@@ -247,7 +247,7 @@ const routes = [
             path: 'cliente',
             name: 'CustomerList',
             // catálogo maestro de programas
-            component: () => import('@/views/customer/customers.vue'),
+            component: () => import('@/views/customer/Customers.vue'),
             meta: { area: 'CLIENTE' },
           },
           {
