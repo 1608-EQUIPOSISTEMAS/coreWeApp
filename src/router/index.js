@@ -247,21 +247,21 @@ const routes = [
             path: 'cliente',
             name: 'CustomerList',
             // catálogo maestro de programas
-            component: () => import('@/views/customer/Customers.vue'),
+            component: () => import('@/views/customer/customers.vue'),
             meta: { area: 'CLIENTE' },
           },
           {
             path: 'cliente/new',
             name: 'CustomerNew',
             // creación de nuevo programa
-            component: () => import('@/views/customer/CustomerForm.vue'),
+            component: () => import('@/views/customer/customerForm.vue'),
             meta: { area: 'CLIENTE' },
           },
           {
             path: 'cliente/:id',
             name: 'CustomerEdit',
             // creación de nuevo programa
-            component: () => import('@/views/customer/CustomerForm.vue'),
+            component: () => import('@/views/customer/customerForm.vue'),
             meta: { area: 'CLIENTE' },
           },
           
