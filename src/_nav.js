@@ -1,389 +1,223 @@
 export default [
-  {
-    component: 'CNavItem',
-    name: 'Dashboard',
-    to: '/dashboard',
-    icon: 'cil-speedometer',
-    badge: {
-      color: 'primary',
-      text: 'NEW',
-    },
-  },
+
+  //
+  // ÁREAS OPERATIVAS
+  //
   {
     component: 'CNavTitle',
-    name: 'Theme',
+    name: 'Áreas',
   },
+
+  //
+  // GERENCIA
+  //
   {
-    component: 'CNavItem',
-    name: 'Colors',
-    to: '/theme/colors',
-    icon: 'cil-drop',
+    component: 'CNavGroup',
+    name: 'Gerencia',
+    to: '/gerencia',
+    icon: 'cil-layers', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Overview',
+        to: '/gerencia/overview',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Indicadores',
+        to: '/gerencia/indicadores',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Reportes Ejecutivos',
+        to: '/gerencia/reportes-ejecutivos',
+      },
+    ],
   },
+  //
+  // FICO
+  //
   {
-    component: 'CNavItem',
-    name: 'Typography',
-    to: '/theme/typography',
-    icon: 'cil-pencil',
+    component: 'CNavGroup',
+    name: 'Finanzas',
+    to: '/fico',
+    icon: 'cil-layers', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Overview',
+        to: '/fico/overview',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Inscripciones',
+        to: '/fico/inscripciones',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Reportes',
+        to: '/fico/reportes',
+      },
+    ],
   },
+
+  //
+  // PRODUCTO
+  //
+  {
+    component: 'CNavGroup',
+    name: 'Producto',
+    to: '/producto',
+    icon: 'cil-layers', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Programas',
+        to: '/producto/programas',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Docentes',
+        to: '/producto/docentes',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Cronograma',
+        to: '/producto/cronograma',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Lista de Precios',
+        to: '/producto/precios',
+      },
+    ],
+  },
+ //
+  // COMERCIAL
+  //
+  {
+    component: 'CNavGroup',
+    name: 'Comercial',
+    to: '/comercial',
+    icon: 'cil-people', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Overview',
+        to: '/comercial/overview',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Comercial',
+        to: '/comercial/leads',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Descuento',
+        to: '/comercial/discount',
+      },
+      {
+        component: 'CNavItem',
+        name: 'R. Producto',
+        to: '/comercial/RptMktProduct',
+      },
+      {
+        component: 'CNavItem',
+        name: 'R. SLA',
+        to: '/comercial/RptSLA',
+      },
+      {
+        component: 'CNavItem',
+        name: 'R. LLamadas',
+        to: '/comercial/RptCalling',
+      },
+      {
+        component: 'CNavItem',
+        name: 'R. Rendimiento',
+        to: '/comercial/RptPerformanceMarketing',
+      },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'R. Cobertura',
+      //   to: '/comercial/RptCoverageForecast',
+      // }
+    ],
+  },
+
+  //
+  // B2B
+  //
+  {
+    component: 'CNavGroup',
+    name: 'B2B',
+    to: '/business',
+    icon: 'cil-layers', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Convenios',
+        to: '/Business/agreement',
+      },
+    ],
+  },
+
+  //
+  // MARKETING
+  //
+  {
+    component: 'CNavGroup',
+    name: 'Marketing',
+    to: '/marketing',
+    icon: 'cil-layers', // icono sugerido
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Overview',
+        to: '/marketing/overview',
+      },
+    ],
+  },
+ 
+  
   {
     component: 'CNavTitle',
-    name: 'Components',
+    name: 'General',
   },
+  //
+  // CLIENTE
+  //
   {
     component: 'CNavGroup',
-    name: 'Base',
-    to: '/base',
-    icon: 'cil-puzzle',
+    name: 'Cliente',
+    to: '/cliente',
+    icon: 'cil-user', // icono sugerido
     items: [
       {
         component: 'CNavItem',
-        name: 'Accordion',
-        to: '/base/accordion',
+        name: 'Cliente',
+        to: '/cliente/cliente',
       },
-      {
-        component: 'CNavItem',
-        name: 'Breadcrumbs',
-        to: '/base/breadcrumbs',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Cards',
-        to: '/base/cards',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Calendar',
-        href: 'https://coreui.io/vue/docs/components/calendar.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Carousels',
-        to: '/base/carousels',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Collapses',
-        to: '/base/collapses',
-      },
-      {
-        component: 'CNavItem',
-        name: 'List Groups',
-        to: '/base/list-groups',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Navs & Tabs',
-        to: '/base/navs',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Paginations',
-        to: '/base/paginations',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Placeholders',
-        to: '/base/placeholders',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Popovers',
-        to: '/base/popovers',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Progress',
-        to: '/base/progress',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Smart Pagination',
-        href: 'https://coreui.io/vue/docs/components/smart-pagination.html',
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Smart Table',
-        external: true,
-        href: 'https://coreui.io/vue/docs/components/smart-table.html',
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Spinners',
-        to: '/base/spinners',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Tables',
-        to: '/base/tables',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Tabs',
-        to: '/base/tabs',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Tooltips',
-        to: '/base/tooltips',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Virtual Scroller',
-        href: 'https://coreui.io/vue/docs/components/virtual-scroller.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      }
     ],
   },
+  
   {
     component: 'CNavGroup',
-    name: 'Buttons',
-    to: '/buttons',
-    icon: 'cil-cursor',
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Buttons',
-        to: '/buttons/standard-buttons',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Button Groups',
-        to: '/buttons/button-groups',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Loading Button',
-        href: 'https://coreui.io/vue/docs/components/loading-button.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Dropdowns',
-        to: '/buttons/dropdowns',
-      },
-    ],
-  },
-  {
-    component: 'CNavGroup',
-    name: 'Forms',
-    to: '/forms',
-    icon: 'cil-notes',
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Autocomplete',
-        href: 'https://coreui.io/vue/docs/forms/autocomplete.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Checks & Radios',
-        to: '/forms/checks-radios',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Date Picker',
-        href: 'https://coreui.io/vue/docs/forms/date-picker.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Date Range Picker',
-        href: 'https://coreui.io/vue/docs/forms/date-range-picker.html',
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Floating Labels',
-        to: '/forms/floating-labels',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Form Control',
-        to: '/forms/form-control',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Input Group',
-        to: '/forms/input-group',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Password Input',
-        href: 'https://coreui.io/vue/docs/forms/password-input.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Range',
-        to: '/forms/range',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Range Slider',
-        href: 'https://coreui.io/vue/docs/forms/range-slider.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Rating',
-        href: 'https://coreui.io/vue/docs/forms/rating.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Select',
-        to: '/forms/select',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Stepper',
-        href: 'https://coreui.io/vue/docs/forms/stepper.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Time Picker',
-        href: 'https://coreui.io/vue/docs/forms/time-picker.html',
-        external: true,
-        badge: {
-          color: 'danger',
-          text: 'PRO',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Layout',
-        to: '/forms/layout',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Validation',
-        to: '/forms/validation',
-      },
-    ],
-  },
-  {
-    component: 'CNavItem',
-    name: 'Charts',
-    to: '/charts',
+    name: 'Reportes',
+    to: '/comercial/reportes',
     icon: 'cil-chart-pie',
-  },
-  {
-    component: 'CNavGroup',
-    name: 'Icons',
-    to: '/icons',
-    icon: 'cil-star',
     items: [
       {
         component: 'CNavItem',
-        name: 'CoreUI Icons',
-        to: '/icons/coreui-icons',
-        badge: {
-          color: 'info',
-          text: 'NEW',
-        },
-      },
-      {
-        component: 'CNavItem',
-        name: 'Brands',
-        to: '/icons/brands',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Flags',
-        to: '/icons/flags',
+        name: 'Embudo',
+        to: '/comercial/reportes/embudo',
       },
     ],
   },
-  {
-    component: 'CNavGroup',
-    name: 'Notifications',
-    to: '/notifications',
-    icon: 'cil-bell',
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Alerts',
-        to: '/notifications/alerts',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Badges',
-        to: '/notifications/badges',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Modals',
-        to: '/notifications/modals',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Toasts',
-        to: '/notifications/toasts',
-      },
-    ],
-  },
-  {
-    component: 'CNavItem',
-    name: 'Widgets',
-    to: '/widgets',
-    icon: 'cil-calculator',
-    badge: {
-      color: 'primary',
-      text: 'NEW',
-      shape: 'pill',
-    },
-  },
-  {
+
+  //
+  // EXTRAS
+  //
+  /*{
     component: 'CNavTitle',
     name: 'Extras',
   },
@@ -414,5 +248,5 @@ export default [
         to: '/pages/500',
       },
     ],
-  },
+  },*/
 ]
