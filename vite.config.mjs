@@ -33,10 +33,11 @@ export default defineConfig(() => {
       extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue', '.scss'],
     },
     server: {
-      port: 3000,
-      proxy: {
-        // https://vitejs.dev/config/server-options.html
-      },
+      host: '0.0.0.0', // Esto es vital para Docker
+      port: 5173,
+      watch: {
+        usePolling: true // A veces necesario en Windows para que detecte cambios
+      }
     },
   }
 })
