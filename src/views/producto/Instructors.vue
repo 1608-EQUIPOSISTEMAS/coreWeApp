@@ -34,6 +34,39 @@
         <button class="chip clear-all" @click="clearFilters">Limpiar todo</button>
       </div>
 
+      <!-- FOOTER: paginación -->
+      <div class="pagination-bar">
+        <div class="page-size">
+          <label>Tamaño</label>
+          <select v-model.number="pagin.size" @change="resetToFirstPage">
+            <option :value="5">5</option>
+            <option :value="10">10</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+            <option :value="300">300</option>
+          </select>
+        </div>
+
+        <div class="pager">
+          <button
+            class="btn btn-outline btn-sm"
+            :disabled="pagin.page === 1"
+            @click="prevPage"
+          >
+            ‹ Anterior
+          </button>
+          <span class="muted">{{ minimun }} - {{ maximun }} de {{ pagin.total }} registros</span>
+          <button
+            class="btn btn-outline btn-sm"
+            :disabled="pagin.page === 0 || pagin.page === totalPages"
+            @click="nextPage"
+          >
+            Siguiente ›
+          </button>
+        </div>
+      </div>
+      <br>
       <!-- Tabla -->
       <div class="table-responsive">
         <table class="table" :class="{ dense }">
@@ -41,7 +74,7 @@
             <tr>
               <th class="ta-right">Acciones</th>
               <th>Estado instructor</th>
-              <th>Estado persona</th>
+              <!-- <th>Estado persona</th> -->
               <th>Nombre completo</th>
               <th>Documento</th>
               <th>Ocupación</th>
@@ -70,14 +103,14 @@
               </td>
 
               <!-- Estado persona -->
-              <td>
+              <!-- <td>
                 <span
                   class="badge"
                   :class="i.person_active === 'Y' ? 'badge-success' : 'badge-danger'"
                 >
                   {{ i.person_active === 'Y' ? 'Activa' : 'Inactiva' }}
                 </span>
-              </td>
+              </td> -->
 
               <!-- Nombre -->
               <td class="minW">
@@ -127,38 +160,6 @@
         </table>
       </div>
 
-      <!-- FOOTER: paginación -->
-      <div class="pagination-bar">
-        <div class="page-size">
-          <label>Tamaño</label>
-          <select v-model.number="pagin.size" @change="resetToFirstPage">
-            <option :value="5">5</option>
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-            <option :value="100">100</option>
-            <option :value="300">300</option>
-          </select>
-        </div>
-
-        <div class="pager">
-          <button
-            class="btn btn-outline btn-sm"
-            :disabled="pagin.page === 1"
-            @click="prevPage"
-          >
-            ‹ Anterior
-          </button>
-          <span class="muted">Página {{ pagin.page }} de {{ totalPages }}</span>
-          <button
-            class="btn btn-outline btn-sm"
-            :disabled="pagin.page === 0 || pagin.page === totalPages"
-            @click="nextPage"
-          >
-            Siguiente ›
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -166,7 +167,7 @@
   <BaseModal v-model="showFilterModal" title="Filtros de instructores" size="lg">
     <div class="px-3 py-2">
       <div class="row g-3">
-        <div class="col-12 col-md-4">
+        <div class="col-md-4">
           <label class="form-label">Estado instructor</label>
           <SearchSelect
             v-model="filters.estado_instructor"
@@ -177,29 +178,7 @@
           />
         </div>
 
-        <div class="col-12 col-md-4">
-          <label class="form-label">Ocupación</label>
-          <SearchSelect
-            v-model="filters.cat_occupation"
-            :items="filtroOcupaciones"
-            label-field="description"
-            value-field="id"
-            placeholder="OCUPACIÓN…"
-          />
-        </div>
-
-        <div class="col-12 col-md-4">
-          <label class="form-label">Estado de persona</label>
-          <SearchSelect
-            v-model="filters.cat_person_status"
-            :items="filtroEstadosPersona"
-            label-field="description"
-            value-field="id"
-            placeholder="ESTADO PERSONA…"
-          />
-        </div>
-
-        <div class="col-12">
+        <div class="col-md-8">
           <label class="form-label">Búsqueda (q)</label>
           <div class="input-group">
             <span class="input-group-text">
@@ -256,17 +235,20 @@ const totalPages = computed(() =>
 )
 function resetToFirstPage () {
   pagin.value.page = 1
+  saveState() // <--- NUEVO
   fetchInstructors()
 }
 function nextPage () {
   if (pagin.value.page < totalPages.value) {
     pagin.value.page++
+    saveState() // <--- NUEVO
     fetchInstructors()
   }
 }
 function prevPage () {
   if (pagin.value.page > 1) {
     pagin.value.page--
+    saveState() // <--- NUEVO
     fetchInstructors()
   }
 }
@@ -343,6 +325,7 @@ function clearFilters () {
     q: ''
   })
   pagin.value.page = 1
+  localStorage.removeItem(STORAGE_KEY) // <--- NUEVO: Borrar memoria
   rebuildChips()
   fetchInstructors()
 }
@@ -350,6 +333,7 @@ function clearFilters () {
 function applyFilters () {
   showFilterModal.value = false
   pagin.value.page = 1
+  saveState()    // <--- NUEVO: Guardar cambios
   rebuildChips()
   fetchInstructors()
 }
@@ -411,9 +395,63 @@ async function fetchInstructors () {
 }
 
 onMounted(() => {
+  loadState()    // <--- NUEVO: Cargar memoria
   rebuildChips()
   fetchInstructors()
 })
+
+const maximun = computed(() =>{
+  const num = (pagin.value.size * pagin.value.page)
+  return (num>pagin.value.total)?pagin.value.total:num 
+})
+
+
+const minimun = computed(() =>
+  (pagin.value.size * pagin.value.page)-pagin.value.size +1
+)
+
+// =========================================
+// LOGICA LOCALSTORAGE (PERSISTENCIA)
+// =========================================
+const STORAGE_KEY = 'crm_instructors_filter_state_v1' // Clave única para instructores
+
+function saveState() {
+  try {
+    const state = {
+      filters: filters,
+      pagination: { 
+        size: pagin.value.size, 
+        page: pagin.value.page 
+      }
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch (e) {
+    console.error('Error guardando state', e)
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      
+      // 1. Restaurar Filtros
+      if (parsed.filters) {
+        Object.assign(filters, parsed.filters)
+      }
+      
+      // 2. Restaurar Paginación
+      if (parsed.pagination) {
+        pagin.value.size = parsed.pagination.size || 25
+        pagin.value.page = parsed.pagination.page || 1
+      }
+    }
+  } catch (e) {
+    console.error('Error cargando state', e)
+  }
+}
+
 </script>
 
 <style scoped>

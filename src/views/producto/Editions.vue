@@ -125,6 +125,11 @@
                 <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_model_modality')"></i>
             </span>
 
+            <span v-if="activeFilters.clasification" class="badge bg-white text-dark border shadow-sm pe-1">
+                Clasif: {{ activeFilters.clasification }}
+                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('clasification')"></i>
+            </span>
+
             <button class="btn btn-link btn-xs text-danger text-decoration-none" @click="clearAllFilters">
                 Limpiar todo
             </button>
@@ -223,8 +228,14 @@
                   </div>
                 </td>
 
-                <td class="minW">
+                <td style="min-width: 120px;" >
                   <div class="name small fw-bold">{{ e.start_date }}</div>
+                  <div class="muted small">
+                    {{ 'CA: '+e.calc_da || 0 }}
+                    <div class="muted small float-end">
+                      {{ 'CP: '+e.calc_dp || 0 }}
+                    </div>
+                  </div>
                 </td>
                 <td class="minW">
                   <div class="small">{{ e.end_date }}</div>
@@ -334,8 +345,10 @@
                 </td>
 
                 <td style="min-width: 150px;">
-                  <div class="name small">{{ e.global_code }}</div>
+                  <div class="name fw-bold small">{{ e.global_code }}</div>
+                  <div class="muted small">{{ 'A: ' +e.specific_code }}</div>
                   <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">{{ e.clasification? 'UNQ: ' + e.clasification:'' }}</div>
+                  
                 </td>
               </tr>
             </template>
@@ -808,6 +821,14 @@
                 placeholder="Todas las modalidades"
             />
         </div>
+
+        <div class="mb-3 col-6">
+            <label class="form-label small fw-bold">Clasificaciòn</label>
+            
+            <!--input text -->
+            <input type="text" class="form-control form-control-sm" v-model="filterForm.clasification" placeholder="UNQ" />
+        </div>
+
     </div>
     <template #footer>
         <div class="d-flex justify-content-end w-100 gap-2">
@@ -831,9 +852,12 @@
                         {{ isCourse ? 'CURSO' : 'PROGRAMA' }}
                     </div>
                     <h5 class="m-0 fw-bold text-dark">{{ currentEdition.program_abreviature }}</h5>
+                    <div class="badge-type bg-primary-subtle text-primary-emphasis">
+                        {{ 'Sesiones: '+modalForm.sessions }}
+                    </div>
                  </div>
                  <div class="text-muted small mt-1 ms-1">
-                    {{ currentEdition.global_code }} &bull; {{ currentEdition.skem_clasification || 'Sin Clasificación' }}
+                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || 'Sin Clasificación' }} 
                  </div>
             </div>
 
@@ -887,7 +911,7 @@
             <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias === 'we_program_type_course'">
                 <div class="section-label">Logística y Horarios</div>
                 <div class="row g-3">
-                     <div class="col-md-6">
+                  <div class="col-md-6">
                         <label class="form-label-sm">Fecha Inicio</label>
                         <input 
                           type="date" 
@@ -897,17 +921,64 @@
                           @change="validateAndCalculate(modalForm, 'start_date')"
                         />
                       </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label-sm">Fecha Fin</label>
+                  <div class="col-md-6 position-relative">
+                    <label class="form-label-sm">Fecha Fin</label>
+                    <div class="input-group input-group-sm">
                       <input 
                         type="date" 
-                        class="form-control form-control-sm" 
+                        class="form-control" 
                         v-model="modalForm.end_date" 
                         :required="isCourse" 
                         @change="validateDateInput(modalForm, 'end_date')"
                       />
+                      <button 
+                        class="btn btn-outline-secondary" 
+                        type="button"
+                        @click.stop="toggleSchedulePreview('main_parent', modalForm)"
+                        title="Ver desglose de sesiones"
+                      >
+                        <i class="fa-solid fa-circle-info text-info"></i>
+                      </button>
                     </div>
+
+                    <div v-if="activePreviewId === 'main_parent'" class="schedule-preview-popover shadow-lg">
+                      <div class="popover-header">
+                        <span>Proyección de Sesiones</span>
+                        <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
+                      </div>
+                      <div class="popover-content">
+                        <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
+                          Faltan datos para calcular (Inicio, Días o Sesiones).
+                        </div>
+                        <table v-else class="table table-sm table-striped mb-0 small-table">
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                                <td class="fw-bold text-center">{{ item.sessionNum }}</td> <td>
+                                  <div class="d-flex flex-column lh-1">
+                                    <span>{{ formatDate(item.date) }}</span>
+                                    <small class="text-muted" style="font-size: 0.65rem">{{ getDayName(item.date) }}</small>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span>
+                                  
+                                  <div v-else class="text-danger fw-bold" style="font-size: 0.7rem;">
+                                    <i class="fa-solid fa-ban me-1"></i> {{ item.desc }} </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div v-if="activePreviewId === 'main_parent'" class="click-overlay" @click="activePreviewId = null"></div>
+                  </div>
                       <div class="col-md-6">
                           <label class="form-label-sm">Días</label>
                           <SearchSelect
@@ -948,10 +1019,13 @@
                         </thead>
                         <tbody>
                              <tr v-for="child in modalForm.program_version_children" :key="child.child_program_version_id">
-                                 <td class="fw-bold text-dark">{{ child.abbreviation }}</td>
+                                 <td class="fw-bold text-dark">
+                                  {{ child.abbreviation }}
+                                  <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: '+ child.sessions }}</div>
+                                 </td>
                                  
                                  <td>
-                                     <div v-if="!currentEdition" class="d-flex align-items-center gap-2 mb-2">
+                                     <div v-if="!currentEdition && !child.edition_id" class="d-flex align-items-center gap-2 mb-2">
                                          <small class="text-muted">¿Nueva?</small>
                                          <label class="form-switch scale-75">
                                             <input type="checkbox" v-model="child.new" />
@@ -960,7 +1034,7 @@
                                      </div>
                                      
                                      <SearchSelect
-                                        v-if="!child.new && !child.edition_id"
+                                        v-if="!child.new && !currentEdition"
                                         v-model="child.edition_id"
                                         mode="remote"
                                         :fetcher="q => editionService.editionCaller({ q, program_version_id: child.child_program_version_id })"
@@ -970,31 +1044,81 @@
                                         placeholder="Vincular edición..."
                                         :minChars="0"
                                         :cache="false"
+                                        @change="onChildEditionChange($event, child)"
                                         :disabled="child.new"
                                      />
-                                     <div v-else-if="child.edition_id" class="p-1 bg-light border rounded text-center">
+                                     <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mt-2">
                                          <div class="fw-bold">{{ child.global_code }}</div>
                                          <div class="text-xs text-muted">{{ child.specific_code }}</div>
+                                         <div class="text-xs text-muted">{{ 'Sesiones: '+ child.sessions }}</div>
                                      </div>
                                  </td>
 
-                                 <td>
+                                 <td class="overflow-visible position-relative">
                                   <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
                                     <input 
                                       type="date" 
-                                      class="form-control form-control-xs" 
+                                      class="form-control form-control-xs mb-1" 
                                       v-model="child.start_date" 
+                                      :disabled="currentEdition"
                                       required 
                                       @change="validateAndCalculate(child, 'start_date')"
                                     />
+
+                                    <div class="position-relative">
+                                        <div class="input-group input-group-xs">
+                                          <input 
+                                            type="date" 
+                                            class="form-control form-control-xs" 
+                                            v-model="child.end_date" 
+                                            required 
+                                            :disabled="currentEdition"
+                                            @change="validateDateInput(child, 'end_date')"
+                                          />
+                                          <button 
+                                            class="btn btn-outline-secondary px-1" 
+                                            type="button"
+                                            @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child)"
+                                          >
+                                            <i class="fa-solid fa-circle-info text-info" style="font-size: 0.8rem;"></i>
+                                          </button>
+                                        </div>
+
+                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="schedule-preview-popover shadow-lg" style="right: 0; left: auto; min-width: 250px;">
+                                            <div class="popover-header">
+                                              <span>Cronograma Estimado</span>
+                                              <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
+                                            </div>
+                                            <div class="popover-content">
+                                              <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
+                                                Datos insuficientes.
+                                              </div>
+                                              <table v-else class="table table-sm table-striped mb-0 small-table">
+                                                  <thead>
+                                                    <tr>
+                                                      <th style="width: 30px;">#</th>
+                                                      <th>Fecha</th>
+                                                      <th>Obs.</th>
+                                                    </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                    <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                                                      <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
+                                                      <td>
+                                                          {{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span>
+                                                      </td>
+                                                      <td>
+                                                        <i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i>
+                                                        <span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span>
+                                                      </td>
+                                                    </tr>
+                                                  </tbody>
+                                              </table>
+                                            </div>
+                                        </div>
+                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
+                                    </div>
                                     
-                                    <input 
-                                      type="date" 
-                                      class="form-control form-control-xs" 
-                                      v-model="child.end_date" 
-                                      required 
-                                      @change="validateDateInput(child, 'end_date')"
-                                    />
                                   </div>
                                   <div v-else class="text-muted text-center">-</div>
                                 </td>
@@ -1007,11 +1131,14 @@
                                           label-field="description" 
                                           value-field="id" 
                                           placeholder="Días" 
+                                            :disabled="currentEdition"
                                           class="mb-1"
                                           @change="calculateEndDate(child)"
                                       />                                         
-                                      <SearchSelect v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
-                                         <SearchSelect v-if="child.new || child.edition_id" v-model="child.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
+                                      <SearchSelect 
+                                            :disabled="currentEdition" v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
+                                         <SearchSelect 
+                                            :disabled="currentEdition"  v-if="child.new || child.edition_id" v-model="child.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
                                  </td>
@@ -1095,6 +1222,30 @@
                 </div>
             </div>
 
+            <!-- <div class="status-card">
+                 <div class="status-card__header">
+                    <i class="fa-regular fa-solid fa-code-branch me-2"></i> Estructura Adjunta
+                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" style="cursor: pointer" @click="addAttachmentProgram">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                    </button>
+                </div>
+                <div class="status-card__body p-0">
+
+                    <div v-for="(child, index) in modalForm.attachments" :key="index" class="d-flex align-items-center gap-2 p-2 border-bottom">
+                        <SearchSelect
+                            v-model="child.program_version_attachment_id"
+                            mode="remote"
+                            :fetcher="q => programService.programVersionCaller({ q })"
+                            label-field="abbreviation"
+                            value-field="program_version_id"
+                            placeholder="Buscar programa..."
+                            :minChars="0"
+                            :cache="false"
+                            view-open="6"
+                        />
+                    </div>
+                </div>
+            </div> -->
         </div>
     </div>
 
@@ -1641,6 +1792,7 @@ const filterForm = reactive({
     instructor_label: '',
     start_date: '',
     end_date: '',
+    clasification: null,
     program_version_id: null,
     cat_type_program: null,
     cat_category: null,
@@ -1686,7 +1838,7 @@ function applyFilters() {
     if (Object.keys(activeFilters).length === 0) {
         historyList.value = []
     }
-    
+    saveState()
     // 5. Ejecutar búsqueda y cerrar modal
     fetchSchedule()
     showFilterModal.value = false
@@ -1714,6 +1866,7 @@ function removeFilter(key) {
         delete activeFilters[key];
         filterForm[key] = null; // O '' dependiendo de tu tipo de dato
     }
+    saveState()
     fetchSchedule();
 }
 
@@ -1725,7 +1878,18 @@ function clearAllFilters() {
     filterForm.instructor_label = '';
     filterForm.start_date = '';
     filterForm.end_date = '';
-    
+    filterForm.clasification = null;
+    filterForm.program_version_id = null;
+    filterForm.cat_type_program = null;
+    filterForm.cat_category = null;
+    filterForm.cat_model_modality = null;
+    filterForm.cat_segment = null;
+    filterForm.cat_course_category = null;
+    filterForm.program_version_label = null;
+    filterForm.active = null;
+    filterForm.cat_day_combination = null;
+    filterForm.cat_hour_combination = null;
+    saveState()
     fetchSchedule();
 }
 
@@ -1770,6 +1934,7 @@ async function fetchSchedule() {
 }
 
 onMounted(() => {
+  loadState()
   fetchSchedule()
 })
 
@@ -1787,7 +1952,8 @@ const catalogs = ref({
   catLines: (catalog && catalog.options('we_program_category')) || [],
   catCategories: (catalog && catalog.options('we_program_type')) || [],
   catTypes: (catalog && catalog.options('we_course_category')) || [],
-  catSegments: (catalog && catalog.options('we_segment')) || []
+  catSegments: (catalog && catalog.options('we_segment')) || [],
+  catHolidays: (catalog && catalog.options('we_holiday')) || []
 })
 
 
@@ -1797,6 +1963,7 @@ const modalForm = reactive({
   start_date: '',
   end_date: '',
   cat_type_program: null,
+    attachments: [],
   cat_type_program_alias: null,
   cat_day_combination_id: null,
   cat_hour_combination_id: null,
@@ -1904,6 +2071,7 @@ async function openEditModal(edition) {
     modalForm.end_date = (data.end_date || '').slice(0, 10)
     modalForm.expedient = !!data.expedient
     modalForm.upgrade = !!data.upgrade
+    modalForm.vacant = data.vacant
     modalForm.active = !!data.active
     modalForm.preconfirmation = !!data.preconfirmation
     modalForm.confirmation = !!data.confirmation
@@ -2042,7 +2210,7 @@ function onProgramVersionChange(opcion) {
     child_program_version_id: child.child_program_version_id,
     abbreviation: child.abbreviation,
     program_version_description: child.description,
-    sessions: sessions,
+    sessions: child.sessions,
     program_version_abbreviation: child.abbreviation,
     program_version_sessions: child.sessions,
     program_version_skem_clasification: child.skem_clasification,
@@ -2085,6 +2253,7 @@ function changeMonth(delta) {
   else if (m > 12) { m = 1; y++ }
   selectedMonth.value = m
   selectedYear.value = y
+  saveState()
   fetchSchedule()
 }
 
@@ -2092,6 +2261,7 @@ function changeMonth(delta) {
     
   function reloadSchedule() {
     fetchSchedule()
+    saveState() // Guardar
   }
 
   
@@ -2187,31 +2357,8 @@ async function saveQuickChange(edition) {
   }
 }
 
-// --- VALIDACIÓN DE FECHAS Y FERIADOS ---
-
-// Lista de feriados basada en la imagen (puedes agregar más años aquí)
-const holidays = [
-  '2025-12-11', // Año Nuevo
-  '2026-04-02', // Jueves Santo
-  '2026-04-03', // Viernes Santo
-  '2026-04-04', // Sábado Santo
-  '2026-04-05', // Domingo Santo
-  '2026-05-01', // Día del Trabajo
-  '2026-05-10', // Día de la Madre
-  '2026-06-07', // Batalla de Arica
-  '2026-06-21', // Día del Padre
-  '2026-06-29', // San Pedro y San Pablo
-  // Agrega aquí los de 2024 y 2025 si es necesario
-];
-
-/**
- * Valida que la fecha seleccionada cumpla:
- * 1. Estar dentro del mes y año seleccionados en el dashboard.
- * 2. No ser un día feriado.
- * * @param {Object} targetObj - El objeto reactivo (modalForm o child)
- * @param {String} fieldKey - El nombre del campo ('start_date' o 'end_date')
- */
 function validateDateInput(targetObj, fieldKey) {
+  debugger
   const dateVal = targetObj[fieldKey];
   if (!dateVal) return;
 
@@ -2219,22 +2366,26 @@ function validateDateInput(targetObj, fieldKey) {
   const [y, m, d] = dateVal.split('-').map(Number);
 
   // 1. Validar Mes y Año (Dashboard context)
-  // Nota: selectedMonth.value va de 1 a 12
   if (y !== selectedYear.value || m !== selectedMonth.value) {
     toast.info(`La fecha debe pertenecer a ${months.value[selectedMonth.value - 1]} del ${selectedYear.value}`);
     targetObj[fieldKey] = ''; // Limpiar el input
     return;
   }
 
-  // 2. Validar Feriados
-  if (holidays.includes(dateVal)) {
-    toast.info(`La fecha seleccionada es un feriado y no está permitida.`);
+  // 2. Validar Feriados (CORREGIDO: Usamos holidayDates.value)
+  if (holidayDates.value.includes(dateVal)) {
+    // Buscamos el nombre para que el mensaje sea más útil
+    console.log("calcular feriado")
+    console.log(dateVal)
+    console.log(catalogs.value.catHolidays)
+    const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
+    const hName = hObj ? hObj.description : 'Feriado';
+    
+    toast.info(`La fecha seleccionada es feriado (${hName}) y no está permitida.`);
     targetObj[fieldKey] = ''; // Limpiar el input
     return;
   }
 }
-
-// ... (Tu array de holidays anterior sigue aquí) ...
 
 /**
  * Parsea la descripción del combo (ej: "Lun-Mie-Vier") y devuelve un array de días JS (0-6)
@@ -2258,101 +2409,318 @@ function parseDaysFromLabel(label) {
   return days; // Ej: [1, 3, 5]
 }
 
-/**
- * Simula el calendario para encontrar la Fecha Fin
- */
-function calculateEndDate(targetObj) {
-  // 1. Validar datos mínimos
-  debugger
-  if (!targetObj.start_date || !targetObj.cat_day_combination_id) return;
 
-  // 2. Obtener sesiones (Soporte para Padre o Hijo)
-  // Nota: Asegúrate de que tu objeto tenga la propiedad 'sessions' o 'program_version_sessions' cargada
-  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0;
-  
-  if (totalSessions <= 0) {
-    // Si no hay sesiones definidas, no podemos calcular
-    return;
+function validateAndCalculate(targetObj, fieldKey) {
+   const dateVal = targetObj[fieldKey];
+   if (!dateVal) return;
+   const [y, m, d] = dateVal.split('-').map(Number);
+
+   // Validación Mes/Año
+   if (y !== selectedYear.value || m !== selectedMonth.value) {
+       toast.info(`La fecha debe pertenecer al periodo seleccionado.`);
+       targetObj[fieldKey] = '';
+       return;
+   }
+   debugger
+   
+   // Validación Feriado (CORREGIDO: Usamos holidayDates.value)
+   if (holidayDates.value.includes(dateVal)) {
+       const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
+       const hName = hObj ? hObj.description : 'Feriado';
+
+       toast.info(`La fecha de inicio no puede ser un feriado (${hName}).`);
+       targetObj[fieldKey] = '';
+       return;
+   }
+
+   // 2. Si es Fecha de Inicio, calcular Fecha Fin automáticamente
+   if (fieldKey === 'start_date') {
+       calculateEndDate(targetObj);
+   }
+}
+
+// REEMPLAZO DEL ARRAY ANTIGUO
+const holidayDates = computed(() => {
+  // Asegúrate de que 'catalogs.value.catHolidays' exista (array vacío por defecto)
+  return (catalogs.value.catHolidays || []).map(h => h.variable_3) // Aquí vienen las fechas 'YYYY-MM-DD'
+})
+
+  function onChildEditionChange(edition, child) {
+    debugger
+    // Primero verificamos si 'edition' existe (no es null ni undefined)
+    if (edition && edition.edition_num_id) {
+      // Caso: Se seleccionó algo válido
+      child.start_date = (edition.start_date || '').slice(0, 10);
+      child.end_date = (edition.end_date || '').slice(0, 10);
+      child.cat_day_combination_id = edition.cat_day_combination_id;
+      child.cat_hour_combination_id = edition.cat_hour_combination_id;
+      child.instructor_id = edition.instructor_id;
+      child.instructor_label = edition.instructor_label; // Asumo que esto existe en el objeto
+      child.global_code = edition.global_code;
+      child.specific_code = edition.specific_code;
+      child.sessions = edition.sessions;
+      child.instructor_label = edition.instructor_label
+      
+    } else {
+      // Caso: Se limpió el input (edition es null) o no tiene ID
+      child.start_date = '';
+      child.end_date = '';
+      child.cat_day_combination_id = null;
+      child.cat_hour_combination_id = null;
+      child.instructor_id = null;
+      child.instructor_label = '';
+      child.global_code = '';
+      child.specific_code = '';
+      // Restaurar sesiones por defecto si es necesario
+      child.sessions = child.program_version_sessions; 
+    }
   }
 
-  // 3. Obtener configuración de días del catálogo
+// --- LÓGICA DE PREVISUALIZACIÓN DE CALENDARIO ---
+const activePreviewId = ref(null) // Para saber qué popover abrir
+const previewItems = ref([])      // La lista de fechas calculadas
+
+// Helper para alternar la visibilidad
+function toggleSchedulePreview(uniqueId, targetObj) {
+  if (activePreviewId.value === uniqueId) {
+    activePreviewId.value = null
+    return
+  }
+  
+  // Generar la data
+  previewItems.value = generatePreviewData(targetObj)
+  activePreviewId.value = uniqueId
+}
+
+// Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)
+function closePreview() {
+  activePreviewId.value = null
+}
+
+// Función CORE que simula el calendario y genera la lista
+// Función CORE que simula el calendario y genera la lista
+function generatePreviewData(targetObj) {
+  const list = []
+  
+  // Validaciones iniciales...
+  if (!targetObj.start_date || !targetObj.cat_day_combination_id) return []
+  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0
+  if (totalSessions <= 0) return []
+  const comboOption = catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id)
+  if (!comboOption) return []
+  const allowedDays = parseDaysFromLabel(comboOption.description)
+  if (allowedDays.length === 0) return []
+
+  // Inicio de simulación
+  let iterDate = new Date(targetObj.start_date + 'T00:00:00')
+  let sessionsCounted = 0
+  let safetyLoop = 0
+
+  // El bucle sigue corriendo HASTA completar las sesiones VÁLIDAS requeridas
+  while (sessionsCounted < totalSessions && safetyLoop < 1000) {
+    safetyLoop++
+    
+    const y = iterDate.getFullYear()
+    const m = String(iterDate.getMonth() + 1).padStart(2, '0')
+    const d = String(iterDate.getDate()).padStart(2, '0')
+    const dateString = `${y}-${m}-${d}` // Fecha actual del bucle
+    const dayOfWeek = iterDate.getDay() // 0=Dom, 1=Lun...
+
+    const isClassDay = allowedDays.includes(dayOfWeek)
+    
+    // Solo nos importa si hoy toca clase (según Lunes-Miércoles, etc)
+    if (isClassDay) {
+      // AQUÍ ESTÁ LA LÓGICA QUE PIDES:
+      // Buscamos si esta fecha exacta es un feriado activo en el catálogo
+      const holidayItem = catalogs.value.catHolidays.find(h => h.variable_3 === dateString )
+      
+      if (holidayItem) {
+        // CASO 1: ES FERIADO
+        // Lo agregamos a la lista para que el usuario lo vea visualmente
+        list.push({
+          date: dateString,
+          status: 'holiday',          // Esto activará el color rojo en el template
+          desc: holidayItem.description, // Ej: "Viernes Santo"
+          sessionNum: '-'             // No lleva número de sesión
+        })
+        // IMPORTANTE: NO hacemos sessionsCounted++, por lo que el sistema
+        // buscará un día más al final para compensar este feriado.
+      } else {
+        // CASO 2: ES DÍA HÁBIL
+        sessionsCounted++ // Aquí sí contamos la sesión
+        list.push({
+          date: dateString,
+          status: 'valid',            // Esto activará el color verde/normal
+          desc: 'Sesión Regular',
+          sessionNum: sessionsCounted
+        })
+      }
+    }
+
+    // Avanzamos al siguiente día calendario
+    iterDate.setDate(iterDate.getDate() + 1)
+  }
+  
+  return list
+}
+
+// Helper simple para nombre de día
+function getDayName(dateStr) {
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const d = new Date(dateStr + 'T00:00:00')
+  return days[d.getDay()]
+}
+
+// --- NUEVOS HELPERS ---
+const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+// Obtiene el índice (0-6) de una fecha string YYYY-MM-DD respetando la zona local
+function getDayIndexFromStr(dateStr) {
+  if (!dateStr) return -1;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  // Creamos fecha local (Mes es índice 0 en JS)
+  const dateObj = new Date(y, m - 1, d);
+  return dateObj.getDay();
+}
+
+/**
+ * Modificamos la función existente calculateEndDate
+ * Ahora incluye la validación de coherencia Día vs Combo
+ */
+function calculateEndDate(targetObj) {
+  // 1. Validar existencia de datos
+  if (!targetObj.start_date || !targetObj.cat_day_combination_id) return;
+
+  // 2. Obtener configuración de días del catálogo
   const comboOption = catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id);
   if (!comboOption) return;
 
-  // Obtenemos los días permitidos (Ej: [1, 3, 5]) basándonos en la descripción
+  // 3. Obtener días permitidos (Ej: [5, 6] para Viernes y Sábado)
   const allowedDays = parseDaysFromLabel(comboOption.description);
-  
-  // Validación de seguridad por si el parseo falla
-  if (allowedDays.length === 0) return; 
+  if (allowedDays.length === 0) return;
 
-  // 4. Iniciar Simulación
-  // Usamos 'T00:00:00' para evitar problemas de zona horaria local al crear el objeto Date
-  let currentDate = new Date(targetObj.start_date + 'T00:00:00');
+  // --- NUEVA LÓGICA DE VALIDACIÓN (Día Coherente) ---
+  const startDayIdx = getDayIndexFromStr(targetObj.start_date);
+  
+  if (!allowedDays.includes(startDayIdx)) {
+    const dayName = dayNames[startDayIdx];
+    
+    toast.warning(
+      `La fecha seleccionada cae en ${dayName} y no corresponde a la combinación de días: ${comboOption.description}.`
+    );
+    
+    // Limpiamos las fechas como solicitaste
+    targetObj.start_date = '';
+    targetObj.end_date = '';
+    
+    // Detenemos el proceso
+    return;
+  }
+  // --------------------------------------------------
+
+  // 4. Validar Sesiones
+  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0;
+  if (totalSessions <= 0) return;
+
+  // 5. Simulación de Calendario (Proyección)
+  // Al haber validado arriba, la iteración comenzará correctamente desde la fecha de inicio
+  // considerándola como la posible "Sesión 1" si no es feriado.
+  
+  let iterDate = new Date(targetObj.start_date + 'T00:00:00');
   let sessionsCounted = 0;
-  let safetyLoop = 0; // Para evitar bucles infinitos
-
-  // Ajuste: Si la fecha de inicio es válida para clase, cuenta como la sesión 1.
-  // Pero el bucle avanzará buscando las siguientes.
-  
-  // Clonamos la fecha para no mutar mientras iteramos
-  let iterDate = new Date(currentDate);
+  let safetyLoop = 0;
 
   while (sessionsCounted < totalSessions && safetyLoop < 1000) {
     safetyLoop++;
     
-    // a. Obtener formato YYYY-MM-DD para comparar con holidays
     const y = iterDate.getFullYear();
     const m = String(iterDate.getMonth() + 1).padStart(2, '0');
     const d = String(iterDate.getDate()).padStart(2, '0');
     const dateString = `${y}-${m}-${d}`;
-    const dayOfWeek = iterDate.getDay(); // 0-6
+    const dayOfWeek = iterDate.getDay();
 
-    // b. Verificar si es día de clase y NO es feriado
+    // Verificamos día de clase
     const isClassDay = allowedDays.includes(dayOfWeek);
-    const isHoliday = holidays.includes(dateString);
+    
+    // Verificamos feriado (usando tu nuevo computed holidayDates)
+    const isHoliday = holidayDates.value.includes(dateString);
 
+    // LÓGICA DE CONTEO:
+    // Si es día de clase Y NO es feriado, cuenta como sesión.
+    // Como iterDate empieza en start_date (que ya validamos que es ClassDay),
+    // si no es feriado, start_date será la sesión #1.
     if (isClassDay && !isHoliday) {
       sessionsCounted++;
     }
 
-    // c. Si ya completamos las sesiones, esta fecha es el FIN
     if (sessionsCounted === totalSessions) {
       targetObj.end_date = dateString;
       break; 
     }
 
-    // d. Avanzar al día siguiente
+    // Avanzar al día siguiente
     iterDate.setDate(iterDate.getDate() + 1);
   }
 }
 
-/**
- * Función Maestra: Valida y luego Calcula
- */
-function validateAndCalculate(targetObj, fieldKey) {
-    // 1. Ejecutar tu validación existente (Validar mes y feriado en el input actual)
-    // Nota: Reutilizamos la lógica que te pasé antes
-    const dateVal = targetObj[fieldKey];
-    if (!dateVal) return;
-    const [y, m, d] = dateVal.split('-').map(Number);
+function addAttachmentProgram(){
+  modalForm.attachments.push({
+    program_version_attachment_id: null,
+  })
+}
 
-    // Validación Mes/Año
-    if (y !== selectedYear.value || m !== selectedMonth.value) {
-        toast.info(`La fecha debe pertenecer al periodo seleccionado.`);
-        targetObj[fieldKey] = '';
-        return;
-    }
-    // Validación Feriado (Fecha inicio no puede ser feriado)
-    if (holidays.includes(dateVal)) {
-        toast.info(`La fecha de inicio no puede ser un feriado.`);
-        targetObj[fieldKey] = '';
-        return;
-    }
+// =========================================
+// LOGICA LOCALSTORAGE (PERSISTENCIA)
+// =========================================
+const STORAGE_KEY = 'crm_schedule_state_v1'
 
-    // 2. Si es Fecha de Inicio, calcular Fecha Fin automáticamente
-    if (fieldKey === 'start_date') {
-        calculateEndDate(targetObj);
+function saveState() {
+  try {
+    const state = {
+      // 1. Guardamos el estado del calendario
+      calendar: {
+        month: selectedMonth.value,
+        year: selectedYear.value
+      },
+      // 2. Guardamos el estado de los filtros (si hay)
+      history: {
+        activeFilters: activeFilters, // Lo que se envía al backend
+        filterForm: filterForm        // Para que el modal recuerde los inputs visuales
+      }
     }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch (e) {
+    console.error('Error guardando state', e)
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      
+      // A. Restaurar Calendario
+      if (parsed.calendar) {
+        selectedMonth.value = parsed.calendar.month || (new Date().getMonth() + 1)
+        selectedYear.value = parsed.calendar.year || new Date().getFullYear()
+      }
+
+      // B. Restaurar Filtros (Modo Histórico)
+      if (parsed.history) {
+        // Restauramos activeFilters (esto activa hasActiveFilters automáticamente)
+        if (parsed.history.activeFilters) {
+          Object.assign(activeFilters, parsed.history.activeFilters)
+        }
+        // Restauramos el formulario del modal para que coincida
+        if (parsed.history.filterForm) {
+          Object.assign(filterForm, parsed.history.filterForm)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error cargando state', e)
+  }
 }
 </script>
 
@@ -2394,7 +2762,7 @@ function validateAndCalculate(targetObj, fieldKey) {
 
 .modern-modal-layout {
     display: grid;
-    grid-template-columns: 1fr 300px; /* Columna principal flexible, Sidebar fija */
+    grid-template-columns: 1fr 200px; /* Columna principal flexible, Sidebar fija */
     gap: 1.5rem;
     min-height: 400px;
 }
@@ -2462,7 +2830,7 @@ function validateAndCalculate(targetObj, fieldKey) {
 .hierarchy-container {
     border: 1px solid #e5e7eb;
     border-radius: 0.375rem;
-    overflow: hidden;
+    overflow: visible; /* <--- PERMITE QUE EL POPUP SALGA */
 }
 .text-xs { font-size: 0.7rem; }
 
@@ -2862,5 +3230,65 @@ tr[class*="row-segment-"]:hover td {
 .schedule-dropdown-wrapper {
   position: relative;
   z-index: inherit; /* Hereda el z-index alto del TD cuando está activo */
+}
+
+/* Popover de Previsualización */
+.schedule-preview-popover {
+  position: absolute;
+  top: 100%; /* Justo debajo del input */
+  z-index: 100000; /* Mayor que el modal y otros popovers */
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 300px; /* Ancho fijo para buena lectura */
+  max-width: 90vw;
+  margin-top: 4px;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Animación suave */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popover-header {
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.popover-content {
+  max-height: 250px; /* Scroll si son muchas sesiones */
+  overflow-y: auto;
+  background: #fff;
+}
+
+.small-table {
+  font-size: 0.75rem;
+}
+.small-table th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+  box-shadow: 0 1px 0 #e2e8f0;
+}
+.small-table td {
+  vertical-align: middle;
+}
+
+/* Ajustes para input group pequeño */
+.input-group-xs > .form-control,
+.input-group-xs > .btn {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
 }
 </style>

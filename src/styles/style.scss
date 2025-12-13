@@ -7,13 +7,20 @@
 body {
   background-color: var(--cui-tertiary-bg);
 }
-
+/* En tu style.css global o App.vue */
+.Vue-Toastification__container {
+    z-index: 100000 !important; /* Mayor que 9999 */
+}
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
   will-change: auto;
   @include transition(padding .15s);
 }
+
+/* BOTONES PEQUEÑOS EN TABLA */
+.btn-icon-sm { width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid transparent; transition: all 0.2s; }
+.btn-icon-sm:hover { border-color: #d1d5db; background: #fff; transform: translateY(-1px); }
 
 .header > .container-fluid,
 .sidebar-header {

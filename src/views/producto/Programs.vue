@@ -387,17 +387,20 @@ const minimun = computed(() =>
 
 function resetToFirstPage () {
   pagin.value.page = 1
+  saveState()
   fetchPrograms()
 }
 function nextPage () {
   if (pagin.value.page < totalPages.value) {
     pagin.value.page++
+    saveState()
     fetchPrograms()
   }
 }
 function prevPage () {
   if (pagin.value.page > 1) {
     pagin.value.page--
+    saveState()
     fetchPrograms()
   }
 }
@@ -486,6 +489,7 @@ function clearFilters () {
     q: ''
   })
   pagin.value.page = 1
+  localStorage.removeItem(STORAGE_KEY)
   rebuildChips()
   fetchPrograms()
 }
@@ -494,6 +498,7 @@ function applyFilters () {
   if(!selectedType.value)return
   showFilterModal.value = false
   pagin.value.page = 1
+  saveState()
   rebuildChips()
   fetchPrograms()
 }
@@ -574,9 +579,58 @@ async function fetchPrograms () {
   const selectedType = ref('versions')
 
   onMounted(() => {
+    loadState()    // <--- NUEVO: Cargar memoria primero
     rebuildChips()
     fetchPrograms()
   })
+
+  // =========================================
+// LOGICA LOCALSTORAGE (PERSISTENCIA)
+// =========================================
+const STORAGE_KEY = 'crm_programs_filter_state_v1'
+
+function saveState() {
+  try {
+    const state = {
+      filters: filters,
+      pagination: { 
+        size: pagin.value.size, 
+        page: pagin.value.page 
+      },
+      selectedType: selectedType.value // <--- IMPORTANTE: Guardar si es 'programs' o 'versions'
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch (e) {
+    console.error('Error guardando state', e)
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      
+      // 1. Restaurar Filtros
+      if (parsed.filters) {
+        Object.assign(filters, parsed.filters)
+      }
+      
+      // 2. Restaurar Paginación
+      if (parsed.pagination) {
+        pagin.value.size = parsed.pagination.size || 25
+        pagin.value.page = parsed.pagination.page || 1
+      }
+
+      // 3. Restaurar Tipo de Vista (Programas vs Versiones)
+      if (parsed.selectedType) {
+        selectedType.value = parsed.selectedType
+      }
+    }
+  } catch (e) {
+    console.error('Error cargando state', e)
+  }
+}
 </script>
 
 

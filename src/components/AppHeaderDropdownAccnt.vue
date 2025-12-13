@@ -31,6 +31,23 @@
     }
     
   }
+
+  //syncScheduleToSheet
+  async function syncScheduleToSheet() {
+    try {
+      const response = await integrationService.syncScheduleToSheet()
+      
+      if (response && response.ok) {
+        toast.success(`Cronograma sincronizado. Filas actualizadas: ${response.data.rows_updated}`);
+      } else {
+        throw new Error(response?.message || 'Error desconocido al sincronizar el cronograma');
+      }
+    } catch (error) {
+      console.error('Error al sincronizar el cronograma:', error)
+      toast.error('Error al sincronizar el cronograma')
+    }
+  }
+  
   
 </script>
 
@@ -60,7 +77,7 @@
        <CDropdownItem @click="updateBase()">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()">
+       <CDropdownItem @click="syncScheduleToSheet()">
         <CIcon  icon="cil-cloud-download" /> Planeamiento
       </CDropdownItem>
       <!-- <CDropdownItem>
