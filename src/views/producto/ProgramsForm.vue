@@ -145,7 +145,7 @@
                   <input
                     v-restrict="{ transform: 'upper' }"
                     v-model.trim="ver.version_code"
-                    :disabled="isEdit"
+                    :disabled="isEdit && !ver.new"
                     type="text"
                     class="form-control"
                     placeholder="CODIGO"
@@ -187,7 +187,7 @@
                     v-model.trim="ver.skem_clasification"
                     type="text"
                     class="form-control"
-                    :disabled="isEdit"
+                    :disabled="isEdit && !ver.new"
                     required
                     placeholder="ESQUEMA"
                   />
@@ -345,7 +345,7 @@
       skem_clasification: partial.skem_clasification ?? '',
       cat_course_category: partial.cat_course_category ?? null,
       cat_course_category_label: partial.cat_course_category_label ?? null,
-      
+      new:partial.new,
       observations: partial.observations ?? '',
       // arreglo reactivo con los hijos de esta versión
       childs: partial.childs ? [...partial.childs] : [],
@@ -357,7 +357,8 @@
     form.program_versions.push(
       makeVersionRow({
         version_code: '',
-        sessions: 0
+        sessions: 0,
+        new: true
       })
     )
   }
@@ -456,6 +457,7 @@
         program_version_id: v.program_version_id ?? null,
         version_code: v.version_code ?? '',
         sessions: v.sessions ?? 0,
+        new:false,
         description: v.description ?? '',
         skem_clasification: v.skem_clasification ?? '',
         cat_course_category: v.cat_course_category ?? null,

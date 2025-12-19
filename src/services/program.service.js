@@ -41,7 +41,7 @@ export default class ProgramService {
                         meta: { skipLoader: true }
                       })).data;
       console.log(response)
-      return response;
+      return response.data;
     }
 
   
