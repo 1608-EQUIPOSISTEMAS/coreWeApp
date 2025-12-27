@@ -1,7 +1,11 @@
 import { h, resolveComponent } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 import DefaultLayout from '@/layouts/DefaultLayout'
+
+//is ntanciar toast
+import { useToast } from 'vue-toastification'
+const toast = useToast()
 
 const RouterViewStub = {
   render() {
@@ -16,9 +20,6 @@ const routes = [
     component: DefaultLayout,
     redirect: '/dashboard',
     children: [
-      //
-      // DASHBOARD GENERAL (landing inicial)
-      //
       {
         path: 'dashboard',
         name: 'Dashboard',
@@ -35,36 +36,26 @@ const routes = [
         path: 'fico',
         name: 'FICO',
         component: RouterViewStub,
-        redirect: { name: 'FicoOverview' },
-        meta: { area: 'FICO' },
+        redirect: { name: 'FicoInscripciones' },
+        meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
         children: [
-          {
-            path: 'overview',
-            name: 'FicoOverview',
-            // salud del área (KPIs de cobranzas, etc.)
-            component: () => import('@/views/fico/Overview.vue'),
-            meta: { area: 'FICO' },
-          },
           {
             path: 'inscripciones',
             name: 'FicoInscripciones',
-            // inscripciones de leads convertidos a clientes
             component: () => import('@/views/fico/Inscripciones.vue'),
-            meta: { area: 'FICO' },
+            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/new',
             name: 'FicoInscripcionesNew',
-            // formulario / alta nueva inscripción
             component: () => import('@/views/fico/InscripcionesNew.vue'),
-            meta: { area: 'FICO' },
+            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
           {
             path: 'reportes',
             name: 'FicoReportes',
-            // export contable / ingresos operativos
             component: () => import('@/views/fico/Reportes.vue'),
-            meta: { area: 'FICO' },
+            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
         ],
       },
@@ -77,70 +68,60 @@ const routes = [
         name: 'Producto',
         component: RouterViewStub,
         redirect: { name: 'ProductoDashboard' },
-        meta: { area: 'PRODUCTO' },
+        meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
         children: [
           {
             path: 'programas',
             name: 'program',
-            // catálogo maestro de programas
             component: () => import('@/views/producto/Programs.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'programas/new',
             name: 'ProgramNew',
-            // creación de nuevo programa
             component: () => import('@/views/producto/ProgramsForm.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'programas/:id',
             name: 'ProgramEdit',
-            // creación de nuevo programa
             component: () => import('@/views/producto/ProgramsForm.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes',
             name: 'Instructor',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Instructors.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes/new',
             name: 'InstructorNew',
             // creación de nuevo programa
             component: () => import('@/views/producto/InstructorsForm.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes/:id',
             name: 'InstructorEdit',
             // creación de nuevo programa
             component: () => import('@/views/producto/InstructorsForm.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'cronograma',
             name: 'Edition',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Editions.vue'),
-            meta: { area: 'PRODUCTO' },
-          },
-          {
-            path: 'planeamiento',
-            name: 'Schedule',
-            // catálogo maestro de programas
-            component: () => import('@/views/producto/ScheduleViewer.vue'),
-            meta: { area: 'PRODUCTO' },
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'precios',
             name: 'Prices',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Prices.vue'),
-            meta: { area: 'PRECIO' },
+            meta: { roles: ['ADMIN', 'GERENCIA'] },
           },
         ],
       },
@@ -153,7 +134,7 @@ const routes = [
         name: 'Gerencia',
         component: RouterViewStub,
         redirect: { name: 'GerenciaOverview' },
-        meta: { area: 'GERENCIA' },
+        meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
         children: [
           {
             path: 'indicadores',
@@ -187,28 +168,28 @@ const routes = [
         name: 'Business',
         component: RouterViewStub,
         redirect: { name: 'BusinessAgreement' },
-        meta: { area: 'B2B' },
+        meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
         children: [
           {
             path: 'agreement',
             name: 'BusinessAgreement',
             // panel general
             component: () => import('@/views/b2b/corporateAgreement.vue'),
-            meta: { area: 'B2B' },
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreement/new',
             name: 'BusinessAgreementNew',
             // panel general
             component: () => import('@/views/b2b/corporateAgreementForm.vue'),
-            meta: { area: 'B2B' },
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreement/:id',
             name: 'BusinessAgreementEdit',
             // panel general
             component: () => import('@/views/b2b/corporateAgreementForm.vue'),
-            meta: { area: 'B2B' },
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
         ],
       },
@@ -241,28 +222,28 @@ const routes = [
         name: 'Cliente',
         component: RouterViewStub,
         redirect: { name: 'Cliente' },
-        meta: { area: 'CLIENTE' },
+        meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         children: [
           {
             path: 'cliente',
             name: 'CustomerList',
             // catálogo maestro de programas
             component: () => import('@/views/customer/customers.vue'),
-            meta: { area: 'CLIENTE' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/new',
             name: 'CustomerNew',
             // creación de nuevo programa
             component: () => import('@/views/customer/customerForm.vue'),
-            meta: { area: 'CLIENTE' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/:id',
             name: 'CustomerEdit',
             // creación de nuevo programa
             component: () => import('@/views/customer/customerForm.vue'),
-            meta: { area: 'CLIENTE' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           
         ],
@@ -275,7 +256,7 @@ const routes = [
         name: 'Comercial',
         component: RouterViewStub,
         redirect: { name: 'ComercialOverview' },
-        meta: { area: 'COMERCIAL' },
+        meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         children: [
           // -----------------
           // CRUD / PIPELINE
@@ -285,21 +266,21 @@ const routes = [
             name: 'ComercialListado',
             // pipeline ventas
             component: () => import('@/views/comercial/Leads.vue'),
-            meta: { area: 'COMERCIAL' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'leads/new',
             name: 'ComercialLeadsNew',
             // alta / captura de nuevo lead
             component: () => import('@/views/comercial/LeadsNew.vue'),
-            meta: { area: 'COMERCIAL' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'leads/:id',
             name: 'ComercialLeadDetalle',
             // ficha 1:1 del lead (timeline, pagos, adjuntos)
             component: () => import('@/views/comercial/LeadsNew.vue'),
-            meta: { area: 'COMERCIAL' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
             props: true,
           },
           {
@@ -307,60 +288,60 @@ const routes = [
             name: 'ReportMktProduct',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportMktProduct.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'RptSLA',
             name: 'ReportSla',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportSla.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'RptCalling',
             name: 'ReportCalling',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportCalling.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'RptPerformanceMarketing',
             name: 'ReportPerformanceMarketing',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportPerformanceMarketing.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'RptCoverageForecast',
             name: 'ReportCoverageForecast',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportCoverageForecast.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'overview',
             name: 'ComercialOverview',
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/Overview.vue'),
-            meta: { area: 'COMERCIAL', report: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'discount',
             name: 'Discount',
             component: () => import('@/views/comercial/Discounts.vue'),
-            meta: { area: 'COMERCIAL' },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'discount/new',
             name: 'DiscountNew',
             component: () => import('@/views/comercial/DiscountsNew.vue'),
-            meta: { area: 'COMERCIAL'},
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'discount/:id',
             name: 'DiscountEdit',
             component: () => import('@/views/comercial/DiscountsNew.vue'),
-            meta: { area: 'COMERCIAL'},
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
 
           // =====================
@@ -371,64 +352,14 @@ const routes = [
             name: 'ComercialReportes',
             component: RouterViewStub,
             redirect: { name: 'RptComercialEmbudo' },
-            meta: { area: 'COMERCIAL', reportGroup: true },
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
             children: [
               {
                 path: 'embudo',
                 name: 'RptComercialEmbudo',
-                // 2) Embudo & conversión
                 component: () => import('@/views/reportes/Embudo.vue'),
                 meta: { area: 'COMERCIAL', report: true },
               },
-              /*{
-                path: 'marketing',
-                name: 'RptComercialMarketing',
-                // 3) Marketing – canales, medios, palabras, estrategias
-                component: () => import('@/views/comercial/reportes/Marketing.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'productividad',
-                name: 'RptComercialProductividad',
-                // 4) Comercial – seguimiento & productividad
-                component: () => import('@/views/comercial/reportes/Productividad.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'programas',
-                name: 'RptComercialProgramas',
-                // 5) Programas & ediciones
-                component: () => import('@/views/comercial/reportes/Programas.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'finanzas',
-                name: 'RptComercialFinanzas',
-                // 6) Finanzas – ventas, descuentos, promociones & pagos
-                component: () => import('@/views/comercial/reportes/Finanzas.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'bot',
-                name: 'RptComercialBot',
-                // 7) Automatización – BOT
-                component: () => import('@/views/comercial/reportes/Bot.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'calidad-datos',
-                name: 'RptComercialCalidadDatos',
-                // 8) Calidad de datos & SLA
-                component: () => import('@/views/comercial/reportes/CalidadDatos.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-              {
-                path: 'explorador',
-                name: 'RptComercialExplorador',
-                // 9) Operativo – Explorador de leads & contactos
-                component: () => import('@/views/comercial/reportes/Explorador.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },*/
             ],
           },
         ],
@@ -461,11 +392,6 @@ const routes = [
         name: 'Login',
         component: () => import('@/views/pages/Login.vue'),
       },
-      // {
-      //   path: 'register',
-      //   name: 'Register',
-      //   component: () => import('@/views/pages/Register.vue'),
-      // },
     ],
   },
 
@@ -476,37 +402,75 @@ const routes = [
   },
 ]
 const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior() {
     return { top: 0 }
   },
 })
-
 router.beforeEach((to, from, next) => {
-  // 1. Definir rutas públicas (que no requieren token)
+  // 1. Rutas públicas
   const publicPages = ['/pages/login', '/pages/404', '/pages/500'];
-  
-  // 2. Comprobar si la ruta a la que quiere ir (to.path) requiere autenticación
-  // En tu estructura, casi todo requiere auth menos lo que empiece por /pages
-  // O podemos verificar si NO está en la lista de páginas públicas
+  // Verificamos si la ruta requiere auth y NO es pública
   const authRequired = !publicPages.includes(to.path);
   
-  // 3. Verificar si tenemos token
-  const loggedIn = localStorage.getItem('token');
+  // 2. Obtener datos
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+  
+  let userRoles = []; // Inicializamos como array vacío por seguridad
 
-  // CASO A: Intenta entrar a ruta privada SIN estar logueado
-  if (authRequired && !loggedIn) {
+  if (userStr) {
+      try {
+          const user = JSON.parse(userStr);
+          // Aseguramos que sea un array, incluso si viene null
+          userRoles = user.roles || []; 
+      } catch (e) {
+          console.error("Error parseando user del storage", e);
+          // Si falla el parseo, forzamos logout borrando token para evitar bucles
+          localStorage.removeItem('token');
+          return next('/pages/login');
+      }
+  }
+
+  // CASO A: No logueado -> Login
+  if (authRequired && !token) {
+      toast.warning('Por favor, inicia sesión para acceder.');
+    
     return next('/pages/login');
   }
 
-  // CASO B: Intenta entrar al Login ESTANDO ya logueado (Redirigir a home)
-  if (to.path === '/pages/login' && loggedIn) {
+  // CASO B: Logueado intentando ir a Login -> Dashboard
+  if (to.path === '/pages/login' && token) {
+      //TOAST
+      
+    toast.info('Ya has iniciado sesión. Redirigiendo al dashboard.');
+    
      return next('/dashboard');
   }
 
-  // Si todo está bien, dejar pasar
+  // ---------------------------------------------------------
+  // CASO C: VALIDACIÓN DE ROLES (CORREGIDO)
+  // ---------------------------------------------------------
+  // Si hay token Y la ruta define roles permitidos
+  if (token && to.meta.roles) {
+    
+      
+      // LÓGICA DE INTERSECCIÓN DE ARRAYS:
+      // "Verifica si ALGUNO (some) de los roles del usuario está INCLUIDO en los roles de la ruta"
+      const tienePermiso = userRoles.some(rolUsuario => to.meta.roles.includes(rolUsuario));
+
+      if (!tienePermiso) {
+          toast.info('No tienes permisos para acceder a esta sección.');
+        
+          console.warn(`Acceso denegado. Usuario con roles [${userRoles}] intentó entrar a ruta que requiere [${to.meta.roles}]`);
+          
+          // no rediriga a nada
+          return next(from.fullPath); // Quédate en la página actual
+          
+      }
+  }
+
   next();
 });
-
 export default router

@@ -48,6 +48,12 @@
     }
   }
   
+  function logout(){
+    console.log("datos")
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    window.location.reload()
+  }
   
 </script>
 
@@ -61,7 +67,7 @@
         component="h6"
         class="bg-body-secondary text-body-secondary fw-semibold mb-2 rounded-top"
       >
-        Account
+        Cuenta
       </CDropdownHeader>
       <!-- <CDropdownItem>
         <CIcon icon="cil-bell" /> Updates
@@ -71,13 +77,13 @@
         <CIcon icon="cil-envelope-open" /> Mensajes
         <CBadge color="success" class="ms-auto">{{ itemsCount }}</CBadge>
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()">
+       <CDropdownItem @click="updateBase()" v-if="$hasRole('ADMIN')">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()">
+       <CDropdownItem @click="updateBase()"  v-if="$hasRole('PRODUCTO')">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem>
-       <CDropdownItem @click="syncScheduleToSheet()">
+       <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole('PRODUCTO')">
         <CIcon  icon="cil-cloud-download" /> Planeamiento
       </CDropdownItem>
       <!-- <CDropdownItem>
@@ -92,7 +98,7 @@
         component="h6"
         class="bg-body-secondary text-body-secondary fw-semibold my-2"
       >
-        Settings
+        Configuración
       </CDropdownHeader>
       <CDropdownItem> <CIcon icon="cil-user" /> Perfil </CDropdownItem>
       <CDropdownItem> <CIcon icon="cil-settings" /> Ajustes </CDropdownItem>
@@ -106,7 +112,7 @@
       </CDropdownItem> -->
       <CDropdownDivider />
       <!-- <CDropdownItem> <CIcon icon="cil-shield-alt" /> Lock Account </CDropdownItem> -->
-      <CDropdownItem> <CIcon icon="cil-lock-locked" /> Cerrar Sesión </CDropdownItem>
+      <CDropdownItem @click="logout()"> <CIcon icon="cil-lock-locked"/> Cerrar Sesión </CDropdownItem>
     </CDropdownMenu>
   </CDropdown>
 </template>

@@ -16,7 +16,7 @@
           </div>
 
           <div class="row g-3 form-section__body">
-            <div class="col-md-12">
+            <div class="col-md-6">
               <label class="form-label mb-1">
                 Nombre General <span class="required-star">*</span>
               </label>
@@ -29,6 +29,34 @@
                 placeholder="NOMBRE PROGRAMA"
               />
             </div>
+
+            <div class="col-md-3">
+              <label class="form-label mb-1">
+                Esquema de clasificaciòn <span class="required-star">*</span>
+              </label>
+              <input
+                v-restrict="{ transform: 'upper' }"
+                v-model.trim="form.skem_clasification"
+                type="text"
+                class="form-control"
+                required
+                placeholder="ESQUEMA"
+              />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label mb-1">
+                URL Web <span class="required-star">*</span>
+              </label>
+              <input
+                v-restrict="{ transform: 'upper' }"
+                v-model.trim="form.link"
+                type="text"
+                class="form-control"
+                placeholder="URL WEB"
+              />
+            </div>
+
 
             <div class="col-md-3">
               <label class="form-label mb-1">
@@ -76,22 +104,8 @@
               />
             </div>
 
-            <div class="col-md-3">
-              <label class="form-label mb-1">
-                URL Web <span class="required-star">*</span>
-              </label>
-              <input
-                v-restrict="{ transform: 'upper' }"
-                v-model.trim="form.link"
-                type="text"
-                class="form-control"
-                required
-                placeholder="URL WEB"
-              />
-            </div>
 
-
-            <div class="col-md-3">
+            <div class="col-md-12">
               <label class="form-label mb-1 d-block">Activo</label>
               <label class="form-switch">
                 <input type="checkbox" v-model="form.active" />
@@ -136,83 +150,23 @@
                   <span v-if="ver.abbreviation" class="version-meta-pill">{{ ver.abbreviation }}</span>
                 </div>
               </div>
-
               <div class="row g-2 align-items-end mb-2">
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Código <span class="required-star">*</span>
-                  </label>
-                  <input
-                    v-restrict="{ transform: 'upper' }"
-                    v-model.trim="ver.version_code"
-                    :disabled="isEdit && !ver.new"
-                    type="text"
-                    class="form-control"
-                    placeholder="CODIGO"
-                    required
-                  />
-                </div>
-
-                <div class="col-md-1">
-                  <label class="form-label mb-1">
-                    Sesiones. <span class="required-star">*</span>
-                  </label>
-                  <input
-                    v-model.number="ver.sessions"
-                    type="text"
-                    v-restrict="{ only: 'numbers' }"
-                    class="form-control mono"
-                    placeholder="NRO. SESIONES"
-                    required
-                  />
-                </div>
-
                 
-                <div class="col-md-9">
-                  <label class="form-label mb-1">Observaciones</label>
-                  <input
-                    v-model.trim="ver.observations"
-                    type="text"
-                    class="form-control"
-                    placeholder="OBSERVACIONES"
-                  />
-                </div>
-
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Esquema de clasificaciòn <span class="required-star">*</span>
-                  </label>
-                  <input
-                    v-restrict="{ transform: 'upper' }"
-                    v-model.trim="ver.skem_clasification"
-                    type="text"
-                    class="form-control"
-                    :disabled="isEdit && !ver.new"
-                    required
-                    placeholder="ESQUEMA"
-                  />
-                </div>
-                
-                
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Categoria <span class="required-star">*</span>
-                  </label>
-                  <SearchSelect
-                    v-model="ver.cat_course_category"
-                    :items="catalogs.courseCategoryList"
-                    label-field="description"
-                    value-field="id"
-                    placeholder="Categoria..."
-                    required
-                    :model-label="ver.cat_course_category_label"
-                  />
-                </div>
-
                 <div class="col-md-4">
-                  <label class="form-label mb-1">Nombre de Versiòn <span class="required-star">*</span></label>
+                  <label class="form-label mb-1">Certificaciòn <span class="required-star">*</span></label>
                   <input
                     v-model.trim="ver.description"
+                    type="text"
+                    class="form-control"
+                    placeholder="DESCRIPCION"
+                    required
+                  />
+                </div>
+                
+                <div class="col-md-4">
+                  <label class="form-label mb-1">Publicitario <span class="required-star">*</span></label>
+                  <input
+                    v-model.trim="ver.brand_name"
                     type="text"
                     class="form-control"
                     placeholder="DESCRIPCION"
@@ -230,8 +184,75 @@
                     placeholder="ABREVIATURA"
                   />
                 </div>
+                <div class="col-md-2">
+                  <label class="form-label mb-1">
+                    Código <span class="required-star">*</span>
+                  </label>
+                  <input
+                    v-restrict="{ transform: 'upper' }"
+                    v-model.trim="ver.version_code"
+                    :disabled="isEdit && !ver.new"
+                    type="text"
+                    class="form-control"
+                    placeholder="CODIGO"
+                    required
+                  />
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label mb-1">
+                    Sesiones. <span class="required-star">*</span>
+                  </label>
+                  <input
+                    v-model.number="ver.sessions"
+                    type="text"
+                    v-restrict="{ only: 'numbers' }"
+                    class="form-control mono"
+                    placeholder="NRO. SESIONES"
+                    required
+                  />
+                </div>
+
+                
+                <div class="col-md-4">
+                  <label class="form-label mb-1">URL FICHA</label>
+                  <input
+                    v-model.trim="ver.expedient_link"
+                    type="text"
+                    class="form-control"
+                    placeholder="URL FICHA"
+                  />
+                </div>
+
+                 
+                    <!--active-->
+                
+                
+                <div class="col-md-2">
+                  <label class="form-label mb-1">
+                    Categoria <span class="required-star">*</span>
+                  </label>
+                  <SearchSelect
+                    v-model="ver.cat_course_category"
+                    :items="catalogs.courseCategoryList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="Categoria..."
+                    required
+                    :model-label="ver.cat_course_category_label"
+                  />
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label mb-1 d-block">Activo</label>
+                  <label class="form-switch">
+                    <input type="checkbox" v-model="ver.active" />
+                    <span></span>
+                  </label>
+                </div>
 
               </div>
+              
 
               <div class="version-block__children">
                 <div class="version-block__children-head">
@@ -296,6 +317,7 @@
   import { ServiceKeys } from '@/services'
   import { useToast } from 'vue-toastification'
 
+import FileUploader from '@/components/FileUploader.vue'
   const toast = useToast()
   const router = useRouter()
   const route = useRoute()
@@ -313,6 +335,7 @@
 
   const form = reactive({
     program_name: null,
+    skem_clasification: null,
     cat_type_program: null,
     cat_category: null,
     cat_model_modality: null,
@@ -342,7 +365,9 @@
       sessions: partial.sessions ?? 0,
       description: partial.description ?? '',
       abbreviation: partial.abbreviation ?? '',
-      skem_clasification: partial.skem_clasification ?? '',
+      expedient_link: partial.expedient_link ?? null,
+      active: partial.active ?? true,
+      brand_name: partial.brand_name ?? null,
       cat_course_category: partial.cat_course_category ?? null,
       cat_course_category_label: partial.cat_course_category_label ?? null,
       new:partial.new,
@@ -358,6 +383,11 @@
       makeVersionRow({
         version_code: '',
         sessions: 0,
+        description: '',
+        abbreviation: '',
+        brand_name: '',
+        cat_course_category: null,
+        expedient_link: null,
         new: true
       })
     )
@@ -369,6 +399,7 @@
       v.version_code.trim() !== '' &&
       v.sessions !== null &&
       v.sessions !== '' &&
+
       !Number.isNaN(Number(v.sessions))
     )
   })
@@ -429,6 +460,9 @@
         return {
           program_version_id: ch.child_program_version_id,
           version_code: ch.version_code,
+          label: ch.label,
+          expedient_link: ch.expedient_link,
+          
           label: ch.abbreviation
         }
       })
@@ -450,6 +484,7 @@
     form.active = data.active === 'N' ? false : true
     form.cat_type_program_label = data.cat_type_program_label
     form.cat_category_label = data.cat_category_label
+    form.skem_clasification = data.skem_clasification ?? ''
     const versions = Array.isArray(data.program_versions) ? data.program_versions : []
     console.log(versions)
     form.program_versions = versions.map(v =>
@@ -458,8 +493,10 @@
         version_code: v.version_code ?? '',
         sessions: v.sessions ?? 0,
         new:false,
+        expedient_link: v.expedient_link ?? null,
         description: v.description ?? '',
-        skem_clasification: v.skem_clasification ?? '',
+        active: v.active === 'N' ? false : true,
+        brand_name: v.brand_name ?? null,
         cat_course_category: v.cat_course_category ?? null,
         cat_course_category_label: v.cat_course_category_label ?? null,
         abbreviation: v.abbreviation ?? '',
@@ -488,6 +525,7 @@
     return ids.length>0 ? ids : []
   }
 
+
   /**
    * Payload para /programregister
    * (program_versions sin ID, pero ya alineado con el schema del backend)
@@ -499,6 +537,7 @@
         cat_type_program: form.cat_type_program ?? null,
         link: form.link || null,
         
+        skem_clasification: form.skem_clasification || null, 
         cat_category: form.cat_category ?? null,
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
@@ -506,7 +545,10 @@
           version_code: v.version_code || null,
           sessions: v.sessions != null ? Number(v.sessions) : null,
           description: v.description || null,
-          skem_clasification: v.skem_clasification || null, 
+          expedient_link: v.expedient_link ?? null,
+          active: v.active ? 'Y' : 'N',
+          brand_name: v.brand_name || null,
+          
           abbreviation: v.abbreviation || null,
           observations: v.observations || null,
           cat_course_category: v.cat_course_category || null,
@@ -533,17 +575,21 @@
         cat_category: form.cat_category ?? null,
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
+        skem_clasification: form.skem_clasification || null,
+        user_creation_id: null,
         user_modification_id: null,
         program_versions: form.program_versions
-          .filter(v => v.program_version_id != null)
+          // .filter(v => v.program_version_id != null)
           .map(v => ({
             program_version_id: v.program_version_id,
             version_code: v.version_code || null,
+            expedient_link: v.expedient_link ?? null,
+            brand_name: v.brand_name || null,
             sessions: v.sessions != null ? Number(v.sessions) : null,
-            skem_clasification: v.skem_clasification || null, 
             description: v.description || null,
             abbreviation: v.abbreviation || null,
             observations: v.observations || null,
+            active: v.active ? 'Y' : 'N',
             cat_course_category: v.cat_course_category || null,
             children_ids: buildChildrenIdsFromRow(v)
           }))

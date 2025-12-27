@@ -54,6 +54,14 @@
               <label class="form-label mb-1">País</label>
               <SearchSelect v-model="form.cat_country" :items="catalogs.countryList" label-field="description" value-field="id" placeholder="PAÍS..." />
             </div>
+            <div class="col-md-4">
+              <label class="form-label mb-1">Correo</label>
+              <input v-model="form.email" type="text" class="form-control" placeholder="Correo" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label mb-1">Telefono</label>
+              <input v-model="form.phone" type="text" class="form-control" placeholder="Telefono" />
+            </div>
             <div class="col-md-3">
               <label class="form-label mb-1 d-block">Activo</label>
               <label class="form-switch">
@@ -83,7 +91,13 @@
                 <label class="form-label mb-1">LinkedIn</label>
                 <input v-model="form.linkedin" type="text" class="form-control" placeholder="URL Perfil" />
               </div>
+              <!--text area profile_resume-->
                 
+              <div class="col-md-12">
+                <label class="form-label mb-1">Resumen de Perfil</label>
+                <textarea v-model="form.profile_resume" class="form-control" rows="3" placeholder="Breve resumen profesional..."></textarea>
+              </div>
+              
               
             </div>
             
@@ -92,11 +106,8 @@
                     <label class="form-label fw-bold mb-2">Curriculum Simplificado (CV)</label>
                     <FileUploader 
                         label="Clic para subir CV Simplificado"
-                        :current-url="form.cv_url"
-                        :loading="uploading.cv"
+                        v-model="form.cv_url"
                         accept=".pdf,.doc,.docx"
-                        @upload="(file) => handleCvUpload(file, 'cv')"
-                        @view="verArchivo(form.cv_url)"
                     />
                 </div>
                 
@@ -104,55 +115,57 @@
                     <label class="form-label fw-bold mb-2">Curriculum Documentado</label>
                     <FileUploader 
                         label="Clic para subir CV Documentado"
-                        :current-url="form.cv_documents_url"
-                        :loading="uploading.cv_doc"
+                        v-model="form.cv_documents_url"
                         accept=".pdf,.doc,.docx"
-                        @upload="(file) => handleCvUpload(file, 'cv_doc')"
-                        @view="verArchivo(form.cv_documents_url)"
                     />
                 </div>
             </div>
         </section>
 
-        <section class="form-section mb-4" v-if="isEdit">
-            <div class="form-section__header d-flex justify-content-between align-items-center w-100 pe-3">
-              <span class="form-section__title">Programas Autorizados</span>
-              <button class="btn btn-sm btn-outline-primary" @click="addProgramItem">
-                <i class="fas fa-plus"></i> Asignar Programa
-              </button>
-            </div>
+        <div class="row">
+          <div class="col-6">
+            <section class="form-section mb-4" v-if="isEdit">
+                <div class="form-section__header d-flex justify-content-between align-items-center w-100 pe-3">
+                  <span class="form-section__title">Programas Personalizaciòn</span>
+                  <button class="btn btn-sm btn-outline-primary" @click="addProgramItem">
+                    <i class="fas fa-plus"></i> Asignar Programa
+                  </button>
+                </div>
 
-            <div v-if="form.programs.length === 0" class="alert alert-light text-center border py-2">
-                <small>No tiene programas asignados.</small>
-            </div>
+                <div v-if="form.programs.length === 0" class="alert alert-light text-center border py-2">
+                    <small>No tiene programas personalizados.</small>
+                </div>
 
-            <div v-for="(prog, index) in form.programs" :key="'prog-'+index" class="card mb-2 bg-white border shadow-sm">
-                <div class="card-body py-2 row align-items-center g-2">
-                    <div class="col-md-4">
-                        <label class="small text-muted d-block mb-0">Programa</label>
-                        <SearchSelect
-                          v-model="prog.program_id"
-                          mode="remote"
-                          :fetcher="q => programService.programCaller({ q })"
-                          label-field="description"
-                          value-field="id"
-                          sublabel-field="label_ui"
-                          placeholder="Buscar programa..."
-                          :cache="false"
-                          view-open="6"
-                          :model-label="prog.name" 
-                      />
-                      
-                    </div>
-                    <div class="col-md-8">
-                         <label class="small text-muted d-block mb-0">Perfil Específico</label>
-                         
-                        <textarea class="form-control" rows="2" v-model.trim="prog.profile_summary" placeholder="Expertise en este programa..."></textarea>
+                <div v-for="(prog, index) in form.programs" :key="'prog-'+index" class="card mb-2 bg-white border shadow-sm">
+                    <div class="card-body py-2 row align-items-center g-2">
+                        <div class="col-md-4">
+                            <label class="small text-muted d-block mb-0">Programa</label>
+                            <SearchSelect
+                              v-model="prog.program_id"
+                              mode="remote"
+                              :fetcher="q => programService.programCaller({ q })"
+                              label-field="description"
+                              value-field="id"
+                              sublabel-field="label_ui"
+                              placeholder="Buscar programa..."
+                              :cache="false"
+                              view-open="6"
+                              :model-label="prog.program_name" 
+                          />
+                          
+                        </div>
+                        <div class="col-md-8">
+                            <label class="small text-muted d-block mb-0">Perfil Específico</label>
+                            
+                            <textarea class="form-control" rows="2" v-model.trim="prog.profile_summary" placeholder="Expertise en este programa..."></textarea>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
-
+            </section>
+            
+          </div>
+          <div class="col-6">
+            
         <section class="form-section mb-4" v-if="isEdit">
             <div class="form-section__header d-flex justify-content-between align-items-center w-100 pe-3">
               <span class="form-section__title">Información Financiera</span>
@@ -169,41 +182,42 @@
                 <div class="card-body position-relative">
                     
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label small mb-1">Banco (Nombre)</label>
                             <input v-model="item.bank_name" type="text" class="form-control" placeholder="Ej. BCP, Interbank..." />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label small mb-1">Tipo de Pago</label>
                             <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_payment_type" :items="catalogs.paymentTypeList" label-field="description" value-field="id" placeholder="Tipo..." />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label small mb-1">Tipo Tarifa</label>
                             <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_rate_pay_id" :items="catalogs.ratePayList" label-field="description" value-field="id" placeholder="Tarifa..." />
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-6">
                             <label class="form-label small mb-1">Moneda</label>
                             <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_currency" :items="catalogs.currencyList" label-field="description" value-field="id" placeholder="Moneda..." />
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-md-4">
                             <label class="form-label small mb-1">Observaciones</label>
                             <textarea class="form-control" rows="2" v-model.trim="item.observations" placeholder="Cta, CCI, etc."></textarea>
                         </div>
                         
-                        <div class="col-md-12 mt-2">
+                        <div class="col-md-6 mt-2">
                              <label class="form-label small mb-1 fw-bold">Constancias / Adjuntos</label>
                              <MultiFileUploader 
-                                v-model="item.attachments"
-                                label="Agregar Constancia"
-                                hint="PDF o Imagen"
-                                :loading="uploading.financials[index]"
-                                @upload-file="(file) => handleFinancialUpload(file, index)"
+                             v-model="item.attachments"
+                              label="Agregar Constancia"
+                                                    
                              />
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+          </div>
+        </div>
+
 
       </div>
       
@@ -257,8 +271,6 @@ const loaded = ref(false)
 const saving = ref(false)
 
 const uploading = reactive({
-    cv: false,
-    cv_doc: false,
     financials: {}
 })
 
@@ -272,6 +284,7 @@ const isUploadingAny = computed(() =>
 const form = reactive({
   person_id: null,        
   first_name: null,
+  profile_resume: null,
   last_name: null,
   mother_last_name: null,
   document_number: null,
@@ -328,65 +341,6 @@ const isValid = computed(() =>
     !!form.cat_type_document
 )
 
-/* ======================
- * Métodos: Uploads
- * ====================== */
-async function handleCvUpload(file, type) {
-    if (!file) return
-    if (file.size > 20 * 1024 * 1024) { 
-        toast.warning('El archivo es muy pesado (>20MB)')
-        return
-    }
-
-    if (type === 'cv') uploading.cv = true
-    else if (type === 'cv_doc') uploading.cv_doc = true
-
-    try {
-        const res = await integrationService.uploadFile(file)
-        const data = res 
-
-        if (type === 'cv') {
-            form.cv_url = data.url
-            toast.success('CV Simplificado cargado')
-        } else {
-            form.cv_documents_url = data.url
-            toast.success('CV Documentado cargado')
-        }
-
-    } catch (error) {
-        console.error(error)
-        toast.error('Error al subir el CV')
-    } finally {
-        if (type === 'cv') uploading.cv = false
-        else uploading.cv_doc = false
-    }
-}
-
-async function handleFinancialUpload(file, index) {
-    if (!file) return
-    if (file.size > 20 * 1024 * 1024) { 
-        toast.warning('> 20MB')
-        return
-    }
-    uploading.financials[index] = true
-    try {
-        const res = await integrationService.uploadFile(file)
-        if(!form.financials[index].attachments) {
-            form.financials[index].attachments = []
-        }
-        form.financials[index].attachments.push(res.url)
-        toast.success('Sustento agregado')
-    } catch (error) {
-        console.error(error)
-        toast.error('Error al subir sustento')
-    } finally {
-        uploading.financials[index] = false
-    }
-}
-
-function verArchivo(url) {
-    if(url) window.open(url, '_blank')
-}
 
 /* ======================
  * Métodos: Gestión Listas
@@ -409,6 +363,7 @@ function addProgramItem() {
     form.programs.push({
         instructor_program_id: null,
         program_id: null,
+        program_name: null, // Para mostrar en el SearchSelect
         profile_summary: '',
         active: true
     })
@@ -431,8 +386,11 @@ async function loadData(id) {
         cat_type_document: data.cat_type_document ?? null,
         cat_country: data.cat_country ?? null,
         birthday: data.birthday ? String(data.birthday).substring(0, 10) : null,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
         person_active: data.person_active !== 'N',
         instructor_active: data.instructor_active !== 'N',
+        profile_resume: data.profile_resume,
         
         // Mapeo de nuevos campos de texto
         resume: data.resume ?? null,
@@ -463,6 +421,8 @@ async function loadData(id) {
         form.programs = data.programs.map(p => ({
             instructor_program_id: p.instructor_program_id,
             program_id: p.program_id,
+            program_name: p.program_name, // Para mostrar en el SearchSelect
+            
             profile_summary: p.profile_summary,
             active: p.active === 'Y'
         }))
@@ -488,6 +448,9 @@ function buildPayload() {
         cat_country: form.cat_country,
         birthday: form.birthday || null,
         person_active: form.person_active ? 'Y' : 'N',
+        email: form.email ?? null,
+        phone: form.phone ?? null,
+        
         
         // Datos Instructor
         instructor_active: form.instructor_active ? 'Y' : 'N',       
@@ -496,7 +459,7 @@ function buildPayload() {
         linkedin: form.linkedin,
         cv_url: form.cv_url, 
         cv_documents_url: form.cv_documents_url,
-        
+        profile_resume: form.profile_summary,
         // Array Financieros
         financials: form.financials.map(f => ({
             instructor_financial_id: f.instructor_financial_id || null,

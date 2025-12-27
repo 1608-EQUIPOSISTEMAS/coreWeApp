@@ -141,7 +141,7 @@
         <table class="table" :class="{ dense }">
           <thead>
             <tr>
-              <th class="bg-dark text-light text-center" style="width: 100px;">
+              <th class="bg-warning text-dark text-center" style="width: 100px;">
                   
                 <div class="d-flex justify-content-center">
                   <button
@@ -154,16 +154,16 @@
                   </button>
                 </div>
               </th>
-              <th class="bg-dark text-light">Programa</th>
-              <th class="bg-dark text-light">Detalle</th>
-              <th class="bg-dark text-light">F. INICIO</th>
-              <th class="bg-dark text-light">F. FIN</th>
-              <th class="bg-dark text-light">Horario</th>
-              <th class="bg-dark text-light">Docente</th>
-              <th class="bg-dark text-light text-center">Ficha/Mejora</th>
-              <th class="bg-dark text-light text-center">Confirm.</th>
-              <th class="bg-dark text-light">Observación</th>
-              <th class="bg-dark text-light">Edición</th>
+              <th class="bg-warning text-dark">Programa</th>
+              <th class="bg-warning text-dark">Detalle</th>
+              <th class="bg-warning text-dark">F. INICIO</th>
+              <th class="bg-warning text-dark">F. FIN</th>
+              <th class="bg-warning text-dark">Horario</th>
+              <th class="bg-warning text-dark">Docente</th>
+              <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
+              <th class="bg-warning text-dark text-center">Confirm.</th>
+              <th class="bg-warning text-dark">Observación</th>
+              <th class="bg-warning text-dark">Edición</th>
             </tr>
           </thead>
 
@@ -174,12 +174,12 @@
                 :class="{ 'is-collapsed': !week.isOpen }"
                 @click="week.isOpen = !week.isOpen"
               >
-                <td class="py-2 px-3 fw-bold bg-light" colspan="11">
+                <td class="py-2 px-3 fw-bold bg-dark" colspan="11">
                   <i
-                    class="fa-solid me-2 text-dark"
+                    class="fa-solid me-2 text-light"
                     :class="week.isOpen ? 'fa-chevron-down' : 'fa-chevron-right'"
                   ></i>
-                  <span class="text-dark">Semana {{ week.schedule }}</span>
+                  <span class="text-light">Semana {{ week.schedule }}</span>
                   <span class="ms-auto badge bg-primary d-flex float-end">
                     {{ week.items.length }} Ediciones
                   </span>
@@ -207,9 +207,9 @@
                   </div>
                 </td>
 
-                <td style="min-width: 200px;" class="minW">
+                <td style="min-width: 100px;" class="minW">
                   <div class="name fw-bold">
-                    {{ e.program_abreviature || '—' }}
+                    {{ e.program_abreviature || '—' }} {{'('+e.program_sessions+')' }}
                   </div>
                   <div class="muted small">
                     {{ e.version_code }}
@@ -221,11 +221,12 @@
                 
                 <td style="min-width: 150px;" class="minW">
                   <div class="muted small">
-                    {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
+                    {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
                   </div>
                   <div class="muted small">
-                    {{ e.program_sessions != null ? 'Sesiones: ' + e.program_sessions : '' }}
+                    {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
                   </div>
+                  
                 </td>
 
                 <td style="min-width: 120px;" >
@@ -1138,7 +1139,7 @@
                                       <SearchSelect 
                                             :disabled="currentEdition" v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
                                          <SearchSelect 
-                                            :disabled="currentEdition"  v-if="child.new || child.edition_id" v-model="child.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
+                                              v-if="child.new || child.edition_id" v-model="child.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
                                  </td>
@@ -1711,6 +1712,14 @@ function openTreeModal(edition) {
   } else {
     // Es un Padre (PEE) o un curso suelto sin contexto complejo
     // Creamos un grupo donde el padre es la edición seleccionada
+    //si es un curso salga mensaje info 
+    if(edition.program_type === 'Curso') {
+      toast.info('Este curso no tiene una estructura jerárquica asociada.');
+      showTreeModal.value = false;
+      return;
+    }
+    
+
     groups.push({
       id: edition.edition_num_id,
       global_code: edition.global_code,

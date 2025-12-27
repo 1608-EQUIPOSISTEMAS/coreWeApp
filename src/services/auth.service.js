@@ -12,20 +12,15 @@ export default class AuthService {
     return response.data;
   }
   
-  
-  // Método para iniciar sesión
+    
+  // src/services/AuthService.js (Vue)
   async login(credentials) {
-    // Ajusta la URL '/auth/login' según tu backend real
     const response = await api.post('/auth/login', credentials);
-    console.log("datas")
     const data = response.data
-    // Asumimos que el backend devuelve algo como: { data: { token: '...', user: {...} } }
+
     if (data.data && data.data.token) {
-      console.log("bers")
-      // Guardamos el token en LocalStorage para que persista
       localStorage.setItem('token', data.data.token);
       
-      // Opcional: Guardar datos del usuario
       localStorage.setItem('user', JSON.stringify(data.data.user));
     }
     
