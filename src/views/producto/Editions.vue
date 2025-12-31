@@ -197,7 +197,10 @@
                      <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
                        <i class="fa-solid fa-eye"></i>
                      </button>
-                     <button class="btn btn-icon-sm btn-light text-danger" @click.stop="openTreeModal(e)" title="Árbol">
+                     <button :class="[
+                            'btn btn-icon-sm btn-light',
+                            (e.tree_detail.length == 0  && program_type != 'Curso')? 'text-secondary' : 'text-danger'
+                          ]" @click.stop="openTreeModal(e)" title="Árbol">
                        <i class="fa-solid fa-book-bookmark"></i>
                      </button>
                      <button class="btn btn-icon-sm btn-light" @click.stop="openEditModal(e)" title="Editar">
@@ -230,7 +233,7 @@
                 </td>
 
                 <td style="min-width: 120px;" >
-                  <div class="name small fw-bold">{{ e.start_date }}</div>
+                  <div class="name small fw-bold">{{ formatDate(e.start_date) }}</div>
                   <div class="muted small">
                     {{ 'CA: '+e.calc_da || 0 }}
                     <div class="muted small float-end">
@@ -239,7 +242,7 @@
                   </div>
                 </td>
                 <td class="minW">
-                  <div class="small">{{ e.end_date }}</div>
+                  <div class="small">{{ formatDate(e.end_date) }}</div>
                 </td>
                 <td 
                   style="min-width: 140px;" 
@@ -345,7 +348,7 @@
                   ></textarea>
                 </td>
 
-                <td style="min-width: 150px;">
+                <td style="min-width: 100px;">
                   <div class="name fw-bold small">{{ e.global_code }}</div>
                   <div class="muted small">{{ 'A: ' +e.specific_code }}</div>
                   <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">{{ e.clasification? 'UNQ: ' + e.clasification:'' }}</div>
@@ -719,7 +722,7 @@
              <SearchSelect
                 v-model="filterForm.instructor_id"
                 mode="remote"
-                :fetcher="q => instructorService.instructorCaller({ q })"
+                :fetcher="q => instructorService.instructorCaller({ q})"
                 label-field="full_name"
                 value-field="instructor_id"
                 placeholder="Todos los docentes"
@@ -858,7 +861,7 @@
                     </div>
                  </div>
                  <div class="text-muted small mt-1 ms-1">
-                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || 'Sin Clasificación' }} 
+                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || '' }} 
                  </div>
             </div>
 
@@ -891,7 +894,6 @@
                             :fetcher="q => instructorService.instructorCaller({ q })"
                             showSubValue
                             label-field="full_name"
-                            required
                             sublabel-field="document_number"
                             value-field="instructor_id"
                             placeholder="Buscar docente..."
@@ -901,11 +903,23 @@
                          />
 
                     </div>
-                    
-                    <div class="col-6" v-if="modalForm.program_version_id">
-                         <label class="form-label-sm">Vacantes</label>
-                         <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" required />
-                    </div>
+                  
+                      <div class="col-3">
+                          <label class="form-label-sm">Segmentación</label>
+                          <SearchSelect
+                              v-model="modalForm.cat_segment_id"
+                              :items="catalogs.catSegments"
+                              label-field="description"
+                              value-field="id"
+                              placeholder="SEGMENTACION"
+                          />
+
+                      </div>
+
+                      <div class="col-3 " v-if="modalForm.program_version_id">
+                          <label class="form-label-sm">Vacantes</label>
+                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" required />
+                      </div>
                 </div>
             </section>
 
@@ -929,6 +943,7 @@
                         type="date" 
                         class="form-control" 
                         v-model="modalForm.end_date" 
+                        disabled
                         :required="isCourse" 
                         @change="validateDateInput(modalForm, 'end_date')"
                       />
@@ -1012,21 +1027,22 @@
                     <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 25%">Sub-Programa</th>
-                                <th style="width: 25%">Edición / Config</th>
-                                <th style="width: 25%">Fechas</th>
-                                <th style="width: 25%">Horario / Docente</th>
+                                <th style="width: 20%">Sub-Programa</th>
+                                <th style="width: 25%">Edición</th>
+                                <th style="width: 20%">Fechas</th>
+                                <th style="width: 20%">Horario / Docente</th>
+                                <th style="width: 15%">Config.</th>
                             </tr>
                         </thead>
                         <tbody>
-                             <tr v-for="child in modalForm.program_version_children" :key="child.child_program_version_id">
+                             <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id">
                                  <td class="fw-bold text-dark">
-                                  {{ child.abbreviation }}
+                                   <span style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
                                   <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: '+ child.sessions }}</div>
                                  </td>
                                  
                                  <td>
-                                     <div v-if="!currentEdition && !child.edition_id" class="d-flex align-items-center gap-2 mb-2">
+                                     <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
                                          <small class="text-muted">¿Nueva?</small>
                                          <label class="form-switch scale-75">
                                             <input type="checkbox" v-model="child.new" />
@@ -1035,10 +1051,10 @@
                                      </div>
                                      
                                      <SearchSelect
-                                        v-if="!child.new && !currentEdition"
+                                        v-if="!child.new && !child.edition_id"
                                         v-model="child.edition_id"
                                         mode="remote"
-                                        :fetcher="q => editionService.editionCaller({ q, program_version_id: child.child_program_version_id })"
+                                        :fetcher="q => editionService.editionCaller({ q, program_version_id: child.child_program_version_id, year: selectedYear, month: selectedMonth  })"
                                         label-field="label_for_iu"
                                         sublabel-field="specific_code"
                                         value-field="edition_num_id"
@@ -1048,7 +1064,13 @@
                                         @change="onChildEditionChange($event, child)"
                                         :disabled="child.new"
                                      />
-                                     <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mt-2">
+
+                                     <!--botòn x borrar-->
+                                     <button v-if="currentEdition && !child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
+                                         <i class="fa-solid fa-times"></i> Desvincular
+                                     </button>
+
+                                     <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
                                          <div class="fw-bold">{{ child.global_code }}</div>
                                          <div class="text-xs text-muted">{{ child.specific_code }}</div>
                                          <div class="text-xs text-muted">{{ 'Sesiones: '+ child.sessions }}</div>
@@ -1061,9 +1083,8 @@
                                       type="date" 
                                       class="form-control form-control-xs mb-1" 
                                       v-model="child.start_date" 
-                                      :disabled="currentEdition"
                                       required 
-                                      @change="validateAndCalculate(child, 'start_date')"
+                                      @change="validateAndCalculate(child, 'start_date', index)"
                                     />
 
                                     <div class="position-relative">
@@ -1073,7 +1094,7 @@
                                             class="form-control form-control-xs" 
                                             v-model="child.end_date" 
                                             required 
-                                            :disabled="currentEdition"
+                                            disabled
                                             @change="validateDateInput(child, 'end_date')"
                                           />
                                           <button 
@@ -1132,16 +1153,50 @@
                                           label-field="description" 
                                           value-field="id" 
                                           placeholder="Días" 
-                                            :disabled="currentEdition"
                                           class="mb-1"
                                           @change="calculateEndDate(child)"
                                       />                                         
                                       <SearchSelect 
-                                            :disabled="currentEdition" v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
+                                             v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
                                          <SearchSelect 
-                                              v-if="child.new || child.edition_id" v-model="child.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
+                                              v-if="child.new || child.edition_id" v-model="child.instructor_id" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
+                                 </td>
+
+                                 <td>
+                                     <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                                         <div class="d-flex align-items-center gap-2">
+                                            <label class="form-switch scale-75">
+                                                <input type="checkbox" v-model="child.active"  />
+                                                <span></span>
+                                            </label>
+                                            <small class="text-muted">Activo</small>
+                                         </div>
+                                         <div class="d-flex align-items-center gap-2">
+                                            <label class="form-switch scale-75">
+                                                <input type="checkbox" v-model="child.preconfirmation"  />
+                                                <span></span>
+                                            </label>
+                                            <small class="text-muted">PRE-cfm</small>
+                                         </div>
+                                         <div class="d-flex align-items-center gap-2">
+                                            <label class="form-switch scale-75">
+                                                <input type="checkbox" v-model="child.confirmation"  />
+                                                <span></span>
+                                            </label>
+                                            <small class="text-muted">Cfm</small>
+                                         </div>
+                                         
+                                         <div class="d-flex align-items-center gap-2">
+                                            <label class="form-switch scale-75">
+                                                <input type="checkbox" v-model="child.expedient"  />
+                                                <span></span>
+                                            </label>
+                                            <small class="text-muted">Ficha</small>
+                                         </div>
+                                     </div>
+                                     <div v-else class="text-muted text-center">-</div>
                                  </td>
                              </tr>
                         </tbody>
@@ -1206,6 +1261,18 @@
                             <span></span>
                         </label>
                     </div>
+                    <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
+                    
+                    <div class="col-12">
+                         <label class="form-label-sm">Historico</label>
+                         <input type="text"  class="form-control form-control-sm" v-model.number="modalForm.global_code" required />
+                    </div>
+
+                    <div class="col-12">
+                         <label class="form-label-sm">Ed. Año</label>
+                         <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" required />
+                    </div>
+
                 </div>
             </div>
             <div class="status-card">
@@ -1256,7 +1323,7 @@
             <span v-if="currentEdition">Editando ID: {{ currentEdition.edition_num_id }}</span>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline btn-sm px-3" @click="showFormModal = false">
+            <button class="btn btn-outline btn-sm px-3" @click="cleanFormModal();showFormModal = false">
             Cancelar
             </button>
             <button
@@ -1302,7 +1369,7 @@
                <div class="badge bg-primary text-white mb-1" style="font-size: 0.65rem;">PROGRAMA PADRE</div>
                <h6 class="m-0 fw-bold text-dark">{{ group.abbreviation }}</h6>
                <div class="small text-muted">
-                 {{ group.global_code }} <span v-if="group.clasification">&bull; {{ group.clasification }}</span>
+                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }}  </span>
                </div>
             </div>
           </div>
@@ -1879,7 +1946,7 @@ function removeFilter(key) {
     fetchSchedule();
 }
 
-function clearAllFilters() {
+function clearAllFilters(reload=true) {
     Object.keys(activeFilters).forEach(key => delete activeFilters[key]);
     // Reset form
     filterForm.q = '';
@@ -1899,7 +1966,9 @@ function clearAllFilters() {
     filterForm.cat_day_combination = null;
     filterForm.cat_hour_combination = null;
     saveState()
-    fetchSchedule();
+
+    if(reload)fetchSchedule();
+    
 }
 
 
@@ -1944,7 +2013,8 @@ async function fetchSchedule() {
 
 onMounted(() => {
   loadState()
-  fetchSchedule()
+  applyFiltersFromQueryParams()
+  // fetchSchedule()
 })
 
 const historyList = ref([])
@@ -1963,7 +2033,8 @@ const catalogs = ref({
   catTypes: (catalog && catalog.options('we_course_category')) || [],
   catSegments: (catalog && catalog.options('we_segment')) || [],
   catHolidays: (catalog && catalog.options('we_holiday')) || []
-})
+}
+)
 
 
 const modalForm = reactive({
@@ -1972,7 +2043,8 @@ const modalForm = reactive({
   start_date: '',
   end_date: '',
   cat_type_program: null,
-    attachments: [],
+  cat_segment_id: null,
+  attachments: [],
   cat_type_program_alias: null,
   cat_day_combination_id: null,
   cat_hour_combination_id: null,
@@ -2011,7 +2083,6 @@ const isCourse = computed(() => modalForm.cat_type_program_alias === 'we_program
 const isCourseValid = computed(() => {
   if (!isCourse.value) return true
   if (!modalForm.program_version_id) return false
-  if (!modalForm.instructor_id) return false
   if (!modalForm.start_date || !modalForm.end_date) return false
   if (!modalForm.cat_day_combination_id || !modalForm.cat_hour_combination_id) return false
   return true
@@ -2054,6 +2125,99 @@ function resetModalForm() {
   modalForm.program_version_children = []
 }
 
+/**
+ * Aplica filtros y abre una nueva ventana con query params
+ * @param {Object} filters - Objeto con los filtros a aplicar (ej: { clasification: 'UNQ-001', cat_segment: 'A1' })
+ */
+function filterDirectly(filters = {}) {
+  // 1. Construir query params desde el objeto de filtros
+  const params = new URLSearchParams()
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== null && value !== '' && value !== undefined) {
+      params.append(key, value)
+    }
+  })
+  
+  // 2. Construir la URL completa
+  const baseUrl = window.location.origin + window.location.pathname
+  const queryString = params.toString()
+  const fullUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl
+  
+  // 3. Abrir en nueva ventana/pestaña
+  window.open(fullUrl, '_blank')
+}
+
+/**
+ * Lee los query params de la URL y aplica los filtros automáticamente
+ */
+function applyFiltersFromQueryParams() {
+  const urlParams = new URLSearchParams(window.location.search)
+  
+  // Si no hay params, no hacer nada
+  if (urlParams.toString() === ''){
+    applyFilters()
+    return
+  }
+  
+  let hasFilters = false
+  
+  // Limpiar filtros previos
+  clearAllFilters(false)
+  
+  // Mapear cada param al filterForm
+  urlParams.forEach((value, key) => {
+    if (filterForm.hasOwnProperty(key)) {
+      // Conversión de tipos según el campo
+      if (key.includes('_id') || key === 'vacant') {
+        // IDs y números
+        filterForm[key] = value ? parseInt(value) : null
+      } else {
+        // Strings y otros
+        filterForm[key] = value
+      }
+      hasFilters = true
+    }
+  })
+  
+  // Si se encontraron filtros, aplicarlos automáticamente
+  if (hasFilters) {
+    applyFilters()
+    toast.info('Filtros aplicados desde URL', { timeout: 2000 })
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+}
+
+// Genera un string "YYYY-MM-01" basado en el dashboard
+const defaultStartDate = computed(() => {
+  const y = selectedYear.value;
+  const m = String(selectedMonth.value).padStart(2, '0');
+  return `${y}-${m}-01`; // Siempre el día 1 para que el picker se posicione ahí
+});
+
+function cleanFormModal(){
+  modalForm.program_version_id = null
+  modalForm.instructor_id = null
+  modalForm.start_date = ''
+  modalForm.end_date = ''
+  modalForm.expedient = false
+  modalForm.sessions = null
+  modalForm.upgrade = false
+  modalForm.preconfirmation = false
+  modalForm.confirmation = false
+  modalForm.active = true
+  modalForm.notes = ''
+  modalForm.cat_type_program = null
+  modalForm.cat_type_program_alias = null
+  modalForm.cat_day_combination_id = null
+  modalForm.cat_hour_combination_id = null
+  modalForm.program_version_children = []
+  modalForm.vacant = 0
+  modalForm.cat_segment_id = null
+  modalForm.global_code = ''
+  modalForm.specific_code = ''
+}
+
 async function openEditModal(edition) {
   currentEdition.value = edition || null
   resetModalForm()
@@ -2061,6 +2225,10 @@ async function openEditModal(edition) {
   // NUEVA
   if (!edition) {
     showFormModal.value = true
+    //cleanForm y set starst date
+    cleanFormModal()
+    modalForm.start_date = defaultStartDate.value
+    modalForm.active = true
     return
   }
 
@@ -2081,6 +2249,11 @@ async function openEditModal(edition) {
     modalForm.expedient = !!data.expedient
     modalForm.upgrade = !!data.upgrade
     modalForm.vacant = data.vacant
+    
+    modalForm.cat_segment_id = data.cat_segment_id
+    modalForm.global_code = data.global_code
+    modalForm.specific_code = data.specific_code
+
     modalForm.active = !!data.active
     modalForm.preconfirmation = !!data.preconfirmation
     modalForm.confirmation = !!data.confirmation
@@ -2100,13 +2273,14 @@ async function openEditModal(edition) {
     // Hijos
     modalForm.program_version_children = (data.children || []).map(child => ({
       ...child,
-      start_date: (child.start_date || '').slice(0, 10),
+      start_date: child.start_date ? child.start_date.slice(0, 10) : defaultStartDate.value,
       end_date: (child.end_date || '').slice(0, 10),
       expedient: !!child.expedient,
       upgrade: !!child.upgrade,
       sessions: child.sessions,
       preconfirmation: !!child.preconfirmation,
       confirmation: !!child.confirmation,
+      active: !!child.active,
       new: !!child.new
     }))
 
@@ -2130,8 +2304,12 @@ async function applyModalForm() {
       const editionPayload = {
         program_version_id: modalForm.program_version_id,
         instructor_id: modalForm.instructor_id,
+        year: selectedYear.value,
         start_date: modalForm.start_date,
         vacant: modalForm.vacant,
+        cat_segment_id: modalForm.cat_segment_id,
+        global_code: modalForm.global_code,
+        specific_code: modalForm.specific_code,
         end_date: modalForm.end_date,
         cat_day_combination_id: modalForm.cat_day_combination_id,
         cat_hour_combination_id: modalForm.cat_hour_combination_id,
@@ -2161,8 +2339,12 @@ async function applyModalForm() {
         vacant: modalForm.vacant,
         active: modalForm.active ? 'Y' : 'N',
         notes: modalForm.notes || null,
+        year: selectedYear.value,
+        global_code: modalForm.global_code,
+        specific_code: modalForm.specific_code,
         expedient: modalForm.expedient ? 'Y' : 'N',
         upgrade: modalForm.upgrade ? 'Y' : 'N',
+        cat_segment_id: modalForm.cat_segment_id,
         preconfirmation: modalForm.preconfirmation ? 'Y' : 'N',
         confirmation: modalForm.confirmation ? 'Y' : 'N',
         children: modalForm.program_version_children.map((child, idx) => ({
@@ -2178,7 +2360,9 @@ async function applyModalForm() {
           expedient: child.expedient ? 'Y' : 'N',
           upgrade: child.upgrade ? 'Y' : 'N',
           preconfirmation: child.preconfirmation ? 'Y' : 'N',
-          confirmation: child.confirmation ? 'Y' : 'N'
+          confirmation: child.confirmation ? 'Y' : 'N',
+          active: child.active ? 'Y' : 'N',
+          preconfirmation: child.preconfirmation ? 'Y' : 'N'
         }))
       }
 
@@ -2193,8 +2377,10 @@ async function applyModalForm() {
       }
     }
 
+
     if (handleServiceResponse(response)) {
       await fetchSchedule()
+      cleanFormModal()
       showFormModal.value = false
     }
   } catch (err) {
@@ -2204,7 +2390,7 @@ async function applyModalForm() {
 }
 
 function onProgramVersionChange(opcion) {
-  debugger
+  
   if (currentEdition.value && modalForm.cat_type_program_alias !== 'we_program_type_course') return
   if (!opcion) {
     modalForm.cat_type_program = null
@@ -2231,7 +2417,7 @@ function onProgramVersionChange(opcion) {
     upgrade: false,
     preconfirmation: false,
     confirmation: false,
-    start_date: '',
+    start_date: defaultStartDate.value,
     end_date: '',
     cat_day_combination_id: null,
     cat_hour_combination_id: null,
@@ -2357,9 +2543,10 @@ async function saveQuickChange(edition) {
     } else {
       toast.error(response?.message || 'Error al actualizar')
       // Opcional: Recargar el listado si falló para revertir visualmente
-      // fetchSchedule(); 
+       
     }
 
+    fetchSchedule();
   } catch (err) {
     console.error(err)
     toast.error('Error de conexión al guardar cambios')
@@ -2367,7 +2554,6 @@ async function saveQuickChange(edition) {
 }
 
 function validateDateInput(targetObj, fieldKey) {
-  debugger
   const dateVal = targetObj[fieldKey];
   if (!dateVal) return;
 
@@ -2419,19 +2605,31 @@ function parseDaysFromLabel(label) {
 }
 
 
-function validateAndCalculate(targetObj, fieldKey) {
+function validateAndCalculate(targetObj, fieldKey, index=null) {
    const dateVal = targetObj[fieldKey];
    if (!dateVal) return;
    const [y, m, d] = dateVal.split('-').map(Number);
 
    // Validación Mes/Año
-   if (y !== selectedYear.value || m !== selectedMonth.value) {
+   if ((y !== selectedYear.value || m !== selectedMonth.value) && index==0 ) {
        toast.info(`La fecha debe pertenecer al periodo seleccionado.`);
        targetObj[fieldKey] = '';
+       targetObj.end_date = '';
        return;
    }
-   debugger
    
+   if (index !== null && index > 0) {
+    const previousChild = modalForm.program_version_children[index - 1];
+    
+    if (previousChild.start_date && dateVal < previousChild.start_date) {
+      toast.warning(
+        `Orden cronológico inválido: Este módulo no puede empezar antes que el anterior (${formatDate(previousChild.start_date)}).`
+      );
+      targetObj[fieldKey] = '';
+      return;
+    }
+  }
+
    // Validación Feriado (CORREGIDO: Usamos holidayDates.value)
    if (holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
@@ -2467,6 +2665,11 @@ const holidayDates = computed(() => {
       child.instructor_label = edition.instructor_label; // Asumo que esto existe en el objeto
       child.global_code = edition.global_code;
       child.specific_code = edition.specific_code;
+      
+      child.active = edition.active === 'Y';
+      child.confirmation = edition.confirmation === 'Y';
+      child.preconfirmation = edition.preconfirmation === 'Y';
+      child.expedient = edition.expedient === 'Y';
       child.sessions = edition.sessions;
       child.instructor_label = edition.instructor_label
       
@@ -2489,13 +2692,26 @@ const holidayDates = computed(() => {
 const activePreviewId = ref(null) // Para saber qué popover abrir
 const previewItems = ref([])      // La lista de fechas calculadas
 
+function unlinkChildEdition(child){
+  child.new = true
+  child.edition_id = null
+  child.start_date = defaultStartDate.value // <--- CAMBIO AQUÍ
+  child.end_date = ''
+  child.cat_day_combination_id = null
+  child.cat_hour_combination_id = null
+  child.instructor_id = null
+  child.instructor_label = ''
+  child.global_code = ''
+  child.specific_code = ''
+}
+
 // Helper para alternar la visibilidad
 function toggleSchedulePreview(uniqueId, targetObj) {
   if (activePreviewId.value === uniqueId) {
     activePreviewId.value = null
     return
   }
-  
+ console.log("datasss")
   // Generar la data
   previewItems.value = generatePreviewData(targetObj)
   activePreviewId.value = uniqueId
@@ -2891,13 +3107,13 @@ function loadState() {
   .form-switch { position: relative; width: 25px; height: 24px; display: inline-block; }
   .form-switch input { display: none; }
   .form-switch span {
-    position: absolute; inset: 0; background: #e5e7eb; border-radius: 9999px; transition: .2s;
+    position: absolute; inset: 0; background: #d4def3; border-radius: 9999px; transition: .2s;
   }
   .form-switch span::after {
     content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
     position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
   }
-  .form-switch input:checked + span { background: #3b82f6; }
+  .form-switch input:checked + span { background: #255095; }
   .form-switch input:checked + span::after { left: 21px; }
 
 .scale-75 { transform: scale(0.75); transform-origin: center; }
@@ -3300,4 +3516,16 @@ tr[class*="row-segment-"]:hover td {
   padding: 0.15rem 0.4rem;
   font-size: 0.75rem;
 }
+.badge-btn {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  background-color: #3b82f6; /* azul */
+  border-radius: 12px;
+  cursor: default;
+}
+
 </style>

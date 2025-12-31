@@ -9,6 +9,7 @@
 
         <button type="button" v-if="!form.enrollment_id &&form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
           class="btn btn-warning"
+          :disabled="form.enrollment_id"
           @click="openInscription()">
           INSCRIBIR
         </button>
@@ -406,7 +407,7 @@
         <button type="button" class="btn btn-outline-secondary" @click="cancelar">
           {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
         </button>
-        <button v-if="!form.enrollment_id && ( isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))" type="button" class="btn btn-primary" @click="guardar" :disabled="saving">
+        <button v-if="!form.enrollment_id && ( isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))" type="button" class="btn btn-primary" @click="guardar" :disabled="saving || form.enrollment_id" >
           {{ saving ? 'Guardando...' : 'Guardar lead' }}
         </button>
       </div>
@@ -611,74 +612,26 @@
 
       <section class="insc-section" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
         <h6 class="insc-section__title">
-          <i class="fa-solid fa-paperclip me-2 text-primary"></i>Documentación Adjunta
+          Documentación Adjunta
         </h6>
         
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label mb-2 fw-semibold">Comprobante de Pago</label>
-            
-            <input autocomplete="off" ref="adjPagoInput" type="file" class="d-none" @change="onAdjuntarPago" accept="image/*,.pdf"/>
-            
-            <div 
-              class="upload-zone" 
-              :class="{ 'upload-zone--filled': insc.adjPagoNombre }"
-              @click="!insc.adjPagoNombre ? adjPagoInput?.click() : null"
-            >
-              <div v-if="!insc.adjPagoNombre" class="upload-zone__empty">
-                <div class="upload-icon-wrapper">
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                </div>
-                <span class="upload-text">Haz clic para subir el voucher</span>
-                <span class="upload-hint">PDF, JPG o PNG</span>
-              </div>
-
-              <div v-else class="upload-zone__file">
-                <div class="file-info">
-                  <i class="fa-solid fa-file-invoice-dollar file-icon"></i>
-                  <div class="file-details">
-                    <span class="file-name text-truncate">{{ insc.adjPagoNombre }}</span>
-                    <span class="file-status">Listo para subir</span>
-                  </div>
-                </div>
-                <button type="button" class="btn-remove-file" @click.stop="removeFile('pago')">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </div>
-            </div>
+            <FileUploader 
+                label="Clic para subir Voucher"
+                v-model="form.ticket_payment_url"
+                accept=".pdf,.doc,.docx"
+            />
           </div>
 
           <div class="col-md-6">
             <label class="form-label mb-2 fw-semibold">Carnet / Documento ID</label>
-            
-            <input autocomplete="off" ref="adjCarnetInput" type="file" class="d-none" @change="onAdjuntarCarnet" accept="image/*,.pdf"/>
-            
-            <div 
-              class="upload-zone" 
-              :class="{ 'upload-zone--filled': insc.adjCarnetNombre }"
-              @click="!insc.adjCarnetNombre ? adjCarnetInput?.click() : null"
-            >
-              <div v-if="!insc.adjCarnetNombre" class="upload-zone__empty">
-                <div class="upload-icon-wrapper">
-                  <i class="fa-regular fa-id-card"></i>
-                </div>
-                <span class="upload-text">Subir carnet estudiantil</span>
-                <span class="upload-hint">Opcional si aplica dscto.</span>
-              </div>
-
-              <div v-else class="upload-zone__file">
-                <div class="file-info">
-                  <i class="fa-solid fa-address-card file-icon"></i>
-                  <div class="file-details">
-                    <span class="file-name text-truncate">{{ insc.adjCarnetNombre }}</span>
-                    <span class="file-status">Listo para subir</span>
-                  </div>
-                </div>
-                <button type="button" class="btn-remove-file" @click.stop="removeFile('carnet')">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </div>
-            </div>
+            <FileUploader 
+                label="Subir carnet estudiantil"
+                v-model="form.carnet_url"
+                accept=".pdf,.doc,.docx"
+            />
           </div>
         </div>
       </section>
@@ -717,7 +670,7 @@
                 </small>
               </div>
               <span class="value-total">
-                {{ selectedCurrency.symbol }} {{ insc.montoFinal?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}
+                {{ selectedCurrency.symbol }} {{ insc.total_amount?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}
               </span>
             </div>
           </div>
@@ -727,14 +680,14 @@
        <section class="insc-section"> 
             <h6 class="insc-section__title">OBSERVACIONES</h6>
             <div class="row g-3"> 
-              <textarea v-model="insc.observacion" class="form-control" rows="2"></textarea>
+              <textarea v-model="insc.observacions" class="form-control" rows="2"></textarea>
             </div> 
         </section>
     </div>
 
     <template #footer>
       <button class="btn btn-outline btn-sm" @click="showViewModal = false">Cerrar</button>
-      <button  class="btn btn-primary btn-sm" @click="confirmarInscripcion" :disabled="savingInsc">
+      <button  class="btn btn-primary btn-sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
         {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
       </button>
     </template>
@@ -746,6 +699,7 @@
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
 
+import FileUploader from '@/components/FileUploader.vue'
   const toast = useToast()
 
   import CurrencyInput from '@/components/CurrencyInput.vue'
@@ -905,7 +859,7 @@
       insc.montoBeneficio = insc.val_beneficio
       const totalDescuentos = insc.montoDescuentoPorcentaje + insc.montoDescuentoFijo + insc.montoBeneficio
       const final = base - totalDescuentos
-      insc.montoFinal = final > 0 ? final : 0
+      insc.total_amount = final > 0 ? final : 0
   })
   function onChangeDescuentoFijo(opt) {
     if (!opt) {
@@ -1010,7 +964,7 @@
       price_student_soles: l.price_student_soles ?? null,
       price_profesional_soles: l.price_profesional_soles ?? null,
       price_profesional_dollars: l.price_profesional_dollars ?? null,
-      
+      enrollment_id: l.enrollment_id,
       observacion: l.observations ?? '',
       contactos: (l.contact_attempts || []).map(att => ({
         id: att.lead_contact_attempt_id,
@@ -1259,8 +1213,9 @@ async function searchLeadByPhone() {
     }
   }
 
+
 function buildEnrollmentPayload() {
-  
+  //obtengo las ID's
   const cat_type_document = idByAlias(insc.cat_type_document, docTypeCatalog.value)
   const cat_insc_modality = idByAlias(insc.cat_insc_modality, inscModalidades.value)
   const cat_type_payment  = idByAlias(insc.cat_type_payment, inscPaymentModes.value)
@@ -1271,9 +1226,8 @@ function buildEnrollmentPayload() {
 
     inscription: {
       lead_id: createdLeadId.value,
-      program_version_id: form.program_version_id,
+      program_version_id: form.edition_id?null:form.program_version_id,
       program_edition_id: form.edition_id,
-
       document: insc.document,
       cat_type_document: cat_type_document,
       full_name: insc.full_name,
@@ -1281,21 +1235,17 @@ function buildEnrollmentPayload() {
       mother_last_name: insc.mother_last_name,
       email: insc.email,
       cat_country: cat_country,
-
       cat_insc_modality: cat_insc_modality,
       cat_type_payment: cat_type_payment,
-      
-      selectedCurrencyAlias: insc.selectedCurrencyAlias,
-      montoFinal: Number(insc.montoFinal),
+      cat_currency:  cat_currency,
+      total_amount: Number(insc.total_amount),
       saved_money: Number(insc.saved_money),
-
       dsct_porcent_id: insc.dsct_porcent_id,
       dsct_stick_id: insc.dsct_stick_id,
       dsct_benefit_id: insc.dsct_benefit_id,
-
-      observations: insc.observacion,
-      
-      b2b_contract_id: null 
+      observations: insc.observacions,
+      flag_agreement: insc.flag_agreement,
+      b2b_contract_id: null //por ahora siempre null eso
     }
   }
 }
@@ -1314,19 +1264,7 @@ async function confirmarInscripcion() {
     const payload = buildEnrollmentPayload()
     const response = await comercialService.enrollmentRegister(payload)
     
-    const newEnrollmentId = response.enrollment_id
-    
-    if (insc.adjPagoFile || insc.adjCarnetFile) {
-        
-        await comercialService.uploadEnrollmentFiles(
-            newEnrollmentId,
-            insc.adjPagoFile,
-            insc.adjCarnetFile
-        )
-        toast.success('Inscripción y documentos subidos con éxito!')
-    } else {
-        toast.success('Inscripción realizada con éxito (sin adjuntos)')
-    }
+    toast.success('Inscripción y documentos subidos con éxito!')
 
     showViewModal.value = false
     router.push({ name: 'ComercialListado' })
@@ -1380,13 +1318,7 @@ async function confirmarInscripcion() {
     insc.saved_money       = 0
     insc.dsct_porcent_id   = null
     insc.dsct_money_id     = null
-    insc.observacion       = ''
-
-    insc.adjPagoFile    = null
-    insc.adjPagoNombre  = ''
-    insc.adjCarnetFile  = null
-    insc.adjCarnetNombre = ''
-
+    insc.observacions       = ''
     showViewModal.value = true 
   }
 
@@ -1418,24 +1350,7 @@ async function confirmarInscripcion() {
     const required = ['selectedCurrencyAlias','cat_type_payment','saved_money']
     return required.every(f => insc[f] || insc[f] === 0)
   }
-
-  const adjPagoInput = ref(null)
-  const adjCarnetInput = ref(null)
-
-  function onAdjuntarPago(e) {
-    const file = e.target.files?.[0]
-    if (file) {
-      insc.adjPagoFile = file
-      insc.adjPagoNombre = file.name
-    }
-  }
-  function onAdjuntarCarnet(e) {
-    const file = e.target.files?.[0]
-    if (file) {
-      insc.adjCarnetFile = file
-      insc.adjCarnetNombre = file.name
-    }
-  }
+  
 
   const montoOriginal = computed(() => 1000)
 
@@ -1461,18 +1376,6 @@ async function confirmarInscripcion() {
 
     function onEditionChange(opcion) {
         if (!opcion) return
-    }
-
-    function removeFile(type) {
-      if (type === 'pago') {
-        insc.adjPagoFile = null
-        insc.adjPagoNombre = ''
-        if (adjPagoInput.value) adjPagoInput.value.value = ''
-      } else if (type === 'carnet') {
-        insc.adjCarnetFile = null
-        insc.adjCarnetNombre = ''
-        if (adjCarnetInput.value) adjCarnetInput.value.value = ''
-      }
     }
 
     const clientProfileType = computed(() => {
@@ -1527,10 +1430,6 @@ async function confirmarInscripcion() {
         montoOriginal: 0, 
         adelanto: 0,
         observacion: '',
-        adjPagoFile: null,
-        adjPagoNombre: '',
-        adjCarnetFile: null,
-        adjCarnetNombre: '',
         montoDescuentoPorcentaje: 0,
         montoDescuentoFijo: 0,
         montoFinal: 0,
@@ -1545,9 +1444,6 @@ async function confirmarInscripcion() {
         montoBeneficio: 0,
         montoFinal: 0,
       })
-
-      if (adjPagoInput.value) adjPagoInput.value.value = ''
-      if (adjCarnetInput.value) adjCarnetInput.value.value = ''
       
     }
 

@@ -65,6 +65,7 @@ async function bootstrap () {
   app.provide(ServiceKeys.Auth,      services[ServiceKeys.Auth])
   app.provide(ServiceKeys.CorporateAgreement, services[ServiceKeys.CorporateAgreement])
   app.provide(ServiceKeys.Integration, services[ServiceKeys.Integration])
+  app.provide(ServiceKeys.Fico, services[ServiceKeys.Fico])
   
   
   app.config.globalProperties.$hasRole = (roles) => {

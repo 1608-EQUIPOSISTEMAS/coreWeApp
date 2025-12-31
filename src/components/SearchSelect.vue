@@ -1,12 +1,11 @@
 <template>
   <div class="position-relative" ref="wrapperEl">
-    <div
-      class="form-control d-flex align-items-center position-relative searchselect-control"
-      :class="[{ 'is-locked': isLocked, 'is-disabled': isDisabled }, validationClass]"
-      style="cursor: text; min-height: 2.5rem;"
-      @mousedown.prevent="onControlMouseDown"
-      :aria-disabled="isDisabled"
-    >
+<div
+  class="form-control d-flex align-items-center position-relative searchselect-control"
+  :class="[{ 'is-locked': isLocked, 'is-disabled': isDisabled }, validationClass]"
+  @mousedown.prevent="onControlMouseDown"
+  :aria-disabled="isDisabled"
+>
       <template v-if="isMultiple && selectedList.length">
         <span
           v-for="tag in selectedList"
@@ -644,5 +643,57 @@ function clearAll () {
   to {
     transform: rotate(360deg);
   }
+}
+.searchselect-control {
+  position: relative;
+  padding: 0.375rem 2.5rem 0.375rem 0.75rem; /* Padding Bootstrap + espacio para botón */
+  overflow: hidden; 
+  display: flex;
+  flex-wrap: nowrap; /* Cambiado de wrap a nowrap */
+  gap: 0.25rem;
+  align-items: center;
+  min-height: 38px; /* Altura fija de input Bootstrap */
+  height: 38px; /* Forzar altura específica */
+}
+
+.ss-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  padding: .1rem .4rem; /* Más compacto */
+  font-size: .75rem;
+  line-height: 1;
+  max-height: 22px; /* Limitar altura máxima */
+}
+
+.searchselect-input {
+  flex: 1 1 auto;
+  min-width: 4ch;
+  height: auto;
+  line-height: 1.5;
+  font-size: 1rem; /* Tamaño estándar */
+}
+
+.searchselect-control {
+  position: relative;
+  padding: 0.25rem 2.5rem 0.25rem 0.75rem; /* Padding reducido */
+  overflow: hidden; 
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  align-items: center;
+  min-height: 32px;
+  height: 32px; /* Reducido de 38px */
+}
+
+.ss-chip {
+  padding: .05rem .35rem; /* Más compacto */
+  font-size: .7rem; /* Más pequeño */
+  max-height: 20px;
 }
 </style>

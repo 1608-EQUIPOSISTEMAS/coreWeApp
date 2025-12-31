@@ -77,13 +77,13 @@
         <CIcon icon="cil-envelope-open" /> Mensajes
         <CBadge color="success" class="ms-auto">{{ itemsCount }}</CBadge>
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()" v-if="$hasRole('ADMIN')">
+       <CDropdownItem @click="updateBase()" v-if="$hasRole(['ADMIN'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()"  v-if="$hasRole('PRODUCTO')">
+       <CDropdownItem @click="updateBase()"  v-if="$hasRole(['ADMIN','GERENCIA'])">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem>
-       <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole('PRODUCTO')">
+       <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole(['ADMIN','PRODUCTO'])">
         <CIcon  icon="cil-cloud-download" /> Planeamiento
       </CDropdownItem>
       <!-- <CDropdownItem>

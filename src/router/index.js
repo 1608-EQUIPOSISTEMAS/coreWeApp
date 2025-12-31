@@ -41,14 +41,14 @@ const routes = [
         children: [
           {
             path: 'inscripciones',
-            name: 'FicoInscripciones',
-            component: () => import('@/views/fico/Inscripciones.vue'),
+            name: 'enrollment',
+            component: () => import('@/views/fico/Enrollment.vue'),
             meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/new',
-            name: 'FicoInscripcionesNew',
-            component: () => import('@/views/fico/InscripcionesNew.vue'),
+            name: 'enrollmentForm',
+            component: () => import('@/views/fico/EnrollmentForm.vue'),
             meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
           {

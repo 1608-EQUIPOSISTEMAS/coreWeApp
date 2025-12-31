@@ -3,7 +3,6 @@
     <div class="card-header">
       <div class="title">Gestión comercial</div>
       <div class="actions-bar">
-        <button class="btn btn-outline" @click="openFilterModal">Filtros</button>
         <button class="btn btn-primary" @click="goNew">+ Nuevo</button>
       </div>
     </div>

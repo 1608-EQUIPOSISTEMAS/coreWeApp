@@ -261,6 +261,7 @@
                     type="button"
                     class="btn btn-link btn-sm p-0"
                     @click="onAddChildClick(ver)"
+                    v-if="form.cat_type_program!='we_program_type_course'"
                     :disabled="!ver.program_version_id"
                   >
                     + Agregar curso hijo
@@ -279,6 +280,7 @@
                     sublabel-field="version_code"
                     :fetcher="q => programService.programVersionCaller({ q })"
                     label-field="abbreviation"
+                    :disabled="child.program_version_id"
                     value-field="program_version_id"
                     placeholder="HIJO…"
                     :minChars="0"
