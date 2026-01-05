@@ -206,7 +206,6 @@ function badgeRisk(e){
 .table{width:100%;border-collapse:collapse;font-size:.85rem}
 .table th,.table td{padding:.55rem .7rem;border-bottom:1px solid #f3f4f6}
 .ta-right{text-align:right}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .badge{display:inline-block;padding:.15rem .45rem;border-radius:.5rem;border:1px solid transparent;font-size:.72rem}
 .badge-success{background:#dcfce7;color:#166534;border-color:#bbf7d0}
 .badge-info{background:#e0f2fe;color:#075985;border-color:#bae6fd}

@@ -1,20 +1,19 @@
 <template>
-  <div class="card leads-card">
+  <div class="card instructors-card">
     <div class="card-header">
       <div class="title">
-        Instructores
-        <span class="sub">Listado</span>
+        <span>Instructores</span>
+        <span class="sub">Listado General</span>
       </div>
 
       <div class="actions-bar">
         <button class="btn btn-primary" @click="goNew">
-          + Nuevo
+          <i class="fa-solid fa-plus me-1"></i> Nuevo
         </button>
       </div>
     </div>
 
     <div class="card-body">
-      
       <BaseFilterChips 
         :items="activeFilterChips"
         @remove="clearFilter"
@@ -28,113 +27,82 @@
           @change="handlePaginationChange"
         />
       </div>
-      
-      <br>
 
       <div class="table-responsive">
-        <table class="table" :class="{ dense }">
+        <table class="table table-hover">
           <thead>
             <tr>
-              <th class="ta-right">Acciones</th>
-              <th>Estado instructor</th>
-              <th>Nombre completo</th>
-              <th>Documento</th>
-              <th>Ocupación</th>
-              <th>País</th>
+              <th class="ta-center">Acciones</th>
+              <th>Estado</th>
+              <th>Instructor / Documento</th>
+              <th>Ocupación / País</th>
               <th>Registro</th>
               <th>Última modif.</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="i in instructors" :key="i.instructor_id">
-              <td class="ta-right nowrap">
-                <button class="btn btn-outline btn-md" @click="editInstructor(i)">
+              <td class="ta-center nowrap">
+                <button class="btn btn-outline btn-sm" @click="editInstructor(i)">
                   <i class="fa-solid fa-pen-to-square text-warning"></i>
                 </button>
               </td>
 
               <td>
-                <span
-                  class="badge"
-                  :class="i.instructor_active === 'Y' ? 'badge-success' : 'badge-danger'"
-                >
+                <span class="badge" :class="i.instructor_active === 'Y' ? 'badge-success' : 'badge-danger'">
                   {{ i.instructor_active === 'Y' ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
 
-              <td class="minW">
-                <div class="name">
-                  {{ buildFullName(i) }}
+              <td>
+                <div class="name">{{ buildFullName(i) }}</div>
+                <div class="font-mono x-small text-primary mt-1">
+                  <span v-if="i.cat_type_document_label">{{ i.cat_type_document_label }}:</span>
+                  {{ i.document_number || 'S/N' }}
                 </div>
               </td>
 
-              <td class="minW">
-                <div class="mono">
-                  <span class="badge badge-neutral" v-if="i.cat_type_document_label">
-                    {{ i.cat_type_document_label }}
-                  </span>
-                  <span v-if="i.document_number">
-                    &nbsp;{{ i.document_number }}
-                  </span>
-                  <span v-else>—</span>
-                </div>
+              <td>
+                <div class="small fw-600">{{ i.cat_occupation_label || '—' }}</div>
+                <div class="muted small">{{ i.cat_country_label || '—' }}</div>
               </td>
 
-              <td class="minW">
-                <div class="name">{{ i.cat_occupation_label || '—' }}</div>
-              </td>
-
-              <td class="minW">
-                <div class="name">{{ i.cat_country_label || '—' }}</div>
-              </td>
-
-              <td class="minW">
-                <div>{{ formatDate(i.registration_date) }}</div>
-              </td>
-
-              <td class="minW">
-                <div>{{ formatDate(i.modification_date) }}</div>
-              </td>
+              <td><div class="small muted">{{ formatDate(i.registration_date) }}</div></td>
+              <td><div class="small muted">{{ formatDate(i.modification_date) }}</div></td>
             </tr>
 
             <tr v-if="!instructors.length">
-              <td colspan="8" class="empty-state">Sin resultados.</td>
+              <td colspan="6" class="empty-state">No se encontraron instructores.</td>
             </tr>
           </tbody>
         </table>
       </div>
-
     </div>
   </div>
 
-  <BaseModal v-model="showFilterModal" title="Filtros de instructores" size="lg">
+  <BaseModal v-model="showFilterModal" title="Filtros de Instructores" size="lg">
     <div class="px-3 py-2">
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Estado instructor</label>
+          <label class="form-label">Estado Instructor</label>
           <SearchSelect
             v-model="filters.estado_instructor"
             :items="filtroEstadoInstructor"
             label-field="description"
             value-field="value"
-            placeholder="ESTADO…"
+            placeholder="Todos..."
           />
         </div>
 
         <div class="col-md-8">
           <label class="form-label">Búsqueda (q)</label>
-          <div class="input-group">
-            <span class="input-group-text">
-              <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
-            <input
-              v-model.trim="filters.q"
-              type="text"
-              class="form-control"
-              placeholder="Buscar por nombre o documento…"
-              @keyup.enter="applyFilters"
-            />
-          </div>
+          <input
+            v-model.trim="filters.q"
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre, documento..."
+            @keyup.enter="applyFilters"
+          />
         </div>
       </div>
     </div>
@@ -143,12 +111,8 @@
       <div class="d-flex justify-content-between w-100">
         <button class="btn btn-outline btn-sm" @click="clearFilters">Limpiar</button>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">
-            Cerrar
-          </button>
-          <button class="btn btn-primary btn-sm" @click="applyFilters">
-            Aplicar filtros
-          </button>
+          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">Cerrar</button>
+          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
         </div>
       </div>
     </template>
@@ -161,60 +125,52 @@ import { useRouter } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
-
-// === NUEVAS IMPORTACIONES ===
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 
 const router = useRouter()
 const instructorService = inject(ServiceKeys.Instructor)
-const catalog = inject('catalog')
+// const catalog = inject('catalog') // Descomentar si usas catálogos
 
-// === estado UI
+// === Estado UI ===
 const showFilterModal = ref(false)
-const dense = ref(false)
-function openFilterModal () { showFilterModal.value = true }
+function openFilterModal() { showFilterModal.value = true }
 
-// === tabla + paginación
+// === Datos ===
 const instructors = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
 
-// === filtros (mapeo a sp_instructor_list)
+// === Filtros ===
 const filters = reactive({
-  estado_instructor: null, // -> active
-  cat_occupation: null,    // -> cat_occupation
-  cat_person_status: null, // -> cat_person_status
-  q: ''                    // -> q
+  estado_instructor: null,
+  cat_occupation: null,
+  cat_person_status: null,
+  q: ''
 })
 
-// === Catálogos ===
+// === Catálogos Locales ===
 const filtroEstadoInstructor = [
   { value: null, description: 'Todos' },
   { value: true, description: 'Activo' },
   { value: false, description: 'Inactivo' }
 ]
-// const filtroOcupaciones = ref(catalog.options('occupation') || [])
-// const filtroEstadosPersona = ref(catalog.options('person_status') || [])
 const activeFilterChips = ref([])
-
 
 // =================================================================
 // 1. LÓGICA DE PERSISTENCIA
 // =================================================================
 const { saveState } = useTablePersistence('crm_instructors_filter_state_v1', filters, pagin)
 
-
 // =================================================================
 // 2. ACCIONES Y EVENTOS
 // =================================================================
-
 function handlePaginationChange() {
   saveState()
   fetchInstructors()
 }
 
-function applyFilters () {
+function applyFilters() {
   showFilterModal.value = false
   pagin.value.page = 1
   saveState()
@@ -222,7 +178,7 @@ function applyFilters () {
   fetchInstructors()
 }
 
-function clearFilter (key) {
+function clearFilter(key) {
   if (key === 'estado_instructor') filters.estado_instructor = null
   else if (key === 'cat_occupation') filters.cat_occupation = null
   else if (key === 'cat_person_status') filters.cat_person_status = null
@@ -231,7 +187,7 @@ function clearFilter (key) {
   applyFilters()
 }
 
-function clearFilters () {
+function clearFilters() {
   Object.assign(filters, {
     estado_instructor: null,
     cat_occupation: null,
@@ -244,34 +200,22 @@ function clearFilters () {
   fetchInstructors()
 }
 
-function rebuildChips () {
+function rebuildChips() {
   const chips = []
   if (filters.estado_instructor !== null) {
-    chips.push({ key: 'estado_instructor', text: `Instructor: ${filters.estado_instructor ? 'Activo' : 'Inactivo'}` })
+    chips.push({ key: 'estado_instructor', text: `Estado: ${filters.estado_instructor ? 'Activo' : 'Inactivo'}` })
   }
-  // (Opcional si usas los filtros de ocupación/estado persona)
-  /*
-  if (filters.cat_occupation) {
-    const it = filtroOcupaciones.value.find(i => i.id === filters.cat_occupation)
-    chips.push({ key: 'cat_occupation', text: `Ocupación: ${it?.description || filters.cat_occupation}` })
-  }
-  if (filters.cat_person_status) {
-    const it = filtroEstadosPersona.value.find(i => i.id === filters.cat_person_status)
-    chips.push({ key: 'cat_person_status', text: `Estado persona: ${it?.description || filters.cat_person_status}` })
-  }
-  */
   if (filters.q) {
     chips.push({ key: 'q', text: `q: ${filters.q}` })
   }
   activeFilterChips.value = chips
 }
 
-
-// === carga al backend
-async function fetchInstructors () {
+// === API ===
+async function fetchInstructors() {
   try {
     const payload = {
-      active: filters.estado_instructor,            // true | false | null
+      active: filters.estado_instructor,
       cat_occupation: filters.cat_occupation || null,
       cat_person_status: filters.cat_person_status || null,
       q: filters.q || null,
@@ -279,12 +223,10 @@ async function fetchInstructors () {
       size: pagin.value.size
     }
 
-    const { items, total, page, size } =
-      await instructorService.instructorList(payload)
+    const { items, total, page, size } = await instructorService.instructorList(payload)
 
     instructors.value = items || []
     pagin.value.total = Number(total || 0)
-    // Asegurar sincronización si el backend corrige la página
     if(page) pagin.value.page = Number(page)
     if(size) pagin.value.size = Number(size)
 
@@ -295,8 +237,8 @@ async function fetchInstructors () {
   }
 }
 
-// === helpers ===
-function formatDate (value) {
+// === Helpers Visuales ===
+function formatDate(value) {
   if (!value) return '—'
   try {
     const d = new Date(value)
@@ -308,19 +250,13 @@ function formatDate (value) {
   } catch { return '—' }
 }
 
-function buildFullName (i) {
+function buildFullName(i) {
   const parts = [i.first_name, i.last_name, i.mother_last_name].filter(Boolean)
   return parts.length ? parts.join(' ') : '—'
 }
 
-// === acciones de navegación ===
-function goNew () {
-  router.push({ name: 'InstructorNew' }) 
-}
-
-function editInstructor (i) {
-  router.push({ name: 'InstructorEdit', params: { id: i.instructor_id } })
-}
+function goNew() { router.push({ name: 'InstructorNew' }) }
+function editInstructor(i) { router.push({ name: 'InstructorEdit', params: { id: i.instructor_id } }) }
 
 // === Lifecycle ===
 onMounted(() => {
@@ -330,42 +266,85 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Solo estilos estructurales esenciales */
-.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); margin-bottom: 1.5rem; }
-.card-header { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }
-.title { font-weight: 600; font-size: 1rem; color: #111827; display: flex; align-items: baseline; gap: .5rem; }
-.title .sub { font-weight: 500; font-size: .8rem; color: #6b7280; }
-.actions-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.card-body { padding: 1rem 1.25rem; }
+/* Contenedor Principal (Estilo FICO - Igual a Programas) */
+.instructors-card { 
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 0.6rem; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #6366f1; /* Color Indigo */
+  margin-bottom: 2rem;
+}
 
-/* Table */
+.card-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 1.25rem; 
+  border-bottom: 1px solid #f3f4f6; 
+}
+
+.title { display: flex; flex-direction: column; gap: 4px; }
+.title span { font-weight: 700; font-size: 1.1rem; color: #111827; }
+.title .sub { font-weight: 600; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.card-body { padding: 1.25rem; }
+
+/* Tabla Unificada */
 .table-responsive { width: 100%; overflow-x: auto; margin-top: 1rem; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.table thead th { position: sticky; top: 0; background-color: #f9fafb; text-align: left; font-weight: 600; white-space: nowrap; padding: .6rem .75rem; border-bottom: 1px solid #e5e7eb; }
-.table td { padding: .6rem .75rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
-.table.dense td, .table.dense thead th { padding: .35rem .5rem; }
-.nowrap { white-space: nowrap; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
+.table thead th { 
+  background: #f9fafb; 
+  padding: 0.85rem 0.75rem; 
+  text-align: left; 
+  font-weight: 600; 
+  color: #4b5563; 
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+.table td { padding: 0.85rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.table-hover tbody tr:hover { background-color: #f8fafc; }
+
+/* Tipografía */
+.font-mono { font-weight: 600;  }
 .ta-right { text-align: right; }
-.minW { min-width: 160px; }
-.empty-state { text-align: center; padding: 1rem; color: #6b7280; font-style: italic; }
+.ta-center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.fw-600 { font-weight: 600; }
 
-.name { font-weight: 600; color: #111827; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.name { font-weight: 600; color: #1e293b; line-height: 1.2; font-size: 0.9rem; }
+.muted { color: #6b7280; }
+.small { font-size: 0.75rem; }
+.x-small { font-size: 0.68rem; }
+.text-primary { color: #4f46e5; }
+.text-warning { color: #d97706; }
 
-/* Badges */
-.badge { display: inline-block; padding: .2rem .45rem; font-size: .72rem; border-radius: .5rem; border: 1px solid transparent; white-space: nowrap; }
-.badge-neutral { background: #f3f4f6; color: #374151; border-color: #e5e7eb; }
-.badge-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-.badge-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+/* Badges (Estilo FICO) */
+.badge { padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 600; display: inline-block; border: 1px solid transparent; }
+.badge-neutral { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.badge-success { background: #ecfdf5; color: #065f46; border-color: #d1fae5; }
+.badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
 
-/* Buttons */
-.btn { display: inline-block; font-size: .8rem; font-weight: 500; border-radius: .375rem; padding: .5rem .75rem; border: 1px solid #d1d5db; background-color: #fff; cursor: pointer; color: #374151; }
-.btn-sm { padding: .25rem .5rem; font-size: .75rem; }
-.btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
-.btn-outline { background-color: #fff; border-color: #d1d5db; color: #374151; }
+/* Botones */
+.btn { 
+  border: 1px solid #d1d5db; 
+  padding: 0.45rem 0.75rem; 
+  border-radius: 0.4rem; 
+  cursor: pointer; 
+  transition: all 0.2s; 
+  background: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+.btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+.btn-primary:hover { background: #4338ca; }
+.btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
 
-/* Modal Inputs */
-.form-label { font-size: .85rem; color: #374151; margin-bottom: .35rem; }
-.input-group-text { background: #f9fafb; border-color: #e5e7eb; }
-.form-control { border-color: #e5e7eb; border-radius: .375rem; padding: .5rem .75rem; font-size: .8rem; }
+/* Filtros y Inputs */
+.form-label { font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; display: block; }
+.form-control { width: 100%; border: 1px solid #d1d5db; border-radius: 0.4rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+.form-control:focus { outline: none; border-color: #6366f1; ring: 2px rgba(99, 102, 241, 0.2); }
+
+.empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
 </style>

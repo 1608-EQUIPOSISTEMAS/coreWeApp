@@ -350,7 +350,6 @@ onMounted(() => {
 .table.dense td, .table.dense thead th { padding: .35rem .5rem; }
 .nowrap { white-space: nowrap; }
 .ta-right { text-align: right; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
 .empty-state { text-align: center; padding: 1rem; color: #6b7280; font-style: italic; }
 .name { font-weight: 600; color: #111827; }
 .muted { color: #6b7280; }

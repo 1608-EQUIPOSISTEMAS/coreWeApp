@@ -13,6 +13,15 @@ export default defineConfig(() => {
           autoprefixer({}), // add options if needed
         ],
       },
+      preprocessorOptions: {
+        scss: {
+          // Esto silencia las advertencias que vienen de librerías en node_modules
+          quietDeps: true,
+          
+          // Si lo anterior no funciona por la versión de Sass, usa esto:
+          silenceDeprecations: ['legacy-js-api', 'if-function', 'import', 'mixed-decls', 'color-functions'],
+        },
+      },
     },
     resolve: {
       alias: [

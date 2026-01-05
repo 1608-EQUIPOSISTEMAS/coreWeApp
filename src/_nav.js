@@ -50,7 +50,7 @@ export default [
       },
       {
         component: 'CNavItem',
-        name: 'Enrollment',
+        name: 'Inscripciones',
         to: '/fico/inscripciones',
       },
       {

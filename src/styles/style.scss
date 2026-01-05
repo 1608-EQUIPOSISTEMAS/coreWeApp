@@ -4,6 +4,10 @@
 @use "@coreui/chartjs/scss/coreui-chartjs";
 @use "vendors/simplebar";
 
+html, body {
+  font-family: 'Inter', 'Roboto', Arial, sans-serif !important;
+}
+
 body {
   background-color: var(--cui-tertiary-bg);
 }
@@ -71,4 +75,19 @@ body {
   .footer {
     --cui-footer-bg: var(--cui-body-bg);
   }
+}
+
+
+/* Opción A: Sobreescribir variables CSS (Recomendado) */
+.dp__theme_light {
+   /* Reduce el padding interno (arriba/abajo, izq/der) */
+   --dp-input-padding: 6px 8px; /* Ajusta este 6px a tu gusto, por defecto es mayor */
+   
+   /* Si necesitas ajustar el tamaño de fuente */
+   --dp-font-size: 0.875rem; 
+}
+
+/* Opción B: Forzar altura si usas Bootstrap (clase form-control-xs) */
+.dp__input {
+    height: 30px; /* O la altura exacta que tengan tus otros inputs */
 }

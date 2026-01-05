@@ -86,7 +86,7 @@
 
             <span v-if="activeFilters.date_range" class="badge bg-white text-dark border shadow-sm pe-1">
                 <i class="fa-regular fa-calendar me-1 text-muted"></i>
-                {{ activeFilters.start_date }} al {{ activeFilters.end_date }}
+                {{ activeFilters.date_from }} al {{ activeFilters.date_to }}
                 <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('date_range')"></i>
             </span>
 
@@ -212,10 +212,13 @@
 
                 <td style="min-width: 100px;" class="minW">
                   <div class="name fw-bold">
-                    {{ e.program_abreviature || '—' }} {{'('+e.program_sessions+')' }}
+                    <span style="cursor:pointer" class="text-primary text-decoration-hover" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
+                      {{ e.program_abreviature || '—' }} 
+                      <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                    </span>
                   </div>
                   <div class="muted small">
-                    {{ e.version_code }}
+                    {{ e.version_code }}&nbsp <b> {{'('+e.program_sessions+')' }}</b>
                     <div class="muted small float-end">
                       {{ 'Seg: ' + e.cat_segment }}  {{ e.cat_course_category_alias?('| S: ' + e.cat_course_category_label):'' }}
                     </div>
@@ -233,7 +236,13 @@
                 </td>
 
                 <td style="min-width: 120px;" >
-                  <div class="name small fw-bold">{{ formatDate(e.start_date) }}</div>
+                  <div 
+                    class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
+                    title="Filtrar solo por este día"
+                    @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
+                  >
+                    {{ formatDate(e.start_date) }} <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                  </div>
                   <div class="muted small">
                     {{ 'CA: '+e.calc_da || 0 }}
                     <div class="muted small float-end">
@@ -733,13 +742,12 @@
 
         <div class="row g-2 mb-3">
             <label class="form-label small fw-bold">Rango Fecha inicio</label>
-          <DateRangePicker
-            :modelValue="{ start: filterForm.start_date, end: filterForm.end_date }"
-            @update:modelValue="(v) => { filterForm.start_date = v.start; filterForm.end_date = v.end }"
-            label-from="DESDE"
-            label-to="HASTA"
-            :show-presets="false"
-          />
+              <BaseDatePicker
+                v-model="filterForm.range_string"
+                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                placeholder="Seleccione rango (Desde a Hasta)"
+                @on-change="handleRangeFilterChange"
+            />
         </div>
 <!-- 
         <div class="mb-3 col-6">
@@ -928,25 +936,24 @@
                 <div class="row g-3">
                   <div class="col-md-6">
                         <label class="form-label-sm">Fecha Inicio</label>
-                        <input 
-                          type="date" 
-                          class="form-control form-control-sm" 
-                          v-model="modalForm.start_date" 
-                          :required="isCourse" 
-                          @change="validateAndCalculate(modalForm, 'start_date')"
+                        <BaseDatePicker
+                          v-model="modalForm.start_date"
+                          :config="getChildDateConfig()"
+                          :required="isCourse"
+                          placeholder="dd/mm/aaaa"
+                          @on-change="validateAndCalculate(modalForm, 'start_date')"
                         />
-                      </div>
+                  </div>
                   <div class="col-md-6 position-relative">
                     <label class="form-label-sm">Fecha Fin</label>
                     <div class="input-group input-group-sm">
-                      <input 
-                        type="date" 
-                        class="form-control" 
-                        v-model="modalForm.end_date" 
-                        disabled
-                        :required="isCourse" 
-                        @change="validateDateInput(modalForm, 'end_date')"
+                      <BaseDatePicker
+                        v-model="modalForm.end_date"
+                        :config="getChildDateConfig(null,modalForm)"
+                        :required="isCourse"
+                        placeholder="Calculado autom."
                       />
+                      
                       <button 
                         class="btn btn-outline-secondary" 
                         type="button"
@@ -1028,8 +1035,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 20%">Sub-Programa</th>
-                                <th style="width: 25%">Edición</th>
-                                <th style="width: 20%">Fechas</th>
+                                <th style="width: 20%">Edición</th>
+                                <th style="width: 25%">Fechas</th>
                                 <th style="width: 20%">Horario / Docente</th>
                                 <th style="width: 15%">Config.</th>
                             </tr>
@@ -1037,7 +1044,8 @@
                         <tbody>
                              <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id">
                                  <td class="fw-bold text-dark">
-                                   <span style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
+                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
+                                   <span class="text-primary text-decoration-hover" style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
                                   <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: '+ child.sessions }}</div>
                                  </td>
                                  
@@ -1079,23 +1087,22 @@
 
                                  <td class="overflow-visible position-relative">
                                   <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                                    <input 
-                                      type="date" 
-                                      class="form-control form-control-xs mb-1" 
-                                      v-model="child.start_date" 
-                                      required 
-                                      @change="validateAndCalculate(child, 'start_date', index)"
-                                    />
+                                    <BaseDatePicker
+                                        v-model="child.start_date"
+                                        class="mb-1"
+                                        required
+                                        placeholder="Inicio"
+                                        :config="getChildDateConfig(index)"
+                                        @on-change="validateAndCalculate(child, 'start_date', index)"
+                                      />
 
                                     <div class="position-relative">
                                         <div class="input-group input-group-xs">
-                                          <input 
-                                            type="date" 
-                                            class="form-control form-control-xs" 
-                                            v-model="child.end_date" 
-                                            required 
-                                            disabled
-                                            @change="validateDateInput(child, 'end_date')"
+                                          <BaseDatePicker
+                                            v-model="child.end_date"
+                                            required
+                                            :config="getChildDateConfig(null,child)"
+                                            placeholder="Fin"
                                           />
                                           <button 
                                             class="btn btn-outline-secondary px-1" 
@@ -1154,12 +1161,15 @@
                                           value-field="id" 
                                           placeholder="Días" 
                                           class="mb-1"
-                                          @change="calculateEndDate(child)"
+                                          @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id',child.cat_day_combination_id)"
                                       />                                         
                                       <SearchSelect 
-                                             v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" />
-                                         <SearchSelect 
-                                              v-if="child.new || child.edition_id" v-model="child.instructor_id" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
+                                        v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" 
+                                        @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
+                                      />
+                                      <SearchSelect 
+                                        v-if="child.new || child.edition_id" v-model="child.instructor_id" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" 
+                                      />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
                                  </td>
@@ -1369,7 +1379,8 @@
                <div class="badge bg-primary text-white mb-1" style="font-size: 0.65rem;">PROGRAMA PADRE</div>
                <h6 class="m-0 fw-bold text-dark">{{ group.abbreviation }}</h6>
                <div class="small text-muted">
-                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }}  </span>
+                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }} 
+                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp; </span>
                </div>
             </div>
           </div>
@@ -1401,7 +1412,10 @@
                              <i class="fa-solid fa-book-open text-muted small"></i>
                              <div>
                                 <div class="fw-bold text-dark">
+                                  <span class="text-decoration-hover text-primary cursor-pointer"  @click.stop="filterDirectly({ program_version_id: child.program_version_id, program_version_label: child.abbreviation })">
                                    {{ child.program_abreviature || child.abbreviation }}
+                                  </span>
+                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
                                    <span v-if="child.is_current" class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem">ACTUAL</span>
                                 </div>
                                 <div class="text-muted small" style="font-size: 0.7rem;">
@@ -1412,7 +1426,13 @@
                        </td>
                        <td>
                           <div v-if="child.start_date">
-                             {{ formatDate(child.start_date) }} <br>
+                              <span class="text-decoration-hover text-primary cursor-pointer"
+                              @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })"
+                              >
+                                {{ formatDate(child.start_date) }} 
+                              </span>
+                              <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
+                             <br>
                              <span class="text-muted text-xs">al {{ formatDate(child.end_date) }}</span>
                           </div>
                           <span v-else class="text-muted">-</span>
@@ -1559,10 +1579,15 @@
 
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted, inject, watch} from 'vue'
+  
+import { ref, reactive, computed, onMounted, inject, watch, nextTick } from 'vue' // <--- Agrega nextTick
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import DateRangePicker from '@/components/DateRangePicker.vue'
+
+import BaseDatePicker from '@/components/BaseDatePicker.vue';
+
+// Configuración opcional para que se vea bonito y en español
 // Asegúrate de tener los componentes importados si los usas dentro de <script setup> 
 // aunque en Vue 3 <script setup> suelen ser auto-detectados si están en components.d.ts, 
 // pero es buena práctica dejarlos si ya estaban.
@@ -1575,7 +1600,7 @@ const editionService = inject(ServiceKeys.Edition)
 const instructorService = inject(ServiceKeys.Instructor)
 const catalog = inject('catalog')
 const toast = useToast()
-
+const date = ref();
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])
@@ -1867,6 +1892,9 @@ const filterForm = reactive({
     instructor_id: null,
     instructor_label: '',
     start_date: '',
+    range_string: null,
+    date_from: null,
+    date_to: null,
     end_date: '',
     clasification: null,
     program_version_id: null,
@@ -1906,7 +1934,7 @@ function applyFilters() {
 
     // 3. LOGICA ESPECIAL PARA FECHAS
     // El template espera 'date_range' para mostrar el chip, pero el form tiene start/end
-    if (filterForm.start_date && filterForm.end_date) {
+    if (filterForm.date_from && filterForm.date_to) {
         activeFilters.date_range = true; 
     }
 
@@ -1922,11 +1950,11 @@ function applyFilters() {
 
 function removeFilter(key) {
     if(key === 'date_range') {
-        delete activeFilters.start_date;
-        delete activeFilters.end_date;
+        delete activeFilters.date_from;
+        delete activeFilters.date_to;
         delete activeFilters.date_range;
-        filterForm.start_date = '';
-        filterForm.end_date = '';
+        filterForm.date_from = null;
+        filterForm.date_to = null;
     } else if (key === 'instructor_id') {
          delete activeFilters.instructor_id;
          delete activeFilters.instructor_label;
@@ -1952,8 +1980,8 @@ function clearAllFilters(reload=true) {
     filterForm.q = '';
     filterForm.instructor_id = null;
     filterForm.instructor_label = '';
-    filterForm.start_date = '';
-    filterForm.end_date = '';
+    filterForm.date_from = null;
+    filterForm.date_to = null;
     filterForm.clasification = null;
     filterForm.program_version_id = null;
     filterForm.cat_type_program = null;
@@ -1963,6 +1991,7 @@ function clearAllFilters(reload=true) {
     filterForm.cat_course_category = null;
     filterForm.program_version_label = null;
     filterForm.active = null;
+    filterForm.range_string = null;
     filterForm.cat_day_combination = null;
     filterForm.cat_hour_combination = null;
     saveState()
@@ -2035,7 +2064,21 @@ const catalogs = ref({
   catHolidays: (catalog && catalog.options('we_holiday')) || []
 }
 )
-
+// 2. Función para procesar el cambio del DatePicker
+function handleRangeFilterChange(selectedDates, dateStr) {
+    // dateStr llega como "2025-01-01 to 2025-01-31"
+    if (dateStr.includes(' to ')) {
+        const parts = dateStr.split(' to ');
+        filterForm.start_date = parts[0];
+        filterForm.end_date = parts[1];
+    } else {
+        // Si el usuario borra o solo selecciona un día
+        filterForm.start_date = dateStr;
+        filterForm.end_date = dateStr; 
+    }
+    // Sincronizamos el string visual
+    filterForm.range_string = dateStr;
+}
 
 const modalForm = reactive({
   program_version_id: null,
@@ -2109,8 +2152,8 @@ const isModalValid = computed(() => {
 function resetModalForm() {
   modalForm.program_version_id = null
   modalForm.instructor_id = null
-  modalForm.start_date = ''
-  modalForm.end_date = ''
+  modalForm.start_date = null
+  modalForm.end_date = null
   modalForm.expedient = false
   modalForm.sessions = null
   modalForm.upgrade = false
@@ -2198,8 +2241,8 @@ const defaultStartDate = computed(() => {
 function cleanFormModal(){
   modalForm.program_version_id = null
   modalForm.instructor_id = null
-  modalForm.start_date = ''
-  modalForm.end_date = ''
+  modalForm.start_date = null
+  modalForm.end_date = null
   modalForm.expedient = false
   modalForm.sessions = null
   modalForm.upgrade = false
@@ -2211,6 +2254,8 @@ function cleanFormModal(){
   modalForm.cat_type_program_alias = null
   modalForm.cat_day_combination_id = null
   modalForm.cat_hour_combination_id = null
+  modalForm.start_date = null // Antes era ''
+  modalForm.end_date = null   // Antes era ''
   modalForm.program_version_children = []
   modalForm.vacant = 0
   modalForm.cat_segment_id = null
@@ -2389,6 +2434,15 @@ async function applyModalForm() {
   }
 }
 
+function setChildren(children, field, value) {
+  children.forEach(child => {
+    if(child[field])return;
+    child[field] = value;
+  });
+}
+
+
+
 function onProgramVersionChange(opcion) {
   
   if (currentEdition.value && modalForm.cat_type_program_alias !== 'we_program_type_course') return
@@ -2563,7 +2617,7 @@ function validateDateInput(targetObj, fieldKey) {
   // 1. Validar Mes y Año (Dashboard context)
   if (y !== selectedYear.value || m !== selectedMonth.value) {
     toast.info(`La fecha debe pertenecer a ${months.value[selectedMonth.value - 1]} del ${selectedYear.value}`);
-    targetObj[fieldKey] = ''; // Limpiar el input
+    targetObj[fieldKey] = null; // Limpiar el input
     return;
   }
 
@@ -2577,11 +2631,46 @@ function validateDateInput(targetObj, fieldKey) {
     const hName = hObj ? hObj.description : 'Feriado';
     
     toast.info(`La fecha seleccionada es feriado (${hName}) y no está permitida.`);
-    targetObj[fieldKey] = ''; // Limpiar el input
+    targetObj[fieldKey] = null; // Limpiar el input
     return;
   }
 }
 
+function getChildDateConfig(index,bodyField=null) {
+  const config = {};
+
+  if(bodyField){
+      config.minDate = bodyField.start_date;
+      return config;
+  }
+
+  // 1. REGLA: El Primer Hijo (index 0) solo dentro del mes seleccionado
+  if ((index === 0 || index == null)&&!hasActiveFilters) {
+    const y = selectedYear.value;
+    const m = selectedMonth.value; // Viene del 1 al 12
+    
+    // Calcular último día del mes (Truco JS: día 0 del mes siguiente es el último del actual)
+    const lastDay = new Date(y, m, 0).getDate(); 
+
+    // Definir límites (YYYY-MM-DD)
+    config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
+  } 
+  
+  // 2. REGLA: Los siguientes hijos (index > 0)
+  // No pueden ser anteriores a la fecha del primer hijo
+  else {
+    const firstChild = modalForm.program_version_children[0];
+    
+    // Si el primer hijo ya tiene fecha, esa es la mínima para este
+    if (firstChild && firstChild.start_date) {
+      config.minDate = firstChild.start_date;
+    }
+    
+  }
+
+  return config;
+}
 /**
  * Parsea la descripción del combo (ej: "Lun-Mie-Vier") y devuelve un array de días JS (0-6)
  * JS: 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
@@ -2611,24 +2700,50 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
    const [y, m, d] = dateVal.split('-').map(Number);
 
    // Validación Mes/Año
-   if ((y !== selectedYear.value || m !== selectedMonth.value) && index==0 ) {
-       toast.info(`La fecha debe pertenecer al periodo seleccionado.`);
-       targetObj[fieldKey] = '';
-       targetObj.end_date = '';
+   if ((y !== selectedYear.value || m !== selectedMonth.value) && (index==0 || index==null) ) {
+      toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
+       
+       // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
+       nextTick(() => {
+           targetObj[fieldKey] = null;
+           // Si es la fecha de inicio, limpiamos también la de fin para evitar inconsistencias
+           if (fieldKey === 'start_date') {
+               targetObj.end_date = null;
+           }
+       });
+      
+       targetObj[fieldKey] = null;
+       targetObj.start_date =null;
+       targetObj.end_date = null;
        return;
    }
    
    if (index !== null && index > 0) {
-    const previousChild = modalForm.program_version_children[index - 1];
-    
-    if (previousChild.start_date && dateVal < previousChild.start_date) {
-      toast.warning(
-        `Orden cronológico inválido: Este módulo no puede empezar antes que el anterior (${formatDate(previousChild.start_date)}).`
-      );
-      targetObj[fieldKey] = '';
-      return;
+      const firstChild = modalForm.program_version_children[0]; 
+      
+      // Validar que no sea anterior al primero
+      if (firstChild.start_date && dateVal < firstChild.start_date) {
+        toast.warning(`No puede iniciar antes que el primer módulo.`);
+        
+        nextTick(() => {
+            targetObj[fieldKey] = null;
+            targetObj.end_date = null; 
+        });
+        return;
+      }
+
+      // Validar contra el hermano anterior (Opcional, según tu lógica actual)
+      const previousChild = modalForm.program_version_children[index - 1];
+      if (previousChild.start_date && dateVal < previousChild.start_date) {
+        toast.warning(`Orden cronológico inválido.`);
+        
+        nextTick(() => {
+            targetObj[fieldKey] = null;
+            targetObj.end_date = null; 
+        });
+        return;
+      }
     }
-  }
 
    // Validación Feriado (CORREGIDO: Usamos holidayDates.value)
    if (holidayDates.value.includes(dateVal)) {
@@ -2636,7 +2751,7 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
        const hName = hObj ? hObj.description : 'Feriado';
 
        toast.info(`La fecha de inicio no puede ser un feriado (${hName}).`);
-       targetObj[fieldKey] = '';
+       targetObj[fieldKey] = null;
        return;
    }
 
@@ -2657,7 +2772,7 @@ const holidayDates = computed(() => {
     // Primero verificamos si 'edition' existe (no es null ni undefined)
     if (edition && edition.edition_num_id) {
       // Caso: Se seleccionó algo válido
-      child.start_date = (edition.start_date || '').slice(0, 10);
+      child.start_date = edition.start_date ? edition.start_date.slice(0, 10) : null;
       child.end_date = (edition.end_date || '').slice(0, 10);
       child.cat_day_combination_id = edition.cat_day_combination_id;
       child.cat_hour_combination_id = edition.cat_hour_combination_id;
@@ -2675,8 +2790,8 @@ const holidayDates = computed(() => {
       
     } else {
       // Caso: Se limpió el input (edition es null) o no tiene ID
-      child.start_date = '';
-      child.end_date = '';
+      child.start_date = null;
+      child.end_date = null;
       child.cat_day_combination_id = null;
       child.cat_hour_combination_id = null;
       child.instructor_id = null;
@@ -2835,8 +2950,8 @@ function calculateEndDate(targetObj) {
     );
     
     // Limpiamos las fechas como solicitaste
-    targetObj.start_date = '';
-    targetObj.end_date = '';
+    targetObj.start_date = null;
+    targetObj.end_date = null;
     
     // Detenemos el proceso
     return;
@@ -3527,5 +3642,10 @@ tr[class*="row-segment-"]:hover td {
   border-radius: 12px;
   cursor: default;
 }
-
+.cursor-pointer {
+    cursor: pointer;
+}
+.text-decoration-hover:hover {
+    text-decoration: underline;
+}
 </style>

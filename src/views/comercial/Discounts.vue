@@ -1,15 +1,12 @@
 <template>
-  <div class="card leads-card">
+  <div class="card discounts-card">
     <div class="card-header">
       <div class="title">
-        Descuentos y Promociones
+        <span>Descuentos y Promociones</span>
         <span class="sub">Listado General</span>
       </div>
 
       <div class="actions-bar">
-        <button class="btn btn-outline" @click="openFilterModal">
-          <i class="fa-solid fa-filter me-1"></i> Filtros
-        </button>
         <button class="btn btn-primary" @click="goNew">
           <i class="fa-solid fa-plus me-1"></i> Nuevo
         </button>
@@ -17,26 +14,26 @@
     </div>
 
     <div class="card-body">
-      <div v-if="activeFilterChips.length" class="active-filters">
-        <span class="label">Filtros activos:</span>
-        <button
-          v-for="chip in activeFilterChips"
-          :key="chip.key"
-          class="chip animate__animated animate__fadeIn"
-          @click="clearFilter(chip.key)"
-          :title="chip.title"
-        >
-          {{ chip.text }} <span class="x">×</span>
-        </button>
-        <button class="chip clear-all" @click="clearFilters">Limpiar todo</button>
+      <BaseFilterChips 
+        :items="activeFilterChips"
+        @remove="clearFilter"
+        @clear-all="clearFilters"
+      />
+
+      <div class="pagination-bar">
+        <BasePagination
+          v-model="pagin"
+          @open-filters="openFilterModal"
+          @change="handlePaginationChange"
+        />
       </div>
 
       <div class="table-responsive">
-        <table class="table" :class="{ dense }">
+        <table class="table table-hover">
           <thead>
             <tr>
-              <th class="ta-right" style="width: 80px">Acciones</th>
-              <th style="width: 100px">Estado</th>
+              <th class="ta-center">Acciones</th>
+              <th>Estado</th>
               <th>Descripción / Alias</th>
               <th>Valor</th>
               <th>Tipo</th>
@@ -46,27 +43,22 @@
           </thead>
           <tbody>
             <tr v-for="d in discounts" :key="d.discount_id">
-              <td class="ta-right nowrap">
-                <button class="btn btn-outline btn-sm border-0" title="Editar" @click="editDiscount(d)">
-                  <i class="fa-solid fa-pen-to-square text-primary"></i>
+              <td class="ta-center nowrap">
+                <button class="btn btn-outline btn-sm" @click="editDiscount(d)">
+                  <i class="fa-solid fa-pen-to-square text-warning"></i>
                 </button>
               </td>
 
               <td>
-                <span
-                  class="badge"
-                  :class="d.active ? 'badge-success' : 'badge-danger'"
-                >
+                <span class="badge" :class="d.active ? 'badge-success' : 'badge-danger'">
                   {{ d.active ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
 
-              <td class="minW">
-                <div class="d-flex flex-column">
-                  <span class="fw-bold text-dark">{{ d.description }}</span>
-                  <span class="mono text-muted small" v-if="d.alias">
-                    <i class="fa-solid fa-tag me-1" style="font-size: 0.7em"></i>{{ d.alias }}
-                  </span>
+              <td>
+                <div class="name">{{ d.description }}</div>
+                <div class="font-mono x-small text-muted mt-1" v-if="d.alias">
+                  <i class="fa-solid fa-tag me-1"></i>{{ d.alias }}
                 </div>
               </td>
 
@@ -77,165 +69,110 @@
               </td>
 
               <td>
-                <div class="text-xs text-secondary">
-                  {{ d.cat_discount_type_label || '—' }}
-                </div>
-                <div class="tiny-text text-muted" v-if="d.cat_currency_type_alias !== 'we_currency_pen' && d.cat_currency_type_label">
+                <div class="small fw-600">{{ d.cat_discount_type_label || '—' }}</div>
+                <div class="muted x-small" v-if="d.cat_currency_type_alias !== 'we_currency_pen'">
                    {{ d.cat_currency_type_label }}
                 </div>
               </td>
 
               <td>
                 <span class="badge" :class="d.is_global ? 'badge-global' : 'badge-specific'">
-                   <i class="fa-solid" :class="d.is_global ? 'fa-globe' : 'fa-list-check'"></i>
-                   {{ d.is_global ? 'Global' : 'Específico' }}
+                  <i class="fa-solid me-1" :class="d.is_global ? 'fa-globe' : 'fa-list-check'"></i>
+                  {{ d.is_global ? 'Global' : 'Específico' }}
                 </span>
               </td>
 
-              <td class="minW">
-                <div class="d-flex flex-column" style="font-size: 0.8rem">
-                    <span v-if="d.start_date">
-                        <i class="fa-regular fa-calendar text-muted me-1"></i>{{ formatDate(d.start_date) }}
-                    </span>
-                    <span v-if="d.end_date" class="text-muted">
-                        hasta {{ formatDate(d.end_date) }}
-                    </span>
-                    <span v-if="!d.start_date && !d.end_date" class="text-muted">—</span>
+              <td>
+                <div class="d-flex flex-column small">
+                  <span v-if="d.start_date" class="muted">
+                     Desde: {{ formatDate(d.start_date) }}
+                  </span>
+                  <span v-if="d.end_date" class="text-danger">
+                     Hasta: {{ formatDate(d.end_date) }}
+                  </span>
+                  <span v-if="!d.start_date && !d.end_date" class="muted">—</span>
                 </div>
               </td>
             </tr>
 
-            <tr v-if="!loading && !discounts.length">
-              <td colspan="7" class="empty-state">
-                <div class="py-4">
-                    <i class="fa-regular fa-folder-open mb-2 fs-4 d-block"></i>
-                    No se encontraron descuentos con los filtros actuales.
-                </div>
-              </td>
-            </tr>
-            <tr v-if="loading">
-                <td colspan="7" class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin text-primary fs-4"></i>
-                    <div class="mt-2 text-muted small">Cargando datos...</div>
-                </td>
+            <tr v-if="!discounts.length">
+              <td colspan="7" class="empty-state">No se encontraron descuentos.</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <div class="pagination-bar">
-        <div class="page-size">
-          <label>Mostrar</label>
-          <select v-model.number="pagin.size" @change="resetToFirstPage">
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-            <option :value="100">100</option>
-          </select>
-          <span>registros</span>
-        </div>
-
-        <div class="pager">
-          <button
-            class="btn btn-outline btn-sm"
-            :disabled="pagin.page === 1 || loading"
-            @click="prevPage"
-          >
-            ‹ Anterior
-          </button>
-          <span class="muted">Página {{ pagin.page }} de {{ totalPages }}</span>
-          <button
-            class="btn btn-outline btn-sm"
-            :disabled="pagin.page >= totalPages || loading"
-            @click="nextPage"
-          >
-            Siguiente ›
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 
-  <BaseModal v-model="showFilterModal" title="Filtrar Descuentos" size="lg">
-    <div class="filter-modal-content p-3">
-      
+  <BaseModal v-model="showFilterModal" title="Filtros de Descuentos" size="lg">
+    <div class="px-3 py-2">
       <div class="row mb-3">
         <div class="col-12">
-           <label class="form-label fw-bold text-primary">
-             <i class="fa-solid fa-magnifying-glass me-1"></i> Búsqueda general
-           </label>
-           <input
+          <label class="form-label">Búsqueda General</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input
               v-model.trim="filters.q"
               type="text"
               class="form-control"
-              placeholder="Buscar por descripción, alias o valor (ej: 'Beca', '20%')..."
+              placeholder="Buscar por descripción, alias o valor..."
               @keyup.enter="applyFilters"
             />
+          </div>
         </div>
       </div>
-
+      
       <hr class="border-secondary opacity-10 my-3">
 
-      <label class="form-label fw-bold text-primary mb-2">
-        <i class="fa-solid fa-sliders me-1"></i> Características
-      </label>
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label small text-muted">Tipo de beneficio</label>
+          <label class="form-label">Tipo de Beneficio</label>
           <SearchSelect
             v-model="filters.cat_discount_type"
             :items="catalogs.discountTypes"
             label-field="description"
             value-field="id"
-            placeholder="Todos los tipos"
-            clearable
+            placeholder="Todos..."
+          />
+        </div>
+        
+        <div class="col-md-6">
+           <label class="form-label">Estado</label>
+           <SearchSelect
+            v-model="filters.active"
+            :items="filtroEstado"
+            label-field="description"
+            value-field="value"
+            placeholder="Todos..."
           />
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label small text-muted">Alcance</label>
-            <div class="btn-group w-100" role="group">
-                <input type="radio" class="btn-check" name="scope" id="scope_all" :value="null" v-model="filters.is_global" autocomplete="off">
-                <label class="btn btn-outline-secondary" for="scope_all">Todos</label>
-
-                <input type="radio" class="btn-check" name="scope" id="scope_global" :value="true" v-model="filters.is_global" autocomplete="off">
-                <label class="btn btn-outline-secondary" for="scope_global">Globales</label>
-
-                <input type="radio" class="btn-check" name="scope" id="scope_specific" :value="false" v-model="filters.is_global" autocomplete="off">
-                <label class="btn btn-outline-secondary" for="scope_specific">Específicos</label>
-            </div>
+        <div class="col-12">
+           <label class="form-label mb-2">Alcance del Descuento</label>
+           <div class="d-flex gap-3">
+             <div class="form-check">
+               <input class="form-check-input" type="radio" :value="null" v-model="filters.is_global" id="scope_all">
+               <label class="form-check-label" for="scope_all">Todos</label>
+             </div>
+             <div class="form-check">
+               <input class="form-check-input" type="radio" :value="true" v-model="filters.is_global" id="scope_global">
+               <label class="form-check-label" for="scope_global">Globales</label>
+             </div>
+             <div class="form-check">
+               <input class="form-check-input" type="radio" :value="false" v-model="filters.is_global" id="scope_specific">
+               <label class="form-check-label" for="scope_specific">Específicos</label>
+             </div>
+           </div>
         </div>
       </div>
-
-      <hr class="border-secondary opacity-10 my-3">
-
-      <div class="row g-3 align-items-center">
-         <div class="col-md-6">
-            <label class="form-label fw-bold text-primary mb-2">
-                <i class="fa-regular fa-circle-check me-1"></i> Estado
-            </label>
-            <select class="form-select" v-model="filters.active">
-                <option :value="null">Mostrar todos (Activos e Inactivos)</option>
-                <option :value="true">Solo Activos</option>
-                <option :value="false">Solo Inactivos</option>
-            </select>
-         </div>
-      </div>
-
     </div>
 
     <template #footer>
-      <div class="d-flex justify-content-between w-100 align-items-center">
-        <button class="btn btn-link text-secondary text-decoration-none btn-sm px-0" @click="clearFilters">
-            <i class="fa-solid fa-eraser me-1"></i> Limpiar filtros
-        </button>
+      <div class="d-flex justify-content-between w-100">
+        <button class="btn btn-outline btn-sm" @click="clearFilters">Limpiar</button>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline-secondary btn-sm" @click="showFilterModal = false">
-            Cancelar
-          </button>
-          <button class="btn btn-primary btn-sm px-4" @click="applyFilters">
-            Aplicar Filtros
-          </button>
+          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">Cerrar</button>
+          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
         </div>
       </div>
     </template>
@@ -243,40 +180,28 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, inject } from 'vue'
+import { ref, reactive, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
-import { ServiceKeys } from '@/services' // Asegúrate de tener esto mapeado
+import BasePagination from '@/components/BasePagination.vue'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import { ServiceKeys } from '@/services'
+import { useTablePersistence } from '@/composables/useTablePersistence'
 
 const router = useRouter()
-// Inyección de servicios y catálogos
 const discountService = inject(ServiceKeys.Discount)
 const catalog = inject('catalog')
 
 // === Estado UI ===
 const showFilterModal = ref(false)
-const dense = ref(false)
-const loading = ref(false)
-
 function openFilterModal() { showFilterModal.value = true }
 
-// === Datos Tabla ===
+// === Datos ===
 const discounts = ref([])
-const pagin = reactive({ size: 25, page: 1, total: 0 })
+const pagin = ref({ size: 25, page: 1, total: 0 })
 
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil((pagin.total || 0) / pagin.size))
-)
-
-// === Catálogos para filtros ===
-const catalogs = ref({
-    discountTypes: catalog.options('we_discount_type') || []
-})
-
-// === Filtros (Modelo reactivo) ===
-// active: null (todos), true (activos), false (inactivos)
-// is_global: null (todos), true (global), false (especifico)
+// === Filtros ===
 const filters = reactive({
   active: null,
   cat_discount_type: null,
@@ -284,216 +209,213 @@ const filters = reactive({
   q: ''
 })
 
-// === Chips de Filtros Activos ===
-const activeFilterChips = computed(() => {
-  const chips = []
-
-  // Filtro de Texto
-  if (filters.q) {
-    chips.push({ key: 'q', text: `Buscar: "${filters.q}"` })
-  }
-
-  // Filtro de Tipo
-  if (filters.cat_discount_type) {
-    const item = catalogs.value.discountTypes.find(i => i.id === filters.cat_discount_type)
-    chips.push({
-      key: 'cat_discount_type',
-      text: `Tipo: ${item?.description || '...'}`
-    })
-  }
-
-  // Filtro Global/Especifico
-  if (filters.is_global !== null) {
-    chips.push({
-      key: 'is_global',
-      text: filters.is_global ? 'Alcance: Global' : 'Alcance: Específico'
-    })
-  }
-
-  // Filtro Estado
-  if (filters.active !== null) {
-    chips.push({
-      key: 'active',
-      text: filters.active ? 'Estado: Activo' : 'Estado: Inactivo'
-    })
-  }
-
-  return chips
+// === Catálogos ===
+const catalogs = ref({
+  discountTypes: catalog.options('we_discount_type') || []
 })
+const filtroEstado = [
+  { value: null, description: 'Todos' },
+  { value: true, description: 'Activo' },
+  { value: false, description: 'Inactivo' }
+]
+const activeFilterChips = ref([])
 
-// === Métodos de Filtrado ===
+// =================================================================
+// 1. LÓGICA DE PERSISTENCIA
+// =================================================================
+const { saveState } = useTablePersistence('crm_discounts_filter_state_v1', filters, pagin)
+
+// =================================================================
+// 2. ACCIONES Y EVENTOS
+// =================================================================
+function handlePaginationChange() {
+  saveState()
+  fetchDiscounts()
+}
+
+function applyFilters() {
+  showFilterModal.value = false
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchDiscounts()
+}
 
 function clearFilter(key) {
-  if (key === 'q') filters.q = ''
-  if (key === 'cat_discount_type') filters.cat_discount_type = null
-  if (key === 'is_global') filters.is_global = null
   if (key === 'active') filters.active = null
-  
+  else if (key === 'cat_discount_type') filters.cat_discount_type = null
+  else if (key === 'is_global') filters.is_global = null
+  else if (key === 'q') filters.q = ''
   applyFilters()
 }
 
 function clearFilters() {
   Object.assign(filters, {
-    q: '',
+    active: null,
     cat_discount_type: null,
     is_global: null,
-    active: null
+    q: ''
   })
-  applyFilters()
-}
-
-function applyFilters() {
-  pagin.page = 1
-  showFilterModal.value = false
+  pagin.value.page = 1
+  localStorage.removeItem('crm_discounts_filter_state_v1')
+  rebuildChips()
   fetchDiscounts()
 }
 
-// === Paginación ===
-function resetToFirstPage() {
-  pagin.page = 1
-  fetchDiscounts()
-}
-function nextPage() {
-  if (pagin.page < totalPages.value) {
-    pagin.page++
-    fetchDiscounts()
+function rebuildChips() {
+  const chips = []
+  
+  if (filters.q) {
+    chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
   }
-}
-function prevPage() {
-  if (pagin.page > 1) {
-    pagin.page--
-    fetchDiscounts()
+  if (filters.active !== null) {
+    chips.push({ key: 'active', text: `Estado: ${filters.active ? 'Activo' : 'Inactivo'}` })
   }
+  if (filters.cat_discount_type) {
+    const item = catalogs.value.discountTypes.find(i => i.id === filters.cat_discount_type)
+    chips.push({ key: 'cat_discount_type', text: `Tipo: ${item?.description || filters.cat_discount_type}` })
+  }
+  if (filters.is_global !== null) {
+    chips.push({ key: 'is_global', text: filters.is_global ? 'Alcance: Global' : 'Alcance: Específico' })
+  }
+
+  activeFilterChips.value = chips
 }
 
-// === API Fetch ===
+// === API ===
 async function fetchDiscounts() {
-  loading.value = true
   try {
     const payload = {
       q: filters.q || null,
       cat_discount_type: filters.cat_discount_type || null,
-      is_global: filters.is_global, // pasa null, true o false directo
-      active: filters.active,       // pasa null, true o false directo
-      page: pagin.page,
-      size: pagin.size
+      is_global: filters.is_global, 
+      active: filters.active,
+      page: pagin.value.page,
+      size: pagin.value.size
     }
 
     const res = await discountService.discountList(payload)
     
     discounts.value = res.items || []
-    pagin.total = Number(res.total || 0)
-    // Actualizamos page/size por seguridad si el back los ajustó
-    pagin.page = Number(res.page || pagin.page)
-    pagin.size = Number(res.size || pagin.size)
+    pagin.value.total = Number(res.total || 0)
+    if(res.page) pagin.value.page = Number(res.page)
+    if(res.size) pagin.value.size = Number(res.size)
 
   } catch (error) {
     console.error("Error fetching discounts:", error)
     discounts.value = []
-    pagin.total = 0
-  } finally {
-    loading.value = false
+    pagin.value.total = 0
   }
 }
 
-// === Navegación / Acciones ===
-function goNew() {
-  router.push({ name: 'DiscountNew' }) // Asegúrate de tener esta ruta
-}
-
-function editDiscount(d) {
-  router.push({ name: 'DiscountEdit', params: { id: d.discount_id } })
-}
-
-// === Helpers ===
+// === Helpers Visuales ===
 function formatDate(isoStr) {
   if (!isoStr) return ''
-  // Corta la fecha YYYY-MM-DD si viene con hora
   const datePart = isoStr.split('T')[0]
   const [y, m, d] = datePart.split('-')
   return `${d}/${m}/${y}`
 }
 
+function goNew() { router.push({ name: 'DiscountNew' }) }
+function editDiscount(d) { router.push({ name: 'DiscountEdit', params: { id: d.discount_id } }) }
+
+// === Lifecycle ===
 onMounted(() => {
+  rebuildChips()
   fetchDiscounts()
 })
 </script>
 
 <style scoped>
-/* Reutilizando estilos base y agregando específicos */
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05);
-  margin-bottom: 1.5rem;
+/* Contenedor Principal (Estilo FICO) */
+.discounts-card { 
+  background: #fff; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 0.6rem; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #6366f1; /* Color Indigo */
+  margin-bottom: 2rem;
 }
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: .75rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+
+.card-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 1.25rem; 
+  border-bottom: 1px solid #f3f4f6; 
 }
-.title {
-  font-weight: 600; font-size: 1rem; color: #111827;
-  display: flex; align-items: baseline; gap: .5rem;
+
+.title { display: flex; flex-direction: column; gap: 4px; }
+.title span { font-weight: 700; font-size: 1.1rem; color: #111827; }
+.title .sub { font-weight: 600; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.card-body { padding: 1.25rem; }
+
+/* Tabla Unificada */
+.table-responsive { width: 100%; overflow-x: auto; margin-top: 1rem; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
+.table thead th { 
+  background: #f9fafb; 
+  padding: 0.85rem 0.75rem; 
+  text-align: left; 
+  font-weight: 600; 
+  color: #4b5563; 
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
 }
-.title .sub { font-weight: 500; font-size: .8rem; color: #6b7280; }
-.actions-bar { display: flex; gap: .5rem; }
-.card-body { padding: 1rem 1.25rem; }
+.table td { padding: 0.85rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.table-hover tbody tr:hover { background-color: #f8fafc; }
 
-/* Chips */
-.active-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; align-items: center; }
-.active-filters .label { font-size: .8rem; color: #6b7280; margin-right: .25rem; }
-.chip {
-  background: #eff6ff; border: 1px solid #dbeafe; color: #1e40af;
-  border-radius: 999px; padding: .2rem .6rem; font-size: .75rem; cursor: pointer;
-  transition: all 0.2s;
+/* Tipografía */
+.font-mono { font-weight: 600 }
+.ta-center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.fw-600 { font-weight: 600; }
+
+.name { font-weight: 600; color: #1e293b; line-height: 1.2; font-size: 0.9rem; }
+.muted { color: #6b7280; }
+.text-danger { color: #dc2626; }
+.small { font-size: 0.75rem; }
+.x-small { font-size: 0.68rem; }
+.text-warning { color: #d97706; }
+
+/* Badges Generales */
+.badge { padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 600; display: inline-block; border: 1px solid transparent; }
+.badge-success { background: #ecfdf5; color: #065f46; border-color: #d1fae5; }
+.badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
+
+/* Badges Específicos de Descuento */
+.badge-value { 
+  background: #f8fafc; 
+  border: 1px solid #cbd5e1; 
+  color: #0f172a; 
+  font-size: 0.8rem; 
 }
-.chip:hover { background: #dbeafe; }
-.chip .x { margin-left: .35rem; opacity: 0.6; }
-.chip.clear-all { background: #fff; border-color: #e5e7eb; color: #6b7280; }
 
-/* Table */
-.table-responsive { min-height: 250px; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.table thead th {
-  background-color: #f9fafb; text-align: left; font-weight: 600;
-  padding: .75rem; border-bottom: 1px solid #e5e7eb; color: #4b5563;
-  text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;
-}
-.table td { padding: .75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-
-/* Badges y Textos */
-.badge { display: inline-block; padding: .25rem .5rem; font-size: .7rem; border-radius: .375rem; font-weight: 600; }
-.badge-success { background: #dcfce7; color: #166534; }
-.badge-danger { background: #fee2e2; color: #991b1b; }
-
-.badge-value { background: #f3f4f6; border: 1px solid #e5e7eb; color: #111827; font-family: 'Consolas', monospace; font-size: 0.8rem; }
-
-.badge-global { background: #f0f9ff; color: #0369a1; border: 1px solid #e0f2fe; }
-.badge-specific { background: #fdf4ff; color: #a21caf; border: 1px solid #fae8ff; }
-
-.mono { font-family: ui-monospace, SFMono-Regular, monospace; }
-.tiny-text { font-size: 0.7rem; }
-.minW { min-width: 140px; }
+.badge-global { background: #f0f9ff; color: #0369a1; border-color: #e0f2fe; }
+.badge-specific { background: #fdf4ff; color: #a21caf; border-color: #fae8ff; }
 
 /* Botones */
-.btn { border-radius: .375rem; padding: .5rem .75rem; font-size: .85rem; font-weight: 500; transition: .2s; }
-.btn-primary { background: #2563eb; border: 1px solid #2563eb; color: #fff; }
-.btn-outline { background: #fff; border: 1px solid #d1d5db; color: #374151; }
-.btn-link { background: none; border: none; }
+.btn { 
+  border: 1px solid #d1d5db; 
+  padding: 0.45rem 0.75rem; 
+  border-radius: 0.4rem; 
+  cursor: pointer; 
+  transition: all 0.2s; 
+  background: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+.btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+.btn-primary:hover { background: #4338ca; }
+.btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
 
-/* Pagination */
-.pagination-bar { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; font-size: 0.85rem; color: #6b7280; }
-.page-size select { border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 5px; margin: 0 5px; }
+/* Inputs y Modal */
+.form-label { font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; display: block; }
+.form-control { width: 100%; border: 1px solid #d1d5db; border-radius: 0.4rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+.form-control:focus { outline: none; border-color: #6366f1; ring: 2px rgba(99, 102, 241, 0.2); }
+.input-group-text { background: #f9fafb; border-color: #d1d5db; color: #6b7280; }
 
-/* Modal Tweaks */
-.filter-modal-content label { font-size: 0.85rem; }
-.btn-group .btn-outline-secondary { border-color: #d1d5db; color: #4b5563; }
-.btn-group .btn-check:checked + .btn-outline-secondary { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; font-weight: 600; }
-
-.empty-state { text-align: center; color: #9ca3af; font-style: italic; }
+.empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
 </style>

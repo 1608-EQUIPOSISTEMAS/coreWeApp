@@ -402,7 +402,7 @@ onMounted(() => {
 .table-hover tbody tr:hover { background-color: #f8fafc; }
 
 /* Tipografía */
-.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-weight: 600; }
+.font-mono { font-weight: 600; }
 .ta-right { text-align: right; }
 .ta-center { text-align: center; }
 .nowrap { white-space: nowrap; }

@@ -1,16 +1,15 @@
 <template>
   <div class="dt12" :class="stateClass">
-    <!-- fecha -->
-    <input
-      type="date"
-      class="dt12__input"
-      v-model="datePart"
-      @change="emitChange"
-      :required="required"
-      :disabled="disabled"
-    />
+    <div class="dt12__date-wrapper">
+      <flat-pickr
+        v-model="datePart"
+        :config="flatpickrConfig"
+        class="dt12__input dt12__input--date"
+        :disabled="disabled"
+        placeholder="Selecciona fecha"
+      />
+    </div>
 
-    <!-- hora 1-12 -->
     <select
       class="dt12__input dt12__input--hour"
       v-model.number="hour12"
@@ -23,7 +22,17 @@
       </option>
     </select>
 
-    <!-- am/pm -->
+    <select
+      class="dt12__input dt12__input--minute"
+      v-model.number="minutePart"
+      @change="emitChange"
+      :disabled="disabled"
+    >
+      <option v-for="m in minutes" :key="m" :value="m">
+        {{ String(m).padStart(2, '0') }}
+      </option>
+    </select>
+
     <select
       class="dt12__input dt12__input--ampm"
       v-model="ampmPart"
@@ -34,31 +43,51 @@
       <option value="PM">PM</option>
     </select>
 
-    <!-- limpiar -->
     <button
       v-if="clearable && hasValue && !disabled"
       type="button"
       class="dt12__clear"
       @click="clearValue"
+      title="Limpiar"
     >
-      ×
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
     </button>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import flatPickr from 'vue-flatpickr-component'
+import 'flatpickr/dist/flatpickr.css'
+import { Spanish } from 'flatpickr/dist/l10n/es.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   required: { type: Boolean, default: false },
   outputPrecision: { type: String, default: 'seconds' },
-  clearable: { type: Boolean, default: false },
+  clearable: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const hours12 = Array.from({ length: 12 }, (_, i) => i + 1)
+const minutes = Array.from({ length: 60 }, (_, i) => i)
+
+// Configuración de FlatPickr
+const flatpickrConfig = {
+  altInput: true,
+  altFormat: "d/m/Y",
+  dateFormat: "Y-m-d",
+  locale: Spanish,
+  allowInput: true,
+  disableMobile: true,
+  onChange: (selectedDates, dateStr) => {
+    emitChange()
+  }
+}
 
 function normalize(v) {
   return (v || '').trim().replace('T', ' ')
@@ -69,10 +98,11 @@ const datePart = computed({
     const norm = normalize(props.modelValue)
     if (!norm) return ''
     const [d] = norm.split(' ')
-    // valida que realmente sea YYYY-MM-DD
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''
   },
-  set(val) { emitFull(val, hour12.value, ampmPart.value) },
+  set(val) { 
+    emitFull(val, hour12.value, minutePart.value, ampmPart.value) 
+  },
 })
 
 const hour12 = computed({
@@ -81,10 +111,26 @@ const hour12 = computed({
     if (!norm) return 12
     const parts = norm.split(' ')
     if (parts.length < 2) return 12
-    const time24 = parts[1].slice(0, 5) // "HH:mm"
+    const time24 = parts[1].slice(0, 5)
     return to12h(time24).hour
   },
-  set(val) { emitFull(datePart.value, val, ampmPart.value) },
+  set(val) { 
+    emitFull(datePart.value, val, minutePart.value, ampmPart.value) 
+  },
+})
+
+const minutePart = computed({
+  get() {
+    const norm = normalize(props.modelValue)
+    if (!norm) return 0
+    const parts = norm.split(' ')
+    if (parts.length < 2) return 0
+    const time = parts[1].split(':')
+    return time.length >= 2 ? Number(time[1]) : 0
+  },
+  set(val) { 
+    emitFull(datePart.value, hour12.value, val, ampmPart.value) 
+  },
 })
 
 const ampmPart = computed({
@@ -96,12 +142,12 @@ const ampmPart = computed({
     const time24 = parts[1].slice(0, 5)
     return to12h(time24).ampm
   },
-  set(val) { emitFull(datePart.value, hour12.value, val) },
+  set(val) { 
+    emitFull(datePart.value, hour12.value, minutePart.value, val) 
+  },
 })
 
-
 const hasValue = computed(() => !!props.modelValue)
-
 const isValid = computed(() => !!datePart.value)
 const isInvalid = computed(() => props.required && !datePart.value)
 
@@ -113,17 +159,18 @@ const stateClass = computed(() => {
 })
 
 function emitChange() {
-  emitFull(datePart.value, hour12.value, ampmPart.value)
+  emitFull(datePart.value, hour12.value, minutePart.value, ampmPart.value)
 }
 
-function emitFull(date, h12, ampm) {
+function emitFull(date, h12, min, ampm) {
   if (!date) {
     emit('update:modelValue', '')
     emit('change', '')
     return
   }
   const hh24 = to24h(h12, ampm)
-  let final = `${date} ${hh24}:00`
+  const mm = String(min).padStart(2, '0')
+  let final = `${date} ${hh24}:${mm}`
   if (props.outputPrecision === 'seconds') {
     final = `${final}:00`
   }
@@ -165,79 +212,169 @@ function to24h(h12, ampm) {
 <style scoped>
 .dt12 {
   display: flex;
-  gap: .4rem;
+  gap: 0.25rem; /* Espacio reducido entre elementos */
   align-items: center;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: .75rem;
-  padding: .4rem .6rem;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem; /* Radio estándar (aprox 6px) */
+  padding: 3px; /* Padding muy ajustado para que el total no crezca */
   position: relative;
   width: 100%;
-  max-width: 360px; /* lo puedes quitar si quieres que se estire */
+  min-width: 410px;
+  max-width: 480px;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+  height: 38px; /* Altura forzada estándar de un input */
+}
+
+.dt12:hover:not(.dt12--error) {
+  border-color: #9ca3af;
+}
+
+.dt12:focus-within {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dt12__date-wrapper {
+  flex: 1;
+  min-width: 120px;
+  height: 100%; /* Ocupar toda la altura disponible */
+  display: flex; /* Para centrar el input interno */
+  align-items: center;
 }
 
 .dt12__input {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  border-radius: .5rem;
-  padding: .3rem .5rem;
-  font-size: .78rem;
-  height: 32px;
+  border: 1px solid transparent; /* Quitar borde visible por defecto o hacerlo sutil */
+  background: #f9fafb;
+  border-radius: 0.25rem;
+  padding: 0 0.5rem; /* Padding horizontal solamente */
+  font-size: 0.875rem;
+  line-height: 1; 
+  height: 30px; /* Altura reducida para que quepa dentro de los 38px del padre */
+  transition: all 0.2s ease;
+  outline: none;
 }
 
-.dt12__input--hour {
-  width: 70px;
+/* Hover suave en los inputs internos para que se note que son editables */
+.dt12__input:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.dt12__input:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+.dt12__input:disabled {
+  background: transparent;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.dt12__input--date {
+  width: 100%;
+  background: transparent; /* Que parezca parte del contenedor principal */
+}
+/* Al hacer focus en la fecha, darle un background sutil */
+.dt12__input--date:focus {
+    background: #fff;
+}
+
+.dt12__input--hour,
+.dt12__input--minute {
+  width: 50px; /* Más estrecho */
   text-align: center;
+  font-weight: 500;
+  appearance: none; /* Aspecto más limpio en navegadores */
+  -webkit-appearance: none;
 }
 
 .dt12__input--ampm {
-  width: 72px;
-}
-
-/* botón limpiar */
-.dt12__clear {
-  position: absolute;
-  top: .25rem;
-  right: .25rem;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(0,0,0,.03);
-  cursor: pointer;
-  color: #6b7280;
-  font-size: .85rem;
-  line-height: 22px;
+  width: 50px;
   text-align: center;
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-/* estados */
+/* Botón Limpiar */
+.dt12__clear {
+  width: 24px; 
+  height: 24px; 
+  border: none;
+  border-radius: 50%; /* Redondo se ve más moderno en espacios pequeños */
+  background: #ef4444;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 0.1rem;
+  margin-right: 0.25rem;
+}
+
+.dt12__clear:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Estados del contenedor principal */
 .dt12--error {
-  border-color: #fca5a5;
-  box-shadow: 0 0 0 .15rem rgba(248,113,113,.08);
-}
-.dt12--success {
-  border-color: #bbf7d0;
-  box-shadow: 0 0 0 .15rem rgba(34,197,94,.08);
-}
-.dt12--neutral {
-  /* nada */
+  border-color: #ef4444;
+  background: #fff5f5;
 }
 
-/* responsive */
+.dt12--success {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+/* Estilos de FlatPickr profundos */
+:deep(.flatpickr-input) {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  height: 100% !important; /* Llenar el wrapper */
+  width: 100%;
+  font-size: 0.875rem;
+  color: #111827;
+  font-weight: 500;
+  box-shadow: none !important;
+  line-height: 30px; /* Centrado vertical */
+}
+
+:deep(.flatpickr-input:focus) {
+  outline: none !important;
+}
+
+/* Responsive */
 @media (max-width: 575.98px) {
   .dt12 {
     flex-wrap: wrap;
-    max-width: 100%;
+    height: auto; /* Permitir crecer en móvil */
+    padding: 0.5rem;
   }
+  
+  .dt12__date-wrapper {
+    flex: 1 1 100%;
+    margin-bottom: 0.5rem;
+  }
+  
   .dt12__input {
-    flex: 1 1 calc(50% - .4rem);
+      height: 36px; /* En móvil un poco más alto para el dedo */
   }
+  
   .dt12__input--hour,
+  .dt12__input--minute,
   .dt12__input--ampm {
-    flex: 1 1 calc(50% - .4rem);
-    width: auto;
+    flex: 1;
   }
 }
 </style>

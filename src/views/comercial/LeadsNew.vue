@@ -337,7 +337,6 @@
           <div class="form-section__header d-flex justify-content-between align-items-center gap-2">
             <div>
               <span class="form-section__title">Seguimiento / intentos de contacto</span>
-              <small class="text-muted d-block">Registra cada intento</small>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm" @click="addContacto">
               + Añadir intento
@@ -345,48 +344,84 @@
           </div>
 
           <div class="contacto-table">
-            <div class="contacto-table__head d-none d-md-grid">
-              <div>#</div>
-              <div>Estado<span class="required-star">*</span></div>
-              <div>Fecha y Hora<span class="required-star">*</span></div>
-              <div>Respuesta / Resultado</div>
-              <div></div>
+            <!-- Header solo en desktop -->
+            <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-3">
+              <div class="col-lg-1 text-center">#</div>
+              <div class="col-lg-2">Estado<span class="required-star">*</span></div>
+              <div class="col-lg-5">Fecha y Hora<span class="required-star">*</span></div>
+              <div class="col-lg-3">Respuesta / Resultado</div>
+              <div class="col-lg-1 text-center"></div>
             </div>
 
+            <!-- Filas -->
             <div
               v-for="(c, idx) in form.contactos"
               :key="c.uid"
-              class="contacto-table__row"
+              class="contacto-table__row mb-3"
             >
-              <div class="contacto-table__cell index">{{ idx + 1 }}</div>
+              <div class="row gx-3 gy-2">
+                <!-- Índice -->
+                <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
+                  <div class="contacto-index">
+                    <span class="d-lg-none me-2">Intento:</span>
+                    <strong>{{ idx + 1 }}</strong>
+                  </div>
+                </div>
 
-              <div class="contacto-table__cell">
-                <SearchSelect
-                  v-model="c.status_alias"
-                  :items="contactAttemptStatusCat"
-                  required
-                  :disabled="c.status_alias == 'we_follow_lead_answered' || c.status_alias == 'we_follow_lead_no_answer' "
-                  label-field="description"
-                  value-field="alias"
-                  placeholder="ESTADO..."
-                  :model-label="c.status_label"
-                />
-              </div>
+                <!-- Estado -->
+                <div class="col-12 col-lg-2">
+                  <label class="form-label d-lg-none mb-1">
+                    Estado<span class="required-star">*</span>
+                  </label>
+                  <SearchSelect
+                    v-model="c.status_alias"
+                    :items="contactAttemptStatusCat"
+                    required
+                    :disabled="c.status_alias == 'we_follow_lead_answered' || c.status_alias == 'we_follow_lead_no_answer'"
+                    label-field="description"
+                    value-field="alias"
+                    placeholder="ESTADO..."
+                    :model-label="c.status_label"
+                  />
+                </div>
 
-              <div class="contacto-table__cell">
-                <DateTime12 v-model="c.fechaContactoProximo" required clearable 
-                  :disabled="c.status_alias != 'we_follow_lead_pending'"/>
-              </div>
+                <!-- Fecha y Hora -->
+                <div class="col-12 col-lg-5">
+                  <label class="form-label d-lg-none mb-1">
+                    Fecha y Hora<span class="required-star">*</span>
+                  </label>
+                  <DateTime12 
+                    v-model="c.fechaContactoProximo" 
+                    required 
+                    clearable 
+                    :disabled="c.status_alias != 'we_follow_lead_pending'"
+                  />
+                </div>
 
-              <div class="contacto-table__cell">
-                <input autocomplete="off" v-model="c.respuesta" type="text" class="form-control" placeholder="RESULTADO" 
-                  :disabled="c.status_alias != 'we_follow_lead_pending'"/>
-              </div>
+                <!-- Respuesta -->
+                <div class="col-12 col-lg-3">
+                  <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
+                  <input 
+                    autocomplete="off" 
+                    v-model="c.respuesta" 
+                    type="text" 
+                    class="form-control" 
+                    placeholder="RESULTADO" 
+                    :disabled="c.status_alias != 'we_follow_lead_pending'"
+                  />
+                </div>
 
-              <div class="contacto-table__cell actions" v-if="!c.id">
-                <button type="button" class="btn btn-outline-danger btn-sm" @click="removeContacto(idx)">
-                  <i class="fa-solid fa-square-minus"></i>
-                </button>
+                <!-- Acciones -->
+                <div class="col-12 col-lg-1 d-flex align-items-start justify-content-lg-center" v-if="!c.id">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-danger btn-sm w-100 w-lg-auto" 
+                    @click="removeContacto(idx)"
+                  >
+                    <i class="fa-solid fa-square-minus"></i>
+                    <span class="d-lg-none ms-2">Eliminar intento</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1639,62 +1674,86 @@ async function confirmarInscripcion() {
     padding-top: 1.5rem;
     }
 
-    .contacto-table {
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    margin-top: .75rem;
-    }
-    .contacto-table__head {
-    display: grid;
-    grid-template-columns: 40px 160px 320px 1fr 100px;
-    gap: .5rem;
-    font-size: .7rem;
-    color: #6b7280;
+.contacto-table {
+  margin-top: .75rem;
+}
+
+.contacto-table__head {
+  font-size: .7rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 600;
+  padding: .5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.contacto-table__row {
+  padding: .75rem;
+  border-radius: .5rem;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  transition: all .2s;
+}
+
+.contacto-table__row:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.contacto-index {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: .9rem;
+  height: 100%;
+}
+
+.btn-outline-danger {
+  border-color: #fca5a5;
+  color: #b91c1c;
+  background: #fff;
+  padding: .35rem .65rem;
+  font-size: .8rem;
+  transition: all .2s;
+}
+
+.btn-outline-danger:hover {
+  background-color: #fef2f2;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+@media (max-width: 767px) {
+  .contacto-table__row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+  }
+
+  .contacto-index {
+    justify-content: flex-start;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: .25rem;
+    font-size: 1rem;
+    color: #3b82f6;
+  }
+
+  .form-label {
+    font-size: .75rem;
     text-transform: uppercase;
-    letter-spacing: .02em;
-    }
-    .contacto-table__row {
-    display: grid;
-    grid-template-columns: 40px 160px 320px 1fr 100px;
-    gap: .5rem;
-    align-items: center;
-    }
-    .contacto-table__cell .form-control {
-    height: 32px;
-    font-size: .8rem;
-    }
-    .contacto-table__cell.actions {
-    display: flex;
-    justify-content: center;
-    }
-    .btn-outline-danger {
-    border-color: #fca5a5;
-    color: #b91c1c;
-    background: #fff;
-    padding: .15rem .5rem;
-    }
-    @media (max-width: 768px) {
-      .contacto-table__head {
-          display: none;
-      }
-      .contacto-table__row {
-          grid-template-columns: 1fr;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: .5rem;
-          padding: .5rem .75rem;
-      }
-      .contacto-table__cell {
-          display: flex;
-          flex-direction: column;
-          gap: .25rem;
-      }
-      .contacto-table__cell.index {
-          font-weight: 600;
-          color: #111827;
-      }
-    }
+    letter-spacing: .03em;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .btn-outline-danger {
+    margin-top: .5rem;
+    padding: .5rem 1rem;
+  }
+}
     .insc-head {
       display: flex;
       gap: 1rem;
@@ -1811,7 +1870,84 @@ async function confirmarInscripcion() {
     background: #3b82f6;
     border-radius: 9999px;
     }
+.contacto-table {
+  margin-top: .75rem;
+}
 
+.contacto-table__head {
+  font-size: .7rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 600;
+  padding: .5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.contacto-table__row {
+  padding: .75rem;
+  border-radius: .5rem;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  transition: all .2s;
+}
+
+.contacto-table__row:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.contacto-index {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: .9rem;
+}
+
+.btn-outline-danger {
+  border-color: #fca5a5;
+  color: #b91c1c;
+  background: #fff;
+  padding: .35rem .65rem;
+  font-size: .8rem;
+  transition: all .2s;
+}
+
+.btn-outline-danger:hover {
+  background-color: #fef2f2;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+@media (max-width: 991px) {
+  .contacto-table__row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+  }
+
+  .contacto-index {
+    padding-bottom: .5rem;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: .25rem;
+    font-size: 1rem;
+    color: #3b82f6;
+  }
+
+  .form-label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .btn-outline-danger {
+    margin-top: .5rem;
+    padding: .5rem 1rem;
+  }
+}
     .insc-lead {
     background: #f9fafb;
     }

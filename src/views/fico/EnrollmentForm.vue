@@ -700,7 +700,6 @@ function removeInstallment(idx){ installments.value.splice(idx,1) }
 .pagos-head, .pagos-row { display:grid; grid-template-columns: 40px 150px 140px 130px 110px 1.2fr 160px 160px 70px; gap:.5rem; align-items:center; }
 .cuotas-head, .cuotas-row { display:grid; grid-template-columns: 40px 180px 160px 1fr 70px; gap:.5rem; align-items:center; }
 .idx{ font-weight:600; color:#6b7280; font-size:.75rem; }
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .btn-outline-danger{ border-color:#fca5a5; color:#b91c1c; background:#fff; padding:.15rem .5rem; }
 
 @media (max-width: 992px) {
