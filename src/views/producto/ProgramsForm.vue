@@ -245,7 +245,7 @@
 
                 <div class="col-md-2">
                   <label class="form-label mb-1 d-block">Activo</label>
-                  <label class="form-switch">
+                  <label class="form-switch" @click="mapActiveChild(ver)">
                     <input type="checkbox" v-model="ver.active" />
                     <span></span>
                   </label>
@@ -342,7 +342,6 @@ import FileUploader from '@/components/FileUploader.vue'
     cat_category: null,
     cat_model_modality: null,
     link: null,
-    
     active: true,
     program_versions: []
   })
@@ -578,8 +577,7 @@ import FileUploader from '@/components/FileUploader.vue'
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
         skem_clasification: form.skem_clasification || null,
-        user_creation_id: null,
-        user_modification_id: null,
+        new_active_version_id: form.program_versions.find(v => v.active=='Y')?.program_version_id ?? null,
         program_versions: form.program_versions
           // .filter(v => v.program_version_id != null)
           .map(v => ({
@@ -643,6 +641,15 @@ import FileUploader from '@/components/FileUploader.vue'
     }
     loaded.value = true
   })
+
+  function mapActiveChild(child){
+    form.program_versions.forEach(ver => {
+      if (ver.program_version_id != child.program_version_id) {
+        ver.active = false
+      }
+    })
+    
+  }
 </script>
 
 

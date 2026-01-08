@@ -181,8 +181,16 @@
             <div :class="'col-md-' + (leadDataHistory ? '1' : '5')"></div>
 
             <div class="col-md-2" v-if="leadDataHistory">
-              <label class="form-label mb-1">T. Lead</label>
-              <input autocomplete="off" v-model="form.categoriaCliente" type="text" class="form-control" disabled />
+              <label class="form-label mb-1">E. Cliente</label>
+              <SearchSelect
+                v-model="form.client_category_alias"
+                :items="momentCatalog"
+                label-field="description"
+                value-field="alias"
+                placeholder="E. Cliente..."
+                required
+                :model-label="form.client_category_label"
+              />
             </div>
 
             <div class="col-md-2" v-if="leadDataHistory">
@@ -774,6 +782,7 @@ import FileUploader from '@/components/FileUploader.vue'
   const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
   const leadInterestCatalog      = ref(catalog.options('we_lead_interest'))
   const countryCatalog           = ref(catalog.options('we_country'))
+  const momentCatalog           = ref(catalog.options('we_moment'))
   const clientCatalog           = ref(catalog.options('we_client'))
   const prospectSituationCatalog = ref(
     catalog.options('we_prospect_situation', {
@@ -1159,7 +1168,8 @@ async function searchLeadByPhone() {
     if (data.status === 'new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
       
-      form.categoriaCliente = 'NEW'
+      client_category_alias = 'we_moment_new'
+      
       form.categoriaMember  = ''
       
     } else {
@@ -1167,9 +1177,9 @@ async function searchLeadByPhone() {
       
       toast.success(`Encontrado: ${data.full_name} (${tipo})`, { timeout: 4000 })
       
-      form.categoriaCliente = data.t_lead
+      client_category_alias = 'we_moment_new'
       form.categoriaMember  = data.membresia || ''
-      
+
       if (data.full_name) {
         form.full_name = data.full_name
       }

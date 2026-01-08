@@ -730,6 +730,8 @@
              <label class="form-label small fw-bold">Docente</label>
              <SearchSelect
                 v-model="filterForm.instructor_id"
+                
+                :cache="false"
                 mode="remote"
                 :fetcher="q => instructorService.instructorCaller({ q})"
                 label-field="full_name"
@@ -903,6 +905,7 @@
                             showSubValue
                             label-field="full_name"
                             sublabel-field="document_number"
+                            
                             value-field="instructor_id"
                             placeholder="Buscar docente..."
                             :model-label="modalForm.instructor_label" 
@@ -919,14 +922,14 @@
                               :items="catalogs.catSegments"
                               label-field="description"
                               value-field="id"
-                              placeholder="SEGMENTACION"
+                              placeholder="OPCIONAL"
                           />
 
                       </div>
 
                       <div class="col-3 " v-if="modalForm.program_version_id">
                           <label class="form-label-sm">Vacantes</label>
-                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" required />
+                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" required  placeholder="VACANTES"/>
                       </div>
                 </div>
             </section>
@@ -939,6 +942,7 @@
                         <BaseDatePicker
                           v-model="modalForm.start_date"
                           :config="getChildDateConfig()"
+                          :disabled="!modalForm.cat_day_combination_id"
                           :required="isCourse"
                           placeholder="dd/mm/aaaa"
                           @on-change="validateAndCalculate(modalForm, 'start_date')"
@@ -949,6 +953,7 @@
                     <div class="input-group input-group-sm">
                       <BaseDatePicker
                         v-model="modalForm.end_date"
+                        :disabled="!modalForm.cat_day_combination_id"
                         :config="getChildDateConfig(null,modalForm)"
                         :required="isCourse"
                         placeholder="Calculado autom."
@@ -1042,7 +1047,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                             <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id">
+                             <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id" :class="{ 'opacity-50': isBlockedByPrevious(index) }">
                                  <td class="fw-bold text-dark">
                                    <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
                                    <span class="text-primary text-decoration-hover" style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
@@ -1053,7 +1058,8 @@
                                      <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
                                          <small class="text-muted">¿Nueva?</small>
                                          <label class="form-switch scale-75">
-                                            <input type="checkbox" v-model="child.new" />
+                                            <input 
+                                        :disabled="isBlockedByPrevious(index) " type="checkbox" v-model="child.new" />
                                             <span></span>
                                          </label>
                                      </div>
@@ -1062,19 +1068,19 @@
                                         v-if="!child.new && !child.edition_id"
                                         v-model="child.edition_id"
                                         mode="remote"
-                                        :fetcher="q => editionService.editionCaller({ q, program_version_id: child.child_program_version_id, year: selectedYear, month: selectedMonth  })"
+                                        :fetcher="(q) => searchEditionsFiltered(q, child,index)"
                                         label-field="label_for_iu"
                                         sublabel-field="specific_code"
                                         value-field="edition_num_id"
                                         placeholder="Vincular edición..."
                                         :minChars="0"
                                         :cache="false"
-                                        @change="onChildEditionChange($event, child)"
+                                        @change="onChildEditionChange($event, child, index)"
                                         :disabled="child.new"
                                      />
 
                                      <!--botòn x borrar-->
-                                     <button v-if="currentEdition && !child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
+                                     <button v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
                                          <i class="fa-solid fa-times"></i> Desvincular
                                      </button>
 
@@ -1089,6 +1095,7 @@
                                   <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
                                     <BaseDatePicker
                                         v-model="child.start_date"
+                                        :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
                                         class="mb-1"
                                         required
                                         placeholder="Inicio"
@@ -1100,6 +1107,7 @@
                                         <div class="input-group input-group-xs">
                                           <BaseDatePicker
                                             v-model="child.end_date"
+                                            :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
                                             required
                                             :config="getChildDateConfig(null,child)"
                                             placeholder="Fin"
@@ -1160,15 +1168,17 @@
                                           label-field="description" 
                                           value-field="id" 
                                           placeholder="Días" 
+                                          :disabled="isBlockedByPrevious(index)"
                                           class="mb-1"
                                           @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id',child.cat_day_combination_id)"
                                       />                                         
                                       <SearchSelect 
                                         v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" 
-                                        @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
+                                        :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
                                       />
                                       <SearchSelect 
-                                        v-if="child.new || child.edition_id" v-model="child.instructor_id" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" 
+                                        v-if="child.new || child.edition_id" v-model="child.instructor_id"
+                            :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" 
                                       />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
@@ -1185,26 +1195,48 @@
                                          </div>
                                          <div class="d-flex align-items-center gap-2">
                                             <label class="form-switch scale-75">
-                                                <input type="checkbox" v-model="child.preconfirmation"  />
+                                                <input @change="()=>{
+                                                  if(child.preconfirmation && child.expedient){
+                                                    child.confirmation=true
+                                                  }else{
+                                                    child.confirmation=false
+                                                  }
+                                                }" type="checkbox" v-model="child.preconfirmation"  />
                                                 <span></span>
                                             </label>
                                             <small class="text-muted">PRE-cfm</small>
                                          </div>
                                          <div class="d-flex align-items-center gap-2">
                                             <label class="form-switch scale-75">
-                                                <input type="checkbox" v-model="child.confirmation"  />
+                                                <input @change="()=>{
+                                                  if(child.preconfirmation && child.expedient){
+                                                    child.confirmation=true
+                                                  }else{
+                                                    child.confirmation=false
+                                                  }
+                                                }" type="checkbox" v-model="child.expedient"  />
+                                                <span></span>
+                                            </label>
+                                            <small class="text-muted">Ficha</small>
+                                         </div>
+
+                                         <div class="d-flex align-items-center gap-2">
+                                            <label class="form-switch scale-75">
+                                                <input @change="()=>{
+                                                  if(child.confirmation){
+                                                    child.preconfirmation=true
+                                                    child.expedient=true
+                                                  }else{
+                                                    child.preconfirmation=false
+                                                    child.expedient=false
+                                                  }
+                                                }" type="checkbox" v-model="child.confirmation"  />
                                                 <span></span>
                                             </label>
                                             <small class="text-muted">Cfm</small>
                                          </div>
                                          
-                                         <div class="d-flex align-items-center gap-2">
-                                            <label class="form-switch scale-75">
-                                                <input type="checkbox" v-model="child.expedient"  />
-                                                <span></span>
-                                            </label>
-                                            <small class="text-muted">Ficha</small>
-                                         </div>
+                                         
                                      </div>
                                      <div v-else class="text-muted text-center">-</div>
                                  </td>
@@ -2066,15 +2098,16 @@ const catalogs = ref({
 )
 // 2. Función para procesar el cambio del DatePicker
 function handleRangeFilterChange(selectedDates, dateStr) {
+  debugger
     // dateStr llega como "2025-01-01 to 2025-01-31"
-    if (dateStr.includes(' to ')) {
-        const parts = dateStr.split(' to ');
-        filterForm.start_date = parts[0];
-        filterForm.end_date = parts[1];
+    if (dateStr.includes(' a ')) {
+        const parts = dateStr.split(' a ');
+        filterForm.date_from = parts[0];
+        filterForm.date_to = parts[1];
     } else {
         // Si el usuario borra o solo selecciona un día
-        filterForm.start_date = dateStr;
-        filterForm.end_date = dateStr; 
+        filterForm.date_from = dateStr;
+        filterForm.date_to = dateStr; 
     }
     // Sincronizamos el string visual
     filterForm.range_string = dateStr;
@@ -2102,21 +2135,23 @@ const modalForm = reactive({
 })
 
 watch(
-  // CORRECCIÓN: Quitamos el ".value" aquí porque modalForm es reactive
   () => [modalForm.expedient, modalForm.preconfirmation], 
-  
   ([newExpedient, newPreconf]) => {
-    // CORRECCIÓN: Quitamos el ".value" aquí también
-    modalForm.confirmation = !!(newExpedient && newPreconf);
+    const newConfirmation = !!(newExpedient && newPreconf);
+    if (modalForm.confirmation !== newConfirmation) {
+      modalForm.confirmation = newConfirmation;
+    }
   }
 );
 
-//si modalForm.confirmation cambia establecer en modalForm.expedient, modalForm.preconfirmation dichos cambios
 watch(
   () => modalForm.confirmation,
-  (newConfirmation) => {
-      modalForm.expedient = newConfirmation;
-      modalForm.preconfirmation = newConfirmation;
+  (newConfirmation, oldConfirmation) => {
+    // Solo actuamos si cambió y se está activando
+    if (newConfirmation !== oldConfirmation && newConfirmation) {
+      modalForm.expedient = true;
+      modalForm.preconfirmation = true;
+    }
   }
 );
 
@@ -2261,6 +2296,7 @@ function cleanFormModal(){
   modalForm.cat_segment_id = null
   modalForm.global_code = ''
   modalForm.specific_code = ''
+  currentEdition.value=null
 }
 
 async function openEditModal(edition) {
@@ -2272,7 +2308,7 @@ async function openEditModal(edition) {
     showFormModal.value = true
     //cleanForm y set starst date
     cleanFormModal()
-    modalForm.start_date = defaultStartDate.value
+    // modalForm.start_date = defaultStartDate.value
     modalForm.active = true
     return
   }
@@ -2314,7 +2350,6 @@ async function openEditModal(edition) {
 
     modalForm.cat_day_combination_id = data.cat_day_combination_id
     modalForm.cat_hour_combination_id = data.cat_hour_combination_id
-
     // Hijos
     modalForm.program_version_children = (data.children || []).map(child => ({
       ...child,
@@ -2407,7 +2442,6 @@ async function applyModalForm() {
           preconfirmation: child.preconfirmation ? 'Y' : 'N',
           confirmation: child.confirmation ? 'Y' : 'N',
           active: child.active ? 'Y' : 'N',
-          preconfirmation: child.preconfirmation ? 'Y' : 'N'
         }))
       }
 
@@ -2455,6 +2489,11 @@ function onProgramVersionChange(opcion) {
   modalForm.cat_type_program = opcion.cat_type_program
   modalForm.sessions = opcion.sessions
   modalForm.cat_type_program_alias = opcion.cat_type_program_alias
+  modalForm.start_date = null
+  modalForm.end_date = null
+  modalForm.cat_day_combination_id = null
+  modalForm.cat_hour_combination_id = null
+
   modalForm.program_version_children = (opcion.children || []).map(child => ({
     child_program_version_id: child.child_program_version_id,
     abbreviation: child.abbreviation,
@@ -2471,8 +2510,10 @@ function onProgramVersionChange(opcion) {
     upgrade: false,
     preconfirmation: false,
     confirmation: false,
-    start_date: defaultStartDate.value,
-    end_date: '',
+    start_date: null,//defaultStartDate.value,
+    end_date: null,
+    instructor_id: null,
+    instructor_label: null,
     cat_day_combination_id: null,
     cat_hour_combination_id: null,
     day_combination_label: null,
@@ -2624,9 +2665,6 @@ function validateDateInput(targetObj, fieldKey) {
   // 2. Validar Feriados (CORREGIDO: Usamos holidayDates.value)
   if (holidayDates.value.includes(dateVal)) {
     // Buscamos el nombre para que el mensaje sea más útil
-    console.log("calcular feriado")
-    console.log(dateVal)
-    console.log(catalogs.value.catHolidays)
     const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
     const hName = hObj ? hObj.description : 'Feriado';
     
@@ -2636,41 +2674,71 @@ function validateDateInput(targetObj, fieldKey) {
   }
 }
 
-function getChildDateConfig(index,bodyField=null) {
+function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
-
-  if(bodyField){
-      config.minDate = bodyField.start_date;
-      return config;
-  }
-
-  // 1. REGLA: El Primer Hijo (index 0) solo dentro del mes seleccionado
-  if ((index === 0 || index == null)&&!hasActiveFilters) {
-    const y = selectedYear.value;
-    const m = selectedMonth.value; // Viene del 1 al 12
-    
-    // Calcular último día del mes (Truco JS: día 0 del mes siguiente es el último del actual)
-    const lastDay = new Date(y, m, 0).getDate(); 
-
-    // Definir límites (YYYY-MM-DD)
-    config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
-    config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
-  } 
   
-  // 2. REGLA: Los siguientes hijos (index > 0)
-  // No pueden ser anteriores a la fecha del primer hijo
-  else {
-    const firstChild = modalForm.program_version_children[0];
-    
-    // Si el primer hijo ya tiene fecha, esa es la mínima para este
-    if (firstChild && firstChild.start_date) {
-      config.minDate = firstChild.start_date;
+  // --- LÓGICA DE FECHAS MIN/MAX (YA EXISTENTE) ---
+  if (bodyField) {
+    config.minDate = bodyField.start_date;
+  }else{
+    if(!hasActiveFilters.value || !currentEdition.value){
+      if ((index === 0 || index == null)) {
+        const y = selectedYear.value;
+        const m = selectedMonth.value;
+        const lastDay = new Date(y, m, 0).getDate();
+        config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
+        config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
+      } else {
+        const firstChild = modalForm.program_version_children[index-1];
+        if (firstChild && firstChild.start_date) {
+          config.minDate = firstChild.start_date;
+        }
+      }
     }
-    
   }
+  // --- NUEVA LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS ---
+  // Determinar el objeto a evaluar (modalForm para curso, o el hijo específico)
+  const targetObj = (index !== null && modalForm.program_version_children[index]) 
+    ? modalForm.program_version_children[index] 
+    : bodyField?bodyField:modalForm;
+
+  // Si hay una combinación de días seleccionada, aplicar filtro
+  if (targetObj?.cat_day_combination_id) {
+    const comboOption = catalogs.value.dayCombinationList.find(
+      c => c.id === targetObj.cat_day_combination_id
+    );
+
+    if (comboOption && comboOption.variable_2) {
+      try {
+        // Parsear el array de días desde variable_2 (ej: "[1,3,5]")
+        const allowedDays = JSON.parse(comboOption.variable_2);
+        
+        // Flatpickr: Solo habilitar esos días específicos
+        config.enable = [
+          (date) => {
+            const dayOfWeek = date.getDay();
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
+
+            // Debe estar en los días permitidos Y no ser feriado
+            return allowedDays.includes(dayOfWeek) && !holidayDates.value.includes(dateStr);
+          }
+        ];
+      } catch (e) {
+        console.error('Error parseando días:', e);
+      }
+    }
+  }
+
+  // --- DESHABILITAR FERIADOS (ADICIONAL) ---
+  // Si también quieres que los feriados NO se puedan seleccionar, agrega:
+  // if (!config.disable) config.disable = [];
+  // config.disable.push(...holidayDates.value);
 
   return config;
 }
+
+
 /**
  * Parsea la descripción del combo (ej: "Lun-Mie-Vier") y devuelve un array de días JS (0-6)
  * JS: 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
@@ -2693,14 +2761,41 @@ function parseDaysFromLabel(label) {
   return days; // Ej: [1, 3, 5]
 }
 
+/**
+ * Obtiene días permitidos con fallback robusto
+ * Prioriza JSON en variable_2, usa texto como backup
+ */
+function getAllowedDaysFromCombo(comboOption) {
+  if (!comboOption) return [];
+  
+  // Intento 1: JSON en variable_2 (más confiable)
+  if (comboOption.variable_2) {
+    try {
+      const parsed = JSON.parse(comboOption.variable_2);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Error parsing variable_2, usando fallback:', e);
+    }
+  }
+  
+  // Intento 2: Fallback a texto
+  return parseDaysFromLabel(comboOption.description);
+}
+
 
 function validateAndCalculate(targetObj, fieldKey, index=null) {
    const dateVal = targetObj[fieldKey];
    if (!dateVal) return;
    const [y, m, d] = dateVal.split('-').map(Number);
 
-   // Validación Mes/Año
-   if ((y !== selectedYear.value || m !== selectedMonth.value) && (index==0 || index==null) ) {
+   // Definir claramente cuándo validar mes/año
+   const shouldValidateMonthYear = !hasActiveFilters.value && 
+                                    !currentEdition.value && 
+                                    (index === null || index === 0);
+
+   if (shouldValidateMonthYear && (y !== selectedYear.value || m !== selectedMonth.value)) {
       toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
        
        // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
@@ -2745,19 +2840,41 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
       }
     }
 
-   // Validación Feriado (CORREGIDO: Usamos holidayDates.value)
+    
    if (holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
        const hName = hObj ? hObj.description : 'Feriado';
-
+       
        toast.info(`La fecha de inicio no puede ser un feriado (${hName}).`);
-       targetObj[fieldKey] = null;
+       // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
+       nextTick(() => {
+           targetObj[fieldKey] = null;
+           // Si es la fecha de inicio, limpiamos también la de fin para evitar inconsistencias
+           if (fieldKey === 'start_date') {
+               targetObj.end_date = null;
+           }
+       });
        return;
    }
 
    // 2. Si es Fecha de Inicio, calcular Fecha Fin automáticamente
    if (fieldKey === 'start_date') {
        calculateEndDate(targetObj);
+       
+       // VALIDACIÓN EN CASCADA para hijos
+       if (index !== null && modalForm.program_version_children.length > index + 1) {
+         const currentChild = modalForm.program_version_children[index];
+         const nextChild = modalForm.program_version_children[index + 1];
+         
+         // Avisar si hay conflicto cronológico con el siguiente
+         if (currentChild.end_date && nextChild.start_date && 
+             currentChild.end_date > nextChild.start_date) {
+           toast.warning(
+             `Atención: El cambio en "${currentChild.abbreviation}" afecta al módulo siguiente.`,
+             { timeout: 4000 }
+           );
+         }
+       }
    }
 }
 
@@ -2767,41 +2884,6 @@ const holidayDates = computed(() => {
   return (catalogs.value.catHolidays || []).map(h => h.variable_3) // Aquí vienen las fechas 'YYYY-MM-DD'
 })
 
-  function onChildEditionChange(edition, child) {
-    debugger
-    // Primero verificamos si 'edition' existe (no es null ni undefined)
-    if (edition && edition.edition_num_id) {
-      // Caso: Se seleccionó algo válido
-      child.start_date = edition.start_date ? edition.start_date.slice(0, 10) : null;
-      child.end_date = (edition.end_date || '').slice(0, 10);
-      child.cat_day_combination_id = edition.cat_day_combination_id;
-      child.cat_hour_combination_id = edition.cat_hour_combination_id;
-      child.instructor_id = edition.instructor_id;
-      child.instructor_label = edition.instructor_label; // Asumo que esto existe en el objeto
-      child.global_code = edition.global_code;
-      child.specific_code = edition.specific_code;
-      
-      child.active = edition.active === 'Y';
-      child.confirmation = edition.confirmation === 'Y';
-      child.preconfirmation = edition.preconfirmation === 'Y';
-      child.expedient = edition.expedient === 'Y';
-      child.sessions = edition.sessions;
-      child.instructor_label = edition.instructor_label
-      
-    } else {
-      // Caso: Se limpió el input (edition es null) o no tiene ID
-      child.start_date = null;
-      child.end_date = null;
-      child.cat_day_combination_id = null;
-      child.cat_hour_combination_id = null;
-      child.instructor_id = null;
-      child.instructor_label = '';
-      child.global_code = '';
-      child.specific_code = '';
-      // Restaurar sesiones por defecto si es necesario
-      child.sessions = child.program_version_sessions; 
-    }
-  }
 
 // --- LÓGICA DE PREVISUALIZACIÓN DE CALENDARIO ---
 const activePreviewId = ref(null) // Para saber qué popover abrir
@@ -2810,8 +2892,8 @@ const previewItems = ref([])      // La lista de fechas calculadas
 function unlinkChildEdition(child){
   child.new = true
   child.edition_id = null
-  child.start_date = defaultStartDate.value // <--- CAMBIO AQUÍ
-  child.end_date = ''
+  child.start_date = null  // ← No forzar fecha, dejar que usuario seleccione
+  child.end_date = null    // ← También null en vez de ''
   child.cat_day_combination_id = null
   child.cat_hour_combination_id = null
   child.instructor_id = null
@@ -2826,10 +2908,124 @@ function toggleSchedulePreview(uniqueId, targetObj) {
     activePreviewId.value = null
     return
   }
- console.log("datasss")
   // Generar la data
   previewItems.value = generatePreviewData(targetObj)
   activePreviewId.value = uniqueId
+}
+
+function isChildComplete(child) {
+  return (
+    !!child.cat_day_combination_id &&
+    !!child.start_date &&
+    !!child.end_date &&
+    !!child.cat_hour_combination_id
+  )
+}
+
+/**
+ * Helper para limpiar los datos de un hijo/módulo específico
+ * Evita repetir este bloque de código varias veces.
+ */
+function resetChildData(child) {
+  child.edition_id = null;
+  child.instructor_id = null;
+  child.instructor_label = '';
+  child.start_date = null;
+  child.end_date = null;
+  
+  // Flags booleanos
+  child.active = false;
+  child.expedient = false;
+  child.preconfirmation = false;
+  child.confirmation = false;
+  child.upgrade = false;
+  
+  // Restaurar sesiones por defecto si existe la propiedad
+  if (child.program_version_sessions) {
+    child.sessions = child.program_version_sessions;
+  }
+}
+
+function onChildEditionChange(edition, child, index) {
+  
+  // 1. CASO: Se limpió el select (edition es null o vacío)
+  if (!edition || !edition.edition_num_id) {
+    resetChildData(child);
+    return; // Terminamos aquí
+  }
+
+  // 2. VALIDACIÓN HACIA ATRÁS (Hermanos previos)
+  // Verificamos que la fecha elegida no sea menor a la de algún módulo anterior
+  const previousSiblings = modalForm.program_version_children.slice(0, index);
+  
+  const hasBackwardConflict = previousSiblings.some(sibling => {
+    // Solo comparamos si ambos tienen fecha
+    return sibling.start_date && edition.start_date && sibling.start_date > edition.start_date;
+  });
+
+  if (hasBackwardConflict) {
+    toast.warning('Cronología inválida: La edición seleccionada inicia antes que un módulo previo.');
+    // Como la selección es inválida, limpiamos el campo actual para obligar al usuario a elegir bien
+    resetChildData(child);
+    return;
+  }
+
+  // 3. ASIGNACIÓN DE DATOS (Si pasó la validación anterior)
+  child.edition_id = edition.edition_num_id; // Asegurar que se setea el ID
+  child.start_date = edition.start_date?.slice(0, 10) || null;
+  child.end_date = edition.end_date?.slice(0, 10) || null;
+  
+  child.cat_day_combination_id = edition.cat_day_combination_id;
+  child.cat_hour_combination_id = edition.cat_hour_combination_id;
+  
+  child.instructor_id = edition.instructor_id;
+  child.instructor_label = edition.instructor_label || '';
+  
+  child.global_code = edition.global_code;
+  child.specific_code = edition.specific_code;
+  
+  // Mapeo de valores 'Y'/'N' a Booleanos
+  child.active = edition.active === 'Y';
+  child.confirmation = edition.confirmation === 'Y';
+  child.preconfirmation = edition.preconfirmation === 'Y';
+  child.expedient = edition.expedient === 'Y';
+  
+  child.sessions = edition.sessions;
+
+
+  // 4. VALIDACIÓN HACIA ADELANTE (Hermanos posteriores) - NUEVO REQUERIMIENTO
+  // Validamos si lo que acabamos de insertar rompe la cronología de los que siguen
+  
+  const nextSiblings = modalForm.program_version_children.slice(index + 1);
+
+  nextSiblings.forEach((sibling, i) => {
+    // Si el hermano no tiene fecha, no hay conflicto que evaluar
+    if (!sibling.start_date || !child.start_date) return;
+
+    // Conflicto: El hermano siguiente empieza ANTES que el actual (que acabamos de poner)
+    if (sibling.start_date < child.start_date) {
+      
+      if (sibling.edition_id) {
+        // A) Es una edición ya vinculada (existente): Solo advertimos
+        // Calculamos el índice real visual para el mensaje (index + 1 (actual) + 1 (siguiente) + i)
+        const siblingPosition = index + 2 + i; 
+        toast.warning(`Conflicto de fechas: El módulo en la posición ${siblingPosition} inicia antes que este. Por favor revíselo.`);
+      } else {
+        // B) Es una edición nueva/draft (sin ID vinculado): La limpiamos automáticamente
+        // para mantener la consistencia sin molestar tanto al usuario
+        resetChildData(sibling);
+        // Opcional: Avisar discretamente que se limpió
+        // toast.info(`Se ha reseteado el módulo posterior ${index + 2 + i} por conflicto de fechas.`);
+      }
+    }
+  });
+}
+function isBlockedByPrevious(index) {
+  // La primera fila nunca se bloquea
+  if (index === 0) return false
+
+  const prev = this.modalForm.program_version_children[index - 1]
+  return !this.isChildComplete(prev)
 }
 
 // Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)
@@ -2848,11 +3044,11 @@ function generatePreviewData(targetObj) {
   if (totalSessions <= 0) return []
   const comboOption = catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id)
   if (!comboOption) return []
-  const allowedDays = parseDaysFromLabel(comboOption.description)
+  const allowedDays = getAllowedDaysFromCombo(comboOption)
   if (allowedDays.length === 0) return []
 
   // Inicio de simulación
-  let iterDate = new Date(targetObj.start_date + 'T00:00:00')
+  let iterDate = new Date(targetObj.start_date + 'T12:00:00')
   let sessionsCounted = 0
   let safetyLoop = 0
 
@@ -2923,54 +3119,54 @@ function getDayIndexFromStr(dateStr) {
   return dateObj.getDay();
 }
 
-/**
- * Modificamos la función existente calculateEndDate
- * Ahora incluye la validación de coherencia Día vs Combo
- */
 function calculateEndDate(targetObj) {
-  // 1. Validar existencia de datos
+  // 1. Validaciones básicas
   if (!targetObj.start_date || !targetObj.cat_day_combination_id) return;
+  
+  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0;
+  if (totalSessions <= 0) {
+    toast.warning("No hay sesiones configuradas para calcular.");
+    return;
+  }
 
-  // 2. Obtener configuración de días del catálogo
-  const comboOption = catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id);
-  if (!comboOption) return;
+  const comboOption = catalogs.value.dayCombinationList.find(
+    c => c.id === targetObj.cat_day_combination_id
+  );
+  if (!comboOption) {
+    toast.warning("Combinación de días no encontrada.");
+    return;
+  }
 
-  // 3. Obtener días permitidos (Ej: [5, 6] para Viernes y Sábado)
-  const allowedDays = parseDaysFromLabel(comboOption.description);
-  if (allowedDays.length === 0) return;
+  // 2. Parsing Robusto usando la nueva función unificada
+  const allowedDays = getAllowedDaysFromCombo(comboOption);
+  
+  if (allowedDays.length === 0) {
+    toast.error("Error en configuración de días del catálogo.");
+    return;
+  }
 
-  // --- NUEVA LÓGICA DE VALIDACIÓN (Día Coherente) ---
+  // 3. Validación de coherencia Día vs Combo
   const startDayIdx = getDayIndexFromStr(targetObj.start_date);
   
   if (!allowedDays.includes(startDayIdx)) {
     const dayName = dayNames[startDayIdx];
-    
     toast.warning(
-      `La fecha seleccionada cae en ${dayName} y no corresponde a la combinación de días: ${comboOption.description}.`
+      `La fecha seleccionada cae en ${dayName} y no corresponde a la combinación: ${comboOption.description}.`
     );
-    
-    // Limpiamos las fechas como solicitaste
-    targetObj.start_date = null;
-    targetObj.end_date = null;
-    
-    // Detenemos el proceso
+    nextTick(() => {
+      targetObj.start_date = null;
+      targetObj.end_date = null;
+    });
     return;
   }
-  // --------------------------------------------------
 
-  // 4. Validar Sesiones
-  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0;
-  if (totalSessions <= 0) return;
-
-  // 5. Simulación de Calendario (Proyección)
-  // Al haber validado arriba, la iteración comenzará correctamente desde la fecha de inicio
-  // considerándola como la posible "Sesión 1" si no es feriado.
-  
-  let iterDate = new Date(targetObj.start_date + 'T00:00:00');
+  // 4. Simulación de calendario con T12:00:00 (evitar problemas de zona horaria)
+  let iterDate = new Date(targetObj.start_date + 'T12:00:00');
   let sessionsCounted = 0;
   let safetyLoop = 0;
+  let calculatedEndDate = null;
 
-  while (sessionsCounted < totalSessions && safetyLoop < 1000) {
+  while (sessionsCounted < totalSessions && safetyLoop < 1500) {
     safetyLoop++;
     
     const y = iterDate.getFullYear();
@@ -2979,30 +3175,35 @@ function calculateEndDate(targetObj) {
     const dateString = `${y}-${m}-${d}`;
     const dayOfWeek = iterDate.getDay();
 
-    // Verificamos día de clase
     const isClassDay = allowedDays.includes(dayOfWeek);
-    
-    // Verificamos feriado (usando tu nuevo computed holidayDates)
     const isHoliday = holidayDates.value.includes(dateString);
 
-    // LÓGICA DE CONTEO:
-    // Si es día de clase Y NO es feriado, cuenta como sesión.
-    // Como iterDate empieza en start_date (que ya validamos que es ClassDay),
-    // si no es feriado, start_date será la sesión #1.
     if (isClassDay && !isHoliday) {
       sessionsCounted++;
+      if (sessionsCounted === totalSessions) {
+        calculatedEndDate = dateString;
+        break; 
+      }
     }
 
-    if (sessionsCounted === totalSessions) {
-      targetObj.end_date = dateString;
-      break; 
-    }
-
-    // Avanzar al día siguiente
     iterDate.setDate(iterDate.getDate() + 1);
   }
-}
 
+  // 5. Validación de resultado
+  if (safetyLoop >= 1500) {
+    toast.error("No se pudo calcular la fecha fin: demasiadas iteraciones. Revise configuración.");
+    targetObj.end_date = null;
+    return;
+  }
+
+  if (calculatedEndDate) {
+    nextTick(() => { 
+      targetObj.end_date = calculatedEndDate; 
+    });
+  } else {
+    toast.error("No se pudo calcular fecha fin. Verifique días/feriados.");
+  }
+}
 function addAttachmentProgram(){
   modalForm.attachments.push({
     program_version_attachment_id: null,
@@ -3061,6 +3262,74 @@ function loadState() {
   } catch (e) {
     console.error('Error cargando state', e)
   }
+}
+const searchEditionsFiltered = async (q, child, index) => {
+  // 1. Llamar al servicio original
+  const response = await editionService.editionCaller({ 
+    q, 
+    program_version_id: child.child_program_version_id, 
+    year: selectedYear.value,
+    month: selectedMonth.value 
+  });
+
+  if (!Array.isArray(response)) return [];
+
+  // --- LÓGICA DE LÍMITE INFERIOR (Hermanos Anteriores) ---
+  let minDateLimit = null; // Fecha mínima permitida (piso)
+
+  if (index > 0) {
+    const arrItemsBefore = modalForm.program_version_children.slice(0, index);
+    const prevDates = arrItemsBefore
+      .map(item => item.start_date)
+      .filter(date => date);
+
+    if (prevDates.length > 0) {
+      prevDates.sort(); 
+      // Queremos la ÚLTIMA fecha de los anteriores (la más grande)
+      minDateLimit = prevDates[prevDates.length - 1]; 
+    }
+  }
+
+  // --- LÓGICA DE LÍMITE SUPERIOR (Hermanos Siguientes) ---
+  let maxDateLimit = null; // Fecha máxima permitida (techo)
+
+  // slice(index + 1) toma desde el siguiente hasta el final
+  const arrItemsAfter = modalForm.program_version_children.slice(index + 1);
+  const nextDates = arrItemsAfter
+    .map(item => item.start_date)
+    .filter(date => date);
+
+  if (nextDates.length > 0) {
+    nextDates.sort(); 
+    // Queremos la PRIMERA fecha de los siguientes (la más pequeña / más pronta)
+    // porque no podemos empezar después de que el siguiente empiece.
+    maxDateLimit = nextDates[0]; 
+  }
+
+  // --- FILTRADO FINAL ---
+  const filteredResponse = response.filter(edition => {
+    // Seguridad: Si la edición no tiene fecha, la descartamos (o la dejas, según tu regla de negocio)
+    if (!edition.start_date) return false;
+
+    const editionDate = edition.start_date;
+
+    // 1. Validar contra el pasado (PISO)
+    // Si existe límite inferior y la edición es menor a ese límite -> False
+    if (minDateLimit && editionDate < minDateLimit) {
+      return false;
+    }
+
+    // 2. Validar contra el futuro (TECHO)
+    // Si existe límite superior y la edición es mayor a ese límite -> False
+    if (maxDateLimit && editionDate > maxDateLimit) {
+      return false;
+    }
+
+    // Si pasa ambas, es válida
+    return true;
+  });
+
+  return filteredResponse;
 }
 </script>
 
@@ -3586,7 +3855,9 @@ tr[class*="row-segment-"]:hover td {
   overflow: hidden;
   animation: fadeIn 0.2s ease-out;
 }
-
+.opacity-50 {
+  opacity: 0.5;
+}
 /* Animación suave */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-5px); }
