@@ -51,12 +51,12 @@ const routes = [
             component: () => import('@/views/fico/EnrollmentForm.vue'),
             meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
-          {
-            path: 'reportes',
-            name: 'FicoReportes',
-            component: () => import('@/views/fico/Reportes.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
-          },
+          // {
+          //   path: 'reportes',
+          //   name: 'FicoReportes',
+          //   component: () => import('@/views/fico/Reportes.vue'),
+          //   meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+          // },
         ],
       },
 
@@ -136,28 +136,28 @@ const routes = [
         redirect: { name: 'GerenciaOverview' },
         meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
         children: [
-          {
-            path: 'indicadores',
-            name: 'GerenciaIndicadores',
-            // BI ejecutivo
-            component: () => import('@/views/gerencia/Indicadores.vue'),
-            meta: { area: 'GERENCIA' },
-          },
-          {
-            path: 'reportes-ejecutivos',
-            name: 'GerenciaReportesEjecutivos',
-            // PDFs / board mensual
-            component: () =>
-              import('@/views/gerencia/ReportesEjecutivos.vue'),
-            meta: { area: 'GERENCIA' },
-          },
-          {
-            path: 'overview',
-            name: 'GerenciaOverview',
-            // vista resumen cross-área
-            component: () => import('@/views/gerencia/Overview.vue'),
-            meta: { area: 'GERENCIA' },
-          },
+          // {
+          //   path: 'indicadores',
+          //   name: 'GerenciaIndicadores',
+          //   // BI ejecutivo
+          //   component: () => import('@/views/gerencia/Indicadores.vue'),
+          //   meta: { area: 'GERENCIA' },
+          // },
+          // {
+          //   path: 'reportes-ejecutivos',
+          //   name: 'GerenciaReportesEjecutivos',
+          //   // PDFs / board mensual
+          //   component: () =>
+          //     import('@/views/gerencia/ReportesEjecutivos.vue'),
+          //   meta: { area: 'GERENCIA' },
+          // },
+          // {
+          //   path: 'overview',
+          //   name: 'GerenciaOverview',
+          //   // vista resumen cross-área
+          //   component: () => import('@/views/gerencia/Overview.vue'),
+          //   meta: { area: 'GERENCIA' },
+          // },
         ],
       },
       // =====================

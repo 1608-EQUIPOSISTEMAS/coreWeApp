@@ -11,29 +11,29 @@ export default [
   //
   // GERENCIA
   //
-  {
-    component: 'CNavGroup',
-    name: 'Gerencia',
-    to: '/gerencia',
-    icon: 'cil-layers', // icono sugerido
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Overview',
-        to: '/gerencia/overview',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Indicadores',
-        to: '/gerencia/indicadores',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Reportes Ejecutivos',
-        to: '/gerencia/reportes-ejecutivos',
-      },
-    ],
-  },
+  // {
+  //   component: 'CNavGroup',
+  //   name: 'Gerencia',
+  //   to: '/gerencia',
+  //   icon: 'cil-layers', // icono sugerido
+  //   items: [
+  //     {
+  //       component: 'CNavItem',
+  //       name: 'Overview',
+  //       to: '/gerencia/overview',
+  //     },
+  //     {
+  //       component: 'CNavItem',
+  //       name: 'Indicadores',
+  //       to: '/gerencia/indicadores',
+  //     },
+  //     {
+  //       component: 'CNavItem',
+  //       name: 'Reportes Ejecutivos',
+  //       to: '/gerencia/reportes-ejecutivos',
+  //     },
+  //   ],
+  // },
   //
   // FICO
   //
@@ -43,21 +43,21 @@ export default [
     to: '/fico',
     icon: 'cil-layers', // icono sugerido
     items: [
-      {
-        component: 'CNavItem',
-        name: 'Overview',
-        to: '/fico/overview',
-      },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'Overview',
+      //   to: '/fico/overview',
+      // },
       {
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
       },
-      {
-        component: 'CNavItem',
-        name: 'Reportes',
-        to: '/fico/reportes',
-      },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'Reportes',
+      //   to: '/fico/reportes',
+      // },
     ],
   },
 
