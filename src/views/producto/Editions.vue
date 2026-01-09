@@ -884,7 +884,7 @@
                             v-model="modalForm.program_version_id"
                             mode="remote"
                             :disabled="currentEdition && currentEdition.edition_num_id"
-                            :fetcher="q => programService.programVersionCaller({ q, not_modality: catalogs.modalityList.find(e=> e.alias == 'we_modality_online').id })"
+                            :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e=> e.alias == 'we_modality_online').id })"
                             label-field="program_type_for_iu"
                             value-field="program_version_id"
                             placeholder="Buscar programa..."
@@ -1083,7 +1083,6 @@
                                      <button v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
                                          <i class="fa-solid fa-times"></i> Desvincular
                                      </button>
-
                                      <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
                                          <div class="fw-bold">{{ child.global_code }}</div>
                                          <div class="text-xs text-muted">{{ child.specific_code }}</div>
@@ -2505,8 +2504,9 @@ function onProgramVersionChange(opcion) {
     cat_model_modality_label: child.cat_model_modality_label,
     modality: child.modality || null,
     new: true,
+    active: true,
     edition_id: null,
-    expedient: false,
+    expedient: true,
     upgrade: false,
     preconfirmation: false,
     confirmation: false,
@@ -2969,7 +2969,7 @@ function onChildEditionChange(edition, child, index) {
     resetChildData(child);
     return;
   }
-
+  console.log(edition)
   // 3. ASIGNACIÓN DE DATOS (Si pasó la validación anterior)
   child.edition_id = edition.edition_num_id; // Asegurar que se setea el ID
   child.start_date = edition.start_date?.slice(0, 10) || null;
@@ -3267,9 +3267,12 @@ const searchEditionsFiltered = async (q, child, index) => {
   // 1. Llamar al servicio original
   const response = await editionService.editionCaller({ 
     q, 
-    program_version_id: child.child_program_version_id, 
-    year: selectedYear.value,
-    month: selectedMonth.value 
+    program_version_id: child.child_program_version_id,
+    //si es el primer hijo y es new que se rija bajo el mesy año seleccionado
+    ...(!hasActiveFilters.value ? {
+      month: selectedMonth.value,
+      year: selectedYear.value
+    } : {})
   });
 
   if (!Array.isArray(response)) return [];
@@ -3323,6 +3326,26 @@ const searchEditionsFiltered = async (q, child, index) => {
     // Si existe límite superior y la edición es mayor a ese límite -> False
     if (maxDateLimit && editionDate > maxDateLimit) {
       return false;
+    }
+    
+    // si es una edición nueva la modal y tambien hasActiveFilters es false y es una edicion nueva hija y es la es la primera hija, tiene que ser del mismo mes y año del selectedMonth y year
+    if (
+      !currentEdition.value &&
+      !hasActiveFilters.value &&
+      index === 0 &&
+      !child.new
+    ) {
+      const date = new Date(editionDate);
+
+      const editionMonth = date.getUTCMonth() + 1; // 1–12
+      const editionYear  = date.getUTCFullYear();
+
+      if (
+        editionMonth !== selectedMonth.value ||
+        editionYear !== selectedYear.value
+      ) {
+        return false;
+      }
     }
 
     // Si pasa ambas, es válida
