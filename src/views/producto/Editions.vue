@@ -3024,8 +3024,11 @@ function isBlockedByPrevious(index) {
   // La primera fila nunca se bloquea
   if (index === 0) return false
 
-  const prev = this.modalForm.program_version_children[index - 1]
-  return !this.isChildComplete(prev)
+  // QUITA 'this.'
+  const prev = modalForm.program_version_children[index - 1] 
+  
+  // QUITA 'this.'
+  return !isChildComplete(prev) 
 }
 
 // Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)
