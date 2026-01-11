@@ -2,8 +2,9 @@
   <flat-pickr
     v-model="model"
     :config="finalConfig"
-    class="base-datepicker-input"
-    v-bind="$attrs" 
+    class="base-datepicker-input form-control"
+    :required="required"
+    v-bind="$attrs"
   />
 </template>
 
@@ -13,46 +14,64 @@ import flatPickr from 'vue-flatpickr-component';
 import 'flatpickr/dist/flatpickr.css';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
 
-// 1. Definimos el modelo (v-model)
 const model = defineModel();
 
-// 2. Props para permitir sobreescribir configuraciones desde fuera
 const props = defineProps({
   config: {
     type: Object,
     default: () => ({})
+  },
+  required: {  // ✅ AÑADIR
+    type: Boolean,
+    default: false
   }
 });
 
-// 3. Configuración Base (Tu estándar)
 const defaultConfig = {
   altInput: true,
   altFormat: "d/m/Y",
-  dateFormat: "Y-m-d", 
+  dateFormat: "Y-m-d",
   locale: Spanish,
   allowInput: true,
-  disableMobile: "true" // Recomendado para que en celular no abra el nativo feo
+  disableMobile: true,
+  showMonths: 1,
+  altInputClass: 'flatpickr-input form-control',
 };
 
-// 4. Fusionamos la config base con la que mandes (si mandas alguna)
 const finalConfig = computed(() => {
   return { ...defaultConfig, ...props.config };
 });
 </script>
 
-<style>
-/* Ajuste de altura (Tu problema del input alto) */
+<style scoped>
+/* Input del DatePicker - SIN border fijo */
 .base-datepicker-input {
-  /* Esto imita un input estándar de Bootstrap o Tailwind */
-  height: 38px; 
-  padding: 0.375rem 0.75rem;
-  font-size: 1rem;
-  line-height: 1.5;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  width: 100%;
-  background-color: white;
+  height: 38px !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  border-radius: 0.25rem !important;
+  width: 100% !important;
+  background-color: white !important;
+  box-sizing: border-box !important;
 }
 
-/* Si usas Tailwind, puedes aplicar clases directas en el template */
+/* Asegurar que el input alternativo también tenga la altura correcta */
+:deep(.flatpickr-input) {
+  height: 38px !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* ✅ OPCIONAL: Si quieres que el borde izquierdo se vea en el input visible */
+:deep(.flatpickr-input.form-control:required:invalid) {
+  border-left-width: 3px !important;
+  border-left-color: #f87171 !important;
+}
+
+:deep(.flatpickr-input.form-control:required:valid) {
+  border-left-width: 3px !important;
+  border-left-color: #34d399 !important;
+}
 </style>

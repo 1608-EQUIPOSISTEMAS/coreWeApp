@@ -14,8 +14,8 @@
     </div>
 
     <div class="card-body">
-      
-      <BaseFilterChips 
+
+      <BaseFilterChips
         :items="activeFilterChips"
         @remove="clearFilter"
         @clear-all="clearFilters"
@@ -79,7 +79,7 @@
                 <div v-if="l.program_label">
                   <div class="name">{{ l.program_label }}</div>
                   <div class="small muted mt-1">
-                    {{ l.cat_type_program_label }} 
+                    {{ l.cat_type_program_label }}
                     <span v-if="l.cat_model_modality_label">• {{ l.cat_model_modality_label }}</span>
                   </div>
                 </div>
@@ -112,7 +112,7 @@
                   <div class="muted x-small">{{ l.modification_date }}</div>
                 </div>
               </td>
-              
+
               <td>
                 <span v-if="l.cat_last_follow_alias" class="badge" :class="badgeForFollow(l.cat_last_follow_alias)">
                   {{ filtroFollow?.find(e=>e.alias==l.cat_last_follow_alias)?.description }}
@@ -131,17 +131,17 @@
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="lg">
     <div class="px-3 py-2">
-      
+
       <div class="row g-3 mb-4">
         <div class="col-md-7">
           <label class="form-label">
             <i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> Búsqueda General
           </label>
-          <input 
-            v-model.trim="filters.q" 
-            type="text" 
-            class="form-control" 
-            placeholder="Nombre, teléfono..." 
+          <input
+            v-model.trim="filters.q"
+            type="text"
+            class="form-control"
+            placeholder="Nombre, teléfono..."
             @keyup.enter="applyFilters"
           />
         </div>
@@ -212,7 +212,7 @@
         <h6 class="section-title text-primary mb-3">
           <i class="fa-solid fa-graduation-cap me-1"></i> Interés Académico
         </h6>
-        
+
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <label class="form-label">Nombre del Programa</label>
@@ -348,7 +348,7 @@ const filters = reactive({
 })
 
 // === CATÁLOGOS ===
-const filtroTiposPrograma = ref(catalog.options('we_program_type') || []) 
+const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status'))
 const filtroCanales = ref(catalog.options('we_social_media'))
@@ -414,7 +414,7 @@ function clearFilters() {
     estado: null,
     owner_user_ids: []
   })
-  
+
   pagin.value.page = 1
   localStorage.removeItem('crm_leads_filter_state_v1')
   rebuildChips()
@@ -424,7 +424,7 @@ function clearFilters() {
 function rebuildChips() {
   const chips = []
   if (filters.q) chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
-  
+
   if (filters.rangoFechas?.start || filters.rangoFechas?.end) {
     chips.push({ key: 'rangoFechas', text: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
   }
@@ -455,7 +455,7 @@ function rebuildChips() {
       const it = filtroQuery.value.find(i => i.alias === filters.cat_query)
       chips.push({ key: 'cat_query', text: `Promo: ${it?.description}` })
   }
-  
+
   if(filters.program_text) {
       chips.push({ key: 'program_text', text: `Prog: ${filters.program_text}` })
   }
@@ -467,9 +467,14 @@ function rebuildChips() {
     const it = filtroModalidad.value.find(i => i.alias === filters.cat_model_modality)
     chips.push({ key: 'cat_model_modality', text: `Mod: ${it?.description}` })
   }
-  
+
   if (filters.owner_user_ids && filters.owner_user_ids.length > 0) {
-    chips.push({ key: 'owner_user_ids', text: `Asesores: ${filters.owner_user_ids.length}` })
+    // chips.push({ key: 'owner_user_ids', text: `Asesores: ${filters.owner_user_ids.length}` }) tambien una propiedad details, agarras el listado
+    const details = filtroOwners.value
+      .filter(o => filters.owner_user_ids.includes(o.value))
+      .map(o =>({ detail: o.description}))
+
+    chips.push({ key: 'owner_user_ids', text: `Asesores: ${filters.owner_user_ids.length}`, details: details })
   }
 
   activeFilterChips.value = chips
@@ -505,7 +510,6 @@ async function fetchLeads() {
     if (items.length > 0) {
       leadsRaw.value = items
       pagin.value.total = Number(t || 0)
-      
       // Cargar owners si es necesario
       if(filtroOwners.value.length === 0){
         const arr = []// await authService.userList({})
@@ -526,8 +530,8 @@ async function fetchLeads() {
 }
 
 // === ROUTING ===
-function goNew() { 
-  router.push({ name: 'ComercialLeadsNew' }) 
+function goNew() {
+  router.push({ name: 'ComercialLeadsNew' })
 }
 function viewLead(lead) {
   router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } })
@@ -576,21 +580,21 @@ onMounted(() => {
 
 <style scoped>
 /* Contenedor Principal (Estilo FICO) */
-.leads-card { 
-  background: #fff; 
-  border: 1px solid #e5e7eb; 
-  border-radius: 0.6rem; 
+.leads-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.6rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-top: 4px solid #6366f1; /* Color Indigo */
   margin-bottom: 2rem;
 }
 
-.card-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 1.25rem; 
-  border-bottom: 1px solid #f3f4f6; 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .title { display: flex; flex-direction: column; gap: 4px; }
@@ -602,12 +606,12 @@ onMounted(() => {
 /* Tabla Unificada */
 .table-responsive { width: 100%; overflow-x: auto; margin-top: 1rem; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
-.table thead th { 
-  background: #f9fafb; 
-  padding: 0.85rem 0.75rem; 
-  text-align: left; 
-  font-weight: 600; 
-  color: #4b5563; 
+.table thead th {
+  background: #f9fafb;
+  padding: 0.85rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
   border-bottom: 2px solid #e5e7eb;
   white-space: nowrap;
 }
@@ -638,12 +642,12 @@ onMounted(() => {
 .badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
 
 /* Botones */
-.btn { 
-  border: 1px solid #d1d5db; 
-  padding: 0.45rem 0.75rem; 
-  border-radius: 0.4rem; 
-  cursor: pointer; 
-  transition: all 0.2s; 
+.btn {
+  border: 1px solid #d1d5db;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
   background: #fff;
   font-size: 0.8rem;
   font-weight: 600;

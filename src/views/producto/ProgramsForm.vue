@@ -151,7 +151,7 @@
                 </div>
               </div>
               <div class="row g-2 align-items-end mb-2">
-                
+
                 <div class="col-md-4">
                   <label class="form-label mb-1">Certificaciòn <span class="required-star">*</span></label>
                   <input
@@ -162,7 +162,7 @@
                     required
                   />
                 </div>
-                
+
                 <div class="col-md-4">
                   <label class="form-label mb-1">Publicitario <span class="required-star">*</span></label>
                   <input
@@ -213,7 +213,7 @@
                   />
                 </div>
 
-                
+
                 <div class="col-md-4">
                   <label class="form-label mb-1">URL FICHA</label>
                   <input
@@ -224,10 +224,10 @@
                   />
                 </div>
 
-                 
+
                     <!--active-->
-                
-                
+
+
                 <div class="col-md-2">
                   <label class="form-label mb-1">
                     Categoria <span class="required-star">*</span>
@@ -252,7 +252,7 @@
                 </div>
 
               </div>
-              
+
 
               <div class="version-block__children">
                 <div class="version-block__children-head">
@@ -288,7 +288,7 @@
                     :model-label="child.label"
                     required
                   />
-                  
+
                 </div>
 
               </div>
@@ -463,7 +463,7 @@ import FileUploader from '@/components/FileUploader.vue'
           version_code: ch.version_code,
           label: ch.label,
           expedient_link: ch.expedient_link,
-          
+
           label: ch.abbreviation
         }
       })
@@ -480,7 +480,7 @@ import FileUploader from '@/components/FileUploader.vue'
     form.cat_type_program = data.cat_type_program ?? null
     form.cat_category = data.cat_category ?? null
     form.link = data.link ?? null
-    
+
     form.cat_model_modality = data.cat_model_modality ?? null
     form.active = data.active === 'N' ? false : true
     form.cat_type_program_label = data.cat_type_program_label
@@ -537,8 +537,8 @@ import FileUploader from '@/components/FileUploader.vue'
         program_name: form.program_name || null,
         cat_type_program: form.cat_type_program ?? null,
         link: form.link || null,
-        
-        skem_clasification: form.skem_clasification || null, 
+
+        skem_clasification: form.skem_clasification || null,
         cat_category: form.cat_category ?? null,
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
@@ -549,11 +549,11 @@ import FileUploader from '@/components/FileUploader.vue'
           expedient_link: v.expedient_link ?? null,
           active: v.active ? 'Y' : 'N',
           brand_name: v.brand_name || null,
-          
+
           abbreviation: v.abbreviation || null,
           observations: v.observations || null,
           cat_course_category: v.cat_course_category || null,
-          
+
           // opcional: el SP puede usarlo para estructura si algún día
           // permites hijos en alta
           children_ids: buildChildrenIdsFromRow(v)
@@ -648,26 +648,12 @@ import FileUploader from '@/components/FileUploader.vue'
         ver.active = false
       }
     })
-    
+
   }
 </script>
 
 
 <style scoped>
-.form-control:required:invalid:not(:disabled):not([readonly]),
-.form-select:required:invalid:not(:disabled):not([readonly]),
-textarea.form-control:required:invalid:not(:disabled):not([readonly]) {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 .2rem rgba(239, 68, 68, .15);
-}
-
-.form-control:required:valid:not(:disabled):not([readonly]),
-.form-select:required:valid:not(:disabled):not([readonly]),
-textarea.form-control:required:valid:not(:disabled):not([readonly]) {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .15);
-}
-
 .lead-form {
   font-size: 0.95rem;
   color: #111827;

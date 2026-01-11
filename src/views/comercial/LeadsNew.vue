@@ -43,7 +43,7 @@
                 value-field="alias"
                 placeholder="PROMOCIÓN..."
                 :model-label="form.query_label"
-                
+
               />
             </div>
 
@@ -77,14 +77,14 @@
               />
             </div>
 
-            <div class="col-md-4" v-if="form.category_alias && 
-                                      (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) || 
+            <div class="col-md-4" v-if="form.category_alias &&
+                                      (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
                                       (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
               <label class="form-label mb-1">Producto / Programa<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.program_version_id"
                 mode="remote"
-                :fetcher="q => programService.programVersionCaller({ q, 
+                :fetcher="q => programService.programVersionCaller({ q,
                                                             cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
                                                             cat_model_modality: !form.program_modality_alias?null:programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
                                                           })"
@@ -152,7 +152,7 @@
               <input autocomplete="off" v-model="form.full_name" type="text" class="form-control" placeholder="NOMBRE COMPLETO" />
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="form-label mb-1">
                 Teléfono / WhatsApp <span class="required-star">*</span>
                 <span v-if="searchingPhone" class="ms-2 badge bg-warning text-dark scale-in-center">
@@ -163,13 +163,13 @@
                 <input autocomplete="off"
                   v-model="form.telefono"
                   type="text"
-                  v-restrict="{ only: 'numbers', max: 15 }" 
+                  v-restrict="{ only: 'numbers', max: 15 }"
                   required
                   class="form-control"
                   :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
                   placeholder="TELEFONO + ENTER"
                   @keyup.enter="searchLeadByPhone"
-                  @blur="searchLeadByPhone" 
+                  @blur="searchLeadByPhone"
                   :disabled="searchingPhone"
                 />
                 <button class="btn btn-outline-secondary" type="button" @click="searchLeadByPhone" :disabled="searchingPhone">
@@ -178,7 +178,6 @@
               </div>
             </div>
 
-            <div :class="'col-md-' + (leadDataHistory ? '1' : '5')"></div>
 
             <div class="col-md-2" v-if="leadDataHistory">
               <label class="form-label mb-1">E. Cliente</label>
@@ -197,7 +196,7 @@
               <label class="form-label mb-1">Membresía</label>
               <input autocomplete="off" v-model="form.categoriaMember" type="text" class="form-control" disabled />
             </div>
-            
+
             <div class="col-md-2">
               <label class="form-label mb-1">Status<span class="required-star">*</span></label>
               <SearchSelect
@@ -398,10 +397,10 @@
                   <label class="form-label d-lg-none mb-1">
                     Fecha y Hora<span class="required-star">*</span>
                   </label>
-                  <DateTime12 
-                    v-model="c.fechaContactoProximo" 
-                    required 
-                    clearable 
+                  <DateTime12
+                    v-model="c.fechaContactoProximo"
+                    required
+                    clearable
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
                 </div>
@@ -409,21 +408,21 @@
                 <!-- Respuesta -->
                 <div class="col-12 col-lg-3">
                   <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
-                  <input 
-                    autocomplete="off" 
-                    v-model="c.respuesta" 
-                    type="text" 
-                    class="form-control" 
-                    placeholder="RESULTADO" 
+                  <input
+                    autocomplete="off"
+                    v-model="c.respuesta"
+                    type="text"
+                    class="form-control"
+                    placeholder="RESULTADO"
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
                 </div>
 
                 <!-- Acciones -->
                 <div class="col-12 col-lg-1 d-flex align-items-start justify-content-lg-center" v-if="!c.id">
-                  <button 
-                    type="button" 
-                    class="btn btn-outline-danger btn-sm w-100 w-lg-auto" 
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm w-100 w-lg-auto"
                     @click="removeContacto(idx)"
                   >
                     <i class="fa-solid fa-square-minus"></i>
@@ -443,7 +442,7 @@
             <span></span>
           </label>
         </div>
-        
+
       </div>
 
       <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
@@ -465,7 +464,7 @@
             <h5 class="program-title">
               {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
             </h5>
-            
+
             <div class="program-edition" v-if="form.edition_label">
               <i class="fa-solid fa-calendar-days me-1"></i>
               <span>Edición: {{ form.edition_label }}</span>
@@ -479,9 +478,9 @@
               </div>
               <span class="user-name text-truncate">{{ form.full_name }}</span>
             </div>
-            
-            <div v-if="clientProfileType" 
-                class="profile-badge" 
+
+            <div v-if="clientProfileType"
+                class="profile-badge"
                 :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
               <i class="fa-solid" :class="clientProfileType === 'estudiante' ? 'fa-graduation-cap' : 'fa-briefcase'"></i>
               <span>{{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}</span>
@@ -511,7 +510,7 @@
               placeholder="T. DOCUMENTO"
               value-field="alias"
             />
-          </div> 
+          </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Documento<span class="required-star">*</span></label>
             <input autocomplete="off" required v-model="insc.document" type="text" placeholder="DOCUMENTO" class="form-control"  @keyup.enter="searchSunat" />
@@ -532,7 +531,7 @@
             <label class="form-label mb-1">Apellido Materno<span class="required-star">*</span></label>
             <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" />
           </div>
-          
+
           <div class="col-md-4">
             <label required class="form-label mb-1">Modalidad del programa<span class="required-star">*</span></label>
             <SearchSelect
@@ -568,7 +567,7 @@
               v-model="insc.cat_type_payment"
               required
               :items="inscPaymentModes"
-              placeholder="M. PAGO" 
+              placeholder="M. PAGO"
               label-field="description"
               value-field="alias"
             />
@@ -584,7 +583,7 @@
               zero-counts-as-empty
               placeholder="0.00"
             />
-          </div>  
+          </div>
           <div class="col-6" v-if="!insc.cat_type_payment || insc.cat_type_payment=='we_payment_way_single'"></div>
           <div class="col-2" v-if="insc.cat_type_payment && insc.cat_type_payment!='we_payment_way_single'"></div>
           <div class="col-md-2">
@@ -601,7 +600,7 @@
           <SearchSelect
             v-model="insc.dsct_porcent_id"
             mode="remote"
-            :fetcher="q => discountService.discountCaller({ q, 
+            :fetcher="q => discountService.discountCaller({ q,
                                                         cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id,
                                                         cat_currency: selectedCurrencyAlias
                                                       })"
@@ -610,8 +609,8 @@
             placeholder="DESCUENTO (%)"
             :minChars="0"
             :cache="false"
-            @change="onChangeDescuentoPorcentual" 
-          /> 
+            @change="onChangeDescuentoPorcentual"
+          />
           </div>
 
         <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
@@ -619,7 +618,7 @@
           <SearchSelect
             v-model="insc.dsct_stick_id"
             mode="remote"
-            :fetcher="q => discountService.discountCaller({ q, 
+            :fetcher="q => discountService.discountCaller({ q,
                                                         cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id,
                                                         cat_currency: selectedCurrency.alias
                                                       })"
@@ -630,14 +629,14 @@
             :cache="false"
             @change="onChangeDescuentoFijo"
           />
-          </div>  
+          </div>
 
         <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
           <label class="form-label mb-1">Beneficio</label>
           <SearchSelect
             v-model="insc.dsct_benefit_id"
             mode="remote"
-            :fetcher="q => discountService.discountCaller({ q, 
+            :fetcher="q => discountService.discountCaller({ q,
                                                         cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id,
                                                         cat_currency: selectedCurrency.alias
                                                       })"
@@ -649,7 +648,7 @@
             @change="onChangeBeneficio"
           />
           </div>
-          
+
         </div>
       </section>
 
@@ -657,11 +656,11 @@
         <h6 class="insc-section__title">
           Documentación Adjunta
         </h6>
-        
+
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label mb-2 fw-semibold">Comprobante de Pago</label>
-            <FileUploader 
+            <FileUploader
                 label="Clic para subir Voucher"
                 v-model="form.ticket_payment_url"
                 accept=".pdf,.doc,.docx"
@@ -670,7 +669,7 @@
 
           <div class="col-md-6">
             <label class="form-label mb-2 fw-semibold">Carnet / Documento ID</label>
-            <FileUploader 
+            <FileUploader
                 label="Subir carnet estudiantil"
                 v-model="form.carnet_url"
                 accept=".pdf,.doc,.docx"
@@ -689,7 +688,7 @@
               <span class="label">Precio del programa</span>
               <span class="value text-muted"> {{ selectedCurrency.symbol }} {{ insc.montoOriginal?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
             </div>
-            
+
             <div class="summary-row" v-if="insc.dsct_porcent_id">
               <span class="label">Descuento</span>
               <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoPorcentaje?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
@@ -720,11 +719,11 @@
         </div>
       </section>
 
-       <section class="insc-section"> 
+       <section class="insc-section">
             <h6 class="insc-section__title">OBSERVACIONES</h6>
-            <div class="row g-3"> 
+            <div class="row g-3">
               <textarea v-model="insc.observacions" class="form-control" rows="2"></textarea>
-            </div> 
+            </div>
         </section>
     </div>
 
@@ -870,8 +869,8 @@ import FileUploader from '@/components/FileUploader.vue'
     modalidadPrograma: 'NORMAL',
     promocion_id: null,
     descuento_id: null,
-    modalidadPago: 'CONTADO', 
-    montoOriginal: 0, 
+    modalidadPago: 'CONTADO',
+    montoOriginal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
     dsct_benefit_id: null,
@@ -923,7 +922,7 @@ import FileUploader from '@/components/FileUploader.vue'
 
     const montoFinalCalculado = computed(() => {
       const base = Number(insc.montoOriginal) || 0
-      const dscto = Number(insc.totalDescuentos) || 0 
+      const dscto = Number(insc.totalDescuentos) || 0
       return base - dscto
   })
 
@@ -1018,8 +1017,8 @@ import FileUploader from '@/components/FileUploader.vue'
         respuesta: att.response || ''
       })),
 
-      enrollment_id: l.enrollment_id 
-      
+      enrollment_id: l.enrollment_id
+
     })
 
     createdLeadId.value   = l.id ?? l.lead_id ?? id
@@ -1030,7 +1029,7 @@ import FileUploader from '@/components/FileUploader.vue'
       try {
       console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
-          
+
           Object.assign(form, {
               fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
               query_alias: originalData.query_alias ?? null,
@@ -1051,7 +1050,7 @@ import FileUploader from '@/components/FileUploader.vue'
               edition_label: originalData.edition_label ?? null,
               query_label: originalData.query_label ?? null,
               ocupacion_label: originalData.ocupacion_label ?? null,
-              
+
               pay_date: null,
               nivel_alias: 'we_lead_interest_low',
               mensajeChat: originalData.message_init_conversation ?? '',
@@ -1067,8 +1066,8 @@ import FileUploader from '@/components/FileUploader.vue'
           createdLeadId.value = null
           createdPersonId.value = null
           toast.info('Formulario precargado con datos del lead original. Por favor, revise y guarde.', { timeout: 5000 })
-          
-          
+
+
       } catch (e) {
           console.error("Error cargando plantilla para clonar", e)
       }
@@ -1097,7 +1096,7 @@ import FileUploader from '@/components/FileUploader.vue'
     form.query_alias   = 'we_category_query_general'
     form.client_status   = 'we_client_person'
     form.active = true
-    
+
     loaded.value = true
   })
 
@@ -1151,15 +1150,15 @@ async function searchSunat() {
 async function searchLeadByPhone() {
   const phone = form.telefono?.trim()
 
-  if (!phone || phone.length < 6) return 
+  if (!phone || phone.length < 6) return
   if (searchingPhone.value) return
 
   searchingPhone.value = true
-  
+
   try {
     const response = await comercialService.searchContact({ phone })
-    
-    const data = response.data || response 
+
+    const data = response.data || response
 
     if (!data || data.status === 'error') {
        return
@@ -1167,23 +1166,23 @@ async function searchLeadByPhone() {
 
     if (data.status === 'new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
-      
+
       client_category_alias = 'we_moment_new'
-      
+
       form.categoriaMember  = ''
-      
+
     } else {
       const tipo = data.t_lead === 'COMUNIDAD' ? 'CLIENTE / COMUNIDAD' : 'LEAD RECURRENTE'
-      
+
       toast.success(`Encontrado: ${data.full_name} (${tipo})`, { timeout: 4000 })
-      
+
       client_category_alias = 'we_moment_new'
       form.categoriaMember  = data.membresia || ''
 
       if (data.full_name) {
         form.full_name = data.full_name
       }
-      
+
       if (data.last_program) {
         if (!form.observacion.includes(data.last_program)) {
            form.observacion = (form.observacion ? form.observacion + '\n' : '') + `[Histórico] Interés previo: ${data.last_program}`
@@ -1214,7 +1213,7 @@ async function searchLeadByPhone() {
     const cat_type_strategy      = idByAlias(form.strategy_alias,        strategyCatalog.value)
     const cat_prospect_situation = idByAlias(form.ocupacion_alias,       prospectSituationCatalog.value)
     const cat_client_type        = idByAlias(form.client_status, clientCatalog.value)
-    
+
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
@@ -1297,18 +1296,18 @@ function buildEnrollmentPayload() {
 
 async function confirmarInscripcion() {
   if (!comercialService) return console.error('comercialService no inyectado')
-  
+
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
      toast.warning("Por favor complete los campos obligatorios")
      return
   }
 
   savingInsc.value = true
-  
+
   try {
     const payload = buildEnrollmentPayload()
     const response = await comercialService.enrollmentRegister(payload)
-    
+
     toast.success('Inscripción y documentos subidos con éxito!')
 
     showViewModal.value = false
@@ -1344,7 +1343,7 @@ async function confirmarInscripcion() {
     }
   }
 
-  function openInscription() { 
+  function openInscription() {
 
     if (!form.price_student_dollars || !form.price_student_soles || !form.price_profesional_soles || !form.price_profesional_dollars) {
       toast.info('No se encontraron precios para el programa seleccionado. Por favor, verifique la configuración del programa.', { timeout: 5000 })
@@ -1364,7 +1363,7 @@ async function confirmarInscripcion() {
     insc.dsct_porcent_id   = null
     insc.dsct_money_id     = null
     insc.observacions       = ''
-    showViewModal.value = true 
+    showViewModal.value = true
   }
 
   function validateLeadInfo() {
@@ -1395,11 +1394,11 @@ async function confirmarInscripcion() {
     const required = ['selectedCurrencyAlias','cat_type_payment','saved_money']
     return required.every(f => insc[f] || insc[f] === 0)
   }
-  
+
 
   const montoOriginal = computed(() => 1000)
 
-  
+
     function onProgramaTypeChange(opcion) {
         if (!opcion){
           form.program_version_id = null
@@ -1415,7 +1414,7 @@ async function confirmarInscripcion() {
           form.program_modality_selected_alias = null
           return
         }
-        
+
         form.program_modality_selected_alias = opcion.cat_model_modality_alias
     }
 
@@ -1425,7 +1424,7 @@ async function confirmarInscripcion() {
 
     const clientProfileType = computed(() => {
       if (!form.ocupacion_alias) return null
-      
+
       const ocupacionInfo = prospectSituationCatalog.value.find(
         opt => opt.alias === form.ocupacion_alias
       )
@@ -1440,12 +1439,12 @@ async function confirmarInscripcion() {
       const type = clientProfileType.value
 
       if (type === 'estudiante') {
-        return isUSD 
-          ? Number(form.price_student_dollars || 0) 
+        return isUSD
+          ? Number(form.price_student_dollars || 0)
           : Number(form.price_student_soles || 0)
       } else {
-        return isUSD 
-          ? Number(form.price_profesional_dollars || 0) 
+        return isUSD
+          ? Number(form.price_profesional_dollars || 0)
           : Number(form.price_profesional_soles || 0)
       }
     })
@@ -1472,7 +1471,7 @@ async function confirmarInscripcion() {
         promocion_id: null,
         descuento_id: null,
         modalidadPago: 'CONTADO',
-        montoOriginal: 0, 
+        montoOriginal: 0,
         adelanto: 0,
         observacion: '',
         montoDescuentoPorcentaje: 0,
@@ -1489,7 +1488,7 @@ async function confirmarInscripcion() {
         montoBeneficio: 0,
         montoFinal: 0,
       })
-      
+
     }
 
     watch(showViewModal, (estaAbierto) => {
@@ -2277,7 +2276,7 @@ async function confirmarInscripcion() {
   justify-content: space-between;
   align-items: flex-start;
   gap: 1.5rem;
-  
+
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   padding: 1.5rem;

@@ -5,7 +5,7 @@
         <div class="title-icon" style="cursor: pointer;" @click="reloadSchedule()">
           <i class="fa-solid fa-calendar-days"></i>
         </div>
-        
+
         <div class="title-main">
           {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
         </div>
@@ -41,7 +41,7 @@
             <option :value="2025">2025</option>
             <option :value="2026">2026</option>
           </select>
-          
+
           <button type="button" class="btn btn-icon" @click="changeMonth(1)">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
@@ -69,72 +69,13 @@
       </div>
     </div>
 
-
     <div class="card-body border-bottom bg-light p-2" v-if="hasActiveFilters">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <small class="text-muted fw-bold me-2">Filtrado por:</small>
-            
-            <span v-if="activeFilters.program_version_label" class="badge bg-white text-dark border shadow-sm pe-1">
-                Prog: {{ activeFilters.program_version_label }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('program_version_id'); removeFilter('program_version_label')"></i>
-            </span>
-
-            <span v-if="activeFilters.instructor_label" class="badge bg-white text-dark border shadow-sm pe-1">
-                Docente: {{ activeFilters.instructor_label }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('instructor_id')"></i>
-            </span>
-
-            <span v-if="activeFilters.date_range" class="badge bg-white text-dark border shadow-sm pe-1">
-                <i class="fa-regular fa-calendar me-1 text-muted"></i>
-                {{ activeFilters.date_from }} al {{ activeFilters.date_to }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('date_range')"></i>
-            </span>
-
-            <span v-if="activeFilters.cat_category" class="badge bg-white text-dark border shadow-sm pe-1">
-                Línea: {{ getCatalogLabel('we_program_category', activeFilters.cat_category) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_category')"></i>
-            </span>
-
-            <span v-if="activeFilters.cat_type_program" class="badge bg-white text-dark border shadow-sm pe-1">
-                Cat: {{ getCatalogLabel('we_program_type', activeFilters.cat_type_program) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_type_program')"></i>
-            </span>
-
-             <span v-if="activeFilters.cat_course_category" class="badge bg-white text-dark border shadow-sm pe-1">
-                Clasif: {{ getCatalogLabel('we_course_category', activeFilters.cat_course_category) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_course_category')"></i>
-            </span>
-
-            <span v-if="activeFilters.cat_segment" class="badge bg-white text-dark border shadow-sm pe-1">
-                Seg: {{ getCatalogLabel('we_segment', activeFilters.cat_segment) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_segment')"></i>
-            </span>
-
-             <span v-if="activeFilters.cat_day_combination" class="badge bg-white text-dark border shadow-sm pe-1">
-                Días: {{ getCatalogLabel('we_day_combination', activeFilters.cat_day_combination) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_day_combination')"></i>
-            </span>
-
-            <span v-if="activeFilters.cat_hour_combination" class="badge bg-white text-dark border shadow-sm pe-1">
-                Horas: {{ getCatalogLabel('we_hour_combination', activeFilters.cat_hour_combination) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_hour_combination')"></i>
-            </span>
-
-            <span v-if="activeFilters.cat_model_modality" class="badge bg-white text-dark border shadow-sm pe-1">
-                Mod: {{ getCatalogLabel('we_modality', activeFilters.cat_model_modality) }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('cat_model_modality')"></i>
-            </span>
-
-            <span v-if="activeFilters.clasification" class="badge bg-white text-dark border shadow-sm pe-1">
-                Clasif: {{ activeFilters.clasification }}
-                <i class="fa-solid fa-xmark ms-2 cursor-pointer text-muted hover-danger" @click="removeFilter('clasification')"></i>
-            </span>
-
-            <button class="btn btn-link btn-xs text-danger text-decoration-none" @click="clearAllFilters">
-                Limpiar todo
-            </button>
-        </div>
-    </div>
+      <BaseFilterChips
+        :items="formattedActiveFilters"
+        @remove="removeFilter($event.key)"
+        @clear-all="clearAllFilters"
+      />
+  </div>
 
     <div class="card-body">
       <div class="table-responsive">
@@ -142,7 +83,7 @@
           <thead>
             <tr>
               <th class="bg-warning text-dark text-center" style="width: 100px;">
-                  
+
                 <div class="d-flex justify-content-center">
                   <button
                     type="button"
@@ -213,7 +154,7 @@
                 <td style="min-width: 100px;" class="minW">
                   <div class="name fw-bold">
                     <span style="cursor:pointer" class="text-primary text-decoration-hover" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
-                      {{ e.program_abreviature || '—' }} 
+                      {{ e.program_abreviature || '—' }}
                       <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
                     </span>
                   </div>
@@ -224,7 +165,7 @@
                     </div>
                   </div>
                 </td>
-                
+
                 <td style="min-width: 150px;" class="minW">
                   <div class="muted small">
                     {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
@@ -232,11 +173,11 @@
                   <div class="muted small">
                     {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
                   </div>
-                  
+
                 </td>
 
                 <td style="min-width: 120px;" >
-                  <div 
+                  <div
                     class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
                     title="Filtrar solo por este día"
                     @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
@@ -253,8 +194,8 @@
                 <td class="minW">
                   <div class="small">{{ formatDate(e.end_date) }}</div>
                 </td>
-                <td 
-                  style="min-width: 140px;" 
+                <td
+                  style="min-width: 140px;"
                   class="position-relative overflow-visible"
                   :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
                 >
@@ -296,7 +237,7 @@
                           </div>
                       </div>
                     </div>
-                    
+
                     <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
                   </div>
                 </td>
@@ -309,18 +250,18 @@
 
                 <td class="text-center" style="min-width: 110px;">
                   <label class="form-switch scale-75" title="Ficha / Expediente">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.expedient" 
+                    <input
+                      type="checkbox"
+                      v-model="e.expedient"
                       @change="updateQuickStatus(e, 'expedient')"
                     />
                     <span></span>
                   </label>
-                  
+
                   <label class="form-switch scale-75" title="Mejora / Upgrade">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.upgrade" 
+                    <input
+                      type="checkbox"
+                      v-model="e.upgrade"
                       @change="updateQuickStatus(e, 'upgrade')"
                     />
                     <span></span>
@@ -329,18 +270,18 @@
 
                 <td class="text-center" style="min-width: 110px;">
                   <label class="form-switch scale-75" title="Pre-Confirmación">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.preconfirmation" 
+                    <input
+                      type="checkbox"
+                      v-model="e.preconfirmation"
                       @change="updateQuickStatus(e, 'preconfirmation')"
                     />
                     <span></span>
                   </label>
-                  
+
                   <label class="form-switch scale-75" title="Confirmación">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.confirmation" 
+                    <input
+                      type="checkbox"
+                      v-model="e.confirmation"
                       @change="updateQuickStatus(e, 'confirmation')"
                     />
                     <span></span>
@@ -348,8 +289,8 @@
                 </td>
 
                 <td style="min-width: 150px;" class="minW">
-                  <textarea 
-                    class="form-control form-control-xs table-textarea" 
+                  <textarea
+                    class="form-control form-control-xs table-textarea"
                     rows="2"
                     v-model="e.notes"
                     @blur="updateQuickNotes(e)"
@@ -361,7 +302,7 @@
                   <div class="name fw-bold small">{{ e.global_code }}</div>
                   <div class="muted small">{{ 'A: ' +e.specific_code }}</div>
                   <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">{{ e.clasification? 'UNQ: ' + e.clasification:'' }}</div>
-                  
+
                 </td>
               </tr>
             </template>
@@ -400,7 +341,7 @@
                     </div>
                   </div>
                 </td>
-                
+
                 <td style="min-width: 150px;" class="minW">
                   <div class="muted small">
                     {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
@@ -417,8 +358,8 @@
                   <div class="small">{{ formatDate(e.end_date) }}</div>
                 </td>
 
-                <td 
-                    style="min-width: 140px;" 
+                <td
+                    style="min-width: 140px;"
                     class="position-relative overflow-visible"
                     :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
                   >
@@ -460,7 +401,7 @@
                           </div>
                       </div>
                     </div>
-                    
+
                     <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
                   </div>
                 </td>
@@ -473,18 +414,18 @@
 
                 <td class="text-center" style="min-width: 110px;">
                   <label class="form-switch scale-75" title="Ficha / Expediente">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.expedient" 
+                    <input
+                      type="checkbox"
+                      v-model="e.expedient"
                       @change="updateQuickStatus(e, 'expedient')"
                     />
                     <span></span>
                   </label>
-                  
+
                   <label class="form-switch scale-75" title="Mejora / Upgrade">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.upgrade" 
+                    <input
+                      type="checkbox"
+                      v-model="e.upgrade"
                       @change="updateQuickStatus(e, 'upgrade')"
                     />
                     <span></span>
@@ -493,18 +434,18 @@
 
                 <td class="text-center" style="min-width: 110px;">
                   <label class="form-switch scale-75" title="Pre-Confirmación">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.preconfirmation" 
+                    <input
+                      type="checkbox"
+                      v-model="e.preconfirmation"
                       @change="updateQuickStatus(e, 'preconfirmation')"
                     />
                     <span></span>
                   </label>
-                  
+
                   <label class="form-switch scale-75" title="Confirmación">
-                    <input 
-                      type="checkbox" 
-                      v-model="e.confirmation" 
+                    <input
+                      type="checkbox"
+                      v-model="e.confirmation"
                       @change="updateQuickStatus(e, 'confirmation')"
                     />
                     <span></span>
@@ -512,8 +453,8 @@
                 </td>
 
                 <td style="min-width: 150px;" class="minW">
-                  <textarea 
-                    class="form-control form-control-xs table-textarea" 
+                  <textarea
+                    class="form-control form-control-xs table-textarea"
                     rows="2"
                     v-model="e.notes"
                     @blur="updateQuickNotes(e)"
@@ -536,18 +477,18 @@
     <div class="card border-0 shadow-sm mb-4 overflow-hidden">
       <div class="card-body p-0">
         <div class="row g-0">
-          
+
           <div class="col-md-4 bg-primary text-white p-4 d-flex flex-column justify-content-center align-items-center text-center position-relative">
             <i class="fa-solid fa-chart-line position-absolute start-0 bottom-0 opacity-25" style="font-size: 8rem; transform: translate(-20%, 20%);"></i>
-            
+
             <h6 class="text-uppercase opacity-75 mb-2 letter-spacing-1">Avance Global</h6>
             <div class="display-3 fw-bold mb-0">
               {{ metaSummary.general.percentage }}<small class="fs-4">%</small>
             </div>
             <div class="progress w-100 bg-white bg-opacity-25 mt-3" style="height: 8px;">
-              <div 
-                class="progress-bar bg-white" 
-                role="progressbar" 
+              <div
+                class="progress-bar bg-white"
+                role="progressbar"
                 :style="{ width: metaSummary.general.percentage + '%' }"
               ></div>
             </div>
@@ -555,7 +496,7 @@
 
           <div class="col-md-8 p-4 d-flex align-items-center bg-white">
             <div class="row w-100 text-center g-3">
-              
+
               <div class="col-4 border-end">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Ventas (B2C)</div>
                 <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.sales }}</div>
@@ -587,7 +528,7 @@
       </div>
     </div>
     <div class="row g-4 mb-4">
-      
+
       <div class="col-lg-8">
         <div class="meta-card h-100">
           <div class="meta-card__header">
@@ -595,9 +536,9 @@
           </div>
           <div class="meta-card__body">
             <div class="lines-grid">
-              <div 
-                v-for="(line, idx) in metaSummary.lines" 
-                :key="idx" 
+              <div
+                v-for="(line, idx) in metaSummary.lines"
+                :key="idx"
                 class="line-item"
                 :class="{ 'is-zero': line.count === 0 }"
               >
@@ -622,14 +563,14 @@
                   <span>{{ cat.count }}</span>
                 </div>
                 <div class="progress" style="height: 6px;">
-                  <div 
-                    class="progress-bar bg-info" 
-                    role="progressbar" 
+                  <div
+                    class="progress-bar bg-info"
+                    role="progressbar"
                     :style="{ width: (cat.count / (metaSummary.categories.find(c=>c.name==='Total')?.count || 1) * 100) + '%' }"
                   ></div>
                 </div>
               </div>
-              
+
               <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
                  <span class="text-muted small text-uppercase fw-bold">Total Programado</span>
                  <span class="badge bg-dark fs-6">{{ metaSummary.categories.find(c=>c.name==='Total')?.count || 0 }}</span>
@@ -641,7 +582,7 @@
     </div>
 
     <div class="row g-4">
-      
+
       <div class="col-md-6">
         <div class="meta-card h-100">
           <div class="meta-card__header">
@@ -709,6 +650,16 @@
 </BaseModal>
 <BaseModal v-model="showFilterModal" title="Filtrar Cronograma" size="lg">
     <div class="p-3 row">
+
+        <div class="row g-2 mb-3">
+            <label class="form-label small fw-bold">Rango Fecha inicio</label>
+              <BaseDatePicker
+                v-model="filterForm.range_string"
+                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                placeholder="Seleccione rango (Desde a Hasta)"
+                @on-change="handleRangeFilterChange"
+            />
+        </div>
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Buscar Programa</label>
             <SearchSelect
@@ -721,124 +672,115 @@
                 placeholder="Buscar programa..."
                 :cache="false"
                 view-open="6"
-                :model-label="filterForm.program_version_label" 
+                :model-label="filterForm.program_version_label"
                 @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''"
             />
           </div>
-        
+
         <div class="mb-3 col-6">
              <label class="form-label small fw-bold">Docente</label>
-             <SearchSelect
-                v-model="filterForm.instructor_id"
-                
-                :cache="false"
-                mode="remote"
-                :fetcher="q => instructorService.instructorCaller({ q})"
-                label-field="full_name"
-                value-field="instructor_id"
-                placeholder="Todos los docentes"
-                :model-label="filterForm.instructor_label" 
-                @change="(opt) => filterForm.instructor_label = opt ? opt.full_name : ''"
-              />
-        </div>
+           <MultiSelect
+  v-model="filterForm.instructores_seleccionados"
 
-        <div class="row g-2 mb-3">
-            <label class="form-label small fw-bold">Rango Fecha inicio</label>
-              <BaseDatePicker
-                v-model="filterForm.range_string"
-                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-                placeholder="Seleccione rango (Desde a Hasta)"
-                @on-change="handleRangeFilterChange"
-            />
+  mode="remote"
+  :fetcher="(q) => instructorService.instructorCaller({ q })"
+  :debounce-ms="400"
+
+  labelKey="full_name"
+  valueKey="instructor_id"
+
+  placeholder="Buscar docentes..."
+  modalTitle="Seleccionar Docentes"
+/>
         </div>
-<!-- 
+<!--
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Texto a buscar</label>
             <input type="text" class="form-control form-control-sm" v-model="filterForm.q" placeholder="Buscar por código, programa, docente..." />
         </div> -->
-        
+
         <!--cat_segment cat_course_category cat_day_combination cat_hour_combination cat_model_modality-->
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Línea de Negocio</label>
-            <SearchSelect
-                v-model="filterForm.cat_category"
+            <MultiSelect
+                v-model="filterForm.category_ids"
                 :items="catalogs.catLines"
-                label-field="description"
-                value-field="id"
-                placeholder="Todas las líneas"
+                label-key="description"
+                value-key="id"
+                placeholder="LINEAS..."
             />
         </div>
 
-    
+
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Categoría</label>
-            <SearchSelect
-                v-model="filterForm.cat_type_program"
+            <MultiSelect
+                v-model="filterForm.type_program_ids"
                 :items="catalogs.catCategories"
-                label-field="description"
-                value-field="id"
-                placeholder="Todas las categorías"
+                label-key="description"
+                value-key="id"
+                placeholder="CATEGORIAS..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Seguimiento Ediciòn</label>
-            <SearchSelect
-                v-model="filterForm.cat_course_category"
+            <MultiSelect
+                v-model="filterForm.course_category_ids"
                 :items="catalogs.catTypes"
-                label-field="description"
-                value-field="id"
-                placeholder="S. Ediciòn"
+                label-key="description"
+                value-key="id"
+                placeholder="S. EDICIONES..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Segmento</label>
-            <SearchSelect
-                v-model="filterForm.cat_segment"
+            <MultiSelect
+                v-model="filterForm.segment_ids"
                 :items="catalogs.catSegments"
-                label-field="description"
-                value-field="id"
-                placeholder="Todos los segmentos"
+                label-key="description"
+                value-key="id"
+                placeholder="SEGMENTOS..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Días</label>
-            <SearchSelect
-                v-model="filterForm.cat_day_combination"
+            <MultiSelect
+                v-model="filterForm.combination_days_ids"
                 :items="catalogs.dayCombinationList"
-                label-field="description"
-                value-field="id"
-                placeholder="Todos los días"
+                label-key="description"
+                value-key="id"
+                placeholder="DIAS..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Horas</label>
-            <SearchSelect
-                v-model="filterForm.cat_hour_combination"
+            <MultiSelect
+                v-model="filterForm.hour_combination_ids"
                 :items="catalogs.hourCombinationList"
-                label-field="description"
-                value-field="id"
-                placeholder="Todas las horas"
+                label-key="description"
+                value-key="id"
+                placeholder="HORARIOS..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Modalidad</label>
-            <SearchSelect
-                v-model="filterForm.cat_model_modality"
+            <MultiSelect
+                v-model="filterForm.model_modality_ids"
                 :items="catalogs.modalityList"
-                label-field="description"
-                value-field="id"
-                placeholder="Todas las modalidades"
+                label-key="description"
+                value-key="id"
+                placeholder="MODALIDADES..."
             />
         </div>
 
         <div class="mb-3 col-6">
             <label class="form-label small fw-bold">Clasificaciòn</label>
-            
+
             <!--input text -->
             <input type="text" class="form-control form-control-sm" v-model="filterForm.clasification" placeholder="UNQ" />
         </div>
@@ -857,9 +799,9 @@
     size="xl"
   >
     <div class="modern-modal-layout">
-        
+
         <div class="main-column">
-            
+
             <div class="internal-header mb-3" v-if="currentEdition">
                  <div class="d-flex align-items-center gap-2">
                     <div class="badge-type" :class="isCourse ? 'bg-warning-subtle text-warning-emphasis' : 'bg-info-subtle text-info-emphasis'">
@@ -871,7 +813,7 @@
                     </div>
                  </div>
                  <div class="text-muted small mt-1 ms-1">
-                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || '' }} 
+                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || '' }}
                  </div>
             </div>
 
@@ -892,7 +834,7 @@
                             :cache="false"
                             required
                             view-open="6"
-                            :model-label="modalForm.abbreviation" 
+                            :model-label="modalForm.abbreviation"
                             @change="onProgramVersionChange"
                         />
                     </div>
@@ -905,16 +847,16 @@
                             showSubValue
                             label-field="full_name"
                             sublabel-field="document_number"
-                            
+
                             value-field="instructor_id"
                             placeholder="Buscar docente..."
-                            :model-label="modalForm.instructor_label" 
+                            :model-label="modalForm.instructor_label"
                             :minChars="0"
                             :cache="false"
                          />
 
                     </div>
-                  
+
                       <div class="col-3">
                           <label class="form-label-sm">Segmentación</label>
                           <SearchSelect
@@ -958,9 +900,9 @@
                         :required="isCourse"
                         placeholder="Calculado autom."
                       />
-                      
-                      <button 
-                        class="btn btn-outline-secondary" 
+
+                      <button
+                        class="btn btn-outline-secondary"
                         type="button"
                         @click.stop="toggleSchedulePreview('main_parent', modalForm)"
                         title="Ver desglose de sesiones"
@@ -996,7 +938,7 @@
                                 </td>
                                 <td>
                                   <span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span>
-                                  
+
                                   <div v-else class="text-danger fw-bold" style="font-size: 0.7rem;">
                                     <i class="fa-solid fa-ban me-1"></i> {{ item.desc }} </div>
                                 </td>
@@ -1016,7 +958,7 @@
                               value-field="id"
                               placeholder="Seleccione días"
                               :required="isCourse"
-                              @change="calculateEndDate(modalForm)" 
+                              @change="calculateEndDate(modalForm)"
                           />
                       </div>
                      <div class="col-md-6">
@@ -1053,17 +995,17 @@
                                    <span class="text-primary text-decoration-hover" style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
                                   <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: '+ child.sessions }}</div>
                                  </td>
-                                 
+
                                  <td>
                                      <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
                                          <small class="text-muted">¿Nueva?</small>
                                          <label class="form-switch scale-75">
-                                            <input 
+                                            <input
                                         :disabled="isBlockedByPrevious(index) " type="checkbox" v-model="child.new" />
                                             <span></span>
                                          </label>
                                      </div>
-                                     
+
                                      <SearchSelect
                                         v-if="!child.new && !child.edition_id"
                                         v-model="child.edition_id"
@@ -1090,13 +1032,13 @@
                                      </div>
                                  </td>
 
-                                 <td class="overflow-visible position-relative">
+                                 <td class="overflow-visible position-relative" style="min-width:150px!important">
                                   <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
                                     <BaseDatePicker
                                         v-model="child.start_date"
                                         :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
                                         class="mb-1"
-                                        required
+                                        :required="true"
                                         placeholder="Inicio"
                                         :config="getChildDateConfig(index)"
                                         @on-change="validateAndCalculate(child, 'start_date', index)"
@@ -1107,12 +1049,12 @@
                                           <BaseDatePicker
                                             v-model="child.end_date"
                                             :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
-                                            required
+                                            :required="true"
                                             :config="getChildDateConfig(null,child)"
                                             placeholder="Fin"
                                           />
-                                          <button 
-                                            class="btn btn-outline-secondary px-1" 
+                                          <button
+                                            class="btn btn-outline-secondary px-1"
                                             type="button"
                                             @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child)"
                                           >
@@ -1154,30 +1096,30 @@
                                         </div>
                                         <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
                                     </div>
-                                    
+
                                   </div>
                                   <div v-else class="text-muted text-center">-</div>
                                 </td>
 
                                  <td>
                                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                                      <SearchSelect 
-                                          v-model="child.cat_day_combination_id" 
-                                          :items="catalogs.dayCombinationList" 
-                                          label-field="description" 
-                                          value-field="id" 
-                                          placeholder="Días" 
+                                      <SearchSelect
+                                          v-model="child.cat_day_combination_id"
+                                          :items="catalogs.dayCombinationList"
+                                          label-field="description"
+                                          value-field="id"
+                                          placeholder="Días"
                                           :disabled="isBlockedByPrevious(index)"
                                           class="mb-1"
                                           @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id',child.cat_day_combination_id)"
-                                      />                                         
-                                      <SearchSelect 
-                                        v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" 
+                                      />
+                                      <SearchSelect
+                                        v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1"
                                         :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
                                       />
-                                      <SearchSelect 
+                                      <SearchSelect
                                         v-if="child.new || child.edition_id" v-model="child.instructor_id"
-                            :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" 
+                            :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label"
                                       />
                                      </div>
                                       <div v-else class="text-muted text-center">-</div>
@@ -1234,8 +1176,8 @@
                                             </label>
                                             <small class="text-muted">Cfm</small>
                                          </div>
-                                         
-                                         
+
+
                                      </div>
                                      <div v-else class="text-muted text-center">-</div>
                                  </td>
@@ -1247,12 +1189,12 @@
         </div>
 
         <div class="sidebar-column">
-            
+
             <div class="status-card mb-3">
                 <div class="status-card__header">
                     <i class="fa-solid fa-sliders me-2"></i> Configuración
                 </div>
-                  
+
                 <div class="status-card__body">
                     <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
                         <div class="switch-label">
@@ -1303,7 +1245,7 @@
                         </label>
                     </div>
                     <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-                    
+
                     <div class="col-12">
                          <label class="form-label-sm">Historico</label>
                          <input type="text"  class="form-control form-control-sm" v-model.number="modalForm.global_code" required />
@@ -1381,7 +1323,7 @@
 
 <BaseModal v-model="showTreeModal" :title="treeModalTitle" size="lg">
   <div class="accordion-container p-3 bg-light rounded-3">
-    
+
     <div v-if="!treeGroups.length" class="empty-state p-5 text-center">
       <div class="mb-3">
         <i class="fa-solid fa-sitemap fs-1 text-muted opacity-25"></i>
@@ -1391,13 +1333,13 @@
     </div>
 
     <div v-else class="d-flex flex-column gap-3">
-      
-      <div 
-        v-for="(group, idx) in treeGroups" 
-        :key="idx" 
+
+      <div
+        v-for="(group, idx) in treeGroups"
+        :key="idx"
         class="accordion-card bg-white border rounded shadow-sm overflow-hidden"
       >
-        <div 
+        <div
           class="accordion-header p-3 d-flex align-items-center justify-content-between cursor-pointer"
           :class="{ 'bg-primary-subtle': group.isOpen }"
           @click="toggleGroup(idx)"
@@ -1410,7 +1352,7 @@
                <div class="badge bg-primary text-white mb-1" style="font-size: 0.65rem;">PROGRAMA PADRE</div>
                <h6 class="m-0 fw-bold text-dark">{{ group.abbreviation }}</h6>
                <div class="small text-muted">
-                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }} 
+                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }}
                                    <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp; </span>
                </div>
             </div>
@@ -1433,8 +1375,8 @@
                     </tr>
                  </thead>
                  <tbody>
-                    <tr 
-                      v-for="child in group.children" 
+                    <tr
+                      v-for="child in group.children"
                       :key="child.edition_num_id || child.global_code"
                       :class="{ 'table-active': child.is_current }"
                     >
@@ -1460,7 +1402,7 @@
                               <span class="text-decoration-hover text-primary cursor-pointer"
                               @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })"
                               >
-                                {{ formatDate(child.start_date) }} 
+                                {{ formatDate(child.start_date) }}
                               </span>
                               <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
                              <br>
@@ -1483,7 +1425,7 @@
                           <span v-else class="text-muted">-</span>
                        </td>
                        <td class="text-end pe-4">
-                          <span 
+                          <span
                             class="badge border"
                             :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'"
                           >
@@ -1503,7 +1445,7 @@
 
   <BaseModal v-model="showGoalsModal" title="Tablero de Control" size="xl">
       <div class="dashboard-layout p-3">
-        
+
         <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
             <div>
               <h5 class="text-primary fw-bold mb-1">
@@ -1551,12 +1493,12 @@
                   <div class="kpi-header">
                     <i class="fa-solid fa-crosshairs text-danger"></i> Cumplimiento
                   </div>
-                  
+
                   <div class="text-center py-3">
                     <div class="progress" style="height: 25px;">
-                        <div 
-                          class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
-                          role="progressbar" 
+                        <div
+                          class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                          role="progressbar"
                           :style="{ width: Math.min(goalsSummary.vacantes.porcentaje, 100) + '%' }"
                         >
                           {{ goalsSummary.vacantes.porcentaje }}%
@@ -1585,7 +1527,7 @@
                   <div class="kpi-header">
                     <i class="fa-solid fa-filter-circle-dollar text-success"></i> Embudo
                   </div>
-                  
+
                   <div class="d-flex align-items-center justify-content-around mt-4">
                     <div class="text-center">
                         <h3 class="fw-bold text-muted mb-0">{{ goalsSummary.consultas.total }}</h3>
@@ -1610,17 +1552,17 @@
 
 </template>
 <script setup>
-  
+
 import { ref, reactive, computed, onMounted, inject, watch, nextTick } from 'vue' // <--- Agrega nextTick
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
-import DateRangePicker from '@/components/DateRangePicker.vue'
-
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import MultiSelect from '@/components/MultiSelect.vue';
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 // Configuración opcional para que se vea bonito y en español
-// Asegúrate de tener los componentes importados si los usas dentro de <script setup> 
-// aunque en Vue 3 <script setup> suelen ser auto-detectados si están en components.d.ts, 
+// Asegúrate de tener los componentes importados si los usas dentro de <script setup>
+// aunque en Vue 3 <script setup> suelen ser auto-detectados si están en components.d.ts,
 // pero es buena práctica dejarlos si ya estaban.
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -1691,7 +1633,7 @@ function calculateMetaSummary() {
 
 
   // 3. Inicializamos los mapas con conteo en 0 (para que aparezcan todos)
-  
+
   // --- A. LÍNEAS DE NEGOCIO ---
   const linesMap = {}
   catalogs.value.catLines.forEach(opt => {
@@ -1718,7 +1660,7 @@ function calculateMetaSummary() {
     const shortCode = opt.description
     typesMap[opt.alias] = {
       description: opt.variable_3,
-      code: shortCode, 
+      code: shortCode,
       count: 0,
       alias: opt.alias
     }
@@ -1727,7 +1669,7 @@ function calculateMetaSummary() {
   // --- D. SEGMENTOS ---
   const segsMap = {}
   catalogs.value.catSegments.forEach(opt => {
-    const shortCode = opt.description 
+    const shortCode = opt.description
     segsMap[shortCode] = {
       description: opt.variable_3,
       code: shortCode,
@@ -1760,7 +1702,7 @@ function calculateMetaSummary() {
 
   const categoriesArray = Object.values(catsMap)
   // Agregamos TOTAL real para las barras de progreso de categorías
-  categoriesArray.push({ name: 'Total', count: totalItems }) 
+  categoriesArray.push({ name: 'Total', count: totalItems })
   metaSummary.value.categories = categoriesArray
 
   metaSummary.value.types = Object.values(typesMap).sort((a, b) => b.count - a.count)
@@ -1774,10 +1716,10 @@ function calculateMetaSummary() {
   const fakeB2B = 3
   const fakeTarget = 808
   const fakeTotal = fakeSales + fakeB2B
-  
+
   // Cálculo real del porcentaje basado en los datos fake
-  const fakePercentage = fakeTarget > 0 
-    ? ((fakeTotal / fakeTarget) * 100).toFixed(2) 
+  const fakePercentage = fakeTarget > 0
+    ? ((fakeTotal / fakeTarget) * 100).toFixed(2)
     : '0.00'
 
   metaSummary.value.general = {
@@ -1796,7 +1738,7 @@ const treeModalTitle = ref('Estructura Académica')
 function openTreeModal(edition) {
   currentEdition.value = edition || null
   treeModalTitle.value = `Jerarquía: ${edition.program_abreviature || edition.global_code}`
-  
+
   const rawTree = edition.tree_detail || []
   const groups = []
 
@@ -1821,9 +1763,9 @@ function openTreeModal(edition) {
         global_code: contextNode.parent_global_code || 'S/C',
         abbreviation: contextNode.parent_abbreviation || 'Programa Padre',
         clasification: contextNode.parent_clasification,
-        
+
         isOpen: index === 0, // Abrir el primero
-        
+
         // Info de los Hijos (hermanos + el mismo)
         children: (contextNode.children || []).map(child => ({
           ...child,
@@ -1835,22 +1777,22 @@ function openTreeModal(edition) {
   } else {
     // Es un Padre (PEE) o un curso suelto sin contexto complejo
     // Creamos un grupo donde el padre es la edición seleccionada
-    //si es un curso salga mensaje info 
+    //si es un curso salga mensaje info
     if(edition.program_type === 'Curso') {
       toast.info('Este curso no tiene una estructura jerárquica asociada.');
       showTreeModal.value = false;
       return;
     }
-    
+
 
     groups.push({
       id: edition.edition_num_id,
       global_code: edition.global_code,
       abbreviation: edition.program_abreviature,
       clasification: edition.clasification || edition.skem_clasification,
-      
+
       isOpen: true,
-      
+
       children: rawTree.map(child => ({
         ...child,
         is_current: false
@@ -1938,16 +1880,95 @@ const filterForm = reactive({
     program_version_label: null,
     active: null,
     cat_day_combination:null,
-    cat_hour_combination: null
+    cat_hour_combination: null,
+    category_ids: [],
+    type_program_ids: [],
+    course_category_ids: [],
+    segment_ids: [],
+    combination_days_ids: [],
+    hour_combination_ids: [],
+    model_modality_ids: [],
+    instructores_seleccionados: [],
 })
 
 // Filtros activos (aplicados)
 const activeFilters = reactive({})
 
+
+const formattedActiveFilters = computed(() => {
+  const chips = []
+
+  // 1. Programa (Valor único / Objeto simple)
+  if (activeFilters.program_version_label) {
+    chips.push({
+      key: 'program_version_id',
+      text: `Prog: ${activeFilters.program_version_label}`
+    })
+  }
+
+  // 2. Docente (Array de objetos desde el MultiSelect)
+  if (activeFilters.instructores_seleccionados && activeFilters.instructores_seleccionados.length > 0) {
+    chips.push({
+      key: 'instructores_seleccionados',
+      // Muestra la cantidad en el chip
+      text: `Docentes: ${activeFilters.instructores_seleccionados.length}`,
+      // Pasa el array completo a 'details' para que tu componente BaseFilterChips pueda mostrar un tooltip o lista
+      details: activeFilters.instructores_seleccionados
+    })
+  }
+
+  // 3. Rango de Fechas
+  if (activeFilters.date_range) {
+    chips.push({
+      key: 'date_range',
+      text: `${activeFilters.date_from} al ${activeFilters.date_to}`,
+      icon: 'fa-regular fa-calendar'
+    })
+  }
+
+  // 4. Catálogos Múltiples (Arrays de IDs desde MultiSelect)
+  // Definimos qué campos son arrays y cómo se llaman en el catálogo
+  const arrayFilters = [
+    { key: 'category_ids', labelPrefix: 'Línea', catalogName: 'catLines' },
+    { key: 'type_program_ids', labelPrefix: 'Cat', catalogName: 'catCategories' },
+    { key: 'segment_ids', labelPrefix: 'Seg', catalogName: 'catSegments' },
+    { key: 'combination_days_ids', labelPrefix: 'Días', catalogName: 'dayCombinationList' },
+    { key: 'hour_combination_ids', labelPrefix: 'Horas', catalogName: 'hourCombinationList' },
+    { key: 'model_modality_ids', labelPrefix: 'Mod', catalogName: 'modalityList' },
+    { key: 'course_category_ids', labelPrefix: 'S. Edición', catalogName: 'catTypes' },
+  ]
+
+  arrayFilters.forEach(map => {
+    const selectedValues = activeFilters[map.key] // Esto debería ser el array de objetos {value, label} del MultiSelect
+
+    if (selectedValues && selectedValues.length > 0) {
+      chips.push({
+        key: map.key,
+        // Aquí aplicas tu lógica: Mostrar el conteo
+        text: `${map.labelPrefix}: ${selectedValues.length}`,
+        // Y aquí pasas el detalle (activeFilters ya tiene los objetos gracias al MultiSelect)
+        details: selectedValues
+      })
+    }
+  })
+
+  // 5. Clasificación (Texto simple)
+  if (activeFilters.clasification) {
+    chips.push({
+      key: 'clasification',
+      text: `Clasif: ${activeFilters.clasification}`
+    })
+  }
+
+  return chips
+})
+
+
 // Computed para saber si estamos en "Modo Histórico"
 const hasActiveFilters = computed(() => {
     return Object.keys(activeFilters).length > 0
 })
+
 
 function applyFilters() {
     // 1. Limpiar activeFilters
@@ -1961,12 +1982,13 @@ function applyFilters() {
         if (filterForm[key] !== null && filterForm[key] !== '' && filterForm[key] !== undefined) {
             activeFilters[key] = filterForm[key]
         }
+
     }
 
     // 3. LOGICA ESPECIAL PARA FECHAS
     // El template espera 'date_range' para mostrar el chip, pero el form tiene start/end
     if (filterForm.date_from && filterForm.date_to) {
-        activeFilters.date_range = true; 
+        activeFilters.date_range = true;
     }
 
     // 4. Si no hay filtros, limpiar lista histórica
@@ -2008,27 +2030,13 @@ function removeFilter(key) {
 function clearAllFilters(reload=true) {
     Object.keys(activeFilters).forEach(key => delete activeFilters[key]);
     // Reset form
-    filterForm.q = '';
-    filterForm.instructor_id = null;
-    filterForm.instructor_label = '';
-    filterForm.date_from = null;
-    filterForm.date_to = null;
-    filterForm.clasification = null;
-    filterForm.program_version_id = null;
-    filterForm.cat_type_program = null;
-    filterForm.cat_category = null;
-    filterForm.cat_model_modality = null;
-    filterForm.cat_segment = null;
-    filterForm.cat_course_category = null;
-    filterForm.program_version_label = null;
-    filterForm.active = null;
-    filterForm.range_string = null;
-    filterForm.cat_day_combination = null;
-    filterForm.cat_hour_combination = null;
+    for (const key in filterForm) {
+        filterForm[key] = null;
+    }
     saveState()
 
     if(reload)fetchSchedule();
-    
+
 }
 
 
@@ -2044,7 +2052,7 @@ async function fetchSchedule() {
         size: 100 // Traemos suficientes para el resumen
       }
       const { items } = await editionService.editionByWeekList(payload)
-      
+
       schedules.value = Array.isArray(items)
         ? items.map(w => ({ ...w, isOpen: true }))
         : []
@@ -2058,12 +2066,12 @@ async function fetchSchedule() {
         ...activeFilters
       }
       const { items } = await editionService.editionList(payload)
-      
-      historyList.value = items 
+
+      historyList.value = items
     }
-      
+
     toast.success(hasActiveFilters.value?'Historico Actualizado':'Cronograma actualizado')
-    
+
   } catch (err) {
     console.error('Error cargando cronograma:', err)
     toast.error('Error al cargar el listado')
@@ -2106,7 +2114,7 @@ function handleRangeFilterChange(selectedDates, dateStr) {
     } else {
         // Si el usuario borra o solo selecciona un día
         filterForm.date_from = dateStr;
-        filterForm.date_to = dateStr; 
+        filterForm.date_to = dateStr;
     }
     // Sincronizamos el string visual
     filterForm.range_string = dateStr;
@@ -2134,7 +2142,7 @@ const modalForm = reactive({
 })
 
 watch(
-  () => [modalForm.expedient, modalForm.preconfirmation], 
+  () => [modalForm.expedient, modalForm.preconfirmation],
   ([newExpedient, newPreconf]) => {
     const newConfirmation = !!(newExpedient && newPreconf);
     if (modalForm.confirmation !== newConfirmation) {
@@ -2209,18 +2217,18 @@ function resetModalForm() {
 function filterDirectly(filters = {}) {
   // 1. Construir query params desde el objeto de filtros
   const params = new URLSearchParams()
-  
+
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== null && value !== '' && value !== undefined) {
       params.append(key, value)
     }
   })
-  
+
   // 2. Construir la URL completa
   const baseUrl = window.location.origin + window.location.pathname
   const queryString = params.toString()
   const fullUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl
-  
+
   // 3. Abrir en nueva ventana/pestaña
   window.open(fullUrl, '_blank')
 }
@@ -2230,18 +2238,18 @@ function filterDirectly(filters = {}) {
  */
 function applyFiltersFromQueryParams() {
   const urlParams = new URLSearchParams(window.location.search)
-  
+
   // Si no hay params, no hacer nada
   if (urlParams.toString() === ''){
     applyFilters()
     return
   }
-  
+
   let hasFilters = false
-  
+
   // Limpiar filtros previos
   clearAllFilters(false)
-  
+
   // Mapear cada param al filterForm
   urlParams.forEach((value, key) => {
     if (filterForm.hasOwnProperty(key)) {
@@ -2256,7 +2264,7 @@ function applyFiltersFromQueryParams() {
       hasFilters = true
     }
   })
-  
+
   // Si se encontraron filtros, aplicarlos automáticamente
   if (hasFilters) {
     applyFilters()
@@ -2329,7 +2337,7 @@ async function openEditModal(edition) {
     modalForm.expedient = !!data.expedient
     modalForm.upgrade = !!data.upgrade
     modalForm.vacant = data.vacant
-    
+
     modalForm.cat_segment_id = data.cat_segment_id
     modalForm.global_code = data.global_code
     modalForm.specific_code = data.specific_code
@@ -2339,7 +2347,7 @@ async function openEditModal(edition) {
     modalForm.confirmation = !!data.confirmation
     modalForm.notes = data.notes || ''
     modalForm.sessions = data.sessions || null
-    
+
     // Alias UI
     modalForm.abbreviation = data.abbreviation
     modalForm.instructor_label = data.instructor_label
@@ -2374,7 +2382,7 @@ async function applyModalForm() {
     toast.warning('Complete los campos requeridos')
     return
   }
-  
+
   let response = null
 
   try {
@@ -2445,11 +2453,11 @@ async function applyModalForm() {
       }
 
       if (currentEdition.value && currentEdition.value.edition_num_id) {
-        response = await editionService.editionTreeUpdate({ 
+        response = await editionService.editionTreeUpdate({
           edition: payload
         })
       } else {
-        response = await editionService.editionTreeRegister({ 
+        response = await editionService.editionTreeRegister({
           edition: payload
         })
       }
@@ -2477,7 +2485,7 @@ function setChildren(children, field, value) {
 
 
 function onProgramVersionChange(opcion) {
-  
+
   if (currentEdition.value && modalForm.cat_type_program_alias !== 'we_program_type_course') return
   if (!opcion) {
     modalForm.cat_type_program = null
@@ -2539,7 +2547,7 @@ function openObjectivesModal(edition) {
 function changeMonth(delta) {
   let m = selectedMonth.value + delta
   let y = selectedYear.value
-  if (m <= 0) { m = 12; y-- } 
+  if (m <= 0) { m = 12; y-- }
   else if (m > 12) { m = 1; y++ }
   selectedMonth.value = m
   selectedYear.value = y
@@ -2548,13 +2556,13 @@ function changeMonth(delta) {
 }
 
   //relaodSchedule
-    
+
   function reloadSchedule() {
     fetchSchedule()
     saveState() // Guardar
   }
 
-  
+
 
 /**
  * Maneja el cambio de los switches (booleans)
@@ -2565,7 +2573,7 @@ async function updateQuickStatus(edition, fieldChanged) {
   // Ajusta 'Curso' según como venga exactamente en tu backend (ej. program_type o alias)
   if (edition.program_type !== 'Curso' && edition.cat_type_program_alias !== 'we_program_type_course') {
     // Revertir el cambio visual porque no está permitido
-    edition[fieldChanged] = !edition[fieldChanged] 
+    edition[fieldChanged] = !edition[fieldChanged]
     toast.info('La gestión de estados desde el listado solo está habilitada para Cursos.')
     return
   }
@@ -2605,7 +2613,7 @@ async function saveQuickChange(edition) {
   try {
     // A. Obtenemos la data "real" actual de la BD
     const currentData = await editionService.editionGet({ id: edition.edition_num_id })
-    
+
     if (!currentData) {
       toast.error('Error al sincronizar con el servidor')
       return
@@ -2614,14 +2622,14 @@ async function saveQuickChange(edition) {
     // B. Preparamos el Payload mezclando la BD con lo que modificó el usuario en la lista
     // Usamos los valores de 'edition' (lista) para los campos que permitimos editar
     // Usamos 'currentData' para el resto (ids, fechas, etc) para no romper nada
-    
+
     const payload = {
       // Campos editables desde la lista (Booleans convertidos a Y/N)
       // Usamos la variable 'edition' que es la reactiva del v-model
       expedient: edition.expedient ? 'Y' : 'N',
       upgrade: edition.upgrade ? 'Y' : 'N',
       preconfirmation: edition.preconfirmation ? 'Y' : 'N',
-      
+
       confirmation: edition.confirmation ? 'Y' : 'N',
       notes: edition.notes // Texto directo
     }
@@ -2638,7 +2646,7 @@ async function saveQuickChange(edition) {
     } else {
       toast.error(response?.message || 'Error al actualizar')
       // Opcional: Recargar el listado si falló para revertir visualmente
-       
+
     }
 
     fetchSchedule();
@@ -2667,7 +2675,7 @@ function validateDateInput(targetObj, fieldKey) {
     // Buscamos el nombre para que el mensaje sea más útil
     const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
     const hName = hObj ? hObj.description : 'Feriado';
-    
+
     toast.info(`La fecha seleccionada es feriado (${hName}) y no está permitida.`);
     targetObj[fieldKey] = null; // Limpiar el input
     return;
@@ -2676,7 +2684,7 @@ function validateDateInput(targetObj, fieldKey) {
 
 function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
-  
+
   // --- LÓGICA DE FECHAS MIN/MAX (YA EXISTENTE) ---
   if (bodyField) {
     config.minDate = bodyField.start_date;
@@ -2698,8 +2706,8 @@ function getChildDateConfig(index = null, bodyField = null) {
   }
   // --- NUEVA LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS ---
   // Determinar el objeto a evaluar (modalForm para curso, o el hijo específico)
-  const targetObj = (index !== null && modalForm.program_version_children[index]) 
-    ? modalForm.program_version_children[index] 
+  const targetObj = (index !== null && modalForm.program_version_children[index])
+    ? modalForm.program_version_children[index]
     : bodyField?bodyField:modalForm;
 
   // Si hay una combinación de días seleccionada, aplicar filtro
@@ -2712,13 +2720,13 @@ function getChildDateConfig(index = null, bodyField = null) {
       try {
         // Parsear el array de días desde variable_2 (ej: "[1,3,5]")
         const allowedDays = JSON.parse(comboOption.variable_2);
-        
+
         // Flatpickr: Solo habilitar esos días específicos
         config.enable = [
           (date) => {
             const dayOfWeek = date.getDay();
             const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            
+
 
             // Debe estar en los días permitidos Y no ser feriado
             return allowedDays.includes(dayOfWeek) && !holidayDates.value.includes(dateStr);
@@ -2745,7 +2753,7 @@ function getChildDateConfig(index = null, bodyField = null) {
  */
 function parseDaysFromLabel(label) {
   if (!label) return [];
-  
+
   const labelLower = label.toLowerCase();
   const days = [];
 
@@ -2767,7 +2775,7 @@ function parseDaysFromLabel(label) {
  */
 function getAllowedDaysFromCombo(comboOption) {
   if (!comboOption) return [];
-  
+
   // Intento 1: JSON en variable_2 (más confiable)
   if (comboOption.variable_2) {
     try {
@@ -2779,7 +2787,7 @@ function getAllowedDaysFromCombo(comboOption) {
       console.warn('Error parsing variable_2, usando fallback:', e);
     }
   }
-  
+
   // Intento 2: Fallback a texto
   return parseDaysFromLabel(comboOption.description);
 }
@@ -2791,13 +2799,13 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
    const [y, m, d] = dateVal.split('-').map(Number);
 
    // Definir claramente cuándo validar mes/año
-   const shouldValidateMonthYear = !hasActiveFilters.value && 
-                                    !currentEdition.value && 
+   const shouldValidateMonthYear = !hasActiveFilters.value &&
+                                    !currentEdition.value &&
                                     (index === null || index === 0);
 
    if (shouldValidateMonthYear && (y !== selectedYear.value || m !== selectedMonth.value)) {
       toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
-       
+
        // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
        nextTick(() => {
            targetObj[fieldKey] = null;
@@ -2806,23 +2814,23 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
                targetObj.end_date = null;
            }
        });
-      
+
        targetObj[fieldKey] = null;
        targetObj.start_date =null;
        targetObj.end_date = null;
        return;
    }
-   
+
    if (index !== null && index > 0) {
-      const firstChild = modalForm.program_version_children[0]; 
-      
+      const firstChild = modalForm.program_version_children[0];
+
       // Validar que no sea anterior al primero
       if (firstChild.start_date && dateVal < firstChild.start_date) {
         toast.warning(`No puede iniciar antes que el primer módulo.`);
-        
+
         nextTick(() => {
             targetObj[fieldKey] = null;
-            targetObj.end_date = null; 
+            targetObj.end_date = null;
         });
         return;
       }
@@ -2831,20 +2839,20 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
       const previousChild = modalForm.program_version_children[index - 1];
       if (previousChild.start_date && dateVal < previousChild.start_date) {
         toast.warning(`Orden cronológico inválido.`);
-        
+
         nextTick(() => {
             targetObj[fieldKey] = null;
-            targetObj.end_date = null; 
+            targetObj.end_date = null;
         });
         return;
       }
     }
 
-    
+
    if (holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
        const hName = hObj ? hObj.description : 'Feriado';
-       
+
        toast.info(`La fecha de inicio no puede ser un feriado (${hName}).`);
        // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
        nextTick(() => {
@@ -2860,14 +2868,14 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
    // 2. Si es Fecha de Inicio, calcular Fecha Fin automáticamente
    if (fieldKey === 'start_date') {
        calculateEndDate(targetObj);
-       
+
        // VALIDACIÓN EN CASCADA para hijos
        if (index !== null && modalForm.program_version_children.length > index + 1) {
          const currentChild = modalForm.program_version_children[index];
          const nextChild = modalForm.program_version_children[index + 1];
-         
+
          // Avisar si hay conflicto cronológico con el siguiente
-         if (currentChild.end_date && nextChild.start_date && 
+         if (currentChild.end_date && nextChild.start_date &&
              currentChild.end_date > nextChild.start_date) {
            toast.warning(
              `Atención: El cambio en "${currentChild.abbreviation}" afecta al módulo siguiente.`,
@@ -2932,14 +2940,14 @@ function resetChildData(child) {
   child.instructor_label = '';
   child.start_date = null;
   child.end_date = null;
-  
+
   // Flags booleanos
   child.active = false;
   child.expedient = false;
   child.preconfirmation = false;
   child.confirmation = false;
   child.upgrade = false;
-  
+
   // Restaurar sesiones por defecto si existe la propiedad
   if (child.program_version_sessions) {
     child.sessions = child.program_version_sessions;
@@ -2947,7 +2955,7 @@ function resetChildData(child) {
 }
 
 function onChildEditionChange(edition, child, index) {
-  
+
   // 1. CASO: Se limpió el select (edition es null o vacío)
   if (!edition || !edition.edition_num_id) {
     resetChildData(child);
@@ -2957,7 +2965,7 @@ function onChildEditionChange(edition, child, index) {
   // 2. VALIDACIÓN HACIA ATRÁS (Hermanos previos)
   // Verificamos que la fecha elegida no sea menor a la de algún módulo anterior
   const previousSiblings = modalForm.program_version_children.slice(0, index);
-  
+
   const hasBackwardConflict = previousSiblings.some(sibling => {
     // Solo comparamos si ambos tienen fecha
     return sibling.start_date && edition.start_date && sibling.start_date > edition.start_date;
@@ -2974,28 +2982,28 @@ function onChildEditionChange(edition, child, index) {
   child.edition_id = edition.edition_num_id; // Asegurar que se setea el ID
   child.start_date = edition.start_date?.slice(0, 10) || null;
   child.end_date = edition.end_date?.slice(0, 10) || null;
-  
+
   child.cat_day_combination_id = edition.cat_day_combination_id;
   child.cat_hour_combination_id = edition.cat_hour_combination_id;
-  
+
   child.instructor_id = edition.instructor_id;
   child.instructor_label = edition.instructor_label || '';
-  
+
   child.global_code = edition.global_code;
   child.specific_code = edition.specific_code;
-  
+
   // Mapeo de valores 'Y'/'N' a Booleanos
   child.active = edition.active === 'Y';
   child.confirmation = edition.confirmation === 'Y';
   child.preconfirmation = edition.preconfirmation === 'Y';
   child.expedient = edition.expedient === 'Y';
-  
+
   child.sessions = edition.sessions;
 
 
   // 4. VALIDACIÓN HACIA ADELANTE (Hermanos posteriores) - NUEVO REQUERIMIENTO
   // Validamos si lo que acabamos de insertar rompe la cronología de los que siguen
-  
+
   const nextSiblings = modalForm.program_version_children.slice(index + 1);
 
   nextSiblings.forEach((sibling, i) => {
@@ -3004,11 +3012,11 @@ function onChildEditionChange(edition, child, index) {
 
     // Conflicto: El hermano siguiente empieza ANTES que el actual (que acabamos de poner)
     if (sibling.start_date < child.start_date) {
-      
+
       if (sibling.edition_id) {
         // A) Es una edición ya vinculada (existente): Solo advertimos
         // Calculamos el índice real visual para el mensaje (index + 1 (actual) + 1 (siguiente) + i)
-        const siblingPosition = index + 2 + i; 
+        const siblingPosition = index + 2 + i;
         toast.warning(`Conflicto de fechas: El módulo en la posición ${siblingPosition} inicia antes que este. Por favor revíselo.`);
       } else {
         // B) Es una edición nueva/draft (sin ID vinculado): La limpiamos automáticamente
@@ -3025,10 +3033,10 @@ function isBlockedByPrevious(index) {
   if (index === 0) return false
 
   // QUITA 'this.'
-  const prev = modalForm.program_version_children[index - 1] 
-  
+  const prev = modalForm.program_version_children[index - 1]
+
   // QUITA 'this.'
-  return !isChildComplete(prev) 
+  return !isChildComplete(prev)
 }
 
 // Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)
@@ -3040,7 +3048,7 @@ function closePreview() {
 // Función CORE que simula el calendario y genera la lista
 function generatePreviewData(targetObj) {
   const list = []
-  
+
   // Validaciones iniciales...
   if (!targetObj.start_date || !targetObj.cat_day_combination_id) return []
   const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0
@@ -3058,7 +3066,7 @@ function generatePreviewData(targetObj) {
   // El bucle sigue corriendo HASTA completar las sesiones VÁLIDAS requeridas
   while (sessionsCounted < totalSessions && safetyLoop < 1000) {
     safetyLoop++
-    
+
     const y = iterDate.getFullYear()
     const m = String(iterDate.getMonth() + 1).padStart(2, '0')
     const d = String(iterDate.getDate()).padStart(2, '0')
@@ -3066,13 +3074,13 @@ function generatePreviewData(targetObj) {
     const dayOfWeek = iterDate.getDay() // 0=Dom, 1=Lun...
 
     const isClassDay = allowedDays.includes(dayOfWeek)
-    
+
     // Solo nos importa si hoy toca clase (según Lunes-Miércoles, etc)
     if (isClassDay) {
       // AQUÍ ESTÁ LA LÓGICA QUE PIDES:
       // Buscamos si esta fecha exacta es un feriado activo en el catálogo
       const holidayItem = catalogs.value.catHolidays.find(h => h.variable_3 === dateString )
-      
+
       if (holidayItem) {
         // CASO 1: ES FERIADO
         // Lo agregamos a la lista para que el usuario lo vea visualmente
@@ -3099,7 +3107,7 @@ function generatePreviewData(targetObj) {
     // Avanzamos al siguiente día calendario
     iterDate.setDate(iterDate.getDate() + 1)
   }
-  
+
   return list
 }
 
@@ -3125,7 +3133,7 @@ function getDayIndexFromStr(dateStr) {
 function calculateEndDate(targetObj) {
   // 1. Validaciones básicas
   if (!targetObj.start_date || !targetObj.cat_day_combination_id) return;
-  
+
   const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0;
   if (totalSessions <= 0) {
     toast.warning("No hay sesiones configuradas para calcular.");
@@ -3142,7 +3150,7 @@ function calculateEndDate(targetObj) {
 
   // 2. Parsing Robusto usando la nueva función unificada
   const allowedDays = getAllowedDaysFromCombo(comboOption);
-  
+
   if (allowedDays.length === 0) {
     toast.error("Error en configuración de días del catálogo.");
     return;
@@ -3150,7 +3158,7 @@ function calculateEndDate(targetObj) {
 
   // 3. Validación de coherencia Día vs Combo
   const startDayIdx = getDayIndexFromStr(targetObj.start_date);
-  
+
   if (!allowedDays.includes(startDayIdx)) {
     const dayName = dayNames[startDayIdx];
     toast.warning(
@@ -3171,7 +3179,7 @@ function calculateEndDate(targetObj) {
 
   while (sessionsCounted < totalSessions && safetyLoop < 1500) {
     safetyLoop++;
-    
+
     const y = iterDate.getFullYear();
     const m = String(iterDate.getMonth() + 1).padStart(2, '0');
     const d = String(iterDate.getDate()).padStart(2, '0');
@@ -3185,7 +3193,7 @@ function calculateEndDate(targetObj) {
       sessionsCounted++;
       if (sessionsCounted === totalSessions) {
         calculatedEndDate = dateString;
-        break; 
+        break;
       }
     }
 
@@ -3200,8 +3208,8 @@ function calculateEndDate(targetObj) {
   }
 
   if (calculatedEndDate) {
-    nextTick(() => { 
-      targetObj.end_date = calculatedEndDate; 
+    nextTick(() => {
+      targetObj.end_date = calculatedEndDate;
     });
   } else {
     toast.error("No se pudo calcular fecha fin. Verifique días/feriados.");
@@ -3243,7 +3251,7 @@ function loadState() {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      
+
       // A. Restaurar Calendario
       if (parsed.calendar) {
         selectedMonth.value = parsed.calendar.month || (new Date().getMonth() + 1)
@@ -3268,8 +3276,8 @@ function loadState() {
 }
 const searchEditionsFiltered = async (q, child, index) => {
   // 1. Llamar al servicio original
-  const response = await editionService.editionCaller({ 
-    q, 
+  const response = await editionService.editionCaller({
+    q,
     program_version_id: child.child_program_version_id,
     //si es el primer hijo y es new que se rija bajo el mesy año seleccionado
     ...(!hasActiveFilters.value ? {
@@ -3290,9 +3298,9 @@ const searchEditionsFiltered = async (q, child, index) => {
       .filter(date => date);
 
     if (prevDates.length > 0) {
-      prevDates.sort(); 
+      prevDates.sort();
       // Queremos la ÚLTIMA fecha de los anteriores (la más grande)
-      minDateLimit = prevDates[prevDates.length - 1]; 
+      minDateLimit = prevDates[prevDates.length - 1];
     }
   }
 
@@ -3306,10 +3314,10 @@ const searchEditionsFiltered = async (q, child, index) => {
     .filter(date => date);
 
   if (nextDates.length > 0) {
-    nextDates.sort(); 
+    nextDates.sort();
     // Queremos la PRIMERA fecha de los siguientes (la más pequeña / más pronta)
     // porque no podemos empezar después de que el siguiente empiece.
-    maxDateLimit = nextDates[0]; 
+    maxDateLimit = nextDates[0];
   }
 
   // --- FILTRADO FINAL ---
@@ -3330,7 +3338,7 @@ const searchEditionsFiltered = async (q, child, index) => {
     if (maxDateLimit && editionDate > maxDateLimit) {
       return false;
     }
-    
+
     // si es una edición nueva la modal y tambien hasActiveFilters es false y es una edicion nueva hija y es la es la primera hija, tiene que ser del mismo mes y año del selectedMonth y year
     if (
       !currentEdition.value &&
@@ -3466,6 +3474,7 @@ const searchEditionsFiltered = async (q, child, index) => {
     border: 1px solid #e5e7eb;
     border-radius: 0.375rem;
     overflow: visible; /* <--- PERMITE QUE EL POPUP SALGA */
+    min-width: 500px!important
 }
 .text-xs { font-size: 0.7rem; }
 
@@ -3768,13 +3777,13 @@ const searchEditionsFiltered = async (q, child, index) => {
 
 .lines-grid {
   /* ... tus estilos actuales de grid (display: grid, etc.) ... */
-  
+
   /* LÍMITE DE ALTURA Y SCROLL */
   max-height: 350px; /* Ajusta este valor según el espacio que desees */
   overflow-y: auto;  /* Activa el scroll vertical solo si se pasa la altura */
-  
+
   /* Opcional: un poco de padding para que el texto no choque con la barra */
-  padding-right: 5px; 
+  padding-right: 5px;
 }
 
 /* Opcional: Estilizar la barra de scroll para que se vea moderna y delgada */
@@ -3782,22 +3791,22 @@ const searchEditionsFiltered = async (q, child, index) => {
   width: 6px;
 }
 .lines-grid::-webkit-scrollbar-track {
-  background: #f1f1f1; 
+  background: #f1f1f1;
   border-radius: 4px;
 }
 .lines-grid::-webkit-scrollbar-thumb {
-  background: #c1c1c1; 
+  background: #c1c1c1;
   border-radius: 4px;
 }
 .lines-grid::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8; 
+  background: #a8a8a8;
 }
 .letter-spacing-1 {
   letter-spacing: 1px;
 }
 /* Asegura que el borde redondeado no se corte mal con la columna de color */
 .card {
-  border-radius: 12px; 
+  border-radius: 12px;
 }
 .display-3 {
   font-size: 3.5rem;
@@ -3857,7 +3866,7 @@ tr[class*="row-segment-"]:hover td {
 /* Ajuste para asegurar que el popover siempre esté encima */
 .schedule-popover {
   /* ... tus estilos actuales ... */
-  z-index: 1000; 
+  z-index: 1000;
   background: white; /* Importante para que no sea transparente */
 }
 

@@ -82,12 +82,132 @@ body {
 .dp__theme_light {
    /* Reduce el padding interno (arriba/abajo, izq/der) */
    --dp-input-padding: 6px 8px; /* Ajusta este 6px a tu gusto, por defecto es mayor */
-   
+
    /* Si necesitas ajustar el tamaño de fuente */
-   --dp-font-size: 0.875rem; 
+   --dp-font-size: 0.875rem;
 }
 
 /* Opción B: Forzar altura si usas Bootstrap (clase form-control-xs) */
 .dp__input {
     height: 30px; /* O la altura exacta que tengan tus otros inputs */
+}
+/* INPUTS CON ALTURA FIJA (sin textarea) */
+.form-control:not(.flatpickr-input):not(.flatpickr-monthDropdown-months):not(.searchselect-control),
+input[type="text"]:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
+input[type="email"]:not(.flatpickr-input),
+input[type="password"]:not(.flatpickr-input),
+input[type="number"]:not(.flatpickr-input):not(.numInput):not(.cur-year),
+input[type="tel"]:not(.flatpickr-input),
+input[type="url"]:not(.flatpickr-input),
+input[type="search"]:not(.flatpickr-input),
+input[type="date"]:not(.flatpickr-input),
+select.form-control:not(.flatpickr-monthDropdown-months),
+select:not(.flatpickr-monthDropdown-months) {
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  color: #212529;
+  background-color: #ffffff;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  outline: none;
+}
+
+/* ✅ AÑADIR - TEXTAREA CON ALTURA VARIABLE */
+textarea.form-control {
+  min-height: 80px;
+  height: auto;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  color: #212529;
+  background-color: #ffffff;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  resize: vertical;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  outline: none;
+}
+
+/* HOVER - textarea se mantiene */
+.form-control:hover:not(:disabled):not([readonly]):not(.flatpickr-input):not(.searchselect-control),
+input:hover:not(:disabled):not([readonly]):not(.flatpickr-input):not(.numInput):not(.searchselect-input),
+select:hover:not(:disabled):not([readonly]):not(.flatpickr-monthDropdown-months),
+textarea:hover:not(:disabled):not([readonly]) {
+  border-color: #86b7fe;
+}
+
+/* FOCUS - textarea se mantiene */
+.form-control:focus:not(.flatpickr-input):not(.searchselect-control),
+input:focus:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
+select:focus:not(.flatpickr-monthDropdown-months),
+textarea:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* PLACEHOLDER - textarea se mantiene */
+.form-control::placeholder:not(.searchselect-input),
+input::placeholder:not(.searchselect-input),
+textarea::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+/* DISABLED - textarea se mantiene */
+.form-control:disabled:not(.searchselect-control),
+input:disabled:not(.searchselect-input),
+select:disabled,
+textarea:disabled {
+  background-color: #e9ecef;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* VALIDACIÓN - textarea se mantiene (las barras laterales funcionan bien) */
+.form-control:required:invalid:not(:disabled):not([readonly]),
+.form-select:required:invalid:not(:disabled):not([readonly]),
+textarea.form-control:required:invalid:not(:disabled):not([readonly]) {
+  border-color: #e5e7eb;
+  border-left: 3px solid #ef4444;
+  padding-left: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:required:valid:not(:disabled):not([readonly]),
+.form-select:required:valid:not(:disabled):not([readonly]),
+textarea.form-control:required:valid:not(:disabled):not([readonly]) {
+  border-color: #e5e7eb;
+  border-left: 3px solid #10b981;
+  padding-left: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:required:invalid:not(:disabled):not([readonly]):focus,
+.form-select:required:invalid:not(:disabled):not([readonly]):focus,
+textarea.form-control:required:invalid:not(:disabled):not([readonly]):focus {
+  border-color: #fecaca;
+  border-left-color: #ef4444;
+  box-shadow: 0 0 0 .2rem rgba(239, 68, 68, .08);
+}
+
+.form-control:required:valid:not(:disabled):not([readonly]):focus,
+.form-select:required:valid:not(:disabled):not([readonly]):focus,
+textarea.form-control:required:valid:not(:disabled):not([readonly]):focus {
+  border-color: #d1fae5;
+  border-left-color: #10b981;
+  box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .08);
 }

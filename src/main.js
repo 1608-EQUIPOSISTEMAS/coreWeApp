@@ -66,12 +66,12 @@ async function bootstrap () {
   app.provide(ServiceKeys.CorporateAgreement, services[ServiceKeys.CorporateAgreement])
   app.provide(ServiceKeys.Integration, services[ServiceKeys.Integration])
   app.provide(ServiceKeys.Fico, services[ServiceKeys.Fico])
-  
-  
+
+
   app.config.globalProperties.$hasRole = (roles) => {
     // 1. Obtener usuario del localStorage
     const userStored = localStorage.getItem('user') // Asegúrate que la key sea 'user'
-    
+
     if (!userStored) return false
 
     try {
@@ -79,7 +79,7 @@ async function bootstrap () {
       // Asumimos que el usuario tiene una propiedad 'role' o 'rol'. Ajusta según tu DB.
       // Si tu usuario tiene un array de roles, la lógica cambia ligeramente.
       // Aquí asumo que user.role es un string (ej: 'ADMIN').
-      const userRoles = user.roles 
+      const userRoles = user.roles
 
       if (!userRoles) return false
 
@@ -88,7 +88,7 @@ async function bootstrap () {
 
       // 3. Verificar si el rol del usuario está incluido en lo solicitado
       return rolesBusca.some(role => userRoles.includes(role))
-      
+
 
     } catch (e) {
       console.error('Error al parsear usuario para verificar rol', e)

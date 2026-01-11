@@ -74,7 +74,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const hours12 = Array.from({ length: 12 }, (_, i) => i + 1)
-const minutes = Array.from({ length: 60 }, (_, i) => i)
+const minutes = [0,10,20,30,40,50,59]
 
 // Configuración de FlatPickr
 const flatpickrConfig = {
@@ -100,8 +100,8 @@ const datePart = computed({
     const [d] = norm.split(' ')
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''
   },
-  set(val) { 
-    emitFull(val, hour12.value, minutePart.value, ampmPart.value) 
+  set(val) {
+    emitFull(val, hour12.value, minutePart.value, ampmPart.value)
   },
 })
 
@@ -114,8 +114,8 @@ const hour12 = computed({
     const time24 = parts[1].slice(0, 5)
     return to12h(time24).hour
   },
-  set(val) { 
-    emitFull(datePart.value, val, minutePart.value, ampmPart.value) 
+  set(val) {
+    emitFull(datePart.value, val, minutePart.value, ampmPart.value)
   },
 })
 
@@ -128,8 +128,8 @@ const minutePart = computed({
     const time = parts[1].split(':')
     return time.length >= 2 ? Number(time[1]) : 0
   },
-  set(val) { 
-    emitFull(datePart.value, hour12.value, val, ampmPart.value) 
+  set(val) {
+    emitFull(datePart.value, hour12.value, val, ampmPart.value)
   },
 })
 
@@ -142,8 +142,8 @@ const ampmPart = computed({
     const time24 = parts[1].slice(0, 5)
     return to12h(time24).ampm
   },
-  set(val) { 
-    emitFull(datePart.value, hour12.value, minutePart.value, val) 
+  set(val) {
+    emitFull(datePart.value, hour12.value, minutePart.value, val)
   },
 })
 
@@ -251,7 +251,7 @@ function to24h(h12, ampm) {
   border-radius: 0.25rem;
   padding: 0 0.5rem; /* Padding horizontal solamente */
   font-size: 0.875rem;
-  line-height: 1; 
+  line-height: 1;
   height: 30px; /* Altura reducida para que quepa dentro de los 38px del padre */
   transition: all 0.2s ease;
   outline: none;
@@ -304,8 +304,8 @@ function to24h(h12, ampm) {
 
 /* Botón Limpiar */
 .dt12__clear {
-  width: 24px; 
-  height: 24px; 
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 50%; /* Redondo se ve más moderno en espacios pequeños */
   background: #ef4444;
@@ -361,16 +361,16 @@ function to24h(h12, ampm) {
     height: auto; /* Permitir crecer en móvil */
     padding: 0.5rem;
   }
-  
+
   .dt12__date-wrapper {
     flex: 1 1 100%;
     margin-bottom: 0.5rem;
   }
-  
+
   .dt12__input {
       height: 36px; /* En móvil un poco más alto para el dedo */
   }
-  
+
   .dt12__input--hour,
   .dt12__input--minute,
   .dt12__input--ampm {

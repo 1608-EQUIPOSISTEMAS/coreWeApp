@@ -1,31 +1,13 @@
 <template>
   <div class="position-relative" ref="wrapperEl">
-<div
-  class="form-control d-flex align-items-center position-relative searchselect-control"
-  :class="[{ 'is-locked': isLocked, 'is-disabled': isDisabled }, validationClass]"
-  @mousedown.prevent="onControlMouseDown"
-  :aria-disabled="isDisabled"
->
-      <template v-if="isMultiple && selectedList.length">
-        <span
-          v-for="tag in selectedList"
-          :key="tag.value"
-          class="ss-chip"
-          :title="String(tag.label)"
-        >
-          <span class="ss-chip__label">{{ tag.label }}</span>
-          <button
-            type="button"
-            class="ss-chip__x"
-            @click.stop="removeChip(tag.value)"
-          >
-            ×
-          </button>
-        </span>
-      </template>
-
+    <div
+      class="form-control searchselect-control"
+      :class="[{ 'is-locked': isLocked, 'is-disabled': isDisabled }, validationClass]"
+      @mousedown.prevent="onControlMouseDown"
+      :aria-disabled="isDisabled"
+    >
       <span
-        v-if="isLocked && !isMultiple"
+        v-if="isLocked"
         class="ss-locked-label"
         :title="selectedList[0]?.label || ''"
       >
@@ -36,14 +18,13 @@
         v-else
         autocomplete="off"
         type="text"
-        class="border-0 flex-grow-1 p-0 bg-transparent searchselect-input"
+        class="searchselect-input"
         :placeholder="placeholder"
         v-model="searchText"
-        :disabled="(isLocked && !isMultiple) || isDisabled"
+        :disabled="isLocked || isDisabled"
         @focus="openDropdown"
         @input="onInputChange"
         :aria-invalid="required && !isLocked && !isDisabled"
-        style="outline: none; box-shadow: none; min-width: 4ch;"
       />
 
       <span
@@ -53,47 +34,48 @@
       ></span>
 
       <button
-        v-if="!isMultiple && isLocked && !isDisabled"
+        v-if="isLocked && !isDisabled"
         type="button"
         class="btn-clear searchselect-affordance"
         @click.stop="clearSelection"
         aria-label="Borrar selección"
         title="Borrar"
       >
-        ×
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
       </button>
 
-      <button
-        v-if="isMultiple && selectedList.length && !isDisabled"
-        type="button"
-        class="btn-clear-all searchselect-affordance"
-        @click.stop="clearAll"
-        aria-label="Borrar todas"
-        title="Borrar todas"
+      <span
+        v-else-if="!showSpinner && !isDisabled"
+        class="dropdown-arrow searchselect-affordance"
+        aria-hidden="true"
       >
-        ×
-      </button>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </span>
     </div>
 
     <Teleport to="body">
       <div
-        v-if="dropdownOpen && (!isLocked || isMultiple) && !isDisabled"
+        v-if="dropdownOpen && !isLocked && !isDisabled"
         ref="dropdownEl"
-        class="searchselect-dropdown bg-white border rounded shadow-sm"
+        class="searchselect-dropdown"
         :class="validationClass"
         :style="dropdownStyle"
         role="listbox"
       >
         <div
           v-if="isRemote && searchTextTrim.length < minChars"
-          class="px-3 py-2 text-muted small"
+          class="dropdown-message"
         >
           Escribe al menos {{ minChars }} caracteres…
         </div>
 
         <div
           v-else-if="isRemote && loading"
-          class="px-3 py-2 small d-flex align-items-center gap-2"
+          class="dropdown-message"
         >
           <span class="spinner"></span>
           Cargando…
@@ -101,7 +83,7 @@
 
         <div
           v-else-if="listItems.length === 0"
-          class="px-3 py-2 text-muted small"
+          class="dropdown-message dropdown-message--empty"
         >
           No se encontraron resultados
         </div>
@@ -111,19 +93,18 @@
           v-for="opt in listItems"
           :key="opt[valueField]"
           type="button"
-          class="w-100 text-start px-3 py-2 dropdown-item-option"
+          class="dropdown-item"
           @click="selectOption(opt)"
           role="option"
         >
-          <div class="fw-semibold" style="font-size: .8rem;">
+          <div class="dropdown-item__label">
             {{ opt[labelField] }}
           </div>
           <div
             v-if="showSubValue"
-            class="text-muted"
-            style="font-size: .7rem;"
+            class="dropdown-item__sublabel"
           >
-            {{ opt[sublabelField]? opt[sublabelField]: opt[valueField] }}
+            {{ opt[sublabelField] ? opt[sublabelField] : opt[valueField] }}
           </div>
         </button>
       </div>
@@ -131,8 +112,7 @@
 
     <div
       v-if="hint"
-      class="form-text text-muted"
-      style="font-size: .75rem;"
+      class="form-text"
     >
       {{ hint }}
     </div>
@@ -147,18 +127,14 @@ const props = defineProps({
   labelField: { type: String, required: true },
   valueField: { type: String, required: true },
   sublabelField: { type: String, required: false },
-  modelValue: { default: null }, 
+  modelValue: { default: null },
   placeholder: { type: String, default: 'Seleccionar / Buscar...' },
   hint: { type: String, default: '' },
   showSubValue: { type: Boolean, default: false },
   required: { type: Boolean, default: false },
-  multiple: { type: Boolean, default: false },
-
-  // Límite de items visibles (NUEVO)
   viewOpen: { type: Number, default: 3 },
-
-  mode: { type: String, default: 'local' }, 
-  fetcher: { type: Function, default: null }, 
+  mode: { type: String, default: 'local' },
+  fetcher: { type: Function, default: null },
   debounceMs: { type: Number, default: 300 },
   minChars: { type: Number, default: 2 },
   cache: { type: Boolean, default: true },
@@ -173,11 +149,9 @@ const emit = defineEmits(['update:modelValue', 'change', 'search'])
 const dropdownOpen = ref(false)
 const searchText = ref('')
 const wrapperEl = ref(null)
-
 const dropdownEl = ref(null)
 const dropdownStyle = ref({})
 
-const isMultiple = computed(() => !!props.multiple)
 const isRemote = computed(() => props.mode === 'remote')
 const isDisabled = computed(() => !!props.disabled)
 const searchTextTrim = computed(() => (searchText.value || '').trim())
@@ -195,7 +169,6 @@ const selectedList = ref([])
 
 const isLocked = computed(
   () =>
-    !isMultiple.value &&
     props.modelValue !== null &&
     props.modelValue !== undefined &&
     props.modelValue !== ''
@@ -203,8 +176,6 @@ const isLocked = computed(
 
 const validationClass = computed(() => {
   if (!props.required || props.disabled) return ''
-  if (isMultiple.value)
-    return selectedList.value.length > 0 ? 'has-success' : 'has-error'
   return isLocked.value ? 'has-success' : 'has-error'
 })
 
@@ -212,7 +183,7 @@ const showSpinner = computed(
   () =>
     isRemote.value &&
     loading.value &&
-    (!isLocked.value || isMultiple.value) &&
+    !isLocked.value &&
     !isDisabled.value
 )
 
@@ -220,40 +191,29 @@ const listItems = computed(() => {
   if (!dropdownOpen.value || isDisabled.value) return []
 
   const base = isRemote.value ? remoteItems.value : safeItems.value
-  const filtered = isMultiple.value
-    ? base.filter(
-        i => !selectedList.value.some(s => s.value === i[props.valueField])
-      )
-    : base
 
   if (!isRemote.value) {
     const t = searchTextTrim.value.toLowerCase()
-    if (!t) return filtered
-    return filtered.filter(item =>
+    if (!t) return base
+    return base.filter(item =>
       String(item[props.labelField] ?? '')
         .toLowerCase()
         .includes(t)
     )
   }
 
-  return filtered
+  return base
 })
 
 function updateDropdownPosition () {
   if (!wrapperEl.value) return
-  
+
   const rect = wrapperEl.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
-  
-  // 1. Calculamos la altura máxima esperada
+
   const itemHeightPx = 42
   const calculatedMaxHeight = props.viewOpen * itemHeightPx
-
-  // 2. Calculamos el espacio disponible abajo
   const spaceBelow = viewportHeight - rect.bottom
-  
-  // 3. Decidimos si voltear: Si el espacio abajo es menor a la altura deseada 
-  //    Y hay más espacio arriba que abajo (o simplemente no cabe abajo)
   const shouldFlip = spaceBelow < calculatedMaxHeight
 
   const commonStyles = {
@@ -266,18 +226,13 @@ function updateDropdownPosition () {
   }
 
   if (shouldFlip) {
-    // === MODO HACIA ARRIBA ===
-    // Anclamos la parte inferior del dropdown a la parte superior del input
-    // "bottom" se calcula restando la posición top del input a la altura de la ventana
     dropdownStyle.value = {
       ...commonStyles,
-      top: 'auto', 
-      bottom: (viewportHeight - rect.top) + 4 + 'px', // 4px de margen
-      // Opcional: Cambiar sombra o bordes si quieres estilos distintos
+      top: 'auto',
+      bottom: (viewportHeight - rect.top) + 4 + 'px',
       transformOrigin: 'bottom center'
     }
   } else {
-    // === MODO HACIA ABAJO (Standard) ===
     dropdownStyle.value = {
       ...commonStyles,
       top: rect.bottom + 4 + 'px',
@@ -301,40 +256,25 @@ watch(
       raw: o
     })
 
-    if (isMultiple.value) {
-      const values = Array.isArray(val) ? val : []
-      const source = isRemote.value
-        ? remoteItems.value.concat(safeItems.value)
-        : safeItems.value
-
-      selectedList.value = values.map(v => {
-        const match = source.find(o => o?.[props.valueField] === v)
-        if (match) return toTag(match)
-        const lbl = props.modelLabelMap?.[v] ?? String(v)
-        return { value: v, label: lbl, raw: null }
-      })
+    if (val === null || val === undefined || val === '') {
+      selectedList.value = []
       searchText.value = ''
+      return
+    }
+
+    const source = isRemote.value
+      ? remoteItems.value.concat(safeItems.value)
+      : safeItems.value
+
+    const match = source.find(o => o?.[props.valueField] === val)
+
+    if (match) {
+      selectedList.value = [toTag(match)]
+      searchText.value = selectedList.value[0]?.label ?? ''
     } else {
-      if (val === null || val === undefined || val === '') {
-        selectedList.value = []
-        searchText.value = ''
-        return
-      }
-
-      const source = isRemote.value
-        ? remoteItems.value.concat(safeItems.value)
-        : safeItems.value
-
-      const match = source.find(o => o?.[props.valueField] === val)
-
-      if (match) {
-        selectedList.value = [toTag(match)]
-        searchText.value = selectedList.value[0]?.label ?? ''
-      } else {
-        const lbl = props.modelLabel || String(val)
-        selectedList.value = [{ value: val, label: lbl, raw: null }]
-        searchText.value = lbl
-      }
+      const lbl = props.modelLabel || String(val)
+      selectedList.value = [{ value: val, label: lbl, raw: null }]
+      searchText.value = lbl
     }
   },
   { immediate: true }
@@ -361,7 +301,7 @@ onBeforeUnmount(() => {
 
 function openDropdown () {
   if (isDisabled.value) return
-  if (isLocked.value && !isMultiple.value) return
+  if (isLocked.value) return
 
   dropdownOpen.value = true
 
@@ -377,7 +317,7 @@ function onControlMouseDown (e) {
     return
   }
 
-  if (isLocked.value && !isMultiple.value) {
+  if (isLocked.value) {
     e.preventDefault()
     return
   }
@@ -394,7 +334,7 @@ function onControlMouseDown (e) {
 
 function onInputChange () {
   if (isDisabled.value) return
-  if (isLocked.value && !isMultiple.value) return
+  if (isLocked.value) return
 
   dropdownOpen.value = true
   updateDropdownPosition()
@@ -449,36 +389,15 @@ function selectOption (option) {
     raw: option
   }
 
-  if (isMultiple.value) {
-    if (!selectedList.value.some(s => s.value === tag.value)) {
-      const next = [...selectedList.value, tag]
-      selectedList.value = next
-      emit('update:modelValue', next.map(s => s.value))
-      emit('change', { type: 'add', option })
-    }
-    searchText.value = ''
-    if (isRemote.value) queueRemoteSearch()
-    dropdownOpen.value = true
-    nextTick(updateDropdownPosition)
-  } else {
-    selectedList.value = [tag]
-    searchText.value = tag.label
-    emit('update:modelValue', tag.value)
-    emit('change', option)
-    dropdownOpen.value = false
-  }
-}
-
-function removeChip (value) {
-  if (!isMultiple.value || isDisabled.value) return
-  const next = selectedList.value.filter(s => s.value !== value)
-  selectedList.value = next
-  emit('update:modelValue', next.map(s => s.value))
-  emit('change', { type: 'remove', value })
+  selectedList.value = [tag]
+  searchText.value = tag.label
+  emit('update:modelValue', tag.value)
+  emit('change', option)
+  dropdownOpen.value = false
 }
 
 function clearSelection () {
-  if (isMultiple.value || isDisabled.value) return
+  if (isDisabled.value) return
   selectedList.value = []
   emit('update:modelValue', null)
   emit('change', null)
@@ -491,209 +410,229 @@ function clearSelection () {
       ?.focus()
   })
 }
-
-function clearAll () {
-  if (!isMultiple.value || isDisabled.value) return
-  selectedList.value = []
-  emit('update:modelValue', [])
-  emit('change', { type: 'clear' })
-
-  nextTick(() => {
-    wrapperEl.value
-      ?.querySelector('.searchselect-input')
-      ?.focus()
-  })
-}
 </script>
 
 <style scoped>
-/* (El CSS se mantiene igual, ya está correcto para lo que necesitas) */
 .searchselect-control {
   position: relative;
-  padding-right: 2.25rem; 
-  overflow: hidden; 
+  padding: 0.5rem 2.75rem 0.5rem 0.875rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
+  align-items: center;
+  min-height: 42px;
+  background-color: #ffffff;
+  border: 1.5px solid #d1d5db; /* ✅ Mantener esto */
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+
+.searchselect-control:hover:not(.is-disabled):not(.is-locked) {
+  border-color: #9ca3af;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.searchselect-control:focus-within:not(.is-disabled) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
 .searchselect-control.is-disabled {
   background-color: #f9fafb;
   color: #9ca3af;
-  cursor: not-allowed !important;
-  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
+
+.searchselect-control.is-locked {
+  cursor: default;
+  background-color: #fafafa;
+}
+
 .ss-locked-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: .9rem;
-  color: #111827;
-  padding: .125rem 0;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ss-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  max-width: 100%;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  border-radius: 999px;
-  padding: .2rem .5rem;
-  font-size: .78rem;
-  line-height: 1;
-}
-.ss-chip__label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 30ch;
-}
-.ss-chip__x {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: #6b7280;
-  font-size: 1rem;
-  line-height: 1;
-}
-.ss-chip__x:hover {
-  color: #dc2626;
-}
+
 .searchselect-input {
   width: 100%;
-  min-height: 1.6rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  outline: none;
+  box-shadow: none;
 }
+
+.searchselect-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
 .searchselect-input[disabled] {
   background-color: transparent;
   color: #9ca3af;
   cursor: not-allowed;
 }
-.is-locked {
-  cursor: default !important;
-}
+
 .searchselect-affordance {
   position: absolute;
-  right: .5rem;
+  right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.btn-clear,
-.btn-clear-all {
+
+.dropdown-arrow {
+  color: #6b7280;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.searchselect-control:focus-within .dropdown-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.btn-clear {
   border: 0;
   background: transparent;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  display: flex;
   align-items: center;
   justify-content: center;
   color: #6b7280;
-  font-size: 1rem;
-  line-height: 1;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
-.btn-clear:hover,
-.btn-clear-all:hover {
+
+.btn-clear:hover {
+  background-color: #f3f4f6;
   color: #dc2626;
 }
+
 .searchselect-dropdown {
-  background: #fff;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
-.dropdown-item-option {
-  border: 0;
-  background: #fff;
-  font-size: .8rem;
-  line-height: 1.3;
+
+.dropdown-message {
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.dropdown-message--empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.dropdown-item {
   width: 100%;
   text-align: left;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid #f3f4f6;
 }
-.dropdown-item-option:hover {
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-item:active {
   background-color: #f3f4f6;
 }
+
+.dropdown-item__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.dropdown-item__sublabel {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  line-height: 1.3;
+}
+/* ✅ AÑADIR - Barra lateral para validación */
 .has-error.searchselect-control {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 .2rem rgba(239, 68, 68, .15);
+  border-color: #e5e7eb;
+  border-left-width: 3px;
+  border-left-color: #f87171;
+  transition: all 0.15s ease;
 }
+
+.has-error.searchselect-control:focus-within {
+  border-color: #fecaca;
+  border-left-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
 .has-success.searchselect-control {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .15);
+  border-color: #e5e7eb;
+  border-left-width: 3px;
+  border-left-color: #34d399;
+  transition: all 0.15s ease;
 }
-.has-error {
+
+.has-success.searchselect-control:focus-within {
+  border-color: #d1fae5;
+  border-left-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+
+/* Dropdown con bordes sutiles */
+.has-error.searchselect-dropdown {
   border-color: #fecaca;
 }
-.has-success {
-  border-color: #bbf7d0;
+
+.has-success.searchselect-dropdown {
+  border-color: #d1fae5;
 }
-.spinner,
-.spinner::after {
-  box-sizing: border-box;
+
+.form-text {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
 }
+
 .spinner {
   width: 16px;
   height: 16px;
   border: 2px solid #e5e7eb;
-  border-top-color: #6b7280;
+  border-top-color: #3b82f6;
   border-radius: 50%;
-  animation: spin .8s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
-}
-.searchselect-control {
-  position: relative;
-  padding: 0.375rem 2.5rem 0.375rem 0.75rem; /* Padding Bootstrap + espacio para botón */
-  overflow: hidden; 
-  display: flex;
-  flex-wrap: nowrap; /* Cambiado de wrap a nowrap */
-  gap: 0.25rem;
-  align-items: center;
-  min-height: 38px; /* Altura fija de input Bootstrap */
-  height: 38px; /* Forzar altura específica */
-}
-
-.ss-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .25rem;
-  flex-shrink: 0;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  border-radius: 999px;
-  padding: .1rem .4rem; /* Más compacto */
-  font-size: .75rem;
-  line-height: 1;
-  max-height: 22px; /* Limitar altura máxima */
-}
-
-.searchselect-input {
-  flex: 1 1 auto;
-  min-width: 4ch;
-  height: auto;
-  line-height: 1.5;
-  font-size: 1rem; /* Tamaño estándar */
-}
-
-.searchselect-control {
-  position: relative;
-  padding: 0.25rem 2.5rem 0.25rem 0.75rem; /* Padding reducido */
-  overflow: hidden; 
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.25rem;
-  align-items: center;
-  min-height: 32px;
-  height: 32px; /* Reducido de 38px */
-}
-
-.ss-chip {
-  padding: .05rem .35rem; /* Más compacto */
-  font-size: .7rem; /* Más pequeño */
-  max-height: 20px;
 }
 </style>

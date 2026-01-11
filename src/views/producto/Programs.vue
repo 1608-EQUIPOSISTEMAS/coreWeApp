@@ -24,7 +24,7 @@
     </div>
 
     <div class="card-body">
-      <BaseFilterChips 
+      <BaseFilterChips
         :items="activeFilterChips"
         @remove="clearFilter"
         @clear-all="clearFilters"
@@ -152,7 +152,14 @@
         </div>
         <div class="col-md-6">
           <label class="form-label">Modalidad</label>
-          <SearchSelect v-model="filters.cat_model_modality" :items="filtroModalidades" label-field="description" value-field="id" placeholder="Seleccionar..." />
+
+            <MultiSelect
+                v-model="filters.modality_ids"
+                :items="filtroModalidades"
+                label-key="description"
+                value-key="id"
+                placeholder="Modalidades..."
+            />
         </div>
         <div class="col-12">
           <label class="form-label">Búsqueda (q)</label>
@@ -182,6 +189,7 @@ import { ServiceKeys } from '@/services'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
+import MultiSelect from '../../components/MultiSelect.vue'
 
 const router = useRouter()
 const programService = inject(ServiceKeys.Program)
@@ -204,11 +212,12 @@ const selectedType = ref('versions') // Valor por defecto
 
 // === Filtros ===
 const filters = reactive({
-  estado: null,           
-  cat_type_program: null, 
-  cat_category: null,     
+  estado: null,
+  filtroModalidades: null,
+  cat_type_program: null,
+  cat_category: null,
   cat_model_modality: null,
-  q: ''                   
+  q: ''
 })
 
 // === Catálogos ===
@@ -252,7 +261,7 @@ function clearFilter(key) {
   else if (key === 'cat_category') filters.cat_category = null
   else if (key === 'cat_model_modality') filters.cat_model_modality = null
   else if (key === 'q') filters.q = ''
-  
+
   applyFilters()
 }
 
@@ -266,10 +275,10 @@ function clearFilters() {
     q: ''
   })
   pagin.value.page = 1
-  
+
   // 2. Limpiar Storage
   localStorage.removeItem('crm_programs_filter_state_v1')
-  
+
   // 3. Recargar
   rebuildChips()
   fetchPrograms()
@@ -288,9 +297,9 @@ function rebuildChips() {
     const it = filtroCategorias.value.find(i => i.id === filters.cat_category)
     chips.push({ key: 'cat_category', text: `Categoría: ${it?.description || filters.cat_category}` })
   }
-  if (filters.cat_model_modality) {
-    const it = filtroModalidades.value.find(i => i.id === filters.cat_model_modality)
-    chips.push({ key: 'cat_model_modality', text: `Modalidad: ${it?.description || filters.cat_model_modality}` })
+  if (filters.modality_ids) {
+    chips.push({ key: 'cat_model_modality', text: `Modalidad: ${filters.modality_ids.length}`, details: filters.modality_ids })
+
   }
   if (filters.q) {
     chips.push({ key: 'q', text: `q: ${filters.q}` })
@@ -346,7 +355,7 @@ function formatDate(value) {
 }
 
 function goNew() {
-  router.push({ name: 'ProgramNew' }) 
+  router.push({ name: 'ProgramNew' })
 }
 function editProgram(p) {
   router.push({ name: 'ProgramEdit', params: { id: p.program_id || p.id } })
@@ -361,21 +370,21 @@ onMounted(() => {
 </script>
 <style scoped>
 /* Contenedor Principal (Estilo FICO) */
-.programs-card { 
-  background: #fff; 
-  border: 1px solid #e5e7eb; 
-  border-radius: 0.6rem; 
+.programs-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.6rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-top: 4px solid #6366f1; /* Color Indigo para Académico */
   margin-bottom: 2rem;
 }
 
-.card-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 1.25rem; 
-  border-bottom: 1px solid #f3f4f6; 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .title { display: flex; flex-direction: column; gap: 4px; }
@@ -389,12 +398,12 @@ onMounted(() => {
 /* Tabla Unificada */
 .table-responsive { width: 100%; overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
-.table thead th { 
-  background: #f9fafb; 
-  padding: 0.85rem 0.75rem; 
-  text-align: left; 
-  font-weight: 600; 
-  color: #4b5563; 
+.table thead th {
+  background: #f9fafb;
+  padding: 0.85rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
   border-bottom: 2px solid #e5e7eb;
   white-space: nowrap;
 }
@@ -422,12 +431,12 @@ onMounted(() => {
 .badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
 
 /* Botones */
-.btn { 
-  border: 1px solid #d1d5db; 
-  padding: 0.45rem 0.75rem; 
-  border-radius: 0.4rem; 
-  cursor: pointer; 
-  transition: all 0.2s; 
+.btn {
+  border: 1px solid #d1d5db;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
   background: #fff;
   font-size: 0.8rem;
   font-weight: 600;
