@@ -145,18 +145,18 @@
             @keyup.enter="applyFilters"
           />
         </div>
+
         <div class="col-md-5">
           <label class="form-label">
             <i class="fa-solid fa-user-tie me-1 text-primary"></i> Asesor Asignado
           </label>
-          <SearchSelect
-            v-model="filters.owner_user_ids"
-            :items="filtroOwners"
-            label-field="description"
-            value-field="value"
-            placeholder="Cualquiera..."
-            multiple
-          />
+           <MultiSelect
+              v-model="filters.owner_user_ids"
+                :items="filtroOwners"
+                label-key="description"
+                value-key="id"
+                placeholder="USUARIO..."
+            />
         </div>
       </div>
 
@@ -167,42 +167,42 @@
         <div class="row g-3">
           <div class="col-md-3 col-6">
             <label class="form-label">Estatus (Pipeline)</label>
-            <SearchSelect
-              v-model="filters.cat_status_lead"
-              :items="filtroPipeline"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todos"
+           <MultiSelect
+              v-model="filters.status_lead_ids"
+                :items="filtroPipeline"
+                label-key="description"
+                value-key="alias"
+                placeholder="ESTATUS..."
             />
           </div>
           <div class="col-md-3 col-6">
             <label class="form-label">Seguimiento</label>
-            <SearchSelect
-              v-model="filters.cat_last_follow"
-              :items="filtroFollow"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todos"
+            <MultiSelect
+              v-model="filters.last_follow_ids"
+                :items="filtroFollow"
+                label-key="description"
+                value-key="id"
+                placeholder="SEGUIMIENTO..."
             />
           </div>
           <div class="col-md-3 col-6">
             <label class="form-label">Nivel de Interés</label>
-            <SearchSelect
-              v-model="filters.cat_interest_level"
-              :items="filtroInterest"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todos"
+            <MultiSelect
+              v-model="filters.interest_level_ids"
+                :items="filtroInterest"
+                label-key="description"
+                value-key="id"
+                placeholder="INTERES..."
             />
           </div>
           <div class="col-md-3 col-6">
             <label class="form-label">Canal Origen</label>
-            <SearchSelect
-              v-model="filters.cat_channel"
-              :items="filtroCanales"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todos"
+            <MultiSelect
+              v-model="filters.channel_ids"
+                :items="filtroCanales"
+                label-key="description"
+                value-key="id"
+                placeholder="CANAL..."
             />
           </div>
         </div>
@@ -219,13 +219,13 @@
             <input v-model="filters.program_text" type="text" class="form-control" placeholder="Ej. Gestión de Proyectos...">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Promoción / Campaña</label>
-            <SearchSelect
-              v-model="filters.cat_query"
-              :items="filtroQuery"
-              label-field="description"
-              value-field="alias"
-              placeholder="Seleccionar..."
+            <label class="form-label">Promoción</label>
+           <MultiSelect
+              v-model="filters.query_ids"
+                :items="filtroQuery"
+                label-key="description"
+                value-key="id"
+                placeholder="PROMO..."
             />
           </div>
         </div>
@@ -233,32 +233,31 @@
         <div class="row g-3 align-items-end">
           <div class="col-md-3 col-6">
             <label class="form-label">Tipo</label>
-            <SearchSelect
-              v-model="filters.cat_type_program"
-              :items="filtroTiposPrograma"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todos"
+           <MultiSelect
+              v-model="filters.type_program_ids"
+                :items="filtroTiposPrograma"
+                label-key="description"
+                value-key="id"
+                placeholder="TIPO..."
             />
           </div>
           <div class="col-md-3 col-6">
             <label class="form-label">Modalidad</label>
-            <SearchSelect
-              v-model="filters.cat_model_modality"
-              :items="filtroModalidad"
-              label-field="description"
-              value-field="alias"
-              placeholder="Todas"
+           <MultiSelect
+              v-model="filters.model_modality_ids"
+                :items="filtroModalidad"
+                label-key="description"
+                value-key="id"
+                placeholder="MODALIDAD..."
             />
           </div>
           <div class="col-md-6">
             <label class="form-label">Rango Inicio Edición</label>
-            <DateRangePicker
-              :modelValue="{ start: filters.edition_start_from, end: filters.edition_start_to }"
-              @update:modelValue="(v) => { filters.edition_start_from = v.start; filters.edition_start_to = v.end }"
-              label-from="DESDE"
-              label-to="HASTA"
-              :show-presets="false"
+            <BaseDatePicker
+              v-model="filters.edition_range_string"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              placeholder="Seleccione rango"
+              @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')"
             />
           </div>
         </div>
@@ -269,16 +268,20 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Fecha de Creación</label>
-            <DateRangePicker
-              v-model="filters.rangoFechas"
-              :show-presets="true"
+            <BaseDatePicker
+              v-model="filters.created_range_string"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              placeholder="Seleccione rango"
+              @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')"
             />
           </div>
           <div class="col-md-6">
             <label class="form-label">Última Modificación</label>
-            <DateRangePicker
-              v-model="filters.rangoModificacion"
-              :show-presets="true"
+            <BaseDatePicker
+              v-model="filters.updated_range_string"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              placeholder="Seleccione rango"
+              @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')"
             />
           </div>
         </div>
@@ -306,11 +309,12 @@
 import { ref, reactive, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
-import DateRangePicker from '@/components/DateRangePicker.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import MultiSelect from '@/components/MultiSelect.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 
 const router = useRouter()
@@ -331,8 +335,6 @@ const pagin = ref({ size: 25, page: 1, total: 0 })
 // === FILTROS ===
 const filters = reactive({
   q: '',
-  rangoFechas: { start: '', end: '' },
-  rangoModificacion: { start: '', end: '' },
   cat_status_lead: null,
   cat_last_follow: null,
   cat_channel: null,
@@ -341,36 +343,42 @@ const filters = reactive({
   program_text: '',
   cat_type_program: null,
   cat_model_modality: null,
-  edition_start_from: '',
-  edition_start_to: '',
   estado: null,
-  owner_user_ids: []
+  owner_user_ids: [],
+
+  // Strings visuales para los date pickers
+  edition_range_string: null,
+  created_range_string: null,
+  updated_range_string: null,
+
+  // Valores reales para la API
+  rangoFechas: { start: '', end: '' },
+  rangoModificacion: { start: '', end: '' },
+  edition_start_from: '',
+  edition_start_to: ''
 })
 
 // === CATÁLOGOS ===
 const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
-const filtroPipeline = ref(catalog.options('we_lead_status'))
-const filtroCanales = ref(catalog.options('we_social_media'))
-const filtroFollow = ref(catalog.options('we_follow_lead'))
-const filtroQuery = ref(catalog.options('we_category_query'))
-const filtroInterest = ref(catalog.options('we_lead_interest'))
+const filtroPipeline = ref(catalog.options('we_lead_status') || [])
+const filtroCanales = ref(catalog.options('we_social_media') || [])
+const filtroFollow = ref(catalog.options('we_follow_lead') || [])
+const filtroQuery = ref(catalog.options('we_category_query') || [])
+const filtroInterest = ref(catalog.options('we_lead_interest') || [])
 
-// =================================================================
-// LOGICA DE PERSISTENCIA
-// =================================================================
+// === PERSISTENCIA ===
 const { saveState } = useTablePersistence('crm_leads_filter_state_v1', filters, pagin)
 
-// =================================================================
-// ACCIONES
-// =================================================================
-
+// === FUNCIONES DE PAGINACIÓN Y FILTROS ===
 function handlePaginationChange() {
   saveState()
   fetchLeads()
 }
 
-function openFilterModal() { showFilterModal.value = true }
+function openFilterModal() {
+  showFilterModal.value = true
+}
 
 function applyFilters() {
   showFilterModal.value = false
@@ -383,11 +391,14 @@ function applyFilters() {
 function clearFilter(key) {
   if (key === 'rangoFechas') {
     filters.rangoFechas = { start: '', end: '' }
+    filters.created_range_string = null
   } else if (key === 'rangoModificacion') {
     filters.rangoModificacion = { start: '', end: '' }
+    filters.updated_range_string = null
   } else if (key === 'edition_start') {
     filters.edition_start_from = ''
-    filters.edition_start_to   = ''
+    filters.edition_start_to = ''
+    filters.edition_range_string = null
   } else if (key === 'owner_user_ids') {
     filters.owner_user_ids = []
   } else {
@@ -412,7 +423,10 @@ function clearFilters() {
     edition_start_from: '',
     edition_start_to: '',
     estado: null,
-    owner_user_ids: []
+    owner_user_ids: [],
+    edition_range_string: null,
+    created_range_string: null,
+    updated_range_string: null
   })
 
   pagin.value.page = 1
@@ -423,104 +437,145 @@ function clearFilters() {
 
 function rebuildChips() {
   const chips = []
-  if (filters.q) chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
+
+  if (filters.q) {
+    chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
+  }
 
   if (filters.rangoFechas?.start || filters.rangoFechas?.end) {
-    chips.push({ key: 'rangoFechas', text: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
+    chips.push({
+      key: 'rangoFechas',
+      text: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}`
+    })
   }
+
   if (filters.rangoModificacion?.start || filters.rangoModificacion?.end) {
-    chips.push({ key: 'rangoModificacion', text: `Mod: ${filters.rangoModificacion.start} → ${filters.rangoModificacion.end}` })
+    chips.push({
+      key: 'rangoModificacion',
+      text: `Mod: ${filters.rangoModificacion.start} → ${filters.rangoModificacion.end}`
+    })
   }
+
   if (filters.edition_start_from || filters.edition_start_to) {
-      chips.push({ key: 'edition_start', text: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
+    chips.push({
+      key: 'edition_start',
+      text: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}`
+    })
   }
 
   if (filters.cat_status_lead) {
     const it = filtroPipeline.value.find(i => i.alias === filters.cat_status_lead)
-    chips.push({ key: 'cat_status_lead', text: `Status: ${it?.description || filters.cat_status_lead}` })
-  }
-  if (filters.cat_last_follow) {
-    const it = filtroFollow.value.find(i => i.alias === filters.cat_last_follow)
-    chips.push({ key: 'cat_last_follow', text: `Seguim: ${it?.description || filters.cat_last_follow}` })
-  }
-  if (filters.cat_channel) {
-    const it = filtroCanales.value.find(i => i.alias === filters.cat_channel)
-    chips.push({ key: 'cat_channel', text: `Canal: ${it?.description}` })
-  }
-  if (filters.cat_interest_level) {
-    const it = filtroInterest.value.find(i => i.alias === filters.cat_interest_level)
-    chips.push({ key: 'cat_interest_level', text: `Interés: ${it?.description}` })
-  }
-  if (filters.cat_query) {
-      const it = filtroQuery.value.find(i => i.alias === filters.cat_query)
-      chips.push({ key: 'cat_query', text: `Promo: ${it?.description}` })
+    chips.push({
+      key: 'cat_status_lead',
+      text: `Status: ${it?.description || filters.cat_status_lead}`
+    })
   }
 
-  if(filters.program_text) {
-      chips.push({ key: 'program_text', text: `Prog: ${filters.program_text}` })
+  if (filters.cat_last_follow) {
+    const it = filtroFollow.value.find(i => i.alias === filters.cat_last_follow)
+    chips.push({
+      key: 'cat_last_follow',
+      text: `Seguim: ${it?.description || filters.cat_last_follow}`
+    })
   }
+
+  if (filters.cat_channel) {
+    const it = filtroCanales.value.find(i => i.alias === filters.cat_channel)
+    chips.push({
+      key: 'cat_channel',
+      text: `Canal: ${it?.description}`
+    })
+  }
+
+  if (filters.cat_interest_level) {
+    const it = filtroInterest.value.find(i => i.alias === filters.cat_interest_level)
+    chips.push({
+      key: 'cat_interest_level',
+      text: `Interés: ${it?.description}`
+    })
+  }
+
+  if (filters.cat_query) {
+    const it = filtroQuery.value.find(i => i.alias === filters.cat_query)
+    chips.push({
+      key: 'cat_query',
+      text: `Promo: ${it?.description}`
+    })
+  }
+
+  if (filters.program_text) {
+    chips.push({
+      key: 'program_text',
+      text: `Prog: ${filters.program_text}`
+    })
+  }
+
   if (filters.cat_type_program) {
     const it = filtroTiposPrograma.value.find(i => i.alias === filters.cat_type_program)
-    chips.push({ key: 'cat_type_program', text: `Tipo: ${it?.description}` })
+    chips.push({
+      key: 'cat_type_program',
+      text: `Tipo: ${it?.description}`
+    })
   }
+
   if (filters.cat_model_modality) {
     const it = filtroModalidad.value.find(i => i.alias === filters.cat_model_modality)
-    chips.push({ key: 'cat_model_modality', text: `Mod: ${it?.description}` })
+    chips.push({
+      key: 'cat_model_modality',
+      text: `Mod: ${it?.description}`
+    })
   }
 
   if (filters.owner_user_ids && filters.owner_user_ids.length > 0) {
-    // chips.push({ key: 'owner_user_ids', text: `Asesores: ${filters.owner_user_ids.length}` }) tambien una propiedad details, agarras el listado
     const details = filtroOwners.value
       .filter(o => filters.owner_user_ids.includes(o.value))
-      .map(o =>({ detail: o.description}))
+      .map(o => ({ detail: o.description }))
 
-    chips.push({ key: 'owner_user_ids', text: `Asesores: ${filters.owner_user_ids.length}`, details: details })
+    chips.push({
+      key: 'owner_user_ids',
+      text: `Asesores: ${filters.owner_user_ids.length}`,
+      details
+    })
   }
 
   activeFilterChips.value = chips
 }
 
-// === API ===
+// === API FETCH ===
 async function fetchLeads() {
   try {
-    const activeFlag = filters.estado === 'Activo' ? '1' : filters.estado === 'Inactivo' ? '0' : null
+    const activeFlag = filters.estado === 'Activo' ? '1'
+      : filters.estado === 'Inactivo' ? '0'
+      : null
 
     const { items, total: t } = await comercialService.leadList({
       q: filters.q || null,
       page: pagin.value.page,
       size: pagin.value.size,
       from_date: filters.rangoFechas?.start || null,
-      to_date:   filters.rangoFechas?.end   || null,
+      to_date: filters.rangoFechas?.end || null,
       updated_from: filters.rangoModificacion?.start || null,
-      updated_to:   filters.rangoModificacion?.end   || null,
-      cat_status_lead:    filters.cat_status_lead || null,
-      cat_last_follow:    filters.cat_last_follow || null,
-      cat_channel:        filters.cat_channel || null,
+      updated_to: filters.rangoModificacion?.end || null,
+      cat_status_lead: filters.cat_status_lead || null,
+      cat_last_follow: filters.cat_last_follow || null,
+      cat_channel: filters.cat_channel || null,
       cat_interest_level: filters.cat_interest_level || null,
-      cat_query:          filters.cat_query || null,
-      program_text:       filters.program_text || null,
-      cat_type_program:   filters.cat_type_program || null,
+      cat_query: filters.cat_query || null,
+      program_text: filters.program_text || null,
+      cat_type_program: filters.cat_type_program || null,
       cat_model_modality: filters.cat_model_modality || null,
       edition_start_from: filters.edition_start_from || null,
-      edition_start_to:   filters.edition_start_to   || null,
+      edition_start_to: filters.edition_start_to || null,
       active: activeFlag,
       owner_user_ids: (filters.owner_user_ids?.length ? filters.owner_user_ids : null)
     })
 
-    if (items.length > 0) {
-      leadsRaw.value = items
-      pagin.value.total = Number(t || 0)
-      // Cargar owners si es necesario
-      if(filtroOwners.value.length === 0){
-        const arr = []// await authService.userList({})
-        filtroOwners.value = arr.map(user => ({
-          value: user.user_id,
-          description: user.first_name
-        })) || []
-      }
-    } else {
-      leadsRaw.value = []
-      pagin.value.total = 0
+    leadsRaw.value = items || []
+    pagin.value.total = Number(t || 0)
+
+    // Cargar owners si aún no están cargados
+    if (filtroOwners.value.length === 0 && items?.length > 0) {
+      await loadOwners()
     }
   } catch (e) {
     console.error('Error cargando leads:', e)
@@ -529,45 +584,92 @@ async function fetchLeads() {
   }
 }
 
-// === ROUTING ===
+async function loadOwners() {
+  try {
+    const arr = await authService.userList({})
+    filtroOwners.value = arr.map(user => ({
+      value: user.user_id,
+      description: user.first_name
+    }))
+  } catch (e) {
+    console.error('Error cargando asesores:', e)
+    filtroOwners.value = []
+  }
+}
+
+// === NAVEGACIÓN ===
 function goNew() {
   router.push({ name: 'ComercialLeadsNew' })
 }
+
 function viewLead(lead) {
   router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } })
 }
-function editLead(i) {
-  router.push({ name: 'ComercialLeadDetalle', params: { id: i.id } })
+
+function editLead(lead) {
+  router.push({ name: 'ComercialLeadDetalle', params: { id: lead.id } })
 }
 
-// === HELPERS (Badges) ===
+// === HELPERS PARA BADGES ===
 function badgeForStatus(s) {
-  switch (s) {
-    case 'we_lead_status_interesado': return 'badge-info'
-    case 'we_lead_status_closed': return 'badge-danger'
-    case 'we_lead_status_atendido': return 'badge-success'
-    case 'we_lead_status_proximo': return 'badge-warning'
-    case 'we_lead_status_bought': return 'badge-success'
-    case 'we_lead_status_will_pay': return 'badge-success'
-    case 'we_lead_status_indiferente': return 'badge-light'
-    case 'we_lead_status_desestimado': return 'badge-danger'
-    default: return 'badge-neutral'
+  const map = {
+    'we_lead_status_interesado': 'badge-info',
+    'we_lead_status_closed': 'badge-danger',
+    'we_lead_status_atendido': 'badge-success',
+    'we_lead_status_proximo': 'badge-warning',
+    'we_lead_status_bought': 'badge-success',
+    'we_lead_status_will_pay': 'badge-success',
+    'we_lead_status_indiferente': 'badge-light',
+    'we_lead_status_desestimado': 'badge-danger'
   }
+  return map[s] || 'badge-neutral'
 }
+
 function badgeForInterest(s) {
-  switch (s) {
-    case 'we_lead_interest_high': return 'badge-success'
-    case 'we_lead_interest_medium': return 'badge-warning'
-    case 'we_lead_interest_low': return 'badge-danger'
-    default: return 'badge-neutral'
+  const map = {
+    'we_lead_interest_high': 'badge-success',
+    'we_lead_interest_medium': 'badge-warning',
+    'we_lead_interest_low': 'badge-danger'
   }
+  return map[s] || 'badge-neutral'
 }
+
 function badgeForFollow(s) {
-  switch (s) {
-    case 'we_follow_lead_pending': return 'badge-light'
-    case 'we_follow_lead_answered': return 'badge-success'
-    case 'we_follow_lead_no_answer': return 'badge-danger'
-    default: return 'badge-neutral'
+  const map = {
+    'we_follow_lead_pending': 'badge-light',
+    'we_follow_lead_answered': 'badge-success',
+    'we_follow_lead_no_answer': 'badge-danger'
+  }
+  return map[s] || 'badge-neutral'
+}
+
+// === MANEJO DE CAMBIOS EN DATEPICKER ===
+function handleDateFilterChange(dateStr, type) {
+  let start = ''
+  let end = ''
+
+  if (dateStr && dateStr.includes(' to ')) {
+    const parts = dateStr.split(' to ')
+    start = parts[0]
+    end = parts[1]
+  } else if (dateStr) {
+    start = dateStr
+    end = dateStr
+  }
+
+  // Asignar según el tipo
+  if (type === 'created') {
+    filters.rangoFechas.start = start
+    filters.rangoFechas.end = end
+    filters.created_range_string = dateStr
+  } else if (type === 'updated') {
+    filters.rangoModificacion.start = start
+    filters.rangoModificacion.end = end
+    filters.updated_range_string = dateStr
+  } else if (type === 'edition_start') {
+    filters.edition_start_from = start
+    filters.edition_start_to = end
+    filters.edition_range_string = dateStr
   }
 }
 

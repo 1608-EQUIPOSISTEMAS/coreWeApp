@@ -72,7 +72,7 @@
     <div class="card-body border-bottom bg-light p-2" v-if="hasActiveFilters">
       <BaseFilterChips
         :items="formattedActiveFilters"
-        @remove="removeFilter($event.key)"
+        @remove="removeFilter($event)"
         @clear-all="clearAllFilters"
       />
   </div>
@@ -680,18 +680,18 @@
         <div class="mb-3 col-6">
              <label class="form-label small fw-bold">Docente</label>
            <MultiSelect
-  v-model="filterForm.instructores_seleccionados"
+              v-model="filterForm.instructores_seleccionados"
 
-  mode="remote"
-  :fetcher="(q) => instructorService.instructorCaller({ q })"
-  :debounce-ms="400"
+              mode="remote"
+              :fetcher="(q) => instructorService.instructorCaller({ q })"
+              :debounce-ms="400"
 
-  labelKey="full_name"
-  valueKey="instructor_id"
+              labelKey="full_name"
+              valueKey="instructor_id"
 
-  placeholder="Buscar docentes..."
-  modalTitle="Seleccionar Docentes"
-/>
+              placeholder="Buscar docentes..."
+              modalTitle="Seleccionar Docentes"
+            />
         </div>
 <!--
         <div class="mb-3 col-6">
@@ -871,7 +871,7 @@
 
                       <div class="col-3 " v-if="modalForm.program_version_id">
                           <label class="form-label-sm">Vacantes</label>
-                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" required  placeholder="VACANTES"/>
+                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant"   placeholder="VACANTES"/>
                       </div>
                 </div>
             </section>
@@ -1017,12 +1017,13 @@
                                         placeholder="Vincular edición..."
                                         :minChars="0"
                                         :cache="false"
+                                        required
                                         @change="onChildEditionChange($event, child, index)"
                                         :disabled="child.new"
                                      />
 
                                      <!--botòn x borrar-->
-                                     <button v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
+                                     <button :disabled="isBlockedByPrevious(index) " v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
                                          <i class="fa-solid fa-times"></i> Desvincular
                                      </button>
                                      <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
@@ -1056,6 +1057,7 @@
                                           <button
                                             class="btn btn-outline-secondary px-1"
                                             type="button"
+                                            :disabled="isBlockedByPrevious(index) "
                                             @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child)"
                                           >
                                             <i class="fa-solid fa-circle-info text-info" style="font-size: 0.8rem;"></i>
@@ -1109,15 +1111,17 @@
                                           label-field="description"
                                           value-field="id"
                                           placeholder="Días"
+                                          required
                                           :disabled="isBlockedByPrevious(index)"
                                           class="mb-1"
                                           @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id',child.cat_day_combination_id)"
                                       />
                                       <SearchSelect
-                                        v-model="child.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1"
+                                        v-model="child.cat_hour_combination_id" required :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1"
                                         :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
                                       />
                                       <SearchSelect
+                                      :disabled="isBlockedByPrevious(index) "
                                         v-if="child.new || child.edition_id" v-model="child.instructor_id"
                             :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label"
                                       />
@@ -1136,7 +1140,7 @@
                                          </div>
                                          <div class="d-flex align-items-center gap-2">
                                             <label class="form-switch scale-75">
-                                                <input @change="()=>{
+                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
                                                   if(child.preconfirmation && child.expedient){
                                                     child.confirmation=true
                                                   }else{
@@ -1149,7 +1153,7 @@
                                          </div>
                                          <div class="d-flex align-items-center gap-2">
                                             <label class="form-switch scale-75">
-                                                <input @change="()=>{
+                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
                                                   if(child.preconfirmation && child.expedient){
                                                     child.confirmation=true
                                                   }else{
@@ -1163,7 +1167,7 @@
 
                                          <div class="d-flex align-items-center gap-2">
                                             <label class="form-switch scale-75">
-                                                <input @change="()=>{
+                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
                                                   if(child.confirmation){
                                                     child.preconfirmation=true
                                                     child.expedient=true
@@ -1264,12 +1268,12 @@
                 </div>
                 <div class="status-card__body p-0">
                     <textarea
-                        class="form-control border-0 bg-transparent"
-                        rows="6"
-                        v-model="modalForm.notes"
-                        placeholder="Escriba aquí notas internas, acuerdos con docentes o detalles logísticos..."
-                        style="resize: none; font-size: 0.85rem;"
-                    ></textarea>
+                      class="form-control border-0 bg-transparent"
+                      rows="6"
+                      v-model="modalForm.notes"
+                      placeholder="Escriba aquí notas internas..."
+                      style="resize: vertical; min-height: 150px; max-height: none; font-size: 0.85rem;"
+                  ></textarea>
                 </div>
             </div>
 
@@ -1871,16 +1875,8 @@ const filterForm = reactive({
     end_date: '',
     clasification: null,
     program_version_id: null,
-    cat_type_program: null,
-    cat_category: null,
-    cat_model_modality: null,
-    cat_segment: null,
-
-    cat_course_category: null,
     program_version_label: null,
     active: null,
-    cat_day_combination:null,
-    cat_hour_combination: null,
     category_ids: [],
     type_program_ids: [],
     course_category_ids: [],
@@ -2002,28 +1998,37 @@ function applyFilters() {
 }
 
 function removeFilter(key) {
-    if(key === 'date_range') {
+    // 1. Caso Especial: Rango de Fechas
+    if (key === 'date_range') {
         delete activeFilters.date_from;
         delete activeFilters.date_to;
         delete activeFilters.date_range;
+
         filterForm.date_from = null;
         filterForm.date_to = null;
-    } else if (key === 'instructor_id') {
-         delete activeFilters.instructor_id;
-         delete activeFilters.instructor_label;
-         filterForm.instructor_id = null;
-         filterForm.instructor_label = '';
-    // AGREGADO: Limpieza específica para Programa
-    } else if (key === 'program_version_id') {
-         delete activeFilters.program_version_id;
-         delete activeFilters.program_version_label;
-         filterForm.program_version_id = null;
-         filterForm.program_version_label = '';
-    } else {
-        delete activeFilters[key];
-        filterForm[key] = null; // O '' dependiendo de tu tipo de dato
+        filterForm.range_string = null;
     }
-    saveState()
+    // 2. Caso Especial: Programa (Single Select con Label auxiliar)
+    else if (key === 'program_version_id') {
+        delete activeFilters.program_version_id;
+        delete activeFilters.program_version_label;
+
+        filterForm.program_version_id = null;
+        filterForm.program_version_label = '';
+    }
+    // 3. NUEVO: Detectar Arrays (Para Instructores, Categorías, etc.)
+    // Si el valor original en el formulario es un Array, lo reseteamos a []
+    else if (Array.isArray(filterForm[key])) {
+        delete activeFilters[key];
+        filterForm[key] = []; // <--- IMPORTANTE: Array vacío, no null
+    }
+    // 4. Caso Genérico (Inputs simples, selects simples)
+    else {
+        delete activeFilters[key];
+        filterForm[key] = null;
+    }
+
+    saveState();
     fetchSchedule();
 }
 
@@ -2684,26 +2689,32 @@ function validateDateInput(targetObj, fieldKey) {
 
 function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
-
+  debugger
   // --- LÓGICA DE FECHAS MIN/MAX (YA EXISTENTE) ---
+  // LOGICA MIN/MAX
   if (bodyField) {
     config.minDate = bodyField.start_date;
-  }else{
-    if(!hasActiveFilters.value || !currentEdition.value){
-      if ((index === 0 || index == null)) {
+  } else {
+    if (!hasActiveFilters.value || !currentEdition.value) {
+      if (index === 0 || index == null) {
+        // Lógica del primer elemento (mes/año seleccionado)
         const y = selectedYear.value;
         const m = selectedMonth.value;
         const lastDay = new Date(y, m, 0).getDate();
         config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
         config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
       } else {
-        const firstChild = modalForm.program_version_children[index-1];
-        if (firstChild && firstChild.start_date) {
-          config.minDate = firstChild.start_date;
+        // CORRECCIÓN AQUÍ: Quitar .value y usar nombre más claro
+        const prevChild = modalForm.program_version_children[index - 1];
+
+        // Si el anterior tiene fecha, esa es mi fecha mínima
+        if (prevChild && prevChild.start_date) {
+          config.minDate = prevChild.start_date;
         }
       }
     }
   }
+
   // --- NUEVA LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS ---
   // Determinar el objeto a evaluar (modalForm para curso, o el hijo específico)
   const targetObj = (index !== null && modalForm.program_version_children[index])
@@ -2884,6 +2895,29 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
          }
        }
    }
+
+   // AÑADIR ESTO AL FINAL DE LA FUNCIÓN:
+  // Si cambié la fecha de inicio, verificar si rompo la cronología del SIGUIENTE hermano
+  if (fieldKey === 'start_date' && index !== null) {
+
+      // Verificar hermano SIGUIENTE (Forward check)
+      const nextIndex = index + 1;
+      if (nextIndex < modalForm.program_version_children.length) {
+          const nextChild = modalForm.program_version_children[nextIndex];
+
+          // Si el siguiente ya tiene fecha Y mi nueva fecha es MAYOR a la del siguiente
+          if (nextChild.start_date && targetObj.start_date > nextChild.start_date) {
+
+              // OPCIÓN A: Limpiar el siguiente automáticamente (lo que pediste)
+              nextChild.start_date = null;
+              nextChild.end_date = null;
+              toast.warning(`Se limpió el módulo siguiente porque iniciaba antes que este.`);
+
+              // Recursividad: Si limpias el siguiente, podrías querer validar el que le sigue a ese,
+              // pero usualmente con limpiar el inmediato basta para obligar al usuario a corregir.
+          }
+      }
+  }
 }
 
 // REEMPLAZO DEL ARRAY ANTIGUO
@@ -3029,14 +3063,15 @@ function onChildEditionChange(edition, child, index) {
   });
 }
 function isBlockedByPrevious(index) {
-  // La primera fila nunca se bloquea
+  // 1. La primera fila nunca se bloquea
   if (index === 0) return false
 
-  // QUITA 'this.'
-  const prev = modalForm.program_version_children[index - 1]
+  // 2. Obtenemos todos los hermanos anteriores al índice actual
+  const previousSiblings = modalForm.program_version_children.slice(0, index)
 
-  // QUITA 'this.'
-  return !isChildComplete(prev)
+  // 3. Verificamos si ALGUNO de los anteriores está incompleto.
+  // Usamos .some(): si encuentra al menos uno que !isChildComplete, devuelve true (Bloqueado)
+  return previousSiblings.some(sibling => !isChildComplete(sibling))
 }
 
 // Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)

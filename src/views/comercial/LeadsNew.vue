@@ -159,7 +159,8 @@
                   <i class="fas fa-spinner fa-spin"></i> Buscando...
                 </span>
               </label>
-              <div class="input-group">
+
+              <div class="input-group flex-nowrap">
                 <input autocomplete="off"
                   v-model="form.telefono"
                   type="text"
@@ -172,7 +173,7 @@
                   @blur="searchLeadByPhone"
                   :disabled="searchingPhone"
                 />
-                <button class="btn btn-outline-secondary" type="button" @click="searchLeadByPhone" :disabled="searchingPhone">
+                <button class="btn btn-outline-secondary" type="button" @click="searchLeadByPhone" :disabled="searchingPhone" style="flex-shrink: 0;">
                   <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
               </div>
@@ -256,7 +257,11 @@
           <div class="row g-3 form-section__body">
             <div class="col-md-3">
               <label class="form-label mb-1">F. Pago (prevista)</label>
-              <input autocomplete="off" v-model="form.pay_date" type="date" class="form-control"  :required="form.status_alias=='we_lead_status_bought'"/>
+              <BaseDatePicker
+                v-model="form.pay_date"
+                :required="form.status_alias=='we_lead_status_bought'"
+                placeholder="dd/mm/aaaa"
+              />
             </div>
 
             <div class="col-md-3">
@@ -274,13 +279,15 @@
 
             <div class="col-md-6">
               <label class="form-label mb-1">Mensaje de chat<span class="required-star">*</span></label>
+
               <textarea
                 v-model="form.mensajeChat"
                 class="form-control"
-                rows="2"
                 placeholder="MENSAJE CHAT"
                 required
+                rows="2"
                 @input="handleMensajeChatInput"
+                style="resize: vertical; min-height: 80px; max-height: none;"
               ></textarea>
             </div>
 
@@ -335,7 +342,12 @@
 
             <div class="col-md-12">
               <label class="form-label mb-1">Observaciones</label>
-              <textarea v-model="form.observacion" class="form-control" rows="2"></textarea>
+              <textarea
+                v-model="form.observacion"
+                class="form-control"
+                rows="2"
+                style="resize: vertical; min-height: 80px; max-height: none;"
+              ></textarea>
             </div>
           </div>
         </section>
@@ -722,7 +734,12 @@
        <section class="insc-section">
             <h6 class="insc-section__title">OBSERVACIONES</h6>
             <div class="row g-3">
-              <textarea v-model="insc.observacions" class="form-control" rows="2"></textarea>
+              <textarea
+                v-model="insc.observacions"
+                class="form-control"
+                rows="2"
+                style="resize: vertical; min-height: 80px; max-height: none;"
+              ></textarea>
             </div>
         </section>
     </div>
@@ -740,6 +757,7 @@
   import { ref, reactive, computed, onMounted, inject, nextTick } from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
+import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
   const toast = useToast()
@@ -1499,19 +1517,6 @@ async function confirmarInscripcion() {
 </script>
 
 <style scoped>
-    .form-control:required:invalid:not(:disabled):not([readonly]),
-    .form-select:required:invalid:not(:disabled):not([readonly]),
-    textarea.form-control:required:invalid:not(:disabled):not([readonly]) {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 .2rem rgba(239,68,68,.15);
-    }
-
-    .form-control:required:valid:not(:disabled):not([readonly]),
-    .form-select:required:valid:not(:disabled):not([readonly]),
-    textarea.form-control:required:valid:not(:disabled):not([readonly]) {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 .2rem rgba(16,185,129,.15);
-    }
 
     .lead-form {
     font-size: 0.95rem;

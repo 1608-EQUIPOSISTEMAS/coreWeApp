@@ -26,7 +26,7 @@
     <div class="card-body">
       <BaseFilterChips
         :items="activeFilterChips"
-        @remove="clearFilter"
+        @remove="clearFilter($event)"
         @clear-all="clearFilters"
       />
 
@@ -213,10 +213,13 @@ const selectedType = ref('versions') // Valor por defecto
 // === Filtros ===
 const filters = reactive({
   estado: null,
-  filtroModalidades: null,
+  // filtroModalidades: null, // <-- BORRAR ESTO (es un catálogo, no un valor de filtro)
   cat_type_program: null,
   cat_category: null,
-  cat_model_modality: null,
+
+  // cat_model_modality: null, // <-- BORRAR ESTO (ya no usas select simple)
+  modality_ids: [], // <-- AGREGAR ESTO (para el MultiSelect)
+
   q: ''
 })
 
@@ -256,10 +259,14 @@ function applyFilters() {
 }
 
 function clearFilter(key) {
-  if (key === 'estado') filters.estado = null
+  // Caso especial para Arrays (MultiSelect)
+  if (key === 'modality_ids') {
+    filters.modality_ids = []
+  }
+  // Casos simples
+  else if (key === 'estado') filters.estado = null
   else if (key === 'cat_type_program') filters.cat_type_program = null
   else if (key === 'cat_category') filters.cat_category = null
-  else if (key === 'cat_model_modality') filters.cat_model_modality = null
   else if (key === 'q') filters.q = ''
 
   applyFilters()
@@ -271,7 +278,7 @@ function clearFilters() {
     estado: null,
     cat_type_program: null,
     cat_category: null,
-    cat_model_modality: null,
+    modality_ids: [], // Limpiar el array de IDs de modalidad
     q: ''
   })
   pagin.value.page = 1
@@ -297,9 +304,12 @@ function rebuildChips() {
     const it = filtroCategorias.value.find(i => i.id === filters.cat_category)
     chips.push({ key: 'cat_category', text: `Categoría: ${it?.description || filters.cat_category}` })
   }
-  if (filters.modality_ids) {
-    chips.push({ key: 'cat_model_modality', text: `Modalidad: ${filters.modality_ids.length}`, details: filters.modality_ids })
-
+  if (filters.modality_ids && filters.modality_ids.length > 0) {
+    chips.push({
+        key: 'modality_ids', // La key debe coincidir con la variable en filters
+        text: `Modalidad: ${filters.modality_ids.length}`,
+        details: filters.modality_ids
+    })
   }
   if (filters.q) {
     chips.push({ key: 'q', text: `q: ${filters.q}` })
@@ -314,7 +324,7 @@ async function fetchPrograms() {
       active: filters.estado,
       cat_type_program: filters.cat_type_program || null,
       cat_category: filters.cat_category || null,
-      cat_model_modality: filters.cat_model_modality || null,
+      modality_ids: filters.modality_ids.length ? filters.modality_ids : null,
       q: filters.q || null,
       page: pagin.value.page,
       size: pagin.value.size

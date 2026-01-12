@@ -107,12 +107,12 @@ select:not(.flatpickr-monthDropdown-months) {
   min-height: 38px;
   max-height: 38px;
   padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db; /* Un poco más suave que ced4da */
   font-size: 1rem;
   line-height: 1.5;
   font-family: inherit;
   color: #212529;
   background-color: #ffffff;
-  border: 1px solid #ced4da;
   border-radius: 0.25rem;
   box-sizing: border-box;
   display: block;
@@ -124,6 +124,7 @@ select:not(.flatpickr-monthDropdown-months) {
 /* ✅ AÑADIR - TEXTAREA CON ALTURA VARIABLE */
 textarea.form-control {
   min-height: 80px;
+  max-height: 200px;
   height: auto;
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
@@ -210,4 +211,57 @@ textarea.form-control:required:valid:not(:disabled):not([readonly]):focus {
   border-color: #d1fae5;
   border-left-color: #10b981;
   box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .08);
+}
+/* Estado Normal: Fondo gris muy sutil */
+.form-control, .form-select, textarea.form-control {
+    background-color: #f9fafb; /* Slate-50 / Gray-50 */
+    border-color: #e2e8f0;     /* Slate-200 / Gray-200 */
+}
+
+/* Estado Focus: Fondo blanco puro y borde azul */
+.form-control:focus, .form-select:focus, textarea.form-control:focus {
+    background-color: #ffffff;
+    border-color: #3b82f6; /* Azul moderno */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* Sombra suave azul */
+}
+
+/* --- ESTADO DISABLED (BLOQUEADO) --- */
+.form-control:disabled,
+.form-select:disabled,
+textarea.form-control:disabled,
+input:disabled {
+    background-color: #e2e8f0; /* Un gris más oscuro y frío (Slate-200) */
+    color: #94a3b8;            /* Texto gris claro (Slate-400) para que parezca inactivo */
+    border-color: #cbd5e1;     /* Borde gris que se fusiona un poco */
+    cursor: not-allowed;       /* Icono de prohibido al pasar el mouse */
+    opacity: 1;                /* Asegura que el color de fondo se vea sólido */
+    box-shadow: none;          /* Elimina sombras si las hubiera */
+}
+
+/* Opcional: Si usas placeholder en disabled, que apenas se vea */
+.form-control:disabled::placeholder {
+    color: #cbd5e1;
+}
+
+/* --- ESTADO NORMAL (EDITABLE) --- */
+/* Mantenemos el estilo "Premium" sugerido antes para contraste */
+.form-control:not(:disabled):not([readonly]),
+.form-select:not(:disabled),
+textarea.form-control:not(:disabled):not([readonly]) {
+    background-color: #f9fafb; /* Fondo casi blanco */
+    border-color: #d1d5db;     /* Borde suave */
+    color: #111827;            /* Texto oscuro y legible */
+}
+
+/* --- ESTADO FOCUS (CUANDO ESCRIBES) --- */
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+    background-color: #ffffff; /* Blanco puro para resaltar atención */
+    border-color: #3b82f6;     /* Azul */
+    color: #000000;
+}
+/* Solo añade una pequeña barra lateral gris a los requeridos vacíos */
+.form-control:required:not(:disabled):placeholder-shown {
+    border-left: 2px solid #9ca3af; /* Una pista visual sutil a la izquierda */
 }

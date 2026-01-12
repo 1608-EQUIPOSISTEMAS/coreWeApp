@@ -2,32 +2,39 @@
   <div v-if="items.length" class="active-filters">
     <span class="label">Filtros:</span>
 
-    <button
+    <div
       v-for="chip in items"
       :key="chip.key"
-      class="chip"
-      @click="$emit('remove', chip.key)"
-      @mouseenter="onMouseEnter($event, chip)"
-      @mouseleave="onMouseLeave"
-      :class="{ 'has-details': chip.details && chip.details.length }"
+      class="chip-wrapper"
     >
-      {{ chip.text }} <span class="x">×</span>
+      <div
+        class="chip"
+        @click="$emit('remove', chip.key)"
+        @mouseenter="onMouseEnter($event, chip)"
+        @mouseleave="onMouseLeave"
+        :class="{ 'has-details': chip.details && chip.details.length }"
+      >
+        <span class="chip-text">{{ chip.label || chip.text }}</span>
+        <span class="x">×</span>
 
-      <Transition name="fade">
-        <div
-          v-if="hoveredChip === chip.key && chip.details && chip.details.length"
-          class="chip-dropdown"
-          :class="dropdownPosition === 'top' ? 'pos-top' : 'pos-bottom'"
-          @click.stop
-        >
-          <div class="dropdown-content">
-            <div v-for="(detail, idx) in chip.details" :key="idx" class="dropdown-item">
-              {{ detail.label }}
+        <Transition name="fade">
+          <div
+            v-if="hoveredChip === chip.key && chip.details && chip.details.length"
+            class="chip-dropdown"
+            :class="dropdownPosition === 'top' ? 'pos-top' : 'pos-bottom'"
+            @click.stop
+            @mouseenter="onDropdownEnter"
+            @mouseleave="onDropdownLeave"
+          >
+            <div class="dropdown-content">
+              <div v-for="(detail, idx) in chip.details" :key="idx" class="dropdown-item">
+                {{ typeof detail === 'object' ? (detail.label || detail.full_name || detail.description) : detail }}
+              </div>
             </div>
           </div>
-        </div>
-      </Transition>
-    </button>
+        </Transition>
+      </div>
+    </div>
 
     <button class="chip clear-all" @click="$emit('clear-all')">
       Limpiar todo
@@ -44,35 +51,44 @@ defineProps({
 
 defineEmits(['remove', 'clear-all'])
 
-// Estado local para controlar el hover
+// Estado local
 const hoveredChip = ref(null)
-const dropdownPosition = ref('bottom') // 'top' | 'bottom'
+const dropdownPosition = ref('bottom')
+let closeTimer = null // Variable para el temporizador
 
 function onMouseEnter(event, chip) {
-  // Solo activamos si el chip tiene la propiedad 'details' y no está vacía
   if (!chip.details || chip.details.length === 0) return
+
+  // Si entramos al chip, cancelamos cualquier cierre pendiente
+  if (closeTimer) clearTimeout(closeTimer)
 
   hoveredChip.value = chip.key
   calculatePosition(event.target)
 }
 
 function onMouseLeave() {
-  hoveredChip.value = null
+  // Esperamos 300ms antes de cerrar
+  closeTimer = setTimeout(() => {
+    hoveredChip.value = null
+  }, 300)
+}
+
+// --- Lógica para mantener abierto el dropdown al entrar ---
+function onDropdownEnter() {
+  if (closeTimer) clearTimeout(closeTimer)
+}
+
+function onDropdownLeave() {
+  closeTimer = setTimeout(() => {
+    hoveredChip.value = null
+  }, 300)
 }
 
 function calculatePosition(targetElement) {
   if (!targetElement) return
-
   const rect = targetElement.getBoundingClientRect()
-  const windowHeight = window.innerHeight
-  const spaceBelow = windowHeight - rect.bottom
-
-  // Si hay menos de 150px abajo, mostramos la lista hacia arriba
-  if (spaceBelow < 150) {
-    dropdownPosition.value = 'top'
-  } else {
-    dropdownPosition.value = 'bottom'
-  }
+  const spaceBelow = window.innerHeight - rect.bottom
+  dropdownPosition.value = spaceBelow < 180 ? 'top' : 'bottom'
 }
 </script>
 
@@ -80,71 +96,89 @@ function calculatePosition(targetElement) {
 .active-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem;
-  margin-bottom: .75rem;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
   align-items: center;
 }
 
-.active-filters .label {
-  font-size: .8rem;
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
   color: #6b7280;
-  margin-right: .25rem;
+  margin-right: 0.25rem;
+}
+
+/* Wrapper para posicionamiento */
+.chip-wrapper {
+  position: relative;
 }
 
 /* CHIP BASE */
 .chip {
-  position: relative; /* Necesario para que el absolute hijo se posicione respecto al botón */
-  background: #f3f4f6;
+  position: relative;
+  background: #ffffff;
   border: 1px solid #e5e7eb;
   color: #374151;
-  border-radius: 999px;
-  padding: .2rem .6rem;
-  font-size: .75rem;
+  border-radius: 6px; /* Menos redondeado para match con estilo profesional */
+  padding: 0.35rem 0.75rem;
+  font-size: 0.813rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
+  transition: all 0.2s ease;
+  display: inline-flex;
   align-items: center;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .chip:hover {
-  background-color: #e5e7eb;
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
 }
 
-.chip .x {
-  margin-left: .35rem;
-  color: #6b7280;
-  font-weight: bold;
+.chip:hover .x {
+  color: #ef4444; /* Rojo al hover */
+}
+
+.x {
+  margin-left: 0.5rem;
+  color: #9ca3af;
+  font-size: 1.1em;
+  line-height: 1;
+  transition: color 0.2s;
 }
 
 .chip.clear-all {
-  background: #fff;
+  background: transparent;
+  border: 1px dashed #d1d5db;
+  color: #6b7280;
+  box-shadow: none;
+}
+.chip.clear-all:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
 }
 
 /* DROPDOWN FLOTANTE */
 .chip-dropdown {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%); /* Centrado horizontalmente respecto al chip */
+  transform: translateX(-50%);
   width: max-content;
-  min-width: 120px;
-  max-width: 200px; /* Límite de ancho */
+  min-width: 160px;
+  max-width: 260px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 50;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 100;
   padding: 0.25rem 0;
-  cursor: default; /* Para que no parezca clickeable el fondo */
-  pointer-events: none; /* Importante: deja pasar clicks o evita interferir con el remove del padre si se superpone */
-}
+  cursor: default;
 
-/* Flechita visual (opcional, estilo tooltip) */
-.chip-dropdown::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
+  /* --- CAMBIO CRÍTICO --- */
+  pointer-events: auto; /* Permite click y scroll */
 }
 
 /* Posición Abajo */
@@ -152,9 +186,18 @@ function calculatePosition(targetElement) {
   top: 100%;
   margin-top: 8px;
 }
+/* Triángulo decorativo arriba */
 .chip-dropdown.pos-bottom::before {
+  content: '';
+  position: absolute;
   bottom: 100%;
-  border-bottom-color: #e5e7eb; /* Color del borde para simular flecha */
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #ffffff transparent; /* Apunta arriba */
+  /* Sombra hack para el triangulo si tiene borde */
+  filter: drop-shadow(0 -1px 0 #e5e7eb);
 }
 
 /* Posición Arriba */
@@ -163,21 +206,39 @@ function calculatePosition(targetElement) {
   margin-bottom: 8px;
 }
 .chip-dropdown.pos-top::before {
+  content: '';
+  position: absolute;
   top: 100%;
-  border-top-color: #e5e7eb;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #ffffff transparent transparent transparent; /* Apunta abajo */
+  filter: drop-shadow(0 1px 0 #e5e7eb);
 }
 
 .dropdown-content {
-  max-height: 150px;
+  max-height: 200px;
   overflow-y: auto;
+  /* Scrollbar fino */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dropdown-content::-webkit-scrollbar {
+  width: 4px;
+}
+.dropdown-content::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
 }
 
 .dropdown-item {
-  padding: 4px 12px;
+  padding: 0.5rem 1rem;
   color: #4b5563;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   text-align: left;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f9fafb;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -186,16 +247,19 @@ function calculatePosition(targetElement) {
 .dropdown-item:last-child {
   border-bottom: none;
 }
+.dropdown-item:hover {
+  background-color: #f3f4f6;
+}
 
 /* Transiciones */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-5px); /* Pequeño movimiento */
+  transform: translateX(-50%) translateY(-5px);
 }
 </style>

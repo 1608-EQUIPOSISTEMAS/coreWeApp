@@ -210,21 +210,22 @@ function to24h(h12, ampm) {
 </script>
 
 <style scoped>
+/* Contenedor Principal */
 .dt12 {
   display: flex;
-  gap: 0.25rem; /* Espacio reducido entre elementos */
+  flex-wrap: nowrap; /* IMPORTANTE: Evita que salten de línea */
+  gap: 2px; /* Gap mínimo para maximizar espacio */
   align-items: center;
   background: #ffffff;
   border: 1px solid #d1d5db;
-  border-radius: 0.375rem; /* Radio estándar (aprox 6px) */
-  padding: 3px; /* Padding muy ajustado para que el total no crezca */
+  border-radius: 0.375rem;
+  padding: 2px 4px; /* Padding reducido */
   position: relative;
-  width: 100%;
-  min-width: 410px;
-  max-width: 480px;
+  width: 100%; /* Ocupa el 100% del padre */
+  /* min-width eliminado para evitar desbordes */
   box-sizing: border-box;
   transition: all 0.2s ease;
-  height: 38px; /* Altura forzada estándar de un input */
+  height: 38px;
 }
 
 .dt12:hover:not(.dt12--error) {
@@ -237,27 +238,28 @@ function to24h(h12, ampm) {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Wrapper de la Fecha (Flexible) */
 .dt12__date-wrapper {
-  flex: 1;
-  min-width: 120px;
-  height: 100%; /* Ocupar toda la altura disponible */
-  display: flex; /* Para centrar el input interno */
+  flex: 1 1 auto; /* Crece y se encoge */
+  min-width: 80px; /* Mínimo aceptable para ver la fecha */
+  height: 100%;
+  display: flex;
   align-items: center;
 }
 
+/* Inputs Internos Comunes */
 .dt12__input {
-  border: 1px solid transparent; /* Quitar borde visible por defecto o hacerlo sutil */
+  border: 1px solid transparent;
   background: #f9fafb;
   border-radius: 0.25rem;
-  padding: 0 0.5rem; /* Padding horizontal solamente */
-  font-size: 0.875rem;
+  padding: 0 2px; /* Padding interno mínimo */
+  font-size: 0.8rem; /* Fuente un pelín más pequeña para que quepa */
   line-height: 1;
-  height: 30px; /* Altura reducida para que quepa dentro de los 38px del padre */
+  height: 28px; /* Altura interna */
   transition: all 0.2s ease;
   outline: none;
 }
 
-/* Hover suave en los inputs internos para que se note que son editables */
 .dt12__input:hover:not(:disabled) {
   background: #f3f4f6;
 }
@@ -274,40 +276,46 @@ function to24h(h12, ampm) {
   cursor: not-allowed;
 }
 
+/* Input Fecha */
 .dt12__input--date {
   width: 100%;
-  background: transparent; /* Que parezca parte del contenedor principal */
+  background: transparent;
 }
-/* Al hacer focus en la fecha, darle un background sutil */
 .dt12__input--date:focus {
-    background: #fff;
+  background: #fff;
 }
 
+/* Selectores de Hora (Ancho Fijo Compacto) */
 .dt12__input--hour,
 .dt12__input--minute {
-  width: 50px; /* Más estrecho */
+  width: 42px; /* Ancho fijo reducido */
   text-align: center;
   font-weight: 500;
-  appearance: none; /* Aspecto más limpio en navegadores */
+  flex-shrink: 0; /* No encogerse más de esto */
+  appearance: none;
   -webkit-appearance: none;
+  /* Hack para centrar texto en select en algunos navegadores */
+  text-align-last: center;
 }
 
+/* Selector AM/PM */
 .dt12__input--ampm {
-  width: 50px;
+  width: 40px;
   text-align: center;
   font-weight: 500;
   color: #6b7280;
-  font-size: 0.8125rem;
+  flex-shrink: 0;
   appearance: none;
   -webkit-appearance: none;
+  text-align-last: center;
 }
 
 /* Botón Limpiar */
 .dt12__clear {
-  width: 24px;
-  height: 24px;
+  width: 20px; /* Más pequeño */
+  height: 20px;
   border: none;
-  border-radius: 50%; /* Redondo se ve más moderno en espacios pequeños */
+  border-radius: 50%;
   background: #ef4444;
   cursor: pointer;
   color: white;
@@ -316,16 +324,19 @@ function to24h(h12, ampm) {
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  margin-left: 0.1rem;
-  margin-right: 0.25rem;
+  margin-left: 2px;
 }
 
 .dt12__clear:hover {
   background: #dc2626;
-  transform: scale(1.1);
 }
 
-/* Estados del contenedor principal */
+.dt12__clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Estados */
 .dt12--error {
   border-color: #ef4444;
   background: #fff5f5;
@@ -336,45 +347,40 @@ function to24h(h12, ampm) {
   background: #f0fdf4;
 }
 
-/* Estilos de FlatPickr profundos */
+/* Estilos FlatPickr */
 :deep(.flatpickr-input) {
   border: none !important;
   background: transparent !important;
   padding: 0 !important;
-  height: 100% !important; /* Llenar el wrapper */
+  height: 100% !important;
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: #111827;
   font-weight: 500;
   box-shadow: none !important;
-  line-height: 30px; /* Centrado vertical */
+  line-height: 28px;
 }
 
 :deep(.flatpickr-input:focus) {
   outline: none !important;
 }
 
-/* Responsive */
-@media (max-width: 575.98px) {
+/* Ajustes Responsive extremos (opcional) */
+/* Si la pantalla es muy pequeña, forzar wrap */
+@media (max-width: 400px) {
   .dt12 {
     flex-wrap: wrap;
-    height: auto; /* Permitir crecer en móvil */
-    padding: 0.5rem;
+    height: auto;
+    padding: 4px;
   }
-
   .dt12__date-wrapper {
-    flex: 1 1 100%;
-    margin-bottom: 0.5rem;
+    flex: 1 1 100%; /* Fecha ocupa toda la fila arriba */
+    margin-bottom: 4px;
   }
-
-  .dt12__input {
-      height: 36px; /* En móvil un poco más alto para el dedo */
-  }
-
   .dt12__input--hour,
   .dt12__input--minute,
   .dt12__input--ampm {
-    flex: 1;
+    flex: 1; /* Horas se distribuyen abajo */
   }
 }
 </style>
