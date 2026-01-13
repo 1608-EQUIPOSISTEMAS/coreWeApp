@@ -2466,14 +2466,23 @@ async function applyModalForm() {
           edition: payload
         })
       }
+
+
     }
 
-
-    if (handleServiceResponse(response)) {
-      await fetchSchedule()
-      cleanFormModal()
+    const { result, message } = response
+    
+    if (result=== 1) {
+      toast.success(message)
       showFormModal.value = false
+      fetchSchedule()
+    }else if(result===0){
+      toast.error(message)
     }
+     else {
+      toast.warning(message)
+    }
+
   } catch (err) {
     console.error(err)
     toast.error('Ocurrió un error inesperado al procesar la solicitud')
@@ -3342,17 +3351,21 @@ const searchEditionsFiltered = async (q, child, index) => {
   // --- LÓGICA DE LÍMITE SUPERIOR (Hermanos Siguientes) ---
   let maxDateLimit = null; // Fecha máxima permitida (techo)
 
-  // slice(index + 1) toma desde el siguiente hasta el final
-  const arrItemsAfter = modalForm.program_version_children.slice(index + 1);
-  const nextDates = arrItemsAfter
-    .map(item => item.start_date)
-    .filter(date => date);
+  
+  if (index != 0 ) {
+      
+    // slice(index + 1) toma desde el siguiente hasta el final
+    const arrItemsAfter = modalForm.program_version_children.slice(index + 1);
+    const nextDates = arrItemsAfter
+      .map(item => item.start_date)
+      .filter(date => date);
 
-  if (nextDates.length > 0) {
-    nextDates.sort();
-    // Queremos la PRIMERA fecha de los siguientes (la más pequeña / más pronta)
-    // porque no podemos empezar después de que el siguiente empiece.
-    maxDateLimit = nextDates[0];
+    if (nextDates.length > 0) {
+      nextDates.sort();
+      // Queremos la PRIMERA fecha de los siguientes (la más pequeña / más pronta)
+      // porque no podemos empezar después de que el siguiente empiece.
+      maxDateLimit = nextDates[0];
+    }
   }
 
   // --- FILTRADO FINAL ---

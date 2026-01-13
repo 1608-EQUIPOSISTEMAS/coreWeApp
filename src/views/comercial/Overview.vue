@@ -1,140 +1,128 @@
 <template>
-  <div class="overview-container">
-    
-    <div class="control-bar">
-      <div class="title-section">
-        <h1 class="main-title">Resumen General del Área</h1>
-        <p class="sub-title">Visión consolidada de Marketing y Ventas</p>
+  <div class="audit-dashboard">
+    <div class="dashboard-header">
+      <div>
+        <h2 class="title">Auditoría de Cierres y Origen</h2>
+        <p class="subtitle">Análisis de ventas inmediatas vs. ventas recuperadas por gestión</p>
       </div>
+      <div class="status-badge">
+        <span class="dot live"></span> Data Actualizada
+      </div>
+    </div>
 
-      <div class="filters-wrapper">
-        <div class="filter-group">
-          <label>Año</label>
-          <select v-model="selectedYear" class="form-select">
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
+    <div class="filters-container">
+      <div class="filter-row">
+        <div class="f-group">
+          <label>Asesor</label>
+          <select v-model="filters.advisor" class="f-input">
+            <option value="">Todos</option>
+            <option value="Raul P.">Raúl P.</option>
+            <option value="Arleth C.">Arleth C.</option>
           </select>
         </div>
-        
-        <div class="filter-group">
-          <label>Mes</label>
-          <select v-model="selectedMonth" class="form-select">
-            <option v-for="(month, index) in months" :key="index" :value="index">
-              {{ month }}
-            </option>
+        <div class="f-group">
+          <label>Programa</label>
+          <select v-model="filters.program" class="f-input">
+            <option value="">Todos</option>
+            <option value="IA">Dir. Comercial con IA</option>
+            <option value="Azure">Azure</option>
           </select>
         </div>
-
-        <button class="btn-refresh" @click="fetchData">
-          🔄 Actualizar
-        </button>
+        <div class="f-group">
+          <label>Canal Origen</label>
+          <select v-model="filters.channel" class="f-input">
+            <option value="">Todos</option>
+            <option value="TikTok">TikTok</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Web">Web</option>
+          </select>
+        </div>
+        <div class="f-group wide">
+          <label>Rango de Fecha (Registro)</label>
+          <div class="date-flex">
+            <input type="date" v-model="filters.start" class="f-input">
+            <span>al</span>
+            <input type="date" v-model="filters.end" class="f-input">
+          </div>
+        </div>
+        <div class="f-group btn-container">
+          <button class="btn-apply">Filtrar</button>
+        </div>
       </div>
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi-card revenue-card">
-        <div class="card-top">
-          <span class="icon-circle">💰</span>
-          <span class="diff-badge positive">▲ 12.5% vs mes anterior</span>
-        </div>
-        <div class="card-main">
-          <span class="label">Ingresos Totales</span>
-          <h3 class="value">S/ 145,200</h3>
-        </div>
-        <div class="progress-mini">
-          <div class="bar" style="width: 85%"></div>
-        </div>
-        <span class="sub-text">85% de la meta mensual</span>
+      <div class="kpi-box">
+        <div class="kpi-title">Ventas Totales (Periodo)</div>
+        <div class="kpi-number">85</div>
+        <div class="kpi-sub">S/ 124,500 facturados</div>
+      </div>
+      
+      <div class="kpi-box highlight-blue">
+        <div class="kpi-title">Cierres Inmediatos ("One-Shot")</div>
+        <div class="kpi-number">60%</div>
+        <div class="kpi-sub">Registrados directamente como "Pagó"</div>
+        <div class="icon-indicator">⚡</div>
       </div>
 
-      <div class="kpi-card">
-        <div class="card-top">
-          <span class="icon-circle bg-blue">👥</span>
-          <span class="diff-badge neutral">─ 0.2% vs mes anterior</span>
-        </div>
-        <div class="card-main">
-          <span class="label">Nuevos Leads</span>
-          <h3 class="value">3,450</h3>
-        </div>
-        <span class="sub-text">Costo por Lead (CPL): S/ 4.20</span>
-      </div>
-
-      <div class="kpi-card">
-        <div class="card-top">
-          <span class="icon-circle bg-purple">⚡</span>
-          <span class="diff-badge negative">▼ 1.5% vs mes anterior</span>
-        </div>
-        <div class="card-main">
-          <span class="label">Conversión a Venta</span>
-          <h3 class="value">4.8%</h3>
-        </div>
-        <span class="sub-text">Promedio industria: 3.5%</span>
-      </div>
-
-      <div class="kpi-card">
-        <div class="card-top">
-          <span class="icon-circle bg-orange">🎫</span>
-          <span class="diff-badge positive">▲ 5% vs mes anterior</span>
-        </div>
-        <div class="card-main">
-          <span class="label">Ticket Promedio</span>
-          <h3 class="value">S/ 850</h3>
-        </div>
-        <span class="sub-text">Impulsado por Diplomados</span>
+      <div class="kpi-box highlight-orange">
+        <div class="kpi-title">Ventas por Seguimiento</div>
+        <div class="kpi-number">40%</div>
+        <div class="kpi-sub">Requirieron intentos posteriores</div>
+        <div class="icon-indicator">📞</div>
       </div>
     </div>
 
-    <div class="charts-section">
-      <div class="main-chart-card">
-        <div class="card-header">
-          <h3>📈 Rendimiento Financiero vs Objetivo</h3>
-          <div class="legend-html">
-            <span class="dot-legend bg-bar"></span> Ingresos
-            <span class="dot-legend bg-line"></span> Meta
-          </div>
-        </div>
-        <div class="chart-container">
-          <Bar :data="revenueData" :options="revenueOptions" />
-        </div>
+    <div class="chart-section">
+      <div class="section-header">
+        <h3>Perfil de Cierre por Asesor</h3>
+        <p>¿Quién cierra en la primera interacción y quién recupera leads?</p>
       </div>
+      <div class="chart-wrapper">
+        <Bar :data="advisorProfileData" :options="stackedOptions" />
+      </div>
+      <div class="insight-text">
+        <strong>Análisis:</strong> <em>Raúl P.</em> tiene un alto volumen de <strong>Cierre Inmediato</strong> (probablemente atiende leads muy calientes de TikTok), mientras que <em>Arleth C.</em> logra rescatar más ventas a través de <strong>Seguimiento</strong>.
+      </div>
+    </div>
 
-      <div class="funnel-card">
-        <div class="card-header">
-          <h3>🔻 Embudo del Mes</h3>
-        </div>
-        <div class="funnel-list">
-          <div class="funnel-step">
-            <div class="step-info">
-              <span class="step-name">Impresiones / Alcance</span>
-              <span class="step-count">150,000</span>
-            </div>
-            <div class="step-bar-bg"><div class="step-bar fill-1"></div></div>
-          </div>
-          <div class="funnel-step">
-            <div class="step-info">
-              <span class="step-name">Leads Captados</span>
-              <span class="step-count">3,450</span>
-            </div>
-            <div class="step-bar-bg"><div class="step-bar fill-2"></div></div>
-            <div class="conversion-rate">2.3% conv.</div>
-          </div>
-          <div class="funnel-step">
-            <div class="step-info">
-              <span class="step-name">Oportunidades (Interesados)</span>
-              <span class="step-count">850</span>
-            </div>
-            <div class="step-bar-bg"><div class="step-bar fill-3"></div></div>
-            <div class="conversion-rate">24% conv.</div>
-          </div>
-          <div class="funnel-step">
-            <div class="step-info">
-              <span class="step-name fw-bold text-success">Ventas Cerradas</span>
-              <span class="step-count fw-bold text-success">165</span>
-            </div>
-            <div class="step-bar-bg"><div class="step-bar fill-4"></div></div>
-            <div class="conversion-rate">19% conv.</div>
-          </div>
-        </div>
+    <div class="table-section">
+      <div class="section-header">
+        <h3>Detalle de Operaciones</h3>
+      </div>
+      <div class="table-overflow">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Fecha Reg.</th>
+              <th>Asesor</th>
+              <th>Cliente / Lead</th>
+              <th>Canal</th>
+              <th>Programa</th>
+              <th class="text-center">Modalidad Cierre</th>
+              <th class="text-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in reportData" :key="i">
+              <td class="text-sm">{{ row.date }}</td>
+              <td>
+                <div class="advisor-chip">{{ row.advisor }}</div>
+              </td>
+              <td>
+                <div class="font-bold">{{ row.client }}</div>
+                <div class="text-xs text-gray">{{ row.status }}</div>
+              </td>
+              <td>{{ row.channel }}</td>
+              <td class="text-sm">{{ row.program }}</td>
+              <td class="text-center">
+                <span v-if="row.isImmediate" class="badge-flash">⚡ Inmediata</span>
+                <span v-else class="badge-work">📞 Gestionada ({{ row.attempts }} int.)</span>
+              </td>
+              <td class="text-right font-mono">{{ row.amount }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -142,146 +130,165 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
 } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
-// --- ESTADO Y FILTROS ---
-const months = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-]
-const selectedMonth = ref(10) // Noviembre (index 10)
-const selectedYear = ref('2025')
-
-// Simulación de actualización de datos
-const fetchData = () => {
-  console.log(`Cargando datos para ${months[selectedMonth.value]} ${selectedYear.value}...`)
-  // Aquí llamarías a tu API
-}
-
-watch([selectedMonth, selectedYear], () => {
-  fetchData()
+// --- ESTADO DE FILTROS ---
+const filters = ref({
+  advisor: '',
+  program: '',
+  channel: '',
+  start: '2026-01-01',
+  end: '2026-01-31'
 })
 
-// --- CONFIG GRÁFICO MIXTO (BARRAS + LINEA) ---
-const revenueData = {
-  labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+// --- DATOS MOCKUP ---
+
+// Gráfico Apilado (Stacked) para ver tipos de cierre
+const advisorProfileData = {
+  labels: ['Raul P.', 'Arleth C.', 'Eliuth D.'],
   datasets: [
     {
-      type: 'bar',
-      label: 'Ingresos Reales',
-      backgroundColor: '#0ea5e9', // Sky Blue
-      data: [32000, 45000, 28000, 40200],
-      borderRadius: 6,
-      order: 2
+      label: 'Cierre Inmediato (⚡)',
+      data: [45, 15, 10], // Raúl cierra mucho rápido
+      backgroundColor: '#3b82f6',
+      stack: 'Stack 0',
     },
     {
-      type: 'line',
-      label: 'Meta Semanal',
-      borderColor: '#334155', // Slate Dark
-      borderWidth: 2,
-      borderDash: [5, 5],
-      pointRadius: 4,
-      pointBackgroundColor: '#fff',
-      data: [35000, 35000, 35000, 35000],
-      tension: 0.1,
-      order: 1
+      label: 'Cierre tras Seguimiento (📞)',
+      data: [5, 25, 8], // Arleth trabaja más los leads
+      backgroundColor: '#f97316',
+      stack: 'Stack 0',
     }
   ]
 }
 
-const revenueOptions = {
+const stackedOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } }, // Usamos leyenda custom HTML
+  plugins: {
+    legend: { position: 'top' },
+    tooltip: {
+      callbacks: {
+        footer: (items) => {
+          // Ejemplo de tooltip personalizado
+          const val = items[0].raw;
+          return val > 20 ? 'Alta eficiencia' : ''; 
+        }
+      }
+    }
+  },
   scales: {
-    y: { 
-      beginAtZero: true,
-      grid: { borderDash: [2, 2] }
-    },
-    x: { grid: { display: false } }
+    x: { grid: { display: false } },
+    y: { beginAtZero: true, stacked: true }
   }
 }
+
+// Datos de la Tabla
+const reportData = [
+  { 
+    date: '12/01/26 16:15', advisor: 'Raul P.', client: 'Juan Perez', status: 'Pagó', 
+    channel: 'TikTok', program: 'Dir. Comercial IA', 
+    isImmediate: true, attempts: 0, amount: 'S/ 1,800' 
+  },
+  { 
+    date: '12/01/26 14:20', advisor: 'Arleth C.', client: 'Maria Gomez', status: 'Pagó', 
+    channel: 'WhatsApp', program: 'Azure Cloud', 
+    isImmediate: false, attempts: 3, amount: 'S/ 1,200' 
+  },
+  { 
+    date: '11/01/26 10:00', advisor: 'Raul P.', client: 'Carlos Ruiz', status: 'Pagó', 
+    channel: 'Web', program: 'Agile', 
+    isImmediate: true, attempts: 0, amount: 'S/ 900' 
+  },
+  { 
+    date: '11/01/26 09:30', advisor: 'Eliuth D.', client: 'Empresa ABC', status: 'Pagó', 
+    channel: 'Referido', program: 'Dir. Comercial IA', 
+    isImmediate: false, attempts: 5, amount: 'S/ 5,400' 
+  },
+]
 </script>
 
 <style scoped>
-/* Contenedor Principal */
-.overview-container { padding: 2rem; background-color: #f8fafc; min-height: 100vh; font-family: 'Inter', sans-serif; color: #334155; }
+/* Estilos Generales */
+.audit-dashboard { font-family: 'Inter', sans-serif; background-color: #f1f5f9; padding: 1.5rem; min-height: 100vh; color: #1e293b; }
 
-/* Barra de Control */
-.control-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
-.main-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0; }
-.sub-title { color: #64748b; margin: 0; font-size: 0.95rem; }
+/* Header */
+.dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+.title { margin: 0; font-size: 1.5rem; font-weight: 800; }
+.subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+.status-badge { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; background: #166534; border-radius: 50%; display: block; }
+.dot.live { animation: pulse 2s infinite; }
 
-.filters-wrapper { display: flex; gap: 1rem; align-items: flex-end; background: white; padding: 0.75rem 1.25rem; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-.filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
-.filter-group label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
-.form-select { padding: 0.4rem 2rem 0.4rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; color: #334155; background-color: #f8fafc; cursor: pointer; outline: none; }
-.form-select:focus { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1); }
+/* 1. FILTROS */
+.filters-container { background: white; padding: 1.25rem; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.filter-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+.f-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+.f-group.wide { min-width: 250px; flex: 1.5; }
+.f-group.btn-container { flex: 0 0 auto; min-width: auto; }
 
-.btn-refresh { background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; height: 38px; }
-.btn-refresh:hover { background: #2563eb; }
+.f-group label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.f-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; width: 100%; font-size: 0.9rem; color: #334155; }
+.date-flex { display: flex; align-items: center; gap: 8px; }
+.date-flex span { color: #94a3b8; font-size: 0.8rem; }
+.btn-apply { background: #0f172a; color: white; border: none; padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; height: 38px; }
+.btn-apply:hover { background: #1e293b; }
 
-/* Grid de KPIs */
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.kpi-card { background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
-.revenue-card { background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%); border: 1px solid #bae6fd; }
+/* 2. KPIs */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.kpi-box { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; }
+.kpi-title { font-size: 0.85rem; color: #64748b; font-weight: 600; margin-bottom: 0.5rem; }
+.kpi-number { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 0.25rem; }
+.kpi-sub { font-size: 0.8rem; color: #94a3b8; }
+.icon-indicator { position: absolute; top: 1.5rem; right: 1.5rem; font-size: 1.5rem; opacity: 0.5; }
 
-.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.icon-circle { width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
-.bg-blue { background: #e0e7ff; color: #4338ca; }
-.bg-purple { background: #f3e8ff; color: #7e22ce; }
-.bg-orange { background: #ffedd5; color: #c2410c; }
+/* Estilos específicos de KPI */
+.highlight-blue { border-bottom: 4px solid #3b82f6; }
+.highlight-orange { border-bottom: 4px solid #f97316; }
 
-.diff-badge { font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
-.positive { background: #dcfce7; color: #166534; }
-.negative { background: #fee2e2; color: #991b1b; }
-.neutral { background: #f1f5f9; color: #64748b; }
+/* 3. CHART */
+.chart-section { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2rem; }
+.section-header { margin-bottom: 1.5rem; }
+.section-header h3 { margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 700; }
+.section-header p { margin: 4px 0 0; font-size: 0.85rem; color: #64748b; }
+.chart-wrapper { height: 250px; width: 100%; }
+.insight-text { margin-top: 1rem; padding: 1rem; background: #eff6ff; border-radius: 6px; font-size: 0.85rem; color: #1e3a8a; border-left: 4px solid #3b82f6; }
 
-.card-main { margin-bottom: 0.5rem; }
-.label { font-size: 0.85rem; color: #64748b; font-weight: 600; }
-.value { font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0; }
-.sub-text { font-size: 0.8rem; color: #94a3b8; }
+/* 4. TABLE */
+.table-section { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+.table-overflow { overflow-x: auto; }
+.custom-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.custom-table th { text-align: left; padding: 12px 16px; background: #f8fafc; color: #475569; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+.custom-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
 
-.progress-mini { height: 4px; background: #e2e8f0; border-radius: 2px; margin-bottom: 0.5rem; overflow: hidden; }
-.progress-mini .bar { height: 100%; background: #0ea5e9; border-radius: 2px; }
+/* Badges de Tabla */
+.advisor-chip { background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; display: inline-block; }
+.badge-flash { background: #dbeafe; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #bfdbfe; }
+.badge-work { background: #ffedd5; color: #c2410c; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fed7aa; }
 
-/* Sección Gráficos */
-.charts-section { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+/* Typos */
+.text-sm { font-size: 0.8rem; color: #64748b; }
+.text-xs { font-size: 0.75rem; }
+.text-gray { color: #94a3b8; }
+.font-bold { font-weight: 700; }
+.font-mono { font-family: monospace; font-weight: 600; color: #334155; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
 
-.main-chart-card, .funnel-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-.card-header h3 { margin: 0; font-size: 1.1rem; color: #1e293b; font-weight: 700; }
-.chart-container { height: 300px; }
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
 
-.legend-html { display: flex; gap: 1rem; font-size: 0.85rem; color: #64748b; }
-.dot-legend { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-.bg-bar { background: #0ea5e9; }
-.bg-line { background: #334155; }
-
-/* Estilos del Funnel */
-.funnel-list { display: flex; flex-direction: column; gap: 1.5rem; }
-.funnel-step { position: relative; }
-.step-info { display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem; color: #334155; }
-.step-bar-bg { height: 8px; background: #f1f5f9; border-radius: 4px; width: 100%; overflow: hidden; }
-.step-bar { height: 100%; border-radius: 4px; }
-.fill-1 { width: 100%; background: #cbd5e1; }
-.fill-2 { width: 60%; background: #93c5fd; }
-.fill-3 { width: 40%; background: #60a5fa; }
-.fill-4 { width: 25%; background: #2563eb; }
-
-.conversion-rate { position: absolute; right: 0; top: 1.5rem; font-size: 0.7rem; color: #64748b; font-weight: 600; background: #f8fafc; padding: 0 4px; }
-
-.text-success { color: #166534; }
-.fw-bold { font-weight: 700; }
-
-@media (max-width: 1024px) {
-  .charts-section { grid-template-columns: 1fr; }
-  .control-bar { flex-direction: column; align-items: flex-start; }
+@media (max-width: 768px) {
+  .filter-row { flex-direction: column; }
+  .f-group { width: 100%; }
 }
 </style>

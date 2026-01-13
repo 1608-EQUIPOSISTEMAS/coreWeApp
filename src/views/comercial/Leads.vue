@@ -335,16 +335,18 @@ const pagin = ref({ size: 25, page: 1, total: 0 })
 // === FILTROS ===
 const filters = reactive({
   q: '',
-  cat_status_lead: null,
-  cat_last_follow: null,
-  cat_channel: null,
-  cat_query: null,
-  cat_interest_level: null,
   program_text: '',
-  cat_type_program: null,
-  cat_model_modality: null,
   estado: null,
+  
+  // Arrays para MultiSelect
   owner_user_ids: [],
+  status_lead_ids: [],
+  last_follow_ids: [],
+  interest_level_ids: [],
+  channel_ids: [],
+  query_ids: [],
+  type_program_ids: [],
+  model_modality_ids: [],
 
   // Strings visuales para los date pickers
   edition_range_string: null,
@@ -389,6 +391,7 @@ function applyFilters() {
 }
 
 function clearFilter(key) {
+  // Casos especiales para rangos de fecha
   if (key === 'rangoFechas') {
     filters.rangoFechas = { start: '', end: '' }
     filters.created_range_string = null
@@ -399,31 +402,45 @@ function clearFilter(key) {
     filters.edition_start_from = ''
     filters.edition_start_to = ''
     filters.edition_range_string = null
-  } else if (key === 'owner_user_ids') {
-    filters.owner_user_ids = []
-  } else {
-    filters[key] = (typeof filters[key] === 'string') ? '' : null
   }
+  // Casos especiales para Arrays (MultiSelect)
+  else if (key === 'owner_user_ids') filters.owner_user_ids = []
+  else if (key === 'status_lead_ids') filters.status_lead_ids = []
+  else if (key === 'last_follow_ids') filters.last_follow_ids = []
+  else if (key === 'interest_level_ids') filters.interest_level_ids = []
+  else if (key === 'channel_ids') filters.channel_ids = []
+  else if (key === 'query_ids') filters.query_ids = []
+  else if (key === 'type_program_ids') filters.type_program_ids = []
+  else if (key === 'model_modality_ids') filters.model_modality_ids = []
+  // Casos simples
+  else if (key === 'q') filters.q = ''
+  else if (key === 'program_text') filters.program_text = ''
+  else if (key === 'estado') filters.estado = null
+  
   applyFilters()
 }
 
 function clearFilters() {
   Object.assign(filters, {
     q: '',
+    program_text: '',
+    estado: null,
+    
+    // Limpiar todos los arrays
+    owner_user_ids: [],
+    status_lead_ids: [],
+    last_follow_ids: [],
+    interest_level_ids: [],
+    channel_ids: [],
+    query_ids: [],
+    type_program_ids: [],
+    model_modality_ids: [],
+    
+    // Limpiar rangos de fecha
     rangoFechas: { start: '', end: '' },
     rangoModificacion: { start: '', end: '' },
-    cat_status_lead: null,
-    cat_last_follow: null,
-    cat_channel: null,
-    cat_query: null,
-    cat_interest_level: null,
-    program_text: '',
-    cat_type_program: null,
-    cat_model_modality: null,
     edition_start_from: '',
     edition_start_to: '',
-    estado: null,
-    owner_user_ids: [],
     edition_range_string: null,
     created_range_string: null,
     updated_range_string: null
@@ -435,8 +452,10 @@ function clearFilters() {
   fetchLeads()
 }
 
-function rebuildChips() {
+ function rebuildChips() {
   const chips = []
+
+  // --- Filtros de Texto / Fecha (Sin cambios) ---
 
   if (filters.q) {
     chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
@@ -463,46 +482,6 @@ function rebuildChips() {
     })
   }
 
-  if (filters.cat_status_lead) {
-    const it = filtroPipeline.value.find(i => i.alias === filters.cat_status_lead)
-    chips.push({
-      key: 'cat_status_lead',
-      text: `Status: ${it?.description || filters.cat_status_lead}`
-    })
-  }
-
-  if (filters.cat_last_follow) {
-    const it = filtroFollow.value.find(i => i.alias === filters.cat_last_follow)
-    chips.push({
-      key: 'cat_last_follow',
-      text: `Seguim: ${it?.description || filters.cat_last_follow}`
-    })
-  }
-
-  if (filters.cat_channel) {
-    const it = filtroCanales.value.find(i => i.alias === filters.cat_channel)
-    chips.push({
-      key: 'cat_channel',
-      text: `Canal: ${it?.description}`
-    })
-  }
-
-  if (filters.cat_interest_level) {
-    const it = filtroInterest.value.find(i => i.alias === filters.cat_interest_level)
-    chips.push({
-      key: 'cat_interest_level',
-      text: `Interés: ${it?.description}`
-    })
-  }
-
-  if (filters.cat_query) {
-    const it = filtroQuery.value.find(i => i.alias === filters.cat_query)
-    chips.push({
-      key: 'cat_query',
-      text: `Promo: ${it?.description}`
-    })
-  }
-
   if (filters.program_text) {
     chips.push({
       key: 'program_text',
@@ -510,31 +489,69 @@ function rebuildChips() {
     })
   }
 
-  if (filters.cat_type_program) {
-    const it = filtroTiposPrograma.value.find(i => i.alias === filters.cat_type_program)
-    chips.push({
-      key: 'cat_type_program',
-      text: `Tipo: ${it?.description}`
-    })
-  }
-
-  if (filters.cat_model_modality) {
-    const it = filtroModalidad.value.find(i => i.alias === filters.cat_model_modality)
-    chips.push({
-      key: 'cat_model_modality',
-      text: `Mod: ${it?.description}`
-    })
-  }
+  // --- MultiSelect Chips (Ajustados para asignación directa) ---
 
   if (filters.owner_user_ids && filters.owner_user_ids.length > 0) {
-    const details = filtroOwners.value
-      .filter(o => filters.owner_user_ids.includes(o.value))
-      .map(o => ({ detail: o.description }))
-
     chips.push({
       key: 'owner_user_ids',
       text: `Asesores: ${filters.owner_user_ids.length}`,
-      details
+      details: filters.owner_user_ids
+    })
+  }
+
+  if (filters.status_lead_ids && filters.status_lead_ids.length > 0) {
+    chips.push({
+      key: 'status_lead_ids',
+      text: `Estatus: ${filters.status_lead_ids.length}`,
+      details: filters.status_lead_ids
+    })
+  }
+
+  if (filters.last_follow_ids && filters.last_follow_ids.length > 0) {
+    chips.push({
+      key: 'last_follow_ids',
+      text: `Seguimiento: ${filters.last_follow_ids.length}`,
+      details: filters.last_follow_ids
+    })
+  }
+
+  if (filters.interest_level_ids && filters.interest_level_ids.length > 0) {
+    chips.push({
+      key: 'interest_level_ids',
+      text: `Interés: ${filters.interest_level_ids.length}`,
+      details: filters.interest_level_ids
+    })
+  }
+
+  if (filters.channel_ids && filters.channel_ids.length > 0) {
+    chips.push({
+      key: 'channel_ids',
+      text: `Canales: ${filters.channel_ids.length}`,
+      details: filters.channel_ids
+    })
+  }
+
+  if (filters.query_ids && filters.query_ids.length > 0) {
+    chips.push({
+      key: 'query_ids',
+      text: `Promoción: ${filters.query_ids.length}`,
+      details: filters.query_ids
+    })
+  }
+
+  if (filters.type_program_ids && filters.type_program_ids.length > 0) {
+    chips.push({
+      key: 'type_program_ids',
+      text: `Tipo: ${filters.type_program_ids.length}`,
+      details: filters.type_program_ids
+    })
+  }
+
+  if (filters.model_modality_ids && filters.model_modality_ids.length > 0) {
+    chips.push({
+      key: 'model_modality_ids',
+      text: `Modalidad: ${filters.model_modality_ids.length}`,
+      details: filters.model_modality_ids
     })
   }
 
@@ -556,18 +573,21 @@ async function fetchLeads() {
       to_date: filters.rangoFechas?.end || null,
       updated_from: filters.rangoModificacion?.start || null,
       updated_to: filters.rangoModificacion?.end || null,
-      cat_status_lead: filters.cat_status_lead || null,
-      cat_last_follow: filters.cat_last_follow || null,
-      cat_channel: filters.cat_channel || null,
-      cat_interest_level: filters.cat_interest_level || null,
-      cat_query: filters.cat_query || null,
+      
+      // Enviar arrays solo si tienen elementos
+      status_lead_ids: filters.status_lead_ids.length ? filters.status_lead_ids : null,
+      last_follow_ids: filters.last_follow_ids.length ? filters.last_follow_ids : null,
+      channel_ids: filters.channel_ids.length ? filters.channel_ids : null,
+      interest_level_ids: filters.interest_level_ids.length ? filters.interest_level_ids : null,
+      query_ids: filters.query_ids.length ? filters.query_ids : null,
+      type_program_ids: filters.type_program_ids.length ? filters.type_program_ids : null,
+      model_modality_ids: filters.model_modality_ids.length ? filters.model_modality_ids : null,
+      owner_user_ids: filters.owner_user_ids.length ? filters.owner_user_ids : null,
+      
       program_text: filters.program_text || null,
-      cat_type_program: filters.cat_type_program || null,
-      cat_model_modality: filters.cat_model_modality || null,
       edition_start_from: filters.edition_start_from || null,
       edition_start_to: filters.edition_start_to || null,
-      active: activeFlag,
-      owner_user_ids: (filters.owner_user_ids?.length ? filters.owner_user_ids : null)
+      active: activeFlag
     })
 
     leadsRaw.value = items || []
@@ -588,7 +608,7 @@ async function loadOwners() {
   try {
     const arr = await authService.userList({})
     filtroOwners.value = arr.map(user => ({
-      value: user.user_id,
+      id: user.user_id,
       description: user.first_name
     }))
   } catch (e) {

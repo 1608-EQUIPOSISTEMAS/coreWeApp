@@ -38,7 +38,7 @@
       const response = await integrationService.syncScheduleToSheet()
       
       if (response && response.ok) {
-        toast.success(`Cronograma sincronizado. Filas actualizadas: ${response.data.rows_updated}`);
+        toast.success(`GOOGLE SHEET PLANEAMIENTO SINCRONIZADO`);
       } else {
         throw new Error(response?.message || 'Error desconocido al sincronizar el cronograma');
       }
@@ -77,7 +77,7 @@
         <CIcon icon="cil-envelope-open" /> Mensajes
         <CBadge color="success" class="ms-auto">{{ itemsCount }}</CBadge>
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()" v-if="$hasRole(['ADMIN'])">
+       <CDropdownItem @click="updateBase()" v-if="$hasRole(['ADMIN','COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
        <CDropdownItem @click="updateBase()"  v-if="$hasRole(['ADMIN','GERENCIA'])">

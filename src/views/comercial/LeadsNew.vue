@@ -368,7 +368,8 @@
               <div class="col-lg-1 text-center">#</div>
               <div class="col-lg-2">Estado<span class="required-star">*</span></div>
               <div class="col-lg-5">Fecha y Hora<span class="required-star">*</span></div>
-              <div class="col-lg-3">Respuesta / Resultado</div>
+              <div class="col-lg-3">T. Respuesta</div>
+              <div class="col-lg-3">Obsv.</div>
               <div class="col-lg-1 text-center"></div>
             </div>
 
@@ -416,9 +417,23 @@
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
                 </div>
+                <!-- T. LLamada -->
+                <div class="col-12 col-lg-3">
+                  <label class="form-label d-lg-none mb-1">T. Resultado</label>
+                  <SearchSelect
+                    v-model="c.calling_alias"
+                    :items="callingCatalog"
+                    label-field="description"
+                    required
+                    value-field="alias"
+                    placeholder="T. LLAMADA..."
+                    :model-label="c.calling_label"
+                    :disabled="c.status_alias != 'we_follow_lead_pending'"
+                  />
+                </div>
 
                 <!-- Respuesta -->
-                <div class="col-12 col-lg-3">
+                <!-- <div class="col-12 col-lg-3">
                   <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
                   <input
                     autocomplete="off"
@@ -428,7 +443,7 @@
                     placeholder="RESULTADO"
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
-                </div>
+                </div> -->
 
                 <!-- Acciones -->
                 <div class="col-12 col-lg-1 d-flex align-items-start justify-content-lg-center" v-if="!c.id">
@@ -499,12 +514,17 @@
             </div>
           </div>
         </div>
-
-        <div class="insc-price-box" v-if="insc.montoOriginal > 0">
+        <div class="insc-price-box">
             <span class="price-label">Precio Base</span>
-            <div class="price-amount">
-              <span class="currency">{{ selectedCurrency?.symbol }}</span>
-              <span class="value">{{ insc.montoOriginal }}</span>
+            <div class="price-amount d-flex align-items-center">
+              <CurrencyInput
+                v-model="insc.montoOriginal"
+                :currency="selectedCurrency"
+                :storeAsMinor="false" 
+                class="form-control form-control-sm fw-bold border-0 bg-transparent text-end p-0"
+                style="font-size: 1.5rem; color: var(--primary-color); max-width: 150px;"
+                placeholder="0.00"
+              />
             </div>
         </div>
       </header>
@@ -824,6 +844,10 @@ import FileUploader from '@/components/FileUploader.vue'
   const programTypeCatalog      = ref(catalog.options('we_program_type'))
   const programModalityCatalog  = ref(catalog.options('we_modality'))
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
+  //we_calling
+  const callingCatalog          = ref(catalog.options('we_calling'))
+  
+
   const currencyCatalog         = ref(
     catalog.options('we_currency', {
       mapItem: x => ({
@@ -912,16 +936,59 @@ import FileUploader from '@/components/FileUploader.vue'
     insc.val_porcentaje = Number(opt.value) || 0
   }
   import { watchEffect } from 'vue'
+// Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
+const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
 
-  watchEffect(() => {
-      const base = Number(insc.montoOriginal) || 0
-      insc.montoDescuentoPorcentaje = (base * insc.val_porcentaje) / 100
-      insc.montoDescuentoFijo = insc.val_fijo
-      insc.montoBeneficio = insc.val_beneficio
-      const totalDescuentos = insc.montoDescuentoPorcentaje + insc.montoDescuentoFijo + insc.montoBeneficio
-      const final = base - totalDescuentos
-      insc.total_amount = final > 0 ? final : 0
-  })
+watchEffect(() => {
+  const base = parseFloat(insc.montoOriginal) || 0
+
+  // 1. Calcular montos brutos
+  // Nota: Usamos round2 inmediatamente para que el dinero "exista" en 2 decimales desde el cálculo
+  let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
+  let montoFijo = round2(parseFloat(insc.val_fijo) || 0)
+  let montoBeneficio = round2(parseFloat(insc.val_beneficio) || 0)
+
+  // 2. Sumar todos los descuentos
+  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
+
+  // 3. VALIDACIÓN: ¿Los descuentos superan el precio base?
+  if (totalDescuentos > base) {
+    // A. Mostrar Alerta
+    toast.warning('¡Cuidado! Los descuentos superan el Precio Base. Se han reiniciado los valores.')
+
+    // B. Limpiar inputs (Reseteamos los valores y los selectores para evitar negativos)
+    // Reiniciar Porcentaje
+    insc.val_porcentaje = 0
+    insc.dsct_porcent_id = null
+    
+    // Reiniciar Monto Fijo
+    insc.val_fijo = 0
+    insc.dsct_stick_id = null
+    
+    // Reiniciar Beneficio
+    insc.val_beneficio = 0
+    insc.dsct_benefit_id = null
+
+    // C. Forzar recálculo visual a 0
+    insc.montoDescuentoPorcentaje = 0
+    insc.montoDescuentoFijo = 0
+    insc.montoBeneficio = 0
+    insc.total_amount = base
+
+
+
+    return // Salimos para evitar asignar valores erróneos
+  }
+
+  // 4. Si todo está bien, asignamos los valores redondeados a la vista
+  insc.montoDescuentoPorcentaje = montoPorcentaje
+  insc.montoDescuentoFijo = montoFijo
+  insc.montoBeneficio = montoBeneficio
+
+  // 5. Cálculo Final (Base - Descuentos)
+  const final = base - totalDescuentos
+  insc.total_amount = round2(final > 0 ? final : 0)
+})
   function onChangeDescuentoFijo(opt) {
     if (!opt) {
       insc.val_fijo = 0
@@ -1030,6 +1097,9 @@ import FileUploader from '@/components/FileUploader.vue'
       contactos: (l.contact_attempts || []).map(att => ({
         id: att.lead_contact_attempt_id,
         status_alias: att.cat_status_alias,
+        calling_alias: att.cat_result_alias,
+        calling_label: att.cat_result_label,
+
         status_label: att.cat_status_label,
         fechaContactoProximo: normalizeDateTime(att.contact_datetime),
         respuesta: att.response || ''
@@ -1235,12 +1305,16 @@ async function searchLeadByPhone() {
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
+      
+      const cat_calling = idByAlias(c.calling_alias, callingCatalog.value)
+      debugger
       const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
       return {
         id: c.id,
         attempt_number: idx + 1,
         cat_status,
         contact_datetime,
+        cat_result: c.cat_calling,
         response: c.respuesta || ''
       }
     })
@@ -1363,10 +1437,10 @@ async function confirmarInscripcion() {
 
   function openInscription() {
 
-    if (!form.price_student_dollars || !form.price_student_soles || !form.price_profesional_soles || !form.price_profesional_dollars) {
-      toast.info('No se encontraron precios para el programa seleccionado. Por favor, verifique la configuración del programa.', { timeout: 5000 })
-      return
-    }
+    // if (!form.price_student_dollars || !form.price_student_soles || !form.price_profesional_soles || !form.price_profesional_dollars) {
+    //   toast.info('No se encontraron precios para el programa seleccionado. Por favor, verifique la configuración del programa.', { timeout: 5000 })
+    //   return
+    // }
 
     insc.cat_type_document = null
     insc.document          = ''
