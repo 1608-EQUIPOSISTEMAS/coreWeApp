@@ -27,7 +27,9 @@
               <label class="form-label mb-1">
                 Fecha contacto inicial <span class="required-star">*</span>
               </label>
-              <DateTime12 :disabled="isEdit" v-model="form.fechaContactoInicial" required clearable />
+              <DateTime12
+                    :onlyHours="true"
+                    :disabled="isEdit" v-model="form.fechaContactoInicial" required clearable />
             </div>
 
             <div class="col-md-5"></div>
@@ -367,7 +369,7 @@
             <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-3">
               <div class="col-lg-1 text-center">#</div>
               <div class="col-lg-2">Estado<span class="required-star">*</span></div>
-              <div class="col-lg-5">Fecha y Hora<span class="required-star">*</span></div>
+              <div class="col-lg-3">Fecha y Hora<span class="required-star">*</span></div>
               <div class="col-lg-3">T. Respuesta</div>
               <div class="col-lg-3">Obsv.</div>
               <div class="col-lg-1 text-center"></div>
@@ -406,7 +408,7 @@
                 </div>
 
                 <!-- Fecha y Hora -->
-                <div class="col-12 col-lg-5">
+                <div class="col-12 col-lg-3">
                   <label class="form-label d-lg-none mb-1">
                     Fecha y Hora<span class="required-star">*</span>
                   </label>
@@ -414,6 +416,7 @@
                     v-model="c.fechaContactoProximo"
                     required
                     clearable
+                    :onlyHours="true"
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
                 </div>
@@ -433,7 +436,7 @@
                 </div>
 
                 <!-- Respuesta -->
-                <!-- <div class="col-12 col-lg-3">
+                <div class="col-12 col-lg-3">
                   <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
                   <input
                     autocomplete="off"
@@ -443,7 +446,7 @@
                     placeholder="RESULTADO"
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
-                </div> -->
+                </div>
 
                 <!-- Acciones -->
                 <div class="col-12 col-lg-1 d-flex align-items-start justify-content-lg-center" v-if="!c.id">
@@ -520,7 +523,7 @@
               <CurrencyInput
                 v-model="insc.montoOriginal"
                 :currency="selectedCurrency"
-                :storeAsMinor="false" 
+                :storeAsMinor="false"
                 class="form-control form-control-sm fw-bold border-0 bg-transparent text-end p-0"
                 style="font-size: 1.5rem; color: var(--primary-color); max-width: 150px;"
                 placeholder="0.00"
@@ -846,7 +849,7 @@ import FileUploader from '@/components/FileUploader.vue'
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
   //we_calling
   const callingCatalog          = ref(catalog.options('we_calling'))
-  
+
 
   const currencyCatalog         = ref(
     catalog.options('we_currency', {
@@ -960,11 +963,11 @@ watchEffect(() => {
     // Reiniciar Porcentaje
     insc.val_porcentaje = 0
     insc.dsct_porcent_id = null
-    
+
     // Reiniciar Monto Fijo
     insc.val_fijo = 0
     insc.dsct_stick_id = null
-    
+
     // Reiniciar Beneficio
     insc.val_beneficio = 0
     insc.dsct_benefit_id = null
@@ -1305,7 +1308,7 @@ async function searchLeadByPhone() {
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-      
+
       const cat_calling = idByAlias(c.calling_alias, callingCatalog.value)
       debugger
       const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial

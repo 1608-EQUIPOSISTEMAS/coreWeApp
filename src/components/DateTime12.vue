@@ -9,8 +9,7 @@
         placeholder="Selecciona fecha"
       />
     </div>
-
-    <select
+<select
       class="dt12__input dt12__input--hour"
       v-model.number="hour12"
       @change="emitChange"
@@ -23,6 +22,7 @@
     </select>
 
     <select
+      v-if="!onlyHours"
       class="dt12__input dt12__input--minute"
       v-model.number="minutePart"
       @change="emitChange"
@@ -70,6 +70,7 @@ const props = defineProps({
   outputPrecision: { type: String, default: 'seconds' },
   clearable: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
+  onlyHours: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'change'])
 
@@ -121,6 +122,9 @@ const hour12 = computed({
 
 const minutePart = computed({
   get() {
+    // Si solo aceptamos horas, forzamos visualmente y lógicamente el 0
+    if (props.onlyHours) return 0
+
     const norm = normalize(props.modelValue)
     if (!norm) return 0
     const parts = norm.split(' ')
@@ -129,7 +133,9 @@ const minutePart = computed({
     return time.length >= 2 ? Number(time[1]) : 0
   },
   set(val) {
-    emitFull(datePart.value, hour12.value, val, ampmPart.value)
+    // Si solo aceptamos horas, ignoramos el valor entrante y usamos 0
+    const finalMin = props.onlyHours ? 0 : val
+    emitFull(datePart.value, hour12.value, finalMin, ampmPart.value)
   },
 })
 
