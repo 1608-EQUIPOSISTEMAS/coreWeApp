@@ -5,7 +5,6 @@
         <div class="title-icon" style="cursor: pointer;" @click="reloadSchedule()">
           <i class="fa-solid fa-calendar-days"></i>
         </div>
-
         <div class="title-main">
           {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
         </div>

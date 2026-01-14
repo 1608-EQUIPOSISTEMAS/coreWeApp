@@ -78,11 +78,20 @@
                 @change="onProgramaTypeChange"
               />
             </div>
-
+            
             <div class="col-md-4" v-if="form.category_alias &&
                                       (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
                                       (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
               <label class="form-label mb-1">Producto / Programa<span class="required-star">*</span></label>
+              <button 
+                v-if="form.program_version_id" 
+                type="button" 
+                class="btn btn-sm btn-outline-info border-0 py-0 mb-1" 
+                @click="showProgramDetail = true"
+                title="Ver detalles del programa"
+            >
+                <i class="fa-solid fa-circle-info fa-lg"></i>
+            </button>
               <SearchSelect
                 v-model="form.program_version_id"
                 mode="remote"
@@ -102,6 +111,7 @@
                 required
                 @change="onProgramaChange"
               />
+              
             </div>
 
             <div class="col-md-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
@@ -109,7 +119,7 @@
               <SearchSelect
                 v-model="form.edition_id"
                 mode="remote"
-                :fetcher="q => editionService.editionCaller({ q, program_version_id: form.program_version_id})"
+                :fetcher="searchEditionsFiltered"
                 label-field="start_date_label"
                 :disabled="isEdit"
                 value-field="edition_num_id"
@@ -151,7 +161,7 @@
 
             <div class="col-md-3">
               <label class="form-label mb-1">Nombre/Razón Social</label>
-              <input autocomplete="off" v-model="form.full_name" type="text" class="form-control" placeholder="NOMBRE COMPLETO" />
+              <input required autocomplete="off" v-model="form.full_name" type="text" class="form-control" placeholder="NOMBRE COMPLETO" />
             </div>
 
             <div class="col-md-3">
@@ -213,7 +223,6 @@
                 @change="onStatusChange"
               />
             </div>
-
             <div class="col-md-3">
               <label class="form-label mb-1">Ocupación / Situación<span class="required-star">*</span></label>
               <SearchSelect
@@ -371,7 +380,7 @@
               <div class="col-lg-2">Estado<span class="required-star">*</span></div>
               <div class="col-lg-3">Fecha y Hora<span class="required-star">*</span></div>
               <div class="col-lg-3">T. Respuesta</div>
-              <div class="col-lg-3">Obsv.</div>
+              <div class="col-lg-2">Obsv.</div>
               <div class="col-lg-1 text-center"></div>
             </div>
 
@@ -436,7 +445,7 @@
                 </div>
 
                 <!-- Respuesta -->
-                <div class="col-12 col-lg-3">
+                <div class="col-12 col-lg-2">
                   <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
                   <input
                     autocomplete="off"
@@ -485,6 +494,163 @@
       </div>
     </div>
   </div>
+  <BaseModal 
+    v-model="showProgramDetail" 
+    title="Detalle del Programa"
+    size="lg" 
+  >
+    <div v-if="selectedProgram" class="d-flex flex-column h-100">
+      
+      <ul class="nav nav-tabs px-3 border-bottom-0 mt-2" v-if="hasEditions">
+        <li class="nav-item">
+          <a class="nav-link" 
+             :class="{ active: activeTab === 'info' }" 
+             href="#" 
+             @click.prevent="activeTab = 'info'">
+             <i class="fa-solid fa-file-lines me-2"></i>General
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" 
+             :class="{ active: activeTab === 'editions' }" 
+             href="#" 
+             @click.prevent="activeTab = 'editions'">
+             <i class="fa-solid fa-calendar-days me-2"></i>Ediciones ({{ selectedProgram.editions_json.length }})
+          </a>
+        </li>
+      </ul>
+
+      <div class="modal-tab-content p-3 border-top" :class="{'rounded-top': !hasEditions}">
+        
+        <div v-if="activeTab === 'info'" class="fade-in">
+          
+          <div class="text-center mb-4 mt-2">
+            <h4 class="fw-bold text-primary mb-0">{{ selectedProgram.program_name }}</h4>
+            <small class="text-muted">Versión: {{ selectedProgram.version_code }}</small>
+          </div>
+
+          <div class="row g-3 mb-4 text-center">
+            <div class="col-4">
+              <small class="d-block text-secondary">Tipo</small>
+              <span class="badge bg-light text-dark border">{{ selectedProgram.cat_type_program_label }}</span>
+            </div>
+            <div class="col-4">
+              <small class="d-block text-secondary">Modalidad</small>
+              <span class="badge bg-info bg-opacity-10 text-info border-info">{{ selectedProgram.cat_model_modality_label }}</span>
+            </div>
+            <div class="col-4">
+              <small class="d-block text-secondary">Sesiones</small>
+              <span class="fw-bold">{{ selectedProgram.sessions }}</span>
+            </div>
+          </div>
+
+          <div class="card bg-light border-0 mb-4">
+            <div class="card-body">
+              <h6 class="card-title text-muted mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Precios Referenciales</h6>
+              <div class="row">
+                <div class="col-6 border-end">
+                  <div class="d-flex flex-column text-center">
+                    <span class="text-muted small">Estudiante</span>
+                    <span class="fw-bold text-dark">S/ {{ selectedProgram.price_student_soles }}</span>
+                    <span class="small text-secondary">$ {{ selectedProgram.price_student_dollars }}</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="d-flex flex-column text-center">
+                    <span class="text-muted small">Profesional</span>
+                    <span class="fw-bold text-dark">S/ {{ selectedProgram.price_profesional_soles }}</span>
+                    <span class="small text-secondary">$ {{ selectedProgram.price_profesional_dollars }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2" v-if="selectedProgram.link">
+            <a :href="selectedProgram.link" target="_blank" class="btn btn-outline-primary">
+              <i class="fa-solid fa-external-link-alt me-2"></i> Ver landing page / Temario
+            </a>
+          </div>
+
+          <div v-if="!hasEditions" class="alert alert-secondary text-center mt-3 mb-0 py-2 small">
+            <i class="fa-solid fa-calendar-xmark me-1"></i> No hay ediciones programadas visibles.
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'editions'" class="fade-in">
+          <div class="editions-scroll-container">
+            
+            <div v-for="edition in selectedProgram.editions_json" :key="edition.edition_num_id" class="card mb-3 shadow-sm border">
+              
+              <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                <div>
+                  <span class="badge bg-primary me-2">{{ edition.global_code }}</span>
+                  <span class="fw-bold text-dark" style="font-size: 0.9rem;">Inicio: {{ formatDate(edition.start_date) }}</span>
+                </div>
+                <div class="text-end">
+                  <span class="badge" :class="edition.vacant?(edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger'):'bg-secondary'">
+                    {{ edition.vacant
+                      ?(edition.vacant > 0
+                        ?`${edition.vacant} Vacantes` 
+                        : 'Lleno')
+                      :'Sin Vacantes' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="card-body p-3">
+                <div class="row g-2 mb-2" style="font-size: 0.85rem;"  v-if="!edition.edition_children || edition.edition_children.length == 0">
+                  <div class="col-md-6">
+                     <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
+                     <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
+                  </div>
+                  <div class="col-md-6">
+                     <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
+                     <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">
+                        {{ sch.day_combination_label }} {{ sch.hour_combination_label }}
+                     </div>
+                     <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
+                  </div>
+                </div>
+
+                <div v-if="edition.edition_children && edition.edition_children.length > 0" class="mt-3">
+                  <div class="p-2 bg-light rounded border">
+                    <h6 class="text-uppercase text-muted mb-2" style="font-size: 0.7rem; letter-spacing: 0.5px;">Estructura Académica / Módulos</h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-borderless mb-0 small align-middle">
+                        <thead class="text-secondary border-bottom">
+                          <tr>
+                            <th>Módulo</th>
+                            <th>Fecha</th>
+                            <th>Horario</th>
+                            <th>Docente</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="child in edition.edition_children" :key="child.edition_num_id">
+                            <td class="fw-bold text-primary">{{ child.abbreviation }}</td>
+                            <td>{{ formatDate(child.start_date) }}</td>
+                            <td>
+                               <div v-for="(csch, ci) in child.schedules" :key="ci" style="line-height: 1.1;">
+                                  <small>{{ csch.day_combination_label }}</small>
+                               </div>
+                            </td>
+                            <td><small class="text-truncate d-block" style="max-width: 120px;">{{ child.instructor }}</small></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </BaseModal>
 
   <BaseModal v-model="showViewModal" title="Inscripción del lead" size="xl">
     <div class="insc-modal">
@@ -816,7 +982,26 @@ import FileUploader from '@/components/FileUploader.vue'
   const leadDataHistory = ref(false)
   const createdLeadId   = ref(null)
   const createdPersonId = ref(null)
+// Variables reactivas para el modal
+const showProgramDetail = ref(false);
+const selectedProgram = ref(null);
+const activeTab = ref('info'); // 'info' | 'editions'
+// Detectar si hay ediciones para mostrar la pestaña
+const hasEditions = computed(() => {
+  return selectedProgram.value?.editions_json && selectedProgram.value.editions_json.length > 0;
+});
 
+// Resetear tab al abrir modal
+watch(showProgramDetail, (val) => {
+  if (val) activeTab.value = 'info';
+});
+
+// Formateador de fechas simple (Ej: 20 Ene 2025)
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const options = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
+  return new Date(dateString).toLocaleDateString('es-PE', options);
+};
   const todayIso = new Date().toISOString().slice(0, 16)
 
   const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
@@ -880,6 +1065,7 @@ import FileUploader from '@/components/FileUploader.vue'
     program_modality_selected_alias: null,
     program_version_id: null,
     edition_id: null,
+    link: null,
     client_status: null,
     client_status_label: null,
     enrollment_id: null,
@@ -901,7 +1087,8 @@ import FileUploader from '@/components/FileUploader.vue'
     observacion: '',
     categoriaCliente: 'NEW',
     categoriaMember: '',
-    contactos: []
+    contactos: [],
+
   })
 
   const insc = reactive({
@@ -1186,7 +1373,12 @@ watchEffect(() => {
     form.status_alias  = 'we_lead_status_atendido'
     form.query_alias   = 'we_category_query_general'
     form.client_status   = 'we_client_person'
+    //{{form.ocupacion_alias}}we_prospect_situation_independent
+    form.ocupacion_alias = 'we_prospect_situation_independent'
     form.active = true
+    //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
+    form.category_alias = 'we_program_type_course'
+    onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
 
     loaded.value = true
   })
@@ -1216,6 +1408,9 @@ watchEffect(() => {
   function onStatusChange(opt) {
     if (!opt) return
     if (opt.description === 'Pagó') {
+      const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
+      if (alto) form.nivel_alias = alto.alias
+    }else if(opt.description === 'Interesado'){
       const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
       if (alto) form.nivel_alias = alto.alias
     }
@@ -1258,7 +1453,7 @@ async function searchLeadByPhone() {
     if (data.status === 'new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
 
-      client_category_alias = 'we_moment_new'
+      form.client_category_alias = 'we_moment_new'
 
       form.categoriaMember  = ''
 
@@ -1267,7 +1462,7 @@ async function searchLeadByPhone() {
 
       toast.success(`Encontrado: ${data.full_name} (${tipo})`, { timeout: 4000 })
 
-      client_category_alias = 'we_moment_new'
+      form.client_category_alias = 'we_moment_new'
       form.categoriaMember  = data.membresia || ''
 
       if (data.full_name) {
@@ -1503,15 +1698,51 @@ async function confirmarInscripcion() {
         }
     }
 
-    function onProgramaChange(opcion) {
-        if (!opcion){
-          form.edition_id = null
-          form.program_modality_selected_alias = null
-          return
-        }
-
-        form.program_modality_selected_alias = opcion.cat_model_modality_alias
+    function openURL(param){
+      window.open(param, '_blank', 'noopener,noreferrer');
     }
+
+  // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
+  function onProgramaChange(opcion) {
+      // 1. Lógica para la Modal de Info
+      selectedProgram.value = opcion; 
+
+      // 2. Lógica del Formulario
+      if (!opcion){
+          form.edition_id = null;
+          form.link = null;
+          form.program_modality_selected_alias = null;
+          // form.program_version_id se limpia solo por el v-model del componente
+          return;
+      }
+
+      form.program_modality_selected_alias = opcion.cat_model_modality_alias;
+      
+      // Guardamos el link en el form por si acaso, aunque lo mostraremos en la modal
+      if(opcion.link){
+          form.link = opcion.link;
+      }
+  }
+
+
+  const searchEditionsFiltered = async (q, child, index) => {
+
+    //crear const month y year
+    const month = new Date().getMonth() + 1; // Mes actual
+    const year = new Date().getFullYear();    // Año actual
+    
+
+    // 1. Llamar al servicio original
+    const response = await editionService.editionCaller({
+      q,
+      program_version_id: form.program_version_id,
+      month,
+      year
+    });
+
+
+    return response;
+  }
 
     function onEditionChange(opcion) {
         if (!opcion) return
@@ -1591,6 +1822,9 @@ async function confirmarInscripcion() {
         alCerrarModal()
       }
     })
+    
+
+
 </script>
 
 <style scoped>
@@ -2493,5 +2727,51 @@ async function confirmarInscripcion() {
     margin-top: 1rem;
   }
 }
+/* Estilos para las pestañas tipo Bootstrap */
+.nav-tabs .nav-link {
+  color: #6c757d;
+  cursor: pointer;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding-bottom: 0.8rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #0d6efd; /* Color primario */
+  background-color: transparent;
+  border-color: transparent;
+  border-bottom-color: #0d6efd;
+  font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+  border-color: transparent;
+  color: #495057;
+}
+
+/* Scroll para la lista de ediciones si es muy larga */
+.editions-scroll-container {
+  max-height: 60vh; /* Ajusta esto según el alto de tu pantalla */
+  overflow-y: auto;
+  padding-right: 5px; /* Espacio para scrollbar */
+}
+
+/* Animación suave al cambiar tabs */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Estilo para scrollbar bonito (opcional) */
+.editions-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+.editions-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
 </style>
-```

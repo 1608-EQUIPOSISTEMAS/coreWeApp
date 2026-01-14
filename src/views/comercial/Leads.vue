@@ -36,7 +36,7 @@
               <th class="ta-center">Acciones</th>
               <th>Status</th>
               <th>Contacto</th>
-              <th>T. Promoción</th>
+              <th>T. Consulta</th>
               <th>Programa / Interés</th>
               <th>Ini. Edición</th>
               <th>Nivel Interés</th>
@@ -46,7 +46,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="l in leadsRaw" :key="l.id">
+            <tr v-for="l in leadsRaw" :class="rowClassForStatus(l.cat_status_alias)" :key="l.id">
               <td class="ta-center nowrap">
                 <button class="btn btn-outline btn-sm me-1" @click="editLead(l)" title="Editar">
                   <i class="fa-solid fa-pen-to-square text-warning"></i>
@@ -55,12 +55,11 @@
                   <i class="fa-solid fa-clone text-primary"></i>
                 </button>
               </td>
-
-              <td>
-                <span v-if="l.cat_status_alias" class="badge" :class="badgeForStatus(l.cat_status_alias)">
-                  {{ filtroPipeline.find(e=>e.alias==l.cat_status_alias)?.description }}
-                </span>
-              </td>
+            <td>
+                  <span class="fw-600 small text-dark">
+                    {{ filtroPipeline.find(e => e.alias == l.cat_status_alias)?.description }}
+                  </span>
+                </td>
 
               <td style="min-width:160px">
                 <div class="d-flex flex-column">
@@ -630,19 +629,30 @@ function editLead(lead) {
   router.push({ name: 'ComercialLeadDetalle', params: { id: lead.id } })
 }
 
-// === HELPERS PARA BADGES ===
-function badgeForStatus(s) {
+function rowClassForStatus(s) {
   const map = {
-    'we_lead_status_interesado': 'badge-info',
-    'we_lead_status_closed': 'badge-danger',
-    'we_lead_status_atendido': 'badge-success',
-    'we_lead_status_proximo': 'badge-warning',
-    'we_lead_status_bought': 'badge-success',
-    'we_lead_status_will_pay': 'badge-success',
-    'we_lead_status_indiferente': 'badge-light',
-    'we_lead_status_desestimado': 'badge-danger'
+    // --- NUEVO: Inscrito (Verde Claro Destacado) ---
+    'we_lead_status_insc': 'row-inscrito', 
+
+    // Azulitos (En proceso / Interesado)
+    'we_lead_status_interesado': 'row-blue',
+    
+    // Verdes (Positivos / Dinero)
+    'we_lead_status_atendido':   'row-green',
+    'we_lead_status_bought':     'row-emerald',
+    'we_lead_status_will_pay':   'row-emerald',
+    
+    // Amarillos/Naranjas (Atención requerida)
+    'we_lead_status_proximo':    'row-yellow',
+    
+    // Grises/Neutros
+    'we_lead_status_indiferente': 'row-gray',
+    
+    // Rojos (Negativos / Cerrados)
+    'we_lead_status_closed':      'row-red',
+    'we_lead_status_desestimado': 'row-red'
   }
-  return map[s] || 'badge-neutral'
+  return map[s] || ''
 }
 
 function badgeForInterest(s) {
@@ -786,4 +796,85 @@ onMounted(() => {
 .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.25rem; }
 .program-filter-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; }
 .empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
+
+/* --- NUEVO: Inscrito (Verde Claro Destacado) --- */
+.row-inscrito,
+.row-inscrito > td { 
+  background-color: #d1fae5 !important; /* Verde menta claro */
+}
+.row-inscrito {
+  border-left: 4px solid #059669 !important; /* Borde solo en el TR */
+}
+.row-inscrito:hover,
+.row-inscrito:hover > td { 
+  background-color: #a7f3d0 !important; 
+}
+
+/* --- Azul (Interesado) --- */
+.row-blue, 
+.row-blue > td { 
+  background-color: #f0f9ff !important; 
+} 
+.row-blue:hover, 
+.row-blue:hover > td { 
+  background-color: #e0f2fe !important; 
+}
+
+/* --- Verde Suave (Atendido) --- */
+.row-green,
+.row-green > td { 
+  background-color: #f0fdf4 !important; 
+}
+.row-green:hover,
+.row-green:hover > td { 
+  background-color: #dcfce7 !important; 
+}
+
+/* --- Verde Esmeralda (Compró / Pagará) --- */
+.row-emerald,
+.row-emerald > td { 
+  background-color: #ecfdf5 !important; 
+}
+.row-emerald {
+  border-left: 3px solid #10b981 !important;
+}
+.row-emerald:hover,
+.row-emerald:hover > td { 
+  background-color: #d1fae5 !important; 
+}
+
+/* --- Amarillo/Naranja (Próximo) --- */
+.row-yellow,
+.row-yellow > td { 
+  background-color: #fffbeb !important; 
+}
+.row-yellow:hover,
+.row-yellow:hover > td { 
+  background-color: #fef3c7 !important; 
+}
+
+/* --- Rojo (Cerrado / Desestimado) --- */
+.row-red,
+.row-red > td { 
+  background-color: #fef2f2 !important; 
+  opacity: 0.95; /* Cuidado con la opacidad en celdas, mejor 0.95 o quitarla */
+}
+.row-red:hover,
+.row-red:hover > td { 
+  background-color: #fee2e2 !important; 
+}
+
+/* --- Gris (Indiferente) --- */
+.row-gray,
+.row-gray > td { 
+  background-color: #f8fafc !important; 
+  color: #64748b; 
+}
+.row-gray:hover,
+.row-gray:hover > td { 
+  background-color: #f1f5f9 !important; 
+}
+
+/* Ajuste para que la transición sea suave */
+tr, td { transition: background-color 0.2s ease; }
 </style>
