@@ -41,6 +41,7 @@ function withBootstrap(map) {
   return out
 }
 
+
 export function createCatalogService () {
   let map = null
 
@@ -62,7 +63,7 @@ export function createCatalogService () {
   async function ensureLoaded(force = false) {
     if (!force) {
       const local = loadFromLocal()
-      if (local) { 
+      if (local) {
         map = withBootstrap(local)
         return map
       }
@@ -105,18 +106,32 @@ export function createCatalogService () {
     const arr = get(alias).filter(filter)
     return arr.map(x => mapItem
       ? mapItem(x)
-      : ({ 
-        alias: x.alias, 
-        id: x[value] ?? x.catalogo_id, 
-        description: x[label] ?? x.description, 
-        raw: x, 
-        variable_1: x.variable_1, 
-        variable_2: x.variable_2, 
+      : ({
+        alias: x.alias,
+        id: x[value] ?? x.catalogo_id,
+        description: x[label] ?? x.description,
+        raw: x,
+        variable_1: x.variable_1,
+        variable_2: x.variable_2,
         variable_3: x.variable_3 })
     )
   }
 
-   
+  async function membershipList(payload) {
+    //si ya existe el listado en localhost solo retornar sino llamar api post y guardar localStorage.setItem('membershipList', JSON.stringify(response.data)); const response = (await api.post('/catalog/membershiplist', payload)).data;
+debugger
+    const local = localStorage.getItem('membershipList');
+    if (local) {
+      return JSON.parse(local);
+    }
+    const response = (await api.post('/catalog/membershiplist', payload)).data;
+    localStorage.setItem('membershipList', JSON.stringify(response.data));
+    return response.data;
+  }
+
+
+
+
 
   return {
     ensureLoaded,
@@ -124,7 +139,7 @@ export function createCatalogService () {
     getMap,
     get,
     byId,
-    options
-    
+    options,
+    membershipList
   }
 }

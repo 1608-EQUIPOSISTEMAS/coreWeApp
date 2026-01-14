@@ -78,15 +78,15 @@
                 @change="onProgramaTypeChange"
               />
             </div>
-            
+
             <div class="col-md-4" v-if="form.category_alias &&
                                       (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
                                       (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
               <label class="form-label mb-1">Producto / Programa<span class="required-star">*</span></label>
-              <button 
-                v-if="form.program_version_id" 
-                type="button" 
-                class="btn btn-sm btn-outline-info border-0 py-0 mb-1" 
+              <button
+                v-if="form.program_version_id"
+                type="button"
+                class="btn btn-sm btn-outline-info border-0 py-0 mb-1"
                 @click="showProgramDetail = true"
                 title="Ver detalles del programa"
             >
@@ -111,7 +111,7 @@
                 required
                 @change="onProgramaChange"
               />
-              
+
             </div>
 
             <div class="col-md-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
@@ -192,22 +192,28 @@
             </div>
 
 
-            <div class="col-md-2" v-if="leadDataHistory">
+            <div class="col-md-2">
               <label class="form-label mb-1">E. Cliente</label>
               <SearchSelect
-                v-model="form.client_category_alias"
+                v-model="form.cat_client_moment_alias"
                 :items="momentCatalog"
                 label-field="description"
                 value-field="alias"
                 placeholder="E. Cliente..."
                 required
-                :model-label="form.client_category_label"
+                :model-label="form.cat_client_moment_label"
               />
             </div>
 
-            <div class="col-md-2" v-if="leadDataHistory">
+            <div class="col-md-2">
               <label class="form-label mb-1">Membresía</label>
-              <input autocomplete="off" v-model="form.categoriaMember" type="text" class="form-control" disabled />
+              <SearchSelect
+                v-model="form.membership_moment_id"
+                :items="membershipList"
+                label-field="tier_name"
+                value-field="membership_tier_id"
+                placeholder="MEMBRESÍA..."
+                :model-label="form.membership_tier_label"/>
             </div>
 
             <div class="col-md-2">
@@ -494,26 +500,26 @@
       </div>
     </div>
   </div>
-  <BaseModal 
-    v-model="showProgramDetail" 
+  <BaseModal
+    v-model="showProgramDetail"
     title="Detalle del Programa"
-    size="lg" 
+    size="lg"
   >
     <div v-if="selectedProgram" class="d-flex flex-column h-100">
-      
+
       <ul class="nav nav-tabs px-3 border-bottom-0 mt-2" v-if="hasEditions">
         <li class="nav-item">
-          <a class="nav-link" 
-             :class="{ active: activeTab === 'info' }" 
-             href="#" 
+          <a class="nav-link"
+             :class="{ active: activeTab === 'info' }"
+             href="#"
              @click.prevent="activeTab = 'info'">
              <i class="fa-solid fa-file-lines me-2"></i>General
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" 
-             :class="{ active: activeTab === 'editions' }" 
-             href="#" 
+          <a class="nav-link"
+             :class="{ active: activeTab === 'editions' }"
+             href="#"
              @click.prevent="activeTab = 'editions'">
              <i class="fa-solid fa-calendar-days me-2"></i>Ediciones ({{ selectedProgram.editions_json.length }})
           </a>
@@ -521,9 +527,9 @@
       </ul>
 
       <div class="modal-tab-content p-3 border-top" :class="{'rounded-top': !hasEditions}">
-        
+
         <div v-if="activeTab === 'info'" class="fade-in">
-          
+
           <div class="text-center mb-4 mt-2">
             <h4 class="fw-bold text-primary mb-0">{{ selectedProgram.program_name }}</h4>
             <small class="text-muted">Versión: {{ selectedProgram.version_code }}</small>
@@ -579,9 +585,9 @@
 
         <div v-if="activeTab === 'editions'" class="fade-in">
           <div class="editions-scroll-container">
-            
+
             <div v-for="edition in selectedProgram.editions_json" :key="edition.edition_num_id" class="card mb-3 shadow-sm border">
-              
+
               <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                 <div>
                   <span class="badge bg-primary me-2">{{ edition.global_code }}</span>
@@ -591,7 +597,7 @@
                   <span class="badge" :class="edition.vacant?(edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger'):'bg-secondary'">
                     {{ edition.vacant
                       ?(edition.vacant > 0
-                        ?`${edition.vacant} Vacantes` 
+                        ?`${edition.vacant} Vacantes`
                         : 'Lleno')
                       :'Sin Vacantes' }}
                   </span>
@@ -1034,7 +1040,8 @@ const formatDate = (dateString) => {
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
   //we_calling
   const callingCatalog          = ref(catalog.options('we_calling'))
-
+// 1. Inicializa la lista vacía (un array vacío para evitar errores en el v-for/items)
+const membershipList = ref([]);
 
   const currencyCatalog         = ref(
     catalog.options('we_currency', {
@@ -1064,6 +1071,9 @@ const formatDate = (dateString) => {
     program_modality_alias: null,
     program_modality_selected_alias: null,
     program_version_id: null,
+    cat_client_moment_alias:null,
+    membership_moment_id: null,
+    membership_tier_label:null,
     edition_id: null,
     link: null,
     client_status: null,
@@ -1259,6 +1269,10 @@ watchEffect(() => {
       ocupacion_alias: l.ocupacion_alias,
       client_status: l.client_status,
       client_status_label: l.client_status_label,
+      membership_moment_id: l.membership_moment_id,
+      membership_tier_label: l.membership_tier_label,
+      cat_client_moment_alias:l.cat_client_moment_alias,
+      cat_client_moment_label: l.cat_client_moment_label,
       bot: l.bot!='N',
       active: l.active!='N',
       program_label: l.program_label ?? null,
@@ -1289,7 +1303,6 @@ watchEffect(() => {
         status_alias: att.cat_status_alias,
         calling_alias: att.cat_result_alias,
         calling_label: att.cat_result_label,
-
         status_label: att.cat_status_label,
         fechaContactoProximo: normalizeDateTime(att.contact_datetime),
         respuesta: att.response || ''
@@ -1321,6 +1334,7 @@ watchEffect(() => {
               status_alias: 'we_lead_status_atendido',
               country_alias: originalData.country_alias,
               client_status: originalData.client_status,
+              client_status_label: originalData.client_status_label,
               ocupacion_alias: originalData.ocupacion_alias,
               bot: false,
               active: true,
@@ -1357,6 +1371,10 @@ watchEffect(() => {
         loaded.value = true
         return
     }
+    const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
+    membershipList.value = data;
+    // 3. Asignamos el valor real a la variable reactiva
+    membershipList.value = data;
 
     if (isEdit.value) {
       await loadLead(leadIdParam.value)
@@ -1453,7 +1471,7 @@ async function searchLeadByPhone() {
     if (data.status === 'new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
 
-      form.client_category_alias = 'we_moment_new'
+      form.cat_client_moment_alias = 'we_moment_new'
 
       form.categoriaMember  = ''
 
@@ -1462,7 +1480,7 @@ async function searchLeadByPhone() {
 
       toast.success(`Encontrado: ${data.full_name} (${tipo})`, { timeout: 4000 })
 
-      form.client_category_alias = 'we_moment_new'
+      form.cat_client_moment_alias = 'we_moment_new'
       form.categoriaMember  = data.membresia || ''
 
       if (data.full_name) {
@@ -1500,11 +1518,11 @@ async function searchLeadByPhone() {
     const cat_prospect_situation = idByAlias(form.ocupacion_alias,       prospectSituationCatalog.value)
     const cat_client_type        = idByAlias(form.client_status, clientCatalog.value)
 
+    const cat_client_category    = idByAlias(form.cat_client_moment_alias, momentCatalog.value)
+
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-
-      const cat_calling = idByAlias(c.calling_alias, callingCatalog.value)
       debugger
       const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
       return {
@@ -1512,7 +1530,7 @@ async function searchLeadByPhone() {
         attempt_number: idx + 1,
         cat_status,
         contact_datetime,
-        cat_result: c.cat_calling,
+        cat_result: idByAlias(c.calling_alias, callingCatalog.value),
         response: c.respuesta || ''
       }
     })
@@ -1536,7 +1554,8 @@ async function searchLeadByPhone() {
         cat_frecuency_word,
         cat_type_strategy,
         cat_prospect_situation,
-
+        cat_client_moment: cat_client_category,
+        membership_moment_id: form.membership_moment_id,
         origin_phone: (form.telefono || '').trim() || null,
         origin_email: null,
 
@@ -1705,7 +1724,7 @@ async function confirmarInscripcion() {
   // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
   function onProgramaChange(opcion) {
       // 1. Lógica para la Modal de Info
-      selectedProgram.value = opcion; 
+      selectedProgram.value = opcion;
 
       // 2. Lógica del Formulario
       if (!opcion){
@@ -1717,7 +1736,7 @@ async function confirmarInscripcion() {
       }
 
       form.program_modality_selected_alias = opcion.cat_model_modality_alias;
-      
+
       // Guardamos el link en el form por si acaso, aunque lo mostraremos en la modal
       if(opcion.link){
           form.link = opcion.link;
@@ -1730,7 +1749,7 @@ async function confirmarInscripcion() {
     //crear const month y year
     const month = new Date().getMonth() + 1; // Mes actual
     const year = new Date().getFullYear();    // Año actual
-    
+
 
     // 1. Llamar al servicio original
     const response = await editionService.editionCaller({
@@ -1822,7 +1841,7 @@ async function confirmarInscripcion() {
         alCerrarModal()
       }
     })
-    
+
 
 
 </script>

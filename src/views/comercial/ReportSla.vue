@@ -1,350 +1,472 @@
 <template>
-  <div class="quality-dashboard">
-    <div class="dashboard-header">
-      <div>
-        <h2 class="title">Análisis de Calidad y Pérdida (Churn)</h2>
-        <p class="subtitle">Identificación de fugas en el embudo y calidad por fuente de tráfico</p>
+  <div class="followup-dashboard">
+    <div class="header-section">
+      <div class="header-content">
+        <h1 class="page-title">RENTABILIDAD DE SEGUIMIENTO & CONTACTABILIDAD</h1>
+        <p class="page-meta">ANÁLISIS DE EFICIENCIA OPERATIVA (OUTBOUND & INBOUND)</p>
       </div>
-      <div class="alert-box">
-        <span class="alert-icon">!</span>
-        <span>Alerta: Tasa de "No Contacto" en TikTok subió 15%</span>
+      <div class="controls">
+        <div class="filter-group">
+          <label>Campaña:</label>
+          <select class="select-clean">
+            <option>Todas las Campañas</option>
+            <option>Cierre Mes Enero</option>
+          </select>
+        </div>
+        <button class="btn-action">ACTUALIZAR DATOS</button>
       </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-header">
-        <span class="filter-title">Segmentación Avanzada</span>
-        <button class="btn-clean">Limpiar Filtros</button>
-      </div>
-      <div class="filter-grid">
-        
-        <div class="f-item">
-          <label>Periodo de Análisis</label>
-          <div class="date-range">
-            <input type="date" v-model="filters.start" class="control">
-            <input type="date" v-model="filters.end" class="control">
-          </div>
-        </div>
-
-        <div class="f-item">
-          <label>Canal de Origen</label>
-          <select v-model="filters.channel" class="control">
-            <option value="">Todos los Canales</option>
-            <option value="TikTok">TikTok Ads</option>
-            <option value="Meta">Facebook / IG</option>
-            <option value="Google">Google Search</option>
-            <option value="Organic">Orgánico / Web</option>
-          </select>
-        </div>
-
-        <div class="f-item">
-          <label>Programa de Interés</label>
-          <select v-model="filters.program" class="control">
-            <option value="">Todos</option>
-            <option value="IA">Dir. Comercial con IA</option>
-            <option value="Azure">Azure Cloud</option>
-          </select>
-        </div>
-
-        <div class="f-item">
-          <label>Tipo de Pérdida</label>
-          <select v-model="filters.lossType" class="control">
-            <option value="">Todos los Perdidos</option>
-            <option value="desestimado">Desestimado (No califica)</option>
-            <option value="indiferente">Indiferente (Curioso)</option>
-            <option value="nocontact">No Contesta</option>
-          </select>
-        </div>
-
-        <div class="f-item">
-          <label>Asesor Responsable</label>
-          <select v-model="filters.advisor" class="control">
-            <option value="">Todos</option>
-            <option value="Raul">Raúl P.</option>
-            <option value="Arleth">Arleth C.</option>
-          </select>
-        </div>
-
-      </div>
-    </div>
-
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="left-border border-red"></div>
-        <div class="kpi-body">
-          <div class="kpi-number text-red">34%</div>
-          <div class="kpi-desc">Tasa de Descarte General</div>
-          <small>Leads marcados como "Desestimado"</small>
+    <div class="kpi-strip">
+      <div class="kpi-box">
+        <span class="kpi-label">INTENTOS DE CONTACTO</span>
+        <span class="kpi-value">3,850</span>
+        <div class="kpi-footer">
+          <span class="text-muted">Promedio: 4.2 intentos/lead</span>
         </div>
       </div>
-
-      <div class="kpi-card">
-        <div class="left-border border-orange"></div>
-        <div class="kpi-body">
-          <div class="kpi-number text-orange">22%</div>
-          <div class="kpi-desc">Tasa de "Curiosos"</div>
-          <small>Estado "Indiferente" (Preguntan precio y se van)</small>
+      <div class="kpi-box">
+        <span class="kpi-label">TASA DE CONTACTABILIDAD</span>
+        <span class="kpi-value warning">42.5%</span>
+        <div class="kpi-footer">
+          <span class="negative">▼ 2.1% vs semana ant.</span>
         </div>
       </div>
-
-      <div class="kpi-card">
-        <div class="left-border border-gray"></div>
-        <div class="kpi-body">
-          <div class="kpi-number text-gray">S/ 4,500</div>
-          <div class="kpi-desc">Inversión en Leads Perdidos</div>
-          <small>Est. basado en CPC promedio</small>
+      <div class="kpi-box">
+        <span class="kpi-label">EFECTIVIDAD DE CIERRE</span>
+        <span class="kpi-value success">18.2%</span>
+        <div class="kpi-footer">
+          <span class="text-muted">Sobre llamadas contestadas</span>
+        </div>
+      </div>
+      <div class="kpi-box highlight">
+        <span class="kpi-label">INGRESO RECUPERADO (SEGUIMIENTO)</span>
+        <span class="kpi-value">S/ 142,500</span>
+        <div class="kpi-footer">
+          <span class="highlight-text">ROI de Llamadas: 12x</span>
         </div>
       </div>
     </div>
 
-    <div class="chart-section">
-      <div class="section-top">
-        <div>
-          <h3>Calidad del Lead por Canal</h3>
-          <p>Comparativa: Leads Efectivos vs. Leads "Basura" (Desestimados/Indiferentes)</p>
+    <div class="section-container">
+      <div class="chart-header">
+        <div class="header-text">
+          <h3>TENDENCIA HORARIA: DEL INTENTO AL PAGO</h3>
+          <span class="chart-desc">Correlación entre esfuerzo (llamadas), éxito de contacto y cierre final por franja horaria.</span>
         </div>
-        <div class="legend-h">
-          <span class="dot good"></span>Efectivos
-          <span class="dot bad"></span>Descarte
+        <div class="legend-inline">
+          <span class="dot-gray"></span> Intentos
+          <span class="dot-blue"></span> Contestó
+          <span class="dot-purple"></span> Interesado
+          <span class="dot-green"></span> PAGÓ
         </div>
       </div>
-      <div class="chart-box">
-        <Bar :data="qualityChartData" :options="stackedOptions" />
-      </div>
-      <div class="insight-strip">
-        <strong>Hallazgo:</strong> <strong>TikTok</strong> trae mucho volumen, pero el <strong>55%</strong> se descarta. <strong>LinkedIn/Web</strong> tiene menos volumen pero solo <strong>15%</strong> de descarte.
+      <div class="chart-wrapper-large">
+        <Line :data="hourlyFlowData" :options="hourlyFlowOptions" />
       </div>
     </div>
 
     <div class="split-section">
-      
-      <div class="panel flex-1">
-        <div class="panel-head">
-          <h4>Distribución de Estados "No Venta"</h4>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h4>CURVA DE PERSISTENCIA</h4>
+          <p>Distribución de ventas según el número de intento de contacto (N° de Toque).</p>
         </div>
-        <div class="doughnut-box">
-          <Doughnut :data="lossReasonData" :options="doughnutOptions" />
+        <div class="chart-wrapper-medium">
+          <Bar :data="persistenceChartData" :options="persistenceChartOptions" />
         </div>
-        <ul class="reason-list">
-          <li><span class="sq c-red"></span> Desestimado (40%)</li>
-          <li><span class="sq c-orange"></span> Indiferente (35%)</li>
-          <li><span class="sq c-gray"></span> No Contesta (25%)</li>
-        </ul>
+        <div class="insight-box">
+          <strong>INSIGHT:</strong> El 65% de las ventas ocurren entre el 2do y 3er intento. Después del 5to intento, la probabilidad de venta cae al 2%.
+        </div>
       </div>
 
-      <div class="panel flex-2">
-        <div class="panel-head">
-          <h4>Auditoría de Leads Perdidos Recientes</h4>
-          <button class="btn-sm">Ver Todos</button>
+      <div class="panel">
+        <div class="panel-header">
+          <h4>ANÁLISIS DE OBJECIONES</h4>
+          <p>Razones principales registradas en llamadas "No Exitosas".</p>
         </div>
-        <div class="table-wrap">
-          <table class="audit-table">
+        <div class="table-compact-wrapper">
+          <table class="compact-table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Lead / Contacto</th>
-                <th>Canal</th>
-                <th>Estado Final</th>
-                <th>Observación (CRM)</th>
+                <th>Objeción</th>
+                <th class="text-right">Frecuencia</th>
+                <th class="text-right">% Total</th>
+                <th>Tendencia</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(lead, i) in lostLeads" :key="i">
-                <td class="text-mute">{{ lead.date }}</td>
-                <td class="font-w600">{{ lead.name }}</td>
-                <td><span class="tag-channel">{{ lead.channel }}</span></td>
-                <td>
-                  <span class="status-badge" :class="lead.statusClass">{{ lead.status }}</span>
-                </td>
-                <td class="text-sm truncate" :title="lead.obs">{{ lead.obs }}</td>
+              <tr>
+                <td>Falta Dinero / Muy Caro</td>
+                <td class="text-right">450</td>
+                <td class="text-right font-bold">45%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 45%"></span></td>
+              </tr>
+              <tr>
+                <td>Solo quería información</td>
+                <td class="text-right">280</td>
+                <td class="text-right font-bold">28%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 28%"></span></td>
+              </tr>
+              <tr>
+                <td>Horarios no coinciden</td>
+                <td class="text-right">150</td>
+                <td class="text-right font-bold">15%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 15%"></span></td>
+              </tr>
+              <tr>
+                <td>Lo consultará (Pareja/Jefe)</td>
+                <td class="text-right">120</td>
+                <td class="text-right font-bold">12%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 12%"></span></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-
     </div>
+
+    <div class="section-container">
+      <div class="panel-header">
+        <h4>MATRIZ DE DESEMPEÑO INDIVIDUAL</h4>
+        <p>Evaluación de productividad: Volumen vs. Eficacia en Cierres.</p>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="col-main">ASESOR</th>
+            <th class="text-right">LEADS GESTIONADOS</th>
+            <th class="text-right">LLAMADAS REALIZADAS</th>
+            <th class="text-right">CONTACTADOS</th>
+            <th class="text-right">% CONTACT.</th>
+            <th class="text-right">PAGÓ (CIERRES)</th>
+            <th class="text-right">TASA CONVERSIÓN</th>
+            <th class="text-right">TIEMPO PROM. LLAMADA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(advisor, index) in advisorData" :key="index">
+            <td class="font-bold text-dark">{{ advisor.name }}</td>
+            <td class="text-right">{{ advisor.leads }}</td>
+            <td class="text-right bg-gray-light">{{ advisor.calls }}</td>
+            <td class="text-right">{{ advisor.contacted }}</td>
+            <td class="text-right">
+              <span :class="getScoreColor(advisor.contactRate)">{{ advisor.contactRate }}%</span>
+            </td>
+            <td class="text-right font-bold text-green">{{ advisor.sales }}</td>
+            <td class="text-right font-bold">{{ advisor.conversion }}%</td>
+            <td class="text-right text-muted">{{ advisor.avgTime }} min</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL / PROMEDIO</td>
+            <td class="text-right">1,250</td>
+            <td class="text-right">3,850</td>
+            <td class="text-right">1,636</td>
+            <td class="text-right">42.5%</td>
+            <td class="text-right">298</td>
+            <td class="text-right">18.2%</td>
+            <td class="text-right">4.5 min</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
+import { Line, Bar } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
-// --- FILTROS REACTIVOS ---
-const filters = ref({
-  start: '2026-01-01',
-  end: '2026-01-15',
-  channel: '',
-  program: '',
-  lossType: '',
-  advisor: ''
-})
-
-// --- DATA: CALIDAD POR CANAL (Barra Apilada 100% o Absoluta) ---
-const qualityChartData = {
-  labels: ['TikTok Ads', 'Facebook Ads', 'Google Search', 'Base Datos', 'Referidos'],
+// --- 1. DATA FLUJO HORARIO (Main Chart) ---
+// Muestra: A qué hora llamamos (gris), a qué hora contestan (azul), y a qué hora pagan (verde).
+const hourlyFlowData = {
+  labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
   datasets: [
     {
-      label: 'Leads Potenciales (Interesado/Pagó)',
-      data: [120, 150, 90, 80, 40],
-      backgroundColor: '#10b981', // Green
-      stack: 'Stack 0',
-      borderRadius: 4
+      label: 'Intentos (Volumen)',
+      data: [40, 120, 150, 140, 80, 40, 60, 130, 160, 180, 150, 90, 30],
+      borderColor: '#cbd5e1',
+      backgroundColor: 'rgba(203, 213, 225, 0.2)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      order: 4
     },
     {
-      label: 'Leads Descarte (Desestimado/Indif.)',
-      data: [140, 60, 15, 20, 2], // TikTok tiene mucha "basura"
-      backgroundColor: '#ef4444', // Red
-      stack: 'Stack 0',
-      borderRadius: 4
+      label: 'Contestó',
+      data: [10, 40, 50, 45, 20, 15, 25, 60, 80, 110, 100, 60, 20],
+      borderColor: '#3b82f6', // Azul fuerte
+      backgroundColor: '#3b82f6',
+      tension: 0.3,
+      borderWidth: 2,
+      pointRadius: 2,
+      order: 3
+    },
+    {
+      label: 'Interesado (Calificado)',
+      data: [5, 20, 30, 35, 15, 10, 20, 40, 55, 70, 65, 40, 15],
+      borderColor: '#8b5cf6', // Morado
+      backgroundColor: '#8b5cf6',
+      tension: 0.3,
+      borderDash: [5, 5], // Línea punteada para diferenciar "intención"
+      borderWidth: 2,
+      pointRadius: 0,
+      order: 2
+    },
+    {
+      label: 'PAGÓ (Cierre)',
+      data: [2, 12, 18, 22, 8, 5, 8, 25, 35, 45, 40, 25, 8],
+      borderColor: '#10b981', // Verde Éxito
+      backgroundColor: '#10b981',
+      type: 'bar', // Barra para resaltar el volumen de ventas concreto
+      barPercentage: 0.3,
+      order: 1
     }
   ]
 }
 
-const stackedOptions = {
+const hourlyFlowOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } }, // Leyenda custom en HTML
+  plugins: {
+    legend: { display: false }, // Usamos leyenda custom
+    tooltip: { mode: 'index', intersect: false }
+  },
   scales: {
-    x: { grid: { display: false } },
-    y: { stacked: true, grid: { borderDash: [5, 5] } }
+    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+    x: { grid: { display: false } }
   }
 }
 
-// --- DATA: DONA DE RAZONES ---
-const lossReasonData = {
-  labels: ['Desestimado', 'Indiferente', 'No Contesta'],
+// --- 2. DATA CURVA DE PERSISTENCIA ---
+const persistenceChartData = {
+  labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+', 'Entrante'],
   datasets: [{
-    data: [40, 35, 25],
-    backgroundColor: ['#ef4444', '#f97316', '#94a3b8'],
-    borderWidth: 0,
-    hoverOffset: 4
+    label: 'Ventas Cerradas',
+    data: [15, 45, 35, 12, 5, 25], // Mayoría en 2do y 3ero
+    backgroundColor: [
+      '#94a3b8', '#3b82f6', '#2563eb', '#1d4ed8', '#0f172a', '#10b981'
+    ],
+    borderRadius: 3
   }]
 }
 
-const doughnutOptions = {
+const persistenceChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  cutout: '70%'
+  scales: {
+    y: { display: false },
+    x: { grid: { display: false } }
+  }
 }
 
-// --- DATA: TABLA DE AUDITORÍA ---
-// Simulando datos de tus columnas 'we_lead_status' y 'Observaciones'
-const lostLeads = [
-  { 
-    date: '12/01', name: 'Carlos M.', channel: 'TikTok', 
-    status: 'Desestimado', statusClass: 'st-red', 
-    obs: 'Buscaba curso gratis, no tiene presupuesto.' 
-  },
-  { 
-    date: '12/01', name: 'Luisa F.', channel: 'Facebook', 
-    status: 'No Contesta', statusClass: 'st-gray', 
-    obs: 'Llamada a buzón 5 veces. Número parece errado.' 
-  },
-  { 
-    date: '11/01', name: 'Jorge P.', channel: 'TikTok', 
-    status: 'Indiferente', statusClass: 'st-orange', 
-    obs: 'Solo preguntó precio y dejó de responder.' 
-  },
-  { 
-    date: '11/01', name: 'Empresa X', channel: 'Google', 
-    status: 'Desestimado', statusClass: 'st-red', 
-    obs: 'Buscaba servicio de consultoría, no capacitación.' 
-  },
+// --- 3. DATA MATRIZ ASESORES ---
+const advisorData = [
+  { name: 'Eliuth D.', leads: 420, calls: 1100, contacted: 550, contactRate: 50.0, sales: 115, conversion: 20.9, avgTime: 5.2 },
+  { name: 'Raúl P.', leads: 380, calls: 1450, contacted: 480, contactRate: 33.1, sales: 85, conversion: 17.7, avgTime: 3.8 },
+  { name: 'Arleth C.', leads: 300, calls: 950, contacted: 420, contactRate: 44.2, sales: 78, conversion: 18.5, avgTime: 4.5 },
+  { name: 'Bot AI', leads: 150, calls: 350, contacted: 186, contactRate: 53.1, sales: 20, conversion: 10.7, avgTime: 1.2 }
 ]
+
+const getScoreColor = (rate) => {
+  if (rate >= 45) return 'text-green'
+  if (rate >= 35) return 'text-dark'
+  return 'text-red'
+}
 </script>
 
 <style scoped>
-/* General */
-.quality-dashboard { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 2rem; color: #334155; min-height: 100vh; }
+/* ESTILOS HARDCORE / DATA-DENSE */
+.followup-dashboard {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
 
 /* Header */
-.dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
-.title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
-.subtitle { color: #64748b; font-size: 0.9rem; margin-top: 0.25rem; }
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.page-meta {
+  color: #64748b;
+  font-size: 0.8rem;
+  margin: 0.4rem 0 0 0;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.controls { display: flex; align-items: flex-end; gap: 1rem; }
+.filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.filter-group label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.select-clean {
+  padding: 0.5rem 2rem 0.5rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  background-color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.btn-action {
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  height: 34px;
+}
 
-.alert-box { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.alert-icon { background: #b91c1c; color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
+/* KPIs */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.kpi-box {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.kpi-box.highlight {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: white;
+}
+.kpi-box.highlight .kpi-label { color: #94a3b8; }
+.kpi-box.highlight .kpi-value { color: white; }
+.kpi-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+.kpi-value.warning { color: #d97706; }
+.kpi-value.success { color: #16a34a; }
 
-/* 1. FILTER PANEL GRID */
-.filter-panel { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-.filter-header { display: flex; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; }
-.filter-title { font-weight: 700; color: #1e293b; font-size: 0.9rem; text-transform: uppercase; }
-.btn-clean { background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+.kpi-footer { margin-top: 0.8rem; font-size: 0.75rem; font-weight: 500; }
+.text-muted { color: #94a3b8; }
+.negative { color: #dc2626; }
+.highlight-text { color: #a5b4fc; font-weight: 700; }
 
-.filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-.f-item { display: flex; flex-direction: column; gap: 4px; }
-.f-item label { font-size: 0.75rem; font-weight: 700; color: #64748b; }
-.control { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; color: #334155; width: 100%; outline: none; transition: border 0.2s; }
-.control:focus { border-color: #3b82f6; }
-.date-range { display: flex; gap: 5px; }
+/* MAIN CHART */
+.section-container {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+.header-text h3 { margin: 0; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
+.chart-desc { font-size: 0.85rem; color: #64748b; }
 
-/* 2. KPI ROW */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.kpi-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; height: 110px; overflow: hidden; }
-.left-border { width: 6px; height: 100%; }
-.border-red { background: #ef4444; } .border-orange { background: #f97316; } .border-gray { background: #94a3b8; }
-.kpi-body { padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; }
-.kpi-number { font-size: 1.8rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
-.kpi-desc { font-weight: 700; color: #475569; font-size: 0.85rem; }
-.kpi-body small { color: #94a3b8; font-size: 0.75rem; margin-top: 4px; }
-.text-red { color: #ef4444; } .text-orange { color: #f97316; } .text-gray { color: #64748b; }
+.legend-inline { display: flex; gap: 1rem; font-size: 0.8rem; font-weight: 600; align-items: center; }
+.dot-gray { width: 10px; height: 10px; background: #cbd5e1; display: inline-block; }
+.dot-blue { width: 10px; height: 10px; background: #3b82f6; display: inline-block; }
+.dot-purple { width: 10px; height: 10px; background: #8b5cf6; display: inline-block; }
+.dot-green { width: 10px; height: 10px; background: #10b981; display: inline-block; }
 
-/* 3. MAIN CHART */
-.chart-section { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 2rem; }
-.section-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
-.section-top h3 { margin: 0; font-size: 1.1rem; color: #0f172a; }
-.section-top p { margin: 4px 0 0; font-size: 0.85rem; color: #64748b; }
-.legend-h { display: flex; gap: 12px; font-size: 0.8rem; color: #475569; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-.dot.good { background: #10b981; } .dot.bad { background: #ef4444; }
+.chart-wrapper-large { height: 320px; width: 100%; }
 
-.chart-box { height: 280px; width: 100%; }
-.insight-strip { background: #fff1f2; color: #9f1239; padding: 10px 15px; border-radius: 6px; font-size: 0.85rem; margin-top: 1rem; border-left: 4px solid #f43f5e; }
+/* SPLIT SECTION */
+.split-section { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+.panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+.panel-header { margin-bottom: 1.5rem; }
+.panel-header h4 { margin: 0; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; }
+.panel-header p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #64748b; }
+.chart-wrapper-medium { height: 220px; width: 100%; }
 
-/* 4. SPLIT SECTIONS */
-.split-section { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.panel { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column; }
-.flex-1 { flex: 1; min-width: 300px; }
-.flex-2 { flex: 2; min-width: 500px; }
+.insight-box {
+  margin-top: auto;
+  padding: 1rem;
+  background: #f1f5f9;
+  border-left: 3px solid #0f172a;
+  font-size: 0.8rem;
+  color: #334155;
+  margin-top: 1rem;
+}
 
-.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.panel-head h4 { margin: 0; font-size: 1rem; color: #0f172a; }
-.btn-sm { background: transparent; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
+/* COMPACT TABLE */
+.table-compact-wrapper { overflow-x: auto; }
+.compact-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.compact-table th { text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
+.compact-table td { padding: 0.6rem 0; border-bottom: 1px solid #f8fafc; color: #334155; }
+.bar-indic { display: block; height: 6px; background: #cbd5e1; border-radius: 2px; }
 
-/* Doughnut & List */
-.doughnut-box { height: 180px; display: flex; justify-content: center; margin-bottom: 1rem; }
-.reason-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-.reason-list li { font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 6px; }
-.sq { width: 10px; height: 10px; border-radius: 2px; }
-.c-red { background: #ef4444; } .c-orange { background: #f97316; } .c-gray { background: #94a3b8; }
+/* MATRIX TABLE */
+.matrix-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.matrix-table th {
+  text-align: left;
+  padding: 1rem;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+.matrix-table td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; color: #334155; }
+.matrix-table tfoot td { font-weight: 800; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
 
-/* Audit Table */
-.table-wrap { overflow-x: auto; }
-.audit-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.audit-table th { text-align: left; padding: 10px; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
-.audit-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
-.font-w600 { font-weight: 600; }
-.text-mute { color: #94a3b8; font-size: 0.8rem; }
-.tag-channel { background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-.truncate { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.col-main { width: 20%; }
+.bg-gray-light { background: #f8fafc; font-weight: 600; }
+.font-bold { font-weight: 700; }
+.text-dark { color: #0f172a; }
+.text-green { color: #16a34a; }
+.text-red { color: #dc2626; }
 
-/* Status Badges */
-.status-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.st-red { background: #fee2e2; color: #991b1b; }
-.st-orange { background: #ffedd5; color: #9a3412; }
-.st-gray { background: #f1f5f9; color: #64748b; }
-
-@media (max-width: 768px) {
-  .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .split-section { flex-direction: column; }
-  .flex-2 { min-width: 100%; }
+@media (max-width: 1024px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .split-section { grid-template-columns: 1fr; }
 }
 </style>

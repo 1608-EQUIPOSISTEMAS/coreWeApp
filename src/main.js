@@ -48,7 +48,10 @@ async function bootstrap () {
   // 3) catálogo: crear servicio, precargar e inyectar
   const catalog = createCatalogService()
   try {
+    debugger
     await catalog.ensureLoaded()
+    debugger
+    await catalog.membershipList({active:true})
   } catch (e) {
     console.warn('No se pudieron precargar catálogos desde API, uso cache local si existe.', e)
   }

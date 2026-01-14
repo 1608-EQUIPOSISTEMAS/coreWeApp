@@ -1,256 +1,399 @@
 <template>
-  <div class="marketing-dashboard">
+  <div class="followup-dashboard">
     <div class="dashboard-header">
       <div>
-        <h2 class="title">Comportamiento del Cliente (Marketing)</h2>
-        <p class="subtitle">Análisis de intención, segmentación demográfica y esfuerzo de cierre</p>
+        <h2 class="title">Rentabilidad de Seguimiento & Contactabilidad</h2>
+        <p class="subtitle">Análisis de eficiencia de llamadas y cierres por horario</p>
       </div>
-      <div class="filter-group">
-        <button class="filter-chip active">Todo</button>
-        <button class="filter-chip">Egresados</button>
-        <button class="filter-chip">Estudiantes</button>
-      </div>
-    </div>
-
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="indicator-strip bg-indigo"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">"Quiero"</div>
-          <div class="kpi-label">Palabra con Mayor Conversión</div>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="indicator-strip bg-orange"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">3.2</div>
-          <div class="kpi-label">Intentos Promedio para Cierre</div>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="indicator-strip bg-teal"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">62%</div>
-          <div class="kpi-label">Son Egresados/Profesionales</div>
-        </div>
+      <div class="header-actions">
+        <select v-model="filters.advisor" class="select-control">
+          <option value="">Todos los Asesores</option>
+          <option value="eliuth">Eliuth D.</option>
+          <option value="raul">Raúl P.</option>
+        </select>
+        <select v-model="filters.country" class="select-control">
+          <option value="">Todos los Países</option>
+          <option value="PE">Perú</option>
+          <option value="CO">Colombia</option>
+          <option value="MX">México</option>
+        </select>
+        <button class="btn-primary" @click="refreshData">
+          <i class="icon-refresh"></i> Actualizar
+        </button>
       </div>
     </div>
 
-    <div class="section-card">
-      <div class="card-header">
-        <div>
-          <h3>Matriz de Intención (Keywords)</h3>
-          <p>Correlación entre la palabra clave usada en el chat y la velocidad de cierre</p>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-blue-light text-blue">📞</div>
+        <div class="kpi-data">
+          <span class="value">1,240</span>
+          <span class="label">Intentos de Llamada</span>
         </div>
-        <span class="badge-outline">Top 5 Detectados</span>
       </div>
-      
-      <div class="table-responsive">
-        <table class="keyword-table">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-green-light text-green">✅</div>
+        <div class="kpi-data">
+          <span class="value">68%</span>
+          <span class="label">Tasa de Contestación</span>
+          <span class="sub-label">Promedio global</span>
+        </div>
+      </div>
+      <div class="kpi-card highlight-card">
+        <div class="kpi-data">
+          <span class="value">S/ 12,400</span>
+          <span class="label">Recuperado por Seguimiento</span>
+          <span class="sub-label">Ventas logradas tras 2+ intentos</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-chart-section">
+      <div class="section-header">
+        <h3>Eficacia Horaria: Llamadas vs. Cierres ("Pagó")</h3>
+        <p>Identifica las "Golden Hours" donde los clientes contestan y compran.</p>
+      </div>
+      <div class="chart-wrapper">
+        <Line :data="hourlyChartData" :options="hourlyChartOptions" />
+      </div>
+      <div class="chart-insight">
+        <span class="insight-badge">💡 Insight IA</span>
+        <p>Se detecta un pico de respuesta a las <strong>6:00 PM</strong>, pero los cierres efectivos ocurren mayormente a las <strong>11:00 AM</strong>.</p>
+      </div>
+    </div>
+
+    <div class="split-row">
+
+      <div class="card flex-1">
+        <div class="card-header">
+          <h4>Perfil del Comprador</h4>
+        </div>
+        <div class="doughnut-wrapper">
+          <Doughnut :data="situationChartData" :options="doughnutOptions" />
+        </div>
+        <div class="legend-custom">
+          <div v-for="(item, i) in situationData" :key="i" class="legend-item">
+            <span class="dot" :style="{ background: item.color }"></span>
+            <span class="text">{{ item.label }}</span>
+            <span class="percent">{{ item.percent }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card flex-2">
+        <div class="card-header">
+          <h4>Conversión por Estrategia</h4>
+          <select v-model="filters.strategy" class="mini-select">
+            <option value="">Todas</option>
+            <option value="sorteo">Sorteo Redes</option>
+            <option value="eventos">Eventos</option>
+          </select>
+        </div>
+        <table class="data-table">
           <thead>
             <tr>
-              <th>Palabra Detectada</th>
-              <th>Volumen Leads</th>
-              <th>Tasa Cierre</th>
-              <th>Velocidad (Días)</th>
-              <th>Impacto</th>
+              <th>Estrategia</th>
+              <th class="text-center">Leads</th>
+              <th class="text-center">Contactados</th>
+              <th class="text-right">Ventas (Pagó)</th>
+              <th>Eficacia</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(kw, i) in keywordData" :key="i">
-              <td class="fw-bold">"{{ kw.word }}"</td>
-              <td>{{ kw.volume }}</td>
-              <td>
-                <div class="progress-bar-container">
-                  <div class="progress-bar" :style="{ width: kw.conversion + '%', background: getIntensityColor(kw.conversion) }"></div>
-                  <span class="progress-text">{{ kw.conversion }}%</span>
-                </div>
+            <tr v-for="st in strategyStats" :key="st.id">
+              <td class="font-medium">{{ st.name }}</td>
+              <td class="text-center">{{ st.leads }}</td>
+              <td class="text-center">
+                <span class="pill-gray">{{ st.contacted }}%</span>
               </td>
-              <td class="text-mono">{{ kw.speed }} días</td>
+              <td class="text-right font-bold text-green">{{ st.sales }}</td>
               <td>
-                <span class="status-pill" :class="kw.impactClass">{{ kw.impactLabel }}</span>
+                <div class="progress-bar">
+                  <div class="fill" :style="{ width: st.efficiency + '%', background: getEfficiencyColor(st.efficiency) }"></div>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-
-    <div class="split-row">
-      
-      <div class="card flex-1">
-        <div class="card-header">
-          <h4>Situación del Prospecto</h4>
-        </div>
-        <div class="chart-box">
-          <Doughnut :data="situationData" :options="doughnutOptions" />
-        </div>
-        <div class="legend-grid">
-          <div class="l-item"><span class="dot c-1"></span>Egresado (45%)</div>
-          <div class="l-item"><span class="dot c-2"></span>Estudiante (30%)</div>
-          <div class="l-item"><span class="dot c-3"></span>Empresa (15%)</div>
-          <div class="l-item"><span class="dot c-4"></span>Independiente (10%)</div>
-        </div>
-      </div>
-
-      <div class="card flex-2">
-        <div class="card-header">
-          <h4>Probabilidad de Venta por N° de Intentos</h4>
-          <p class="small-text">¿Cuándo insistir deja de ser rentable?</p>
-        </div>
-        <div class="chart-box-lg">
-          <Bar :data="attemptsData" :options="attemptsOptions" />
-        </div>
-        <div class="insight-box">
-          <strong>INSIGHT:</strong> La probabilidad de venta cae drásticamente después del <strong>4to intento</strong>. Se recomienda automatizar el seguimiento a partir del 5to contacto.
-        </div>
-      </div>
-
-    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
+import { Line, Doughnut } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, Filler)
 
-// --- 1. DATA: MATRIZ DE KEYWORDS ---
-// Simula el análisis de tus columnas "we_key_word" vs "we_lead_status"
-const keywordData = [
-  { word: 'Quiero', volume: 450, conversion: 28, speed: 2.1, impactClass: 'high', impactLabel: 'Muy Alto' },
-  { word: 'Precio', volume: 620, conversion: 12, speed: 5.4, impactClass: 'med', impactLabel: 'Medio' },
-  { word: 'Necesito', volume: 180, conversion: 22, speed: 1.8, impactClass: 'high', impactLabel: 'Alto' },
-  { word: 'Información', volume: 890, conversion: 8, speed: 8.5, impactClass: 'low', impactLabel: 'Bajo' },
-  { word: 'Costo', volume: 310, conversion: 10, speed: 6.2, impactClass: 'low', impactLabel: 'Bajo' },
-]
+// --- ESTADO Y FILTROS ---
+const filters = ref({
+  advisor: '',
+  country: '',
+  strategy: ''
+})
 
-const getIntensityColor = (val) => {
-  if (val > 20) return '#4f46e5' // Indigo
-  if (val > 10) return '#818cf8' // Light Indigo
-  return '#cbd5e1' // Grey
+// --- DATA MOCKUP (Simulando tu DB) ---
+
+// 1. DATA PARA EL GRÁFICO DE LÍNEA (Eficacia Horaria)
+// Eje X: Horas del día
+// Dataset 1: Intentos de llamada (Línea gris o área)
+// Dataset 2: "Contestó" (Línea Azul)
+// Dataset 3: "Pagó" (Barras o Puntos verdes grandes - Éxito)
+const hourlyChartData = {
+  labels: ['8am', '9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm', '7pm', '8pm'],
+  datasets: [
+    {
+      label: 'Llamadas Realizadas',
+      data: [12, 25, 40, 35, 15, 10, 20, 35, 45, 50, 40, 20, 10],
+      borderColor: '#94a3b8', // Gris azulado
+      backgroundColor: 'rgba(148, 163, 184, 0.1)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0
+    },
+    {
+      label: 'Cliente Contestó',
+      data: [5, 15, 25, 20, 5, 2, 8, 20, 30, 42, 35, 15, 5], // A las 5-6pm contestan más
+      borderColor: '#3b82f6', // Azul
+      backgroundColor: '#3b82f6',
+      tension: 0.4,
+      borderWidth: 2
+    },
+    {
+      label: 'Cierre Exitoso (Pagó)',
+      data: [0, 2, 5, 8, 1, 0, 1, 3, 5, 4, 12, 4, 1], // Picos de venta
+      borderColor: '#10b981', // Verde
+      pointBackgroundColor: '#10b981',
+      pointRadius: 6, // Puntos más grandes para resaltar el éxito
+      showLine: false // Solo mostrar puntos
+    }
+  ]
 }
 
-// --- 2. DATA: SEGMENTACIÓN (SITUACIÓN) ---
-// Basado en "we_prospect_situation"
-const situationData = {
-  labels: ['Egresado', 'Estudiante', 'Empresa', 'Independiente'],
+const hourlyChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } },
+    tooltip: { mode: 'index', intersect: false }
+  },
+  interaction: { mode: 'nearest', axis: 'x', intersect: false },
+  scales: {
+    y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
+    x: { grid: { display: false } }
+  }
+}
+
+// 2. DATA SITUACIÓN DEL PROSPECTO (ID 512)
+const situationData = [
+  { label: 'Independientes', percent: 45, color: '#6366f1' },
+  { label: 'Estudiantes', percent: 30, color: '#3b82f6' },
+  { label: 'Egresados', percent: 15, color: '#10b981' },
+  { label: 'Empresas', percent: 10, color: '#f59e0b' }
+]
+
+const situationChartData = {
+  labels: situationData.map(d => d.label),
   datasets: [{
-    data: [45, 30, 15, 10],
-    backgroundColor: ['#0f172a', '#3b82f6', '#06b6d4', '#94a3b8'],
+    data: situationData.map(d => d.percent),
+    backgroundColor: situationData.map(d => d.color),
     borderWidth: 0,
-    hoverOffset: 4
+    cutout: '75%'
   }]
 }
 
 const doughnutOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  cutout: '70%'
+  plugins: { legend: { display: false } }
 }
 
-// --- 3. DATA: EMBUDO DE INTENTOS ---
-// Muestra % de éxito según en qué intento se cerró la venta
-const attemptsData = {
-  labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+', 'Auto'],
-  datasets: [
-    {
-      label: 'Probabilidad de Cierre',
-      data: [15, 35, 42, 20, 5, 2], // El pico está en el 3er intento
-      backgroundColor: (ctx) => {
-        // Resaltar el pico (3er intento)
-        const index = ctx.dataIndex;
-        return index === 2 ? '#f59e0b' : '#e2e8f0'; // Amber for peak, grey for others
-      },
-      borderRadius: 4
-    }
-  ]
+// 3. DATA ESTRATEGIA (ID 516)
+const strategyStats = [
+  { id: 1, name: 'Sorteo Redes', leads: 450, contacted: 85, sales: 'S/ 5k', efficiency: 20 },
+  { id: 2, name: 'Eventos (Webinar)', leads: 120, contacted: 92, sales: 'S/ 12k', efficiency: 85 }, // Alta eficiencia
+  { id: 3, name: 'Convalidación', leads: 80, contacted: 60, sales: 'S/ 3k', efficiency: 45 },
+  { id: 4, name: 'Difusión Grupos', leads: 300, contacted: 40, sales: 'S/ 1k', efficiency: 10 } // Mucho ruido, poca venta
+]
+
+// --- FUNCIONES UTILITARIAS ---
+const getEfficiencyColor = (val) => {
+  if (val >= 70) return '#10b981' // Verde
+  if (val >= 40) return '#f59e0b' // Amarillo
+  return '#ef4444' // Rojo
 }
 
-const attemptsOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    y: { beginAtZero: true, grid: { borderDash: [5, 5] }, title: { display: true, text: '% Cierres' } },
-    x: { grid: { display: false } }
-  }
+const refreshData = () => {
+  // Lógica para llamar a tu API
+  console.log("Consultando datos filtrados...")
 }
 </script>
 
 <style scoped>
-/* Estilos Base */
-.marketing-dashboard { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 2rem; color: #334155; min-height: 100vh; }
+/* Estilos Base Clean & Professional */
+.followup-dashboard {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  padding: 2rem;
+  color: #1e293b;
+  min-height: 100vh;
+}
 
-/* Header */
-.dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
-.title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
-.subtitle { color: #64748b; font-size: 0.9rem; margin-top: 0.5rem; }
-.filter-group { display: flex; gap: 0.5rem; }
-.filter-chip { border: 1px solid #e2e8f0; background: white; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; color: #64748b; font-weight: 600; transition: all 0.2s; }
-.filter-chip.active { background: #0f172a; color: white; border-color: #0f172a; }
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.title { font-size: 1.5rem; font-weight: 800; margin: 0; color: #0f172a; }
+.subtitle { color: #64748b; margin: 0.25rem 0 0; font-size: 0.9rem; }
 
-/* KPI Cards */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.kpi-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; height: 90px; overflow: hidden; }
-.indicator-strip { width: 6px; height: 100%; }
-.bg-indigo { background: #4f46e5; }
-.bg-orange { background: #f97316; }
-.bg-teal { background: #06b6d4; }
-.kpi-content { padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; }
-.kpi-value { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
-.kpi-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; margin-top: 4px; }
+.header-actions { display: flex; gap: 0.8rem; }
+.select-control {
+  padding: 0.5rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
+  font-size: 0.85rem;
+  outline: none;
+}
+.btn-primary {
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: #1e293b; }
 
-/* Secciones Comunes */
-.section-card, .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 2rem; }
-.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
-.card-header h3, .card-header h4 { margin: 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; }
-.card-header p { margin: 4px 0 0 0; color: #94a3b8; font-size: 0.85rem; }
-.badge-outline { border: 1px solid #cbd5e1; color: #64748b; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.kpi-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.bg-blue-light { background: #eff6ff; }
+.bg-green-light { background: #dcfce7; }
+.text-blue { color: #3b82f6; }
+.text-green { color: #10b981; }
 
-/* Tabla de Keywords */
-.table-responsive { overflow-x: auto; }
-.keyword-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.keyword-table th { text-align: left; padding: 10px; color: #64748b; font-weight: 600; border-bottom: 2px solid #f1f5f9; font-size: 0.75rem; text-transform: uppercase; }
-.keyword-table td { padding: 12px 10px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-.fw-bold { font-weight: 700; color: #1e293b; }
-.text-mono { font-family: monospace; color: #64748b; }
+.kpi-data { display: flex; flex-direction: column; }
+.value { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.label { font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+.sub-label { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
 
-/* Barra de progreso en tabla */
-.progress-bar-container { display: flex; align-items: center; gap: 8px; }
-.progress-bar { height: 6px; border-radius: 3px; }
-.progress-text { font-size: 0.75rem; font-weight: 700; color: #334155; width: 30px; }
+.highlight-card {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border: none;
+}
+.highlight-card .value { color: white; }
+.highlight-card .label { color: #a5b4fc; }
+.highlight-card .sub-label { color: #818cf8; }
 
-/* Status Pills */
-.status-pill { padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.status-pill.high { background: #dcfce7; color: #15803d; }
-.status-pill.med { background: #fef9c3; color: #a16207; }
-.status-pill.low { background: #f1f5f9; color: #64748b; }
+/* CHARTS & SECTIONS */
+.card, .main-chart-section {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.main-chart-section { margin-bottom: 2rem; position: relative; }
+.chart-wrapper { height: 320px; width: 100%; margin-top: 1rem; }
 
-/* Split Row */
-.split-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.chart-insight {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.insight-badge {
+  background: #16a34a;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.chart-insight p { margin: 0; font-size: 0.9rem; color: #166534; }
+
+/* SPLIT ROW */
+.split-row { display: flex; gap: 2rem; flex-wrap: wrap; }
 .flex-1 { flex: 1; min-width: 300px; }
-.flex-2 { flex: 2; min-width: 450px; }
+.flex-2 { flex: 2; min-width: 400px; }
 
-/* Gráficos y Leyendas */
-.chart-box { height: 200px; position: relative; }
-.chart-box-lg { height: 250px; width: 100%; }
-.legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1.5rem; }
-.l-item { font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 6px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; }
-.c-1 { background: #0f172a; } .c-2 { background: #3b82f6; } .c-3 { background: #06b6d4; } .c-4 { background: #94a3b8; }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.card-header h4 { margin: 0; font-size: 1.1rem; color: #0f172a; }
 
-.insight-box { margin-top: 1rem; background: #fffbeb; border: 1px solid #fcd34d; padding: 1rem; border-radius: 6px; color: #92400e; font-size: 0.85rem; }
+/* DOUGHNUT & LEGEND */
+.doughnut-wrapper { height: 200px; position: relative; margin-bottom: 1rem; }
+.legend-custom { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.legend-item { display: flex; align-items: center; font-size: 0.85rem; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.text { color: #64748b; flex-grow: 1; }
+.percent { font-weight: 700; color: #1e293b; }
+
+/* TABLE */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.data-table th { text-align: left; padding-bottom: 1rem; color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+.data-table td { padding: 0.8rem 0; border-bottom: 1px solid #f1f5f9; color: #334155; }
+.pill-gray { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-medium { font-weight: 600; color: #1e293b; }
+
+/* PROGRESS BAR */
+.progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  width: 100%;
+  overflow: hidden;
+}
+.fill { height: 100%; border-radius: 3px; }
 
 @media (max-width: 768px) {
-  .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .split-row { flex-direction: column; }
-  .flex-2, .flex-1 { min-width: 100%; }
+  .dashboard-header { flex-direction: column; align-items: flex-start; }
+  .header-actions { width: 100%; flex-direction: column; }
+  .select-control { width: 100%; }
 }
 </style>

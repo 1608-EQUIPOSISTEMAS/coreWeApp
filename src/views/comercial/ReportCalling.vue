@@ -1,135 +1,161 @@
 <template>
-  <div class="advisor-dashboard">
-    <div class="dashboard-header">
-      <div>
-        <h2 class="title">Rendimiento del Equipo Comercial</h2>
-        <p class="subtitle">Supervisión de tiempos de respuesta y efectividad de cierre por agente</p>
+  <div class="marketing-dashboard">
+    <div class="header-section">
+      <div class="header-content">
+        <h1 class="page-title">REPORTE DE INTELIGENCIA DE MERCADO & ADQUISICIÓN</h1>
+        <p class="page-meta">ANÁLISIS DE CANALES, ESTRATEGIAS Y PALABRAS CLAVE</p>
       </div>
-      <div class="actions">
-        <button class="btn-secondary">Exportar CSV</button>
-        <button class="btn-primary">Configurar Metas</button>
+      <div class="controls">
+        <div class="date-range">01/01/2026 - 31/01/2026</div>
+        <button class="btn-action">EXPORTAR DATA</button>
       </div>
     </div>
 
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="indicator-strip bg-warning"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">42 min</div>
-          <div class="kpi-label">Tiempo Prom. 1ª Respuesta</div>
-          <small class="trend negative">↑ 12% vs mes anterior</small>
+    <div class="kpi-strip">
+      <div class="kpi-box">
+        <span class="kpi-label">LEADS TOTALES (VOLUMEN)</span>
+        <span class="kpi-value">2,845</span>
+        <span class="kpi-delta positive">+12.5% vs mes anterior</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-label">LEADS CALIFICADOS (SQL)</span>
+        <span class="kpi-value">420</span>
+        <span class="kpi-sub">14.7% del total</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-label">COSTO ADQUISICIÓN (CAC)</span>
+        <span class="kpi-value">S/ 18.50</span>
+        <span class="kpi-delta negative">-2.3% optimización</span>
+      </div>
+      <div class="kpi-box highlight">
+        <span class="kpi-label">INGRESOS ATRIBUIDOS</span>
+        <span class="kpi-value">S/ 85,400</span>
+        <span class="kpi-sub">Canal Principal: TikTok Ads</span>
+      </div>
+    </div>
+
+    <div class="section-container">
+      <div class="chart-header">
+        <h3>EFICIENCIA DE CANAL: TRÁFICO VS. CIERRE</h3>
+        <span class="chart-desc">Comparativa entre volumen de leads generados y ventas efectivas (Pagó).</span>
+      </div>
+      <div class="chart-wrapper-large">
+        <Bar :data="channelChartData" :options="channelChartOptions" />
+      </div>
+    </div>
+
+    <div class="split-section">
+
+      <div class="panel">
+        <div class="panel-header">
+          <h4>INTENCIÓN DE LEADS (PALABRAS CLAVE)</h4>
+          <p>Análisis de las palabras detectadas en el primer mensaje (Variable: we_key_word)</p>
+        </div>
+        <div class="chart-wrapper-medium">
+          <Bar :data="keywordChartData" :options="horizontalChartOptions" />
+        </div>
+        <div class="insight-text">
+          <strong>HALLAZGO:</strong> Leads que usan "QUIERO" o "NECESITO" tienen un 40% más de probabilidad de cierre que los que usan "PRECIO".
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="indicator-strip bg-success"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">14.2%</div>
-          <div class="kpi-label">Efectividad Global (Cierre)</div>
-          <small class="trend positive">↑ 2.1% vs mes anterior</small>
+      <div class="panel">
+        <div class="panel-header">
+          <h4>PENETRACIÓN POR ESTRATEGIA</h4>
+          <p>Participación de mercado según tipo de campaña (Variable: we_type_strategy)</p>
+        </div>
+        <div class="doughnut-container">
+          <Doughnut :data="strategyChartData" :options="doughnutOptions" />
+        </div>
+        <div class="legend-table">
+          <div v-for="(item, i) in strategyLegend" :key="i" class="legend-row">
+            <span class="color-box" :style="{ backgroundColor: item.color }"></span>
+            <span class="legend-name">{{ item.label }}</span>
+            <span class="legend-val">{{ item.value }}%</span>
+          </div>
         </div>
       </div>
-
-      <div class="kpi-card">
-        <div class="indicator-strip bg-info"></div>
-        <div class="kpi-content">
-          <div class="kpi-value">85</div>
-          <div class="kpi-label">Leads "En Proceso" hoy</div>
-        </div>
-      </div>
     </div>
 
-    <div class="chart-section">
-      <div class="section-header">
-        <h3>Efectividad de Cierre por Asesor</h3>
-        <p>Comparativa: Volumen de leads gestionados vs. Ventas reales (Inscritos)</p>
+    <div class="section-container">
+      <div class="panel-header">
+        <h4>MATRIZ DE CALIDAD DE TRÁFICO</h4>
+        <p>Desglose de estados finales agrupados por origen del lead.</p>
       </div>
-      <div class="chart-wrapper">
-        <Bar :data="advisorChartData" :options="chartOptions" />
-      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="col-main">ORIGEN / CANAL</th>
+            <th class="text-right">TOTAL LEADS</th>
+            <th class="text-right">SIN INTERÉS</th>
+            <th class="text-right">INTERESADO</th>
+            <th class="text-right">PAGÓ (CIERRE)</th>
+            <th class="text-right">TASA CONVERSIÓN</th>
+            <th class="text-right">TICKET PROM.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, index) in matrixData" :key="index">
+            <td class="font-bold">{{ row.channel }}</td>
+            <td class="text-right bg-gray-light">{{ row.total }}</td>
+            <td class="text-right text-muted">{{ row.lost }}</td>
+            <td class="text-right text-blue">{{ row.interested }}</td>
+            <td class="text-right font-bold text-dark">{{ row.paid }}</td>
+            <td class="text-right">
+              <span :class="getConversionClass(row.rate)">{{ row.rate }}%</span>
+            </td>
+            <td class="text-right">{{ row.ticket }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL GLOBAL</td>
+            <td class="text-right">2,845</td>
+            <td class="text-right">1,420</td>
+            <td class="text-right">1,005</td>
+            <td class="text-right">420</td>
+            <td class="text-right">14.7%</td>
+            <td class="text-right">S/ 450</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
 
-    <div class="details-section">
-      <div class="section-header">
-        <h3>Detalle de Gestión y Tiempos</h3>
-      </div>
-      <div class="table-container">
-        <table class="advisor-table">
-          <thead>
-            <tr>
-              <th>Asesor</th>
-              <th class="text-center">Leads Asignados</th>
-              <th class="text-center">Leads Atendidos</th>
-              <th class="text-center">Ventas (Pagó)</th>
-              <th class="text-center">Tasa Cierre</th>
-              <th class="text-right">T. Respuesta Prom.</th>
-              <th class="text-center">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(agent, index) in tableData" :key="index">
-              <td class="agent-name">
-                <div class="avatar">{{ agent.initials }}</div>
-                <div>
-                  <span class="name">{{ agent.name }}</span>
-                  <span class="role">{{ agent.role }}</span>
-                </div>
-              </td>
-              <td class="text-center">{{ agent.assigned }}</td>
-              <td class="text-center">{{ agent.attended }}</td>
-              <td class="text-center font-bold">{{ agent.sales }}</td>
-              <td class="text-center">
-                <span class="badge" :class="getConversionClass(agent.conversion)">
-                  {{ agent.conversion }}%
-                </span>
-              </td>
-              <td class="text-right time-cell" :class="getTimeClass(agent.responseTime)">
-                {{ agent.responseTime }} min
-              </td>
-              <td class="text-center">
-                <span class="status-dot" :class="agent.isOnline ? 'online' : 'offline'"></span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement
 } from 'chart.js'
-import { Bar } from 'vue-chartjs'
+import { Bar, Doughnut } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement)
 
-// --- DATOS MOCKUP (Basados en tus capturas) ---
+// --- CONFIGURACIÓN DE DATOS (MOCKUP BASADO EN TU INPUT) ---
 
-// 1. Datos para el Gráfico (Comparativa Atendidos vs Pagados)
-// Esto visualiza rápidamente quién convierte mejor su volumen.
-const advisorChartData = {
-  labels: ['Raul P.', 'Arleth C.', 'Eliuth David', 'Jorge M.'],
+// 1. Gráfico de Barras Agrupadas: Leads vs Ventas por Canal
+const channelChartData = {
+  labels: ['TikTok', 'Facebook Ads', 'WhatsApp Orgánico', 'Web SEO', 'Referidos'],
   datasets: [
     {
-      label: 'Leads Atendidos',
-      data: [120, 95, 80, 45],
-      backgroundColor: '#cbd5e1', // Gris (Volumen)
+      label: 'Leads Totales',
+      data: [1200, 800, 450, 250, 145],
+      backgroundColor: '#cbd5e1', // Gris claro (Volumen)
       barPercentage: 0.6,
       categoryPercentage: 0.8
     },
     {
-      label: 'Ventas Cerradas (Pagó)',
-      data: [18, 22, 5, 8], // Arleth tiene menos volumen pero más ventas (Mejor efectividad)
-      backgroundColor: '#3b82f6', // Azul (Éxito)
+      label: 'Ventas (Pagó)',
+      data: [120, 95, 110, 45, 50],
+      backgroundColor: '#0f172a', // Azul oscuro casi negro (Resultado)
       barPercentage: 0.6,
       categoryPercentage: 0.8
     }
   ]
 }
 
-const chartOptions = {
+const channelChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -137,132 +163,244 @@ const chartOptions = {
     tooltip: { mode: 'index', intersect: false }
   },
   scales: {
-    y: { grid: { borderDash: [4, 4] }, beginAtZero: true },
+    y: { grid: { color: '#f1f5f9' }, beginAtZero: true },
     x: { grid: { display: false } }
   }
 }
 
-// 2. Datos para la Tabla (Detalle con Tiempos)
-const tableData = [
-  { 
-    name: 'Arleth C.', initials: 'AC', role: 'Senior', 
-    assigned: 110, attended: 95, sales: 22, conversion: 23.1, 
-    responseTime: 12, // Muy rápido
-    isOnline: true 
-  },
-  { 
-    name: 'Raul P.', initials: 'RP', role: 'Senior', 
-    assigned: 150, attended: 120, sales: 18, conversion: 15.0, 
-    responseTime: 45, // Lento
-    isOnline: true 
-  },
-  { 
-    name: 'Jorge M.', initials: 'JM', role: 'Junior', 
-    assigned: 60, attended: 45, sales: 8, conversion: 17.7, 
-    responseTime: 25, // Normal
-    isOnline: false 
-  },
-  { 
-    name: 'Eliuth David', initials: 'ED', role: 'Junior', 
-    assigned: 100, attended: 80, sales: 5, conversion: 6.2, 
-    responseTime: 180, // Muy lento (Alerta roja)
-    isOnline: true 
-  }
+// 2. Gráfico Horizontal: Palabras Clave (we_key_word)
+const keywordChartData = {
+  labels: ['QUIERO (Alta Intención)', 'NECESITO (Alta Intención)', 'PRECIO (Media Intención)', 'INFO (Baja Intención)', 'COMO (Baja Intención)'],
+  datasets: [
+    {
+      label: 'Tasa de Cierre %',
+      data: [28, 24, 12, 8, 5],
+      backgroundColor: (ctx) => {
+        const val = ctx.raw
+        if (val > 20) return '#1e293b' // Alta conversión
+        if (val > 10) return '#64748b' // Media
+        return '#cbd5e1' // Baja
+      },
+      borderRadius: 4
+    }
+  ]
+}
+
+const horizontalChartOptions = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: { x: { display: true, max: 35 }, y: { grid: { display: false } } }
+}
+
+// 3. Gráfico Donut: Estrategias (we_type_strategy)
+const strategyChartData = {
+  labels: ['Eventos / Webinars', 'Sorteo Redes', 'Difusión Grupos', 'Partners'],
+  datasets: [{
+    data: [45, 25, 20, 10],
+    backgroundColor: ['#0f172a', '#334155', '#64748b', '#94a3b8'],
+    borderWidth: 0
+  }]
+}
+
+const strategyLegend = [
+  { label: 'Eventos / Webinars', value: 45, color: '#0f172a' },
+  { label: 'Sorteo Redes', value: 25, color: '#334155' },
+  { label: 'Difusión Grupos', value: 20, color: '#64748b' },
+  { label: 'Partners / Alianzas', value: 10, color: '#94a3b8' }
 ]
 
-// Helpers para clases dinámicas
-const getConversionClass = (val) => {
-  if (val >= 20) return 'high-conv'
-  if (val >= 10) return 'med-conv'
-  return 'low-conv'
+const doughnutOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '70%',
+  plugins: { legend: { display: false } }
 }
 
-const getTimeClass = (minutes) => {
-  if (minutes <= 15) return 'time-good' // Verde
-  if (minutes <= 60) return 'time-warn' // Naranja
-  return 'time-bad' // Rojo
-}
+// 4. Datos Matriz (Totalizadores)
+const matrixData = [
+  { channel: 'TikTok', total: 1200, lost: 800, interested: 280, paid: 120, rate: 10.0, ticket: 'S/ 350' },
+  { channel: 'WhatsApp', total: 450, lost: 100, interested: 240, paid: 110, rate: 24.4, ticket: 'S/ 480' },
+  { channel: 'Referidos', total: 145, lost: 20, interested: 75, paid: 50, rate: 34.5, ticket: 'S/ 550' },
+  { channel: 'Facebook', total: 800, lost: 500, interested: 205, paid: 95, rate: 11.8, ticket: 'S/ 380' }
+]
 
+const getConversionClass = (rate) => {
+  if (rate >= 20) return 'badge-high'
+  if (rate >= 10) return 'badge-mid'
+  return 'badge-low'
+}
 </script>
 
 <style scoped>
-/* Layout */
-.advisor-dashboard { 
-  font-family: 'Inter', sans-serif; 
-  background-color: #f1f5f9; 
-  padding: 2rem; 
-  color: #334155; 
-  min-height: 100vh; 
+/* ESTILOS CORPORATIVOS / MINIMALISTAS */
+.marketing-dashboard {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-/* Header */
-.dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
-.title { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
-.subtitle { color: #64748b; font-size: 0.9rem; margin-top: 0.25rem; }
-.actions { display: flex; gap: 0.75rem; }
-.btn-primary { background: #0f172a; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
-.btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+/* HEADER */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-transform: uppercase;
+}
+.page-meta {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0 0;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.date-range {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  background: white;
+  padding: 0.5rem 1rem;
+  border: 1px solid #cbd5e1;
+}
+.btn-action {
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-transform: uppercase;
+}
 
-/* KPI Cards */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.kpi-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; height: 100px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+/* KPI STRIP */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.kpi-box {
+  background: white;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+.kpi-box.highlight {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
+}
+.kpi-box.highlight .kpi-label, .kpi-box.highlight .kpi-sub {
+  color: #94a3b8;
+}
+.kpi-box.highlight .kpi-value {
+  color: white;
+}
+.kpi-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.kpi-delta { font-size: 0.8rem; font-weight: 600; }
+.positive { color: #16a34a; }
+.negative { color: #dc2626; }
+.kpi-sub { font-size: 0.8rem; color: #64748b; }
 
-.indicator-strip { width: 5px; height: 100%; }
-.bg-warning { background: #f59e0b; }
-.bg-success { background: #10b981; }
-.bg-info { background: #3b82f6; }
+/* SECTIONS & CHARTS */
+.section-container {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.chart-header { margin-bottom: 1.5rem; }
+.chart-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; }
+.chart-desc { font-size: 0.85rem; color: #64748b; }
 
-.kpi-content { padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; width: 100%; }
-.kpi-value { font-size: 1.8rem; font-weight: 700; color: #1e293b; line-height: 1; margin-bottom: 0.25rem; }
-.kpi-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
-.trend { font-size: 0.75rem; font-weight: 600; margin-top: 4px; }
-.trend.positive { color: #10b981; }
-.trend.negative { color: #ef4444; }
+.chart-wrapper-large { height: 350px; width: 100%; }
+.chart-wrapper-medium { height: 250px; width: 100%; }
 
-/* Chart Section */
-.chart-section { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 2rem; }
-.section-header { margin-bottom: 1.5rem; }
-.section-header h3 { margin: 0; font-size: 1.1rem; color: #1e293b; }
-.section-header p { margin: 0.25rem 0 0; color: #94a3b8; font-size: 0.85rem; }
-.chart-wrapper { height: 300px; }
+/* SPLIT SECTION */
+.split-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+}
+.panel-header { margin-bottom: 1.5rem; }
+.panel-header h4 { margin: 0; font-size: 1rem; font-weight: 700; text-transform: uppercase; }
+.panel-header p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #64748b; }
 
-/* Details Table */
-.details-section { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 1.5rem; }
-.table-container { overflow-x: auto; }
-.advisor-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.advisor-table th { text-align: left; color: #64748b; font-weight: 600; padding: 1rem; border-bottom: 2px solid #f1f5f9; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
-.advisor-table td { padding: 1rem; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+.doughnut-container { height: 200px; margin-bottom: 1rem; }
+.legend-table { display: flex; flex-direction: column; gap: 0.5rem; }
+.legend-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.25rem; }
+.color-box { width: 12px; height: 12px; display: block; margin-right: 10px; }
+.legend-name { flex-grow: 1; font-weight: 500; }
+.legend-val { font-weight: 700; }
 
-/* Agent Cell Styles */
-.agent-name { display: flex; align-items: center; gap: 0.75rem; }
-.avatar { width: 32px; height: 32px; background: #e2e8f0; color: #475569; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; }
-.name { display: block; font-weight: 600; color: #1e293b; }
-.role { display: block; font-size: 0.75rem; color: #94a3b8; }
+.insight-text {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-left: 4px solid #0f172a;
+  font-size: 0.85rem;
+  color: #334155;
+}
 
-/* Metrics Styles */
-.text-center { text-align: center; }
+/* MATRIX TABLE */
+.matrix-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.matrix-table th { text-align: left; padding: 1rem; background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 0.75rem; }
+.matrix-table td { padding: 1rem; border-bottom: 1px solid #e2e8f0; color: #334155; }
+.matrix-table tfoot td { font-weight: 800; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
+
+.col-main { width: 20%; }
 .text-right { text-align: right; }
+.bg-gray-light { background: #f8fafc; font-weight: 600; }
+.text-muted { color: #94a3b8; }
+.text-blue { color: #2563eb; font-weight: 600; }
+.text-dark { color: #0f172a; }
 .font-bold { font-weight: 700; }
 
-/* Badges de Conversión */
-.badge { padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
-.high-conv { background: #dcfce7; color: #166534; }
-.med-conv { background: #fef9c3; color: #854d0e; }
-.low-conv { background: #fee2e2; color: #991b1b; }
+.badge-high { color: #16a34a; font-weight: 800; }
+.badge-mid { color: #d97706; font-weight: 700; }
+.badge-low { color: #dc2626; font-weight: 600; }
 
-/* Colores de Tiempo de Respuesta */
-.time-cell { font-family: 'Courier New', monospace; font-weight: 700; }
-.time-good { color: #10b981; }
-.time-warn { color: #f59e0b; }
-.time-bad { color: #ef4444; }
-
-/* Status Dot */
-.status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #e2e8f0; }
-.online { background: #10b981; }
-.offline { background: #cbd5e1; }
-
-@media (max-width: 768px) {
-  .dashboard-header { flex-direction: column; gap: 1rem; }
-  .actions { width: 100%; justify-content: flex-start; }
+@media (max-width: 1024px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .split-section { grid-template-columns: 1fr; }
 }
 </style>
