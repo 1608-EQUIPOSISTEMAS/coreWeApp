@@ -172,23 +172,27 @@
                 </span>
               </label>
 
+              <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary border-0 py-0 mb-1"
+                  @click="showClientHistory = true"
+                  title="Ver historial del cliente"
+              >
+                  <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
+              </button>
               <div class="input-group flex-nowrap">
                 <input autocomplete="off"
-                  v-model="form.telefono"
-                  type="text"
-                  v-restrict="{ only: 'numbers', max: 15 }"
-                  required
-                  class="form-control"
-                  :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
-                  placeholder="TELEFONO + ENTER"
-                  @keyup.enter="searchLeadByPhone"
-                  @blur="searchLeadByPhone"
-                  :disabled="searchingPhone"
-                />
-                <button class="btn btn-outline-secondary" type="button" @click="searchLeadByPhone" :disabled="searchingPhone" style="flex-shrink: 0;">
-                  <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-              </div>
+                    v-model="form.telefono"
+                    type="text"
+                    v-restrict="{ only: 'numbers', max: 15 }"
+                    required
+                    class="form-control"
+                    :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
+                    placeholder="TELEFONO + ENTER"
+                    @keyup.enter="searchLeadByPhone"
+                    :disabled="searchingPhone"
+                  />
+                  </div>
             </div>
 
 
@@ -334,7 +338,7 @@
               />
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label mb-1">Palabra MKT</label>
               <SearchSelect
                 v-model="form.key_word_alias"
@@ -346,7 +350,7 @@
               />
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label mb-1">Estrategia</label>
               <SearchSelect
                 v-model="form.strategy_alias"
@@ -500,6 +504,127 @@
       </div>
     </div>
   </div>
+  <BaseModal v-model="showClientHistory" title="Historial Completo del Cliente" size="xl">
+  <div class="d-flex flex-column h-100">
+
+    <div class="px-3 py-2 bg-light border-bottom mb-3 rounded">
+      <div class="d-flex gap-4 align-items-center">
+        <div><small class="text-muted d-block">Cliente</small> <strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
+        <div><small class="text-muted d-block">Teléfono</small> <strong>{{ form.telefono || '---' }}</strong></div>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs px-3 border-bottom-0">
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
+          <i class="fa-solid fa-list me-2"></i>Histórico Lead
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: activeHistoryTab === 'asesoria' }" href="#" @click.prevent="activeHistoryTab = 'asesoria'">
+          <i class="fa-solid fa-headset me-2"></i>Asesoría / CRM
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: activeHistoryTab === 'inscripcion' }" href="#" @click.prevent="activeHistoryTab = 'inscripcion'">
+          <i class="fa-solid fa-graduation-cap me-2"></i>Inscripciones
+        </a>
+      </li>
+    </ul>
+
+    <div class="modal-tab-content p-3 border-top bg-white">
+
+      <div v-if="activeHistoryTab === 'historico'" class="fade-in">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="20%">Fecha</th>
+                <th width="40%">Programa / Interés</th>
+                <th width="40%">Nombre registrado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, i) in hcHistoryData" :key="i">
+                <td><small>{{ item.fecha }}</small></td>
+                <td>
+                  <div class="fw-bold text-primary">{{ item.programa }}</div>
+                  <small class="text-muted">{{ item.tipo }}</small>
+                </td>
+                <td>{{ item.nombre }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="15%">Fecha</th>
+                <th width="25%">Interés</th>
+                <th width="20%">Asesor</th>
+                <th width="20%">Estatus</th>
+                <th width="20%" class="text-center">Intentos</th>
+              </tr>
+            </thead>
+            <tbody>
+               <tr v-for="(item, i) in hcAdvisoryData" :key="i">
+                <td><small>{{ item.fecha }}</small></td>
+                <td>{{ item.interes }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-2">{{ item.asesor.charAt(0) }}</div>
+                    <small>{{ item.asesor }}</small>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge" :class="getBadgeClass(item.status)">{{ item.status }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-light text-dark border">{{ item.intentos }} <i class="fa-solid fa-phone ms-1 text-muted"></i></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="activeHistoryTab === 'inscripcion'" class="fade-in">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="15%">Fecha</th>
+                <th width="45%">Programa</th>
+                <th width="20%">Estado</th>
+                <th width="20%" class="text-center">Nota Obtenida</th>
+              </tr>
+            </thead>
+            <tbody>
+               <tr v-for="(item, i) in hcEnrollmentData" :key="i">
+                <td><small>{{ item.fecha }}</small></td>
+                <td>
+                  <div class="fw-bold">{{ item.programa }}</div>
+                  <small class="text-muted">Edición: {{ item.edicion }}</small>
+                </td>
+                <td>
+                  <span class="badge" :class="item.estado === 'Finalizado' ? 'bg-success' : 'bg-warning text-dark'">{{ item.estado }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</BaseModal>
   <BaseModal
     v-model="showProgramDetail"
     title="Detalle del Programa"
@@ -1064,6 +1189,40 @@ const membershipList = ref([]);
     })
   )
 
+
+  // --- VARIABLES PARA EL MODAL DE HISTORIAL CLIENTE ---
+const showClientHistory = ref(false)
+const activeHistoryTab = ref('historico')
+
+// Función auxiliar para estilos de badge (puedes borrarla si no la usas)
+const getBadgeClass = (status) => {
+  switch(status) {
+    case 'Matriculado': return 'bg-success';
+    case 'En Seguimiento': return 'bg-warning text-dark';
+    case 'No Interesado': return 'bg-danger';
+    default: return 'bg-secondary';
+  }
+}
+
+// --- DATA HARDCORE (MOCKUP) ---
+
+const hcHistoryData = ref([
+  { fecha: '12 Ene 2025', programa: 'Gestión de Proyectos', tipo: 'Curso', nombre: 'Eliuth Diaz' },
+  { fecha: '15 Nov 2024', programa: 'Excel Empresarial', tipo: 'Taller', nombre: 'Eliuth J. Diaz' },
+  { fecha: '20 Ago 2024', programa: 'Power BI Avanzado', tipo: 'Especialización', nombre: 'Eliuth Diaz' },
+])
+
+const hcAdvisoryData = ref([
+  { fecha: '14 Ene 2026', interes: 'PMP Certification', asesor: 'Ana Lopez', status: 'En Seguimiento', intentos: 3 },
+  { fecha: '10 Ene 2026', interes: 'Scrum Master', asesor: 'Carlos Ruiz', status: 'No Interesado', intentos: 5 },
+  { fecha: '05 Dic 2025', interes: 'Power BI', asesor: 'Maria Paz', status: 'Matriculado', intentos: 2 },
+])
+
+const hcEnrollmentData = ref([
+  { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso', nota: null },
+  { fecha: '10 Jun 2024', programa: 'SQL Server Database', edicion: '2024-II', estado: 'Finalizado', nota: 18 },
+  { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
+])
   const form = reactive({
     fechaContactoInicial: todayIso,
     query_alias: null,
@@ -1451,8 +1610,16 @@ async function searchSunat() {
   console.log('Buscando en SUNAT con documento:', insc.document)
 }
 
+const dataSetted = ref(null)
+
 async function searchLeadByPhone() {
+
+
   const phone = form.telefono?.trim()
+
+  if(dataSetted==phone)return
+
+  dataSetted.value = phone
 
   if (!phone || phone.length < 6) return
   if (searchingPhone.value) return
@@ -2792,5 +2959,21 @@ async function confirmarInscripcion() {
 .editions-scroll-container::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 4px;
+}
+.avatar-circle {
+  width: 24px;
+  height: 24px;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8fafc;
 }
 </style>

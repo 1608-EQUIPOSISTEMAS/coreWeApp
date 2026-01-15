@@ -2,7 +2,9 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useSidebarStore = defineStore('sidebar', () => {
-  const visible = ref(undefined)
+  // CAMBIO AQUÍ: de undefined a false
+  const visible = ref(false)
+
   const unfoldable = ref(false)
 
   const toggleVisible = (value) => {
