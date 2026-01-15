@@ -132,7 +132,7 @@
     <div class="px-3 py-2">
 
       <div class="row g-3 mb-4">
-        <div class="col-md-7">
+        <div class="col-md-6">
           <label class="form-label">
             <i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> Búsqueda General
           </label>
@@ -145,7 +145,7 @@
           />
         </div>
 
-        <div class="col-md-5">
+        <div class="col-md-3">
           <label class="form-label">
             <i class="fa-solid fa-user-tie me-1 text-primary"></i> Asesor Asignado
           </label>
@@ -155,6 +155,18 @@
                 label-key="description"
                 value-key="id"
                 placeholder="USUARIO..."
+            />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">
+            <i class="fa-solid fa-user-tag me-1 text-primary"></i> E. Cliente
+          </label>
+           <MultiSelect
+              v-model="filters.moment_ids"
+                :items="filtroMoment"
+                label-key="description"
+                value-key="id"
+                placeholder="E. CLIENTE..."
             />
         </div>
       </div>
@@ -336,7 +348,7 @@ const filters = reactive({
   q: '',
   program_text: '',
   estado: null,
-  
+  moment_ids: [],
   // Arrays para MultiSelect
   owner_user_ids: [],
   status_lead_ids: [],
@@ -365,6 +377,7 @@ const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
 const filtroFollow = ref(catalog.options('we_follow_lead') || [])
+const filtroMoment = ref(catalog.options('we_moment') || [])
 const filtroQuery = ref(catalog.options('we_category_query') || [])
 const filtroInterest = ref(catalog.options('we_lead_interest') || [])
 
@@ -405,6 +418,7 @@ function clearFilter(key) {
   // Casos especiales para Arrays (MultiSelect)
   else if (key === 'owner_user_ids') filters.owner_user_ids = []
   else if (key === 'status_lead_ids') filters.status_lead_ids = []
+  else if (key === 'moment_ids') filters.moment_ids = []
   else if (key === 'last_follow_ids') filters.last_follow_ids = []
   else if (key === 'interest_level_ids') filters.interest_level_ids = []
   else if (key === 'channel_ids') filters.channel_ids = []
@@ -428,6 +442,7 @@ function clearFilters() {
     // Limpiar todos los arrays
     owner_user_ids: [],
     status_lead_ids: [],
+    moment_ids: [],
     last_follow_ids: [],
     interest_level_ids: [],
     channel_ids: [],
@@ -505,6 +520,15 @@ function clearFilters() {
       details: filters.status_lead_ids
     })
   }
+  //moment_ids
+  if (filters.moment_ids && filters.moment_ids.length > 0) {
+    chips.push({
+      key: 'moment_ids',
+      text: `E. Cliente: ${filters.moment_ids.length}`,
+      details: filters.moment_ids
+    })
+  }
+  
 
   if (filters.last_follow_ids && filters.last_follow_ids.length > 0) {
     chips.push({
@@ -575,6 +599,7 @@ async function fetchLeads() {
       
       // Enviar arrays solo si tienen elementos
       status_lead_ids: filters.status_lead_ids.length ? filters.status_lead_ids : null,
+      moment_ids: filters.moment_ids.length ? filters.moment_ids : null,
       last_follow_ids: filters.last_follow_ids.length ? filters.last_follow_ids : null,
       channel_ids: filters.channel_ids.length ? filters.channel_ids : null,
       interest_level_ids: filters.interest_level_ids.length ? filters.interest_level_ids : null,
