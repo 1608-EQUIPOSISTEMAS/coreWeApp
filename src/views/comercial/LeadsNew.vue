@@ -86,8 +86,8 @@
               <button
                 v-if="form.program_version_id"
                 type="button"
-                class="btn btn-sm btn-outline-info border-0 py-0 mb-1"
-                @click="showProgramDetail = true"
+                class="btn btn-sm btn-outline-info border-0 py-0 mb-1 "
+                @click="openProgramVersionDetail()"
                 title="Ver detalles del programa"
             >
                 <i class="fa-solid fa-circle-info fa-lg"></i>
@@ -175,7 +175,7 @@
               <button
                   type="button"
                   class="btn btn-sm btn-outline-primary border-0 py-0 mb-1"
-                  @click="showClientHistory = true"
+                  @click="openPhoneDetail()"
                   title="Ver historial del cliente"
               >
                   <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
@@ -504,20 +504,29 @@
       </div>
     </div>
   </div>
+
   <BaseModal v-model="showClientHistory" title="Historial Completo del Cliente" size="xl">
-  <div class="d-flex flex-column h-100">
+  
+  <div v-if="loadingHistory" class="d-flex justify-content-center align-items-center py-5 h-100">
+     <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando historial...</span>
+     </div>
+  </div>
+
+  <div v-else class="d-flex flex-column h-100">
 
     <div class="px-3 py-2 bg-light border-bottom mb-3 rounded">
       <div class="d-flex gap-4 align-items-center">
-        <div><small class="text-muted d-block">Cliente</small> <strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
-        <div><small class="text-muted d-block">Teléfono</small> <strong>{{ form.telefono || '---' }}</strong></div>
+        <div><small class="text-muted d-block">Cliente (Formulario)</small> <strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
+        <div><small class="text-muted d-block">Teléfono Consultando</small> <strong>{{ form.telefono || '---' }}</strong></div>
       </div>
     </div>
 
     <ul class="nav nav-tabs px-3 border-bottom-0">
       <li class="nav-item">
         <a class="nav-link" :class="{ active: activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
-          <i class="fa-solid fa-list me-2"></i>Histórico Lead
+          <i class="fa-solid fa-list me-2"></i>Histórico
+          <span class="badge bg-secondary ms-1 rounded-pill" v-if="clientHistoryLegacy.length">{{ clientHistoryLegacy.length }}</span>
         </a>
       </li>
       <li class="nav-item">
@@ -535,23 +544,29 @@
     <div class="modal-tab-content p-3 border-top bg-white">
 
       <div v-if="activeHistoryTab === 'historico'" class="fade-in">
-        <div class="table-responsive">
+        
+        <div v-if="clientHistoryLegacy.length === 0" class="alert alert-info text-center">
+            No se encontró historial legado para este número.
+        </div>
+
+        <div v-else class="table-responsive">
           <table class="table table-hover table-sm align-middle mb-0">
             <thead class="table-light">
               <tr>
                 <th width="20%">Fecha</th>
                 <th width="40%">Programa / Interés</th>
-                <th width="40%">Nombre registrado</th>
+                <th width="30%">Nombre registrado</th>
+                <th width="10%">E. CLIENTE</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, i) in hcHistoryData" :key="i">
-                <td><small>{{ item.fecha }}</small></td>
+              <tr v-for="(item, i) in clientHistoryLegacy" :key="i">
+                <td><small>{{ item.date }}</small></td>
                 <td>
-                  <div class="fw-bold text-primary">{{ item.programa }}</div>
-                  <small class="text-muted">{{ item.tipo }}</small>
+                  <div class="fw-bold text-primary">{{ item.program }}</div>
                 </td>
-                <td>{{ item.nombre }}</td>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.cat_client_moment_label }}</td>
               </tr>
             </tbody>
           </table>
@@ -559,33 +574,71 @@
       </div>
 
       <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
-        <div class="table-responsive">
+        
+        <div v-if="clientHistoryLeads.length === 0" class="alert alert-info text-center">
+            No se encontraron gestiones de CRM recientes.
+        </div>
+
+        <div v-else class="table-responsive">
           <table class="table table-hover table-sm align-middle mb-0">
             <thead class="table-light">
               <tr>
-                <th width="15%">Fecha</th>
-                <th width="25%">Interés</th>
+                <th width="20%">Fecha Gestión</th>
+                <th width="35%">Interés / Edición</th>
                 <th width="20%">Asesor</th>
-                <th width="20%">Estatus</th>
-                <th width="20%" class="text-center">Intentos</th>
+                <th width="15%">Estatus</th>
+                <th width="10%" class="text-center">Intentos</th>
               </tr>
             </thead>
             <tbody>
-               <tr v-for="(item, i) in hcAdvisoryData" :key="i">
-                <td><small>{{ item.fecha }}</small></td>
-                <td>{{ item.interes }}</td>
+               <tr v-for="(lead, i) in clientHistoryLeads" :key="i">
+                
                 <td>
-                  <div class="d-flex align-items-center">
-                    <div class="avatar-circle me-2">{{ item.asesor.charAt(0) }}</div>
-                    <small>{{ item.asesor }}</small>
+                    <div class="fw-semibold">{{ formatDateTime(lead.date).split(' ')[0] }} {{ formatDateTime(lead.date).split(' ')[1] }} {{ formatDateTime(lead.date).split(' ')[2] }}</div>
+                    <small class="text-muted">{{ formatDateTime(lead.date).split(' ').slice(3).join(' ') }}</small>
+                </td>
+
+                <td>
+                  <div class="fw-bold text-primary" style="font-size: 0.9rem;">
+                    {{ lead.program || 'Sin programa' }}
+                  </div>
+                  <div v-if="lead.edition">
+                      <span class="badge bg-light text-dark border mt-1">
+                        <i class="fa-regular fa-calendar me-1"></i> {{ lead.edition }}
+                      </span>
                   </div>
                 </td>
+
                 <td>
-                  <span class="badge" :class="getBadgeClass(item.status)">{{ item.status }}</span>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-2 bg-secondary text-white d-flex align-items-center justify-content-center rounded-circle" style="width: 25px; height: 25px; font-size: 0.75rem;">
+                        {{ lead.user_registration_full_name ? lead.user_registration_full_name.charAt(0) : '?' }}
+                    </div>
+                    <small class="text-truncate" style="max-width: 120px;" :title="lead.user_registration_full_name">
+                        {{ lead.user_registration_full_name || 'Sistema' }}
+                    </small>
+                  </div>
                 </td>
+
+                <td>
+                  <span class="badge" 
+                    :class="{
+                        'bg-success': ['Inscrito', 'Pagó', 'Matriculado'].includes(lead.cat_status_lead_label),
+                        'bg-warning text-dark': ['Interesado', 'En Seguimiento', 'Prox. Inicio'].includes(lead.cat_status_lead_label),
+                        'bg-info text-dark': ['Atendido'].includes(lead.cat_status_lead_label),
+                        'bg-danger': ['No Interesado', 'Rechazado'].includes(lead.cat_status_lead_label),
+                        'bg-secondary': !['Inscrito','Pagó','Interesado','Atendido','No Interesado'].includes(lead.cat_status_lead_label)
+                    }">
+                    {{ lead.cat_status_lead_label || 'Pendiente' }}
+                  </span>
+                </td>
+
                 <td class="text-center">
-                  <span class="badge bg-light text-dark border">{{ item.intentos }} <i class="fa-solid fa-phone ms-1 text-muted"></i></span>
+                  <span class="badge bg-white text-dark border">
+                    {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size: 0.7rem;"></i>
+                  </span>
                 </td>
+
               </tr>
             </tbody>
           </table>
@@ -625,12 +678,19 @@
     </div>
   </div>
 </BaseModal>
-  <BaseModal
+
+<BaseModal
     v-model="showProgramDetail"
     title="Detalle del Programa"
     size="lg"
   >
-    <div v-if="selectedProgram" class="d-flex flex-column h-100">
+    <div v-if="loadingDetail" class="d-flex justify-content-center align-items-center py-5">
+       <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+       </div>
+    </div>
+
+    <div v-else-if="modelProgramVersion" class="d-flex flex-column h-100">
 
       <ul class="nav nav-tabs px-3 border-bottom-0 mt-2" v-if="hasEditions">
         <li class="nav-item">
@@ -646,7 +706,7 @@
              :class="{ active: activeTab === 'editions' }"
              href="#"
              @click.prevent="activeTab = 'editions'">
-             <i class="fa-solid fa-calendar-days me-2"></i>Ediciones ({{ selectedProgram.editions_json.length }})
+             <i class="fa-solid fa-calendar-days me-2"></i>Ediciones ({{ modelProgramVersion.editions_json.length }})
           </a>
         </li>
       </ul>
@@ -656,22 +716,22 @@
         <div v-if="activeTab === 'info'" class="fade-in">
 
           <div class="text-center mb-4 mt-2">
-            <h4 class="fw-bold text-primary mb-0">{{ selectedProgram.program_name }}</h4>
-            <small class="text-muted">Versión: {{ selectedProgram.version_code }}</small>
+            <h4 class="fw-bold text-primary mb-0">{{ modelProgramVersion.program_name }}</h4>
+            <small class="text-muted">Versión: {{ modelProgramVersion.version_code }}</small>
           </div>
 
           <div class="row g-3 mb-4 text-center">
             <div class="col-4">
               <small class="d-block text-secondary">Tipo</small>
-              <span class="badge bg-light text-dark border">{{ selectedProgram.cat_type_program_label }}</span>
+              <span class="badge bg-light text-dark border">{{ modelProgramVersion.cat_type_program_label }}</span>
             </div>
             <div class="col-4">
               <small class="d-block text-secondary">Modalidad</small>
-              <span class="badge bg-info bg-opacity-10 text-info border-info">{{ selectedProgram.cat_model_modality_label }}</span>
+              <span class="badge bg-info bg-opacity-10 text-info border-info">{{ modelProgramVersion.cat_model_modality_label }}</span>
             </div>
             <div class="col-4">
               <small class="d-block text-secondary">Sesiones</small>
-              <span class="fw-bold">{{ selectedProgram.sessions }}</span>
+              <span class="fw-bold">{{ modelProgramVersion.sessions }}</span>
             </div>
           </div>
 
@@ -682,23 +742,23 @@
                 <div class="col-6 border-end">
                   <div class="d-flex flex-column text-center">
                     <span class="text-muted small">Estudiante</span>
-                    <span class="fw-bold text-dark">S/ {{ selectedProgram.price_student_soles }}</span>
-                    <span class="small text-secondary">$ {{ selectedProgram.price_student_dollars }}</span>
+                    <span class="fw-bold text-dark">S/ {{ modelProgramVersion.price_student_soles }}</span>
+                    <span class="small text-secondary">$ {{ modelProgramVersion.price_student_dollars }}</span>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="d-flex flex-column text-center">
                     <span class="text-muted small">Profesional</span>
-                    <span class="fw-bold text-dark">S/ {{ selectedProgram.price_profesional_soles }}</span>
-                    <span class="small text-secondary">$ {{ selectedProgram.price_profesional_dollars }}</span>
+                    <span class="fw-bold text-dark">S/ {{ modelProgramVersion.price_profesional_soles }}</span>
+                    <span class="small text-secondary">$ {{ modelProgramVersion.price_profesional_dollars }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="d-grid gap-2" v-if="selectedProgram.link">
-            <a :href="selectedProgram.link" target="_blank" class="btn btn-outline-primary">
+          <div class="d-grid gap-2" v-if="modelProgramVersion.link">
+            <a :href="modelProgramVersion.link" target="_blank" class="btn btn-outline-primary">
               <i class="fa-solid fa-external-link-alt me-2"></i> Ver landing page / Temario
             </a>
           </div>
@@ -711,7 +771,7 @@
         <div v-if="activeTab === 'editions'" class="fade-in">
           <div class="editions-scroll-container">
 
-            <div v-for="edition in selectedProgram.editions_json" :key="edition.edition_num_id" class="card mb-3 shadow-sm border">
+            <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="card mb-3 shadow-sm border">
 
               <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                 <div>
@@ -719,12 +779,10 @@
                   <span class="fw-bold text-dark" style="font-size: 0.9rem;">Inicio: {{ formatDate(edition.start_date) }}</span>
                 </div>
                 <div class="text-end">
-                  <span class="badge" :class="edition.vacant?(edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger'):'bg-secondary'">
-                    {{ edition.vacant
-                      ?(edition.vacant > 0
-                        ?`${edition.vacant} Vacantes`
-                        : 'Lleno')
-                      :'Sin Vacantes' }}
+                  <span class="badge" :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger') : 'bg-secondary'">
+                    {{ (edition.vacant !== null && edition.vacant !== undefined)
+                      ? (edition.vacant > 0 ? `${edition.vacant} Vacantes` : 'Lleno')
+                      : 'Sin Vacantes' }}
                   </span>
                 </div>
               </div>
@@ -732,15 +790,15 @@
               <div class="card-body p-3">
                 <div class="row g-2 mb-2" style="font-size: 0.85rem;"  v-if="!edition.edition_children || edition.edition_children.length == 0">
                   <div class="col-md-6">
-                     <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
-                     <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
+                      <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
+                      <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
                   </div>
                   <div class="col-md-6">
-                     <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
-                     <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">
-                        {{ sch.day_combination_label }} {{ sch.hour_combination_label }}
-                     </div>
-                     <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
+                      <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
+                      <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">
+                         {{ sch.day_combination_label }} {{ sch.hour_combination_label }}
+                      </div>
+                      <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
                   </div>
                 </div>
 
@@ -773,14 +831,17 @@
                     </div>
                   </div>
                 </div>
-                </div>
-            </div>
-
-          </div>
+                
+              </div> </div> </div>
         </div>
 
       </div>
     </div>
+    
+    <div v-else class="text-center py-5 text-muted">
+       No se encontró información detallada para este programa.
+    </div>
+
   </BaseModal>
 
   <BaseModal v-model="showViewModal" title="Inscripción del lead" size="xl">
@@ -1092,6 +1153,8 @@ import FileUploader from '@/components/FileUploader.vue'
   const router = useRouter()
   const route  = useRoute()
 
+
+
   const programService   = inject(ServiceKeys.Program)
   const comercialService = inject(ServiceKeys.Comercial)
   const customerService = inject(ServiceKeys.Customer)
@@ -1117,10 +1180,7 @@ import FileUploader from '@/components/FileUploader.vue'
 const showProgramDetail = ref(false);
 const selectedProgram = ref(null);
 const activeTab = ref('info'); // 'info' | 'editions'
-// Detectar si hay ediciones para mostrar la pestaña
-const hasEditions = computed(() => {
-  return selectedProgram.value?.editions_json && selectedProgram.value.editions_json.length > 0;
-});
+
 
 // Resetear tab al abrir modal
 watch(showProgramDetail, (val) => {
@@ -1614,9 +1674,13 @@ const dataSetted = ref(null)
 
 async function searchLeadByPhone() {
 
-
   const phone = form.telefono?.trim()
 
+  if (!phone || phone.length < 5) {
+    toast.warning("Por favor ingrese un número de teléfono válido.");
+    return;
+  }
+  
   if(dataSetted==phone)return
 
   dataSetted.value = phone
@@ -1669,6 +1733,62 @@ async function searchLeadByPhone() {
   } finally {
     searchingPhone.value = false
   }
+}
+// 1. VARIABLES REACTIVAS NUEVAS
+const clientHistoryLegacy = ref([]) // Aquí guardaremos 'legacy_details'
+const loadingHistory = ref(false)   // Para el spinner de carga
+const clientHistoryLeads = ref([])
+
+async function openPhoneDetail() {
+  
+  const phone = form.telefono?.trim();
+
+  if (!phone || phone.length < 5) {
+    toast.warning("Por favor ingrese un número de teléfono válido.");
+    return;
+  }
+
+  
+  if(dataSetted!=phone)dataSetted.value = phone
+
+  
+
+  showClientHistory.value = true;
+  loadingHistory.value = true;
+  
+  // Reseteamos ambas listas
+  clientHistoryLegacy.value = [];
+  clientHistoryLeads.value = []; // <--- 2. RESETEAR AQUÍ
+  
+  activeHistoryTab.value = 'asesoria'; // (Opcional: Si quieres que se abra directo en esta pestaña para probar)
+
+  try {
+    const response = await comercialService.searchPhoneGet({ phone });
+
+    if (response) {
+        // Mapeamos el Histórico legado
+        clientHistoryLegacy.value = response.legacy_details || [];
+        
+        // Mapeamos el detalle de Leads (CRM)
+        clientHistoryLeads.value = response.lead_details || []; // <--- 3. ASIGNAR DATA AQUÍ
+    } 
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Error al obtener el historial.");
+  } finally {
+    loadingHistory.value = false;
+  }
+}
+
+// Helper para formatear fecha y hora (Agrégalo si no tienes uno global)
+function formatDateTime(isoString) {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  // Retorna formato: 13 Ene 2026 10:58 PM
+  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+         ' ' + 
+         date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 }
 
   function cancelar() { router.back() }
@@ -1733,6 +1853,41 @@ async function searchLeadByPhone() {
     }
   }
 
+// 1. NUEVA VARIABLE REACTIVA PARA EL DETALLE
+const modelProgramVersion = ref(null)
+const loadingDetail = ref(false)
+const hasEditions = computed(() => {
+  return modelProgramVersion.value?.editions_json && modelProgramVersion.value.editions_json.length > 0;
+});
+
+// 3. ACTUALIZAR LA FUNCIÓN DE APERTURA
+async function openProgramVersionDetail() {
+  // Validamos que haya una ID seleccionada
+  if (!form.program_version_id) return;
+  
+  loadingDetail.value = true;
+  modelProgramVersion.value = null; // Limpiamos data anterior
+  
+  try {
+    // Llamamos al servicio (Postman: /api/program/programversiondetailget)
+    const response = await programService.programVersionDetailGet({ 
+      program_version_id: form.program_version_id 
+    });
+    
+    // Asignamos la respuesta completa a la variable
+    modelProgramVersion.value = response; 
+    
+    // Reseteamos el tab a 'info' y abrimos modal
+    activeTab.value = 'info';
+    showProgramDetail.value = true;
+    
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo cargar el detalle del programa");
+  } finally {
+    loadingDetail.value = false;
+  }
+}
 
 function buildEnrollmentPayload() {
   //obtengo las ID's

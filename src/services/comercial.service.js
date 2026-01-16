@@ -27,7 +27,14 @@ export default class ComercialService {
     return response.data;
   }
 
+  //searchphoneget
 
+async searchPhoneGet(payload) {
+    const response = (await api.post('/comercial/searchphoneget', payload)).data;
+    console.log(response)
+    return response;
+  }
+  
   async leadUpdate(payload) {
     return (await api.post('/comercial/leadupdate', payload)).data;
   }

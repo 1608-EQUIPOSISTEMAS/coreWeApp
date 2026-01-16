@@ -49,6 +49,14 @@ export default class ProgramService {
   async programVersionUpdate(payload) {
     return (await api.post('/program/programversionupdate', payload)).data;
   }
+
+  //programversiondetailget
+  async programVersionDetailGet(payload) {
+    const response = (await api.post('/program/programversiondetailget', payload)).data;
+    console.log(response.data)
+    return response.data;
+  }
+  
   
   
 }

@@ -112,10 +112,18 @@
                 </div>
               </td>
 
-              <td>
-                <span v-if="l.cat_last_follow_alias" class="badge" :class="badgeForFollow(l.cat_last_follow_alias)">
-                  {{ filtroFollow?.find(e=>e.alias==l.cat_last_follow_alias)?.description }}
-                </span>
+              <td class="ta-center" style="min-width:140px">
+                <div 
+                  v-if="l.cat_last_follow_alias" 
+                  class="badge cursor-pointer hover-scale d-inline-flex align-items-center gap-1" 
+                  :class="badgeForFollow(l.cat_last_follow_alias)"
+                  @click.stop="openFollowModal(l)"
+                  title="Ver detalle del último intento"
+                >
+                  <span>{{ filtroFollow?.find(e=>e.alias==l.cat_last_follow_alias)?.description }}</span>
+                  <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75" style="font-size: 0.75rem;"></i>
+                </div>
+                <span v-else class="muted small">—</span>
               </td>
             </tr>
 
@@ -128,6 +136,91 @@
     </div>
   </div>
 
+<BaseModal v-model="showFollowModal" title="Historial de Contactos" size="md">
+    <div v-if="selectedFollowLead" class="d-flex flex-column h-100">
+      
+      <div class="p-3 bg-light border-bottom">
+        <div class="d-flex align-items-center mb-2">
+          <div class="avatar-placeholder me-3">
+            <i class="fa-regular fa-user"></i>
+          </div>
+          <div class="overflow-hidden">
+            <h6 class="mb-0 fw-bold text-dark text-truncate">{{ selectedFollowLead.full_name_label || 'Sin Nombre' }}</h6>
+            <span class="text-primary small fw-600">
+              <i class="fa-solid fa-phone me-1"></i> {{ selectedFollowLead.origin_phone }}
+            </span>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between text-secondary x-small border-top pt-2 mt-2">
+           <div>
+             <span class="fw-bold text-dark">Interés:</span> {{ selectedFollowLead.program_label || '—' }}
+           </div>
+           <div>
+             <span class="fw-bold text-dark">Estado:</span> 
+             {{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || '—' }}
+           </div>
+        </div>
+      </div>
+
+      <div class="p-3 bg-white scroll-area">
+        
+        <div v-if="selectedFollowLead.follow_details && selectedFollowLead.follow_details.length > 0">
+          <h6 class="section-title text-primary mb-3 sticky-top bg-white pb-2 border-bottom">
+            <i class="fa-solid fa-list-ol me-1"></i> Intentos ({{ selectedFollowLead.follow_details.length }})
+          </h6>
+
+          <div 
+            v-for="(attempt, index) in selectedFollowLead.follow_details" 
+            :key="index" 
+            class="attempt-card mb-3"
+          >
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-bold text-dark fs-6">
+                <i class="fa-solid fa-hashtag text-muted me-1 small"></i>Intento {{ attempt.attempt_number }}
+              </span>
+              <span class="badge" :class="badgeForFollow(attempt.cat_status_label)">
+                {{ filtroFollow?.find(e=>e.alias == attempt.cat_status_label)?.description || 'Desconocido' }}
+              </span>
+            </div>
+
+            <div class="ps-3 border-start border-3" :class="attempt.cat_status_label == 'we_follow_lead_answered' ? 'border-success' : 'border-light'">
+               
+               <div v-if="attempt.cat_result_label" class="mb-2">
+                  <span class="x-small text-uppercase text-muted fw-bold d-block">Resultado</span>
+                  <div class="d-flex align-items-center text-dark small">
+                    <i class="fa-solid fa-check-circle text-success me-2" v-if="attempt.cat_result_label"></i>
+                    {{ attempt.cat_result_label }}
+                  </div>
+               </div>
+
+               <div v-if="attempt.response" class="mt-2">
+                  <span class="x-small text-uppercase text-muted fw-bold d-block mb-1">Observación</span>
+                  <div class="p-2 bg-light rounded text-secondary fst-italic small border">
+                    "{{ attempt.response }}"
+                  </div>
+               </div>
+               
+               <div v-if="!attempt.cat_result_label && !attempt.response" class="text-muted x-small fst-italic">
+                 Sin detalles registrados.
+               </div>
+
+             </div>
+          </div>
+        </div>
+
+        <div v-else class="text-center py-5 text-muted">
+          <div class="mb-2"><i class="fa-regular fa-clipboard fs-2 opacity-25"></i></div>
+          <p class="small mb-0">No se encontraron intentos registrados en el historial.</p>
+        </div>
+      </div>
+    </div>
+    
+    <template #footer>
+      <button class="btn btn-primary btn-sm w-100" @click="showFollowModal = false">
+        Cerrar Historial
+      </button>
+    </template>
+  </BaseModal>
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="lg">
     <div class="px-3 py-2">
 
@@ -182,7 +275,7 @@
               v-model="filters.status_lead_ids"
                 :items="filtroPipeline"
                 label-key="description"
-                value-key="alias"
+                value-key="id"
                 placeholder="ESTATUS..."
             />
           </div>
@@ -581,6 +674,18 @@ function clearFilters() {
   activeFilterChips.value = chips
 }
 
+
+    // === VARIABLES PARA MODAL SEGUIMIENTO ===
+  const showFollowModal = ref(false)
+  const selectedFollowLead = ref(null)
+  function openFollowModal(lead) {
+    // Verificamos si tiene datos básicos, sino no abrimos o mostramos toast
+    if (!lead.cat_last_follow_alias) return
+    
+    selectedFollowLead.value = lead
+    showFollowModal.value = true
+  }
+
 // === API FETCH ===
 async function fetchLeads() {
   try {
@@ -902,4 +1007,92 @@ onMounted(() => {
 
 /* Ajuste para que la transición sea suave */
 tr, td { transition: background-color 0.2s ease; }
+
+/* ... estilos existentes ... */
+
+/* Clases utilitarias para el nuevo modal */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover-scale {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Avatar placeholder en el header del modal */
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  background-color: #e0e7ff; /* Indigo suave */
+  color: #4f46e5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* Estilos de etiquetas de detalle */
+.detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.follow-detail-box {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Zona Scrollable para la lista de intentos */
+.scroll-area {
+  max-height: 60vh; /* Altura máxima para pantallas normales */
+  overflow-y: auto;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Tarjeta individual de intento */
+.attempt-card {
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+}
+
+.attempt-card:hover {
+  border-color: #cbd5e1;
+}
+
+/* Tipografía pequeña auxiliar */
+.x-small {
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+}
+
+/* Header sticky dentro del modal */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
 </style>
