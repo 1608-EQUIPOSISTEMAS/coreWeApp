@@ -113,9 +113,9 @@
               </td>
 
               <td class="ta-center" style="min-width:140px">
-                <div 
-                  v-if="l.cat_last_follow_alias" 
-                  class="badge cursor-pointer hover-scale d-inline-flex align-items-center gap-1" 
+                <div
+                  v-if="l.cat_last_follow_alias"
+                  class="badge cursor-pointer hover-scale d-inline-flex align-items-center gap-1"
                   :class="badgeForFollow(l.cat_last_follow_alias)"
                   @click.stop="openFollowModal(l)"
                   title="Ver detalle del último intento"
@@ -138,7 +138,7 @@
 
 <BaseModal v-model="showFollowModal" title="Historial de Contactos" size="md">
     <div v-if="selectedFollowLead" class="d-flex flex-column h-100">
-      
+
       <div class="p-3 bg-light border-bottom">
         <div class="d-flex align-items-center mb-2">
           <div class="avatar-placeholder me-3">
@@ -156,22 +156,22 @@
              <span class="fw-bold text-dark">Interés:</span> {{ selectedFollowLead.program_label || '—' }}
            </div>
            <div>
-             <span class="fw-bold text-dark">Estado:</span> 
+             <span class="fw-bold text-dark">Estado:</span>
              {{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || '—' }}
            </div>
         </div>
       </div>
 
       <div class="p-3 bg-white scroll-area">
-        
+
         <div v-if="selectedFollowLead.follow_details && selectedFollowLead.follow_details.length > 0">
           <h6 class="section-title text-primary mb-3 sticky-top bg-white pb-2 border-bottom">
             <i class="fa-solid fa-list-ol me-1"></i> Intentos ({{ selectedFollowLead.follow_details.length }})
           </h6>
 
-          <div 
-            v-for="(attempt, index) in selectedFollowLead.follow_details" 
-            :key="index" 
+          <div
+            v-for="(attempt, index) in selectedFollowLead.follow_details"
+            :key="index"
             class="attempt-card mb-3"
           >
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -184,7 +184,7 @@
             </div>
 
             <div class="ps-3 border-start border-3" :class="attempt.cat_status_label == 'we_follow_lead_answered' ? 'border-success' : 'border-light'">
-               
+
                <div v-if="attempt.cat_result_label" class="mb-2">
                   <span class="x-small text-uppercase text-muted fw-bold d-block">Resultado</span>
                   <div class="d-flex align-items-center text-dark small">
@@ -199,7 +199,7 @@
                     "{{ attempt.response }}"
                   </div>
                </div>
-               
+
                <div v-if="!attempt.cat_result_label && !attempt.response" class="text-muted x-small fst-italic">
                  Sin detalles registrados.
                </div>
@@ -214,7 +214,7 @@
         </div>
       </div>
     </div>
-    
+
     <template #footer>
       <button class="btn btn-primary btn-sm w-100" @click="showFollowModal = false">
         Cerrar Historial
@@ -522,7 +522,7 @@ function clearFilter(key) {
   else if (key === 'q') filters.q = ''
   else if (key === 'program_text') filters.program_text = ''
   else if (key === 'estado') filters.estado = null
-  
+
   applyFilters()
 }
 
@@ -531,7 +531,7 @@ function clearFilters() {
     q: '',
     program_text: '',
     estado: null,
-    
+
     // Limpiar todos los arrays
     owner_user_ids: [],
     status_lead_ids: [],
@@ -542,7 +542,7 @@ function clearFilters() {
     query_ids: [],
     type_program_ids: [],
     model_modality_ids: [],
-    
+
     // Limpiar rangos de fecha
     rangoFechas: { start: '', end: '' },
     rangoModificacion: { start: '', end: '' },
@@ -621,7 +621,7 @@ function clearFilters() {
       details: filters.moment_ids
     })
   }
-  
+
 
   if (filters.last_follow_ids && filters.last_follow_ids.length > 0) {
     chips.push({
@@ -681,7 +681,7 @@ function clearFilters() {
   function openFollowModal(lead) {
     // Verificamos si tiene datos básicos, sino no abrimos o mostramos toast
     if (!lead.cat_last_follow_alias) return
-    
+
     selectedFollowLead.value = lead
     showFollowModal.value = true
   }
@@ -701,7 +701,7 @@ async function fetchLeads() {
       to_date: filters.rangoFechas?.end || null,
       updated_from: filters.rangoModificacion?.start || null,
       updated_to: filters.rangoModificacion?.end || null,
-      
+
       // Enviar arrays solo si tienen elementos
       status_lead_ids: filters.status_lead_ids.length ? filters.status_lead_ids : null,
       moment_ids: filters.moment_ids.length ? filters.moment_ids : null,
@@ -712,7 +712,7 @@ async function fetchLeads() {
       type_program_ids: filters.type_program_ids.length ? filters.type_program_ids : null,
       model_modality_ids: filters.model_modality_ids.length ? filters.model_modality_ids : null,
       owner_user_ids: filters.owner_user_ids.length ? filters.owner_user_ids : null,
-      
+
       program_text: filters.program_text || null,
       edition_start_from: filters.edition_start_from || null,
       edition_start_to: filters.edition_start_to || null,
@@ -762,22 +762,21 @@ function editLead(lead) {
 function rowClassForStatus(s) {
   const map = {
     // --- NUEVO: Inscrito (Verde Claro Destacado) ---
-    'we_lead_status_insc': 'row-inscrito', 
+    'we_lead_status_insc': 'row-inscrito',
 
     // Azulitos (En proceso / Interesado)
     'we_lead_status_interesado': 'row-blue',
-    
+
     // Verdes (Positivos / Dinero)
-    'we_lead_status_atendido':   'row-green',
     'we_lead_status_bought':     'row-emerald',
     'we_lead_status_will_pay':   'row-emerald',
-    
+
     // Amarillos/Naranjas (Atención requerida)
     'we_lead_status_proximo':    'row-yellow',
-    
+
     // Grises/Neutros
     'we_lead_status_indiferente': 'row-gray',
-    
+
     // Rojos (Negativos / Cerrados)
     'we_lead_status_closed':      'row-red',
     'we_lead_status_desestimado': 'row-red'
@@ -929,80 +928,80 @@ onMounted(() => {
 
 /* --- NUEVO: Inscrito (Verde Claro Destacado) --- */
 .row-inscrito,
-.row-inscrito > td { 
+.row-inscrito > td {
   background-color: #d1fae5 !important; /* Verde menta claro */
 }
 .row-inscrito {
   border-left: 4px solid #059669 !important; /* Borde solo en el TR */
 }
 .row-inscrito:hover,
-.row-inscrito:hover > td { 
-  background-color: #a7f3d0 !important; 
+.row-inscrito:hover > td {
+  background-color: #a7f3d0 !important;
 }
 
 /* --- Azul (Interesado) --- */
-.row-blue, 
-.row-blue > td { 
-  background-color: #f0f9ff !important; 
-} 
-.row-blue:hover, 
-.row-blue:hover > td { 
-  background-color: #e0f2fe !important; 
+.row-blue,
+.row-blue > td {
+  background-color: #f0f9ff !important;
+}
+.row-blue:hover,
+.row-blue:hover > td {
+  background-color: #e0f2fe !important;
 }
 
 /* --- Verde Suave (Atendido) --- */
 .row-green,
-.row-green > td { 
-  background-color: #f0fdf4 !important; 
+.row-green > td {
+  background-color: #f0fdf4 !important;
 }
 .row-green:hover,
-.row-green:hover > td { 
-  background-color: #dcfce7 !important; 
+.row-green:hover > td {
+  background-color: #dcfce7 !important;
 }
 
 /* --- Verde Esmeralda (Compró / Pagará) --- */
 .row-emerald,
-.row-emerald > td { 
-  background-color: #ecfdf5 !important; 
+.row-emerald > td {
+  background-color: #ecfdf5 !important;
 }
 .row-emerald {
   border-left: 3px solid #10b981 !important;
 }
 .row-emerald:hover,
-.row-emerald:hover > td { 
-  background-color: #d1fae5 !important; 
+.row-emerald:hover > td {
+  background-color: #d1fae5 !important;
 }
 
 /* --- Amarillo/Naranja (Próximo) --- */
 .row-yellow,
-.row-yellow > td { 
-  background-color: #fffbeb !important; 
+.row-yellow > td {
+  background-color: #fffbeb !important;
 }
 .row-yellow:hover,
-.row-yellow:hover > td { 
-  background-color: #fef3c7 !important; 
+.row-yellow:hover > td {
+  background-color: #fef3c7 !important;
 }
 
 /* --- Rojo (Cerrado / Desestimado) --- */
 .row-red,
-.row-red > td { 
-  background-color: #fef2f2 !important; 
+.row-red > td {
+  background-color: #fef2f2 !important;
   opacity: 0.95; /* Cuidado con la opacidad en celdas, mejor 0.95 o quitarla */
 }
 .row-red:hover,
-.row-red:hover > td { 
-  background-color: #fee2e2 !important; 
+.row-red:hover > td {
+  background-color: #fee2e2 !important;
 }
 
 /* --- Gris (Indiferente) --- */
 .row-gray,
-.row-gray > td { 
-  background-color: #f8fafc !important; 
-  color: #64748b; 
+.row-gray > td {
+  background-color: #f8fafc !important;
+  color: #64748b;
 }
 .row-gray:hover,
-.row-gray:hover > td { 
-  background-color: #f1f5f9 !important; 
+.row-gray:hover > td {
+  background-color: #f1f5f9 !important;
 }
 
 /* Ajuste para que la transición sea suave */

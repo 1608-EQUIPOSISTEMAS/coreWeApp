@@ -19,6 +19,7 @@
           <select
             v-model.number="selectedMonth"
             @change="fetchSchedule"
+            style="width: 100px;"
             class="form-select form-select-sm period-select"
           >
             <option
@@ -34,7 +35,7 @@
             v-model.number="selectedYear"
             @change="fetchSchedule"
             class="form-select form-select-sm year-select ms-1"
-            style="width: 80px;"
+            style="width: 100px;"
           >
             <option :value="2024">2024</option>
             <option :value="2025">2025</option>
@@ -47,24 +48,37 @@
         </div>
 
         <div class="header-actions">
-           <button
-            type="button"
-            class="btn btn-outline me-2 btn-sm"
-            :class="hasActiveFilters ? 'btn-primary' : 'btn-outline-secondary'"
-            @click="showFilterModal = true"
-          >
-            <i class="fa-solid fa-filter me-1"></i>
-            Filtros
-          </button>
-          <button
-            type="button"
-            class="btn btn-outline btn-sm" v-if="!hasActiveFilters"
-            @click="showMetaModal = true"
-          >
-            <i class="fa-solid fa-layer-group me-1"></i>
-            Resumen
-          </button>
-        </div>
+    <button
+      type="button"
+      class="btn btn-outline btn-sm"
+      :class="hasActiveFilters ? 'btn-primary' : 'btn-outline-secondary'"
+      @click="showFilterModal = true"
+    >
+      <i class="fa-solid fa-filter me-1"></i>
+      Filtros
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-outline btn-sm"
+      v-if="!hasActiveFilters"
+      @click="showMetaModal = true"
+    >
+      <i class="fa-solid fa-layer-group me-1"></i>
+      Resumen
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-outline btn-sm ms-1"
+      :class="isCompact ? 'btn-info' : 'btn-outline-secondary'"
+      @click="isCompact = !isCompact"
+      :title="isCompact ? 'Cambiar a vista normal' : 'Cambiar a vista compactada'"
+    >
+      <i class="fa-solid" :class="isCompact ? 'fa-compress' : 'fa-expand'"></i>
+      {{ isCompact ? 'Normal' : 'Compacto' }}
+    </button>
+  </div>
       </div>
     </div>
 
@@ -78,7 +92,7 @@
 
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table" :class="{ dense }">
+        <table class="table" :class="{ dense, 'table-bordered compact-borders': isCompact }">
           <thead>
             <tr>
               <th class="bg-warning text-dark text-center" style="width: 100px;">
@@ -95,9 +109,15 @@
                 </div>
               </th>
               <th class="bg-warning text-dark">Programa</th>
-              <th class="bg-warning text-dark">Detalle</th>
+              <th class="bg-warning text-dark" v-if="!isCompact">Detalle</th>
+              <th class="bg-warning text-dark" v-if="isCompact">Linea</th>
+              <th class="bg-warning text-dark" v-if="isCompact">Tipado</th>
+              <th class="bg-warning text-dark" v-if="isCompact">Segmento</th>
+              <th class="bg-warning text-dark" v-if="isCompact">D.A.</th>
               <th class="bg-warning text-dark">F. INICIO</th>
+              <th class="bg-warning text-dark" v-if="isCompact">D.P.</th>
               <th class="bg-warning text-dark">F. FIN</th>
+              <th class="bg-warning text-dark"  v-if="isCompact">Dias Clase</th>
               <th class="bg-warning text-dark">Horario</th>
               <th class="bg-warning text-dark">Docente</th>
               <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
@@ -114,7 +134,7 @@
                 :class="{ 'is-collapsed': !week.isOpen }"
                 @click="week.isOpen = !week.isOpen"
               >
-                <td class="py-2 px-3 fw-bold bg-dark" colspan="11">
+                <td class="py-2 px-3 fw-bold bg-dark" :colspan="isCompact?'17':'11'">
                   <i
                     class="fa-solid me-2 text-light"
                     :class="week.isOpen ? 'fa-chevron-down' : 'fa-chevron-right'"
@@ -150,14 +170,19 @@
                   </div>
                 </td>
 
-                <td style="min-width: 100px;" class="minW">
+                <td style="min-width: 40px;max-width: 230px;" >
                   <div class="name fw-bold">
                     <span style="cursor:pointer" class="text-primary text-decoration-hover" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
-                      {{ e.program_abreviature || '—' }}
-                      <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                      <span v-if="!isCompact">
+                        {{ e.program_abreviature || '—' }}
+                        <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                      </span>
+                      <div v-if="isCompact" class="small text-truncate" style="min-width: 40px;max-width: 160px;" :title="e.program_abreviature">
+                        {{ e.program_abreviature || '—' }}
+                      </div>
                     </span>
                   </div>
-                  <div class="muted small">
+                  <div class="muted small" v-if="!isCompact">
                     {{ e.version_code }}&nbsp <b> {{'('+e.program_sessions+')' }}</b>
                     <div class="muted small float-end">
                       {{ 'Seg: ' + e.cat_segment }}  {{ e.cat_course_category_alias?('| S: ' + e.cat_course_category_label):'' }}
@@ -165,43 +190,64 @@
                   </div>
                 </td>
 
-                <td style="min-width: 150px;" class="minW">
-                  <div class="muted small">
+                <td style="min-width: 40px;max-width: 120px;"  v-if="!isCompact">
+                  <div class="muted small" v-if="!isCompact">
                     {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
                   </div>
                   <div class="muted small">
                     {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
                   </div>
-
+                </td>
+                <td style="min-width: 120px;max-width: 300px;" v-if="isCompact">
+                    {{e.program_line_business}}&nbsp <b> {{'('+e.program_sessions+')' }}</b>
                 </td>
 
-                <td style="min-width: 120px;" >
+                <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
+                    {{e.cat_course_category_label}}
+                </td>
+                <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
+                    {{e.cat_segment}}
+                </td>
+
+                <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
+                    {{e.calc_da}}
+                </td>
+
+                <td style="min-width: 40px;max-width: 120px;" >
                   <div
                     class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
                     title="Filtrar solo por este día"
                     @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
                   >
-                    {{ formatDate(e.start_date) }} <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                    {{ formatDate(e.start_date) }} <i v-if="!isCompact" class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
                   </div>
-                  <div class="muted small">
+                  <div class="muted small" v-if="!isCompact">
                     {{ 'CA: '+e.calc_da || 0 }}
                     <div class="muted small float-end">
                       {{ 'CP: '+e.calc_dp || 0 }}
                     </div>
                   </div>
                 </td>
-                <td class="minW">
+                <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
+                    {{e.calc_dp}}
+                </td>
+
+                <td style="min-width: 40px;max-width: 120px;">
                   <div class="small">{{ formatDate(e.end_date) }}</div>
                 </td>
+
+                <td style="min-width: 130px;max-width: 300px;" v-if="isCompact">
+                  {{e.schedules[0].day_combination_label}}
+                </td>
                 <td
-                  style="min-width: 140px;"
+                  style="min-width: 100px;max-width: 300px;"
                   class="position-relative overflow-visible"
                   :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
                 >
                   <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
 
                   <div v-else-if="e.schedules.length === 1">
-                    <div class="name small fw-bold text-dark">
+                    <div class="name small fw-bold text-dark" v-if="!isCompact">
                       {{ e.schedules[0].day_combination_label || '—' }}
                     </div>
                     <div class="small text-muted">
@@ -209,7 +255,7 @@
                     </div>
                   </div>
 
-                  <div v-else class="schedule-dropdown-wrapper">
+                  <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
                     <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
                       <div>
                         <div class="name small fw-bold text-dark">
@@ -241,13 +287,13 @@
                   </div>
                 </td>
 
-                <td style="min-width: 160px;" class="minW">
+                <td style="min-width: 100px;max-width: 120px;">
                   <div class="small text-truncate" style="max-width: 160px;" :title="e.instructor">
                     {{ e.instructor || '—' }}
                   </div>
                 </td>
 
-                <td class="text-center" style="min-width: 110px;">
+                <td class="text-center" style="min-width: 100px;max-width: 120px;">
                   <label class="form-switch scale-75" title="Ficha / Expediente">
                     <input
                       type="checkbox"
@@ -267,7 +313,7 @@
                   </label>
                 </td>
 
-                <td class="text-center" style="min-width: 110px;">
+                <td class="text-center" style="min-width: 100px;max-width: 120px;">
                   <label class="form-switch scale-75" title="Pre-Confirmación">
                     <input
                       type="checkbox"
@@ -287,21 +333,31 @@
                   </label>
                 </td>
 
-                <td style="min-width: 150px;" class="minW">
-                  <textarea
+                <td style="min-width: 40px;max-width: 120px;">
+                  <textarea  v-if="!isCompact"
                     class="form-control form-control-xs table-textarea"
                     rows="2"
                     v-model="e.notes"
                     @blur="updateQuickNotes(e)"
                     placeholder="..."
                   ></textarea>
+                  <div class="small text-truncate" v-if="isCompact" style="max-width: 160px;" :title="e.notes">
+                    {{ e.notes || '—' }}
+                  </div>
                 </td>
 
-                <td style="min-width: 100px;">
-                  <div class="name fw-bold small">{{ e.global_code }}</div>
-                  <div class="muted small">{{ 'A: ' +e.specific_code }}</div>
-                  <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">{{ e.clasification? 'UNQ: ' + e.clasification:'' }}</div>
-
+                <td style="min-width: 40px;max-width: 120px;">
+                  <div class="name fw-bold small" v-if="!isCompact">
+                    <b v-if="e.global_code">{{e.global_code}}</b>
+                  </div>
+                  <div class="muted small" v-if="!isCompact || (isCompact && e.program_type=='Curso') ">
+                    <span v-if="!isCompact && e.specific_code">A: </span>
+                    <b v-if="e.specific_code">{{e.specific_code}}</b>
+                  </div>
+                  <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">
+                    <span v-if="!isCompact && e.clasification">UNQ: </span>
+                    <b v-if="e.clasification">{{e.clasification}}</b>
+                  </div>
                 </td>
               </tr>
             </template>
@@ -314,158 +370,205 @@
               :key="e.edition_num_id"
               :class="e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : ''"
             >
-                <td class="ta-right nowrap">
-                  <div class="d-flex justify-content-center gap-1">
-                     <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                       <i class="fa-solid fa-eye"></i>
-                     </button>
-                     <button class="btn btn-icon-sm btn-light text-danger" @click.stop="openTreeModal(e)" title="Árbol">
-                       <i class="fa-solid fa-book-bookmark"></i>
-                     </button>
-                     <button class="btn btn-icon-sm btn-light" @click.stop="openEditModal(e)" title="Editar">
-                       <i v-if="e.program_type === 'Curso'" class="fa-solid fa-pen-to-square text-warning"></i>
-                       <i v-else class="fa-solid fa-sitemap text-info"></i>
-                     </button>
-                  </div>
-                </td>
+              <td class="ta-right nowrap">
+                <div class="d-flex justify-content-center gap-1">
+                  <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                  <button :class="[
+                    'btn btn-icon-sm btn-light',
+                    (e.tree_detail.length == 0 && program_type != 'Curso') ? 'text-secondary' : 'text-danger'
+                  ]" @click.stop="openTreeModal(e)" title="Árbol">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                  </button>
+                  <button class="btn btn-icon-sm btn-light" @click.stop="openEditModal(e)" title="Editar">
+                    <i v-if="e.program_type === 'Curso'" class="fa-solid fa-pen-to-square text-warning"></i>
+                    <i v-else class="fa-solid fa-sitemap text-info"></i>
+                  </button>
+                </div>
+              </td>
 
-                <td style="min-width: 200px;" class="minW">
-                  <div class="name fw-bold">
+              <td style="min-width: 40px;max-width: 230px;">
+                <div class="name fw-bold">
+                  <span v-if="!isCompact">
+                    {{ e.program_abreviature || '—' }}
+                  </span>
+                  <div v-if="isCompact" class="small text-truncate" style="min-width: 40px;max-width: 160px;" :title="e.program_abreviature">
                     {{ e.program_abreviature || '—' }}
                   </div>
-                  <div class="muted small">
-                    {{ e.version_code }}
-                    <div class="muted small float-end">
-                      {{ 'Seg: ' + e.cat_segment }}  {{ e.cat_course_category_alias?('| S: ' + e.cat_course_category_label):'' }}
-                    </div>
+                </div>
+                <div class="muted small" v-if="!isCompact">
+                  {{ e.version_code }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                  <div class="muted small float-end">
+                    {{ 'Seg: ' + e.cat_segment }} {{ e.cat_course_category_alias ? ('| S: ' + e.cat_course_category_label) : '' }}
                   </div>
-                </td>
+                </div>
+              </td>
 
-                <td style="min-width: 150px;" class="minW">
-                  <div class="muted small">
-                    {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
+              <td style="min-width: 40px;max-width: 120px;" v-if="!isCompact">
+                <div class="muted small">
+                  {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
+                </div>
+                <div class="muted small">
+                  {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
+                </div>
+              </td>
+              <td style="min-width: 10px;max-width: 300px;" v-if="isCompact">
+                {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+              </td>
+
+              <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
+                {{ e.cat_course_category_label }}
+              </td>
+              <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
+                {{ e.cat_segment }}
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
+                {{ e.calc_da }}
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;">
+                <div class="name small fw-bold">{{ formatDate(e.start_date) }}</div>
+                <div class="muted small" v-if="!isCompact">
+                  {{ 'CA: ' + e.calc_da || 0 }}
+                  <div class="muted small float-end">
+                    {{ 'CP: ' + e.calc_dp || 0 }}
                   </div>
-                  <div class="muted small">
-                    {{ e.program_sessions != null ? 'Sesiones: ' + e.program_sessions : '' }}
+                </div>
+              </td>
+              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
+                {{ e.calc_dp }}
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;">
+                <div class="small">{{ formatDate(e.end_date) }}</div>
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
+                {{ e.schedules[0].day_combination_label }}
+              </td>
+              <td
+                style="min-width: 40px;max-width: 120px;"
+                class="position-relative overflow-visible"
+                :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
+              >
+                <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
+
+                <div v-else-if="e.schedules.length === 1">
+                  <div class="name small fw-bold text-dark" v-if="!isCompact">
+                    {{ e.schedules[0].day_combination_label || '—' }}
                   </div>
-                </td>
-
-                <td class="minW">
-                  <div class="name small fw-bold">{{ formatDate(e.start_date) }}</div>
-                </td>
-                <td class="minW">
-                  <div class="small">{{ formatDate(e.end_date) }}</div>
-                </td>
-
-                <td
-                    style="min-width: 140px;"
-                    class="position-relative overflow-visible"
-                    :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
-                  >
-                  <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-
-                  <div v-else-if="e.schedules.length === 1">
-                    <div class="name small fw-bold text-dark">
-                      {{ e.schedules[0].day_combination_label || '—' }}
-                    </div>
-                    <div class="small text-muted">
-                      {{ e.schedules[0].hour_combination_label }}
-                    </div>
+                  <div class="small text-muted">
+                    {{ e.schedules[0].hour_combination_label }}
                   </div>
+                </div>
 
-                  <div v-else class="schedule-dropdown-wrapper">
-                    <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                      <div>
-                        <div class="name small fw-bold text-dark">
-                          {{ e.schedules[0].day_combination_label }}
-                        </div>
-                        <div class="small text-muted text-truncate" style="max-width: 90px;">
-                          {{ e.schedules[0].hour_combination_label }}
-                        </div>
+                <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
+                  <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                    <div>
+                      <div class="name small fw-bold text-dark">
+                        {{ e.schedules[0].day_combination_label }}
                       </div>
-                      <span class="badge bg-light text-primary border border-primary-subtle rounded-pill">
-                        +{{ e.schedules.length - 1 }}
-                      </span>
-                    </div>
-
-                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                      <div class="popover-header-sm">
-                          Horarios ({{ e.schedules.length }})
-                          <button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button>
-                      </div>
-                      <div class="popover-body-sm">
-                          <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
-                            <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
-                            <div class="text-muted small">{{ sch.hour_combination_label }}</div>
-                          </div>
+                      <div class="small text-muted text-truncate" style="max-width: 90px;">
+                        {{ e.schedules[0].hour_combination_label }}
                       </div>
                     </div>
-
-                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                    <span class="badge bg-light text-primary border border-primary-subtle rounded-pill">
+                      +{{ e.schedules.length - 1 }}
+                    </span>
                   </div>
-                </td>
 
-                <td style="min-width: 160px;" class="minW">
-                  <div class="small text-truncate" style="max-width: 160px;" :title="e.instructor">
-                    {{ e.instructor || '—' }}
+                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
+                    <div class="popover-header-sm">
+                      Horarios ({{ e.schedules.length }})
+                      <button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button>
+                    </div>
+                    <div class="popover-body-sm">
+                      <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
+                        <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
+                        <div class="text-muted small">{{ sch.hour_combination_label }}</div>
+                      </div>
+                    </div>
                   </div>
-                </td>
 
-                <td class="text-center" style="min-width: 110px;">
-                  <label class="form-switch scale-75" title="Ficha / Expediente">
-                    <input
-                      type="checkbox"
-                      v-model="e.expedient"
-                      @change="updateQuickStatus(e, 'expedient')"
-                    />
-                    <span></span>
-                  </label>
+                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                </div>
+              </td>
 
-                  <label class="form-switch scale-75" title="Mejora / Upgrade">
-                    <input
-                      type="checkbox"
-                      v-model="e.upgrade"
-                      @change="updateQuickStatus(e, 'upgrade')"
-                    />
-                    <span></span>
-                  </label>
-                </td>
+              <td style="min-width: 40px;max-width: 120px;">
+                <div class="small text-truncate" style="max-width: 160px;" :title="e.instructor">
+                  {{ e.instructor || '—' }}
+                </div>
+              </td>
 
-                <td class="text-center" style="min-width: 110px;">
-                  <label class="form-switch scale-75" title="Pre-Confirmación">
-                    <input
-                      type="checkbox"
-                      v-model="e.preconfirmation"
-                      @change="updateQuickStatus(e, 'preconfirmation')"
-                    />
-                    <span></span>
-                  </label>
+              <td class="text-center" style="min-width: 100px;max-width: 120px;">
+                <label class="form-switch scale-75" title="Ficha / Expediente">
+                  <input
+                    type="checkbox"
+                    v-model="e.expedient"
+                    @change="updateQuickStatus(e, 'expedient')"
+                  />
+                  <span></span>
+                </label>
 
-                  <label class="form-switch scale-75" title="Confirmación">
-                    <input
-                      type="checkbox"
-                      v-model="e.confirmation"
-                      @change="updateQuickStatus(e, 'confirmation')"
-                    />
-                    <span></span>
-                  </label>
-                </td>
+                <label class="form-switch scale-75" title="Mejora / Upgrade">
+                  <input
+                    type="checkbox"
+                    v-model="e.upgrade"
+                    @change="updateQuickStatus(e, 'upgrade')"
+                  />
+                  <span></span>
+                </label>
+              </td>
 
-                <td style="min-width: 150px;" class="minW">
-                  <textarea
-                    class="form-control form-control-xs table-textarea"
-                    rows="2"
-                    v-model="e.notes"
-                    @blur="updateQuickNotes(e)"
-                    placeholder="..."
-                  ></textarea>
-                </td>
+              <td class="text-center" style="min-width: 100px;max-width: 120px;">
+                <label class="form-switch scale-75" title="Pre-Confirmación">
+                  <input
+                    type="checkbox"
+                    v-model="e.preconfirmation"
+                    @change="updateQuickStatus(e, 'preconfirmation')"
+                  />
+                  <span></span>
+                </label>
 
-                <td style="min-width: 150px;">
-                  <div class="name small">{{ e.global_code }}</div>
-                  <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">{{ e.clasification? 'UNQ: ' + e.clasification:'' }}</div>
-                </td>
-              </tr>
+                <label class="form-switch scale-75" title="Confirmación">
+                  <input
+                    type="checkbox"
+                    v-model="e.confirmation"
+                    @change="updateQuickStatus(e, 'confirmation')"
+                  />
+                  <span></span>
+                </label>
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;">
+                <textarea v-if="!isCompact"
+                  class="form-control form-control-xs table-textarea"
+                  rows="2"
+                  v-model="e.notes"
+                  @blur="updateQuickNotes(e)"
+                  placeholder="..."
+                ></textarea>
+                <div class="small text-truncate" v-if="isCompact" style="max-width: 160px;" :title="e.notes">
+                  {{ e.notes || '—' }}
+                </div>
+              </td>
+
+              <td style="min-width: 40px;max-width: 120px;">
+                <div class="name fw-bold small" v-if="!isCompact">
+                  <b v-if="e.global_code">{{ e.global_code }}</b>
+                </div>
+                <div class="muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                  <span v-if="!isCompact && e.specific_code">A: </span>
+                  <b v-if="e.specific_code">{{ e.specific_code }}</b>
+                </div>
+                <div v-if="e.program_type_alias != 'we_program_type_course'" class="muted small" style="font-size: 0.7rem;">
+                  <span v-if="!isCompact && e.clasification">UNQ: </span>
+                  <b v-if="e.clasification">{{ e.clasification }}</b>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -1577,6 +1680,7 @@ const instructorService = inject(ServiceKeys.Instructor)
 const catalog = inject('catalog')
 const toast = useToast()
 const date = ref();
+const isCompact = ref(true)
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])
@@ -2470,7 +2574,7 @@ async function applyModalForm() {
     }
 
     const { result, message } = response
-    
+
     if (result=== 1) {
       toast.success(message)
       showFormModal.value = false
@@ -3350,9 +3454,9 @@ const searchEditionsFiltered = async (q, child, index) => {
   // --- LÓGICA DE LÍMITE SUPERIOR (Hermanos Siguientes) ---
   let maxDateLimit = null; // Fecha máxima permitida (techo)
 
-  
+
   if (index != 0 ) {
-      
+
     // slice(index + 1) toma desde el siguiente hasta el final
     const arrItemsAfter = modalForm.program_version_children.slice(index + 1);
     const nextDates = arrItemsAfter
@@ -4000,5 +4104,19 @@ tr[class*="row-segment-"]:hover td {
 }
 .text-decoration-hover:hover {
     text-decoration: underline;
+}
+
+.table-bordered.compact-borders {
+  border-color: #174166 !important;
+}
+
+.table-bordered.compact-borders th,
+.table-bordered.compact-borders td {
+  border-color: #1c496e !important;
+}
+
+.table-bordered.compact-borders td {
+  padding: 2px 15px !important;
+  margin: 2px !important;
 }
 </style>

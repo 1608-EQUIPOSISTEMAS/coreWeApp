@@ -1,33 +1,31 @@
 <template>
   <div class="pagination-container">
-    
+
     <div class="pagination-left">
-      <button 
-        class="btn btn-filter" 
+      <button
+        class="btn btn-filter"
         @click="$emit('open-filters')"
         title="Configurar filtros avanzados"
       >
         <i class="fa-solid fa-sliders"></i>
-        <span>Filtros</span>
+        <span class="mobile-hide">Filtros</span>
       </button>
 
-      <!--button reload-->
-      <button 
-        class="btn btn-filter" 
+      <button
+        class="btn btn-filter"
         @click="$emit('change')"
         title="Recargar tabla"
       >
         <i class="fa-solid fa-rotate-right"></i>
       </button>
-      
 
       <div class="separator"></div>
 
       <div class="page-size-control">
-        <label for="pageSize" class="text-muted">Mostrar</label>
-        <select 
+        <label for="pageSize" class="text-muted mobile-hide">Mostrar</label>
+        <select
           id="pageSize"
-          :value="modelValue.size" 
+          :value="modelValue.size"
           @change="updateSize($event.target.value)"
           class="form-select-sm"
         >
@@ -36,31 +34,44 @@
           <option :value="25">25</option>
           <option :value="50">50</option>
           <option :value="100">100</option>
-          <option :value="300">300</option>
         </select>
         <span class="text-muted mobile-hide">filas</span>
       </div>
     </div>
 
     <div class="pagination-right">
-      <span class="pagination-info">
-        <strong>{{ minimun }} - {{ maximun }}</strong> 
-        <span class="text-muted">&nbsp;de&nbsp;</span> 
+      <span class="pagination-info mobile-hide">
+        <strong>{{ minimun }} - {{ maximun }}</strong>
+        <span class="text-muted">&nbsp;de&nbsp;</span>
         <strong>{{ modelValue.total }}</strong>
       </span>
 
       <div class="btn-group">
-        <button 
-          class="btn btn-icon" 
+        <button
+          class="btn btn-icon"
           :disabled="modelValue.page === 1"
           @click="changePage(modelValue.page - 1)"
           title="Página anterior"
         >
           <i class="fa-solid fa-chevron-left"></i>
         </button>
-        
-        <button 
-          class="btn btn-icon" 
+
+        <template v-for="(p, index) in visiblePages" :key="index">
+
+          <span v-if="p === '...'" class="dots">...</span>
+
+          <button
+            v-else
+            class="btn btn-icon btn-number"
+            :class="{ 'active': p === modelValue.page }"
+            @click="changePage(p)"
+          >
+            {{ p }}
+          </button>
+        </template>
+
+        <button
+          class="btn btn-icon"
           :disabled="modelValue.page >= totalPages"
           @click="changePage(modelValue.page + 1)"
           title="Página siguiente"
@@ -76,20 +87,19 @@
 <script setup>
 import { computed } from 'vue'
 
-// Props: Recibimos el objeto de paginación completo
 const props = defineProps({
   modelValue: {
     type: Object,
     required: true,
-    // Estructura esperada: { size: 25, page: 1, total: 0 }
     default: () => ({ size: 25, page: 1, total: 0 })
   }
 })
 
 const emit = defineEmits(['update:modelValue', 'change', 'open-filters'])
 
-// --- Lógica Computada (Matemáticas) ---
-const totalPages = computed(() => 
+// --- Lógica Matemática ---
+
+const totalPages = computed(() =>
   Math.max(1, Math.ceil((props.modelValue.total || 0) / props.modelValue.size))
 )
 
@@ -103,19 +113,54 @@ const minimun = computed(() => {
   return (props.modelValue.size * props.modelValue.page) - props.modelValue.size + 1
 })
 
-// --- Manejadores de Eventos ---
+/**
+ * Calcula qué números mostrar con el formato clásico:
+ * Ej: 1 ... 4 5 6 ... 20
+ */
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = props.modelValue.page
+  const delta = 1 // Cuántas páginas mostrar a los lados de la actual (vecinos)
+  const range = []
+  const rangeWithDots = []
+  let l
+
+  // 1. Obtenemos el rango crudo de números a mostrar
+  for (let i = 1; i <= total; i++) {
+    // Siempre mostrar la primera, la última, y el rango alrededor de la actual
+    if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+      range.push(i)
+    }
+  }
+
+  // 2. Insertamos los "..." donde haya saltos
+  for (let i of range) {
+    if (l) {
+      if (i - l === 2) {
+        // Si el salto es pequeño (ej: de 2 a 4), metemos el 3 en vez de "..."
+        rangeWithDots.push(l + 1)
+      } else if (i - l !== 1) {
+        // Si el salto es grande, metemos los puntos
+        rangeWithDots.push('...')
+      }
+    }
+    rangeWithDots.push(i)
+    l = i
+  }
+
+  return rangeWithDots
+})
+
+// --- Manejadores ---
 
 function updateSize(newSize) {
   const size = Number(newSize)
-  // Al cambiar tamaño, reseteamos a página 1 y actualizamos el modelo
   emit('update:modelValue', { ...props.modelValue, size, page: 1 })
-  // Avisamos al padre que debe recargar (y guardar estado si quiere)
   emit('change')
 }
 
 function changePage(newPage) {
   if (newPage < 1 || newPage > totalPages.value) return
-  
   emit('update:modelValue', { ...props.modelValue, page: newPage })
   emit('change')
 }
@@ -129,9 +174,10 @@ function changePage(newPage) {
   padding: 0.75rem 1rem;
   background-color: #ffffff;
   border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb; /* Opcional, dependiendo de donde lo pongas */
+  border-bottom: 1px solid #e5e7eb;
   flex-wrap: wrap;
   gap: 1rem;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 /* --- Left Side --- */
@@ -157,7 +203,7 @@ function changePage(newPage) {
 .form-select-sm {
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
-  padding: 0.25rem 2rem 0.25rem 0.5rem; /* Espacio para la flecha del select */
+  padding: 0.25rem 2rem 0.25rem 0.5rem;
   font-size: 0.875rem;
   background-color: #fff;
   cursor: pointer;
@@ -184,6 +230,7 @@ function changePage(newPage) {
 .btn-group {
   display: flex;
   gap: 0.25rem;
+  align-items: center; /* Alinea verticalmente los puntos y botones */
 }
 
 /* --- Buttons Styles --- */
@@ -211,29 +258,54 @@ function changePage(newPage) {
   border-color: #9ca3af;
 }
 
+/* Estilos Específicos para botones cuadrados (Iconos y Números) */
 .btn-icon {
-  padding: 0.35rem;
-  width: 32px;
+  padding: 0;           /* Quitamos padding lateral para centrar mejor */
+  min-width: 32px;      /* Usamos min-width para números grandes (ej: 100) */
   height: 32px;
   background-color: #fff;
   border-color: #d1d5db;
   color: #6b7280;
 }
-.btn-icon:hover:not(:disabled) {
+
+.btn-icon:hover:not(:disabled):not(.active) {
   background-color: #f3f4f6;
   color: #111827;
+  border-color: #9ca3af;
 }
+
 .btn-icon:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background-color: #f9fafb;
 }
 
+/* Estilo para la página ACTIVA */
+.btn-icon.active {
+  background-color: #2563eb; /* Azul primary */
+  border-color: #2563eb;
+  color: #ffffff;
+  z-index: 1; /* Para que el borde quede por encima si hubiera overlap */
+  cursor: default;
+}
+
+/* Estilo para los puntos suspensivos (...) */
+.dots {
+  color: #9ca3af;
+  padding: 0 0.25rem;
+  font-size: 0.875rem;
+  user-select: none;
+}
+
 .text-muted { color: #6b7280; }
 
+/* Responsive */
 @media (max-width: 600px) {
   .mobile-hide { display: none; }
-  .pagination-container { justify-content: center; }
-  .pagination-left, .pagination-right { width: 100%; justify-content: space-between; }
+  .pagination-container { justify-content: center; gap: 0.75rem; }
+  .pagination-left, .pagination-right { width: 100%; justify-content: center; }
+
+  /* En móviles ocultamos el texto info para que quepan los números */
+  .pagination-info { display: none; }
 }
 </style>
