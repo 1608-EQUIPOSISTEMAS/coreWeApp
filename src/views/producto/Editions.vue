@@ -9,7 +9,6 @@
           {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
         </div>
       </div>
-
       <div class="actions-bar">
         <div class="period-picker" v-if="!hasActiveFilters">
           <button type="button" class="btn btn-icon" @click="changeMonth(-1)">
@@ -61,7 +60,6 @@
     <button
       type="button"
       class="btn btn-outline btn-sm"
-      v-if="!hasActiveFilters"
       @click="showMetaModal = true"
     >
       <i class="fa-solid fa-layer-group me-1"></i>
@@ -93,42 +91,122 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table" :class="{ dense, 'table-bordered compact-borders': isCompact }">
-          <thead>
-            <tr>
-              <th class="bg-warning text-dark text-center" style="width: 100px;">
+        <thead>
+          <tr>
+            <th class="bg-warning text-dark text-center" style="width: 100px;">
+              <div class="d-flex justify-content-center">
+                <button type="button" class="btn btn-sm btn-primary" v-if="!hasActiveFilters" @click="openEditModal(null)">
+                  Nueva
+                </button>
+              </div>
+            </th>
 
-                <div class="d-flex justify-content-center">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-primary"
-                    v-if="!hasActiveFilters"
-                    @click="openEditModal(null)"
-                  >
-                   Nueva
-                  </button>
-                </div>
-              </th>
-              <th class="bg-warning text-dark">Programa</th>
-              <th class="bg-warning text-dark" v-if="!isCompact">Detalle</th>
-              <th class="bg-warning text-dark" v-if="isCompact">Linea</th>
-              <th class="bg-warning text-dark" v-if="isCompact">Tipado</th>
-              <th class="bg-warning text-dark" v-if="isCompact">Segmento</th>
-              <th class="bg-warning text-dark" v-if="isCompact">D.A.</th>
-              <th class="bg-warning text-dark">F. INICIO</th>
-              <th class="bg-warning text-dark" v-if="isCompact">D.P.</th>
-              <th class="bg-warning text-dark">F. FIN</th>
-              <th class="bg-warning text-dark"  v-if="isCompact">Dias Clase</th>
-              <th class="bg-warning text-dark">Horario</th>
-              <th class="bg-warning text-dark">Docente</th>
-              <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
-              <th class="bg-warning text-dark text-center">Confirm.</th>
-              <th class="bg-warning text-dark">Observación</th>
-              <th class="bg-warning text-dark">Edición</th>
-            </tr>
-          </thead>
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>Programa</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.program" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="!isCompact">
+              <div class="d-flex flex-column">
+                <span>Detalle</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.detail" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>Linea</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.line" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>Tipado</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.type" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>Segmento</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.segment" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>D.A.</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.da" placeholder="..." style="font-size: 0.7rem; width: 40px;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>F. INICIO</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.start_date" placeholder="dd/mm" style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>D.P.</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.dp" placeholder="..." style="font-size: 0.7rem; width: 40px;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>F. FIN</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.end_date" placeholder="dd/mm" style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1" v-if="isCompact">
+              <div class="d-flex flex-column">
+                <span>Dias Clase</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.schedule" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>Horario</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.schedule" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>Docente</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.instructor" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
+
+            <th class="bg-warning text-dark text-center">Confirm.</th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>Observación</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.notes" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+
+            <th class="bg-warning text-dark p-1">
+              <div class="d-flex flex-column">
+                <span>Edición</span>
+                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.edition_code" placeholder="..." style="font-size: 0.7rem;">
+              </div>
+            </th>
+          </tr>
+        </thead>
 
           <tbody v-if="!hasActiveFilters">
-            <template v-for="(week, wIndex) in schedules" :key="week.schedule">
+            <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
               <tr
                 class="week-header text-white"
                 :class="{ 'is-collapsed': !week.isOpen }"
@@ -237,7 +315,7 @@
                 </td>
 
                 <td style="min-width: 130px;max-width: 300px;" v-if="isCompact">
-                  {{e.schedules[0].day_combination_label}}
+                  {{!e.schedules?'':e.schedules[0].day_combination_label}}
                 </td>
                 <td
                   style="min-width: 100px;max-width: 300px;"
@@ -248,10 +326,10 @@
 
                   <div v-else-if="e.schedules.length === 1">
                     <div class="name small fw-bold text-dark" v-if="!isCompact">
-                      {{ e.schedules[0].day_combination_label || '—' }}
+                      {{ e.schedules[0]?.day_combination_label || '—' }}
                     </div>
                     <div class="small text-muted">
-                      {{ e.schedules[0].hour_combination_label }}
+                      {{ e.schedules[0]?.hour_combination_label }}
                     </div>
                   </div>
 
@@ -446,7 +524,7 @@
               </td>
 
               <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                {{ e.schedules[0].day_combination_label }}
+                {{ !e.schedules?'':e.schedules[0].day_combination_label }}
               </td>
               <td
                 style="min-width: 40px;max-width: 120px;"
@@ -576,7 +654,7 @@
   </div>
 <BaseModal v-model="showMetaModal" title="Resumen de Programación" size="xl">
   <div class="meta-dashboard p-3">
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" v-if="!hasActiveFilters">
       <div class="card-body p-0">
         <div class="row g-0">
 
@@ -1733,13 +1811,23 @@ function getCatalogLabel(catalogName, value, defaultText = 'Sin Asignar') {
  * Calcula los totales comparando contra el Catálogo completo.
  * Incluye datos HARDCODEADOS para la sección de 'Avance Global' por ahora.
  */
+/**
+ * Calcula los totales comparando contra el Catálogo completo.
+ * Adapta la fuente de datos según si hay filtros o no.
+ */
 function calculateMetaSummary() {
-  // 1. Obtenemos todos los items del cronograma actual (aplanando las semanas)
-  const allItems = schedules.value.flatMap(week => week.items || [])
+  // 1. Determinar la fuente de datos
+  let allItems = []
+  
+  if (hasActiveFilters.value) {
+    // Si hay filtros, usamos la lista histórica plana
+    allItems = historyList.value || []
+  } else {
+    // Si es vista mensual, aplanamos las semanas
+    allItems = schedules.value.flatMap(week => week.items || [])
+  }
+  
   const totalItems = allItems.length
-
-
-  // 3. Inicializamos los mapas con conteo en 0 (para que aparezcan todos)
 
   // --- A. LÍNEAS DE NEGOCIO ---
   const linesMap = {}
@@ -1815,25 +1903,24 @@ function calculateMetaSummary() {
   metaSummary.value.types = Object.values(typesMap).sort((a, b) => b.count - a.count)
   metaSummary.value.segments = Object.values(segsMap).sort((a, b) => b.count - a.count)
 
-  // -----------------------------------------------------------------------
-  // 6. DATOS HARDCODEADOS PARA AVANCE GLOBAL (SOLO DEMO)
-  // -----------------------------------------------------------------------
-  // Aquí simulas los datos que pediste: 84 ventas, 3 B2B, 808 Objetivo
-  const fakeSales = 84
-  const fakeB2B = 3
-  const fakeTarget = 808
-  const fakeTotal = fakeSales + fakeB2B
+  // 6. DATOS HARDCODEADOS PARA AVANCE GLOBAL (Solo si NO hay filtros)
+  if (!hasActiveFilters.value) {
+      const fakeSales = 84
+      const fakeB2B = 3
+      const fakeTarget = 808
+      const fakeTotal = fakeSales + fakeB2B
+      const fakePercentage = fakeTarget > 0 ? ((fakeTotal / fakeTarget) * 100).toFixed(2) : '0.00'
 
-  // Cálculo real del porcentaje basado en los datos fake
-  const fakePercentage = fakeTarget > 0
-    ? ((fakeTotal / fakeTarget) * 100).toFixed(2)
-    : '0.00'
-
-  metaSummary.value.general = {
-    sales: fakeSales,
-    b2b: fakeB2B,
-    target: fakeTarget,
-    percentage: fakePercentage // Debería dar aprox 10.77% con estos datos
+      metaSummary.value.general = {
+        sales: fakeSales,
+        b2b: fakeB2B,
+        target: fakeTarget,
+        percentage: fakePercentage
+      }
+  } else {
+      // En modo histórico dejamos esto vacío o en ceros por seguridad, 
+      // aunque el v-if del template lo ocultará.
+      metaSummary.value.general = { sales: 0, b2b: 0, target: 0, percentage: 0 }
   }
 }
 
@@ -2065,41 +2152,62 @@ const formattedActiveFilters = computed(() => {
 
 // Computed para saber si estamos en "Modo Histórico"
 const hasActiveFilters = computed(() => {
-    return Object.keys(activeFilters).length > 0
-})
+    return Object.entries(activeFilters).some(([key, value]) => {
+        // Ignorar si es null, undefined o string vacío
+        if (value === null || value === undefined || value === '') return false;
+        
+        // Si es array, solo contar como "activo" si tiene elementos
+        if (Array.isArray(value)) {
+            return value.length > 0;
+        }
+        
+        // Para cualquier otro tipo, si existe es activo
+        return true;
+    });
+});
 
-
+// 4. MEJORAR applyFilters para no copiar arrays vacíos
 function applyFilters() {
     // 1. Limpiar activeFilters
     for (const key in activeFilters) {
-        delete activeFilters[key]
+        delete activeFilters[key];
     }
 
-    // 2. Copiar valores del formulario a los filtros activos
+    // 2. Copiar valores del formulario SOLO si tienen contenido real
     for (const key in filterForm) {
-        // Solo copiamos si tiene valor (no null, no string vacía, no undefined)
-        if (filterForm[key] !== null && filterForm[key] !== '' && filterForm[key] !== undefined) {
-            activeFilters[key] = filterForm[key]
+        const value = filterForm[key];
+        
+        // Ignorar valores nulos, undefined o strings vacíos
+        if (value === null || value === '' || value === undefined) continue;
+        
+        // Para arrays, solo copiar si tiene elementos
+        if (Array.isArray(value)) {
+            if (value.length > 0) {
+                activeFilters[key] = value;
+            }
+            continue;
         }
-
+        
+        // Para otros tipos, copiar directamente
+        activeFilters[key] = value;
     }
 
-    // 3. LOGICA ESPECIAL PARA FECHAS
-    // El template espera 'date_range' para mostrar el chip, pero el form tiene start/end
+    // 3. Lógica especial para fechas
     if (filterForm.date_from && filterForm.date_to) {
         activeFilters.date_range = true;
     }
 
-    // 4. Si no hay filtros, limpiar lista histórica
+    // 4. Si NO quedó ningún filtro, limpiar historial
     if (Object.keys(activeFilters).length === 0) {
-        historyList.value = []
+        historyList.value = [];
     }
-    saveState()
-    // 5. Ejecutar búsqueda y cerrar modal
-    fetchSchedule()
-    showFilterModal.value = false
+
+    saveState();
+    fetchSchedule();
+    showFilterModal.value = false;
 }
 
+// 2. MEJORAR removeFilter para limpiar arrays vacíos
 function removeFilter(key) {
     // 1. Caso Especial: Rango de Fechas
     if (key === 'date_range') {
@@ -2119,45 +2227,57 @@ function removeFilter(key) {
         filterForm.program_version_id = null;
         filterForm.program_version_label = '';
     }
-    // 3. NUEVO: Detectar Arrays (Para Instructores, Categorías, etc.)
-    // Si el valor original en el formulario es un Array, lo reseteamos a []
+    // 3. Arrays (Para Instructores, Categorías, etc.)
     else if (Array.isArray(filterForm[key])) {
         delete activeFilters[key];
-        filterForm[key] = []; // <--- IMPORTANTE: Array vacío, no null
+        filterForm[key] = [];
     }
-    // 4. Caso Genérico (Inputs simples, selects simples)
+    // 4. Caso Genérico
     else {
         delete activeFilters[key];
         filterForm[key] = null;
     }
 
+    // NUEVO: Limpieza adicional de arrays vacíos en activeFilters
+    Object.keys(activeFilters).forEach(k => {
+        if (Array.isArray(activeFilters[k]) && activeFilters[k].length === 0) {
+            delete activeFilters[k];
+        }
+    });
+
     saveState();
     fetchSchedule();
 }
 
-function clearAllFilters(reload=true) {
+// 3. MEJORAR clearAllFilters
+function clearAllFilters(reload = true) {
+    // Limpiar activeFilters completamente
     Object.keys(activeFilters).forEach(key => delete activeFilters[key]);
-    // Reset form
+    
+    // Reset form (diferenciando arrays de otros tipos)
     for (const key in filterForm) {
-        filterForm[key] = null;
+        if (Array.isArray(filterForm[key])) {
+            filterForm[key] = [];
+        } else {
+            filterForm[key] = null;
+        }
     }
-    saveState()
-
-    if(reload)fetchSchedule();
-
+    
+    saveState();
+    
+    if (reload) fetchSchedule();
 }
 
 
 // --- LISTADO ---
 async function fetchSchedule() {
   try {
-
     if(!hasActiveFilters.value){
       const payload = {
         selectedMonth: selectedMonth.value,
         selectedYear: selectedYear.value,
         page: 1,
-        size: 100 // Traemos suficientes para el resumen
+        size: 100 
       }
       const { items } = await editionService.editionByWeekList(payload)
 
@@ -2165,9 +2285,10 @@ async function fetchSchedule() {
         ? items.map(w => ({ ...w, isOpen: true }))
         : []
 
-      // Calculamos el resumen después de obtener los datos
+      // Cálculo para vista mensual
       calculateMetaSummary()
-    }else{
+      
+    } else {
       const payload = {
         page: 1,
         size: 100,
@@ -2176,17 +2297,20 @@ async function fetchSchedule() {
       const { items } = await editionService.editionList(payload)
 
       historyList.value = items
+
+      // AGREGADO: Cálculo para vista histórica
+      calculateMetaSummary()
     }
 
-    toast.success(hasActiveFilters.value?'Historico Actualizado':'Cronograma actualizado')
+    toast.success(hasActiveFilters.value ? 'Historico Actualizado' : 'Cronograma actualizado')
 
   } catch (err) {
     console.error('Error cargando cronograma:', err)
     toast.error('Error al cargar el listado')
     schedules.value = []
+    historyList.value = []
   }
 }
-
 onMounted(() => {
   loadState()
   applyFiltersFromQueryParams()
@@ -3368,6 +3492,87 @@ function addAttachmentProgram(){
   })
 }
 
+
+// --- FILTRADO LOCAL (CLIENT-SIDE) ---
+const localFilters = reactive({
+  program: '',
+  detail: '',      // Para vista normal (busca en versión, segmento, categoría)
+  line: '',        // Vista compacta
+  type: '',        // Vista compacta
+  segment: '',     // Vista compacta
+  da: '',          // Vista compacta
+  start_date: '',
+  dp: '',          // Vista compacta
+  end_date: '',
+  schedule: '',    // Sirve para Días y Horarios
+  instructor: '',
+  notes: '',       // Observaciones
+  edition_code: '' // Columna final (Global, Específico, Clasificación)
+})
+
+const filteredSchedules = computed(() => {
+  if (!schedules.value || schedules.value.length === 0) return []
+
+  // Verificar si hay algún filtro activo
+  const hasFilter = Object.values(localFilters).some(val => val && String(val).trim() !== '')
+  if (!hasFilter) return schedules.value
+
+  return schedules.value.map(week => {
+    const filteredItems = (week.items || []).filter(item => {
+      
+      // Helper para limpiar texto y evitar errores de null
+      const safeLower = (val) => (val || '').toString().toLowerCase()
+
+      // 1. Programa
+      if (localFilters.program && !safeLower(item.program_abreviature).includes(safeLower(localFilters.program))) return false
+
+      // 2. Detalle (Vista Normal: busca en varios campos)
+      if (localFilters.detail) {
+        const detailText = `${item.version_code} ${item.cat_segment} ${item.cat_course_category_label} ${item.program_line_business}`.toLowerCase()
+        if (!detailText.includes(safeLower(localFilters.detail))) return false
+      }
+
+      // 3. Filtros específicos de Vista Compacta
+      if (localFilters.line && !safeLower(item.program_line_business).includes(safeLower(localFilters.line))) return false
+      if (localFilters.type && !safeLower(item.cat_course_category_label).includes(safeLower(localFilters.type))) return false
+      if (localFilters.segment && !safeLower(item.cat_segment).includes(safeLower(localFilters.segment))) return false
+      if (localFilters.da && !safeLower(item.calc_da).includes(safeLower(localFilters.da))) return false
+      if (localFilters.dp && !safeLower(item.calc_dp).includes(safeLower(localFilters.dp))) return false
+
+      // 4. Fechas
+      if (localFilters.start_date && !formatDate(item.start_date).toLowerCase().includes(safeLower(localFilters.start_date))) return false
+      if (localFilters.end_date && !formatDate(item.end_date).toLowerCase().includes(safeLower(localFilters.end_date))) return false
+
+      // 5. Horario (Busca en label de combinación día y hora)
+      if (localFilters.schedule) {
+        const term = safeLower(localFilters.schedule)
+        // Concatenamos toda la info de horarios
+        const scheduleText = item.schedules 
+          ? item.schedules.map(s => s.day_combination_label + ' ' + s.hour_combination_label).join(' ') 
+          : (item.day_combination_label + ' ' + item.hour_combination_label) // Fallback
+        
+        if (!safeLower(scheduleText).includes(term)) return false
+      }
+
+      // 6. Docente
+      if (localFilters.instructor && !safeLower(item.instructor).includes(safeLower(localFilters.instructor))) return false
+
+      // 7. Observación (Notes)
+      if (localFilters.notes && !safeLower(item.notes).includes(safeLower(localFilters.notes))) return false
+
+      // 8. Edición (Códigos al final)
+      if (localFilters.edition_code) {
+        const codeText = `${item.global_code} ${item.specific_code} ${item.clasification}`.toLowerCase()
+        if (!codeText.includes(safeLower(localFilters.edition_code))) return false
+      }
+
+      return true
+    })
+
+    return { ...week, items: filteredItems }
+  })
+})
+
 // =========================================
 // LOGICA LOCALSTORAGE (PERSISTENCIA)
 // =========================================
@@ -4116,7 +4321,15 @@ tr[class*="row-segment-"]:hover td {
 }
 
 .table-bordered.compact-borders td {
-  padding: 2px 15px !important;
-  margin: 2px !important;
+  padding: 2px 10px !important;
+  margin: 1px !important;
+}
+.placeholder-dark::placeholder {
+  color: #4b5563;
+  opacity: 0.7;
+}
+.form-control-xs {
+  padding: 0.1rem 0.2rem;
+  height: auto;
 }
 </style>
