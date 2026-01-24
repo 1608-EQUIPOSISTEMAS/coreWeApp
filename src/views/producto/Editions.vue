@@ -49,7 +49,7 @@
         <div class="header-actions">
     <button
       type="button"
-      class="btn btn-outline btn-sm"
+      class="btn btn-outline btn-sm mx-1"
       :class="hasActiveFilters ? 'btn-primary' : 'btn-outline-secondary'"
       @click="showFilterModal = true"
     >
@@ -204,10 +204,9 @@
             </th>
           </tr>
         </thead>
-
           <tbody v-if="!hasActiveFilters">
             <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
-              <tr
+              <tr v-if="week.items.length>0"
                 class="week-header text-white"
                 :class="{ 'is-collapsed': !week.isOpen }"
                 @click="week.isOpen = !week.isOpen"

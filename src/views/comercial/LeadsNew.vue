@@ -34,14 +34,12 @@
 
             <div class="col-md-5"></div>
 
-            <div class="col-md-4">
+            <div class="col-6 col-md-4">
               <label class="form-label mb-1">T. Consulta</label>
               <SearchSelect
                 v-model="form.query_alias"
                 :items="queryCatalog"
-                :disabled="isEdit"
                 label-field="description"
-                required
                 value-field="alias"
                 placeholder="PROMOCIÓN..."
                 :model-label="form.query_label"
@@ -49,37 +47,33 @@
               />
             </div>
 
-            <div class="col-md-3">
+            <div class="col-6 col-md-4 col-lg-3">
               <label class="form-label mb-1">Categoría<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.category_alias"
                 :items="programTypeCatalog"
                 label-field="description"
-                :disabled="isEdit"
                 value-field="alias"
                 view-open="6"
                 placeholder="CATEGORÍA..."
-                required
                 @change="onProgramaTypeChange"
               />
             </div>
 
-            <div class="col-md-2" v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias" >
+            <div class="col-6 col-md-4 col-lg-2" v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias" >
               <label class="form-label mb-1">Modalidad<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.program_modality_alias"
                 :items="programModalityCatalog"
                 label-field="description"
                 view-open="6"
-                :disabled="isEdit"
                 value-field="alias"
                 placeholder="MODALIDAD..."
-                required
                 @change="onProgramaTypeChange"
               />
             </div>
 
-            <div class="col-md-4" v-if="form.category_alias &&
+            <div class="col-6 col-md-4" v-if="form.category_alias &&
                                       (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
                                       (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
               <label class="form-label mb-1">Producto / Programa<span class="required-star">*</span></label>
@@ -100,7 +94,6 @@
                                                             cat_model_modality: !form.program_modality_alias?null:programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
                                                           })"
                 label-field="abbreviation"
-                :disabled="isEdit"
                 sublabel-field="version_code"
                 value-field="program_version_id"
                 view-open="6"
@@ -108,20 +101,18 @@
                 placeholder="Buscar programa…"
                 :minChars="0"
                 :cache="false"
-                required
                 @change="onProgramaChange"
               />
 
             </div>
 
-            <div class="col-md-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
+            <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
               <label class="form-label mb-1">Edición / Fecha prevista<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.edition_id"
                 mode="remote"
                 :fetcher="searchEditionsFiltered"
                 label-field="start_date_label"
-                :disabled="isEdit"
                 value-field="edition_num_id"
                 view-open="6"
                 placeholder="Buscar Edicion…"
@@ -146,7 +137,7 @@
           </div>
 
           <div class="row g-3 form-section__body">
-            <div class="col-md-2">
+            <div class="col-6 col-md-3 col-lg-2">
               <label class="form-label mb-1">T. Contacto</label>
               <SearchSelect
                 v-model="form.client_status"
@@ -159,14 +150,14 @@
               />
             </div>
 
-            <div class="col-md-3">
+            <div class="col-6 col-md-6 col-lg-3">
               <label class="form-label mb-1">Nombre/Razón Social</label>
               <input required autocomplete="off" v-model="form.full_name" type="text" class="form-control" placeholder="NOMBRE COMPLETO" />
             </div>
 
-            <div class="col-md-3">
+            <div class="col-6 col-md-3 col-lg-3">
               <label class="form-label mb-1">
-                Teléfono / WhatsApp <span class="required-star">*</span>
+                Teléfono <span class="required-star">*</span>
                 <span v-if="searchingPhone" class="ms-2 badge bg-warning text-dark scale-in-center">
                   <i class="fas fa-spinner fa-spin"></i> Buscando...
                 </span>
@@ -196,7 +187,7 @@
             </div>
 
 
-            <div class="col-md-2">
+            <div class="col-6 col-md-3 col-lg-2">
               <label class="form-label mb-1">E. Cliente</label>
               <SearchSelect
                 v-model="form.cat_client_moment_alias"
@@ -209,7 +200,7 @@
               />
             </div>
 
-            <div class="col-md-2">
+            <div class="col-6 col-md-3 col-lg-2">
               <label class="form-label mb-1">Membresía</label>
               <SearchSelect
                 v-model="form.membership_moment_id"
@@ -220,7 +211,7 @@
                 :model-label="form.membership_tier_label"/>
             </div>
 
-            <div class="col-md-2">
+            <div class="col-6 col-md-3 col-lg-2">
               <label class="form-label mb-1">Status<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.status_alias"
@@ -233,7 +224,7 @@
                 @change="onStatusChange"
               />
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
               <label class="form-label mb-1">Ocupación / Situación<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.ocupacion_alias"
@@ -246,7 +237,7 @@
               />
             </div>
 
-            <div class="col-md-2">
+            <div class="col-6 col-md-3 col-md-2">
               <label class="form-label mb-1">País<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.country_alias"
@@ -257,16 +248,16 @@
                 placeholder="PAÍS..."
               />
             </div>
-            <div class="col-md-4"></div>
+            <div class="col-6 col-md-4"></div>
 
-            <div class="col-md-1" v-if="isEdit">
+            <!-- <div class="col-md-1" v-if="isEdit">
               <label class="form-label mb-1">BOT<span class="required-star">*</span></label>
               <br>
               <label class="form-switch">
                 <input type="checkbox" v-model="form.bot" />
                 <span></span>
               </label>
-            </div>
+            </div> -->
           </div>
         </section>
 
@@ -321,6 +312,7 @@
                 label-field="description"
                 value-field="alias"
                 :model-label="form.canal_label"
+                @change="onChannelChange"
                 placeholder="CANAL..."
               />
             </div>
@@ -349,14 +341,16 @@
                 placeholder="MKT..."
               />
             </div>
-
+            
             <div class="col-md-3">
               <label class="form-label mb-1">Estrategia</label>
               <SearchSelect
                 v-model="form.strategy_alias"
+                :disabled=" !form.canal_alias||form.canal_alias!='we_social_media_other'"
                 :items="strategyCatalog"
                 label-field="description"
                 value-field="alias"
+                @change="onStrategyChange"
                 placeholder="ESTRATEGIA..."
               />
             </div>
@@ -386,12 +380,12 @@
           <div class="contacto-table">
             <!-- Header solo en desktop -->
             <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-3">
-              <div class="col-lg-1 text-center">#</div>
-              <div class="col-lg-2">Estado<span class="required-star">*</span></div>
-              <div class="col-lg-3">Fecha y Hora<span class="required-star">*</span></div>
-              <div class="col-lg-3">T. Respuesta</div>
-              <div class="col-lg-2">Obsv.</div>
-              <div class="col-lg-1 text-center"></div>
+              <div class="col-md-6 col-lg-1 text-center">#</div>
+              <div class="col-md-6 col-lg-2">Estado<span class="required-star">*</span></div>
+              <div class="col-md-6 col-lg-3">Fecha y Hora<span class="required-star">*</span></div>
+              <div class="col-md-6 col-lg-3">T. Respuesta</div>
+              <div class="col-md-6 col-lg-2">Obsv.</div>
+              <div class="col-md-6 col-lg-1 text-center"></div>
             </div>
 
             <!-- Filas -->
@@ -1476,9 +1470,10 @@ watchEffect(() => {
     Object.assign(form, {
       fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
       query_alias: l.query_alias ?? null,
-      category_alias: l.cat_type_program_alias || l.category_alias || null,
-      program_modality_alias: l.program_modality_alias ?? null,
+      category_alias: l.cat_program_type_alias || l.category_alias || null,
+      program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
       program_modality_selected_alias: modality_selected_alias,
+      
       program_version_id: l.program_version_id ?? null,
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
       full_name: l.full_name ?? l.full_name_label ?? '',
@@ -1610,8 +1605,6 @@ watchEffect(() => {
     form.status_alias  = 'we_lead_status_atendido'
     form.query_alias   = 'we_category_query_general'
     form.client_status   = 'we_client_person'
-    //{{form.ocupacion_alias}}we_prospect_situation_independent
-    form.ocupacion_alias = 'we_prospect_situation_independent'
     form.active = true
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
     form.category_alias = 'we_program_type_course'
@@ -1691,41 +1684,30 @@ async function searchLeadByPhone() {
   searchingPhone.value = true
 
   try {
-    const response = await comercialService.searchContact({ phone })
+    const response = await comercialService.searchPhoneGet({ phone });
+    console.log(response)
 
-    const data = response.data || response
-
-    if (!data || data.status === 'error') {
-       return
-    }
-
-    if (data.status === 'new') {
+  form.membership_moment_id  =  response.membership_tier_id
+  form.cat_client_moment_alias = response.cat_client_moment
+    
+    if (response.cat_client_moment === 'we_moment_new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
 
-      form.cat_client_moment_alias = 'we_moment_new'
-
-      form.categoriaMember  = ''
-
     } else {
-      const tipo = data.t_lead === 'COMUNIDAD' ? 'CLIENTE / COMUNIDAD' : 'LEAD RECURRENTE'
+      toast.success(`Encontrado: (${response.cat_client_moment=='we_moment_lead'?'LEAD':'COMUNIDAD'})`, { timeout: 4000 })
+      leadDataHistory.value = true
 
-      toast.success(`Encontrado: ${data.full_name} (${tipo})`, { timeout: 4000 })
-
-      form.cat_client_moment_alias = 'we_moment_new'
-      form.categoriaMember  = data.membresia || ''
-
-      if (data.full_name) {
-        form.full_name = data.full_name
+      if(response.lead_details.length>0){
+        form.full_name = response.lead_details[0].full_name
+        return
       }
-
-      if (data.last_program) {
-        if (!form.observacion.includes(data.last_program)) {
-           form.observacion = (form.observacion ? form.observacion + '\n' : '') + `[Histórico] Interés previo: ${data.last_program}`
-        }
+      
+      if(response.legacy_details.length>0){
+        form.full_name = response.legacy_details[0].full_name
       }
+    
     }
 
-    leadDataHistory.value = true
 
   } catch (error) {
     console.error(error)
@@ -1781,6 +1763,20 @@ async function openPhoneDetail() {
   }
 }
 
+function onStrategyChange(option){
+  if(!option){
+    form.canal_alias   = 'we_social_media_other'
+  }
+}
+
+
+
+function onChannelChange(option){
+  if(!option){
+    form.strategy_alias   = null
+  }
+}
+
 // Helper para formatear fecha y hora (Agrégalo si no tienes uno global)
 function formatDateTime(isoString) {
   if (!isoString) return '-';
@@ -1806,8 +1802,9 @@ function formatDateTime(isoString) {
     const cat_client_type        = idByAlias(form.client_status, clientCatalog.value)
 
     const cat_client_category    = idByAlias(form.cat_client_moment_alias, momentCatalog.value)
-
-
+    const cat_program_modality = idByAlias(form.program_modality_alias, programModalityCatalog.value)
+    const cat_program_type = idByAlias(form.category_alias, programTypeCatalog.value)
+ 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
       debugger
@@ -1825,6 +1822,8 @@ function formatDateTime(isoString) {
     return {
       lead: {
         first_contact_date: form.fechaContactoInicial || null,
+        cat_program_modality,
+        cat_program_type,
         program_version_id: form.program_version_id || null,
         program_edition_id: form.edition_id || null,
         cat_status_lead,
@@ -1998,7 +1997,7 @@ async function confirmarInscripcion() {
   }
 
   function validateLeadInfo() {
-    const required = ['fechaContactoInicial','category_alias','query_alias','program_version_id','edition_id']
+    const required = ['fechaContactoInicial']
     for (const field of required) {
       if (field === 'edition_id') {
         if(route.query.clone_from)return true
