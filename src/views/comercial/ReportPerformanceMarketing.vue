@@ -68,15 +68,14 @@
           <table>
             <thead>
               <tr class="header-group">
-                <th colspan="3" class="text-left">ASESOR</th>
-                <th colspan="3" class="group-blue">OBJETIVOS (VOLUMEN)</th>
+                <th  class="text-left">ASESOR</th>
+                <th colspan="3" class="group-blue">OBJETIVOS</th>
                 <th colspan="3" class="group-green">FINANCIERO (S/.)</th> <th colspan="3" class="group-gray">GESTIÓN</th>
                 <th colspan="2" class="group-dark">EFICIENCIA</th>
               </tr>
               <tr class="header-cols">
-                <th>#</th>
                 <th>NOMBRE</th>
-                <th>TREND</th> <th class="sub-blue">META #</th>
+                <th class="sub-blue">META #</th>
                 <th class="sub-blue">REAL #</th>
                 <th class="sub-blue">GAP</th>
                 <th class="sub-green">META S/.</th>
@@ -91,15 +90,7 @@
             </thead>
             <tbody>
               <tr v-for="(row, index) in tableData" :key="index" class="data-row">
-                <td class="text-muted text-center">{{ index + 1 }}</td>
                 <td class="font-medium text-dark">{{ row.asesor }}</td>
-
-                <td class="text-center">
-                   <span v-if="row.trend === 'up'" class="trend-up">▲</span>
-                   <span v-else-if="row.trend === 'down'" class="trend-down">▼</span>
-                   <span v-else class="trend-flat">=</span>
-                </td>
-
                 <td class="text-center bg-blue-light">{{ row.obj }}</td>
                 <td class="text-center bg-blue-light font-bold text-dark">{{ row.ven }}</td>
                 <td class="text-center bg-blue-light">

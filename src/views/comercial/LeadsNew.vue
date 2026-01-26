@@ -105,7 +105,7 @@
               />
 
             </div>
-
+{{program_modality_selected_alias}}
             <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
               <label class="form-label mb-1">Edición / Fecha prevista<span class="required-star">*</span></label>
               <SearchSelect
@@ -341,7 +341,7 @@
                 placeholder="MKT..."
               />
             </div>
-            
+
             <div class="col-md-3">
               <label class="form-label mb-1">Estrategia</label>
               <SearchSelect
@@ -500,7 +500,7 @@
   </div>
 
   <BaseModal v-model="showClientHistory" title="Historial Completo del Cliente" size="xl">
-  
+
   <div v-if="loadingHistory" class="d-flex justify-content-center align-items-center py-5 h-100">
      <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Cargando historial...</span>
@@ -538,7 +538,7 @@
     <div class="modal-tab-content p-3 border-top bg-white">
 
       <div v-if="activeHistoryTab === 'historico'" class="fade-in">
-        
+
         <div v-if="clientHistoryLegacy.length === 0" class="alert alert-info text-center">
             No se encontró historial legado para este número.
         </div>
@@ -568,7 +568,7 @@
       </div>
 
       <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
-        
+
         <div v-if="clientHistoryLeads.length === 0" class="alert alert-info text-center">
             No se encontraron gestiones de CRM recientes.
         </div>
@@ -586,7 +586,7 @@
             </thead>
             <tbody>
                <tr v-for="(lead, i) in clientHistoryLeads" :key="i">
-                
+
                 <td>
                     <div class="fw-semibold">{{ formatDateTime(lead.date).split(' ')[0] }} {{ formatDateTime(lead.date).split(' ')[1] }} {{ formatDateTime(lead.date).split(' ')[2] }}</div>
                     <small class="text-muted">{{ formatDateTime(lead.date).split(' ').slice(3).join(' ') }}</small>
@@ -615,7 +615,7 @@
                 </td>
 
                 <td>
-                  <span class="badge" 
+                  <span class="badge"
                     :class="{
                         'bg-success': ['Inscrito', 'Pagó', 'Matriculado'].includes(lead.cat_status_lead_label),
                         'bg-warning text-dark': ['Interesado', 'En Seguimiento', 'Prox. Inicio'].includes(lead.cat_status_lead_label),
@@ -825,13 +825,13 @@
                     </div>
                   </div>
                 </div>
-                
+
               </div> </div> </div>
         </div>
 
       </div>
     </div>
-    
+
     <div v-else class="text-center py-5 text-muted">
        No se encontró información detallada para este programa.
     </div>
@@ -1465,15 +1465,15 @@ watchEffect(() => {
 
     const l = data?.lead || data || {}
 
-    const modality_selected_alias = l.cat_model_modality_alias ?? l.program_modality_selected_alias ?? null
-
+    const modality_selected_alias = l.cat_program_modality_alias ?? l.program_modality_alias ?? null
+    console.log(l)
     Object.assign(form, {
       fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
       query_alias: l.query_alias ?? null,
       category_alias: l.cat_program_type_alias || l.category_alias || null,
       program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
       program_modality_selected_alias: modality_selected_alias,
-      
+
       program_version_id: l.program_version_id ?? null,
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
       full_name: l.full_name ?? l.full_name_label ?? '',
@@ -1673,7 +1673,7 @@ async function searchLeadByPhone() {
     toast.warning("Por favor ingrese un número de teléfono válido.");
     return;
   }
-  
+
   if(dataSetted==phone)return
 
   dataSetted.value = phone
@@ -1689,7 +1689,7 @@ async function searchLeadByPhone() {
 
   form.membership_moment_id  =  response.membership_tier_id
   form.cat_client_moment_alias = response.cat_client_moment
-    
+
     if (response.cat_client_moment === 'we_moment_new') {
       toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
 
@@ -1701,11 +1701,11 @@ async function searchLeadByPhone() {
         form.full_name = response.lead_details[0].full_name
         return
       }
-      
+
       if(response.legacy_details.length>0){
         form.full_name = response.legacy_details[0].full_name
       }
-    
+
     }
 
 
@@ -1722,7 +1722,7 @@ const loadingHistory = ref(false)   // Para el spinner de carga
 const clientHistoryLeads = ref([])
 
 async function openPhoneDetail() {
-  
+
   const phone = form.telefono?.trim();
 
   if (!phone || phone.length < 5) {
@@ -1730,18 +1730,18 @@ async function openPhoneDetail() {
     return;
   }
 
-  
+
   if(dataSetted!=phone)dataSetted.value = phone
 
-  
+
 
   showClientHistory.value = true;
   loadingHistory.value = true;
-  
+
   // Reseteamos ambas listas
   clientHistoryLegacy.value = [];
   clientHistoryLeads.value = []; // <--- 2. RESETEAR AQUÍ
-  
+
   activeHistoryTab.value = 'asesoria'; // (Opcional: Si quieres que se abra directo en esta pestaña para probar)
 
   try {
@@ -1750,10 +1750,10 @@ async function openPhoneDetail() {
     if (response) {
         // Mapeamos el Histórico legado
         clientHistoryLegacy.value = response.legacy_details || [];
-        
+
         // Mapeamos el detalle de Leads (CRM)
         clientHistoryLeads.value = response.lead_details || []; // <--- 3. ASIGNAR DATA AQUÍ
-    } 
+    }
 
   } catch (error) {
     console.error(error);
@@ -1782,8 +1782,8 @@ function formatDateTime(isoString) {
   if (!isoString) return '-';
   const date = new Date(isoString);
   // Retorna formato: 13 Ene 2026 10:58 PM
-  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) + 
-         ' ' + 
+  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) +
+         ' ' +
          date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -1804,7 +1804,7 @@ function formatDateTime(isoString) {
     const cat_client_category    = idByAlias(form.cat_client_moment_alias, momentCatalog.value)
     const cat_program_modality = idByAlias(form.program_modality_alias, programModalityCatalog.value)
     const cat_program_type = idByAlias(form.category_alias, programTypeCatalog.value)
- 
+
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
       debugger
@@ -1863,23 +1863,23 @@ const hasEditions = computed(() => {
 async function openProgramVersionDetail() {
   // Validamos que haya una ID seleccionada
   if (!form.program_version_id) return;
-  
+
   loadingDetail.value = true;
   modelProgramVersion.value = null; // Limpiamos data anterior
-  
+
   try {
     // Llamamos al servicio (Postman: /api/program/programversiondetailget)
-    const response = await programService.programVersionDetailGet({ 
-      program_version_id: form.program_version_id 
+    const response = await programService.programVersionDetailGet({
+      program_version_id: form.program_version_id
     });
-    
+
     // Asignamos la respuesta completa a la variable
-    modelProgramVersion.value = response; 
-    
+    modelProgramVersion.value = response;
+
     // Reseteamos el tab a 'info' y abrimos modal
     activeTab.value = 'info';
     showProgramDetail.value = true;
-    
+
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar el detalle del programa");
