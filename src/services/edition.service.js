@@ -56,6 +56,11 @@ export default class EditionService {
     return (await api.post('/edition/editiontreeupdate', payload)).data;
   }
   
-  
+  async auditLogsGet(payload) {
+    // Nota: Asegúrate que en tu Backend la ruta sea '/edition/auditlogsget' 
+    // o cambia aquí a '/audit-logs/get' según como lo hayas definido en Fastify.
+    const response = (await api.post('/edition/auditlogsget', payload)).data;
+    return response.data;
+  }
   
 }

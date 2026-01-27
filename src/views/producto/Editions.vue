@@ -47,6 +47,14 @@
         </div>
 
         <div class="header-actions">
+          <button
+          type="button"
+          class="btn btn-outline btn-sm ms-1"
+          @click="openGlobalHistory"
+        >
+          <i class="fa-solid fa-clock-rotate-left me-1"></i>
+          Historial
+        </button>
     <button
       type="button"
       class="btn btn-outline btn-sm mx-1"
@@ -57,14 +65,18 @@
       Filtros
     </button>
 
-    <button
-      type="button"
-      class="btn btn-outline btn-sm"
-      @click="showMetaModal = true"
-    >
-      <i class="fa-solid fa-layer-group me-1"></i>
-      Resumen
-    </button>
+  <button
+  type="button"
+  class="btn btn-outline btn-sm"
+  :class="{ 'btn-primary': hasColumnFilters }"
+  @click="showMetaModal = true"
+>
+  <i class="fa-solid fa-layer-group me-1"></i>
+  Resumen
+  <span v-if="hasColumnFilters" class="badge bg-white text-primary ms-1">
+    Filtrado
+  </span>
+</button>
 
     <button
       type="button"
@@ -91,119 +103,177 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table" :class="{ dense, 'table-bordered compact-borders': isCompact }">
-        <thead>
-          <tr>
-            <th class="bg-warning text-dark text-center" style="width: 100px;">
-              <div class="d-flex justify-content-center">
-                <button type="button" class="btn btn-sm btn-primary" v-if="!hasActiveFilters" @click="openEditModal(null)">
-                  Nueva
-                </button>
-              </div>
-            </th>
 
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>Programa</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.program" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
+  <thead>
+    <tr>
+      <!-- Columna Acciones -->
+      <th class="bg-warning text-dark text-center" style="width: 100px;">
+        <div class="d-flex justify-content-center">
+          <button type="button" class="btn btn-sm btn-primary" v-if="!hasActiveFilters" @click="openEditModal(null)">
+            Nueva
+          </button>
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="!isCompact">
-              <div class="d-flex flex-column">
-                <span>Detalle</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.detail" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
+      <!-- Columna Programa -->
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Programa</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Programa"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.program_abreviature"
+            v-model="columnFilters.program"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>Linea</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.line" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
+      <!-- Columna Detalle (Vista Normal) -->
+      <th class="bg-warning text-dark p-1" v-if="!isCompact">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Detalle</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Detalle"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`"
+            v-model="columnFilters.detail"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>Tipado</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.type" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
+      <!-- Columna Línea (Vista Compacta) -->
+      <th class="bg-warning text-dark p-1" v-if="isCompact">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Linea</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Línea"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.program_line_business"
+            v-model="columnFilters.line"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>Segmento</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.segment" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
+      <!-- Columna Tipado (Vista Compacta) -->
+      <th class="bg-warning text-dark p-1" v-if="isCompact">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Tipado</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Tipado"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.cat_course_category_label"
+            v-model="columnFilters.type"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>D.A.</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.da" placeholder="..." style="font-size: 0.7rem; width: 40px;">
-              </div>
-            </th>
+      <!-- Columna Segmento (Vista Compacta) -->
+      <th class="bg-warning text-dark p-1" v-if="isCompact">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Segmento</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Segmento"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.cat_segment"
+            v-model="columnFilters.segment"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>F. INICIO</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.start_date" placeholder="dd/mm" style="font-size: 0.7rem;">
-              </div>
-            </th>
+      <th class="bg-warning text-dark p-1" v-if="isCompact">
+        <div class="d-flex flex-column">
+          <span>D.A.</span>
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>D.P.</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.dp" placeholder="..." style="font-size: 0.7rem; width: 40px;">
-              </div>
-            </th>
-
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>F. FIN</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.end_date" placeholder="dd/mm" style="font-size: 0.7rem;">
-              </div>
-            </th>
+      
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex flex-column">
+          <span>F. INICIO</span>
+        </div>
+      </th>
+      <th class="bg-warning text-dark p-1" v-if="isCompact">
+        <div class="d-flex flex-column">
+          <span>D.P.</span>
+        </div>
+      </th>
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex flex-column">
+          <span>F. FIN</span>
+        </div>
+      </th>
 
             <th class="bg-warning text-dark p-1" v-if="isCompact">
               <div class="d-flex flex-column">
                 <span>Dias Clase</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.schedule" placeholder="..." style="font-size: 0.7rem;">
               </div>
             </th>
 
             <th class="bg-warning text-dark p-1">
               <div class="d-flex flex-column">
                 <span>Horario</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.schedule" placeholder="..." style="font-size: 0.7rem;">
               </div>
             </th>
 
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>Docente</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.instructor" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
 
-            <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
+      <!-- Columna Docente -->
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Docente</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Docente"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.instructor"
+            v-model="columnFilters.instructor"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark text-center">Confirm.</th>
+      <!-- Resto de columnas sin filtros rápidos -->
+      <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
+      <th class="bg-warning text-dark text-center">Confirm.</th>
+      
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Observación</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Observación"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => item.notes"
+            v-model="columnFilters.notes"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
 
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>Observación</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.notes" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
-
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>Edición</span>
-                <input v-if="!hasActiveFilters" type="text" class="form-control form-control-xs mt-1 border-warning bg-warning-subtle placeholder-dark" v-model="localFilters.edition_code" placeholder="..." style="font-size: 0.7rem;">
-              </div>
-            </th>
-          </tr>
-        </thead>
+      <th class="bg-warning text-dark p-1">
+        <div class="d-flex align-items-center justify-content-between">
+          <span>Edición</span>
+          <ColumnFilterDropdown
+            v-if="!hasActiveFilters"
+            column-label="Código Edición"
+            :all-items="allScheduleItems"
+            :value-extractor="(item) => `${item.global_code} ${item.specific_code}`"
+            v-model="columnFilters.edition_code"
+            @apply="applyColumnFilters"
+          />
+        </div>
+      </th>
+    </tr>
+  </thead>
           <tbody v-if="!hasActiveFilters">
             <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
               <tr v-if="week.items.length>0"
@@ -651,6 +721,79 @@
       </div>
     </div>
   </div>
+  <BaseModal v-model="showHistoryModal" title="Historial Global de Cambios" size="xl">
+  <div class="p-3 bg-light" style="min-height: 400px; max-height: 80vh; overflow-y: auto;">
+    
+    <div v-if="isLoadingHistory" class="text-center p-5 text-muted">
+      <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
+      <p>Cargando historial...</p>
+    </div>
+
+    <div v-else-if="!globalHistoryList || globalHistoryList.length === 0" class="text-center p-5 text-muted">
+      <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 opacity-25"></i>
+      <p>No se encontraron registros recientes.</p>
+    </div>
+
+    <div v-else class="d-flex flex-column gap-3">
+      <div v-for="tx in globalHistoryList" :key="tx.transaction_id" class="card border shadow-sm">
+        
+        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-bold text-primary"><i class="fa-solid fa-user-circle me-1"></i> {{ tx.user_name || 'Sistema' }}</span>
+            <span class="text-muted small ms-2">{{ formatDate(tx.created_at) }} <span class="text-xs">({{ new Date(tx.created_at).toLocaleTimeString() }})</span></span>
+          </div>
+          <span class="badge bg-light text-dark border">ID Transacción: {{ tx.transaction_id }}</span>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0 small">
+              <thead class="table-light text-muted">
+                <tr>
+                  <th style="width: 50px;" class="text-center">Tipo</th>
+                  <th style="width: 80px;">Acción</th>
+                  <th style="width: 250px;">Edición</th>
+                  <th>Detalle de Cambios</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(change, idx) in tx.changes" :key="idx">
+                  <td class="text-center align-middle">
+                    <span class="badge" :class="change.is_child ? 'bg-info-subtle text-info-emphasis' : 'bg-primary-subtle text-primary-emphasis'">
+                      {{ change.is_child ? 'Hijo' : 'Padre' }}
+                    </span>
+                  </td>
+                  <td class="align-middle">
+                    <span class="fw-bold" :class="change.action === 'UPDATE' ? 'text-warning' : 'text-success'">
+                      {{ change.action }}
+                    </span>
+                  </td>
+                  <td class="align-middle text-muted">{{ change.abbreviation + ' ('+ change.global_code+')'}}</td>
+                  <td class="align-middle">
+                    <div v-if="change.action === 'INSERT'" class="text-muted fst-italic">Registro creado</div>
+                    
+                    <div v-else class="d-flex flex-column gap-1">
+                      <div v-for="(diff, field) in change.changed_fields" :key="field" class="d-flex align-items-center gap-2 border-bottom border-light pb-1">
+                        <span class="fw-bold text-dark" style="min-width: 100px;">{{ field }}:</span>
+                        <span class="text-danger text-decoration-line-through bg-danger-subtle px-1 rounded">{{ diff.old === null ? 'null' : diff.old }}</span>
+                        <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.7rem;"></i>
+                        <span class="text-success bg-success-subtle px-1 rounded fw-bold">{{ diff.new === null ? 'null' : diff.new }}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <template #footer>
+    <button class="btn btn-secondary btn-sm" @click="showHistoryModal = false">Cerrar</button>
+  </template>
+</BaseModal>
 <BaseModal v-model="showMetaModal" title="Resumen de Programación" size="xl">
   <div class="meta-dashboard p-3">
     <div class="card border-0 shadow-sm mb-4 overflow-hidden" v-if="!hasActiveFilters">
@@ -1743,10 +1886,25 @@ import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import MultiSelect from '@/components/MultiSelect.vue';
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
-// Configuración opcional para que se vea bonito y en español
-// Asegúrate de tener los componentes importados si los usas dentro de <script setup>
-// aunque en Vue 3 <script setup> suelen ser auto-detectados si están en components.d.ts,
-// pero es buena práctica dejarlos si ya estaban.
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+
+// Estado para los filtros de columna (reemplaza localFilters)
+const columnFilters = reactive({
+  program: [],
+  detail: [],
+  line: [],
+  type: [],
+  segment: [],
+  da: [],
+  start_date: [],
+  dp: [],
+  end_date: [],
+  schedule: [],
+  instructor: [],
+  notes: [],
+  edition_code: []
+})
+
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 
@@ -1806,26 +1964,91 @@ function getCatalogLabel(catalogName, value, defaultText = 'Sin Asignar') {
   return found ? found.description : defaultText
 }
 
-/**
- * Calcula los totales comparando contra el Catálogo completo.
- * Incluye datos HARDCODEADOS para la sección de 'Avance Global' por ahora.
- */
-/**
- * Calcula los totales comparando contra el Catálogo completo.
- * Adapta la fuente de datos según si hay filtros o no.
- */
-function calculateMetaSummary() {
-  // 1. Determinar la fuente de datos
-  let allItems = []
-  
+// Computed que devuelve items después de aplicar TODOS los filtros
+// (tanto los de búsqueda global como los de columna)
+const effectiveItems = computed(() => {
+  let items = []
+
+  // 1. Obtener datos base según el contexto (filtros globales o vista mensual)
   if (hasActiveFilters.value) {
-    // Si hay filtros, usamos la lista histórica plana
-    allItems = historyList.value || []
+    // Modo histórico: datos planos del backend
+    items = historyList.value || []
   } else {
-    // Si es vista mensual, aplanamos las semanas
-    allItems = schedules.value.flatMap(week => week.items || [])
+    // Vista mensual: aplanar las semanas y aplicar filtros de columna
+    const scheduleData = filteredSchedules.value // Ya tiene filtros de columna aplicados
+    items = scheduleData.flatMap(week => week.items || [])
   }
-  
+
+  // 2. Aplicar filtros de columna si NO estamos en modo histórico
+  // (en modo histórico no aplican los filtros de columna, solo los del modal)
+  if (!hasActiveFilters.value) {
+    const hasColumnFilter = Object.values(columnFilters).some(arr => arr.length > 0)
+    
+    if (hasColumnFilter) {
+      items = items.filter(item => {
+        // Reutilizar la misma lógica de filteredSchedules
+        const getValue = (val) => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
+
+        // Programa
+        if (columnFilters.program.length > 0) {
+          if (!columnFilters.program.includes(getValue(item.program_abreviature))) return false
+        }
+
+        // Detalle
+        if (columnFilters.detail.length > 0) {
+          const detailValue = `${item.version_code} ${item.cat_segment}`
+          if (!columnFilters.detail.some(filter => detailValue.includes(filter))) return false
+        }
+
+        // Línea
+        if (columnFilters.line.length > 0) {
+          if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
+        }
+
+        // Tipado
+        if (columnFilters.type.length > 0) {
+          if (!columnFilters.type.includes(getValue(item.cat_course_category_label))) return false
+        }
+
+        // Segmento
+        if (columnFilters.segment.length > 0) {
+          if (!columnFilters.segment.includes(getValue(item.cat_segment))) return false
+        }
+
+        // Docente
+        if (columnFilters.instructor.length > 0) {
+          if (!columnFilters.instructor.includes(getValue(item.instructor))) return false
+        }
+
+        // Notas
+        if (columnFilters.notes.length > 0) {
+          if (!columnFilters.notes.includes(getValue(item.notes))) return false
+        }
+
+        // Código de Edición
+        if (columnFilters.edition_code.length > 0) {
+          const codeValue = `${item.global_code} ${item.specific_code}`.trim()
+          if (!columnFilters.edition_code.some(filter => codeValue.includes(filter))) return false
+        }
+
+        return true
+      })
+    }
+  }
+
+  return items
+})
+// Watch para recalcular resumen cuando cambien filtros de columna
+watch(
+  () => Object.values(columnFilters).flat().length, // Cuenta total de filtros activos
+  () => {
+    calculateMetaSummary()
+  }
+)
+
+function calculateMetaSummary() {
+  // 1. USAR EL COMPUTED QUE YA TIENE TODOS LOS FILTROS APLICADOS
+  const allItems = effectiveItems.value
   const totalItems = allItems.length
 
   // --- A. LÍNEAS DE NEGOCIO ---
@@ -1895,7 +2118,6 @@ function calculateMetaSummary() {
   metaSummary.value.lines = Object.values(linesMap).sort((a, b) => b.count - a.count)
 
   const categoriesArray = Object.values(catsMap)
-  // Agregamos TOTAL real para las barras de progreso de categorías
   categoriesArray.push({ name: 'Total', count: totalItems })
   metaSummary.value.categories = categoriesArray
 
@@ -1904,22 +2126,20 @@ function calculateMetaSummary() {
 
   // 6. DATOS HARDCODEADOS PARA AVANCE GLOBAL (Solo si NO hay filtros)
   if (!hasActiveFilters.value) {
-      const fakeSales = 84
-      const fakeB2B = 3
-      const fakeTarget = 808
-      const fakeTotal = fakeSales + fakeB2B
-      const fakePercentage = fakeTarget > 0 ? ((fakeTotal / fakeTarget) * 100).toFixed(2) : '0.00'
+    const fakeSales = 84
+    const fakeB2B = 3
+    const fakeTarget = 808
+    const fakeTotal = fakeSales + fakeB2B
+    const fakePercentage = fakeTarget > 0 ? ((fakeTotal / fakeTarget) * 100).toFixed(2) : '0.00'
 
-      metaSummary.value.general = {
-        sales: fakeSales,
-        b2b: fakeB2B,
-        target: fakeTarget,
-        percentage: fakePercentage
-      }
+    metaSummary.value.general = {
+      sales: fakeSales,
+      b2b: fakeB2B,
+      target: fakeTarget,
+      percentage: fakePercentage
+    }
   } else {
-      // En modo histórico dejamos esto vacío o en ceros por seguridad, 
-      // aunque el v-if del template lo ocultará.
-      metaSummary.value.general = { sales: 0, b2b: 0, target: 0, percentage: 0 }
+    metaSummary.value.general = { sales: 0, b2b: 0, target: 0, percentage: 0 }
   }
 }
 
@@ -2000,7 +2220,10 @@ function openTreeModal(edition) {
 function toggleGroup(index) {
   treeGroups.value[index].isOpen = !treeGroups.value[index].isOpen
 }
-
+// Computed para detectar si hay filtros de columna activos
+const hasColumnFilters = computed(() => {
+  return Object.values(columnFilters).some(arr => arr.length > 0)
+})
 // --- HELPER RESPUESTAS ---
 function handleServiceResponse(response) {
   if (!response) {
@@ -2900,32 +3123,28 @@ function validateDateInput(targetObj, fieldKey) {
   const dateVal = targetObj[fieldKey];
   if (!dateVal) return;
 
-  // Usamos split para evitar problemas de zona horaria al instanciar Date
   const [y, m, d] = dateVal.split('-').map(Number);
 
-  // 1. Validar Mes y Año (Dashboard context)
+  // 1. Validar Mes y Año
   if (y !== selectedYear.value || m !== selectedMonth.value) {
     toast.info(`La fecha debe pertenecer a ${months.value[selectedMonth.value - 1]} del ${selectedYear.value}`);
-    targetObj[fieldKey] = null; // Limpiar el input
+    targetObj[fieldKey] = null;
     return;
   }
 
-  // 2. Validar Feriados (CORREGIDO: Usamos holidayDates.value)
+  // 2. Validar Feriados (MODIFICADO: Solo aviso)
   if (holidayDates.value.includes(dateVal)) {
-    // Buscamos el nombre para que el mensaje sea más útil
     const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
     const hName = hObj ? hObj.description : 'Feriado';
 
-    toast.info(`La fecha seleccionada es feriado (${hName}) y no está permitida.`);
-    targetObj[fieldKey] = null; // Limpiar el input
-    return;
+    // CAMBIO: Toast warning y NO limpiamos el input
+    toast.warning(`Atención: La fecha seleccionada es feriado (${hName}).`);
   }
 }
 
 function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
-  debugger
-  // --- LÓGICA DE FECHAS MIN/MAX (YA EXISTENTE) ---
+  
   // LOGICA MIN/MAX
   if (bodyField) {
     config.minDate = bodyField.start_date;
@@ -2939,10 +3158,7 @@ function getChildDateConfig(index = null, bodyField = null) {
         config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
         config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
       } else {
-        // CORRECCIÓN AQUÍ: Quitar .value y usar nombre más claro
         const prevChild = modalForm.program_version_children[index - 1];
-
-        // Si el anterior tiene fecha, esa es mi fecha mínima
         if (prevChild && prevChild.start_date) {
           config.minDate = prevChild.start_date;
         }
@@ -2950,13 +3166,11 @@ function getChildDateConfig(index = null, bodyField = null) {
     }
   }
 
-  // --- NUEVA LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS ---
-  // Determinar el objeto a evaluar (modalForm para curso, o el hijo específico)
+  // --- LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS (PERO PERMITIR FERIADOS) ---
   const targetObj = (index !== null && modalForm.program_version_children[index])
     ? modalForm.program_version_children[index]
-    : bodyField?bodyField:modalForm;
+    : bodyField ? bodyField : modalForm;
 
-  // Si hay una combinación de días seleccionada, aplicar filtro
   if (targetObj?.cat_day_combination_id) {
     const comboOption = catalogs.value.dayCombinationList.find(
       c => c.id === targetObj.cat_day_combination_id
@@ -2964,18 +3178,17 @@ function getChildDateConfig(index = null, bodyField = null) {
 
     if (comboOption && comboOption.variable_2) {
       try {
-        // Parsear el array de días desde variable_2 (ej: "[1,3,5]")
         const allowedDays = JSON.parse(comboOption.variable_2);
 
-        // Flatpickr: Solo habilitar esos días específicos
+        // Flatpickr: Solo habilitar los días de la semana permitidos (Lun, Mie, etc.)
+        // YA NO bloqueamos si es feriado.
         config.enable = [
           (date) => {
             const dayOfWeek = date.getDay();
-            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-
-            // Debe estar en los días permitidos Y no ser feriado
-            return allowedDays.includes(dayOfWeek) && !holidayDates.value.includes(dateStr);
+            // const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
+            // CAMBIO AQUÍ: Solo validamos que sea el día de la semana correcto.
+            return allowedDays.includes(dayOfWeek); 
           }
         ];
       } catch (e) {
@@ -2984,14 +3197,8 @@ function getChildDateConfig(index = null, bodyField = null) {
     }
   }
 
-  // --- DESHABILITAR FERIADOS (ADICIONAL) ---
-  // Si también quieres que los feriados NO se puedan seleccionar, agrega:
-  // if (!config.disable) config.disable = [];
-  // config.disable.push(...holidayDates.value);
-
   return config;
 }
-
 
 /**
  * Parsea la descripción del combo (ej: "Lun-Mie-Vier") y devuelve un array de días JS (0-6)
@@ -3044,83 +3251,61 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
    if (!dateVal) return;
    const [y, m, d] = dateVal.split('-').map(Number);
 
-   // Definir claramente cuándo validar mes/año
+   // Validar Mes/Año (Solo si no hay filtros y es nueva edición)
    const shouldValidateMonthYear = !hasActiveFilters.value &&
-                                    !currentEdition.value &&
-                                    (index === null || index === 0);
+                                   !currentEdition.value &&
+                                   (index === null || index === 0);
 
    if (shouldValidateMonthYear && (y !== selectedYear.value || m !== selectedMonth.value)) {
-      toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
-
-       // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
+     toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
        nextTick(() => {
            targetObj[fieldKey] = null;
-           // Si es la fecha de inicio, limpiamos también la de fin para evitar inconsistencias
-           if (fieldKey === 'start_date') {
-               targetObj.end_date = null;
-           }
+           if (fieldKey === 'start_date') targetObj.end_date = null;
        });
-
-       targetObj[fieldKey] = null;
-       targetObj.start_date =null;
-       targetObj.end_date = null;
        return;
    }
 
+   // Validaciones de cronología con hijos anteriores
    if (index !== null && index > 0) {
       const firstChild = modalForm.program_version_children[0];
-
-      // Validar que no sea anterior al primero
       if (firstChild.start_date && dateVal < firstChild.start_date) {
         toast.warning(`No puede iniciar antes que el primer módulo.`);
-
         nextTick(() => {
             targetObj[fieldKey] = null;
             targetObj.end_date = null;
         });
         return;
       }
-
-      // Validar contra el hermano anterior (Opcional, según tu lógica actual)
       const previousChild = modalForm.program_version_children[index - 1];
       if (previousChild.start_date && dateVal < previousChild.start_date) {
         toast.warning(`Orden cronológico inválido.`);
-
         nextTick(() => {
             targetObj[fieldKey] = null;
             targetObj.end_date = null;
         });
         return;
       }
-    }
+   }
 
-
+   // --- CAMBIO PRINCIPAL AQUÍ (FERIADOS) ---
    if (holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
        const hName = hObj ? hObj.description : 'Feriado';
 
-       toast.info(`La fecha de inicio no puede ser un feriado (${hName}).`);
-       // SOLUCIÓN AQUÍ: Usamos nextTick para forzar la limpieza
-       nextTick(() => {
-           targetObj[fieldKey] = null;
-           // Si es la fecha de inicio, limpiamos también la de fin para evitar inconsistencias
-           if (fieldKey === 'start_date') {
-               targetObj.end_date = null;
-           }
-       });
-       return;
+       // Solo mostramos advertencia, NO limpiamos el campo ni hacemos return
+       toast.warning(`Nota: La fecha seleccionada coincide con un feriado (${hName}).`);
    }
+   // ----------------------------------------
 
-   // 2. Si es Fecha de Inicio, calcular Fecha Fin automáticamente
+   // Si es Fecha de Inicio, calcular Fecha Fin automáticamente
    if (fieldKey === 'start_date') {
        calculateEndDate(targetObj);
 
-       // VALIDACIÓN EN CASCADA para hijos
+       // Validación en cascada (aviso si rompe al siguiente)
        if (index !== null && modalForm.program_version_children.length > index + 1) {
          const currentChild = modalForm.program_version_children[index];
          const nextChild = modalForm.program_version_children[index + 1];
 
-         // Avisar si hay conflicto cronológico con el siguiente
          if (currentChild.end_date && nextChild.start_date &&
              currentChild.end_date > nextChild.start_date) {
            toast.warning(
@@ -3131,25 +3316,15 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
        }
    }
 
-   // AÑADIR ESTO AL FINAL DE LA FUNCIÓN:
-  // Si cambié la fecha de inicio, verificar si rompo la cronología del SIGUIENTE hermano
-  if (fieldKey === 'start_date' && index !== null) {
-
-      // Verificar hermano SIGUIENTE (Forward check)
+   // Limpiar siguiente si rompe cronología (Forward check)
+   if (fieldKey === 'start_date' && index !== null) {
       const nextIndex = index + 1;
       if (nextIndex < modalForm.program_version_children.length) {
           const nextChild = modalForm.program_version_children[nextIndex];
-
-          // Si el siguiente ya tiene fecha Y mi nueva fecha es MAYOR a la del siguiente
           if (nextChild.start_date && targetObj.start_date > nextChild.start_date) {
-
-              // OPCIÓN A: Limpiar el siguiente automáticamente (lo que pediste)
               nextChild.start_date = null;
               nextChild.end_date = null;
               toast.warning(`Se limpió el módulo siguiente porque iniciaba antes que este.`);
-
-              // Recursividad: Si limpias el siguiente, podrías querer validar el que le sigue a ese,
-              // pero usualmente con limpiar el inmediato basta para obligar al usuario a corregir.
           }
       }
   }
@@ -3490,79 +3665,74 @@ function addAttachmentProgram(){
     program_version_attachment_id: null,
   })
 }
-
-
-// --- FILTRADO LOCAL (CLIENT-SIDE) ---
-const localFilters = reactive({
-  program: '',
-  detail: '',      // Para vista normal (busca en versión, segmento, categoría)
-  line: '',        // Vista compacta
-  type: '',        // Vista compacta
-  segment: '',     // Vista compacta
-  da: '',          // Vista compacta
-  start_date: '',
-  dp: '',          // Vista compacta
-  end_date: '',
-  schedule: '',    // Sirve para Días y Horarios
-  instructor: '',
-  notes: '',       // Observaciones
-  edition_code: '' // Columna final (Global, Específico, Clasificación)
+// Computed para aplanar todos los items (necesario para el componente)
+const allScheduleItems = computed(() => {
+  if (hasActiveFilters.value) {
+    return historyList.value || []
+  }
+  return schedules.value.flatMap(week => week.items || [])
 })
 
+// Función para aplicar filtros de columna
+function applyColumnFilters() {
+  // Los filtros ya están aplicados reactivamente gracias al v-model
+  // Esta función se puede usar para acciones adicionales si es necesario
+  console.log('Filtros aplicados:', columnFilters)
+}
+
+// Modificar el computed filteredSchedules para usar los nuevos filtros
 const filteredSchedules = computed(() => {
   if (!schedules.value || schedules.value.length === 0) return []
 
   // Verificar si hay algún filtro activo
-  const hasFilter = Object.values(localFilters).some(val => val && String(val).trim() !== '')
+  const hasFilter = Object.values(columnFilters).some(arr => arr.length > 0)
   if (!hasFilter) return schedules.value
 
   return schedules.value.map(week => {
     const filteredItems = (week.items || []).filter(item => {
-      
-      // Helper para limpiar texto y evitar errores de null
-      const safeLower = (val) => (val || '').toString().toLowerCase()
+      // Helper para obtener valor comparable
+      const getValue = (val) => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
 
       // 1. Programa
-      if (localFilters.program && !safeLower(item.program_abreviature).includes(safeLower(localFilters.program))) return false
-
-      // 2. Detalle (Vista Normal: busca en varios campos)
-      if (localFilters.detail) {
-        const detailText = `${item.version_code} ${item.cat_segment} ${item.cat_course_category_label} ${item.program_line_business}`.toLowerCase()
-        if (!detailText.includes(safeLower(localFilters.detail))) return false
+      if (columnFilters.program.length > 0) {
+        if (!columnFilters.program.includes(getValue(item.program_abreviature))) return false
       }
 
-      // 3. Filtros específicos de Vista Compacta
-      if (localFilters.line && !safeLower(item.program_line_business).includes(safeLower(localFilters.line))) return false
-      if (localFilters.type && !safeLower(item.cat_course_category_label).includes(safeLower(localFilters.type))) return false
-      if (localFilters.segment && !safeLower(item.cat_segment).includes(safeLower(localFilters.segment))) return false
-      if (localFilters.da && !safeLower(item.calc_da).includes(safeLower(localFilters.da))) return false
-      if (localFilters.dp && !safeLower(item.calc_dp).includes(safeLower(localFilters.dp))) return false
+      // 2. Detalle (combina varios campos)
+      if (columnFilters.detail.length > 0) {
+        const detailValue = `${item.version_code} ${item.cat_segment}`
+        if (!columnFilters.detail.some(filter => detailValue.includes(filter))) return false
+      }
 
-      // 4. Fechas
-      if (localFilters.start_date && !formatDate(item.start_date).toLowerCase().includes(safeLower(localFilters.start_date))) return false
-      if (localFilters.end_date && !formatDate(item.end_date).toLowerCase().includes(safeLower(localFilters.end_date))) return false
+      // 3. Línea
+      if (columnFilters.line.length > 0) {
+        if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
+      }
 
-      // 5. Horario (Busca en label de combinación día y hora)
-      if (localFilters.schedule) {
-        const term = safeLower(localFilters.schedule)
-        // Concatenamos toda la info de horarios
-        const scheduleText = item.schedules 
-          ? item.schedules.map(s => s.day_combination_label + ' ' + s.hour_combination_label).join(' ') 
-          : (item.day_combination_label + ' ' + item.hour_combination_label) // Fallback
-        
-        if (!safeLower(scheduleText).includes(term)) return false
+      // 4. Tipado
+      if (columnFilters.type.length > 0) {
+        if (!columnFilters.type.includes(getValue(item.cat_course_category_label))) return false
+      }
+
+      // 5. Segmento
+      if (columnFilters.segment.length > 0) {
+        if (!columnFilters.segment.includes(getValue(item.cat_segment))) return false
       }
 
       // 6. Docente
-      if (localFilters.instructor && !safeLower(item.instructor).includes(safeLower(localFilters.instructor))) return false
+      if (columnFilters.instructor.length > 0) {
+        if (!columnFilters.instructor.includes(getValue(item.instructor))) return false
+      }
 
-      // 7. Observación (Notes)
-      if (localFilters.notes && !safeLower(item.notes).includes(safeLower(localFilters.notes))) return false
+      // 7. Notas
+      if (columnFilters.notes.length > 0) {
+        if (!columnFilters.notes.includes(getValue(item.notes))) return false
+      }
 
-      // 8. Edición (Códigos al final)
-      if (localFilters.edition_code) {
-        const codeText = `${item.global_code} ${item.specific_code} ${item.clasification}`.toLowerCase()
-        if (!codeText.includes(safeLower(localFilters.edition_code))) return false
+      // 8. Código de Edición
+      if (columnFilters.edition_code.length > 0) {
+        const codeValue = `${item.global_code} ${item.specific_code}`.trim()
+        if (!columnFilters.edition_code.some(filter => codeValue.includes(filter))) return false
       }
 
       return true
@@ -3571,6 +3741,7 @@ const filteredSchedules = computed(() => {
     return { ...week, items: filteredItems }
   })
 })
+
 
 // =========================================
 // LOGICA LOCALSTORAGE (PERSISTENCIA)
@@ -3720,6 +3891,35 @@ const searchEditionsFiltered = async (q, child, index) => {
 
   return filteredResponse;
 }
+
+// --- HISTORIAL GLOBAL ---
+const showHistoryModal = ref(false)
+const globalHistoryList = ref([])
+const isLoadingHistory = ref(false)
+
+async function openGlobalHistory() {
+  showHistoryModal.value = true
+  isLoadingHistory.value = true
+  globalHistoryList.value = []
+
+  try {
+    // Llamada al servicio que creamos anteriormente
+    // Enviamos editionId: null para traer todo, y un límite razonable
+    const data = await editionService.auditLogsGet({ 
+      editionId: null, 
+      limit: 50, 
+      offset: 0 
+    })
+    
+    globalHistoryList.value = data || []
+  } catch (err) {
+    console.error('Error al cargar historial:', err)
+    toast.error('No se pudo cargar el historial de cambios')
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
 </script>
 
 <style scoped>
