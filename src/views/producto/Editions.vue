@@ -360,20 +360,82 @@
                     {{e.calc_da}}
                 </td>
 
-                <td style="min-width: 40px;max-width: 120px;" >
-                  <div
-                    class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
-                    title="Filtrar solo por este día"
-                    @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
-                  >
-                    {{ formatDate(e.start_date) }} <i v-if="!isCompact" class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
-                  </div>
-                  <div class="muted small" v-if="!isCompact">
-                    {{ 'CA: '+e.calc_da || 0 }}
-                    <div class="muted small float-end">
-                      {{ 'CP: '+e.calc_dp || 0 }}
+                <td style="min-width: 40px;max-width: 120px;" class="position-relative overflow-visible">
+                    <div
+                        class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
+                        title="Click derecho para ver proyección"
+                        @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
+                        @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
+                    >
+                        {{ formatDate(e.start_date) }} 
+                        <i v-if="!isCompact" class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
                     </div>
-                  </div>
+                    
+                    <div class="muted small" v-if="!isCompact">
+                        {{ 'CA: '+e.calc_da || 0 }}
+                        <div class="muted small float-end">{{ 'CP: '+e.calc_dp || 0 }}</div>
+                    </div>
+
+                    <div 
+                        v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" 
+                        class="schedule-preview-popover shadow-lg"
+                        :class="{ 'popover-opens-top': popoverPosition === 'top' }"
+                        style="width: 360px; left: 0;" 
+                    >
+                        <div class="popover-header">
+                            <span>Proyección: {{ e.program_abreviature }}</span>
+                            <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
+                        </div>
+                        
+                        <div class="popover-content">
+                            <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                            <div v-else class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                <table class="table table-sm table-borderless mb-0 align-middle small-table w-100">
+                                    <thead class="bg-light sticky-top text-muted" style="font-size: 0.7rem;">
+                                        <tr>
+                                            <th class="ps-3">Código</th>
+                                            <th>Fecha / Horario</th>
+                                            <th class="text-end pe-3">Gap</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
+                                            :class="item.type === 'current' ? 'bg-primary-subtle' : 'border-bottom border-light'">
+                                            
+                                            <td class="ps-3 fw-bold" :class="item.type === 'current' ? 'text-primary' : 'text-dark'">
+                                                {{ item.global_code }}
+                                                <span v-if="item.type === 'current'" class="badge bg-primary ms-1" style="font-size: 0.6rem;">ACTUAL</span>
+                                            </td>
+
+                                            <td>
+                                                <div class="d-flex flex-column lh-1 py-1">
+                                                    <span :class="{'fw-bold': item.type === 'current'}">{{ formatDate(item.start_date_eff) }}</span>
+                                                    <div class="text-muted d-flex flex-column mt-1" style="font-size: 0.65rem; gap: 2px;">
+                                                        <span class="text-truncate" style="max-width: 140px;" :title="item.daysLabel">
+                                                            <i class="fa-regular fa-calendar me-1 text-secondary"></i>{{ item.daysLabel }}
+                                                        </span>
+                                                        <span class="text-truncate" style="max-width: 140px;" :title="item.hoursLabel">
+                                                            <i class="fa-regular fa-clock me-1 text-secondary"></i>{{ item.hoursLabel }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="text-end pe-3">
+                                                <div v-if="item.gapInfo" class="fw-bold" :class="item.gapInfo.color" style="font-size: 0.7rem;">
+                                                    {{ item.gapInfo.label }}
+                                                </div>
+                                                <div v-else-if="item.type === 'current'" class="text-primary fw-bold" style="font-size: 0.7rem;">SELECCIÓN</div>
+                                                <div v-else><span class="badge bg-light text-secondary border border-light-subtle">HIST</span></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
                 </td>
                 <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
                     {{e.calc_dp}}
@@ -1201,17 +1263,100 @@
             <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias === 'we_program_type_course'">
                 <div class="section-label">Logística y Horarios</div>
                 <div class="row g-3">
-                  <div class="col-md-6">
-                        <label class="form-label-sm">Fecha Inicio</label>
+                  <div class="col-md-6 position-relative">
+                    <label class="form-label-sm">Fecha Inicio</label>
+                    
+                    <div class="input-group input-group-sm">
                         <BaseDatePicker
-                          v-model="modalForm.start_date"
-                          :config="getChildDateConfig()"
-                          :disabled="!modalForm.cat_day_combination_id"
-                          :required="isCourse"
-                          placeholder="dd/mm/aaaa"
-                          @on-change="validateAndCalculate(modalForm, 'start_date')"
+                            v-model="modalForm.start_date"
+                            :config="getChildDateConfig()"
+                            :disabled="!modalForm.cat_day_combination_id"
+                            :required="isCourse"
+                            placeholder="dd/mm/aaaa"
+                            @on-change="validateAndCalculate(modalForm, 'start_date')"
                         />
-                  </div>
+                        
+                        <button
+                            class="btn btn-outline-secondary"
+                            type="button"
+                            @click.stop="toggleGapPreview($event, 'main_gap', modalForm.program_version_id, modalForm)"
+                            title="Ver análisis de tiempos"
+                            :disabled="!modalForm.start_date || !modalForm.program_version_id"
+                        >
+                            <i class="fa-solid fa-timeline text-primary"></i>
+                        </button>
+                    </div>
+
+                    <div 
+                      v-if="activeGapPreviewId === 'main_gap'" 
+                      class="schedule-preview-popover shadow-lg"
+                      :class="{ 'popover-opens-top': popoverPosition === 'top' }"
+                      style="width: 350px;"
+                    >
+                        <div class="popover-header">
+                            <span>Análisis de Tiempos</span>
+                            <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
+                        </div>
+                        
+                        <div class="popover-content">
+                            <div v-if="isLoadingGap" class="text-center p-3 text-muted">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Calculando...
+                            </div>
+                            <div v-else-if="gapPreviewData.length === 0" class="text-center text-muted p-3 small">
+                                Sin historial disponible.
+                            </div>
+                            
+                            <div v-else class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-sm table-borderless mb-0 align-middle small-table w-100">
+                                    <thead class="bg-light sticky-top text-muted" style="font-size: 0.7rem;">
+                                        <tr>
+                                            <th class="ps-3">Código</th>
+                                            <th>Fecha / Detalle</th>
+                                            <th class="text-end pe-3">Gap / Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
+                                            :class="item.type === 'current' ? 'bg-primary-subtle' : 'border-bottom border-light'">
+                                            
+                                            <td class="ps-3 fw-bold" :class="item.type === 'current' ? 'text-primary' : 'text-dark'">
+                                                {{ item.global_code }}
+                                                <span v-if="item.type === 'current'" class="badge bg-primary ms-1" style="font-size: 0.6rem;">HOY</span>
+                                            </td>
+
+                                            <td>
+                                                <div class="d-flex flex-column lh-1">
+                                                    <span :class="{'fw-bold': item.type === 'current'}">
+                                                        {{ formatDate(item.start_date_eff) }}
+                                                    </span>
+                                                    <div class="text-muted d-flex flex-column mt-1" style="font-size: 0.65rem">
+                                                        <span><i class="fa-regular fa-calendar me-1"></i>{{ item.daysLabel }}</span>
+                                                        <span><i class="fa-regular fa-clock me-1"></i>{{ item.hoursLabel }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="text-end pe-3">
+                                                <div v-if="item.gapInfo" class="fw-bold" :class="item.gapInfo.color" style="font-size: 0.7rem;">
+                                                    {{ item.gapInfo.label }}
+                                                    <i class="fa-solid" :class="item.gapInfo.color.includes('warning') || item.gapInfo.color.includes('danger') ? 'fa-triangle-exclamation' : 'fa-check'"></i>
+                                                </div>
+                                                <div v-else-if="item.type === 'current'" class="text-primary fw-bold" style="font-size: 0.7rem;">
+                                                    SELECCIÓN
+                                                </div>
+                                                <div v-else>
+                                                    <span class="badge bg-light text-secondary border border-light-subtle">HIST</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="activeGapPreviewId === 'gap_popover'" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                </div>
                   <div class="col-md-6 position-relative">
                     <label class="form-label-sm">Fecha Fin</label>
                     <div class="input-group input-group-sm">
@@ -1360,80 +1505,102 @@
                                          <div class="text-xs text-muted">{{ 'Sesiones: '+ child.sessions }}</div>
                                      </div>
                                  </td>
-                                 <td class="overflow-visible position-relative" style="min-width:150px!important">
-                                    <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                                 <td class="overflow-visible position-relative" style="min-width:180px!important"> <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+        
+                                  <div class="input-group input-group-xs mb-1">
                                       <BaseDatePicker
-                                        v-model="child.start_date"
-                                        :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
-                                        class="mb-1"
-                                        :required="true"
-                                        placeholder="Inicio"
-                                        :config="getChildDateConfig(index)"
-                                        @on-change="validateAndCalculate(child, 'start_date', index)"
+                                          v-model="child.start_date"
+                                          :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
+                                          :required="true"
+                                          placeholder="Inicio"
+                                          :config="getChildDateConfig(index)"
+                                          @on-change="validateAndCalculate(child, 'start_date', index)"
                                       />
+                                      <button
+                                          class="btn btn-outline-secondary px-1"
+                                          type="button"
+                                          :disabled="!child.start_date || isBlockedByPrevious(index)"
+                                          @click.stop="toggleGapPreview($event, 'child_gap_' + index, child.child_program_version_id, child)"
+                                          title="Ver análisis de tiempos"
+                                      >
+                                          <i class="fa-solid fa-timeline text-primary" style="font-size: 0.8rem;"></i>
+                                      </button>
+                                  </div>
 
-                                      <div class="position-relative">
-                                        <div class="input-group input-group-xs">
-                                          <BaseDatePicker
-                                            v-model="child.end_date"
-                                            :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
-                                            :required="true"
-                                            :config="getChildDateConfig(null,child)"
-                                            placeholder="Fin"
-                                          />
-                                          <button
-                                            class="btn btn-outline-secondary px-1"
-                                            type="button"
-                                            :disabled="isBlockedByPrevious(index)"
-                                            @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"
-                                          >
-                                            <i class="fa-solid fa-circle-info text-info" style="font-size: 0.8rem;"></i>
-                                          </button>
-                                        </div>
-
-                                        <div 
-                                          v-if="activePreviewId === ('child_' + child.child_program_version_id)" 
-                                          class="schedule-preview-popover shadow-lg" 
-                                          style="right: 0; left: auto; min-width: 250px;"
-                                          :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                                        >
-                                          <div class="popover-header">
-                                            <span>Cronograma Estimado</span>
-                                            <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
-                                          </div>
-                                          <div class="popover-content">
-                                            <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
-                                              Datos insuficientes.
-                                            </div>
-                                            <table v-else class="table table-sm table-striped mb-0 small-table">
-                                              <thead>
-                                                <tr>
-                                                  <th style="width: 30px;">#</th>
-                                                  <th>Fecha</th>
-                                                  <th>Obs.</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody>
-                                                <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                                                  <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
-                                                  <td>
-                                                    {{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span>
-                                                  </td>
-                                                  <td>
-                                                    <i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i>
-                                                    <span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span>
-                                                  </td>
-                                                </tr>
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        </div>
-
-                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
+                                  <div 
+                                    v-if="activeGapPreviewId === ('child_gap_' + index)" 
+                                    class="schedule-preview-popover shadow-lg"
+                                    :class="{ 'popover-opens-top': popoverPosition === 'top' }"
+                                    style="width: 350px; left: 0; z-index: 1060;" 
+                                  >
+                                      <div class="popover-header">
+                                          <span>Análisis: {{ child.abbreviation }}</span>
+                                          <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
                                       </div>
-                                    </div>
-                                    <div v-else class="text-muted text-center">-</div>
-                                  </td>
+                                      
+                                      <div class="popover-content">
+                                          <div v-if="isLoadingGap" class="text-center p-3 text-muted">
+                                              <i class="fa-solid fa-spinner fa-spin"></i> Calculando...
+                                          </div>
+                                          <div v-else-if="gapPreviewData.length === 0" class="text-center text-muted p-3 small">
+                                              Sin historial disponible para este módulo.
+                                          </div>
+                                          
+                                          <div v-else class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                              <table class="table table-sm table-borderless mb-0 align-middle small-table w-100">
+                                                  <thead class="bg-light sticky-top text-muted" style="font-size: 0.7rem;">
+                                                      <tr>
+                                                          <th class="ps-3">Código</th>
+                                                          <th>Fecha / Detalle</th>
+                                                          <th class="text-end pe-3">Gap</th>
+                                                      </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                      <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
+                                                          :class="item.type === 'current' ? 'bg-primary-subtle' : 'border-bottom border-light'">
+                                                          
+                                                          <td class="ps-3 fw-bold" :class="item.type === 'current' ? 'text-primary' : 'text-dark'">
+                                                              {{ item.global_code }}
+                                                              <span v-if="item.type === 'current'" class="badge bg-primary ms-1" style="font-size: 0.6rem;">HOY</span>
+                                                          </td>
+
+                                                          <td>
+                                                              <div class="d-flex flex-column lh-1">
+                                                                  <span :class="{'fw-bold': item.type === 'current'}">
+                                                                      {{ formatDate(item.start_date_eff) }}
+                                                                  </span>
+                                                                  <div class="text-muted d-flex flex-column mt-1" style="font-size: 0.65rem">
+                                                                      <span><i class="fa-regular fa-calendar me-1"></i>{{ item.daysLabel }}</span>
+                                                                      <span><i class="fa-regular fa-clock me-1"></i>{{ item.hoursLabel }}</span>
+                                                                  </div>
+                                                              </div>
+                                                          </td>
+
+                                                          <td class="text-end pe-3">
+                                                              <div v-if="item.gapInfo" class="fw-bold" :class="item.gapInfo.color" style="font-size: 0.7rem;">
+                                                                  {{ item.gapInfo.label }}
+                                                              </div>
+                                                              <div v-else-if="item.type === 'current'" class="text-primary fw-bold" style="font-size: 0.7rem;">
+                                                                  SELECCIÓN
+                                                              </div>
+                                                              <div v-else>
+                                                                  <span class="badge bg-light text-secondary border border-light-subtle">HIST</span>
+                                                              </div>
+                                                          </td>
+                                                      </tr>
+                                                  </tbody>
+                                              </table>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div class="position-relative">
+                                      </div>
+                              </div>
+                              <div v-else class="text-muted text-center">-</div>
+                              
+                              <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                          </td>
 
                                  <td>
                                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
@@ -3967,7 +4134,156 @@ function toggleSchedulePreview(uniqueId, targetObj, event) {
   previewItems.value = generatePreviewData(targetObj);
   activePreviewId.value = uniqueId;
 }
+
+const isLoadingExtraInfo = ref(false)
+
+// --- LÓGICA DE GAP ANALYSIS (Timeline Genérico) ---
+const activeGapPreviewId = ref(null) 
+const gapPreviewData = ref([])
+const isLoadingGap = ref(false)
+
+/**
+ * Abre el popover de GAPS. 
+ * Funciona para: Formulario (Padre/Hijo) y Listado (Click Derecho).
+ */
+async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, isReadOnly = false) {
+  // Prevenir menú nativo si es click derecho
+  if (event && event.type === 'contextmenu') {
+    event.preventDefault();
+  }
+
+  // Si ya está abierto, cerrar
+  if (activeGapPreviewId.value === uniqueId) {
+    activeGapPreviewId.value = null
+    return
+  }
+
+  // 1. Posicionamiento inteligente
+  if (event && event.currentTarget) {
+    const buttonRect = event.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - buttonRect.bottom;
+    // Si hay poco espacio abajo (<300px), abrir hacia arriba
+    popoverPosition.value = spaceBelow < 300 ? 'top' : 'bottom';
+  }
+
+  activeGapPreviewId.value = uniqueId
+  gapPreviewData.value = []
+  isLoadingGap.value = true
+
+  try {
+    // 2. Llamada al SP (que ahora trae horarios)
+    const responseItems = await editionService.editionExtraInfoCaller({ 
+      program_version_id: programVersionId 
+    })
+    
+    // 3. Preparar el objeto "Actual" según de dónde venga el click
+    let currentItem = contextObj;
+
+    if (isReadOnly) {
+        // SI VIENE DE LA TABLA (Click Derecho):
+        // Mapeamos los datos de la fila 'e' a lo que espera el calculador
+        currentItem = {
+            ...contextObj,
+            edition_id: contextObj.edition_num_id, // Para excluirse a sí mismo
+            start_date: contextObj.start_date,
+            global_code: contextObj.global_code,
+            // Intentamos sacar los labels de horarios de la fila
+            day_combination_label: contextObj.day_combination_label || 
+                                   (contextObj.schedules?.[0]?.day_combination_label) || '—',
+            hour_combination_label: contextObj.hour_combination_label || 
+                                    (contextObj.schedules?.[0]?.hour_combination_label) || '—'
+        }
+    }
+
+    // 4. Calcular
+    gapPreviewData.value = calculateGapData(responseItems || [], currentItem)
+
+  } catch (e) {
+    console.error("Error timeline:", e)
+    toast.error("No se pudo cargar la proyección")
+  } finally {
+    isLoadingGap.value = false
+  }
+}
+
+/**
+ * CORE: Cálculo de Lista Completa
+ */
+function calculateGapData(historicalList, currentObj) {
+  if (!currentObj.start_date) return []
+
+  const msPerDay = 1000 * 60 * 60 * 24
+  const targetDate = new Date(currentObj.start_date + 'T12:00:00')
+  
+  // ID para excluir (si estamos editando)
+  const currentId = currentObj.edition_id || (currentEdition.value?.edition_num_id)
+
+  // A. Preparar Historial (Data del SP)
+  let timeline = historicalList
+    .filter(e => e.active === 'Y' && e.edition_num_id !== currentId)
+    .map(e => ({
+      ...e,
+      dateObj: new Date(e.start_date_eff),
+      type: 'history',
+      // Mapeamos los campos nuevos de tu SP
+      daysLabel: e.cat_day_combination || '—', 
+      hoursLabel: e.cat_hour_combination || '—'
+    }))
+
+  // B. Preparar Item Actual (Selección / Fila)
+  // Si no viene pre-seteado (caso formulario), buscamos en catálogos
+  let myDays = currentObj.day_combination_label;
+  let myHours = currentObj.hour_combination_label;
+
+  if (!myDays && currentObj.cat_day_combination_id) {
+      const d = catalogs.value.dayCombinationList.find(x => x.id === currentObj.cat_day_combination_id)
+      if (d) myDays = d.description
+  }
+  if (!myHours && currentObj.cat_hour_combination_id) {
+      const h = catalogs.value.hourCombinationList.find(x => x.id === currentObj.cat_hour_combination_id)
+      if (h) myHours = h.description
+  }
+
+  const newItem = {
+    global_code: currentObj.global_code || 'NUEVA',
+    start_date_eff: currentObj.start_date,
+    dateObj: targetDate,
+    type: 'current',
+    active: 'Y',
+    daysLabel: myDays || '—',
+    hoursLabel: myHours || '—'
+  }
+  
+  timeline.push(newItem)
+
+  // C. Ordenar y Calcular Gaps
+  timeline.sort((a, b) => a.dateObj - b.dateObj)
+  const currentIndex = timeline.findIndex(t => t.type === 'current')
+  
+  return timeline.map((item, index) => {
+    let gapInfo = null
+    
+    if (index === currentIndex - 1) {
+       const diff = Math.floor((newItem.dateObj - item.dateObj) / msPerDay)
+       gapInfo = { label: `${diff} días después`, color: diff < 30 ? 'text-warning' : 'text-success' }
+    }
+    if (index === currentIndex + 1) {
+       const diff = Math.floor((item.dateObj - newItem.dateObj) / msPerDay)
+       gapInfo = { label: `${diff} días antes`, color: diff < 30 ? 'text-danger' : 'text-info' }
+    }
+
+    return { ...item, gapInfo }
+  })
+}
 </script>
+
+
+
+
+
+
+
+
 
 <style scoped>
 /* ESTILOS GENERALES (Mantenidos y pulidos) */
@@ -4595,4 +4911,144 @@ tr[class*="row-segment-"]:hover td {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Ajustes específicos para que se parezca a tu imagen */
+.small-table th {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: #f8fafc; /* Fondo gris suave para header */
+    z-index: 2; /* Para que quede encima al scrollear */
+}
+
+.small-table td {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Scrollbar fina para el popover */
+.popover-content::-webkit-scrollbar {
+    width: 5px;
+}
+.popover-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.popover-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.popover-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Sticky header para la tabla del popover */
+.sticky-top {
+    position: sticky;
+    top: 0;
+}
+
+/* Popover de Previsualización (Estilo "Elevado") */
+.schedule-preview-popover {
+  position: absolute;
+  top: 100%; 
+  /* Z-Index muy alto para ganar a filas sticky o bordes de tabla */
+  z-index: 9999 !important; 
+  
+  /* Fondo BLANCO sólido (importante para que no se mezcle) */
+  background-color: #ffffff !important; 
+  
+  /* Borde sutil */
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  
+  /* Sombra fuerte para dar efecto de "flotar" (Elevation) */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  
+  width: 350px; 
+  max-width: 90vw;
+  margin-top: 4px;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease-out;
+}
+/* Clase de utilidad para permitir que el popover salga de la celda */
+.overflow-visible {
+  overflow: visible !important;
+  /* Asegura que el z-index del hijo funcione relativo a esto */
+  z-index: inherit; 
+}
+.popover-header {
+  /* Un gris azulado profesional o el color primario de tu marca */
+  background: #f1f5f9; 
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #334155;
+  
+  /* Asegura que el header tape contenido al scrollear */
+  position: relative; 
+  z-index: 5;
+}
+
+/* --- POPOVER ELEVADO (Estilo Excel) --- */
+.schedule-preview-popover {
+  position: absolute;
+  top: 100%; 
+  left: 0;
+  
+  /* CRÍTICO: Debe ser muy alto para superar filas sticky, headers y bordes */
+  z-index: 9999 !important; 
+  
+  background-color: #ffffff !important; 
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  
+  /* Sombra fuerte para efecto 3D */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  
+  width: 360px; /* Un poco más ancho para que quepan los horarios */
+  max-width: 90vw;
+  margin-top: 4px;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* Header sólido para separar visualmente */
+.popover-header {
+  background: #f1f5f9; 
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #334155;
+  position: relative; 
+  z-index: 5;
+}
+
+/* Clase utilidad para permitir desbordamiento en celdas de tabla */
+.overflow-visible {
+  overflow: visible !important;
+  /* Asegura que el posicionamiento absoluto funcione relativo a la celda */
+  position: relative !important; 
+  z-index: inherit;
+}
+
+/* Animación de entrada */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar fina */
+.popover-content::-webkit-scrollbar { width: 5px; }
+.popover-content::-webkit-scrollbar-track { background: #f1f1f1; }
+.popover-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.popover-content::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 </style>
