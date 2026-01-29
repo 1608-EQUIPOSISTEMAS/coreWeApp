@@ -62,5 +62,14 @@ export default class EditionService {
     const response = (await api.post('/edition/auditlogsget', payload)).data;
     return response.data;
   }
+
+  //edition_extra_info_caller
+  async editionExtraInfoCaller(payload) {
+    const response = (await api.post('/edition/editionextrainfocaller', payload,{
+    meta: { skipLoader: true }
+  })).data;
+    console.log(response)
+    return response.items;
+  }
   
 }

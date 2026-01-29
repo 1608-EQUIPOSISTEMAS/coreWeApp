@@ -1226,14 +1226,18 @@
                       <button
                         class="btn btn-outline-secondary"
                         type="button"
-                        @click.stop="toggleSchedulePreview('main_parent', modalForm)"
+                        @click.stop="toggleSchedulePreview('main_parent', modalForm, $event)"
                         title="Ver desglose de sesiones"
                       >
                         <i class="fa-solid fa-circle-info text-info"></i>
                       </button>
                     </div>
 
-                    <div v-if="activePreviewId === 'main_parent'" class="schedule-preview-popover shadow-lg">
+                    <div 
+                      v-if="activePreviewId === 'main_parent'" 
+                      class="schedule-preview-popover shadow-lg"
+                      :class="{ 'popover-opens-top': popoverPosition === 'top' }"
+                    >
                       <div class="popover-header">
                         <span>Proyección de Sesiones</span>
                         <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
@@ -1243,32 +1247,34 @@
                           Faltan datos para calcular (Inicio, Días o Sesiones).
                         </div>
                         <table v-else class="table table-sm table-striped mb-0 small-table">
-                            <thead>
-                              <tr>
-                                <th>#</th>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                                <td class="fw-bold text-center">{{ item.sessionNum }}</td> <td>
-                                  <div class="d-flex flex-column lh-1">
-                                    <span>{{ formatDate(item.date) }}</span>
-                                    <small class="text-muted" style="font-size: 0.65rem">{{ getDayName(item.date) }}</small>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span>
-
-                                  <div v-else class="text-danger fw-bold" style="font-size: 0.7rem;">
-                                    <i class="fa-solid fa-ban me-1"></i> {{ item.desc }} </div>
-                                </td>
-                              </tr>
-                            </tbody>
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Fecha</th>
+                              <th>Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                              <td class="fw-bold text-center">{{ item.sessionNum }}</td>
+                              <td>
+                                <div class="d-flex flex-column lh-1">
+                                  <span>{{ formatDate(item.date) }}</span>
+                                  <small class="text-muted" style="font-size: 0.65rem">{{ getDayName(item.date) }}</small>
+                                </div>
+                              </td>
+                              <td>
+                                <span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span>
+                                <div v-else class="text-danger fw-bold" style="font-size: 0.7rem;">
+                                  <i class="fa-solid fa-ban me-1"></i> {{ item.desc }}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
                         </table>
                       </div>
                     </div>
+                    
                     <div v-if="activePreviewId === 'main_parent'" class="click-overlay" @click="activePreviewId = null"></div>
                   </div>
                       <div class="col-md-6">
@@ -1354,10 +1360,9 @@
                                          <div class="text-xs text-muted">{{ 'Sesiones: '+ child.sessions }}</div>
                                      </div>
                                  </td>
-
                                  <td class="overflow-visible position-relative" style="min-width:150px!important">
-                                  <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                                    <BaseDatePicker
+                                    <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                                      <BaseDatePicker
                                         v-model="child.start_date"
                                         :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
                                         class="mb-1"
@@ -1367,7 +1372,7 @@
                                         @on-change="validateAndCalculate(child, 'start_date', index)"
                                       />
 
-                                    <div class="position-relative">
+                                      <div class="position-relative">
                                         <div class="input-group input-group-xs">
                                           <BaseDatePicker
                                             v-model="child.end_date"
@@ -1379,51 +1384,56 @@
                                           <button
                                             class="btn btn-outline-secondary px-1"
                                             type="button"
-                                            :disabled="isBlockedByPrevious(index) "
-                                            @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child)"
+                                            :disabled="isBlockedByPrevious(index)"
+                                            @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"
                                           >
                                             <i class="fa-solid fa-circle-info text-info" style="font-size: 0.8rem;"></i>
                                           </button>
                                         </div>
 
-                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="schedule-preview-popover shadow-lg" style="right: 0; left: auto; min-width: 250px;">
-                                            <div class="popover-header">
-                                              <span>Cronograma Estimado</span>
-                                              <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
+                                        <div 
+                                          v-if="activePreviewId === ('child_' + child.child_program_version_id)" 
+                                          class="schedule-preview-popover shadow-lg" 
+                                          style="right: 0; left: auto; min-width: 250px;"
+                                          :class="{ 'popover-opens-top': popoverPosition === 'top' }"
+                                        >
+                                          <div class="popover-header">
+                                            <span>Cronograma Estimado</span>
+                                            <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
+                                          </div>
+                                          <div class="popover-content">
+                                            <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
+                                              Datos insuficientes.
                                             </div>
-                                            <div class="popover-content">
-                                              <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
-                                                Datos insuficientes.
-                                              </div>
-                                              <table v-else class="table table-sm table-striped mb-0 small-table">
-                                                  <thead>
-                                                    <tr>
-                                                      <th style="width: 30px;">#</th>
-                                                      <th>Fecha</th>
-                                                      <th>Obs.</th>
-                                                    </tr>
-                                                  </thead>
-                                                  <tbody>
-                                                    <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                                                      <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
-                                                      <td>
-                                                          {{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span>
-                                                      </td>
-                                                      <td>
-                                                        <i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i>
-                                                        <span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span>
-                                                      </td>
-                                                    </tr>
-                                                  </tbody>
-                                              </table>
-                                            </div>
+                                            <table v-else class="table table-sm table-striped mb-0 small-table">
+                                              <thead>
+                                                <tr>
+                                                  <th style="width: 30px;">#</th>
+                                                  <th>Fecha</th>
+                                                  <th>Obs.</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                                                  <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
+                                                  <td>
+                                                    {{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span>
+                                                  </td>
+                                                  <td>
+                                                    <i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i>
+                                                    <span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span>
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                          </div>
                                         </div>
-                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
-                                    </div>
 
-                                  </div>
-                                  <div v-else class="text-muted text-center">-</div>
-                                </td>
+                                        <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
+                                      </div>
+                                    </div>
+                                    <div v-else class="text-muted text-center">-</div>
+                                  </td>
 
                                  <td>
                                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
@@ -1670,17 +1680,35 @@
           :class="{ 'bg-primary-subtle': group.isOpen }"
           @click="toggleGroup(idx)"
         >
-          <div class="d-flex align-items-center gap-3">
-            <div class="icon-box bg-white text-primary border border-primary-subtle rounded p-2">
-               <i class="fa-solid fa-layer-group"></i>
+          <div class="d-flex align-items-center gap-3" :class="{ 'opacity-75': group.active === 'N' }">
+            <div class="icon-box border rounded p-2 position-relative" 
+                :class="group.active === 'N' ? 'bg-danger-subtle text-danger border-danger-subtle' : 'bg-white text-primary border-primary-subtle'">
+              
+              <i class="fa-solid" :class="group.active === 'N' ? 'fa-ban' : 'fa-layer-group'"></i>
+              
+              <i v-if="group.active === 'N'" 
+                class="fa-solid fa-times position-absolute top-50 start-50 translate-middle opacity-50" 
+                style="font-size: 1.5rem;"></i>
             </div>
+
             <div>
-               <div class="badge bg-primary text-white mb-1" style="font-size: 0.65rem;">PROGRAMA PADRE</div>
-               <h6 class="m-0 fw-bold text-dark">{{ group.abbreviation }}</h6>
-               <div class="small text-muted">
-                 {{ group.global_code }} &bull;<span class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })" v-if="group.clasification"> {{ group.clasification }}
-                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp; </span>
-               </div>
+              <div class="badge mb-1" 
+                  :class="group.active === 'N' ? 'bg-danger text-white' : 'bg-primary text-white'"
+                  style="font-size: 0.65rem;">
+                {{ group.active === 'N' ? 'PROGRAMA INACTIVO' : 'PROGRAMA PADRE' }}
+              </div>
+
+              <h6 class="m-0 fw-bold" :class="group.active === 'N' ? 'text-danger text-decoration-line-through' : 'text-dark'">
+                {{ group.abbreviation }}
+              </h6>
+
+              <div class="small text-muted">
+                {{ group.global_code }} &bull;
+                <span v-if="group.clasification" class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })"> 
+                  {{ group.clasification }}
+                  <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -2163,6 +2191,8 @@ function openTreeModal(edition) {
   }
   */
 
+  console.log(edition)
+
   // Detectamos si es una estructura "Hijo con contexto" (tiene padre/hermanos)
   // La clave es si el primer elemento tiene 'children' o 'parent_edition_id'
   const isChildContext = rawTree.length > 0 && (rawTree[0].children || rawTree[0].parent_edition_id)
@@ -2173,6 +2203,7 @@ function openTreeModal(edition) {
       groups.push({
         // Info del Padre
         id: contextNode.parent_edition_id || `p-${index}`,
+        active: contextNode.active || 'Y',
         global_code: contextNode.parent_global_code || 'S/C',
         abbreviation: contextNode.parent_abbreviation || 'Programa Padre',
         clasification: contextNode.parent_clasification,
@@ -2197,7 +2228,6 @@ function openTreeModal(edition) {
       return;
     }
 
-
     groups.push({
       id: edition.edition_num_id,
       global_code: edition.global_code,
@@ -2206,6 +2236,7 @@ function openTreeModal(edition) {
 
       isOpen: true,
 
+        active: edition.active?'Y':'N',
       children: rawTree.map(child => ({
         ...child,
         is_current: false
@@ -2812,6 +2843,7 @@ async function openEditModal(edition) {
     modalForm.cat_day_combination_id = data.cat_day_combination_id
     modalForm.cat_hour_combination_id = data.cat_hour_combination_id
     // Hijos
+    console.log(data.children)
     modalForm.program_version_children = (data.children || []).map(child => ({
       ...child,
       start_date: child.start_date ? child.start_date.slice(0, 10) : defaultStartDate.value,
@@ -3354,17 +3386,6 @@ function unlinkChildEdition(child){
   child.specific_code = ''
 }
 
-// Helper para alternar la visibilidad
-function toggleSchedulePreview(uniqueId, targetObj) {
-  if (activePreviewId.value === uniqueId) {
-    activePreviewId.value = null
-    return
-  }
-  // Generar la data
-  previewItems.value = generatePreviewData(targetObj)
-  activePreviewId.value = uniqueId
-}
-
 function isChildComplete(child) {
   return (
     !!child.cat_day_combination_id &&
@@ -3422,27 +3443,24 @@ function onChildEditionChange(edition, child, index) {
     return;
   }
   console.log(edition)
-  // 3. ASIGNACIÓN DE DATOS (Si pasó la validación anterior)
-  child.edition_id = edition.edition_num_id; // Asegurar que se setea el ID
-  child.start_date = edition.start_date?.slice(0, 10) || null;
-  child.end_date = edition.end_date?.slice(0, 10) || null;
-
-  child.cat_day_combination_id = edition.cat_day_combination_id;
-  child.cat_hour_combination_id = edition.cat_hour_combination_id;
-
-  child.instructor_id = edition.instructor_id;
-  child.instructor_label = edition.instructor_label || '';
-
-  child.global_code = edition.global_code;
-  child.specific_code = edition.specific_code;
-
-  // Mapeo de valores 'Y'/'N' a Booleanos
-  child.active = edition.active === 'Y';
-  child.confirmation = edition.confirmation === 'Y';
-  child.preconfirmation = edition.preconfirmation === 'Y';
-  child.expedient = edition.expedient === 'Y';
-
-  child.sessions = edition.sessions;
+  nextTick(() => {
+    child.edition_id = edition.edition_num_id;
+    child.start_date = edition.start_date ? edition.start_date.slice(0, 10) : null;
+    child.end_date = edition.end_date ? edition.end_date.slice(0, 10) : null;
+    
+    child.cat_day_combination_id = edition.cat_day_combination_id;
+    child.cat_hour_combination_id = edition.cat_hour_combination_id;
+    child.instructor_id = edition.instructor_id;
+    child.instructor_label = edition.instructor_label || '';
+    child.global_code = edition.global_code;
+    child.specific_code = edition.specific_code;
+    
+    child.active = edition.active === 'Y';
+    child.confirmation = edition.confirmation === 'Y';
+    child.preconfirmation = edition.preconfirmation === 'Y';
+    child.expedient = edition.expedient === 'Y';
+    child.sessions = edition.sessions;
+  });
 
 
   // 4. VALIDACIÓN HACIA ADELANTE (Hermanos posteriores) - NUEVO REQUERIMIENTO
@@ -3919,7 +3937,36 @@ async function openGlobalHistory() {
     isLoadingHistory.value = false
   }
 }
+// Variable reactiva para controlar la dirección ('bottom' = normal, 'top' = hacia arriba)
+const popoverPosition = ref('bottom');
 
+// Actualizar la firma de la función para aceptar 'event'
+function toggleSchedulePreview(uniqueId, targetObj, event) {
+  // Si ya está abierto y es el mismo, lo cerramos
+  if (activePreviewId.value === uniqueId) {
+    activePreviewId.value = null;
+    return;
+  }
+
+  // CALCULO DE POSICIÓN
+  // Verificamos espacio disponible abajo
+  if (event && event.currentTarget) {
+    const buttonRect = event.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - buttonRect.bottom;
+    const estimatedHeight = 300; // Altura estimada máxima del popover (puedes ajustar esto)
+
+    // Si hay menos de 300px abajo, lo mandamos para arriba
+    if (spaceBelow < estimatedHeight) {
+      popoverPosition.value = 'top';
+    } else {
+      popoverPosition.value = 'bottom';
+    }
+  }
+
+  // Generar la data y abrir
+  previewItems.value = generatePreviewData(targetObj);
+  activePreviewId.value = uniqueId;
+}
 </script>
 
 <style scoped>
@@ -4530,5 +4577,22 @@ tr[class*="row-segment-"]:hover td {
 .form-control-xs {
   padding: 0.1rem 0.2rem;
   height: auto;
+}
+
+/* Clase para invertir la dirección */
+.popover-opens-top {
+  top: auto !important;       /* Anula el top: 100% original */
+  bottom: 100% !important;    /* Lo pega a la parte superior del input */
+  margin-top: 0 !important;
+  margin-bottom: 4px;         /* Un pequeño espacio visual */
+  
+  /* Animación inversa (opcional, para que parezca que sale de abajo) */
+  transform-origin: bottom center;
+  animation: fadeInTop 0.2s ease-out;
+}
+
+@keyframes fadeInTop {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
