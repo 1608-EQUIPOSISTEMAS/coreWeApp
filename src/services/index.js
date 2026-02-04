@@ -9,6 +9,7 @@ import AuthService from './auth.service'
 import CorporateAgreementService from './corporateAgreement.service'
 import IntegrationService from './integration.service'
 import FicoService from './fico';
+import DashboardService from './dashboard.service'
 
 
 // Re-exportar para fácil acceso
@@ -25,7 +26,8 @@ export const ServiceKeys = {
   Auth:      Symbol('AuthService'),
   CorporateAgreement: Symbol('CorporateAgreementService'),
   Integration: Symbol('IntegrationService'),
-  Fico: Symbol('FicoService')
+  Fico: Symbol('FicoService'),
+  Dashboard: Symbol('DashboardService')
 }
 
 export function createServices() {
@@ -39,6 +41,7 @@ export function createServices() {
     [ServiceKeys.Auth]:      new AuthService(api),
     [ServiceKeys.CorporateAgreement]: new CorporateAgreementService(api),
     [ServiceKeys.Integration]: new IntegrationService(api),
-    [ServiceKeys.Fico]: new FicoService(api)
+    [ServiceKeys.Fico]: new FicoService(api),
+    [ServiceKeys.Dashboard]: new DashboardService(api)
   }
 }

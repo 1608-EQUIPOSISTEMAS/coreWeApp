@@ -1927,25 +1927,59 @@ function buildEnrollmentPayload() {
 async function confirmarInscripcion() {
   if (!comercialService) return console.error('comercialService no inyectado')
 
+  // 1. Validar datos de INSCRIPCIÓN
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
-     toast.warning("Por favor complete los campos obligatorios")
-     return
+      toast.warning("Por favor complete los campos obligatorios de la inscripción")
+      return
+  }
+
+  // 2. Validar datos del LEAD (Porque ahora vamos a guardar el lead primero)
+  if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
+      toast.warning("Faltan datos obligatorios en el formulario del Lead. Revise la información principal.")
+      return
   }
 
   savingInsc.value = true
 
   try {
-    const payload = buildEnrollmentPayload()
-    const response = await comercialService.enrollmentRegister(payload)
+    // --- PASO A: GUARDAR EL LEAD ---
+    const leadPayload = buildLeadPayload()
+    
+    // Determinamos si es edición o creación basado en si ya existe un ID en la URL o uno creado en memoria
+    const currentLeadId = leadIdParam.value || createdLeadId.value
 
-    toast.success('Inscripción y documentos subidos con éxito!')
+    if (currentLeadId) {
+      // ACTUALIZAR LEAD EXISTENTE
+      await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
+      // No necesitamos cambiar createdLeadId, ya es correcto
+    } else {
+      // CREAR NUEVO LEAD
+      const resp = await comercialService.leadRegister(leadPayload)
+      // Asignamos los IDs recibidos para que el payload de inscripción los use
+      createdLeadId.value   = resp.lead_id
+      createdPersonId.value = resp.person_id
+    }
+
+    // --- PASO B: GUARDAR LA INSCRIPCIÓN ---
+    // Ahora que el lead está guardado y tenemos su ID actualizado en createdLeadId,
+    // construimos el payload de inscripción.
+    const enrollmentPayload = buildEnrollmentPayload()
+    
+    const response = await comercialService.enrollmentRegister(enrollmentPayload)
+
+    toast.success('Lead actualizado e Inscripción realizada con éxito!')
 
     showViewModal.value = false
     router.push({ name: 'ComercialListado' })
 
   } catch (err) {
     console.error(err)
-    toast.error('Ocurrió un error en el proceso de inscripción')
+    // Identificamos si el error fue al guardar el lead o la inscripción para dar mejor feedback
+    if (!createdLeadId.value && !leadIdParam.value) {
+        toast.error('Error al guardar el Lead inicial. La inscripción no se procesó.')
+    } else {
+        toast.error('El Lead se guardó, pero ocurrió un error al procesar la inscripción.')
+    }
   } finally {
     savingInsc.value = false
   }
