@@ -29,7 +29,12 @@
               </label>
               <DateTime12
                     :onlyHours="true"
-                    :disabled="isEdit" v-model="form.fechaContactoInicial" required clearable />
+                    :disabled="isEdit"
+                    v-model="form.fechaContactoInicial"
+                    required
+                    clearable
+                    :config="dateLimitConfig"
+                />
             </div>
 
             <div class="col-md-5"></div>
@@ -54,7 +59,7 @@
                 :items="programTypeCatalog"
                 label-field="description"
                 value-field="alias"
-                view-open="6"
+                :viewOpen="6"
                 placeholder="CATEGORÍA..."
                 @change="onProgramaTypeChange"
               />
@@ -66,7 +71,7 @@
                 v-model="form.program_modality_alias"
                 :items="programModalityCatalog"
                 label-field="description"
-                view-open="6"
+                :viewOpen="6"
                 value-field="alias"
                 placeholder="MODALIDAD..."
                 @change="onProgramaTypeChange"
@@ -96,7 +101,7 @@
                 label-field="abbreviation"
                 sublabel-field="version_code"
                 value-field="program_version_id"
-                view-open="6"
+                :viewOpen="6"
                 :model-label="form.program_label"
                 placeholder="Buscar programa…"
                 :minChars="0"
@@ -105,7 +110,6 @@
               />
 
             </div>
-{{program_modality_selected_alias}}
             <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
               <label class="form-label mb-1">Edición / Fecha prevista<span class="required-star">*</span></label>
               <SearchSelect
@@ -114,12 +118,11 @@
                 :fetcher="searchEditionsFiltered"
                 label-field="start_date_label"
                 value-field="edition_num_id"
-                view-open="6"
+                :viewOpen="6"
                 placeholder="Buscar Edicion…"
                 :model-label="form.edition_label"
                 :minChars="0"
                 :cache="false"
-                required
               />
               <div v-if="currentEdition">
                 <div class="text-label-aux"><b>Inicio:</b> {{ currentEdition.inicio }}</div>
@@ -254,7 +257,7 @@
               <label class="form-label mb-1">WEB<span class="required-star">*</span></label>
               <br>
               <label class="form-switch">
-                <input type="checkbox" v-model="form.web" /> 
+                <input type="checkbox" v-model="form.web" />
                 <span></span>
               </label>
             </div>
@@ -290,6 +293,7 @@
               <BaseDatePicker
                 v-model="form.pay_date"
                 :required="form.status_alias=='we_lead_status_bought'"
+                :config="dateLimitConfig"
                 placeholder="dd/mm/aaaa"
               />
             </div>
@@ -444,12 +448,13 @@
                     Fecha y Hora<span class="required-star">*</span>
                   </label>
                   <DateTime12
-                    v-model="c.fechaContactoProximo"
-                    required
-                    clearable
-                    :onlyHours="true"
-                    :disabled="c.status_alias != 'we_follow_lead_pending'"
-                  />
+                      v-model="c.fechaContactoProximo"
+                      required
+                      clearable
+                      :onlyHours="true"
+                      :disabled="c.status_alias != 'we_follow_lead_pending'"
+                      :config="dateLimitConfig"
+                    />
                 </div>
                 <!-- T. LLamada -->
                 <div class="col-12 col-lg-3">
@@ -460,7 +465,7 @@
                     label-field="description"
                     required
                     value-field="alias"
-                    placeholder="T. LLAMADA..."
+                    placeholder="T. RESPUESTA..."
                     :model-label="c.calling_label"
                     :disabled="c.status_alias != 'we_follow_lead_pending'"
                   />
@@ -991,14 +996,14 @@
           </div>
           <div class="col-6" v-if="!insc.cat_type_payment || insc.cat_type_payment=='we_payment_way_single'"></div>
           <div class="col-2" v-if="insc.cat_type_payment && insc.cat_type_payment!='we_payment_way_single'"></div>
-          <div class="col-md-2">
+          <!-- <div class="col-md-2">
             <label class="form-label mb-1">Convenio Empresarial<span class="required-star">*</span></label>
             <br>
             <label class="form-switch">
               <input type="checkbox" v-model="form.b2b" />
               <span></span>
             </label>
-          </div>
+          </div> -->
 
           <div class="col-md-4" v-if="isEdit || (validateInscriptionPaymentInfo())">
           <label class="form-label mb-1">Descuento</label>
@@ -1011,6 +1016,7 @@
                                                       })"
             label-field="full_label"
             value-field="id"
+            :viewOpen="6"
             placeholder="DESCUENTO (%)"
             :minChars="0"
             :cache="false"
@@ -1023,6 +1029,7 @@
           <SearchSelect
             v-model="insc.dsct_stick_id"
             mode="remote"
+            :viewOpen="6"
             :fetcher="q => discountService.discountCaller({ q,
                                                         cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id,
                                                         cat_currency: selectedCurrency.alias
@@ -1047,6 +1054,7 @@
                                                       })"
             label-field="full_label"
             value-field="id"
+            :viewOpen="6"
             placeholder="DESCUENTO (S/)"
             :minChars="0"
             :cache="false"
@@ -1164,8 +1172,11 @@ import FileUploader from '@/components/FileUploader.vue'
 
   const router = useRouter()
   const route  = useRoute()
-
-
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const dateLimitConfig = {
+    minDate: sevenDaysAgo
+};
 
   const programService   = inject(ServiceKeys.Program)
   const comercialService = inject(ServiceKeys.Comercial)
@@ -1493,7 +1504,7 @@ watchEffect(() => {
       category_alias: l.cat_program_type_alias || l.category_alias || null,
       program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
       program_modality_selected_alias: modality_selected_alias,
-      web: l.web === 'Y' || l.web === true, 
+      web: l.web === 'Y' || l.web === true,
       b2b: l.b2b === 'Y' || l.b2b === true,
       program_version_id: l.program_version_id ?? null,
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
@@ -1967,7 +1978,7 @@ async function confirmarInscripcion() {
   try {
     // --- PASO A: GUARDAR EL LEAD ---
     const leadPayload = buildLeadPayload()
-    
+
     // Determinamos si es edición o creación basado en si ya existe un ID en la URL o uno creado en memoria
     const currentLeadId = leadIdParam.value || createdLeadId.value
 
@@ -1987,7 +1998,7 @@ async function confirmarInscripcion() {
     // Ahora que el lead está guardado y tenemos su ID actualizado en createdLeadId,
     // construimos el payload de inscripción.
     const enrollmentPayload = buildEnrollmentPayload()
-    
+
     const response = await comercialService.enrollmentRegister(enrollmentPayload)
 
     toast.success('Lead actualizado e Inscripción realizada con éxito!')
@@ -2043,7 +2054,7 @@ async function confirmarInscripcion() {
     insc.full_name         = form.full_name || ''
     insc.last_name         = ''
     insc.mother_last_name  = ''
-    insc.cat_insc_modality = form.program_modality_selected_alias || 'we_insc_modality_normal'
+    insc.cat_insc_modality = 'we_insc_modality_normal'
     insc.selectedCurrencyAlias = 'we_currency_soles'
     insc.cat_type_payment  = 'we_payment_way_single'
     insc.saved_money       = 0
@@ -2101,25 +2112,39 @@ async function confirmarInscripcion() {
 
   // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
   function onProgramaChange(opcion) {
-      // 1. Lógica para la Modal de Info
-      selectedProgram.value = opcion;
+    // 1. Lógica para la Modal de Info
+    selectedProgram.value = opcion;
 
-      // 2. Lógica del Formulario
-      if (!opcion){
-          form.edition_id = null;
-          form.link = null;
-          form.program_modality_selected_alias = null;
-          // form.program_version_id se limpia solo por el v-model del componente
-          return;
-      }
+    // 2. Lógica del Formulario
+    if (!opcion){
+        form.edition_id = null;
+        form.link = null;
+        form.program_modality_selected_alias = null;
 
-      form.program_modality_selected_alias = opcion.cat_model_modality_alias;
+        // IMPORTANTE: Resetear precios si se limpia el programa
+        form.price_student_soles = 0;
+        form.price_student_dollars = 0;
+        form.price_profesional_soles = 0;
+        form.price_profesional_dollars = 0;
 
-      // Guardamos el link en el form por si acaso, aunque lo mostraremos en la modal
-      if(opcion.link){
-          form.link = opcion.link;
-      }
-  }
+        return;
+    }
+
+    form.program_modality_selected_alias = opcion.cat_model_modality_alias;
+
+    // Guardamos el link en el form por si acaso
+    if(opcion.link){
+        form.link = opcion.link;
+    }
+
+    // --- AQUÍ ESTÁ EL FIX ---
+    // Debes asignar los precios del objeto 'opcion' a las variables del 'form'
+    // para que el computed 'calculatedBasePrice' detecte el cambio.
+    form.price_student_soles = Number(opcion.price_student_soles || 0);
+    form.price_student_dollars = Number(opcion.price_student_dollars || 0);
+    form.price_profesional_soles = Number(opcion.price_profesional_soles || 0);
+    form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0);
+}
 
 
   const searchEditionsFiltered = async (q, child, index) => {

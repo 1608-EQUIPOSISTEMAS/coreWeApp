@@ -34,6 +34,9 @@
           <option :value="25">25</option>
           <option :value="50">50</option>
           <option :value="100">100</option>
+          <option :value="200">200</option>
+          <option :value="1000">1000</option>
+          <option :value="2000">2000</option>
         </select>
         <span class="text-muted mobile-hide">filas</span>
       </div>

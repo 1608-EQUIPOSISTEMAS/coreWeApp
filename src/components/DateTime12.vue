@@ -71,6 +71,7 @@ const props = defineProps({
   clearable: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
   onlyHours: { type: Boolean, default: false },
+  config: { type: Object, default: () => ({}) }
 })
 const emit = defineEmits(['update:modelValue', 'change'])
 
@@ -78,17 +79,21 @@ const hours12 = Array.from({ length: 12 }, (_, i) => i + 1)
 const minutes = [0,10,20,30,40,50,59]
 
 // Configuración de FlatPickr
-const flatpickrConfig = {
-  altInput: true,
-  altFormat: "d/m/Y",
-  dateFormat: "Y-m-d",
-  locale: Spanish,
-  allowInput: true,
-  disableMobile: true,
-  onChange: (selectedDates, dateStr) => {
-    emitChange()
+const flatpickrConfig = computed(() => {
+  return {
+    altInput: true,
+    altFormat: "d/m/Y",
+    dateFormat: "Y-m-d",
+    locale: Spanish,
+    allowInput: true,
+    disableMobile: true,
+    ...props.config, // Aquí fusionamos lo que venga de afuera (como el minDate)
+    // Mantenemos el onChange crítico para que funcione el componente
+    onChange: (selectedDates, dateStr) => {
+      emitChange()
+    }
   }
-}
+})
 
 function normalize(v) {
   return (v || '').trim().replace('T', ' ')
