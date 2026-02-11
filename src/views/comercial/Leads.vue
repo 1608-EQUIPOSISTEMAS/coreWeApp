@@ -41,7 +41,7 @@
               <th>Ini. Edición</th>
               <th>Nivel Interés</th>
               <th>Registro</th>
-              <th>Modificación</th>
+              <!-- <th>Modificación</th> -->
               <th>Seguimiento</th>
             </tr>
           </thead>
@@ -104,13 +104,13 @@
                   <div class="muted x-small">{{ l.registration_date }}</div>
                 </div>
               </td>
-
+            <!-- 
               <td style="min-width:120px">
                 <div v-if="l.user_modification_label">
                   <div class="small fw-600">{{ l.user_modification_label }}</div>
                   <div class="muted x-small">{{ l.modification_date }}</div>
                 </div>
-              </td>
+              </td> -->
 
               <td class="ta-center" style="min-width:140px">
                 <div
@@ -136,89 +136,109 @@
     </div>
   </div>
 
-<BaseModal v-model="showFollowModal" title="Historial de Contactos" size="md">
+<BaseModal v-model="showFollowModal" title="Gestión Rápida de Contactos" size="lg">
     <div v-if="selectedFollowLead" class="d-flex flex-column h-100">
-
-      <div class="p-3 bg-light border-bottom">
-        <div class="d-flex align-items-center mb-2">
-          <div class="avatar-placeholder me-3">
+      
+      <div class="px-4 py-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <div class="avatar-placeholder me-3 bg-white border text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:45px; height:45px; font-size:1.2rem;">
             <i class="fa-regular fa-user"></i>
           </div>
-          <div class="overflow-hidden">
-            <h6 class="mb-0 fw-bold text-dark text-truncate">{{ selectedFollowLead.full_name_label || 'Sin Nombre' }}</h6>
-            <span class="text-primary small fw-600">
-              <i class="fa-solid fa-phone me-1"></i> {{ selectedFollowLead.origin_phone }}
-            </span>
-          </div>
-        </div>
-        <div class="d-flex justify-content-between text-secondary x-small border-top pt-2 mt-2">
-           <div>
-             <span class="fw-bold text-dark">Interés:</span> {{ selectedFollowLead.program_label || '—' }}
-           </div>
-           <div>
-             <span class="fw-bold text-dark">Estado:</span>
-             {{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || '—' }}
-           </div>
-        </div>
-      </div>
-
-      <div class="p-3 bg-white scroll-area">
-
-        <div v-if="selectedFollowLead.follow_details && selectedFollowLead.follow_details.length > 0">
-          <h6 class="section-title text-primary mb-3 sticky-top bg-white pb-2 border-bottom">
-            <i class="fa-solid fa-list-ol me-1"></i> Intentos ({{ selectedFollowLead.follow_details.length }})
-          </h6>
-
-          <div
-            v-for="(attempt, index) in selectedFollowLead.follow_details"
-            :key="index"
-            class="attempt-card mb-3"
-          >
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="fw-bold text-dark fs-6">
-                <i class="fa-solid fa-hashtag text-muted me-1 small"></i>Intento {{ attempt.attempt_number }}
-              </span>
-              <span class="badge" :class="badgeForFollow(attempt.cat_status_label)">
-                {{ filtroFollow?.find(e=>e.alias == attempt.cat_status_label)?.description || 'Desconocido' }}
-              </span>
-            </div>
-
-            <div class="ps-3 border-start border-3" :class="attempt.cat_status_label == 'we_follow_lead_answered' ? 'border-success' : 'border-light'">
-
-               <div v-if="attempt.cat_result_label" class="mb-2">
-                  <span class="x-small text-uppercase text-muted fw-bold d-block">Resultado</span>
-                  <div class="d-flex align-items-center text-dark small">
-                    <i class="fa-solid fa-check-circle text-success me-2" v-if="attempt.cat_result_label"></i>
-                    {{ attempt.cat_result_label }}
-                  </div>
-               </div>
-
-               <div v-if="attempt.response" class="mt-2">
-                  <span class="x-small text-uppercase text-muted fw-bold d-block mb-1">Observación</span>
-                  <div class="p-2 bg-light rounded text-secondary fst-italic small border">
-                    "{{ attempt.response }}"
-                  </div>
-               </div>
-
-               <div v-if="!attempt.cat_result_label && !attempt.response" class="text-muted x-small fst-italic">
-                 Sin detalles registrados.
-               </div>
-
+          <div>
+             <h6 class="mb-0 fw-bold text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+             <div class="d-flex gap-3 text-secondary small">
+               <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
+               <span><i class="fa-solid fa-bullseye me-1"></i>{{ selectedFollowLead.cat_status_lead_label || 'Estado desc.' }}</span>
              </div>
           </div>
         </div>
+        <button class="btn btn-primary btn-sm" @click="addLocalAttempt">
+          <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
+        </button>
+      </div>
 
+      <div class="p-3 bg-white scroll-area">
+        <div v-if="editableHistory.length > 0">
+           
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 50px;" class="text-center">#</th>
+                
+                <th style="min-width: 140px;">Estado</th>
+                <th style="min-width: 140px;">Resultado</th>
+                
+                <th style="min-width: 210px;">Fecha/Hora</th> 
+                
+                <th style="min-width: 200px;">Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(attempt, idx) in editableHistory" :key="idx" :class="{'bg-blue-50': !attempt.id}">
+                <td class="text-center fw-bold text-muted align-top pt-2">{{ idx + 1 }}</td>
+                
+                <td class="align-top">
+                  <SearchSelect
+                    v-model="attempt.status_alias"
+                    :items="filtroFollow"
+                    label-field="description"
+                    value-field="alias"
+                    placeholder="Estado..."
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    class="form-control-sm p-0 border-0"
+                  />
+                </td>
+
+                <td class="align-top">
+                  <SearchSelect
+                    v-model="attempt.calling_alias"
+                    :items="filtroCalling"
+                    label-field="description"
+                    value-field="alias"
+                    placeholder="Resultado..."
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    class="form-control-sm p-0 border-0"
+                  />
+                </td>
+
+                <td class="align-top">
+                    <DateTime12
+                      v-model="attempt.contact_datetime"
+                      :onlyHours="true"
+                      :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                      class="w-100" 
+                    />
+                </td>
+
+                <td class="align-top">
+                  <textarea
+                    v-model="attempt.response" 
+                    class="form-control form-control-sm text-area-resize" 
+                    rows="2"
+                    placeholder="Escribe una observación..."
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                  ></textarea>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        </div>
         <div v-else class="text-center py-5 text-muted">
-          <div class="mb-2"><i class="fa-regular fa-clipboard fs-2 opacity-25"></i></div>
-          <p class="small mb-0">No se encontraron intentos registrados en el historial.</p>
+           <p>No hay historial previo. Agrega el primer intento.</p>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button class="btn btn-primary btn-sm w-100" @click="showFollowModal = false">
-        Cerrar Historial
-      </button>
+      <div class="d-flex justify-content-between w-100">
+        <button class="btn btn-outline-secondary btn-sm" @click="showFollowModal = false">Cancelar</button>
+        <button class="btn btn-success btn-sm px-4" @click="saveFastFollow" :disabled="isSavingFollow">
+           <i class="fa-solid fa-save me-1"></i> {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
+        </button>
+      </div>
     </template>
   </BaseModal>
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="lg">
@@ -238,18 +258,18 @@
           />
         </div>
 
-        <div class="col-md-3">
-          <label class="form-label">
-            <i class="fa-solid fa-user-tie me-1 text-primary"></i> Asesor Asignado
-          </label>
-           <MultiSelect
-              v-model="filters.owner_user_ids"
-                :items="filtroOwners"
-                label-key="description"
-                value-key="id"
-                placeholder="USUARIO..."
-            />
-        </div>
+        <div class="col-md-3" v-if="!isComercial">
+        <label class="form-label">    
+          <i class="fa-solid fa-user-tie me-1 text-primary"></i> Asesor Asignado
+        </label>
+        <MultiSelect
+            v-model="filters.owner_user_ids"
+            :items="filtroOwners"
+            label-key="description"
+            value-key="id"
+            placeholder="USUARIO..."
+          />
+      </div>
         <div class="col-md-3">
           <label class="form-label">
             <i class="fa-solid fa-user-tag me-1 text-primary"></i> E. Cliente
@@ -420,7 +440,9 @@ import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
-
+import DateTime12 from '@/components/DateTime12.vue'
+import { useToast } from 'vue-toastification'
+const toast = useToast()
 const router = useRouter()
 const comercialService = inject(ServiceKeys.Comercial)
 const authService = inject(ServiceKeys.Auth)
@@ -435,6 +457,18 @@ const filtroOwners = ref([])
 
 // === PAGINACIÓN ===
 const pagin = ref({ size: 25, page: 1, total: 0 })
+
+// === 1. LÓGICA DE PERMISOS (LOCALSTORAGE) ===
+const storedUserStr = localStorage.getItem('user') // Tal como se ve en tu imagen
+const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
+
+// Detectamos si tiene rol COMERCIAL (y NO es Admin/Gerencia)
+// Ajusta la lógica si un usuario puede tener ambos roles, aquí priorizo si es 'COMERCIAL' estricto
+const isComercial = storedUser?.roles?.includes('COMERCIAL') && 
+                    !storedUser?.roles?.includes('ADMIN') && 
+                    !storedUser?.roles?.includes('GERENCIA');
+
+const currentUserId = storedUser?.user_id;
 
 // === FILTROS ===
 const filters = reactive({
@@ -482,7 +516,9 @@ function handlePaginationChange() {
   saveState()
   fetchLeads()
 }
-
+const filtroCalling = ref(catalog.options('we_calling') || []) // Nuevo catálogo
+const editableHistory = ref([])
+const isSavingFollow = ref(false)
 function openFilterModal() {
   showFilterModal.value = true
 }
@@ -496,6 +532,7 @@ function applyFilters() {
 }
 
 function clearFilter(key) {
+  
   // Casos especiales para rangos de fecha
   if (key === 'rangoFechas') {
     filters.rangoFechas = { start: '', end: '' }
@@ -508,8 +545,11 @@ function clearFilter(key) {
     filters.edition_start_to = ''
     filters.edition_range_string = null
   }
-  // Casos especiales para Arrays (MultiSelect)
-  else if (key === 'owner_user_ids') filters.owner_user_ids = []
+  else if (key === 'owner_user_ids') {
+     // Si es comercial, NO hacemos nada (return), impidiendo que lo borre
+     if (isComercial) return; 
+     filters.owner_user_ids = []
+  }
   else if (key === 'status_lead_ids') filters.status_lead_ids = []
   else if (key === 'moment_ids') filters.moment_ids = []
   else if (key === 'last_follow_ids') filters.last_follow_ids = []
@@ -552,6 +592,11 @@ function clearFilters() {
     created_range_string: null,
     updated_range_string: null
   })
+
+
+  if (isComercial && currentUserId) {
+    filters.owner_user_ids = [currentUserId]
+  }
 
   pagin.value.page = 1
   localStorage.removeItem('crm_leads_filter_state_v1')
@@ -599,11 +644,13 @@ function clearFilters() {
   // --- MultiSelect Chips (Ajustados para asignación directa) ---
 
   if (filters.owner_user_ids && filters.owner_user_ids.length > 0) {
-    chips.push({
-      key: 'owner_user_ids',
-      text: `Asesores: ${filters.owner_user_ids.length}`,
-      details: filters.owner_user_ids
-    })
+    if (!isComercial) { 
+        chips.push({
+          key: 'owner_user_ids',
+          text: `Asesores: ${filters.owner_user_ids.length}`,
+          details: filters.owner_user_ids
+        })
+    }
   }
 
   if (filters.status_lead_ids && filters.status_lead_ids.length > 0) {
@@ -678,13 +725,117 @@ function clearFilters() {
     // === VARIABLES PARA MODAL SEGUIMIENTO ===
   const showFollowModal = ref(false)
   const selectedFollowLead = ref(null)
-  function openFollowModal(lead) {
-    // Verificamos si tiene datos básicos, sino no abrimos o mostramos toast
-    if (!lead.cat_last_follow_alias) return
-
-    selectedFollowLead.value = lead
-    showFollowModal.value = true
+function openFollowModal(lead) {
+  selectedFollowLead.value = lead
+  
+  // Clonamos el historial existente para editarlo sin afectar la vista principal inmediatamente
+  // Mapeamos los campos para que coincidan con los modelos de los inputs
+  if (lead.follow_details && Array.isArray(lead.follow_details)) {
+    editableHistory.value = lead.follow_details.map(d => ({
+       id: d.id || d.lead_contact_attempt_id, // Asegurar compatibilidad de nombres
+       status_alias: d.cat_status_alias || d.cat_status_label, // Ajustar según venga del backend
+       calling_alias: d.cat_result_alias || d.cat_result_label,
+       contact_datetime: d.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
+       response: d.response || ''
+    }))
+  } else {
+    editableHistory.value = []
   }
+
+  showFollowModal.value = true
+}
+
+// Añadir una fila vacía localmente
+function addLocalAttempt() {
+  const now = new Date()
+  // Ajuste de zona horaria simple para el input datetime-local si es necesario
+  const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+  editableHistory.value.unshift({
+    id: null, // Es nuevo
+    status_alias: 'we_follow_lead_pending', // Default: Pendiente
+    calling_alias: null,
+    contact_datetime: isoString,
+    response: ''
+  })
+}
+
+// Función auxiliar para obtener ID desde Alias (la usaremos al guardar)
+function getIdFromAlias(alias, catalogArray) {
+   if (!alias) return null
+   const item = catalogArray.find(i => i.alias === alias)
+   return item ? item.id : null
+}
+
+// Guardar cambios (Llamada al nuevo SP)
+async function saveFastFollow() {
+  if (!selectedFollowLead.value) return
+
+  isSavingFollow.value = true
+  try {
+    // 1. Construir el payload JSON esperado por el SP
+    // Mapeamos los alias de vuelta a IDs numéricos
+    const attemptsPayload = editableHistory.value.map(item => ({
+       id: item.id, // Si es null, el SP hará INSERT
+       cat_status: getIdFromAlias(item.status_alias, filtroFollow.value),
+       cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
+       contact_datetime: item.contact_datetime,
+       response: item.response
+    }))
+
+    // 2. Llamada al servicio (Debes agregar este método a tu servicio comercial o usar uno genérico de ejecución de query si no tienes backend middleware)
+    // Aquí asumo que tienes un endpoint genérico o creas uno nuevo para 'leadContactFastUpdate'
+    
+    // OPCIÓN A: Si tienes un método específico en tu comercialService
+    /* await comercialService.leadContactFastUpdate({
+       lead_id: selectedFollowLead.value.id,
+       contact_attempts: attemptsPayload
+    })
+    */
+
+    // OPCIÓN B (Más probable dado el contexto): Usar leadUpdate existente si soporta pasar JSON parcial, 
+    // pero idealmente deberías crear el método en tu servicio JS que apunte al nuevo SP.
+    // Simularemos la llamada:
+    console.log("Enviando payload al SP sp_fast_lead_contact_update:", attemptsPayload)
+    
+    // *** IMAGINA QUE ESTO ES TU LLAMADA REAL AL BACKEND ***
+    // await axios.post('/api/comercial/lead/fast-contact-update', { lead_id: selectedFollowLead.value.id, attempts: attemptsPayload })
+    // Como no tengo tu archivo de servicios JS, asumo que puedes implementar el fetch aquí.
+    
+    // Si usas el mismo leadUpdate porque el backend ya maneja updates parciales:
+    /*
+     await comercialService.leadUpdate({
+       id: selectedFollowLead.value.id,
+       lead: {}, // Objeto lead vacío para no tocar datos
+       contact_attempts: attemptsPayload 
+     })
+    */
+    
+    // NOTA: Para que esto funcione con el SP nuevo, tu backend (Node/C#/PHP) debe exponer una ruta que ejecute `sp_fast_lead_contact_update`.
+    // Si no puedes tocar el backend API, usa el `leadUpdate` normal, ya que el SP original que me pasaste (`sp_comercial_lead_update`) 
+    // YA TIENE LA LOGICA DE INSERT/UPDATE de contactos en la segunda mitad. 
+    // En ese caso, solo envía:
+    await comercialService.leadUpdate({
+        id: selectedFollowLead.value.id,
+        lead: { 
+            // Enviamos datos mínimos requeridos para que no rompa constraints, o un objeto vacío si el SP original lo soporta.
+            // Según tu SP original, actualiza campos con COALESCE, así que enviando nulls o vacíos debería mantener los valores viejos.
+            // Solo enviamos lo necesario.
+         }, 
+        contact_attempts: attemptsPayload
+    })
+
+    toast.success('Seguimiento actualizado correctamente')
+    showFollowModal.value = false
+    fetchLeads() // Recargar la tabla principal
+
+  } catch (error) {
+    console.error(error)
+    toast.error('Error al guardar el seguimiento')
+  } finally {
+    isSavingFollow.value = false
+  }
+}
 
 // === API FETCH ===
 async function fetchLeads() {
@@ -692,6 +843,9 @@ async function fetchLeads() {
     const activeFlag = filters.estado === 'Activo' ? '1'
       : filters.estado === 'Inactivo' ? '0'
       : null
+
+    // Helper para transformar [1, 2] a [{ value: 1 }, { value: 2 }]
+    const mapToObj = (arr) => arr && arr.length ? arr.map(id => ({ value: id })) : null
 
     const { items, total: t } = await comercialService.leadList({
       q: filters.q || null,
@@ -702,16 +856,20 @@ async function fetchLeads() {
       updated_from: filters.rangoModificacion?.start || null,
       updated_to: filters.rangoModificacion?.end || null,
 
-      // Enviar arrays solo si tienen elementos
-      status_lead_ids: filters.status_lead_ids.length ? filters.status_lead_ids : null,
-      moment_ids: filters.moment_ids.length ? filters.moment_ids : null,
-      last_follow_ids: filters.last_follow_ids.length ? filters.last_follow_ids : null,
-      channel_ids: filters.channel_ids.length ? filters.channel_ids : null,
-      interest_level_ids: filters.interest_level_ids.length ? filters.interest_level_ids : null,
-      query_ids: filters.query_ids.length ? filters.query_ids : null,
-      type_program_ids: filters.type_program_ids.length ? filters.type_program_ids : null,
-      model_modality_ids: filters.model_modality_ids.length ? filters.model_modality_ids : null,
-      owner_user_ids: filters.owner_user_ids.length ? filters.owner_user_ids : null,
+      // --- AQUI ESTÁ LA CORRECCIÓN ---
+      // Transformamos los arrays de IDs simples a Arrays de Objetos { value: id }
+      
+      owner_user_ids: mapToObj(filters.owner_user_ids),
+      
+      // Aplicamos lo mismo a los demás filtros porque tu backend tiene el mismo esquema para todos
+      status_lead_ids: mapToObj(filters.status_lead_ids),
+      moment_ids: mapToObj(filters.moment_ids),
+      last_follow_ids: mapToObj(filters.last_follow_ids),
+      channel_ids: mapToObj(filters.channel_ids),
+      interest_level_ids: mapToObj(filters.interest_level_ids),
+      query_ids: mapToObj(filters.query_ids),
+      type_program_ids: mapToObj(filters.type_program_ids),
+      model_modality_ids: mapToObj(filters.model_modality_ids),
 
       program_text: filters.program_text || null,
       edition_start_from: filters.edition_start_from || null,
@@ -722,7 +880,6 @@ async function fetchLeads() {
     leadsRaw.value = items || []
     pagin.value.total = Number(t || 0)
 
-    // Cargar owners si aún no están cargados
     if (filtroOwners.value.length === 0 && items?.length > 0) {
       await loadOwners()
     }
@@ -834,6 +991,10 @@ function handleDateFilterChange(dateStr, type) {
 
 // === LIFECYCLE ===
 onMounted(() => {
+  if (isComercial && currentUserId) {
+    filters.owner_user_ids = [currentUserId]
+  }
+  
   rebuildChips()
   fetchLeads()
 })

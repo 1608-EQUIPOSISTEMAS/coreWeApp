@@ -19,5 +19,4 @@ async getDetailLeads(payload) {
     const response = (await api.post('/dashboard/detailsales', payload)).data;
     return response.data;
   }
-  
 }

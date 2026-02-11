@@ -248,7 +248,25 @@
                 placeholder="PAÍS..."
               />
             </div>
-            <div class="col-6 col-md-4"></div>
+
+            <div class="col-6 col-md-2"></div>
+            <div class="col-6 col-md-1">
+              <label class="form-label mb-1">WEB<span class="required-star">*</span></label>
+              <br>
+              <label class="form-switch">
+                <input type="checkbox" v-model="form.web" /> 
+                <span></span>
+              </label>
+            </div>
+
+            <div class="col-6 col-md-1">
+              <label class="form-label mb-1">B2B<span class="required-star">*</span></label>
+              <br>
+              <label class="form-switch">
+                <input type="checkbox" v-model="form.b2b" />
+                <span></span>
+              </label>
+            </div>
 
             <!-- <div class="col-md-1" v-if="isEdit">
               <label class="form-label mb-1">BOT<span class="required-star">*</span></label>
@@ -1282,6 +1300,8 @@ const hcEnrollmentData = ref([
     query_alias: null,
     category_alias: null,
     program_modality_alias: null,
+    web: false,
+    b2b: false,
     program_modality_selected_alias: null,
     program_version_id: null,
     cat_client_moment_alias:null,
@@ -1473,7 +1493,8 @@ watchEffect(() => {
       category_alias: l.cat_program_type_alias || l.category_alias || null,
       program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
       program_modality_selected_alias: modality_selected_alias,
-
+      web: l.web === 'Y' || l.web === true, 
+      b2b: l.b2b === 'Y' || l.b2b === true,
       program_version_id: l.program_version_id ?? null,
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
       full_name: l.full_name ?? l.full_name_label ?? '',
@@ -1834,6 +1855,8 @@ function formatDateTime(isoString) {
         cat_medium_contact,
         bot: form.bot? 'Y' : 'N',
         active: form.active? 'Y' : 'N',
+        web: form.web ? 'Y' : 'N',
+        b2b: form.b2b ? 'Y' : 'N',
         cat_query,
         full_name: form.full_name,
         pay_date: form.pay_date,
