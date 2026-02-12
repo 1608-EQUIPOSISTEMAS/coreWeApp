@@ -114,7 +114,7 @@ const routes = [
             name: 'Edition',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Editions.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'precios',
@@ -258,9 +258,6 @@ const routes = [
         redirect: { name: 'ComercialOverview' },
         meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         children: [
-          // -----------------
-          // CRUD / PIPELINE
-          // -----------------
           {
             path: 'leads',
             name: 'ComercialListado',
@@ -317,6 +314,24 @@ const routes = [
             // vista rápida del equipo comercial (kpis, embudo mini)
             component: () => import('@/views/comercial/ReportCoverageForecast.vue'),
             meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+          },
+          {
+            path: 'RptGoalAgent',
+            name: 'ReportGoalAgent',
+            component: () => import('@/views/comercial/ReportGoalAgent.vue'),
+            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          },
+          {
+            path: 'RptGoalEdition',
+            name: 'ReportGoalEdition',
+            component: () => import('@/views/comercial/ReportGoalEdition.vue'),
+            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          },
+          {
+            path: 'RptControlComercial',
+            name: 'ReportControlComercial',
+            component: () => import('@/views/comercial/ReportControlComercial.vue'),
+            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'overview',

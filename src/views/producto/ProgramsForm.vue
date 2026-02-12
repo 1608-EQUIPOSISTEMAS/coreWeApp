@@ -514,7 +514,7 @@ import FileUploader from '@/components/FileUploader.vue'
    */
   function buildChildrenIdsFromRow(v) {
     console.log("data: \n")
-    debugger
+    
     if (!Array.isArray(v.childs)) return null
     const ids = v.childs
       .map(c => Number(c.program_version_id))

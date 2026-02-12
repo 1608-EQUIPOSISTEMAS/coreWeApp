@@ -51,7 +51,7 @@
 
     <div class="main-header">
       <div>
-        <h1 class="system-title">TABLERO DE CONTROL COMERCIAL</h1>
+        <h1 class="system-title">TABLERO DE ASESOR OBJETIVOS</h1>
         <p class="system-subtitle">VISTA: {{ filters.period === 'ALL' ? 'MENSUAL' : filters.period }} - {{ filters.month }} {{ filters.year }}</p>
       </div>
 

@@ -155,7 +155,15 @@
 
             <div class="col-6 col-md-6 col-lg-3">
               <label class="form-label mb-1">Nombre/Razón Social</label>
-              <input required autocomplete="off" v-model="form.full_name" type="text" class="form-control" placeholder="NOMBRE COMPLETO" />
+              <input 
+                required 
+                autocomplete="off" 
+                v-model="form.full_name" 
+                type="text" 
+                class="form-control" 
+                placeholder="NOMBRE COMPLETO"
+                v-restrict="{ transform: 'upper', trim: true }" 
+              />
             </div>
 
             <div class="col-6 col-md-3 col-lg-3">
@@ -219,6 +227,7 @@
               <SearchSelect
                 v-model="form.status_alias"
                 :items="leadStatusCatalog"
+                :viewOpen="6"
                 label-field="description"
                 value-field="alias"
                 placeholder="STATUS..."
@@ -232,9 +241,9 @@
               <SearchSelect
                 v-model="form.ocupacion_alias"
                 :items="prospectSituationCatalog"
+                :viewOpen="6"
                 label-field="description"
                 value-field="alias"
-                required
                 :model-label="form.ocupacion_label"
                 placeholder="OCUPACIÓN..."
               />
@@ -245,6 +254,7 @@
               <SearchSelect
                 v-model="form.country_alias"
                 :items="countryCatalog"
+                :viewOpen="6"
                 label-field="description"
                 value-field="alias"
                 required
@@ -881,7 +891,7 @@
               <div class="user-icon">
                 <i class="fa-solid fa-user"></i>
               </div>
-              <span class="user-name text-truncate">{{ form.full_name }}</span>
+              <span class="user-name text-truncate">{{ form.telefono }}</span>
             </div>
 
             <div v-if="clientProfileType"
@@ -923,19 +933,52 @@
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Documento<span class="required-star">*</span></label>
-            <input autocomplete="off" required v-model="insc.document" type="text" placeholder="DOCUMENTO" class="form-control"  @keyup.enter="searchSunat" />
+            <input 
+              autocomplete="off" 
+              required 
+              v-model="insc.document" 
+              type="text" 
+              placeholder="DOCUMENTO" 
+              class="form-control"  
+              @keyup.enter="searchSunat" 
+              v-restrict="{ trim: true, spaces: false, max: 15 }"
+            />
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Correo<span class="required-star">*</span></label>
-            <input autocomplete="off" required v-model="insc.email" type="email" placeholder="CORREO" class="form-control" />
+            <input 
+              autocomplete="off" 
+              required 
+              v-model="insc.email" 
+              type="email" 
+              placeholder="CORREO" 
+              class="form-control"
+              v-restrict="{ trim: true, spaces: false, transform: 'lower' }"
+            />
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Nombres<span class="required-star">*</span></label>
-            <input autocomplete="off" required  v-model="insc.full_name" type="text" placeholder="NOMBRES" class="form-control" />
+            <input 
+              autocomplete="off" 
+              required 
+              v-model="insc.full_name" 
+              type="text" 
+              placeholder="NOMBRES" 
+              class="form-control"
+              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }" 
+            />
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Apellido Paterno<span class="required-star">*</span></label>
-            <input autocomplete="off" required v-model="insc.last_name" type="text" placeholder="A. PATERNO" class="form-control" />
+            <input 
+              autocomplete="off" 
+              required 
+              v-model="insc.last_name" 
+              type="text" 
+              placeholder="A. PATERNO" 
+              class="form-control"
+              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }"
+            />
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Apellido Materno<span class="required-star">*</span></label>
@@ -1220,7 +1263,20 @@ const formatDate = (dateString) => {
 
   const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
   const leadInterestCatalog      = ref(catalog.options('we_lead_interest'))
-  const countryCatalog           = ref(catalog.options('we_country'))
+  const countryCatalog = ref(
+    catalog.options('we_country', {
+      mapItem: x => ({
+        id: x.id,
+        description: `(${String(x?.codigo)}) - ${x.description}`,
+        alias: x.alias,
+        variable_3: x.variable_3,
+        raw: x
+      })
+    })
+  )
+
+  
+
   const momentCatalog           = ref(catalog.options('we_moment'))
   const clientCatalog           = ref(catalog.options('we_client'))
   const prospectSituationCatalog = ref(
@@ -1482,6 +1538,13 @@ watchEffect(() => {
     const it = list.find(i => i.id === id || i.raw?.id === id)
     return it?.alias ?? null
   }
+  watch(() => form.web, (val) => {
+    if (val) form.b2b = false
+  })
+
+  watch(() => form.b2b, (val) => {
+    if (val) form.web = false
+  })
   function normalizeDateTime(v) {
     if (!v) return ''
     const s = String(v).replace('T', ' ')
@@ -1839,7 +1902,7 @@ function formatDateTime(isoString) {
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-      debugger
+      
       const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
       return {
         id: c.id,
@@ -2077,7 +2140,7 @@ async function confirmarInscripcion() {
     return true
   }
   function validateContactInfo() {
-    const required = ['telefono','status_alias','country_alias','ocupacion_alias']
+    const required = ['telefono','status_alias','country_alias']
     return required.every(f => !!form[f])
   }
   function validateCommercialInfo() {

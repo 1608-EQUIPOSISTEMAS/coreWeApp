@@ -3,7 +3,7 @@
     
     <div class="main-header">
       <div>
-        <h1 class="system-title">CRONOGRAMA COMERCIAL & SEGUIMIENTO</h1>
+        <h1 class="system-title">TABLERO DE CRONOGRAMA OBJETIVOS</h1>
         <p class="system-subtitle">ENERO 2026 - GESTIÓN DE CURSOS Y DIPLOMADOS</p>
       </div>
       

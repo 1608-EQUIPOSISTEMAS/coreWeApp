@@ -4,24 +4,22 @@
       <CRow class="g-0 min-vh-100">
         
         <CCol :md="7" :lg="8" class="d-none d-md-flex position-relative overflow-hidden align-items-center justify-content-center bg-dark">
-          <video autoplay muted loop playsinline class="video-background">
-            <source :src="videoSrc" type="video/mp4">
-            Tu navegador no soporta videos HTML5.
-          </video>
-          <div class="video-overlay"></div>
-          <div class="position-relative text-white text-center p-5 content-on-video">
-            <h2 class="display-4 fw-bold mb-3">¡Felices Fiestas!</h2>
-            <p class="lead fs-4">Bienvenido al sistema de gestión.</p>
-          </div>
+          <img :src="bgImage" alt="Fondo Amistad" class="img-background">
+          <div class="img-overlay"></div>
+          
         </CCol>
 
-        <CCol :md="5" :lg="4" class="d-flex align-items-center shadow-lg position-relative striped-blue-bg">
+        <CCol :md="5" :lg="4" class="d-flex align-items-center shadow-lg position-relative theme-blue-bg">
           <div class="w-100 p-4 p-lg-5">
             <CForm @submit.prevent="handleLogin">
               
-              <div class="mb-5 text-white">
-                <h1 class="fw-bold mb-2">Iniciar Sesión</h1>
-                <p class="text-white-50">
+              <div class="mb-4 text-center">
+                 <img src="/images/logo_we.png" alt="WE Educación Ejecutiva" class="img-fluid mb-4 logo-login">
+              </div>
+
+              <div class="mb-4 text-white">
+                <h3 class="fw-bold mb-1">Bienvenido</h3>
+                <p class="text-white-50 fs-6">
                   Ingresa tus credenciales para acceder.
                 </p>
               </div>
@@ -55,11 +53,11 @@
 
               <div class="d-grid gap-2 mb-3">
                 <CButton 
-                  color="primary" 
+                  color="danger" 
                   size="lg"
                   type="submit"
                   :disabled="loading"
-                  class="fw-bold text-white py-2 shadow-sm"
+                  class="fw-bold text-white py-2 shadow-sm btn-rosas"
                 >
                   <span v-if="!loading">Ingresar</span>
                   <span v-else>
@@ -78,11 +76,13 @@
 </template>
 
 <script>
-import navidadesVideo from '@/assets/videos/Video_de_Navidad_Alegre.mp4'
 import { inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+
+// NOTA: Ya no importamos la imagen aquí porque está en 'public'
+// Vite sirve todo lo que está en 'public' en la raíz '/'.
 
 export default {
   name: 'Login',
@@ -99,7 +99,8 @@ export default {
   },
   data() {
     return {
-      videoSrc: navidadesVideo,
+      // Ruta absoluta desde la raíz del servidor (carpeta public)
+      bgImage: '/images/friendship_bg.png', 
       credentials: {
         username: '', 
         password: ''
@@ -131,69 +132,79 @@ export default {
     if(this.authService && this.authService.isAuthenticated && this.authService.isAuthenticated()){
         this.router.push({ name: 'Dashboard' });
     }
-    const videoElement = document.querySelector('video');
-    if(videoElement) {
-        videoElement.playbackRate = 1.0; 
-    }
   }
 }
 </script>
 
 <style scoped>
 /* =========================================
-   ESTILOS PARA EL VIDEO DE FONDO
+   ESTILOS LOGO
    ========================================= */
-.video-background {
+.logo-login {
+  max-height: 80px; /* Ajusta este tamaño según prefieras */
+  object-fit: contain;
+}
+
+/* =========================================
+   ESTILOS PARA LA IMAGEN DE FONDO
+   ========================================= */
+.img-background {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   z-index: 0;
 }
-.video-overlay {
+
+.img-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.4); 
   z-index: 1;
 }
-.content-on-video {
+
+.content-on-image {
   z-index: 2;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 4px 8px rgba(0,0,0,0.8);
 }
 
 /* =========================================
-   ESTILOS NUEVOS: FONDO AZUL RAYADO
+   ESTILOS FONDO DERECHO
    ========================================= */
-.striped-blue-bg {
-  /* Color base azul oscuro */
-  background-color: #0d1b2a; 
-  /* Patrón de rayas diagonales */
-  background-image: repeating-linear-gradient(
-    45deg,
-    #102a43,
-    #102a43 10px,
-    #0d1b2a 10px,
-    #0d1b2a 20px
-  );
-  color: #fff; /* Texto blanco por defecto */
+.theme-blue-bg {
+  background-color: #051538; 
+  color: #fff;
+  border-left: 1px solid rgba(255,255,255,0.1);
 }
 
 /* =========================================
-   ESTILOS DEL FORMULARIO Y INPUTS
+   BOTÓN PERSONALIZADO (ROJO ROSA)
    ========================================= */
-/* Forzar que el grupo de input sea una fila y no se rompa */
+.btn-rosas {
+  background-color: #d90429; 
+  border-color: #d90429;
+  transition: all 0.3s ease;
+}
+.btn-rosas:hover {
+  background-color: #ef233c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(217, 4, 41, 0.4) !important;
+}
+
+/* =========================================
+   ESTILOS DEL FORMULARIO
+   ========================================= */
 .custom-input-group {
   display: flex;
-  flex-wrap: nowrap; /* Esto evita que el icono se vaya arriba */
+  flex-wrap: nowrap;
   align-items: stretch;
 }
 
-/* Ajustes visuales para que parezcan una sola caja */
 .form-control, .input-group-text {
   border-color: #ced4da;
 }
@@ -203,17 +214,16 @@ export default {
   border-color: #dee2e6;
 }
 
-/* Efecto focus mejorado: Ilumina todo el grupo */
 .input-group:focus-within .form-control,
 .input-group:focus-within .input-group-text {
-  border-color: #4f5d75; /* Un azul grisáceo para el borde al hacer click */
+  border-color: #ef233c;
   background-color: #fff !important;
 }
 
 .input-group-text {
-  display: flex; /* Centrar el icono */
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 50px; /* Asegura un ancho mínimo para el icono */
+  min-width: 50px;
 }
 </style>

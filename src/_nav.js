@@ -8,35 +8,6 @@ export default [
     name: 'Áreas',
   },
 
-  //
-  // GERENCIA
-  //
-  // {
-  //   component: 'CNavGroup',
-  //   name: 'Gerencia',
-  //   to: '/gerencia',
-  //   icon: 'cil-layers', // icono sugerido
-  //   items: [
-  //     {
-  //       component: 'CNavItem',
-  //       name: 'Overview',
-  //       to: '/gerencia/overview',
-  //     },
-  //     {
-  //       component: 'CNavItem',
-  //       name: 'Indicadores',
-  //       to: '/gerencia/indicadores',
-  //     },
-  //     {
-  //       component: 'CNavItem',
-  //       name: 'Reportes Ejecutivos',
-  //       to: '/gerencia/reportes-ejecutivos',
-  //     },
-  //   ],
-  // },
-  //
-  // FICO
-  //
   {
     component: 'CNavGroup',
     name: 'Finanzas',
@@ -101,40 +72,55 @@ export default [
     to: '/comercial',
     icon: 'cil-people', // icono sugerido
     items: [
-      {
-        component: 'CNavItem',
-        name: 'Overview',
-        to: '/comercial/overview',
-      },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'Overview',
+      //   to: '/comercial/overview',
+      // },
       {
         component: 'CNavItem',
         name: 'Comercial',
         to: '/comercial/leads',
       },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'Descuento',
+      //   to: '/comercial/discount',
+      // },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'R. Producto',
+      //   to: '/comercial/RptMktProduct',
+      // },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'R. SLA',
+      //   to: '/comercial/RptSLA',
+      // },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'R. LLamadas',
+      //   to: '/comercial/RptCalling',
+      // },
+      // {
+      //   component: 'CNavItem',
+      //   name: 'R. Rendimiento',
+      //   to: '/comercial/RptPerformanceMarketing',
+      // },
       {
         component: 'CNavItem',
-        name: 'Descuento',
-        to: '/comercial/discount',
+        name: 'Control Comercial',
+        to: '/comercial/RptControlComercial',
       },
       {
         component: 'CNavItem',
-        name: 'R. Producto',
-        to: '/comercial/RptMktProduct',
+        name: 'Asesor - Objetivos',
+        to: '/comercial/RptGoalAgent',
       },
       {
         component: 'CNavItem',
-        name: 'R. SLA',
-        to: '/comercial/RptSLA',
-      },
-      {
-        component: 'CNavItem',
-        name: 'R. LLamadas',
-        to: '/comercial/RptCalling',
-      },
-      {
-        component: 'CNavItem',
-        name: 'R. Rendimiento',
-        to: '/comercial/RptPerformanceMarketing',
+        name: 'Cronograma - Objetivos',
+        to: '/comercial/RptGoalEdition',
       },
       // {
       //   component: 'CNavItem',

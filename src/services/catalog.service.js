@@ -119,7 +119,7 @@ export function createCatalogService () {
 
   async function membershipList(payload) {
     //si ya existe el listado en localhost solo retornar sino llamar api post y guardar localStorage.setItem('membershipList', JSON.stringify(response.data)); const response = (await api.post('/catalog/membershiplist', payload)).data;
-debugger
+
     const local = localStorage.getItem('membershipList');
     if (local) {
       return JSON.parse(local);

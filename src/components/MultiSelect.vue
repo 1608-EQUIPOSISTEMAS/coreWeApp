@@ -1,45 +1,55 @@
 <template>
   <div class="multi-select-wrapper" ref="wrapperEl">
     <div
-      class="multi-select-control"
+      class="multi-select-trigger"
       :class="{
         'is-disabled': disabled,
-        'is-error': required && selected.length === 0,
-        'is-success': required && selected.length > 0
+        'is-active': modalOpen,
+        'has-selection': selected.length > 0
       }"
       @click="openModal"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
       ref="controlRef"
-      :aria-disabled="disabled"
     >
-      <div class="control-content">
-        <span v-if="selected.length === 0" class="control-placeholder">
+      <div class="trigger-content">
+        <span v-if="selected.length === 0" class="placeholder-text">
           {{ placeholder }}
         </span>
-        <span v-else class="control-value">
-          {{ selected.length }} {{ selected.length === 1 ? 'seleccionado' : 'seleccionados' }}
+        <span v-else class="value-text">
+          <span class="badge-count">{{ selected.length }}</span>
+          <span class="badge-label">{{ selected.length === 1 ? 'opción' : 'opciones' }}</span>
         </span>
       </div>
 
-      <div class="control-icon">
-        <i class="fa-solid fa-border-all"></i>
+      <div class="trigger-actions">
+        <button 
+          v-if="selected.length > 0 && !disabled" 
+          @click.stop="clearAllSelection" 
+          class="btn-quick-clear"
+          title="Limpiar selección"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="trigger-icon">
+          <i class="fa-solid fa-border-all"></i>
+        </div>
       </div>
 
-      <Transition name="fade">
+      <Transition name="fade-scale">
         <div
           v-if="showHoverList && selected.length > 0"
-          class="hover-list"
+          class="hover-tooltip"
           :class="hoverListPosition === 'top' ? 'pos-top' : 'pos-bottom'"
-          @mouseenter="onMouseEnterList"
-          @mouseleave="onMouseLeaveList"
         >
-          <div class="hover-list-content">
-            <div v-for="(item, index) in selected" :key="index" class="hover-item">
+          <div class="tooltip-header">Seleccionados:</div>
+          <div class="tooltip-body">
+            <div v-for="(item, index) in selected.slice(0, 10)" :key="index" class="tooltip-item">
                {{ item.label }}
             </div>
-            <div v-if="selected.length > 10" class="hover-more">
-              ... y {{ selected.length - 10 }} más
+            <div v-if="selected.length > 10" class="tooltip-more">
+              + {{ selected.length - 10 }} más...
             </div>
           </div>
         </div>
@@ -50,106 +60,101 @@
 
     <Teleport to="body">
       <Transition name="modal-fade">
-        <div v-if="modalOpen" class="modal-overlay" @click.self="closeModal">
-          <Transition name="modal-slide">
-            <div v-if="modalOpen" class="modal-container" @click.stop>
-
-              <div class="modern-header">
-                <div class="header-top">
-                  <h3 class="modern-title">{{ modalTitle }}</h3>
-                  <button type="button" class="modern-close-btn" @click="closeModal">
+        <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
+          <Transition name="modal-zoom">
+            <div v-if="modalOpen" class="modal-card">
+              
+              <div class="card-header">
+                <div class="header-title-row">
+                  <h3>{{ modalTitle }}</h3>
+                  <button class="btn-icon-close" @click="closeModal">
                     <i class="fa-solid fa-xmark"></i>
                   </button>
                 </div>
-
-                <div class="modern-search-wrapper">
-                  <div class="search-pill">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input
-                      ref="searchInputRef"
-                      type="text"
-                      class="search-input-transparent"
-                      placeholder="Buscar..."
-                      v-model="searchQuery"
-                      @input="onSearchInput"
-                    />
-                    <button v-if="searchQuery" @click="clearSearch" class="search-clear-mini">
-                      <i class="fa-solid fa-circle-xmark"></i>
-                    </button>
-                  </div>
+                
+                <!-- Search sin ícono de lupa -->
+                <div class="search-container">
+                  <input
+                    ref="searchInputRef"
+                    type="text"
+                    class="search-input"
+                    placeholder="Filtrar opciones..."
+                    v-model="searchQuery"
+                    @input="onSearchInput"
+                  />
+                  <button v-if="searchQuery" @click="clearSearch" class="btn-input-clear">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                  </button>
                 </div>
 
-                <div class="modern-toolbar">
-                  <span class="selection-count">
+                <div class="toolbar-row">
+                  <span class="selection-status">
                     {{ tempSelection.size }} seleccionados
                   </span>
-                  <div class="toolbar-actions">
-                    <button
-                      @click="selectAll"
-                      :disabled="filteredItems.length === 0"
-                      class="text-btn"
-                    >
+                  <div class="toolbar-buttons">
+                    <button @click="selectAll" :disabled="filteredItems.length === 0" class="btn-link">
                       Todos
                     </button>
-                    <button
-                      @click="deselectAll"
-                      :disabled="!hasVisibleSelection"
-                      class="text-btn text-danger"
-                    >
+                    <button @click="deselectAll" :disabled="!hasVisibleSelection" class="btn-link danger">
                       Ninguno
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="modern-body">
-                <div v-if="loading" class="modern-state">
-                  <div class="spinner-modern"></div>
-                  <p>Cargando...</p>
+              <div class="card-body">
+                <div v-if="loading" class="state-container">
+                  <div class="spinner"></div>
+                  <span>Cargando datos...</span>
                 </div>
 
-                <div v-else-if="filteredItems.length === 0" class="modern-state">
-                  <i class="fa-regular fa-folder-open empty-icon"></i>
-                  <p>Sin resultados</p>
+                <div v-else-if="filteredItems.length === 0" class="state-container">
+                  <i class="fa-regular fa-folder-open"></i>
+                  <span>No se encontraron resultados</span>
                 </div>
 
-                <div v-else class="modern-list">
+                <div v-else class="list-container">
                   <label
                     v-for="item in filteredItems"
                     :key="item[valueKey]"
-                    class="modern-row"
-                    :class="{ 'is-active': tempSelection.has(item[valueKey]) }"
+                    class="list-row"
+                    :class="{ 'is-selected': tempSelection.has(item[valueKey]) }"
                   >
-                    <div class="row-content">
-                      <div class="row-title">{{ item[labelKey] }}</div>
-                      <div v-if="sublabelKey && item[sublabelKey]" class="row-subtitle">
+                    <div class="custom-checkbox">
+                      <input
+                        type="checkbox"
+                        :checked="tempSelection.has(item[valueKey])"
+                        @change="toggleItem(item)"
+                      />
+                      <span class="checkmark">
+                        <i class="fa-solid fa-check"></i>
+                      </span>
+                    </div>
+
+                    <div class="row-info">
+                      <span class="row-label">{{ item[labelKey] }}</span>
+                      <span v-if="sublabelKey && item[sublabelKey]" class="row-sublabel">
                         {{ item[sublabelKey] }}
-                      </div>
+                      </span>
                     </div>
 
-                    <input
-                      type="checkbox"
-                      class="hidden-checkbox"
-                      :checked="tempSelection.has(item[valueKey])"
-                      @change="toggleItem(item)"
-                    />
-
-                    <div class="row-check-indicator">
-                      <Transition name="scale-check">
-                        <i v-if="tempSelection.has(item[valueKey])" class="fa-solid fa-circle-check"></i>
-                        <i v-else class="fa-regular fa-circle"></i>
-                      </Transition>
-                    </div>
+                    <!-- Botón "Solo este" -->
+                    <button
+                      class="btn-only"
+                      :class="{ 'is-exclusive': tempSelection.size === 1 && tempSelection.has(item[valueKey]) }"
+                      @click.prevent.stop="selectOnly(item)"
+                      title="Seleccionar solo este"
+                    >
+                      <i class="fa-solid fa-filter-circle-dot"></i>
+                    </button>
                   </label>
                 </div>
               </div>
 
-              <div class="modern-footer">
-                <button type="button" class="btn-modern-cancel" @click="closeModal">
-                  Cancelar
-                </button>
-                <button type="button" class="btn-modern-accept" @click="acceptSelection">
-                  Confirmar selección
+              <div class="card-footer">
+                <button class="btn-secondary" @click="closeModal">Cancelar</button>
+                <button class="btn-primary" @click="acceptSelection">
+                  Aplicar selección
                 </button>
               </div>
 
@@ -165,17 +170,17 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: Array, default: () => [] }, // Se espera [{value: 1, label: 'Name'}, ...]
+  modelValue: { type: Array, default: () => [] },
   items: { type: Array, default: () => [] },
   labelKey: { type: String, required: true },
   valueKey: { type: String, required: true },
   sublabelKey: { type: String, default: '' },
-  placeholder: { type: String, default: 'Seleccionar opciones...' },
+  placeholder: { type: String, default: 'Seleccionar...' },
   modalTitle: { type: String, default: 'Seleccionar opciones' },
   hint: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   required: { type: Boolean, default: false },
-  mode: { type: String, default: 'local', validator: (v) => ['local', 'remote'].includes(v) },
+  mode: { type: String, default: 'local' },
   fetcher: { type: Function, default: null },
   minSearchChars: { type: Number, default: 0 },
   debounceMs: { type: Number, default: 300 }
@@ -183,8 +188,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change', 'search'])
 
-// --- Refs y Estado ---
-const internalCache = ref(new Map()) // <--- EL SECRETO: Memoria persistente de items
+// --- Estado ---
+const internalCache = ref(new Map())
 const controlRef = ref(null)
 const showHoverList = ref(false)
 const hoverListPosition = ref('bottom')
@@ -201,16 +206,12 @@ let debounceTimer = null
 const isRemote = computed(() => props.mode === 'remote')
 const selected = computed(() => props.modelValue || [])
 
-// Lista actual de opciones crudas (sin filtrar)
 const currentSourceItems = computed(() => {
   return isRemote.value ? remoteItems.value : props.items
 })
 
-// Lógica principal de visualización en la Modal
 const filteredItems = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-
-  // 1. Si hay búsqueda, filtramos sobre la fuente actual (remota o local)
   if (query) {
     return currentSourceItems.value.filter(item => {
       const label = String(item[props.labelKey] || '').toLowerCase()
@@ -218,26 +219,12 @@ const filteredItems = computed(() => {
       return label.includes(query) || sublabel.includes(query)
     })
   }
-
-  // 2. Si NO hay búsqueda (estado inicial de la modal):
-  //    Queremos mostrar PRIMERO los seleccionados, LUEGO los resultados disponibles.
-
-  // A) Recuperamos los objetos completos de lo que está seleccionado usando el Cache
   const selectedObjects = []
   tempSelection.value.forEach(id => {
-    if (internalCache.value.has(id)) {
-      selectedObjects.push(internalCache.value.get(id))
-    }
+    if (internalCache.value.has(id)) selectedObjects.push(internalCache.value.get(id))
   })
-
-  // B) Obtenemos los items de la fuente actual que NO están seleccionados
-  //    (para no duplicarlos visualmente)
-  const unselectedCurrentItems = currentSourceItems.value.filter(item =>
-    !tempSelection.value.has(item[props.valueKey])
-  )
-
-  // C) Unimos: [Seleccionados Arriba] + [Resto Abajo]
-  return [...selectedObjects, ...unselectedCurrentItems]
+  const unselected = currentSourceItems.value.filter(item => !tempSelection.value.has(item[props.valueKey]))
+  return [...selectedObjects, ...unselected]
 })
 
 const hasVisibleSelection = computed(() => {
@@ -245,60 +232,35 @@ const hasVisibleSelection = computed(() => {
   return filteredItems.value.some(item => tempSelection.value.has(item[props.valueKey]))
 })
 
-// --- Gestión del Cache (Vital para Remote) ---
+// Cache management
 function updateCache(items) {
   if (!Array.isArray(items)) return
   items.forEach(item => {
-    if (item && item[props.valueKey]) {
-      internalCache.value.set(item[props.valueKey], item)
-    }
+    if (item && item[props.valueKey]) internalCache.value.set(item[props.valueKey], item)
   })
 }
-
-// Observamos cambios en los items entrantes para alimentar el cache
-watch(() => props.items, (newItems) => updateCache(newItems), { immediate: true })
-watch(remoteItems, (newRemote) => updateCache(newRemote), { deep: true })
-// También alimentamos el cache con lo que ya venga seleccionado inicialmente
+watch(() => props.items, (n) => updateCache(n), { immediate: true })
+watch(remoteItems, (n) => updateCache(n), { deep: true })
 watch(() => props.modelValue, (val) => {
   if (val && Array.isArray(val)) {
     val.forEach(v => {
-      // Si viene con formato objeto {value, label}, intentamos reconstruir un item parcial
-      // O si viene el objeto completo item de base de datos
       if (v && typeof v === 'object') {
-        // Guardamos usando el ID como clave
         const id = v.value || v[props.valueKey]
-        // Si ya existe en cache uno más completo, no lo sobrescribimos con uno parcial
-        if (id && !internalCache.value.has(id)) {
-           // Truco: Si v es {value: 1, label: 'X'}, lo adaptamos al formato de item esperado
-           // O si v ya es el item, lo guardamos.
-           const cacheItem = { ...v }
-           // Aseguramos que tenga las keys correctas si viniera formateado
-           if (!cacheItem[props.valueKey] && cacheItem.value) cacheItem[props.valueKey] = cacheItem.value
-           if (!cacheItem[props.labelKey] && cacheItem.label) cacheItem[props.labelKey] = cacheItem.label
-
-           internalCache.value.set(id, cacheItem)
-        }
+        if (id && !internalCache.value.has(id)) internalCache.value.set(id, { ...v })
       }
     })
   }
 }, { immediate: true, deep: true })
 
-
-// --- Métodos ---
+// --- Métodos de UI ---
 function openModal() {
   if (props.disabled) return
   modalOpen.value = true
   searchQuery.value = ''
-
-  // Extraer IDs del modelValue
-  const initialIds = selected.value.map(item => {
-    return (typeof item === 'object' && item !== null) ? (item.value || item[props.valueKey]) : item
-  })
+  const initialIds = selected.value.map(item => (typeof item === 'object' && item !== null) ? (item.value || item[props.valueKey]) : item)
   tempSelection.value = new Set(initialIds)
-
   nextTick(() => {
     searchInputRef.value?.focus()
-    // En remote, cargamos data inicial (vacía o default)
     if (isRemote.value) fetchRemoteData('')
   })
 }
@@ -309,13 +271,31 @@ function closeModal() {
   searchQuery.value = ''
 }
 
+function clearAllSelection() {
+  emit('update:modelValue', [])
+  emit('change', [])
+  tempSelection.value.clear()
+}
+
 function toggleItem(item) {
   const value = item[props.valueKey]
   if (tempSelection.value.has(value)) {
     tempSelection.value.delete(value)
   } else {
     tempSelection.value.add(value)
-    // Aseguramos que el item recién clickeado esté en caché
+    internalCache.value.set(value, item)
+  }
+}
+
+// Selecciona solo este ítem y desmarca todos los demás
+function selectOnly(item) {
+  const value = item[props.valueKey]
+  // Si ya es el único seleccionado, lo desmarca (toggle)
+  if (tempSelection.value.size === 1 && tempSelection.value.has(value)) {
+    tempSelection.value.clear()
+  } else {
+    tempSelection.value.clear()
+    tempSelection.value.add(value)
     internalCache.value.set(value, item)
   }
 }
@@ -330,12 +310,8 @@ function selectAll() {
 
 function deselectAll() {
   if (searchQuery.value.trim()) {
-    // Solo desmarcamos los visibles
-    filteredItems.value.forEach(item => {
-      tempSelection.value.delete(item[props.valueKey])
-    })
+    filteredItems.value.forEach(item => tempSelection.value.delete(item[props.valueKey]))
   } else {
-    // Desmarcamos todo
     tempSelection.value.clear()
   }
 }
@@ -343,21 +319,16 @@ function deselectAll() {
 function clearSearch() {
   searchQuery.value = ''
   if (isRemote.value) fetchRemoteData('')
+  searchInputRef.value?.focus()
 }
 
-function onSearchInput() {
-  if (isRemote.value) queueRemoteSearch()
-}
+function onSearchInput() { if (isRemote.value) queueRemoteSearch() }
 
 function queueRemoteSearch() {
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
     const query = searchQuery.value.trim()
-    if (query.length >= props.minSearchChars) {
-      fetchRemoteData(query)
-    } else if (query.length === 0) {
-      fetchRemoteData('')
-    }
+    if (query.length >= props.minSearchChars || query.length === 0) fetchRemoteData(query)
   }, props.debounceMs)
 }
 
@@ -368,9 +339,8 @@ async function fetchRemoteData(query) {
   try {
     const result = await props.fetcher(query)
     remoteItems.value = Array.isArray(result) ? result : []
-    // El watcher de remoteItems actualizará el cache automáticamente
   } catch (error) {
-    console.error('MultiSelect fetch error:', error)
+    console.error(error)
     remoteItems.value = []
   } finally {
     loading.value = false
@@ -379,403 +349,261 @@ async function fetchRemoteData(query) {
 
 function acceptSelection() {
   const selectedIds = Array.from(tempSelection.value)
-
-  // Reconstruimos los objetos completos usando la Memoria (Cache)
-  // Esto evita que se pierdan los nombres si el item no está en la búsqueda actual
   const selectedObjects = selectedIds.map(id => {
     const cachedItem = internalCache.value.get(id)
-
-    if (cachedItem) {
-      return {
-        value: cachedItem[props.valueKey],
-        label: cachedItem[props.labelKey]
-      }
-    }
-
-    // Fallback extremo (solo si algo falló con el caché)
-    return {
-      value: id,
-      label: String(id) // Aquí es donde salían los números antes
-    }
+    return cachedItem ? { value: cachedItem[props.valueKey], label: cachedItem[props.labelKey] } : { value: id, label: String(id) }
   })
-
   emit('update:modelValue', selectedObjects)
   emit('change', selectedObjects)
   modalOpen.value = false
 }
 
-// --- Hover Logic ---
+// Hover logic
 function onMouseEnter() {
   if (props.disabled || selected.value.length === 0) return
   if (closeTimer) clearTimeout(closeTimer)
-  calculateHoverPosition()
+  const rect = controlRef.value.getBoundingClientRect()
+  hoverListPosition.value = (window.innerHeight - rect.bottom) < 200 ? 'top' : 'bottom'
   showHoverList.value = true
 }
-function onMouseLeave() {
-  closeTimer = setTimeout(() => { showHoverList.value = false }, 300)
-}
-function onMouseEnterList() { if (closeTimer) clearTimeout(closeTimer) }
-function onMouseLeaveList() { closeTimer = setTimeout(() => { showHoverList.value = false }, 300) }
+function onMouseLeave() { closeTimer = setTimeout(() => { showHoverList.value = false }, 200) }
 
-function calculateHoverPosition() {
-  if (!controlRef.value) return
-  const rect = controlRef.value.getBoundingClientRect()
-  const spaceBelow = window.innerHeight - rect.bottom
-  hoverListPosition.value = spaceBelow < 200 ? 'top' : 'bottom'
-}
-
-function handleEscape(e) {
-  if (e.key === 'Escape' && modalOpen.value) closeModal()
-}
-
-onMounted(() => { document.addEventListener('keydown', handleEscape) })
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleEscape)
-  if (debounceTimer) clearTimeout(debounceTimer)
-})
+onMounted(() => { document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalOpen.value) closeModal() }) })
+onBeforeUnmount(() => { if (debounceTimer) clearTimeout(debounceTimer) })
 </script>
 
 <style scoped>
-/* Los estilos se mantienen EXACTAMENTE IGUALES a la versión "Clean Professional" anterior.
-   Cópialos tal cual de mi respuesta previa para no duplicar texto innecesariamente.
-   Incluyen .multi-select-wrapper, .modern-header, .modern-row, etc.
-*/
-/* =========================================
-   1. CONTROL PRINCIPAL (INPUT)
-   ========================================= */
 .multi-select-wrapper {
   position: relative;
   width: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.multi-select-control {
-  position: relative;
+/* --- Trigger --- */
+.multi-select-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.375rem 2.5rem 0.375rem 0.75rem;
   background: #ffffff;
-  border: 1px solid #d1d5db; /* Borde gris suave */
-  border-radius: 6px; /* Radio moderado */
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 42px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 38px;
-  font-size: 0.95rem;
-  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+.multi-select-trigger:hover:not(.is-disabled) { border-color: #cbd5e1; background: #f8fafc; }
+.multi-select-trigger.is-active { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.trigger-content { flex: 1; display: flex; align-items: center; overflow: hidden; }
+.placeholder-text { color: #64748b; font-size: 0.9rem; }
+.value-text { display: flex; gap: 6px; align-items: center; }
+.badge-count { background: #eff6ff; color: #2563eb; font-weight: 600; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; }
+.badge-label { color: #334155; font-weight: 500; font-size: 0.9rem; }
+.trigger-actions { display: flex; align-items: center; gap: 8px; }
+.btn-quick-clear { background: none; border: none; color: #94a3b8; padding: 4px; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
+.btn-quick-clear:hover { background: #fee2e2; color: #ef4444; }
+.trigger-icon { color: #94a3b8; font-size: 0.8rem; }
 
-.multi-select-control:hover:not(.is-disabled) {
-  border-color: #0f62fe; /* Azul corporativo al hover */
-}
-
-.multi-select-control.is-disabled {
-  background-color: #f3f4f6;
-  cursor: not-allowed;
-  color: #9ca3af;
-}
-
-/* Placeholders y Textos */
-.control-placeholder { color: #6b7280; }
-.control-value { color: #111827; font-weight: 500; }
-.control-icon {
-  position: absolute;
-  right: 0.75rem;
-  color: #9ca3af;
-  pointer-events: none;
-}
-.control-hint {
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-/* =========================================
-   2. LISTA FLOTANTE (TOOLTIP HOVER)
-   ========================================= */
-.hover-list {
+/* --- Tooltip Hover --- */
+.hover-tooltip {
   position: absolute;
   left: 0;
   width: 100%;
-  min-width: 250px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #1e293b;
+  color: white;
   border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 8px 12px;
   z-index: 50;
-  padding: 0;
-  pointer-events: auto; /* Permite scroll */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  font-size: 0.8rem;
 }
+.hover-tooltip.pos-bottom { top: calc(100% + 6px); }
+.hover-tooltip.pos-top { bottom: calc(100% + 6px); }
+.tooltip-header { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em; }
+.tooltip-item { margin-bottom: 2px; }
+.tooltip-more { color: #94a3b8; font-style: italic; margin-top: 4px; }
 
-.hover-list.pos-bottom { top: calc(100% + 4px); }
-.hover-list.pos-top { bottom: calc(100% + 4px); }
-
-.hover-list-content {
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.hover-item {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  color: #374151;
-  border-bottom: 1px solid #f3f4f6;
-}
-.hover-item:last-child { border-bottom: none; }
-
-.hover-more {
-  padding: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-  background-color: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* Transiciones Tooltip */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s, transform 0.2s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); }
-
-
-/* =========================================
-   3. MODAL (DISEÑO FORMAL/PROFESIONAL)
-   ========================================= */
-
-/* Overlay Oscuro y Serio */
-.modal-overlay {
+/* --- Modal Backdrop --- */
+.modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5); /* Más oscuro para enfoque */
-  backdrop-filter: blur(2px);
+  background: rgba(5, 10, 20, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 999999;
-  padding: 1rem;
+  align-items: center;
+  padding: 16px;
 }
 
-/* Contenedor Estructurado */
-.modal-container {
-  background: #ffffff;
-  border-radius: 8px; /* Bordes menos redondeados = más formal */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+/* --- Modal Card (estilo oscuro) --- */
+.modal-card {
+  background: #1a2235;
   width: 100%;
-  max-width: 520px;
-  max-height: 85vh;
+  max-width: 480px;
+  border-radius: 14px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  max-height: 85vh;
+  border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
-  border: 1px solid #e5e7eb;
 }
 
-/* --- Header --- */
-.modern-header {
-  background: #ffffff;
-  padding: 1.25rem 1.5rem 0.75rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  flex-shrink: 0;
+/* Header oscuro */
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: #1e2a3e;
 }
+.header-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.header-title-row h3 { margin: 0; font-size: 1.05rem; font-weight: 600; color: #e2e8f0; }
+.btn-icon-close { background: transparent; border: none; color: #64748b; font-size: 1.05rem; cursor: pointer; transition: color 0.2s; }
+.btn-icon-close:hover { color: #cbd5e1; }
 
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.modern-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.modern-close-btn {
-  background: transparent;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  padding: 4px;
-  transition: color 0.2s;
-}
-.modern-close-btn:hover { color: #111827; }
-
-/* --- Search (Estilo Input Formal) --- */
-.modern-search-wrapper { margin-bottom: 0.75rem; }
-
-.search-pill {
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px; /* Coincide con el input principal */
-  padding: 0.5rem 0.75rem;
-  transition: all 0.2s;
-}
-
-.search-pill:focus-within {
-  border-color: #0f62fe;
-  box-shadow: 0 0 0 1px #0f62fe;
-}
-
-.search-icon { color: #9ca3af; margin-right: 0.5rem; font-size: 0.9rem; }
-
-.search-input-transparent {
-  border: none;
-  background: transparent;
+/* Buscador limpio sin ícono */
+.search-container { position: relative; display: flex; align-items: center; }
+.search-input {
   width: 100%;
-  font-size: 0.9rem;
-  color: #1f2937;
+  padding: 9px 36px 9px 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px;
+  font-size: 0.88rem;
   outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(255,255,255,0.06);
+  color: #e2e8f0;
 }
-
-.search-clear-mini {
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
+.search-input::placeholder { color: #475569; }
+.search-input:focus {
+  background: rgba(255,255,255,0.09);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
-.search-clear-mini:hover { color: #4b5563; }
+.btn-input-clear { position: absolute; right: 10px; background: none; border: none; color: #475569; cursor: pointer; font-size: 0.9rem; }
+.btn-input-clear:hover { color: #94a3b8; }
 
-/* --- Toolbar (Contadores y Acciones) --- */
-.modern-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.813rem;
-  padding-top: 0.25rem;
-}
+/* Toolbar */
+.toolbar-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; }
+.selection-status { color: #60a5fa; font-weight: 600; }
+.toolbar-buttons { display: flex; gap: 2px; }
+.btn-link { background: none; border: none; cursor: pointer; font-size: 0.8rem; color: #64748b; font-weight: 500; padding: 3px 8px; border-radius: 5px; transition: all 0.15s; }
+.btn-link:hover:not(:disabled) { background: rgba(255,255,255,0.07); color: #94a3b8; }
+.btn-link.danger:hover:not(:disabled) { color: #f87171; background: rgba(239, 68, 68, 0.1); }
+.btn-link:disabled { opacity: 0.35; cursor: default; }
 
-.selection-count {
-  font-weight: 600;
-  color: #0f62fe; /* Azul corporativo */
-}
-
-.toolbar-actions { display: flex; gap: 1rem; }
-
-.text-btn {
-  background: none;
-  border: none;
-  font-size: 0.813rem;
-  font-weight: 600;
-  color: #4b5563;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s;
-}
-.text-btn:hover:not(:disabled) { color: #0f62fe; }
-.text-btn:disabled { opacity: 0.4; cursor: default; }
-.text-btn.text-danger:hover:not(:disabled) { color: #dc2626; }
-
-/* --- Body (Lista) --- */
-.modern-body {
+/* Body oscuro */
+.card-body {
   flex: 1;
   overflow-y: auto;
-  background: #f9fafb; /* Fondo ligeramente gris para contraste */
+  padding: 6px 0;
+  background: #1a2235;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
+.card-body::-webkit-scrollbar { width: 5px; }
+.card-body::-webkit-scrollbar-track { background: transparent; }
+.card-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
-.modern-list { padding: 0.5rem 0; }
+.state-container { padding: 40px; text-align: center; color: #475569; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 0.9rem; }
+.spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.modern-row {
+/* Lista Items */
+.list-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.5rem;
+  padding: 9px 16px 9px 20px;
   cursor: pointer;
-  background: #ffffff;
-  border-bottom: 1px solid #f3f4f6;
-  transition: background 0.15s;
+  transition: background 0.12s;
+  user-select: none;
+  gap: 4px;
 }
+.list-row:hover { background-color: rgba(255,255,255,0.05); }
+.list-row.is-selected { background-color: rgba(59, 130, 246, 0.12); }
 
-.modern-row:hover { background-color: #f3f4f6; }
-.modern-row.is-active { background-color: #eff6ff; } /* Fondo azul muy muy suave */
-
-.row-content { flex: 1; padding-right: 1rem; }
-.row-title { font-size: 0.9rem; color: #374151; font-weight: 500; }
-.modern-row.is-active .row-title { color: #0f62fe; font-weight: 600; }
-.row-subtitle { font-size: 0.75rem; color: #6b7280; }
-
-.hidden-checkbox { display: none; }
-
-.row-check-indicator {
-  font-size: 1.1rem;
-  color: #d1d5db; /* Gris apagado cuando no seleccionado */
+/* Checkbox */
+.custom-checkbox { position: relative; width: 20px; height: 20px; margin-right: 12px; flex-shrink: 0; }
+.custom-checkbox input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+.checkmark {
+  position: absolute; top: 0; left: 0; height: 20px; width: 20px;
+  background-color: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
 }
-.modern-row.is-active .row-check-indicator { color: #0f62fe; }
+.checkmark i { color: white; font-size: 0.72rem; transform: scale(0); transition: transform 0.2s; }
+.list-row:hover .checkmark { border-color: rgba(255,255,255,0.3); }
+.custom-checkbox input:checked ~ .checkmark { background-color: #3b82f6; border-color: #3b82f6; }
+.custom-checkbox input:checked ~ .checkmark i { transform: scale(1); }
 
-/* --- Footer --- */
-.modern-footer {
-  padding: 1rem 1.5rem;
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
+/* Textos */
+.row-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.row-label { font-size: 0.88rem; color: #cbd5e1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-row.is-selected .row-label { color: #93c5fd; }
+.row-sublabel { font-size: 0.74rem; color: #475569; }
+
+/* Botón "Solo este" */
+.btn-only {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #334155;
+  font-size: 0.78rem;
+  padding: 4px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.15s;
   display: flex;
-  justify-content: flex-end; /* Botones a la derecha (estándar profesional) */
-  gap: 0.75rem;
+  align-items: center;
 }
+.list-row:hover .btn-only { opacity: 1; color: #64748b; }
+.btn-only:hover { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
+/* Cuando ya ES el único seleccionado */
+.btn-only.is-exclusive { opacity: 1; color: #3b82f6; }
+.btn-only.is-exclusive:hover { background: rgba(239, 68, 68, 0.1) !important; color: #f87171 !important; }
 
-.btn-modern-cancel {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  font-size: 0.875rem;
+/* Footer oscuro */
+.card-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #1e2a3e;
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 16px;
+  border-radius: 7px;
+  color: #94a3b8;
   font-weight: 500;
-  border-radius: 6px;
+  font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.2s;
 }
-.btn-modern-cancel:hover { background: #f9fafb; border-color: #9ca3af; }
-
-.btn-modern-accept {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  background: #0f62fe; /* Azul corporativo */
+.btn-secondary:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.2); color: #cbd5e1; }
+.btn-primary {
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
+  padding: 8px 18px;
+  border-radius: 7px;
   color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: background 0.2s;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s;
 }
-.btn-modern-accept:hover { background: #0043ce; }
+.btn-primary:hover { background: #2563eb; box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4); }
 
-/* --- States (Loading/Empty) --- */
-.modern-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  color: #6b7280;
-  gap: 0.75rem;
-}
-.empty-icon { font-size: 1.5rem; opacity: 0.6; }
-.spinner-modern {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #0f62fe;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-/* Animaciones Modal */
-.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
+/* Transitions */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-
-.modal-slide-enter-active, .modal-slide-leave-active { transition: transform 0.2s ease, opacity 0.2s ease; }
-.modal-slide-enter-from { opacity: 0; transform: translateY(-10px) scale(0.98); }
-.modal-slide-leave-to { opacity: 0; transform: translateY(10px) scale(0.98); }
-
-.scale-check-enter-active { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.scale-check-enter-from { transform: scale(0.5); opacity: 0; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Scrollbar Fino */
-.modern-body::-webkit-scrollbar { width: 6px; }
-.modern-body::-webkit-scrollbar-track { background: transparent; }
-.modern-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-.modern-body::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.modal-zoom-enter-active, .modal-zoom-leave-active { transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-zoom-enter-from, .modal-zoom-leave-to { opacity: 0; transform: scale(0.96) translateY(8px); }
 </style>

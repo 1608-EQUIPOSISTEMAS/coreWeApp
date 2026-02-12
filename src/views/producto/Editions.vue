@@ -299,7 +299,7 @@
                   v-show="week.isOpen"
                   :class="e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : ''"
                 >
-                <td class="ta-right nowrap">
+                <td class="ta-right nowrap p-0 m-0">
                   <div class="d-flex justify-content-center gap-1">
                      <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
                        <i class="fa-solid fa-eye"></i>
@@ -2855,7 +2855,7 @@ const catalogs = ref({
 )
 // 2. Función para procesar el cambio del DatePicker
 function handleRangeFilterChange(selectedDates, dateStr) {
-  debugger
+  
     // dateStr llega como "2025-01-01 to 2025-01-31"
     if (dateStr.includes(' a ')) {
         const parts = dateStr.split(' a ');
@@ -4974,5 +4974,8 @@ tr[class*="row-segment-"]:hover td {
   margin-top: 0 !important;
   margin-bottom: 6px;
   transform-origin: bottom center;
+}
+.table.compact-borders td {
+  padding: 0.05rem 0.75rem;
 }
 </style>

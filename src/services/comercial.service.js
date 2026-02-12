@@ -74,5 +74,19 @@ async searchPhoneGet(payload) {
       headers: { 'Content-Type': 'multipart/form-data' }
     })).data;
   }
+
+  // async leadStats(payload) {
+  //   // Asegúrate que la URL coincida con la ruta de tu backend (/leadstats)
+  //   const { data } = await http.post('/comercial/leadstats', payload)
+  //   // Si tu backend devuelve { ok: true, data: {...} }, retorna data.data
+  //   // Si devuelve el JSON directo, retorna data.
+  //   return data.data || data 
+  // }
+
+  async leadStats(payload) {
+    const response = (await api.post('/comercial/leadstats', payload)).data;
+    console.log(response)
+    return response;
+  }
   
 }

@@ -1,22 +1,26 @@
 // src/directives/restrict.js
+
 function sanitize(value, cfg) {
   let out = String(value ?? '')
+
+  // 1. REGLA INMEDIATA: Evitar espacios al inicio siempre si trim está activo
+  if (cfg.trim) {
+    out = out.replace(/^\s+/, '') // Elimina espacios a la izquierda inmediatamente
+  }
 
   // "only" tiene prioridad
   if (cfg.only === 'numbers') out = out.replace(/[^0-9]/g, '')
   else if (cfg.only === 'letters')
     out = out.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, '')
 
-  // Filtros finos (se aplican si no usaste "only")
+  // Filtros finos
   if (cfg.numbers === false) out = out.replace(/[0-9]/g, '')
   if (cfg.letters === false) out = out.replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '')
   if (cfg.spaces === false)  out = out.replace(/\s+/g, '')
 
-  // Extra permitidos (ej: '-_@.')
+  // Extra permitidos
   if (cfg.allowExtra && cfg.allowExtra.length) {
-    const extra = cfg.allowExtra.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
-    // vuelve a permitir los extra si fueron eliminados por reglas previas
-    // (opcional: normalmente con "only" te basta)
+    // Lógica para re-permitir caracteres (si fuera necesaria)
   }
 
   if (typeof cfg.max === 'number') out = out.slice(0, cfg.max)
@@ -28,21 +32,40 @@ function sanitize(value, cfg) {
 }
 
 function attach(el, cfg) {
-  const handler = () => {
+  // Handler para el evento INPUT (mientras escribes)
+  const inputHandler = () => {
     const prev = el.value
     const next = sanitize(prev, cfg)
     if (next !== prev) {
       el.value = next
-      // notifica a v-model
       el.dispatchEvent(new Event('input', { bubbles: true }))
     }
   }
-  el.__restrict_cfg__ = cfg
-  el.__restrict_handler__ = handler
 
-  el.addEventListener('input', handler)
-  el.addEventListener('paste', () => setTimeout(handler, 0))
-  el.addEventListener('drop',  () => setTimeout(handler, 0))
+  // Handler para el evento BLUR (cuando sales del campo)
+  // Aquí es seguro quitar los espacios del final
+  const blurHandler = () => {
+    if (cfg.trim) {
+      const prev = el.value
+      const next = prev.trim() // Quita espacios al inicio y final
+      if (next !== prev) {
+        el.value = next
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    }
+  }
+
+  el.__restrict_cfg__ = cfg
+  el.__restrict_handler__ = inputHandler
+  el.__restrict_blur_handler__ = blurHandler // Guardamos referencia para limpiar después
+
+  el.addEventListener('input', inputHandler)
+  // Agregamos el listener de BLUR
+  el.addEventListener('blur', blurHandler)
+  
+  el.addEventListener('paste', () => setTimeout(inputHandler, 0))
+  el.addEventListener('drop',  () => setTimeout(inputHandler, 0))
 }
 
 function detach(el) {
@@ -51,29 +74,35 @@ function detach(el) {
     el.removeEventListener('paste', el.__restrict_handler__)
     el.removeEventListener('drop',  el.__restrict_handler__)
   }
+  // Limpiamos el evento blur
+  if (el.__restrict_blur_handler__) {
+    el.removeEventListener('blur', el.__restrict_blur_handler__)
+  }
+  
   delete el.__restrict_cfg__
   delete el.__restrict_handler__
+  delete el.__restrict_blur_handler__
 }
 
 export default {
   mounted(el, binding) {
+    // Por defecto trim: true para que siempre limpie, salvo que lo desactives
     const cfg = Object.assign(
-      { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '' },
+      { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '', trim: true },
       binding.value || {}
     )
     attach(el, cfg)
   },
   updated(el, binding) {
-    // si cambia la config, re-aplica
     if (JSON.stringify(binding.value) !== JSON.stringify(el.__restrict_cfg__)) {
       detach(el)
       const cfg = Object.assign(
-        { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '' },
+        { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '', trim: true },
         binding.value || {}
       )
       attach(el, cfg)
-      // re-sanitiza
-      el.__restrict_handler__?.()
+      // Opcional: Ejecutar handler una vez al actualizar
+      // el.__restrict_handler__?.() 
     }
   },
   unmounted(el) {
