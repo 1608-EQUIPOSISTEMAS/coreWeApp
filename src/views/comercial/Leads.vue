@@ -60,6 +60,7 @@
               <th>Fecha Reg.</th>
               <th>Status</th>
               <th>Teléfono</th>
+              <th>E. Cliente</th>
               <th>Nombre</th>
               <th>T. Consulta</th>
               <th>Programa</th>
@@ -144,6 +145,8 @@
               <td class="small nowrap">{{ l.registration_date }}</td>
               <td><span class="badge badge-neutral text-dark border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span></td>
               <td class="nowrap fw-bold text-dark">{{ l.origin_phone }}</td>
+              <td class="nowrap fw-bold text-dark">{{ l.cat_client_moment_description }}</td>
+              
               <td class="nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
               <td class="small" style="min-width:120px">{{ l.cat_promotion_description || '—' }}</td>
               <td class="small fw-600 text-primary">{{ l.program_label || '—' }}</td>
@@ -369,7 +372,7 @@ const catalog = inject('catalog')
 // === ESTADO ===
 const showFilterModal = ref(false)
 const showFollowModal = ref(false)
-const isCompact = ref(true)
+const isCompact = ref(false)
 const dense = ref(false)
 const activeFilterChips = ref([])
 const leadsRaw = ref([])
@@ -391,20 +394,38 @@ const currentUserId = storedUser?.user_id;
 
 // === FILTROS ===
 const filters = reactive({
-  q: '', program_text: '', estado: null,
-  moment_ids: [], web: null, b2b: null,
-  owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],
-  interest_level_ids: [], channel_ids: [], query_ids: [],
-  type_program_ids: [], model_modality_ids: [], strategy_ids: [], word_ids: [],
-  edition_range_string: null, created_range_string: null, updated_range_string: null,
+  q: '',
+  program_text: '',
+  estado: null,
+  web: null,
+  b2b: null,
+
+  // Ahora todos los MultiSelect guardan [{value, label}]
+  owner_user_ids: [],
+  status_lead_ids: [],
+  last_follow_ids: [],
+  interest_level_ids: [],
+  channel_ids: [],
+  query_ids: [],
+  type_program_ids: [],
+  model_modality_ids: [],
+  strategy_ids: [],
+  word_ids: [],
+  medium_contact_ids: [],
+  code_country_ids: [],
+  moment_ids: [],
+
+  // Fechas siguen siendo strings
   rangoFechas: { start: '', end: '' },
-  pay_date_from: '',
-  medium_contact_ids: [], // <--- NUEVO
-  code_country_ids: [],   // <--- NUEVO
-  pay_date_to: '',
-  pay_date_range_string: null,
   rangoModificacion: { start: '', end: '' },
-  edition_start_from: '', edition_start_to: ''
+  created_range_string: null,
+  updated_range_string: null,
+  edition_range_string: null,
+  edition_start_from: '',
+  edition_start_to: '',
+  pay_date_from: '',
+  pay_date_to: '',
+  pay_date_range_string: null
 })
 
 // === CATÁLOGOS ===
@@ -438,79 +459,67 @@ const { saveState } = useTablePersistence('crm_leads_filter_state_v1', filters, 
 const editableHistory = ref([])
 const isSavingFollow = ref(false)
 const selectedFollowLead = ref(null)
+const decodeFilter = (jsonStr) => {
+  if (!jsonStr) return []
+  try {
+    return JSON.parse(jsonStr)
+  } catch (e) {
+    return []
+  }
+}
 
+// Codificar URL (Array de Objetos -> String)
+const encodeFilter = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined // undefined borra el param de la URL
+  return JSON.stringify(arr.map(i => ({ value: i.value, label: i.label }))) // Guardamos solo lo vital
+}
 async function parseQueryAndApply() {
   const q = route.query
+  console.log(q)
   const hasQueryParams = Object.keys(q).length > 0
-  
-  // Si no hay parámetros, no hacemos nada
   if (!hasQueryParams) return false
 
-  // Limpiamos filtros previos sin recargar (false)
   clearFilters(false)
 
-  // --- HELPER: Convierte "1,2,3" -> [{id:1, description:'...'}, ...] ---
-  const hydrate = (key, catalogRef) => {
-    // 1. Si no existe el parámetro en la URL, retornar array vacío
-    if (!q[key]) return []
+  // A. Filtros de texto y booleanos simples
+  if (q.q)              filters.q            = q.q
+  if (q.program_text)   filters.program_text  = q.program_text
+  if (q.web)            filters.web           = q.web
+  if (q.b2b)            filters.b2b           = q.b2b
 
-    // 2. Obtener array de IDs numéricos
-    const ids = q[key].split(',').map(n => parseInt(n)).filter(n => !isNaN(n))
-
-    // 3. Si el catálogo no está listo, devolvemos solo los IDs para no romper la lógica
-    if (!catalogRef || !catalogRef.value || catalogRef.value.length === 0) {
-      return ids
-    }
-
-    // 4. Mapeamos los IDs a los objetos del catálogo
-    // filter(Boolean) elimina los 'undefined' si un ID no se encuentra
-    return ids.map(id => catalogRef.value.find(item => item.id === id)).filter(Boolean)
-  }
-
-  // --- A. FILTROS DE FECHA Y TEXTO (Simples) ---
+  // B. Fechas
   if (q.from_date || q.to_date) {
     filters.rangoFechas = { start: q.from_date || '', end: q.to_date || '' }
-    if (q.from_date) {
-      filters.created_range_string = `${q.from_date} a ${q.to_date || q.from_date}`
-    }
+    if (q.from_date) filters.created_range_string = `${q.from_date} a ${q.to_date || q.from_date}`
   }
-
   if (q.pay_date_from || q.pay_date_to) {
     filters.pay_date_from = q.pay_date_from || ''
-    filters.pay_date_to = q.pay_date_to || ''
-    if (q.pay_date_from) {
-      filters.pay_date_range_string = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
-    }
+    filters.pay_date_to   = q.pay_date_to   || ''
+    if (q.pay_date_from) filters.pay_date_range_string = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
+  }
+  if (q.edition_start_from) {
+    filters.edition_start_from = q.edition_start_from
+    filters.edition_start_to   = q.edition_start_to || q.edition_start_from
+    filters.edition_range_string = `${q.edition_start_from} a ${filters.edition_start_to}`
   }
 
-  if (q.program_text) filters.program_text = q.program_text
-  if (q.web) filters.web = q.web
-  if (q.b2b) filters.b2b = q.b2b
+  // C. MultiSelects: JSON directo, sin hydrate ni catálogos
+  filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
+  filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
+  filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
+  filters.interest_level_ids = decodeFilter(q.interest_level_ids)
+  filters.channel_ids        = decodeFilter(q.channel_ids)
+  filters.query_ids          = decodeFilter(q.query_ids)
+  filters.type_program_ids   = decodeFilter(q.type_program_ids)
+  filters.model_modality_ids = decodeFilter(q.model_modality_ids)
+  filters.strategy_ids       = decodeFilter(q.strategy_ids)
+  filters.word_ids           = decodeFilter(q.word_ids)
+  filters.medium_contact_ids = decodeFilter(q.medium_contact_ids)
+  filters.code_country_ids   = decodeFilter(q.code_country_ids)
+  filters.moment_ids         = decodeFilter(q.moment_ids)
 
-
-  // --- B. FILTROS DE SELECCIÓN MÚLTIPLE (Hidratados con Objetos) ---
-  // Nota: Pasamos la referencia reactiva del catálogo (.value no es necesario aquí, se pasa la ref)
-  
-  if (q.owner_user_ids)     filters.owner_user_ids     = hydrate('owner_user_ids', filtroOwners)
-  if (q.status_lead_ids)    filters.status_lead_ids    = hydrate('status_lead_ids', filtroPipeline)
-  if (q.strategy_ids)       filters.strategy_ids       = hydrate('strategy_ids', strategyCatalog)
-  if (q.channel_ids)        filters.channel_ids        = hydrate('channel_ids', filtroCanales)
-  if (q.word_ids)           filters.word_ids           = hydrate('word_ids', mktWordsCatalog)
-  if (q.medium_contact_ids) filters.medium_contact_ids = hydrate('medium_contact_ids', filtroMedios)
-  if (q.code_country_ids)   filters.code_country_ids   = hydrate('code_country_ids', filtroPaises)
-  if (q.interest_level_ids) filters.interest_level_ids = hydrate('interest_level_ids', filtroInterest)
-  if (q.query_ids)          filters.query_ids          = hydrate('query_ids', filtroQuery)
-  if (q.last_follow_ids)    filters.last_follow_ids    = hydrate('last_follow_ids', filtroFollow)
-  if (q.moment_ids)         filters.moment_ids         = hydrate('moment_ids', filtroMoment)
-  
-  // Los filtros de programa que faltaban antes:
-  if (q.type_program_ids)   filters.type_program_ids   = hydrate('type_program_ids', filtroTiposPrograma)
-  if (q.model_modality_ids) filters.model_modality_ids = hydrate('model_modality_ids', filtroModalidad)
-
-  // Limpiamos la URL para que quede limpia visualmente
   await router.replace({ query: {} })
-
-  return true // Retornamos true para indicar que SÍ se aplicaron filtros externos
+  return true
 }
 // === LOGICA MODAL SEGUIMIENTO (Restaurada) ===
 
@@ -590,124 +599,88 @@ async function saveFastFollow() {
     isSavingFollow.value = false
   }
 }
-// === CHIPS INTELIGENTES MEJORADO ===
 function rebuildChips() {
   const chips = []
-  
-  // Helper Maestro: Maneja tanto IDs numéricos (URL) como Objetos (MultiSelect local)
-  const resolveNames = (items, catalogRef) => {
-    if (!items || items.length === 0) return ''
-    
-    return items.map(item => {
-      let id = item
-      if (typeof item === 'object' && item !== null) {
-        id = item.id ?? item.value
-      }
-      const found = catalogRef.find(c => c.id == id || c.alias == id)
-      return found ? found.description : id
-    }).join(', ')
+
+  const makeChip = (key, labelPrefix, items) => {
+    if (!items || items.length === 0) return
+    const labels = items.map(i => i.label || i.value)
+    chips.push({
+      key,
+      label:   labels.length === 1 ? `${labelPrefix}: ${labels[0]}` : `${labelPrefix}: ${labels.length} sel.`,
+      text:    `${labelPrefix}: ${labels.join(', ')}`,
+      details: labels
+    })
   }
 
-  // A. Filtros Simples
-  if (filters.q) chips.push({ key: 'q', text: `Buscar: ${filters.q}` })
-  if (filters.rangoFechas?.start) chips.push({ key: 'rangoFechas', text: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
-  if (filters.program_text) chips.push({ key: 'program_text', text: `Prog: ${filters.program_text}` })
+  // Simples
+  if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
+  if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
+  if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
+  if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
 
-  // B. Filtros Arrays
-  if (filters.status_lead_ids?.length) {
-     chips.push({ key: 'status_lead_ids', text: `Estatus: ${resolveNames(filters.status_lead_ids, filtroPipeline.value)}` })
-  }
-  if (filters.strategy_ids?.length) {
-     chips.push({ key: 'strategy_ids', text: `Estrat: ${resolveNames(filters.strategy_ids, strategyCatalog.value)}` })
-  }
-  if (filters.channel_ids?.length) {
-     chips.push({ key: 'channel_ids', text: `Canal: ${resolveNames(filters.channel_ids, filtroCanales.value)}` })
-  }
-  if (filters.last_follow_ids?.length) {
-     chips.push({ key: 'last_follow_ids', text: `Seguim: ${resolveNames(filters.last_follow_ids, filtroFollow.value)}` })
-  }
-  if (filters.interest_level_ids?.length) {
-     chips.push({ key: 'interest_level_ids', text: `Interés: ${resolveNames(filters.interest_level_ids, filtroInterest.value)}` })
-  }
-  if (filters.moment_ids?.length) {
-     chips.push({ key: 'moment_ids', text: `Etapa: ${resolveNames(filters.moment_ids, filtroMoment.value)}` })
-  }
-  if (filters.type_program_ids?.length) {
-    chips.push({ key: 'type_program_ids', text: `Tipo: ${resolveNames(filters.type_program_ids, filtroTiposPrograma.value)}` })
-}
-if (filters.model_modality_ids?.length) {
-    chips.push({ key: 'model_modality_ids', text: `Modalidad: ${resolveNames(filters.model_modality_ids, filtroModalidad.value)}` })
-}
-  if (filters.owner_user_ids?.length && !isComercial) {
-     chips.push({ key: 'owner_user_ids', text: `Asesor: ${resolveNames(filters.owner_user_ids, filtroOwners.value)}` })
-  }
-  if (filters.medium_contact_ids?.length) {
-     chips.push({ key: 'medium_contact_ids', text: `Medio: ${resolveNames(filters.medium_contact_ids, filtroMedios.value)}` })
-  }
-  if (filters.code_country_ids?.length) {
-     chips.push({ key: 'code_country_ids', text: `País: ${resolveNames(filters.code_country_ids, filtroPaises.value)}` })
-  }
-  if (filters.word_ids?.length) {
-     chips.push({ key: 'word_ids', text: `Palabra: ${resolveNames(filters.word_ids, mktWordsCatalog.value)}` })
-  }
-  if (filters.pay_date_from) {
-    chips.push({ 
-      key: 'pay_date', 
-      text: `Pago: ${filters.pay_date_from} → ${filters.pay_date_to}` 
-    });
-  }
-  // --- FALTA ESTE BLOQUE ---
-  if (filters.query_ids?.length) {
-     chips.push({ key: 'query_ids', text: `Promoción: ${resolveNames(filters.query_ids, filtroQuery.value)}` })
-  }
-  // -------------------------
+  if (filters.rangoFechas?.start)
+    chips.push({ key: 'rangoFechas', label: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
+  if (filters.pay_date_from)
+    chips.push({ key: 'pay_date', label: `Pago: ${filters.pay_date_from} → ${filters.pay_date_to}` })
+  if (filters.edition_start_from)
+    chips.push({ key: 'edition_start', label: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
 
-  // C. Filtros Booleanos/String
-  if (filters.web) chips.push({ key: 'web', text: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
-  if (filters.b2b) chips.push({ key: 'b2b', text: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
+  // MultiSelects (instantáneo, sin buscar en catálogos)
+  makeChip('status_lead_ids',    'Estatus',    filters.status_lead_ids)
+  makeChip('last_follow_ids',    'Seguim.',    filters.last_follow_ids)
+  makeChip('interest_level_ids', 'Interés',    filters.interest_level_ids)
+  makeChip('channel_ids',        'Canal',      filters.channel_ids)
+  makeChip('query_ids',          'Promoción',  filters.query_ids)
+  makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
+  makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
+  makeChip('strategy_ids',       'Estrategia', filters.strategy_ids)
+  makeChip('word_ids',           'Palabra',    filters.word_ids)
+  makeChip('medium_contact_ids', 'Medio',      filters.medium_contact_ids)
+  makeChip('code_country_ids',   'País',       filters.code_country_ids)
+  makeChip('moment_ids',         'Etapa',      filters.moment_ids)
+  if (!isComercial) makeChip('owner_user_ids', 'Asesor', filters.owner_user_ids)
 
   activeFilterChips.value = chips
 }
 // === API ===
 async function fetchLeads() {
   try {
-    const activeFlag = filters.estado === 'Activo' ? '1' : filters.estado === 'Inactivo' ? '0' : null
-    const extractIds = (arr) => {
+    const getIds = (arr) => {
       if (!Array.isArray(arr)) return []
-      return arr.map(item => (typeof item === 'object' && item !== null) ? (item.id ?? item.value) : item)
+      return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
     }
 
     const { items, total: t } = await comercialService.leadList({
-      q: filters.q || null,
-      page: pagin.value.page,
-      pay_date_from: filters.pay_date_from || null, // <--- AÑADIR
-    pay_date_to: filters.pay_date_to || null,     // <--- AÑADIR
-      size: pagin.value.size,
-      from_date: filters.rangoFechas?.start || null,
-      medium_contact_ids: extractIds(filters.medium_contact_ids),
-       code_country_ids: extractIds(filters.code_country_ids),
-      to_date: filters.rangoFechas?.end || null,
-      updated_from: filters.rangoModificacion?.start || null,
-      updated_to: filters.rangoModificacion?.end || null,
-      
-      owner_user_ids: extractIds(filters.owner_user_ids),
-      status_lead_ids: extractIds(filters.status_lead_ids),
-      moment_ids: extractIds(filters.moment_ids),
-      strategy_ids: extractIds(filters.strategy_ids),
-      word_ids: extractIds(filters.word_ids),
-      last_follow_ids: extractIds(filters.last_follow_ids),
-      channel_ids: extractIds(filters.channel_ids),
-      interest_level_ids: extractIds(filters.interest_level_ids),
-      query_ids: extractIds(filters.query_ids),
-      type_program_ids: extractIds(filters.type_program_ids),
-      model_modality_ids: extractIds(filters.model_modality_ids),
-      
-      web: filters.web || null,
-      b2b: filters.b2b || null,
-      program_text: filters.program_text || null,
-      edition_start_from: filters.edition_start_from || null,
-      edition_start_to: filters.edition_start_to || null,
-      active: activeFlag
+      q:                   filters.q             || null,
+      page:                pagin.value.page,
+      size:                pagin.value.size,
+      program_text:        filters.program_text  || null,
+      web:                 filters.web           || null,
+      b2b:                 filters.b2b           || null,
+
+      from_date:           filters.rangoFechas?.start        || null,
+      to_date:             filters.rangoFechas?.end          || null,
+      updated_from:        filters.rangoModificacion?.start  || null,
+      updated_to:          filters.rangoModificacion?.end    || null,
+      pay_date_from:       filters.pay_date_from             || null,
+      pay_date_to:         filters.pay_date_to               || null,
+      edition_start_from:  filters.edition_start_from        || null,
+      edition_start_to:    filters.edition_start_to          || null,
+
+      owner_user_ids:      getIds(filters.owner_user_ids),
+      status_lead_ids:     getIds(filters.status_lead_ids),
+      last_follow_ids:     getIds(filters.last_follow_ids),
+      interest_level_ids:  getIds(filters.interest_level_ids),
+      channel_ids:         getIds(filters.channel_ids),
+      query_ids:           getIds(filters.query_ids),
+      type_program_ids:    getIds(filters.type_program_ids),
+      model_modality_ids:  getIds(filters.model_modality_ids),
+      strategy_ids:        getIds(filters.strategy_ids),
+      word_ids:            getIds(filters.word_ids),
+      medium_contact_ids:  getIds(filters.medium_contact_ids),
+      code_country_ids:    getIds(filters.code_country_ids),
+      moment_ids:          getIds(filters.moment_ids),
     })
 
     leadsRaw.value = items || []
@@ -726,7 +699,7 @@ async function fetchLeads() {
 // === EVENTOS UI ===
 function startPress(lead) {
   pressingRowId.value = lead.id
-  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 2000)
+  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 1000)
 }
 function cancelPress() {
   if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
@@ -735,15 +708,19 @@ function cancelPress() {
 
 function clearFilters(reload = true) {
   Object.assign(filters, {
-    q: '', program_text: '', estado: null, owner_user_ids: [], status_lead_ids: [], moment_ids: [],
-    strategy_ids: [], word_ids: [], last_follow_ids: [], interest_level_ids: [], channel_ids: [],
-    query_ids: [], type_program_ids: [], model_modality_ids: [], web: null, b2b: null,
+    q: '', program_text: '', estado: null, web: null, b2b: null,
+    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],
+    interest_level_ids: [], channel_ids: [], query_ids: [],
+    type_program_ids: [], model_modality_ids: [], strategy_ids: [],
+    word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
-    edition_start_from: '', edition_start_to: '',
-    edition_range_string: null, created_range_string: null, updated_range_string: null
+    created_range_string: null, updated_range_string: null,
+    edition_range_string: null, edition_start_from: '', edition_start_to: '',
+    pay_date_from: '', pay_date_to: '', pay_date_range_string: null
   })
+
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
-  
+
   if (reload) {
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_filter_state_v1')
@@ -757,23 +734,46 @@ function clearFilters(reload = true) {
 async function loadOwners() {
   try {
     const arr = await authService.userList({})
-    filtroOwners.value = arr.map(user => ({ id: user.user_id, description: user.first_name }))
-  } catch (e) { console.error(e) }
+    filtroOwners.value = arr.map(u => {
+      // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
+      const fName = (u.first_name || '').trim()
+      const lName = (u.last_name || '').trim()
+      
+      let fullName = fName
+      if (lName) fullName += ` ${lName.charAt(0)}.`
+      
+      // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
+      const desc = fullName.trim() || `Usuario ${u.user_id}`
+
+      return { 
+        id: u.user_id, 
+        description: desc 
+      }
+    })
+  } catch (e) { 
+    console.error(e) 
+  }
 }
 function openFilterModal() { showFilterModal.value = true }
 function applyFilters() { showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function clearFilter(key) {
-    // ... logica de borrado individual ...
-    if (key === 'rangoFechas') { filters.rangoFechas = { start: '', end: '' }; filters.created_range_string = null }
-    else if (Array.isArray(filters[key])) filters[key] = []
-    else if (key === 'pay_date') {
-      filters.pay_date_from = '';
-      filters.pay_date_to = '';
-      filters.pay_date_range_string = null;
-    }
-    else filters[key] = null;
-    applyFilters()
-    
+  if (key === 'rangoFechas') {
+    filters.rangoFechas = { start: '', end: '' }
+    filters.created_range_string = null
+  } else if (key === 'pay_date') {
+    filters.pay_date_from = ''
+    filters.pay_date_to = ''
+    filters.pay_date_range_string = null
+  } else if (key === 'edition_start') {
+    filters.edition_start_from = ''
+    filters.edition_start_to = ''
+    filters.edition_range_string = null
+  } else if (Array.isArray(filters[key])) {
+    filters[key] = []
+  } else {
+    filters[key] = null
+  }
+  applyFilters()
 }
 function handleDateFilterChange(dateStr, type) {
   let start = '', end = ''
@@ -881,5 +881,5 @@ tr, td { transition: background-color 0.2s ease; }
 .compact-table td:hover { white-space: normal; overflow: visible; position: relative; z-index: 10; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 tr { position: relative; user-select: none; will-change: background-color; transition: background-color 0.1s ease-in-out; }
 tr::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background-color: rgba(99, 102, 241, 0.25); transition: width 0.3s ease-out; pointer-events: none; z-index: 5; }
-tr.row-pressing::after { width: 100%; transition: width 2s linear; }
+tr.row-pressing::after { width: 100%; transition: width 1s linear; }
 </style>

@@ -47,6 +47,16 @@
         </div>
 
         <div class="header-actions">
+          
+        <button
+      v-if="!hasActiveFilters"
+      type="button"
+      class="btn btn-outline btn-sm me-1 text-success border-success-subtle"
+      @click="openMonthlyGoalsModal"
+    >
+      <i class="fa-solid fa-bullseye me-1"></i>
+      Objetivos
+    </button>
           <button
           type="button"
           class="btn btn-outline btn-sm ms-1"
@@ -55,6 +65,7 @@
           <i class="fa-solid fa-clock-rotate-left me-1"></i>
           Historial
         </button>
+
     <button
       type="button"
       class="btn btn-outline btn-sm mx-1"
@@ -2168,7 +2179,82 @@
         </div>
       </div>
     </BaseModal>
-
+<BaseModal v-model="showMonthlyGoalsModal" title="Definición de Objetivos Mensuales" size="xl">
+  <div class="p-3 bg-light rounded" style="min-height: 400px; max-height: 70vh; overflow-y: auto;">
+    
+    <div class="table-responsive bg-white border rounded shadow-sm">
+      <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
+        <thead class="table-light sticky-top">
+          <tr>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Línea</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Categ</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Segmento</th>
+            <th rowspan="2" class="align-middle border-bottom-0 text-start pb-2">Programa abr</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Tipo</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Día</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Hora</th>
+            <th rowspan="2" class="align-middle border-bottom-0 pb-2 border-end">Fecha</th>
+            <th colspan="2" class="bg-primary-subtle text-primary border-bottom border-primary-subtle py-2">
+              <i class="fa-solid fa-crosshairs me-1"></i> OBJETIVO DE VACANTES
+            </th>
+          </tr>
+          <tr class="bg-light">
+            <th class="border-end text-muted" style="width: 120px;">OBJETIVO (#)</th>
+            <th class="text-muted" style="width: 150px;">OBJETIVO (S/)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="activeGoalsList.length === 0">
+            <td colspan="10" class="text-center text-muted py-5">
+              <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+              <br>No hay ediciones activas para este periodo.
+            </td>
+          </tr>
+          <tr v-for="item in activeGoalsList" :key="item.edition_num_id">
+            <td class="text-muted">{{ item.program_line_business || '—' }}</td>
+            <td><span class="badge bg-light text-dark border">{{ item.cat_course_category_label || '—' }}</span></td>
+            <td><div class="segment-circle mx-auto" style="width:20px; height:20px; font-size:0.6rem;">{{ item.cat_segment || '—' }}</div></td>
+            <td class="text-start fw-bold text-primary">{{ item.program_abreviature }}</td>
+            <td class="text-muted">{{ item.program_type || '—' }}</td>
+            <td class="text-muted">{{ item.schedules?.[0]?.day_combination_label || item.day_combination_label || '—' }}</td>
+            <td class="text-muted">{{ item.schedules?.[0]?.hour_combination_label || item.hour_combination_label || '—' }}</td>
+            <td class="fw-bold border-end">{{ formatDate(item.start_date) }}</td>
+            
+            <td class="bg-primary-subtle bg-opacity-10 border-end p-2">
+              <input 
+                type="number" 
+                class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" 
+                v-model.number="item.target_vacants" 
+                placeholder="0" 
+              />
+            </td>
+            <td class="bg-primary-subtle bg-opacity-10 p-2">
+              <CurrencyInput
+                v-model="item.target_revenue"
+                currency="PEN"
+                :storeAsMinor="false"
+                class="form-control form-control-sm fw-bold text-end text-success border-primary-subtle"
+                placeholder="0.00"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <template #footer>
+    <div class="d-flex justify-content-between w-100 align-items-center">
+      <span class="text-muted small">Mostrando {{ activeGoalsList.length }} programas activos</span>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" @click="showMonthlyGoalsModal = false">Cancelar</button>
+        <button class="btn btn-primary btn-sm fw-bold px-3" @click="saveMonthlyGoals">
+          <i class="fa-solid fa-save me-1"></i> Guardar Objetivos
+        </button>
+      </div>
+    </div>
+  </template>
+</BaseModal>
 </template>
 <script setup>
 
@@ -2178,8 +2264,10 @@ import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import MultiSelect from '@/components/MultiSelect.vue';
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
-
+import CurrencyInput from '@/components/CurrencyInput.vue' // Ajusta la ruta si es necesario
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+const showMonthlyGoalsModal = ref(false)
+const activeGoalsList = ref([])
 
 // Estado para los filtros de columna (reemplaza localFilters)
 const columnFilters = reactive({
@@ -2440,7 +2528,51 @@ function calculateMetaSummary() {
 const showTreeModal = ref(false)
 const treeGroups = ref([]) // Usamos Grupos para el Acordeón
 const treeModalTitle = ref('Estructura Académica')
+async function openMonthlyGoalsModal() {
+  // 1. Forzamos actualizar el listado primero para traer datos frescos
+  await fetchSchedule()
 
+  // 2. Extraemos todos los items del mes actual y filtramos SOLO los activos
+  // (Dependiendo de tu BD, el campo active puede ser 'Y' o true)
+  const currentMonthItems = schedules.value.flatMap(week => week.items || [])
+  activeGoalsList.value = currentMonthItems.filter(item => item.active === 'Y' || item.active === true || item.active === 1)
+
+  // 3. Inicializamos las propiedades de objetivos si no existen para que Vue las haga reactivas
+  activeGoalsList.value.forEach(item => {
+    // Si la BD no trae target_vacants, usamos las vacantes regulares como sugerencia inicial
+    if (item.target_vacants === undefined) item.target_vacants = item.vacant || 0
+    // Campo de meta de dinero (revenue)
+    if (item.target_revenue === undefined) item.target_revenue = 0 
+  })
+
+  // 4. Abrimos el modal
+  showMonthlyGoalsModal.value = true
+}
+
+async function saveMonthlyGoals() {
+  try {
+    // Aquí mapeas los datos que necesitas enviar a tu backend
+    const payload = activeGoalsList.value.map(item => ({
+      edition_num_id: item.edition_num_id,
+      target_vacants: item.target_vacants,
+      target_revenue: item.target_revenue
+    }))
+
+    // TODO: Reemplazar con tu servicio real, por ejemplo:
+    // const response = await editionService.saveGoals(payload)
+    // handleServiceResponse(response)
+
+    console.log("Objetivos a guardar:", payload)
+    toast.success("Objetivos actualizados correctamente")
+    showMonthlyGoalsModal.value = false
+    
+    // Opcional: recargar calendario
+    // fetchSchedule()
+  } catch (error) {
+    console.error("Error guardando objetivos:", error)
+    toast.error("Ocurrió un error al guardar los objetivos")
+  }
+}
 function openTreeModal(edition) {
   currentEdition.value = edition || null
   treeModalTitle.value = `Jerarquía: ${edition.program_abreviature || edition.global_code}`

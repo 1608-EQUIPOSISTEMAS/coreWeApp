@@ -39,81 +39,91 @@
         </div>
       </div>
 
-      <!-- Barra de Filtros (mismo contenedor que Control Comercial) -->
-      <div class="filter-bar bg-light rounded-3 p-3 border">
-        <div class="row g-3 align-items-end">
+        <div class="filter-bar bg-light rounded-3 p-3 border">
+                <div class="row g-3 align-items-end">
+                
+                    <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
+                    <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                        <i class="fa-solid fa-layer-group me-1"></i> Modalidad
+                    </label>
+                    <div class="btn-group w-100" role="group">
+                        <button 
+                        type="button" 
+                        class="btn btn-sm"
+                        :class="filters.modality === 'NO_ONLINE' ? 'btn-dark' : 'btn-outline-secondary'"
+                        @click="filters.modality = 'NO_ONLINE'; fetchData()"
+                        >
+                        <i class="fa-solid fa-chalkboard-user me-1"></i> EN VIVO
+                        </button>
+                        <button 
+                        type="button" 
+                        class="btn btn-sm"
+                        :class="filters.modality === 'ONLINE' ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="filters.modality = 'ONLINE'; fetchData()"
+                        >
+                        <i class="fa-solid fa-wifi me-1"></i> ONLINE
+                        </button>
+                    </div>
+                    </div>
 
-          <!-- Año -->
-          <div class="col-md-2">
-            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-              <i class="fa-regular fa-calendar me-1"></i> Año
-            </label>
-            <select class="form-select bg-white" v-model="filters.year" @change="fetchData">
-              <option :value="2026">2026</option>
-              <option :value="2025">2025</option>
-            </select>
-          </div>
+                <div class="col-6 col-sm-3 col-lg-2">
+                    <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                    <i class="fa-regular fa-calendar me-1"></i> Año
+                    </label>
+                    <select class="form-select bg-white" v-model="filters.year" @change="fetchData">
+                    <option :value="2026">2026</option>
+                    <option :value="2025">2025</option>
+                    </select>
+                </div>
 
-          <!-- Mes -->
-          <div class="col-md-2">
-            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-              <i class="fa-solid fa-calendar-days me-1"></i> Mes
-            </label>
-            <select class="form-select bg-white" v-model="filters.month" @change="fetchData">
-              <option value="ENE">Enero</option>
-              <option value="FEB">Febrero</option>
-              <option value="MAR">Marzo</option>
-              <option value="ABR">Abril</option>
-              <option value="MAY">Mayo</option>
-              <option value="JUN">Junio</option>
-              <option value="JUL">Julio</option>
-              <option value="AGO">Agosto</option>
-              <option value="SEP">Septiembre</option>
-              <option value="OCT">Octubre</option>
-              <option value="NOV">Noviembre</option>
-              <option value="DIC">Diciembre</option>
-            </select>
-          </div>
+                <div class="col-6 col-sm-3 col-lg-2">
+                    <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                    <i class="fa-solid fa-calendar-days me-1"></i> Mes
+                    </label>
+                    <select class="form-select bg-white" v-model="filters.month" @change="fetchData">
+                    <option value="ENE">Enero</option>
+                    <option value="FEB">Febrero</option>
+                    <option value="MAR">Marzo</option>
+                    </select>
+                </div>
 
-          <!-- Periodo -->
-          <div class="col-md-4">
-            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-              <i class="fa-solid fa-clock-rotate-left me-1"></i> Periodo (Vista)
-            </label>
-            <select class="form-select bg-white" v-model="filters.period" @change="fetchData">
-              <option value="ALL">Acumulado Mensual (MTD)</option>
-              <option
-                v-for="opt in currentPeriodOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >{{ opt.label }}</option>
-            </select>
-          </div>
+                <div class="col-12 col-md-6 col-lg-3 col-xl-2">
+                    <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Periodo (Vista)
+                    </label>
+                    <select class="form-select bg-white" v-model="filters.period" @change="fetchData">
+                    <option value="ALL">Acumulado (MTD)</option>
+                    <option
+                        v-for="opt in currentPeriodOptions"
+                        :key="opt.value"
+                        :value="opt.value"
+                    >{{ opt.label }}</option>
+                    </select>
+                </div>
 
-          <!-- Mini KPIs integrados en la barra de filtros -->
-          <div class="col-md-4">
-            <div class="d-flex gap-3 justify-content-end h-100 align-items-end">
-              <div
-                class="kpi-inline text-end cursor-pointer"
-                @click="drillDown({ type: 'sales' })"
-                title="Ver todas las ventas del mes"
-              >
-                <div class="x-small fw-bold text-uppercase text-secondary ls-1">Venta Total</div>
-                <div class="fw-bold text-primary fs-6">{{ formatCurrency(totals.ven_monto) }}</div>
-              </div>
-              <div class="kpi-inline text-end">
-                <div class="x-small fw-bold text-uppercase text-secondary ls-1">Ticket Prom.</div>
-                <div class="fw-bold text-dark fs-6">{{ formatCurrency(totals.ticketProm) }}</div>
-              </div>
-              <div class="kpi-inline text-end">
-                <div class="x-small fw-bold text-uppercase text-secondary ls-1">% Meta S/.</div>
-                <div class="fw-bold text-success fs-6">{{ totals.pctMetaMonto }}%</div>
-              </div>
+                <div class="col-12 col-md-6 col-lg-12 col-xl-4 mt-3 mt-xl-0">
+                    <div class="d-flex flex-wrap gap-3 justify-content-start justify-content-xl-end h-100 align-items-end">
+                    <div
+                        class="kpi-inline text-start text-xl-end cursor-pointer"
+                        @click="drillDown({ type: 'sales' })"
+                        title="Ver todas las ventas del mes"
+                    >
+                        <div class="x-small fw-bold text-uppercase text-secondary ls-1">Venta Total</div>
+                        <div class="fw-bold text-primary fs-6">{{ formatCurrency(totals.ven_monto) }}</div>
+                    </div>
+                    <div class="kpi-inline text-start text-xl-end border-start ps-3 border-xl-0 ps-xl-0">
+                        <div class="x-small fw-bold text-uppercase text-secondary ls-1">Ticket Prom.</div>
+                        <div class="fw-bold text-dark fs-6">{{ formatCurrency(totals.ticketProm) }}</div>
+                    </div>
+                    <div class="kpi-inline text-start text-xl-end border-start ps-3 border-xl-0 ps-xl-0">
+                        <div class="x-small fw-bold text-uppercase text-secondary ls-1">% Meta S/.</div>
+                        <div class="fw-bold text-success fs-6">{{ totals.pctMetaMonto }}%</div>
+                    </div>
+                    </div>
+                </div>
+
+                </div>
             </div>
-          </div>
-
-        </div>
-      </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════
@@ -133,103 +143,124 @@
         <div v-if="!isDashboard">
 
           <!-- Tabla Principal de Asesores -->
-          <div class="card border-0 shadow-sm mb-4 widget-card">
-            <div class="card-header bg-white fw-bold text-dark border-bottom py-3 d-flex align-items-center">
-              <span class="bg-primary-subtle text-primary p-1 rounded me-2">
-                <i class="fa-solid fa-user-tie"></i>
-              </span>
-              Rendimiento por Asesor — Objetivos y Financiero
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0 small align-middle">
-                  <thead class="table-light sticky-top">
-                    <tr>
-                      <th class="ps-3 py-2 border-0" rowspan="2" style="vertical-align:middle">ASESOR</th>
-                      <th colspan="3" class="text-center py-2 border-0 border-start group-header-blue">OBJETIVOS (VACANTES)</th>
-                      <th colspan="3" class="text-center py-2 border-0 border-start group-header-green">FINANCIERO (S/.)</th>
-                      <th colspan="3" class="text-center py-2 border-0 border-start group-header-gray">GESTIÓN</th>
-                      <th colspan="3" class="text-center py-2 border-0 border-start group-header-dark">EFICIENCIA</th>
-                    </tr>
-                    <tr class="table-light">
-                      <th class="text-center py-2 border-0 border-start sub-blue">META #</th>
-                      <th class="text-center py-2 border-0 sub-blue">REAL #</th>
-                      <th class="text-center py-2 border-0 sub-blue">GAP</th>
-                      <th class="text-center py-2 border-0 border-start sub-green">META S/.</th>
-                      <th class="text-center py-2 border-0 sub-green">VENTA S/.</th>
-                      <th class="text-center py-2 border-0 sub-green">TICKET</th>
-                      <th class="text-center py-2 border-0 border-start sub-gray">LEADS</th>
-                      <th class="text-center py-2 border-0 sub-gray">ACTIVOS</th>
-                      <th class="text-center py-2 border-0 sub-gray">% GEST</th>
-                      <th class="text-center py-2 border-0 border-start sub-dark" title="Ventas Operativas / Leads">RATIO</th>
-                      <th class="text-center py-2 border-0 sub-dark" title="Ventas Cohorte / Leads">% CONV</th>
-                      <th class="text-center pe-3 py-2 border-0 sub-dark">STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-if="tableData.length === 0">
-                      <td colspan="13" class="text-center py-4 text-muted">No hay datos para este periodo</td>
-                    </tr>
-                    <tr v-for="(row, index) in tableData" :key="index" class="cursor-pointer row-hover">
-                      <td class="ps-3 py-2 border-0 fw-bold text-dark">{{ row.asesor }}</td>
+<div class="card border-0 shadow-sm mb-4 widget-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 small align-middle">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th class="ps-3 py-2 border-0" rowspan="2" style="vertical-align:middle">ASESOR</th>
+              <th colspan="3" class="text-center py-2 border-0 border-start group-header-blue">OBJETIVOS (VACANTES)</th>
+              <th colspan="3" class="text-center py-2 border-0 border-start group-header-green">FINANCIERO (S/.)</th>
+              <th colspan="3" class="text-center py-2 border-0 border-start group-header-gray">GESTIÓN</th>
+              <th colspan="4" class="text-center py-2 border-0 border-start group-header-dark">EFICIENCIA</th>
+            </tr>
+            <tr class="table-light">
+              <th class="text-center py-2 border-0 border-start sub-blue">META #</th>
+              <th class="text-center py-2 border-0 sub-blue" title="Ventas Operativas (Fecha de Pago)">REAL #</th>
+              <th class="text-center py-2 border-0 sub-blue">GAP</th>
+              
+              <th class="text-center py-2 border-0 border-start sub-green">META S/.</th>
+              <th class="text-center py-2 border-0 sub-green">VENTA S/.</th>
+              <th class="text-center py-2 border-0 sub-green">TICKET</th>
+              
+              <th class="text-center py-2 border-0 border-start sub-gray">LEADS</th>
+              <th class="text-center py-2 border-0 sub-gray" title="Leads con estado pendiente (Last Follow)">ACTIVOS</th>
+              <th class="text-center py-2 border-0 sub-gray">% GEST</th>
+              
+              <th class="text-center py-2 border-0 border-start sub-dark" title="Real # / Leads">RATIO</th>
+              <th class="text-center py-2 border-0 sub-dark" title="Ventas según fecha de registro del lead">CONV. #</th>
+              <th class="text-center py-2 border-0 sub-dark" title="Conv # / Leads">% CONV</th>
+              <th class="text-center pe-3 py-2 border-0 sub-dark">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="tableData.length === 0">
+              <td colspan="14" class="text-center py-4 text-muted">No hay datos para este periodo</td>
+            </tr>
+            <tr v-for="(row, index) in tableData" :key="index" class="cursor-pointer row-hover">
+              <td class="ps-3 py-2 border-0 fw-bold text-dark">{{ row.asesor }}</td>
 
-                      <td class="text-center py-2 border-0 border-start bg-blue-subtle">{{ row.obj }}</td>
-                      <td class="text-center py-2 border-0 bg-blue-subtle fw-bold cursor-pointer cell-actionable"
-                          @click.stop="drillDown({ advisor: row.cod, type: 'sales' })"
-                          title="Ver ventas">{{ row.ven }}</td>
-                      <td class="text-center py-2 border-0 bg-blue-subtle">
-                        <span :class="row.falta > 0 ? 'text-danger fw-bold' : 'text-success fw-bold'">
-                          {{ row.falta > 0 ? '-' + row.falta : '✓' }}
-                        </span>
-                      </td>
+              <td class="text-center py-2 border-0 border-start bg-blue-subtle">{{ row.obj }}</td>
+              <td class="text-center py-2 border-0 bg-blue-subtle fw-bold cursor-pointer cell-actionable"
+                  @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">
+                {{ row.ven }}
+              </td>
+              <td class="text-center py-2 border-0 bg-blue-subtle">
+                <span :class="row.falta > 0 ? 'text-danger fw-bold' : 'text-success fw-bold'">
+                  {{ row.falta > 0 ? '-' + row.falta : '✓' }}
+                </span>
+              </td>
 
-                      <td class="text-end py-2 border-0 border-start bg-success-subtle text-muted x-small">{{ formatCurrency(row.obj_monto) }}</td>
-                      <td class="text-end py-2 border-0 bg-success-subtle fw-bold text-dark">{{ formatCurrency(row.ven_monto) }}</td>
-                      <td class="text-end py-2 border-0 bg-success-subtle x-small">{{ formatCurrency(row.ven_monto / (row.ven || 1)) }}</td>
+              <td class="text-end py-2 border-0 border-start bg-success-subtle text-muted x-small">{{ formatCurrency(row.obj_monto) }}</td>
+              <td class="text-end py-2 border-0 bg-success-subtle fw-bold text-dark cursor-pointer text-decoration-underline"
+                    @click.stop="drillDown({ advisor: row.cod, type: 'sales' })" title="Ver detalle de ventas (Monto)">
+                {{ formatCurrency(row.ven_monto) }}
+                </td>
+              <td class="text-end py-2 border-0 bg-success-subtle x-small">{{ formatCurrency(row.ven_monto / (row.ven || 1)) }}</td>
 
-                      <td class="text-center py-2 border-0 border-start cell-actionable"
-                          @click.stop="drillDown({ advisor: row.cod, type: 'leads' })"
-                          title="Ver leads asignados">{{ row.contactos }}</td>
-                      <td class="text-center py-2 border-0 text-muted">{{ Math.round(row.contactos * 0.85) }}</td>
-                      <td class="text-center py-2 border-0 x-small">100%</td>
+              <td class="text-center py-2 border-0 border-start cell-actionable"
+                  @click.stop="drillDown({ advisor: row.cod, type: 'leads' })">
+                {{ row.contactos }}
+              </td>
+              <td class="text-center py-2 border-0 text-muted cursor-pointer text-decoration-underline"
+                    @click.stop="drillDown({ advisor: row.cod, type: 'active_leads' })" title="Ver leads activos / pendientes de gestión">
+                {{ row.activos }}
+                </td>
+              <td class="text-center py-2 border-0 x-small">{{ row.pct_gestion }}%</td>
 
-                      <td class="text-center py-2 border-0 border-start fw-bold text-primary">{{ row.ratio }}%</td>
-                      <td class="text-center py-2 border-0 fw-bold">
-                        <span :class="getConvClass(row.conv)">{{ row.conv }}%</span>
-                      </td>
-                      <td class="text-center pe-3 py-2 border-0">
-                        <span class="badge rounded-pill"
-                              :class="getStatusBadge(row.ven, row.obj)">
-                          {{ getStatusLabel(row.ven, row.obj) }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr class="table-secondary fw-bold border-top">
-                      <td class="ps-3 py-2">TOTAL EQUIPO</td>
-                      <td class="text-center py-2">{{ totals.obj }}</td>
-                      <td class="text-center py-2 text-primary cursor-pointer text-decoration-underline" @click="drillDown({ type: 'sales' })">{{ totals.ven }}</td>
-                      <td class="text-center py-2 text-danger">-{{ totals.falta }}</td>
-                      <td class="text-end py-2">{{ formatCurrency(totals.obj_monto) }}</td>
-                      <td class="text-end py-2 text-success">{{ formatCurrency(totals.ven_monto) }}</td>
-                      <td class="text-end py-2">{{ formatCurrency(totals.ticketProm) }}</td>
-                      <td class="text-center py-2 cursor-pointer text-decoration-underline" @click="drillDown({ type: 'leads' })">{{ totals.contactos }}</td>
-                      <td class="text-center py-2 text-muted">—</td>
-                      <td class="text-center py-2 text-muted">—</td>
-                      <td class="text-center py-2 text-primary">{{ totals.avgRatio }}%</td>
-                      <td class="text-center py-2">{{ totals.avgConv }}%</td>
-                      <td class="text-center pe-3 py-2">
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">
-                          {{ totals.pctMetaMonto }}% $$
-                        </span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
+              <td class="text-center py-2 border-0 border-start fw-bold text-primary">{{ row.ratio }}%</td>
+              <td class="text-center py-2 border-0 fw-bold text-dark cursor-pointer text-decoration-underline"
+                    @click.stop="drillDown({ advisor: row.cod, type: 'cohort_sales' })" title="Ver ventas provenientes de leads de este periodo">
+                {{ row.acum_ventas_cohorte }}
+                </td>
+              <td class="text-center py-2 border-0 fw-bold">
+                <span :class="getConvClass(row.conv)">{{ row.conv }}%</span>
+              </td>
+              <td class="text-center pe-3 py-2 border-0">
+                <span class="badge rounded-pill" :class="getStatusBadge(row.ven, row.obj)">
+                  {{ getStatusLabel(row.ven, row.obj) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-secondary fw-bold border-top">
+              <td class="ps-3 py-2">TOTAL EQUIPO</td>
+              <td class="text-center py-2">{{ totals.obj }}</td>
+              <td class="text-center py-2 text-primary cursor-pointer text-decoration-underline" @click="drillDown({ type: 'sales' })">{{ totals.ven }}</td>
+              <td class="text-center py-2 text-danger">-{{ totals.falta }}</td>
+              <td class="text-end py-2">{{ formatCurrency(totals.obj_monto) }}</td>
+              <td class="text-end py-2 text-success cursor-pointer text-decoration-underline" 
+                    @click="drillDown({ type: 'sales' })">
+                {{ formatCurrency(totals.ven_monto) }}
+                </td>
+              <td class="text-end py-2">{{ formatCurrency(totals.ticketProm) }}</td>
+              
+              <td class="text-center py-2 cursor-pointer text-decoration-underline" @click="drillDown({ type: 'leads' })">{{ totals.contactos }}</td>
+              <td class="text-center py-2 text-muted cursor-pointer text-decoration-underline" 
+                    @click="drillDown({ type: 'active_leads' })">
+                {{ totals.activos }}
+                </td>
+              <td class="text-center py-2 text-muted">{{ totals.avgGestion }}%</td>
+              
+              <td class="text-center py-2 text-primary">{{ totals.avgRatio }}%</td>
+              <td class="text-center py-2 text-dark cursor-pointer text-decoration-underline" 
+                    @click="drillDown({ type: 'cohort_sales' })">
+                {{ totals.acum_ventas_cohorte_total }}
+                </td>
+              <td class="text-center py-2">{{ totals.avgConv }}%</td>
+              <td class="text-center pe-3 py-2">
+                 <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">
+                  {{ totals.pctMetaMonto }}% $$
+                </span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
 
           <!-- Sección Micro-gestión diaria -->
           <div class="card border-0 shadow-sm widget-card mb-2" style="border-top: 3px solid #0f172a !important;">
@@ -273,7 +304,7 @@
                       <span class="x-small fw-bold text-uppercase text-secondary">Leads</span>
                       <span
                         class="fw-bold text-dark pointer-badge"
-                        @click="drillDown({ date: day.date, type: 'leads', advisor: selectedAdvisorCode })"
+                        @click="drillDown({ date: day.date || day.name, type: 'leads', advisor: selectedAdvisorCode })"
                       >{{ day.con }}</span>
                     </div>
                     <!-- Cierres -->
@@ -282,19 +313,25 @@
                       <div class="text-end">
                         <span
                           class="fw-bold text-primary d-block pointer-badge"
-                          @click="drillDown({ date: day.date, type: 'sales', advisor: selectedAdvisorCode })"
+                          @click="drillDown({ date: day.date || day.name, type: 'sales', advisor: selectedAdvisorCode })"
                         >{{ day.ven }}</span>
                         <span class="x-small text-muted">{{ day.ratio_dia }}%</span>
                       </div>
                     </div>
                     <!-- Conversión -->
                     <div class="d-flex justify-content-between align-items-center">
-                      <span class="x-small fw-bold text-uppercase text-success">Conv.</span>
-                      <div class="text-end">
-                        <span class="fw-bold text-success d-block">{{ day.ven_coh }}</span>
-                        <span class="x-small text-muted">{{ day.conv_dia }}%</span>
-                      </div>
-                    </div>
+                        <span class="x-small fw-bold text-uppercase text-success">Conv.</span>
+                        <div class="text-end">
+                            <span 
+                            class="fw-bold text-success d-block pointer-badge text-decoration-underline cursor-pointer"
+                          @click="drillDown({ date: day.date || day.name, type: 'cohort_sales', advisor: selectedAdvisorCode })"
+                            title="Ver ventas generadas por los leads de este día"
+                            >
+                            {{ day.ven_coh }}
+                            </span>
+                            <span class="x-small text-muted">{{ day.conv_dia }}%</span>
+                        </div>
+                        </div>
                   </div>
                 </div>
               </div>
@@ -337,15 +374,6 @@
                     </div>
                     <div class="progress" style="height: 20px; border-radius: 6px;">
                       <div class="progress-bar bg-secondary" style="width: 100%"></div>
-                    </div>
-                  </div>
-                  <div class="funnel-step">
-                    <div class="d-flex justify-content-between mb-1">
-                      <span class="x-small fw-bold text-uppercase text-secondary">Contactados</span>
-                      <span class="fw-bold text-dark">{{ Math.round(totals.contactos * 0.85) }}</span>
-                    </div>
-                    <div class="progress" style="height: 20px; border-radius: 6px;">
-                      <div class="progress-bar bg-primary" style="width: 85%"></div>
                     </div>
                   </div>
                   <div class="funnel-step cursor-pointer" @click="drillDown({ type: 'sales' })">
@@ -423,7 +451,12 @@ const isDashboard = ref(false)
 const loading = ref(false)
 const selectedAdvisorCode = ref('ALL')
 const tableData = ref([])
-const filters = reactive({ year: 2026, month: 'ENE', period: 'ALL' })
+const filters = reactive({ 
+  year: 2026, 
+  month: 'ENE', 
+  period: 'ALL',
+  modality: 'NO_ONLINE'   // <-- NUEVO, default no-online
+})
 const usersMap = ref([])
 
 const currentPeriodOptions = computed(() => PERIODS_CONFIG[filters.month] || [])
@@ -437,13 +470,21 @@ onMounted(async () => {
   fetchData()
 })
 const activePeriodRange = reactive({ start: null, end: null })
-
+const encodeFilter = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined
+  return JSON.stringify(arr.map(i => ({ value: i.value ?? i.id, label: i.label ?? i.description })))
+}
 async function fetchData() {
   loading.value = true
   activePeriodRange.start = null
   activePeriodRange.end = null
   try {
-    const payload = { year: filters.year, month: filters.month, period: filters.period === 'ALL' ? null : filters.period }
+    const payload = { 
+    year: filters.year, 
+    month: filters.month, 
+    period: filters.period === 'ALL' ? null : filters.period,
+    modality: filters.modality   // <-- NUEVO
+    }
     const rawResponse = await dashboardService.dashboardList(payload)
     const items = rawResponse.items || []
    if (items.length > 0 && filters.period !== 'ALL') {
@@ -472,6 +513,7 @@ async function fetchData() {
         grouped[item.cod_asesor] = {
           asesor: item.asesor, cod: item.cod_asesor,
           obj: 0, ven: 0, falta: 0, obj_monto: 0, ven_monto: 0, contactos: 0,
+          activos: 0, 
           acum_ventas_cohorte: 0,
           daily: []
         }
@@ -483,9 +525,9 @@ async function fetchData() {
       g.ven_monto += Number(item.logrado_monto)
       g.contactos += Number(item.consultas)
       const ventasCohorte = Math.round((Number(item.consultas) * Number(item.conversion)) / 100)
-      g.acum_ventas_cohorte += ventasCohorte
-
-      if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desglose_diario)) {
+        g.activos += Number(item.leads_activos || 0)
+      g.acum_ventas_cohorte += Number(item.venta_cohorte || 0)
+        if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desglose_diario)) {
         item.desglose_diario.forEach(dia => {
           g.daily.push({
             name: `${dia.dia_nombre} ${dia.dia_num}`,
@@ -498,11 +540,13 @@ async function fetchData() {
           })
         })
       } else {
+        // --- AQUÍ ESTABA EL ERROR: Faltaba calcular ratio_dia ---
         g.daily.push({
           name: item.week, date: '',
           con: Number(item.consultas),
           ven: Number(item.logrado),
           ven_coh: ventasCohorte,
+          ratio_dia: Number(item.consultas) > 0 ? Math.round((Number(item.logrado) / Number(item.consultas)) * 100) : 0, // <-- LÍNEA NUEVA
           conv_dia: item.conversion
         })
       }
@@ -510,8 +554,14 @@ async function fetchData() {
 
     tableData.value = Object.values(grouped).map(adv => {
       adv.falta = Math.max(0, adv.obj - adv.ven)
+      
+      // Cálculos de porcentajes finales para la tabla
       adv.ratio = adv.contactos > 0 ? Math.round((adv.ven / adv.contactos) * 100) : 0
       adv.conv = adv.contactos > 0 ? Math.round((adv.acum_ventas_cohorte / adv.contactos) * 100) : 0
+      
+      // NUEVO: % Gestión
+      adv.pct_gestion = adv.contactos > 0 ? Math.round((adv.activos / adv.contactos) * 100) : 0
+
       adv.daily.sort((a, b) => {
         if(a.date && b.date) return a.date.localeCompare(b.date)
         return a.name.localeCompare(b.name)
@@ -527,7 +577,7 @@ const DEAD_STATUS_ALIASES = [
   'we_lead_status_desestimado',
   'we_lead_status_indiferente',
   'we_lead_status_closed',     // Cerrado
-  'we_lead_status_anulado',    // Anulado  ← ajusta el alias exacto si difiere
+  'we_lead_status_anullment',    // Anulado  ← ajusta el alias exacto si difiere
 ]
 
 /**
@@ -545,92 +595,166 @@ function getActiveStatusIds() {
 
 
 function drillDown(params = {}) {
-  const { date, type, advisor } = params
-  const query = {}
+  const { date, type, advisor } = params;
+  const query = {};
 
-  // ── 1. Rango de fechas ──────────────────────────────────────
-  if (date) {
-    // Clic en celda de día específico
-    // NOTA: Si 'date' también viene del backend con hora, aplícale .split('T')[0] aquí también por seguridad
-    query.pay_date_from = String(date).split('T')[0]
-    query.pay_date_to   = String(date).split('T')[0]
-  }
-  // 2. FILTRO POR PERIODO (S1, S2...)
-  else if (filters.period !== 'ALL' && activePeriodRange.start && activePeriodRange.end) {
-      // Ahora enviamos "2026-01-26" limpio
-      query.pay_date_from = activePeriodRange.start
-      query.pay_date_to   = activePeriodRange.end
-  } 
-  // 3. FILTRO MENSUAL (ALL)
-  else {
-    const monthIndex = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
-      .indexOf(filters.month)
-    const y = filters.year
-    // Aquí calculamos inicio y fin de mes manualmente
-    const toSql = (d) => d.toISOString().split('T')[0]
-    query.pay_date_from = toSql(new Date(y, monthIndex, 1))
-    query.pay_date_to   = toSql(new Date(y, monthIndex + 1, 0))
-  }
+  // ── 1. Determinar Fechas Base ──────────────────────────────────────
+  let dStart = null;
+  let dEnd = null;
 
-  // ── 2. Filtro de Asesor ─────────────────────────────────────
-  const targetAdvisor =
-    (advisor && advisor !== 'ALL') ? advisor
-    : (selectedAdvisorCode.value !== 'ALL' ? selectedAdvisorCode.value : null)
+  // Helpers
+  const monthIndex = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'].indexOf(filters.month);
+  const y = filters.year;
+  const monthNumStr = String(monthIndex + 1).padStart(2, '0');
+  const toSql = (d) => d.toISOString().split('T')[0];
 
-  if (targetAdvisor) {
-    if (!isNaN(targetAdvisor)) {
-      query.owner_user_ids = targetAdvisor
+  // LOGICA PRINCIPAL DE FECHAS
+  if (date && String(date).includes('-')) {
+    // CASO A: Es un día específico (ej. "2026-01-15T...")
+    dStart = String(date).split('T')[0];
+    dEnd = String(date).split('T')[0];
+
+  } else if (date && String(date).startsWith('S')) {
+    // CASO B: Hicieron clic en una tarjeta de SEMANA en la vista ALL (ej. date = "S2")
+    const periodData = PERIODS_CONFIG[filters.month]?.find(p => p.value === date);
+    
+    if (periodData) {
+      const matches = periodData.label.match(/\((\d{2})(?:-(\d{2}))?/);
+      if (matches) {
+        const startDay = parseInt(matches[1], 10);
+        const endDay = matches[2] ? parseInt(matches[2], 10) : startDay;
+        
+        dStart = `${y}-${monthNumStr}-${String(startDay).padStart(2, '0')}`;
+        dEnd = `${y}-${monthNumStr}-${String(endDay).padStart(2, '0')}`;
+      } else {
+        // Fallback si falla el regex
+        dStart = toSql(new Date(y, monthIndex, 1));
+        dEnd = toSql(new Date(y, monthIndex + 1, 0));
+      }
+    }
+
+  } else if (filters.period !== 'ALL') {
+    // CASO C: Hay una semana seleccionada en el filtro superior, pero hicieron clic
+    // en un botón general (como los totales de la tabla o embudo)
+    const periodData = PERIODS_CONFIG[filters.month]?.find(p => p.value === filters.period);
+    
+    if (periodData) {
+      const matches = periodData.label.match(/\((\d{2})(?:-(\d{2}))?/);
+      if (matches) {
+        const startDay = parseInt(matches[1], 10);
+        const endDay = matches[2] ? parseInt(matches[2], 10) : startDay;
+        
+        dStart = `${y}-${monthNumStr}-${String(startDay).padStart(2, '0')}`;
+        dEnd = `${y}-${monthNumStr}-${String(endDay).padStart(2, '0')}`;
+      } else {
+         dStart = activePeriodRange.start;
+         dEnd = activePeriodRange.end;
+      }
     } else {
-      const found = usersMap.value.find(
-        u => u.username === targetAdvisor || u.first_name === targetAdvisor
-      )
-      if (found) query.owner_user_ids = found.user_id
+      dStart = activePeriodRange.start;
+      dEnd = activePeriodRange.end;
+    }
+
+  } else {
+    // CASO D: Mes Completo (clic en tabla o embudo estando en vista ALL)
+    dStart = toSql(new Date(y, monthIndex, 1));
+    dEnd = toSql(new Date(y, monthIndex + 1, 0));
+  }
+
+
+  // ── 2. Aplicar Fechas según el Tipo de métrica ────────────────────
+  if (type === 'sales') {
+    query.pay_date_from = dStart;
+    query.pay_date_to = dEnd;
+  } else if (['leads', 'active_leads', 'cohort_sales'].includes(type)) {
+    query.from_date = dStart;
+    query.to_date = dEnd;
+  }
+
+  // ── 3. Filtro de Asesor ─────────────────────────────────────
+  const targetAdvisor = (advisor && advisor !== 'ALL') ? advisor : (selectedAdvisorCode.value !== 'ALL' ? selectedAdvisorCode.value : null)
+  if (targetAdvisor) {
+    const advisorRow = tableData.value.find(r => r.cod == targetAdvisor)
+    if (advisorRow) {
+      query.owner_user_ids = encodeFilter([{ value: advisorRow.cod, label: advisorRow.asesor }])
+    } else {
+      const found = usersMap.value.find(u => u.user_id == targetAdvisor)
+      if (found) {
+        query.owner_user_ids = encodeFilter([{ value: found.user_id, label: found.first_name }])
+      }
     }
   }
 
-  // ── 3. Filtro de Estado según tipo ──────────────────────────
-  if (type === 'sales') {
-    // Ventas: solo estados de cierre
-    const salesAliases = [
-      'we_lead_status_bought',
-      'we_lead_status_insc',
-      'we_lead_status_matriculado',
-    ]
-    const ids = salesAliases
-      .map(alias => catalog.options('we_lead_status').find(s => s.alias === alias)?.id)
-      .filter(Boolean)
-      .join(',')
-    if (ids) query.status_lead_ids = ids
+  // ── 4. Filtro de Estado ───────────────────────────────────────────
+  const salesAliases = ['we_lead_status_bought', 'we_lead_status_insc', 'we_lead_status_matriculado']
 
-  } else {
-    // Leads generales (type === 'leads', o cualquier otro):
-    // excluir los 4 estados muertos → mostramos sólo los activos
-    const activeIds = getActiveStatusIds()
-    if (activeIds) query.status_lead_ids = activeIds
+  if (type === 'sales' || type === 'cohort_sales') {
+    const salesItems = salesAliases
+      .map(alias => catalog.options('we_lead_status').find(s => s.alias === alias))
+      .filter(Boolean)
+      .map(s => ({ value: s.id, label: s.description }))
+    if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+
+  } else if (type === 'leads' || type === 'active_leads') {
+    const activeItems = catalog.options('we_lead_status')
+      .filter(s => !DEAD_STATUS_ALIASES.includes(s.alias))
+      .map(s => ({ value: s.id, label: s.description }))
+    if (activeItems.length) query.status_lead_ids = encodeFilter(activeItems)
+
+    if (type === 'active_leads') {
+       const pendingFollow = catalog.options('we_follow_lead').find(s => s.alias === 'we_follow_lead_pending')
+       if (pendingFollow) {
+         query.last_follow_ids = encodeFilter([{ value: pendingFollow.id, label: pendingFollow.description }])
+       }
+    }
   }
 
-  // ── 4. Redirección ──────────────────────────────────────────
+  // ── 5. Filtro de Modalidad ────────────────────────────────────────
+  const ONLINE_ALIAS = 'we_modality_online'
+  if (filters.modality === 'NO_ONLINE') {
+    const noOnlineItems = catalog.options('we_modality')
+      .filter(m => m.alias !== ONLINE_ALIAS)
+      .map(m => ({ value: m.id, label: m.description }))
+    if (noOnlineItems.length) query.model_modality_ids = encodeFilter(noOnlineItems)
+  } else if (filters.modality === 'ONLINE') {
+    const onlineItem = catalog.options('we_modality').find(m => m.alias === ONLINE_ALIAS)
+    if (onlineItem) query.model_modality_ids = encodeFilter([{ value: onlineItem.id, label: onlineItem.description }])
+  }
+
+  // ── 6. Redirección ───────────────────────────────────────────
+  console.log(`Filtro Drilldown - Tipo: ${type}, Inicio: ${dStart}, Fin: ${dEnd}`);
   const routeData = router.resolve({ path: '/comercial/leads', query })
   window.open(routeData.href, '_blank')
 }
-
-
-
-
-
-
 const totals = computed(() => {
   const t = tableData.value.reduce((acc, row) => {
-    acc.obj += row.obj; acc.ven += row.ven; acc.contactos += row.contactos
-    acc.obj_monto += row.obj_monto; acc.ven_monto += row.ven_monto
-    acc.acum_ventas_cohorte_total += (row.acum_ventas_cohorte || 0)
+    acc.obj += row.obj
+    acc.ven += row.ven
+    acc.contactos += row.contactos
+    acc.obj_monto += row.obj_monto
+    acc.ven_monto += row.ven_monto
+    
+    // Sumamos los valores absolutos
+    acc.activos += row.activos 
+    acc.acum_ventas_cohorte_total += row.acum_ventas_cohorte
+    
     return acc
-  }, { obj: 0, ven: 0, contactos: 0, obj_monto: 0, ven_monto: 0, acum_ventas_cohorte_total: 0 })
+  }, { 
+    obj: 0, ven: 0, contactos: 0, obj_monto: 0, ven_monto: 0, 
+    activos: 0, acum_ventas_cohorte_total: 0 
+  })
+
   t.falta = Math.max(0, t.obj - t.ven)
   t.ticketProm = t.ven > 0 ? t.ven_monto / t.ven : 0
   t.pctMetaMonto = t.obj_monto > 0 ? Math.round((t.ven_monto / t.obj_monto) * 100) : 0
+  
+  // Ratios generales
   t.avgRatio = t.contactos > 0 ? Math.round((t.ven / t.contactos) * 100) : 0
   t.avgConv = t.contactos > 0 ? Math.round((t.acum_ventas_cohorte_total / t.contactos) * 100) : 0
+  
+  // NUEVO: Promedio de gestión global
+  t.avgGestion = t.contactos > 0 ? Math.round((t.activos / t.contactos) * 100) : 0
+  
   return t
 })
 
@@ -688,19 +812,104 @@ const getStatusLabel = (ven, obj) => {
 }
 
 const trendChartData = computed(() => {
-  const labels = currentDailyStats.value.map(d => d.name)
-  const values = currentDailyStats.value.map(d => d.ven)
-  const cumulative = values.reduce((acc, curr, i) => [...acc, curr + (acc[i-1] || 0)], [])
-  return { labels, datasets: [{ label: 'Ventas Acumuladas', data: cumulative, borderColor: '#0f172a', backgroundColor: 'rgba(15, 23, 42, 0.1)', fill: true, tension: 0.4 }] }
-})
+  if (!currentDailyStats.value || currentDailyStats.value.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  const labels = currentDailyStats.value.map(d => d.name);
+  const ventasDiarias = currentDailyStats.value.map(d => Number(d.ven) || 0);
+  const consultasDiarias = currentDailyStats.value.map(d => Number(d.con) || 0);
+  
+  // Calcula el acumulado sumando el día anterior
+  const cumulative = ventasDiarias.reduce((acc, curr, i) => {
+    acc.push((i > 0 ? acc[i - 1] : 0) + curr);
+    return acc;
+  }, []);
+
+  return {
+    labels,
+    datasets: [
+      {
+        type: 'line',
+        label: 'Ventas Acumuladas',
+        data: cumulative,
+        borderColor: '#0f172a',
+        backgroundColor: 'rgba(15, 23, 42, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        order: 1 // Dibuja la línea por encima de las barras
+      },
+      {
+        type: 'bar',
+        label: 'Consultas (Leads)',
+        data: consultasDiarias,
+        backgroundColor: '#e2e8f0', // Gris clarito para no robar atención
+        borderRadius: 4,
+        order: 3
+      },
+      {
+        type: 'bar',
+        label: 'Ventas Periodo',
+        data: ventasDiarias,
+        backgroundColor: '#3b82f6', // Azul primario
+        borderRadius: 4,
+        order: 2
+      }
+    ]
+  };
+});
 const revenueChartData = computed(() => {
-  const active = tableData.value.filter(d => d.obj > 0)
-  return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => d.obj_monto), backgroundColor: '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => d.ven_monto), backgroundColor: '#10b981', borderRadius: 4 }] }
-})
+  const active = tableData.value.filter(d => {
+    // Si elegimos un asesor, solo mostramos a ese
+    if (selectedAdvisorCode.value !== 'ALL') return d.cod === selectedAdvisorCode.value;
+    // Si es todo el equipo, mostramos a los que tengan meta o venta (evita asesores inactivos)
+    return d.obj_monto > 0 || d.ven_monto > 0 || d.obj > 0;
+  });
+
+  return {
+    labels: active.map(d => d.asesor),
+    datasets: [
+      {
+        label: 'Meta S/.',
+        data: active.map(d => Number(d.obj_monto) || 0),
+        backgroundColor: '#e2e8f0',
+        borderRadius: 4
+      },
+      {
+        label: 'Real S/.',
+        data: active.map(d => Number(d.ven_monto) || 0),
+        backgroundColor: '#10b981',
+        borderRadius: 4
+      }
+    ]
+  };
+});
+
 const shareChartData = computed(() => {
-  const top = tableData.value.filter(d => d.ven > 0)
-  return { labels: top.map(d => d.asesor), datasets: [{ data: top.map(d => d.ven), backgroundColor: ['#0f172a','#334155','#64748b','#94a3b8'], borderWidth: 0 }] }
-})
+  if (tableData.value.length === 0) return { labels: [], datasets: [] };
+
+  // La dona solo tiene sentido si vemos a todo el equipo comparándose entre sí
+  // Filtramos solo a los que tienen al menos 1 venta operativa
+  const top = tableData.value.filter(d => Number(d.ven) > 0);
+
+  // Si seleccionamos a un solo asesor, no tiene sentido ver una dona del 100% de él mismo, 
+  // pero lo dejamos para que no desaparezca el gráfico.
+  const filteredTop = selectedAdvisorCode.value !== 'ALL' 
+    ? top.filter(d => d.cod === selectedAdvisorCode.value) 
+    : top;
+
+  return {
+    labels: filteredTop.map(d => d.asesor),
+    datasets: [{
+      data: filteredTop.map(d => Number(d.ven)),
+      // Agregué más colores por si tienes muchos asesores
+      backgroundColor: ['#0f172a','#334155','#64748b','#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9', '#2563eb', '#3b82f6', '#60a5fa'],
+      borderWidth: 1,
+      borderColor: '#ffffff' // Borde blanco para separar las tajadas
+    }]
+  };
+}); 
 const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
 const groupedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'bottom' } } }
 const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }

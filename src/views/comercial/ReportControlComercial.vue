@@ -20,60 +20,74 @@
       </div>
 
       <div class="filter-bar bg-light rounded-3 p-3 border">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-              <i class="fa-regular fa-calendar me-1"></i> Rango de Registro
-            </label>
-            <BaseDatePicker
-               v-model="dateRangeString"
-               :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-               class="form-control bg-white"
-               placeholder="Registro..."
-               @on-change="(d, s) => handleDateFilterChange(d, 'created')"
-            />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-bold text-uppercase text-success mb-1">
-              <i class="fa-solid fa-money-bill-wave me-1"></i> Rango de Pago
-            </label>
-            <BaseDatePicker
-               v-model="payRangeString"
-               :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-               class="form-control bg-white"
-               placeholder="F. Pago..."
-               @on-change="(d, s) => handleDateFilterChange(d, 'payment')"
-            />
-          </div>
-          <div class="col-md-3">
-             <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-               <i class="fa-solid fa-user-tie me-1"></i> Asesor Asignado
-             </label>
-             <MultiSelect
-               v-model="filters.owner_user_ids"
-               :items="filtroOwners"
-               label-key="description"
-               value-key="id"
-               placeholder="Todos..."
-               class="bg-white"
-             />
-          </div>
-          <div class="col-md-3">
-             <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
-               <i class="fa-solid fa-graduation-cap me-1"></i> Programa / Interés
-             </label>
-             <div class="input-group shadow-sm">
-               <input 
-                 type="text" 
-                 class="form-control border-start-0" 
-                 v-model="filters.program_text" 
-                 placeholder="Buscar..." 
-                 @keyup.enter="fetchStats"
-               >
-             </div>
-          </div>
-        </div>
-      </div>
+            <div class="row g-3 align-items-end">
+               <div class="col-xl-2 col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                  <i class="fa-regular fa-calendar me-1"></i> Registro
+                  </label>
+                  <BaseDatePicker
+                     v-model="dateRangeString"
+                     :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                     class="form-control bg-white"
+                     placeholder="Registro..."
+                     @on-change="(d, s) => handleDateFilterChange(d, 'created')"
+                  />
+               </div>
+               <div class="col-xl-2 col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-success mb-1">
+                  <i class="fa-solid fa-money-bill-wave me-1"></i> F. Pago
+                  </label>
+                  <BaseDatePicker
+                     v-model="payRangeString"
+                     :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                     class="form-control bg-white"
+                     placeholder="F. Pago..."
+                     @on-change="(d, s) => handleDateFilterChange(d, 'payment')"
+                  />
+               </div>
+               <div class="col-xl-3 col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                     <i class="fa-solid fa-user-tie me-1"></i> Asesor Asignado
+                  </label>
+                  <MultiSelect
+                     v-model="filters.owner_user_ids"
+                     :items="filtroOwners"
+                     label-key="description"
+                     value-key="id"
+                     placeholder="Todos..."
+                     class="bg-white"
+                  />
+               </div>
+               
+               <div class="col-xl-2 col-md-6">
+                  <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                     <i class="fa-solid fa-laptop me-1"></i> Modalidad
+                  </label>
+                  <SearchSelect
+                     v-model="filters.model_modality_id"
+                     :items="catalog.options('we_modality')"
+                     label-field="description"
+                     value-field="id"
+                     placeholder="Todas..."
+                  />
+               </div>
+
+               <div class="col-xl-3 col-md-6">
+                  <label class="form-label small fw-bold text-uppercase text-secondary mb-1">
+                     <i class="fa-solid fa-graduation-cap me-1"></i> Programa / Interés
+                  </label>
+                  <div class="input-group shadow-sm">
+                     <input 
+                     type="text" 
+                     class="form-control border-start-0" 
+                     v-model="filters.program_text" 
+                     placeholder="Buscar..." 
+                     @keyup.enter="fetchStats"
+                     >
+                  </div>
+               </div>
+            </div>
+            </div>
     </div>
 
     <div class="card-body bg-body-tertiary" style="min-height: 500px;">
@@ -329,7 +343,7 @@
                     Geografía
                  </div>
                  <div class="card-body scroll-y-custom p-0">
-                    <StatsTable :data="stats.byCountry" />
+                    <StatsTable  @click-row="(item) => drillDown('country', item.name)" :data="stats.byCountry" />
                  </div>
               </div>
            </div>
@@ -349,12 +363,12 @@
 
 <script setup>
 import { ref, reactive, onMounted, inject, h, defineComponent } from 'vue'
-import { useRouter } from 'vue-router'
-import { ServiceKeys } from '@/services' 
+import { useRouter, useRoute } from 'vue-router'  // <-- añade useRoute
+import { ServiceKeys } from '@/services'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
-
-// --- DEFINICIÓN DE COMPONENTE INTERNO (Correcta para Vue 3) ---
+import SearchSelect from '@/components/SearchSelect.vue'
+// --- COMPONENTE INTERNO (sin cambios) ---
 const StatsTable = defineComponent({
   props: ['data'],
   emits: ['click-row'],
@@ -362,203 +376,300 @@ const StatsTable = defineComponent({
     return h('table', { class: 'table table-hover table-striped mb-0 small align-middle' }, [
       h('thead', { class: 'table-light sticky-top' }, [
         h('tr', [
-           h('th', { class: 'ps-3 py-2 border-0' }, 'Nombre'),
-           h('th', { class: 'text-end py-2 border-0' }, 'Leads'),
-           h('th', { class: 'text-end py-2 border-0 text-success' }, 'Ventas'),
-           h('th', { class: 'text-end pe-3 py-2 border-0 text-muted' }, '%'),
+          h('th', { class: 'ps-3 py-2 border-0' }, 'Nombre'),
+          h('th', { class: 'text-end py-2 border-0' }, 'Leads'),
+          h('th', { class: 'text-end py-2 border-0 text-success' }, 'Ventas'),
+          h('th', { class: 'text-end pe-3 py-2 border-0 text-muted' }, '%'),
         ])
       ]),
-      h('tbody', 
-        (this.data || []).map((item, i) => {
-           return h('tr', { 
-               key: i, 
-               class: 'cursor-pointer',
-               onClick: () => this.$emit('click-row', item) 
-             }, [
-               h('td', { class: 'ps-3 py-2 border-0' }, item.name),
-               h('td', { class: 'text-end fw-bold py-2 border-0' }, item.count),
-               h('td', { class: 'text-end fw-bold text-success py-2 border-0' }, item.sales),
-               h('td', { class: 'text-end pe-3 text-muted py-2 border-0' }, item.conversion_rate + '%'),
-             ])
-        })
+      h('tbody',
+        (this.data || []).map((item, i) =>
+          h('tr', {
+            key: i,
+            class: 'cursor-pointer',
+            onClick: () => this.$emit('click-row', item)
+          }, [
+            h('td', { class: 'ps-3 py-2 border-0' }, item.name),
+            h('td', { class: 'text-end fw-bold py-2 border-0' }, item.count),
+            h('td', { class: 'text-end fw-bold text-success py-2 border-0' }, item.sales),
+            h('td', { class: 'text-end pe-3 text-muted py-2 border-0' }, item.conversion_rate + '%'),
+          ])
+        )
       )
     ])
   }
 })
 
 const router = useRouter()
+const route  = useRoute()   // <-- añadido
 const comercialService = inject(ServiceKeys.Comercial)
-const authService = inject(ServiceKeys.Auth)
-const catalog = inject('catalog')
+const authService      = inject(ServiceKeys.Auth)
+const catalog          = inject('catalog')
 
 // === ESTADO ===
-const isLoading = ref(false)
-const stats = ref(null)
-const filtroOwners = ref([])
+const isLoading      = ref(false)
+const stats          = ref(null)
+const filtroOwners   = ref([])
 const dateRangeString = ref(null)
-const payRangeString = ref(null)
+const payRangeString  = ref(null)
+
+// === HELPERS URL ===
+const decodeFilter = (jsonStr) => {
+  if (!jsonStr) return []
+  try { return JSON.parse(jsonStr) } catch (e) { return [] }
+}
+
+const encodeFilter = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined
+  return JSON.stringify(arr.map(i => ({ value: i.value ?? i.id, label: i.label ?? i.description })))
+}
+
+const getIds = (arr) =>
+  Array.isArray(arr) ? arr.map(i => i.value ?? i.id).filter(x => x != null) : []
 
 // === FILTROS ===
 const filters = reactive({
   rangoFechas: { start: '', end: '' },
-  rangoPago: { start: '', end: '' },
-  owner_user_ids: [],
-  program_text: ''
+  rangoPago:   { start: '', end: '' },
+  owner_user_ids: [],   // [{value, label}]
+  program_text: '',
+  model_modality_id: null
 })
 
 // === LIFECYCLE ===
 onMounted(async () => {
   await loadOwners()
+  await parseQueryAndApply()
   fetchStats()
 })
 
+// === CARGA CATÁLOGOS ===
 async function loadOwners() {
   try {
     const arr = await authService.userList({})
-    filtroOwners.value = arr.map(u => ({ id: u.user_id, description: u.first_name }))
-  } catch (e) { console.error(e) }
+    filtroOwners.value = arr.map(u => {
+      // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
+      const fName = (u.first_name || '').trim()
+      const lName = (u.last_name || '').trim()
+      
+      let fullName = fName
+      if (lName) fullName += ` ${lName.charAt(0)}.`
+      
+      // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
+      const desc = fullName.trim() || `Usuario ${u.user_id}`
+
+      return { 
+        id: u.user_id, 
+        description: desc 
+      }
+    })
+  } catch (e) { 
+    console.error(e) 
+  }
 }
 
-function handleDateFilterChange(selectedDates, type) {
-  const toSQLDate = (dateObj) => {
-    if (!dateObj) return ''
-    const offset = dateObj.getTimezoneOffset() * 60000
-    return new Date(dateObj.getTime() - offset).toISOString().split('T')[0]
+// === LEER URL AL MONTAR ===
+async function parseQueryAndApply() {
+  const q = route.query
+  if (Object.keys(q).length === 0) return
+
+  // Fechas de registro
+  if (q.from_date || q.to_date) {
+    filters.rangoFechas = { start: q.from_date || '', end: q.to_date || '' }
+    if (q.from_date) dateRangeString.value = `${q.from_date} a ${q.to_date || q.from_date}`
   }
-  let start = ''
-  let end = ''
+
+  // Fechas de pago
+  if (q.pay_date_from || q.pay_date_to) {
+    filters.rangoPago = { start: q.pay_date_from || '', end: q.pay_date_to || '' }
+    if (q.pay_date_from) payRangeString.value = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
+  }
+if (q.model_modality_id) {
+    filters.model_modality_id = Number(q.model_modality_id)
+  }
+  // Texto programa
+  if (q.program_text) filters.program_text = q.program_text
+
+  // Asesores: acepta el nuevo formato JSON y el antiguo de IDs separados por coma
+  if (q.owner_user_ids) {
+    // Intenta parsear como JSON primero (nuevo formato)
+    const decoded = decodeFilter(q.owner_user_ids)
+    if (decoded.length > 0) {
+      filters.owner_user_ids = decoded
+    } else {
+      // Fallback: venía como "1,2,3" (drillDown antiguo)
+      const ids = q.owner_user_ids.split(',').map(Number).filter(Boolean)
+      filters.owner_user_ids = filtroOwners.value
+        .filter(u => ids.includes(u.id))
+        .map(u => ({ value: u.id, label: u.description }))
+    }
+  }
+}
+
+// === FECHAS ===
+function handleDateFilterChange(selectedDates, type) {
+  const toSQL = (d) => {
+    if (!d) return ''
+    const offset = d.getTimezoneOffset() * 60000
+    return new Date(d.getTime() - offset).toISOString().split('T')[0]
+  }
+  let start = '', end = ''
   if (Array.isArray(selectedDates) && selectedDates.length > 0) {
-    start = toSQLDate(selectedDates[0])
-    end = selectedDates[1] ? toSQLDate(selectedDates[1]) : start 
+    start = toSQL(selectedDates[0])
+    end   = selectedDates[1] ? toSQL(selectedDates[1]) : start
   }
   if (type === 'created') filters.rangoFechas = { start, end }
   else if (type === 'payment') filters.rangoPago = { start, end }
 }
 
+// === FETCH STATS (escribe en URL + llama API) ===
 async function fetchStats() {
   isLoading.value = true
+
+  // 1. Sincronizar URL con estado actual
+  const queryParams = {}
+  if (filters.rangoFechas.start) {
+    queryParams.from_date = filters.rangoFechas.start
+    queryParams.to_date   = filters.rangoFechas.end
+  }
+
+  if (filters.model_modality_id) queryParams.model_modality_id = filters.model_modality_id
+  if (filters.rangoPago.start) {
+    queryParams.pay_date_from = filters.rangoPago.start
+    queryParams.pay_date_to   = filters.rangoPago.end
+  }
+  if (filters.program_text)         queryParams.program_text    = filters.program_text
+  if (filters.owner_user_ids.length) queryParams.owner_user_ids = encodeFilter(filters.owner_user_ids)
+
+  router.replace({ query: queryParams })
+
+  // 2. Llamada a la API
   try {
-    const formatDate = (val) => {
-        if (!val) return null
-        if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}$/)) return val
-        try {
-           const d = new Date(val)
-           if (isNaN(d.getTime())) return null
-           const offset = d.getTimezoneOffset() * 60000
-           return new Date(d.getTime() - offset).toISOString().split('T')[0]
-        } catch (e) { return null }
-    }
-    const getVal = (item) => {
-        if (!item) return null
-        if (typeof item === 'object') return item.id ?? item.value ?? null
-        return item
-    }
-
-    const payload = {
-       from_date: formatDate(filters.rangoFechas.start),
-       to_date: formatDate(filters.rangoFechas.end),
-       pay_date_from: formatDate(filters.rangoPago.start),
-       pay_date_to: formatDate(filters.rangoPago.end),
-       owner_user_ids: filters.owner_user_ids.map(getVal).filter(x => x !== null), 
-       program_text: filters.program_text || null
-    }
-
-    const data = await comercialService.leadStats(payload)
+    const data = await comercialService.leadStats({
+      from_date:       filters.rangoFechas.start || null,
+      to_date:         filters.rangoFechas.end   || null,
+      pay_date_from:   filters.rangoPago.start   || null,
+      pay_date_to:     filters.rangoPago.end     || null,
+      program_text:    filters.program_text      || null,
+      model_modality_ids: filters.model_modality_id ? [filters.model_modality_id] : [],
+      owner_user_ids:  getIds(filters.owner_user_ids)
+    })
     stats.value = data
   } catch (error) {
-    console.error("Error cargando stats:", error)
+    console.error('Error cargando stats:', error)
   } finally {
     isLoading.value = false
   }
 }
 
-function getBadgeClassInterest(alias) {
-   if (alias === 'we_lead_interest_high') return 'bg-danger text-white'
-   if (alias === 'we_lead_interest_medium') return 'bg-warning text-dark'
-   return 'bg-secondary text-white'
-}
-
-// === DRILL DOWN ===
+// === DRILL DOWN (ahora con {value, label} en URL) ===
 function drillDown(type, valueName) {
-  const getVal = (item) => (item && typeof item === 'object') ? (item.id ?? item.value ?? null) : item
-  
-  const query = {
-     from_date: filters.rangoFechas.start,
-     to_date: filters.rangoFechas.end,
-     pay_date_from: filters.rangoPago.start,
-     pay_date_to: filters.rangoPago.end,
-     program_text: filters.program_text,
-     owner_user_ids: filters.owner_user_ids.map(getVal).filter(x => x !== null).join(',')
+
+  // Base: heredamos las fechas y texto del filtro actual
+  const query = {}
+  if (filters.rangoFechas.start) {
+    query.from_date = filters.rangoFechas.start
+    query.to_date   = filters.rangoFechas.end
+  }
+  if (filters.rangoPago.start) {
+    query.pay_date_from = filters.rangoPago.start
+    query.pay_date_to   = filters.rangoPago.end
+  }
+  if (filters.program_text)          query.program_text    = filters.program_text
+  if (filters.owner_user_ids.length) query.owner_user_ids  = encodeFilter(filters.owner_user_ids)
+  // Heredar modalidad formateada como [{value, label}] para el Listado
+  if (filters.model_modality_id) {
+    const modObj = catalog.options('we_modality').find(x => x.id === filters.model_modality_id)
+    if (modObj) {
+      query.model_modality_ids = encodeFilter([{ value: modObj.id, label: modObj.description }])
+    }
+  }
+  // Helper: busca en catálogo y devuelve JSON {value, label}
+  const findInCatalog = (catalogKey, field, val) => {
+    const found = catalog.options(catalogKey).find(x => x[field] === val)
+    return found ? encodeFilter([{ value: found.id, label: found.description }]) : null
   }
 
-  if (type === 'all') {}
-  else if (type === 'web') { query.web = 'Y' }
-  else if (type === 'b2b') { query.b2b = 'Y' }
+  if (type === 'all') {
+    // Sin filtro extra
+  }
+  else if (type === 'web') {
+    query.web = 'Y'
+  }
+  else if (type === 'b2b') {
+    query.b2b = 'Y'
+  }
   else if (type === 'sales') {
-     const bought = catalog.options('we_lead_status').find(x => x.alias === 'we_lead_status_bought')
-     const insc = catalog.options('we_lead_status').find(x => x.alias === 'we_lead_status_insc')
-     const ids = [bought?.id, insc?.id].filter(Boolean).join(',')
-     if (ids) query.status_lead_ids = ids
+    const opts = catalog.options('we_lead_status')
+    const salesItems = opts
+      .filter(x => ['we_lead_status_bought', 'we_lead_status_insc'].includes(x.alias))
+      .map(x => ({ value: x.id, label: x.description }))
+    if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
   }
   else if (type === 'status') {
-     const found = catalog.options('we_lead_status').find(x => x.description === valueName)
-     if (found) query.status_lead_ids = found.id
-  }
-  else if (type === 'strategy') {
-     const found = catalog.options('we_type_strategy').find(x => x.description === valueName)
-     if (found) query.strategy_ids = found.id
-  }
-  else if (type === 'channel') {
-     const found = catalog.options('we_social_media').find(x => x.description === valueName)
-     if (found) query.channel_ids = found.id
+    const r = findInCatalog('we_lead_status', 'description', valueName)
+    if (r) query.status_lead_ids = r
   }
   else if (type === 'owner') {
-     // Truco: El SP devuelve el nombre formateado. Buscamos en tu lista local 'filtroOwners'
-     // aquel usuario cuyo nombre coincida con el de la tabla.
-     // OJO: Esto requiere que el nombre mostrado en tabla sea idéntico al del dropdown.
-     const found = filtroOwners.value.find(u => u.description === valueName)
-     if (found) {
-        query.owner_user_ids = found.id
-     } else {
-        console.warn("No se pudo encontrar el ID para el asesor:", valueName)
-     }
+  const found = filtroOwners.value.find(u => u.description === valueName)
+  if (found) query.owner_user_ids = encodeFilter([{ value: found.id, label: found.description }])
+}
+  else if (type === 'strategy') {
+    const r = findInCatalog('we_type_strategy', 'description', valueName)
+    if (r) query.strategy_ids = r
   }
-
-  // 2. TIPO DE PROGRAMA
+  else if (type === 'channel') {
+    const r = findInCatalog('we_social_media', 'description', valueName)
+    if (r) query.channel_ids = r
+  }
   else if (type === 'program_type') {
-     // Usamos el catálogo estándar (asumiendo que se llama 'we_type_program' o similar)
-     // Si tu catálogo tiene otro nombre interno, ajusta 'we_type_program'
-     const found = catalog.options('we_type_program').find(x => x.description === valueName)
-     if (found) query.type_program_ids = found.id
+    const r = findInCatalog('we_program_type', 'description', valueName)
+    if (r) query.type_program_ids = r
   }
   else if (type === 'word') {
-     const found = catalog.options('we_key_word').find(x => x.description === valueName)
-     if (found) query.word_ids = found.id
+    const r = findInCatalog('we_key_word', 'description', valueName)
+    if (r) query.word_ids = r
   }
   else if (type === 'promotion') {
-     const found = catalog.options('we_category_query').find(x => x.description === valueName)
-     if (found) query.query_ids = found.id
+    const r = findInCatalog('we_category_query', 'description', valueName)
+    if (r) query.query_ids = r
   }
   else if (type === 'interest') {
-     let found = catalog.options('we_lead_interest').find(x => x.description === valueName)
-     if(!found && valueName === 'Alta') found = catalog.options('we_lead_interest').find(x => x.alias === 'we_lead_interest_high')
-     if (found) query.interest_level_ids = found.id
+    const opts = catalog.options('we_lead_interest')
+    const found = opts.find(x => x.description === valueName)
+      ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
+    if (found) query.interest_level_ids = encodeFilter([{ value: found.id, label: found.description }])
   }
-  // --- LÓGICA AGREGADA PARA MOMENTO ---
+else if (type === 'medium') {
+    // Busca en el catálogo de medios y lo codifica como [{value, label}]
+    const r = findInCatalog('we_medium_contact', 'description', valueName)
+    if (r) query.medium_contact_ids = r
+  }
+  else if (type === 'country') {
+    // Busca en el catálogo de países y lo codifica como [{value, label}]
+    const r = findInCatalog('we_country', 'description', valueName)
+    if (r) query.code_country_ids = r
+  }
   else if (type === 'moment') {
-     const found = catalog.options('we_moment').find(x => x.description === valueName)
-     if (found) query.moment_ids = found.id
+    const r = findInCatalog('we_moment', 'description', valueName)
+    if (r) query.moment_ids = r
   }
-  // --- FIN AGREGADO ---
   else if (type === 'follow') {
-      const found = catalog.options('we_follow_lead').find(x => x.description === valueName)
-      const foundAlias = catalog.options('we_follow_lead').find(x => x.alias === valueName)
-      if (found) query.last_follow_ids = found.id
-      else if (foundAlias) query.last_follow_ids = foundAlias.id
+    const opts  = catalog.options('we_follow_lead')
+    const found = opts.find(x => x.description === valueName)
+      ?? opts.find(x => x.alias === valueName)
+    if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
   }
 
   const routeData = router.resolve({ name: 'ComercialListado', query })
   window.open(routeData.href, '_blank')
+}
+
+// === HELPERS VISUALES ===
+function getBadgeClassInterest(alias) {
+  if (alias === 'we_lead_interest_high')   return 'bg-danger text-white'
+  if (alias === 'we_lead_interest_medium') return 'bg-warning text-dark'
+  return 'bg-secondary text-white'
 }
 </script>
 
