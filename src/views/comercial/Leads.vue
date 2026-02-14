@@ -7,6 +7,15 @@
       </div>
 
       <div class="actions-bar">
+        <button 
+          class="btn me-2" 
+          :class="hasActiveRestrictions ? 'btn-outline-danger text-danger fw-bold pulse-alert bg-white' : 'btn-outline-warning text-dark bg-white'" 
+          @click="openControlModal"
+          :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
+        >
+          <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i> 
+          <span class="ms-1">{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
+        </button>
         <button
           class="btn me-2"
           :class="isCompact ? 'bg-info text-light' : 'bg-outline-info text-dark'"
@@ -86,8 +95,19 @@
                 @mouseleave="cancelPress">
                 
               <td class="ta-center nowrap">
-                <button class="btn btn-outline btn-sm me-1" @click="editLead(l)" title="Editar"><i class="fa-solid fa-pen-to-square text-warning"></i></button>
-                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver"><i class="fa-solid fa-clone text-primary"></i></button>
+                <button 
+  class="btn btn-outline btn-sm me-1" 
+  @click="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" 
+  :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
+>
+  <i class="fa-solid" 
+    :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'">
+  </i>
+</button>
+                
+                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver">
+                  <i class="fa-solid fa-clone text-primary"></i>
+                </button>
               </td>
 
               <td><span class="fw-600 small text-dark">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</span></td>
@@ -138,8 +158,19 @@
                 @mouseleave="cancelPress">
 
               <td class="ta-center nowrap">
-                <button class="btn btn-outline btn-sm me-1" @click="editLead(l)" title="Editar"><i class="fa-solid fa-pen-to-square text-warning"></i></button>
-                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver"><i class="fa-solid fa-clone text-primary"></i></button>
+                <button 
+                  class="btn btn-outline btn-sm me-1" 
+                  @click="editLead(l)" 
+                  :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
+                >
+                  <i class="fa-solid" 
+                    :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'">
+                  </i>
+                </button>
+
+                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver">
+                  <i class="fa-solid fa-clone text-primary"></i>
+                </button>
               </td>
 
               <td class="small nowrap">{{ l.registration_date }}</td>
@@ -200,34 +231,60 @@
       <div class="p-3 bg-white scroll-area">
         <div v-if="editableHistory.length > 0">
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 50px;" class="text-center">#</th>
-                  <th style="min-width: 140px;">Estado</th>
-                  <th style="min-width: 140px;">Resultado</th>
-                  <th style="min-width: 210px;">Fecha/Hora</th>
-                  <th style="min-width: 200px;">Observación</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(attempt, idx) in editableHistory" :key="idx" :class="{'bg-blue-50': !attempt.id}">
-                  <td class="text-center fw-bold text-muted align-top pt-2">{{ idx + 1 }}</td>
-                  <td class="align-top">
-                    <SearchSelect v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
-                  </td>
-                  <td class="align-top">
-                    <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Resultado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
-                  </td>
-                  <td class="align-top">
-                    <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="w-100" />
-                  </td>
-                  <td class="align-top">
-                    <textarea v-model="attempt.response" class="form-control form-control-sm text-area-resize" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"></textarea>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+<div class="table-responsive">
+  <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 50px;" class="text-center">#</th>
+        <th style="min-width: 140px;">Estado</th>
+        <th style="min-width: 140px;">Resultado</th>
+        <th style="min-width: 210px;">Fecha/Hora</th>
+        <th style="min-width: 130px;" class="text-center">Duración</th> 
+        <th style="min-width: 200px;">Observación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="(attempt, idx) in editableHistory" :key="idx" :class="{'bg-blue-50': !attempt.id}">
+        <td class="text-center fw-bold text-muted align-top pt-2">{{ idx + 1 }}</td>
+        
+        <td class="align-top">
+          <SearchSelect v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
+        </td>
+
+        <td class="align-top">
+          <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Resultado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
+        </td>
+
+        <td class="align-top">
+          <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="w-100" />
+        </td>
+
+        <td class="align-top text-center">
+          <div class="d-flex align-items-center justify-content-center gap-2">
+            <button 
+                class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                style="width: 32px; height: 32px;"
+                :class="attempt.timerActive ? 'btn-danger' : 'btn-outline-success'"
+                @click="toggleTimer(attempt)"
+                :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
+            >
+                <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
+            </button>
+            
+            <div class="font-mono fw-bold" :class="attempt.timerActive ? 'text-danger' : 'text-dark'">
+                {{ formatDuration(attempt.contact_duration) }}
+            </div>
+          </div>
+        </td>
+
+        <td class="align-top">
+          <textarea v-model="attempt.response" class="form-control form-control-sm text-area-resize" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"></textarea>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
           </div>
         </div>
         <div v-else class="text-center py-5 text-muted"><p>No hay historial previo. Agrega el primer intento.</p></div>
@@ -346,10 +403,274 @@
       </div>
     </template>
   </BaseModal>
+
+  <BaseModal v-model="showControlModal" :title="isComercial ? 'Mis Permisos de Visualización' : 'Panel de Control: Restricciones de Asesores'" size="xl">
+    
+    <div v-if="!isComercial" class="px-3 py-2">
+      <div class="alert alert-info py-2 small mb-3">
+        <i class="fa-solid fa-circle-info me-1"></i> Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
+      </div>
+      
+      <div class="table-responsive control-table-wrapper">
+        <table class="table table-bordered table-hover align-middle control-table">
+          <thead class="table-light text-center">
+            <tr>
+              <th rowspan="2" class="align-middle bg-light sticky-col">Asesor Comercial</th>
+              <th colspan="3" class="bg-primary-subtle text-primary">PROGRAMAS</th>
+              <th colspan="6" class="bg-success-subtle text-success">GLOBAL</th>
+            </tr>
+            <tr class="small text-muted">
+              <th class="bg-primary-subtle minW-200">Tipos</th>
+              <th class="bg-primary-subtle minW-200">Modalidades</th>
+              <th class="bg-primary-subtle minW-200">Específicos</th>
+              <th class="bg-success-subtle minW-200">Estatus (Pipeline)</th>
+              <th class="bg-success-subtle minW-200">Seguimiento</th>
+              <th class="bg-success-subtle minW-200">Niv. Interés</th>
+              <th class="bg-success-subtle minW-200">Canal</th>
+              <th class="bg-success-subtle minW-200">Estrategia</th>
+              <th class="bg-success-subtle minW-200">E. Cliente</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="asesor in asesoresControl" :key="asesor.user_id">
+              <td class="fw-bold small sticky-col bg-white">
+                <i class="fa-solid fa-user-tie text-secondary me-2"></i>{{ asesor.name }}
+              </td>
+              
+              <td><MultiSelect v-model="asesor.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td><MultiSelect v-model="asesor.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></td>
+              <td><MultiSelect v-model="asesor.program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              
+              <td><MultiSelect v-model="asesor.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td><MultiSelect v-model="asesor.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td><MultiSelect v-model="asesor.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td><MultiSelect v-model="asesor.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td><MultiSelect v-model="asesor.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></td>
+              <td><MultiSelect v-model="asesor.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todos..." /></td>
+            </tr>
+            <tr v-if="asesoresControl.length === 0">
+              <td colspan="10" class="text-center py-4 text-muted">Cargando asesores...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-else class="px-4 py-3">
+      <div class="alert d-flex align-items-center mb-4 border-0" :class="hasActiveRestrictions ? 'alert-danger bg-danger-subtle text-danger' : 'alert-success bg-success-subtle text-success'">
+        <i class="fa-solid fa-3x me-3" :class="hasActiveRestrictions ? 'fa-user-lock' : 'fa-check-circle'"></i>
+        <div>
+          <h5 class="alert-heading fw-bold mb-1">
+            {{ hasActiveRestrictions ? 'Filtros de Seguridad Activos' : 'Acceso Total Permitido' }}
+          </h5>
+          <p class="mb-0 small text-dark">
+            <span v-if="hasActiveRestrictions">Actualmente tu perfil tiene restricciones operativas asignadas por administración. Solo puedes acceder a los leads que coincidan <b>estrictamente</b> con los parámetros mostrados a continuación. Los campos vacíos indican que tienes acceso a todas las opciones de esa categoría.</span>
+            <span v-else>Tu perfil no cuenta con restricciones en este momento. Tienes visibilidad completa sobre todos los leads del sistema.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4" v-if="asesoresControl.length > 0">
+        <div class="col-12">
+          <h6 class="section-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Tipos de Programa</label>
+          <MultiSelect disabled v-model="asesoresControl[0].type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Modalidades</label>
+          <MultiSelect disabled v-model="asesoresControl[0].model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Programas Específicos</label>
+          <MultiSelect disabled v-model="asesoresControl[0].program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+
+        <div class="col-12 mt-4">
+          <h6 class="section-title text-success"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Estatus (Pipeline)</label>
+          <MultiSelect disabled v-model="asesoresControl[0].status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">E. Cliente</label>
+          <MultiSelect disabled v-model="asesoresControl[0].moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Seguimiento</label>
+          <MultiSelect disabled v-model="asesoresControl[0].last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Canal de Origen</label>
+          <MultiSelect disabled v-model="asesoresControl[0].channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Estrategia MKT</label>
+          <MultiSelect disabled v-model="asesoresControl[0].strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small fw-bold">Nivel de Interés</label>
+          <MultiSelect disabled v-model="asesoresControl[0].interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Accesibilidad total" />
+        </div>
+      </div>
+    </div>
+    
+    <template #footer>
+      <div class="d-flex justify-content-end w-100 gap-2">
+        <button class="btn btn-outline-secondary btn-sm px-4" @click="showControlModal = false">
+          {{ isComercial ? 'Entendido, cerrar' : 'Cancelar' }}
+        </button>
+        
+        <button v-if="!isComercial" class="btn btn-warning btn-sm px-4 fw-bold" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
+          <i class="fa-solid fa-save me-1"></i> {{ isSavingRestrictions ? 'Guardando...' : 'Guardar Restricciones' }}
+        </button>
+      </div>
+    </template>
+  </BaseModal>
+<BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
+  <div v-if="isLoadingEnrollment" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Cargando información financiera...</p>
+  </div>
+
+  <div v-else-if="enrollmentData" class="px-3 py-2">
+    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h6 class="fw-bold mb-1 text-primary text-uppercase">{{ enrollmentData.program_name }}</h6>
+        
+        <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="small text-muted mt-1">
+          <span v-if="enrollmentData.version_name">
+             <i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}
+          </span>
+          <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2">|</span> 
+          <span v-if="enrollmentData.edition_label">
+             <i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}
+          </span>
+        </div>
+      </div>
+      
+      <span v-if="enrollmentData.modality_label" class="badge bg-white text-dark border">
+        {{ enrollmentData.modality_label }}
+      </span>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6 border-end">
+        <h6 class="text-muted small fw-bold text-uppercase mb-3">Información del Alumno</h6>
+        
+        <div class="mb-3">
+          <label class="d-block small text-muted">Nombre Completo</label>
+          <span class="fw-bold text-dark fs-6">{{ enrollmentData.student_name }}</span>
+        </div>
+        
+        <div class="d-flex justify-content-between mb-3">
+          <div>
+            <label class="d-block small text-muted">Documento</label>
+            <span class="font-mono small fw-bold">{{ enrollmentData.document_number }}</span>
+          </div>
+          <div>
+            <label class="d-block small text-muted">Fecha Inscripción</label>
+            <span class="small">{{ enrollmentData.registration_date }}</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="d-block small text-muted mb-1">Estado de Matrícula</label>
+            <span class="badge" 
+              :class="enrollmentData.active === 'Y' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+              {{ enrollmentData.status_label || 'Desconocido' }}
+            </span>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <h6 class="text-muted small fw-bold text-uppercase mb-3">Estado Financiero</h6>
+
+        <div class="card bg-light border-0 mb-3">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small text-secondary">Costo Total:</span>
+              <span class="fw-bold text-dark">
+                {{ formatMoney(enrollmentData.status_alias, enrollmentData.total_amount) }}
+              </span>
+            </div>
+            
+            <div class="d-flex justify-content-between mb-2 text-success">
+              <span class="small">Pagado:</span>
+              <span class="fw-bold">
+                - {{ formatMoney(enrollmentData.status_alias, enrollmentData.total_paid) }}
+              </span>
+            </div>
+            
+            <hr class="my-2 border-secondary opacity-25">
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold text-dark">Pendiente:</span>
+              <span class="fs-4 fw-bold" :class="enrollmentData.pending_amount > 0 ? 'text-danger' : 'text-success'">
+                 {{ formatMoney(enrollmentData.status_alias, enrollmentData.pending_amount) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="enrollmentData.pending_amount > 0" class="alert alert-warning py-2 px-3 small mb-3 border-warning">
+          <div class="d-flex align-items-start">
+             <i class="fa-solid fa-clock mt-1 me-2 text-warning-emphasis"></i>
+             <div>
+                <strong class="d-block text-warning-emphasis">Próximo vencimiento:</strong>
+                <span v-if="enrollmentData.next_due_date">
+                   {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.status_alias, enrollmentData.next_due_amount) }}</b>
+                </span>
+                <span v-else class="text-muted fst-italic">
+                   No hay fecha de cuota programada.
+                </span>
+             </div>
+          </div>
+        </div>
+        
+        <div v-else class="alert alert-success py-2 px-3 small mb-3 border-success">
+          <i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!
+        </div>
+
+        <div class="text-end">
+           <span class="badge border" :class="{
+             'bg-danger text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_debt',
+             'bg-success text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_paid',
+             'bg-warning text-dark': enrollmentData.financial_status_alias === 'we_enrollment_status_pending'
+           }">{{ enrollmentData.financial_status_label || 'Estado Pendiente' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <template #footer>
+    <div v-if="enrollmentData" class="d-flex justify-content-between w-100">
+      <div class="d-flex gap-2">
+        <a v-if="enrollmentData.student_attachment_url" 
+           :href="enrollmentData.student_attachment_url" 
+           target="_blank" 
+           class="btn btn-outline-secondary btn-sm"
+           title="Descargar Ficha">
+           <i class="fa-regular fa-file-pdf me-1"></i> Ficha
+        </a>
+        <a v-if="enrollmentData.payment_attachment_url" 
+           :href="enrollmentData.payment_attachment_url" 
+           target="_blank" 
+           class="btn btn-outline-secondary btn-sm"
+           title="Descargar Voucher">
+           <i class="fa-regular fa-image me-1"></i> Voucher
+        </a>
+      </div>
+      <button class="btn btn-primary btn-sm px-4" @click="showEnrollmentModal = false">Cerrar</button>
+    </div>
+  </template>
+</BaseModal>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, computed } from 'vue'
+import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -361,13 +682,19 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 import DateTime12 from '@/components/DateTime12.vue'
 import { useToast } from 'vue-toastification'
+const hasActiveRestrictions = ref(false)
 
+const showControlModal = ref(false)
+const isSavingRestrictions = ref(false)
+const asesoresControl = ref([])
 const toast = useToast()
 const router = useRouter()
 const route = useRoute()
 const comercialService = inject(ServiceKeys.Comercial)
 const authService = inject(ServiceKeys.Auth)
 const catalog = inject('catalog')
+
+const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
 
 // === ESTADO ===
 const showFilterModal = ref(false)
@@ -451,7 +778,10 @@ const pipelineMap = computed(() => createMap(filtroPipeline.value))
 const queryMap    = computed(() => createMap(filtroQuery.value))
 const interestMap = computed(() => createMap(filtroInterest.value))
 const followMap   = computed(() => createMap(filtroFollow.value))
-
+const extractIds = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(item => (typeof item === 'object' && item !== null) ? (item.id || item.value) : item);
+};
 // === PERSISTENCIA ===
 const { saveState } = useTablePersistence('crm_leads_filter_state_v1', filters, pagin)
 
@@ -473,6 +803,22 @@ const encodeFilter = (arr) => {
   if (!Array.isArray(arr) || arr.length === 0) return undefined // undefined borra el param de la URL
   return JSON.stringify(arr.map(i => ({ value: i.value, label: i.label }))) // Guardamos solo lo vital
 }
+
+const getCurrencySymbol = (alias) => {
+  if (!alias) return '';
+  if (alias.includes('soles') || alias === 'PEN') return 'S/';
+  if (alias.includes('dollar') || alias.includes('usd') || alias === 'USD') return '$';
+  return alias; // Si no reconoce, devuelve el texto original
+}
+
+// Formatea el monto: S/ 338.00
+const formatMoney = (alias, amount) => {
+  const symbol = getCurrencySymbol(alias);
+  const val = Number(amount) || 0;
+  return `${symbol} ${val.toFixed(2)}`;
+}
+
+
 async function parseQueryAndApply() {
   const q = route.query
   console.log(q)
@@ -522,25 +868,47 @@ async function parseQueryAndApply() {
   return true
 }
 // === LOGICA MODAL SEGUIMIENTO (Restaurada) ===
+const formatDuration = (seconds) => {
+  if (!seconds) return '00:00'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
 
+// 2. Lógica de Iniciar/Detener
+const toggleTimer = (attempt) => {
+  if (attempt.timerActive) {
+    // Detener
+    clearInterval(attempt.timerId)
+    attempt.timerActive = false
+    attempt.timerId = null
+  } else {
+    // Iniciar
+    attempt.timerActive = true
+    attempt.timerId = setInterval(() => {
+      // Si es null o undefined, iniciar en 0, luego sumar 1
+      attempt.contact_duration = (attempt.contact_duration || 0) + 1
+    }, 1000)
+  }
+}
+
+// 3. Limpieza de intervalos al salir (para que no se queden corriendo en memoria)
+onBeforeUnmount(() => {
+  if (editableHistory.value) {
+    editableHistory.value.forEach(item => {
+      if (item.timerId) clearInterval(item.timerId)
+    })
+  }
+})
 function openFollowModal(lead) {
-  // 1. Asignamos el lead seleccionado
   selectedFollowLead.value = lead
-
+  
   try {
     let rawDetails = lead.follow_details;
-
-    // 2. Parseo seguro de JSON si viene como string
     if (typeof rawDetails === 'string') {
-      try {
-        rawDetails = JSON.parse(rawDetails);
-      } catch (e) {
-        console.warn('No se pudo parsear follow_details', e);
-        rawDetails = [];
-      }
+        try { rawDetails = JSON.parse(rawDetails); } catch (e) { rawDetails = []; }
     }
 
-    // 3. Mapeo para la tabla editable
     if (Array.isArray(rawDetails)) {
       editableHistory.value = rawDetails
         .map(d => {
@@ -549,10 +917,13 @@ function openFollowModal(lead) {
             id: d?.id || d?.lead_contact_attempt_id,
             status_alias: d?.cat_status_alias || d?.cat_status_label,
             calling_alias: d?.cat_result_alias || d?.cat_result_label,
-            contact_datetime: d?.contact_datetime
-                ? String(d.contact_datetime).replace('T', ' ').slice(0, 16)
-                : '',
-            response: d?.response || ''
+            contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
+            response: d?.response || '',
+            
+            // --> AGREGAR ESTOS CAMPOS:
+            contact_duration: d?.contact_duration || 0, 
+            timerActive: false,
+            timerId: null
           };
         })
         .filter(item => item !== null);
@@ -560,17 +931,156 @@ function openFollowModal(lead) {
       editableHistory.value = [];
     }
   } catch (error) {
-    console.error("Error procesando historial:", error);
+    console.error(error)
     editableHistory.value = [];
   }
-
-  // 4. Abrir modal
   showFollowModal.value = true;
 }
 
+// --- 3. MODIFICAR NUEVO INTENTO (addLocalAttempt) ---
 
+// === COMPROBACIÓN INICIAL PARA EL BOTÓN ===
+async function checkMyRestrictions() {
+  if (!isComercial) return; // Si es líder/admin, no necesita alerta
+  try {
+    const myRest = await comercialService.restrictionsList({ 
+      user_id: currentUserId, 
+      is_comercial: true 
+    });
+    
+    if (myRest && myRest.length > 0) {
+      const r = myRest[0];
+      // Verificamos si al menos UNO de los arrays tiene datos (length > 0)
+      const isRestricted = [
+        r.type_program_ids, r.model_modality_ids, r.program_ids, 
+        r.status_lead_ids, r.last_follow_ids, r.interest_level_ids, 
+        r.channel_ids, r.strategy_ids, r.moment_ids
+      ].some(arr => Array.isArray(arr) && arr.length > 0);
+      
+      hasActiveRestrictions.value = isRestricted;
+    }
+  } catch (e) {
+    console.error("Error comprobando mis restricciones:", e);
+  }
+}
+const hydrateCatalog = (ids, catalogArray) => {
+  if (!Array.isArray(ids) || !catalogArray) return [];
+  return catalogArray.filter(item => ids.includes(item.id));
+};
+
+// === 1. ABRIR Y CARGAR DATA (VERSIÓN CORREGIDA Y ROBUSTA) ===
+async function openControlModal() {
+  showControlModal.value = true;
+  asesoresControl.value = []; 
+  
+  try {
+    // 1. Asegurar carga de asesores
+    if (filtroOwners.value.length === 0) {
+      await loadOwners();
+    }
+
+    // 2. Traer restricciones desde BD
+    const savedRestrictions = await comercialService.restrictionsList({
+      user_id: currentUserId,
+      is_comercial: isComercial
+    });
+
+    // 3. Función local para mapear e hidratar un asesor a la vez
+    const buildAsesorRecord = (userId, userName, bdRest = {}) => {
+      return {
+        user_id: userId,
+        name: userName,
+        type_program_ids: hydrateCatalog(bdRest.type_program_ids, filtroTiposPrograma.value),
+        model_modality_ids: hydrateCatalog(bdRest.model_modality_ids, filtroModalidad.value),
+        program_ids: hydrateCatalog(bdRest.program_ids, filtroProgramasEspec.value),
+        status_lead_ids: hydrateCatalog(bdRest.status_lead_ids, filtroPipeline.value),
+        last_follow_ids: hydrateCatalog(bdRest.last_follow_ids, filtroFollow.value),
+        interest_level_ids: hydrateCatalog(bdRest.interest_level_ids, filtroInterest.value),
+        channel_ids: hydrateCatalog(bdRest.channel_ids, filtroCanales.value),
+        strategy_ids: hydrateCatalog(bdRest.strategy_ids, strategyCatalog.value),
+        moment_ids: hydrateCatalog(bdRest.moment_ids, filtroMoment.value)
+      };
+    };
+
+    // 4. Asignación según rol
+    if (isComercial) {
+      // VISTA ASESOR: Solo mi usuario
+      const bdRest = savedRestrictions[0] || {};
+      const myName = storedUser?.first_name 
+        ? `${storedUser.first_name} ${storedUser.last_name || ''}` 
+        : `Mi Usuario (${currentUserId})`;
+        
+      asesoresControl.value = [buildAsesorRecord(currentUserId, myName, bdRest)];
+      
+    } else {
+      // VISTA ADMIN/LÍDER: Todos los usuarios
+      asesoresControl.value = filtroOwners.value.map(owner => {
+        const bdRest = savedRestrictions.find(r => r.user_id === owner.id) || {};
+        return buildAsesorRecord(owner.id, owner.description, bdRest);
+      });
+    }
+
+    // 5. TRUCO DE REHIDRATACIÓN (Fallback por si Vue tardó en cargar los catálogos inyectados)
+    // Si la modalidad está vacía en los catálogos al principio, le damos 500ms y re-evaluamos
+    if (filtroModalidad.value.length === 0 || filtroTiposPrograma.value.length === 0) {
+      setTimeout(() => {
+         console.log("Re-hidratando catálogos retrasados...");
+         // Forzamos la reactividad recargando los valores con los catálogos llenos
+         asesoresControl.value = asesoresControl.value.map(asesor => {
+            const originalBdRest = isComercial 
+              ? savedRestrictions[0] || {}
+              : savedRestrictions.find(r => r.user_id === asesor.user_id) || {};
+            return buildAsesorRecord(asesor.user_id, asesor.name, originalBdRest);
+         });
+      }, 500);
+    }
+
+  } catch (error) {
+    console.error("Error cargando permisos:", error);
+    toast.error("Hubo un error al cargar el panel de permisos.");
+  }
+}
+
+// === 2. GUARDAR DATA ===
+async function saveControlRestrictions() {
+  isSavingRestrictions.value = true;
+  
+  try {
+    // Preparar el payload masivo limpiando los objetos a Arrays planos de Enteros [1, 2]
+    const payloadMasivo = asesoresControl.value.map(asesor => ({
+      user_id: asesor.user_id,
+      is_active: true,
+      type_program_ids: extractIds(asesor.type_program_ids),
+      model_modality_ids: extractIds(asesor.model_modality_ids),
+      program_ids: extractIds(asesor.program_ids),
+      status_lead_ids: extractIds(asesor.status_lead_ids),
+      last_follow_ids: extractIds(asesor.last_follow_ids),
+      interest_level_ids: extractIds(asesor.interest_level_ids),
+      channel_ids: extractIds(asesor.channel_ids),
+      strategy_ids: extractIds(asesor.strategy_ids),
+      moment_ids: extractIds(asesor.moment_ids),
+    }));
+
+    await comercialService.restrictionsUpdate(payloadMasivo);
+    
+    toast.success('Filtros restrictivos aplicados correctamente');
+    showControlModal.value = false;
+    
+  } catch (error) {
+    console.error("Error guardando restricciones:", error);
+    toast.error('Error al guardar las restricciones');
+  } finally {
+    isSavingRestrictions.value = false;
+  }
+}
 async function saveFastFollow() {
   if (!selectedFollowLead.value) return
+  
+  // --> AGREGAR: Detener timers activos antes de guardar
+  editableHistory.value.forEach(item => {
+      if(item.timerActive) toggleTimer(item);
+  });
+
   isSavingFollow.value = true
   
   try {
@@ -579,19 +1089,21 @@ async function saveFastFollow() {
        cat_status: getIdFromAlias(item.status_alias, filtroFollow.value),
        cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
        contact_datetime: item.contact_datetime,
-       response: item.response
+       response: item.response,
+       
+       // --> AGREGAR: Enviar duración al backend
+       contact_duration: item.contact_duration 
     }))
 
-    // Enviamos solo los intentos de contacto para actualizar
     await comercialService.leadUpdate({
         id: selectedFollowLead.value.id,
-        lead: {}, // Lead vacío para no tocar datos del perfil
-        contact_attempts: attemptsPayload
+        lead: {}, 
+        contact_attempts: attemptsPayload 
     })
 
     toast.success('Seguimiento actualizado correctamente')
     showFollowModal.value = false
-    fetchLeads() // Recargamos la lista para ver cambios de color/estado
+    fetchLeads() 
   } catch (error) {
     console.error(error)
     toast.error('Error al guardar el seguimiento')
@@ -695,7 +1207,31 @@ async function fetchLeads() {
     pagin.value.total = 0
   }
 }
+const showEnrollmentModal = ref(false)
+const enrollmentData = ref(null)
+const isLoadingEnrollment = ref(false)
 
+// Función para abrir el modal (llámala desde el botón verde)
+async function openEnrollmentModal(enrollmentId) {
+  if (!enrollmentId) return;
+  
+  isLoadingEnrollment.value = true;
+  enrollmentData.value = null; // Limpiar data vieja
+  showEnrollmentModal.value = true;
+
+  try {
+    // Ajusta la ruta a tu servicio de API real
+    const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId }); 
+    // Asumiendo que tu servicio devuelve response.data o response
+    enrollmentData.value = response.data || response; 
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo cargar la información de la matrícula");
+    showEnrollmentModal.value = false;
+  } finally {
+    isLoadingEnrollment.value = false;
+  }
+}
 // === EVENTOS UI ===
 function startPress(lead) {
   pressingRowId.value = lead.id
@@ -791,7 +1327,24 @@ function handleDateFilterChange(dateStr, type) {
 function rowClassForStatus(s) { const map = { 'we_lead_status_insc': 'row-inscrito', 'we_lead_status_interesado': 'row-blue', 'we_lead_status_bought': 'row-emerald', 'we_lead_status_will_pay': 'row-emerald', 'we_lead_status_proximo': 'row-yellow', 'we_lead_status_indiferente': 'row-gray', 'we_lead_status_closed': 'row-red', 'we_lead_status_desestimado': 'row-red' }; return map[s] || '' }
 function badgeForInterest(s) { const map = { 'we_lead_interest_high': 'badge-success', 'we_lead_interest_medium': 'badge-warning', 'we_lead_interest_low': 'badge-danger' }; return map[s] || 'badge-neutral' }
 function badgeForFollow(s) { const map = { 'we_follow_lead_pending': 'badge-light', 'we_follow_lead_answered': 'badge-success', 'we_follow_lead_no_answer': 'badge-danger' }; return map[s] || 'badge-neutral' }
-function addLocalAttempt() { const now = new Date(); const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); editableHistory.value.unshift({ id: null, status_alias: 'we_follow_lead_pending', calling_alias: null, contact_datetime: isoString, response: '' }) }
+function addLocalAttempt() { 
+    const now = new Date(); 
+    const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); 
+    
+    editableHistory.value.unshift({ 
+        id: null, 
+        status_alias: 'we_follow_lead_pending', 
+        calling_alias: null, 
+        contact_datetime: isoString, 
+        response: '',
+        
+        // --> AGREGAR ESTOS CAMPOS:
+        contact_duration: 0,
+        timerActive: false,
+        timerId: null
+    }) 
+}
+
 function getIdFromAlias(alias, catalogArray) { if (!alias || !catalogArray) return null; const item = catalogArray.find(i => i.alias === alias); return item ? item.id : null }
 function goNew() { router.push({ name: 'ComercialLeadsNew' }) }
 function viewLead(lead) { router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } }) }
@@ -803,15 +1356,11 @@ function handlePaginationChange() {
 onMounted(async () => {
   if (isComercial && currentUserId) {
     filters.owner_user_ids = [currentUserId]
+    checkMyRestrictions() 
   }
-
   loadOwners()
-
-  // Aplicar URL params si los hay, LUEGO rebuilding chips
   await parseQueryAndApply()
-  rebuildChips()  // ✅ Siempre al final, cuando los filtros ya están estables
-  
-  // Disparar en paralelo (fix de performance anterior)
+  rebuildChips()
   fetchLeads()
 })
 </script>
@@ -882,4 +1431,37 @@ tr, td { transition: background-color 0.2s ease; }
 tr { position: relative; user-select: none; will-change: background-color; transition: background-color 0.1s ease-in-out; }
 tr::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background-color: rgba(99, 102, 241, 0.25); transition: width 0.3s ease-out; pointer-events: none; z-index: 5; }
 tr.row-pressing::after { width: 100%; transition: width 1s linear; }
+/* Estilos adicionales para el Panel de Control */
+.control-table-wrapper {
+  max-height: 60vh;
+  overflow: auto;
+}
+.control-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.minW-200 {
+  min-width: 220px;
+}
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+}
+.control-table thead .sticky-col {
+  z-index: 3; /* Para que la cabecera del sticky quede por encima del scroll horizontal Y vertical */
+}
+
+.pulse-alert {
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
 </style>

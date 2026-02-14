@@ -110,7 +110,7 @@
               />
 
             </div>
-            <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))">
+            <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))">
               <label class="form-label mb-1">Edición / Fecha prevista<span class="required-star">*</span></label>
               <SearchSelect
                 v-model="form.edition_id"
