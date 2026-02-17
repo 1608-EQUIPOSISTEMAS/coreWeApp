@@ -11,7 +11,6 @@ export default class AuthService {
     console.log(response)
     return response.data;
   }
-  
     
   // src/services/AuthService.js (Vue)
   async login(credentials) {
@@ -29,9 +28,10 @@ export default class AuthService {
 
   // Método para cerrar sesión
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  }
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  window.location.href = '/login' // <-- asegura redirección limpia
+}
   
   // Método utilitario para ver si hay sesión activa
   isAuthenticated() {

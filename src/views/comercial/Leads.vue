@@ -562,7 +562,6 @@
       <div class="row g-4">
         <div class="col-md-6 border-end">
           <h6 class="text-muted small fw-bold text-uppercase mb-3">Información del Alumno</h6>
-          
           <div class="mb-3">
             <label class="d-block small text-muted">Nombre Completo</label>
             <span class="fw-bold text-dark fs-6">{{ enrollmentData.student_name }}</span>
@@ -586,22 +585,36 @@
                {{ enrollmentData.status_label || 'Desconocido' }}
              </span>
           </div>
+          <div class="mb-3">
+            <label class="d-block small text-muted">Asesor que Registró</label>
+            <span class="small fw-bold text-dark">
+              <i class="fa-solid fa-user-tie me-1 text-secondary"></i>
+              {{ enrollmentData.seller_name || '—' }}
+            </span>
+          </div>
         </div>
 
 <div class="col-md-6">
   <h6 class="text-muted small fw-bold text-uppercase mb-3">Desglose Financiero</h6>
+<div class="d-flex align-items-center gap-2 mb-3">
+  <i class="fa-solid fa-credit-card text-secondary"></i>
+  <span class="small fw-bold text-dark">{{ enrollmentData.payment_plan_label || '—' }}</span>
+  <span class="badge bg-light border text-secondary" style="font-size:0.65rem">Plan de Pago</span>
+</div>
 
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-3">
       
-      <!-- 1. PRECIO DE LISTA (Original) -->
       <div class="d-flex justify-content-between mb-2 pb-2">
-        <span class="small text-secondary fw-600">Precio de Lista:</span>
+        <span class="small text-secondary fw-600">Precio de Lista:
+          <span class="badge bg-light border text-secondary ms-1" style="font-size:0.65rem">
+            {{ enrollmentData.profile_label || 'General' }}
+          </span>
+        </span>
         <span class="fw-bold text-dark fs-6">
           {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}
         </span>
       </div>
-
       <!-- 2. DESCUENTOS APLICADOS (Si existen) -->
       <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
          <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" 

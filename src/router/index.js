@@ -248,137 +248,111 @@ const routes = [
           
         ],
       },
-      // =====================
-      // COMERCIAL
-      // =====================
-      {
-        path: 'comercial',
-        name: 'Comercial',
-        component: RouterViewStub,
-        redirect: { name: 'ComercialOverview' },
-        meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-        children: [
-          {
-            path: 'leads',
-            name: 'ComercialListado',
-            // pipeline ventas
-            component: () => import('@/views/comercial/Leads.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'leads/new',
-            name: 'ComercialLeadsNew',
-            // alta / captura de nuevo lead
-            component: () => import('@/views/comercial/LeadsNew.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'leads/:id',
-            name: 'ComercialLeadDetalle',
-            // ficha 1:1 del lead (timeline, pagos, adjuntos)
-            component: () => import('@/views/comercial/LeadsNew.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-            props: true,
-          },
-          {
-            path: 'RptMktProduct',
-            name: 'ReportMktProduct',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/ReportMktProduct.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptSLA',
-            name: 'ReportSla',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/ReportSla.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptCalling',
-            name: 'ReportCalling',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/ReportCalling.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptPerformanceMarketing',
-            name: 'ReportPerformanceMarketing',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/ReportPerformanceMarketing.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptCoverageForecast',
-            name: 'ReportCoverageForecast',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/ReportCoverageForecast.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptGoalAgent',
-            name: 'ReportGoalAgent',
-            component: () => import('@/views/comercial/ReportGoalAgent.vue'),
-            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptGoalEdition',
-            name: 'ReportGoalEdition',
-            component: () => import('@/views/comercial/ReportGoalEdition.vue'),
-            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'RptControlComercial',
-            name: 'ReportControlComercial',
-            component: () => import('@/views/comercial/ReportControlComercial.vue'),
-            meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'overview',
-            name: 'ComercialOverview',
-            // vista rápida del equipo comercial (kpis, embudo mini)
-            component: () => import('@/views/comercial/Overview.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'discount',
-            name: 'Discount',
-            component: () => import('@/views/comercial/Discounts.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'discount/new',
-            name: 'DiscountNew',
-            component: () => import('@/views/comercial/DiscountsNew.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-          {
-            path: 'discount/:id',
-            name: 'DiscountEdit',
-            component: () => import('@/views/comercial/DiscountsNew.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-          },
-
-          // =====================
-          // REPORTERÍA / ANALÍTICA
-          // =====================
-          {
-            path: 'reportes',
-            name: 'ComercialReportes',
-            component: RouterViewStub,
-            redirect: { name: 'RptComercialEmbudo' },
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-            children: [
-              {
-                path: 'embudo',
-                name: 'RptComercialEmbudo',
-                component: () => import('@/views/reportes/Embudo.vue'),
-                meta: { area: 'COMERCIAL', report: true },
-              },
-            ],
-          },
-        ],
-      },
+    // =====================
+    // COMERCIAL — roles actualizados
+    // =====================
+    {
+      path: 'comercial',
+      name: 'Comercial',
+      component: RouterViewStub,
+      redirect: { name: 'ComercialOverview' },
+      meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] }, // + LIDER_COMERCIAL
+      children: [
+        {
+          path: 'leads',
+          name: 'ComercialListado',
+          component: () => import('@/views/comercial/Leads.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/new',
+          name: 'ComercialLeadsNew',
+          component: () => import('@/views/comercial/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/:id',
+          name: 'ComercialLeadDetalle',
+          component: () => import('@/views/comercial/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          props: true,
+        },
+        {
+          path: 'overview',
+          name: 'ComercialOverview',
+          component: () => import('@/views/comercial/Overview.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'discount',
+          name: 'Discount',
+          component: () => import('@/views/comercial/Discounts.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'discount/new',
+          name: 'DiscountNew',
+          component: () => import('@/views/comercial/DiscountsNew.vue'),
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] }, // solo líderes crean
+        },
+        {
+          path: 'discount/:id',
+          name: 'DiscountEdit',
+          component: () => import('@/views/comercial/DiscountsNew.vue'),
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Reportes — solo líderes y admin (ya los tenías bien)
+        {
+          path: 'RptGoalAgent',
+          name: 'ReportGoalAgent',
+          component: () => import('@/views/comercial/ReportGoalAgent.vue'),
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptGoalEdition',
+          name: 'ReportGoalEdition',
+          component: () => import('@/views/comercial/ReportGoalEdition.vue'),
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptControlComercial',
+          name: 'ReportControlComercial',
+          component: () => import('@/views/comercial/ReportControlComercial.vue'),
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Reportes generales — todos los comerciales
+        {
+          path: 'RptMktProduct',
+          name: 'ReportMktProduct',
+          component: () => import('@/views/comercial/ReportMktProduct.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptSLA',
+          name: 'ReportSla',
+          component: () => import('@/views/comercial/ReportSla.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptCalling',
+          name: 'ReportCalling',
+          component: () => import('@/views/comercial/ReportCalling.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptPerformanceMarketing',
+          name: 'ReportPerformanceMarketing',
+          component: () => import('@/views/comercial/ReportPerformanceMarketing.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        {
+          path: 'RptCoverageForecast',
+          name: 'ReportCoverageForecast',
+          component: () => import('@/views/comercial/ReportCoverageForecast.vue'),
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+      ],
+    },
 
     ],
   },
