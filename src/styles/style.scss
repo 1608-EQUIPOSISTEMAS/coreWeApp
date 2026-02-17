@@ -265,3 +265,19 @@ textarea.form-control:focus {
 .form-control:required:not(:disabled):placeholder-shown {
     border-left: 2px solid #9ca3af; /* Una pista visual sutil a la izquierda */
 }
+
+/* ══════════════════════════════════════════
+   W|E SIDEBAR GLOBAL OVERRIDES
+   Agregar al FINAL de style.scss
+   ══════════════════════════════════════════ */
+.sidebar.sidebar-we {
+  --cui-sidebar-bg: #06101f !important;
+  --cui-sidebar-border-color: rgba(255,255,255,0.06) !important;
+  --cui-sidebar-nav-link-color: rgba(255,255,255,0.58) !important;
+  --cui-sidebar-nav-link-active-color: #fff !important;
+  --cui-sidebar-nav-link-hover-color: rgba(255,255,255,0.82) !important;
+  --cui-sidebar-nav-group-bg: transparent !important;
+  --cui-sidebar-nav-group-toggle-show-color: #fff !important;
+  --cui-sidebar-nav-link-active-bg: rgba(217,4,41,0.1) !important;
+  --cui-sidebar-nav-link-hover-bg: rgba(255,255,255,0.055) !important;
+}
