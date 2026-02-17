@@ -80,7 +80,7 @@
        <CDropdownItem @click="updateBase()" v-if="$hasRole(['COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()"  v-if="$hasRole(['LIDER GERENCIA'])">
+       <CDropdownItem @click="updateBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem>
        <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole(['ADMIN','PRODUCTO','LIDER GERENCIA'])">

@@ -1,7 +1,7 @@
 <template>
   <div 
     class="file-uploader" 
-    :class="{ 'is-dragging': isDragging, 'is-loading': loading, 'has-file': !!modelValue }"
+    :class="{ 'is-dragging': isDragging, 'is-loading': loading, 'has-file': !!modelValue,'has-error': isInvalid }"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
     @drop.prevent="handleDrop"
@@ -39,14 +39,20 @@
       <div class="icon-circle bg-primary-subtle mb-2">
         <i class="fas fa-cloud-upload-alt text-primary fa-lg"></i>
       </div>
-      <div class="upload-text text-dark fw-bold mb-1">{{ label }}</div>
-      <div class="upload-hint small text-muted">{{ hint }}</div>
+      <div class="upload-text text-dark fw-bold mb-1">
+        {{ label }} <span v-if="required" class="text-danger">*</span>
+      </div>
+      
+      <div v-if="props.error" class="small text-danger fw-bold anim-fade-in">
+        Este campo es obligatorio
+      </div>
+      <div v-else class="upload-hint small text-muted">{{ hint }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { ref, inject, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services' // Asegúrate de importar tus keys
 
@@ -55,6 +61,8 @@ const props = defineProps({
   label: { type: String, default: 'Haz clic para subir archivo' },
   hint: { type: String, default: 'PDF, JPG o PNG' },
   accept: { type: String, default: '.pdf,.png,.jpg,.jpeg' },
+  required: { type: Boolean, default: false },
+  error: { type: Boolean, default: false },
   maxSize: { type: Number, default: 20 } // MB por defecto
 })
 
@@ -87,7 +95,9 @@ function handleDrop(event) {
 function verArchivo() {
     if(props.modelValue) window.open(props.modelValue, '_blank')
 }
-
+const isInvalid = computed(() => {
+  return props.required && !props.modelValue
+})
 // Lógica de subida encapsulada
 async function processUpload(file) {
   if (!file) return
@@ -121,8 +131,8 @@ async function processUpload(file) {
 <style scoped>
 /* Tus estilos se mantienen igual */
 .file-uploader {
-  border: 2px dashed #cbd5e1;
   border-radius: 12px;
+  border: 2px dashed #cbd5e1;
   background-color: #f8fafc;
   padding: 1.5rem;
   text-align: center;
@@ -160,4 +170,57 @@ async function processUpload(file) {
 }
 .upload-text { font-size: 0.95rem; }
 .upload-hint { font-size: 0.8rem; }
+
+.file-uploader.has-error {
+  border-color: #ef4444; /* Rojo de Bootstrap o Tailwind */
+  background-color: #fef2f2;
+  border-style: solid;
+}
+
+.error-text {
+  position: absolute;
+  bottom: 10px;
+  font-weight: 600;
+}
+
+/* Opcional: Animación de error */
+.has-error {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+@keyframes shake {
+  0% { margin-left: 0rem; }
+  25% { margin-left: 0.5rem; }
+  75% { margin-left: -0.5rem; }
+  100% { margin-left: 0rem; }
+}
+
+.anim-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 2. Estado Hover (Solo si NO tiene error) */
+.file-uploader:not(.has-error):hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* 3. Estado Error (Usa selectores más específicos para forzar el color) */
+.file-uploader.has-error {
+  border-color: #ef4444 !important; /* Aquí el important es válido para asegurar el aviso */
+  background-color: #fef2f2 !important;
+  border-style: solid !important;
+}
+
+/* 4. Estado Éxito (Archivo cargado) */
+.file-uploader.has-file {
+  border-style: solid;
+  border-color: #86efac;
+  background-color: #f0fdf4;
+}
 </style>

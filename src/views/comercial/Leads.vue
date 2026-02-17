@@ -26,7 +26,7 @@
           <span class="ms-1">Compactado</span>
         </button>
         
-        <button class="btn btn-primary" @click="goNew">
+        <button class="btn btn-primary" @click="goNew" >
           <i class="fa-solid fa-plus me-1"></i> Nuevo
         </button>
       </div>
@@ -209,7 +209,7 @@
     </div>
   </div>
 
-  <BaseModal v-model="showFollowModal" title="Gestión Rápida de Contactos" size="xl">
+  <BaseModal v-model="showFollowModal" title="Seguimiento" size="xl">
     <div v-if="selectedFollowLead" class="d-flex flex-column h-100">
       <div class="px-4 py-3 bg-light border-bottom d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
@@ -236,6 +236,7 @@
     <thead class="table-light">
       <tr>
         <th style="width: 50px;" class="text-center">#</th>
+        <th style="min-width: 140px;">T. Seguimiento</th>
         <th style="min-width: 140px;">Estado</th>
         <th style="min-width: 140px;">Resultado</th>
         <th style="min-width: 210px;">Fecha/Hora</th>
@@ -246,9 +247,11 @@
     <tbody>
       <tr v-for="(attempt, idx) in editableHistory" :key="idx" :class="{'bg-blue-50': !attempt.id}">
         <td class="text-center fw-bold text-muted align-top pt-2">{{ idx + 1 }}</td>
-        
         <td class="align-top">
-          <SearchSelect v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
+          <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt"  label-field="description" value-field="alias" placeholder="T. Seguimiento..." :disabled="attempt.id" class="form-control-sm p-0 border-0" required />
+        </td>
+        <td class="align-top">
+          <SearchSelect required v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
         </td>
 
         <td class="align-top">
@@ -260,7 +263,7 @@
         </td>
 
         <td class="align-top text-center">
-          <div class="d-flex align-items-center justify-content-center gap-2">
+          <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt=='we_attempt_call'">
             <button 
                 class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
                 style="width: 32px; height: 32px;"
@@ -530,143 +533,198 @@
     </template>
   </BaseModal>
 <BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
-  <div v-if="isLoadingEnrollment" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2 text-muted">Cargando información financiera...</p>
-  </div>
+    <div v-if="isLoadingEnrollment" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 text-muted">Cargando información financiera...</p>
+    </div>
 
-  <div v-else-if="enrollmentData" class="px-3 py-2">
-    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h6 class="fw-bold mb-1 text-primary text-uppercase">{{ enrollmentData.program_name }}</h6>
-        
-        <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="small text-muted mt-1">
-          <span v-if="enrollmentData.version_name">
-             <i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}
-          </span>
-          <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2">|</span> 
-          <span v-if="enrollmentData.edition_label">
-             <i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}
-          </span>
+    <div v-else-if="enrollmentData" class="px-3 py-2">
+      <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h6 class="fw-bold mb-1 text-primary text-uppercase">{{ enrollmentData.abbreviation }}</h6>
+          
+          <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="small text-muted mt-1">
+            <span v-if="enrollmentData.version_name">
+               <i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}
+            </span>
+            <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2">|</span> 
+            <span v-if="enrollmentData.edition_label">
+               <i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}
+            </span>
+          </div>
         </div>
+        
+        <span v-if="enrollmentData.modality_label" class="badge bg-white text-dark border">
+          {{ enrollmentData.modality_label }}
+        </span>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6 border-end">
+          <h6 class="text-muted small fw-bold text-uppercase mb-3">Información del Alumno</h6>
+          
+          <div class="mb-3">
+            <label class="d-block small text-muted">Nombre Completo</label>
+            <span class="fw-bold text-dark fs-6">{{ enrollmentData.student_name }}</span>
+          </div>
+          
+          <div class="d-flex justify-content-between mb-3">
+            <div>
+              <label class="d-block small text-muted">Documento</label>
+              <span class="font-mono small fw-bold">{{ enrollmentData.document_number }}</span>
+            </div>
+            <div>
+              <label class="d-block small text-muted">Fecha Inscripción</label>
+              <span class="small">{{ enrollmentData.registration_date }}</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+             <label class="d-block small text-muted mb-1">Estado de Matrícula</label>
+             <span class="badge" 
+               :class="enrollmentData.active === 'Y' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+               {{ enrollmentData.status_label || 'Desconocido' }}
+             </span>
+          </div>
+        </div>
+
+<div class="col-md-6">
+  <h6 class="text-muted small fw-bold text-uppercase mb-3">Desglose Financiero</h6>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-3">
+      
+      <!-- 1. PRECIO DE LISTA (Original) -->
+      <div class="d-flex justify-content-between mb-2 pb-2">
+        <span class="small text-secondary fw-600">Precio de Lista:</span>
+        <span class="fw-bold text-dark fs-6">
+          {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}
+        </span>
+      </div>
+
+      <!-- 2. DESCUENTOS APLICADOS (Si existen) -->
+      <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
+         <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" 
+              class="d-flex justify-content-between align-items-center text-danger small py-1">
+            <span class="text-muted">
+               <i class="fa-solid fa-tag me-1"></i> 
+               <span class="fw-600">{{ desc.label || desc.name }}</span>
+               <span v-if="desc.value" class="text-secondary ms-1 fst-italic" style="font-size: 0.7rem;">
+                 ({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})
+               </span>
+            </span>
+            <span class="fw-bold text-danger">
+               - {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}
+            </span>
+         </div>
+         <hr class="my-2 border-secondary opacity-25">
+      </div>
+
+      <!-- 3. SUBTOTAL / TOTAL A PAGAR -->
+      <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <span class="fw-bold text-dark">Total a Pagar:</span>
+        <span class="fs-5 fw-bold text-primary">
+           {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}
+        </span>
       </div>
       
-      <span v-if="enrollmentData.modality_label" class="badge bg-white text-dark border">
-        {{ enrollmentData.modality_label }}
-      </span>
-    </div>
-
-    <div class="row g-4">
-      <div class="col-md-6 border-end">
-        <h6 class="text-muted small fw-bold text-uppercase mb-3">Información del Alumno</h6>
-        
-        <div class="mb-3">
-          <label class="d-block small text-muted">Nombre Completo</label>
-          <span class="fw-bold text-dark fs-6">{{ enrollmentData.student_name }}</span>
-        </div>
-        
-        <div class="d-flex justify-content-between mb-3">
-          <div>
-            <label class="d-block small text-muted">Documento</label>
-            <span class="font-mono small fw-bold">{{ enrollmentData.document_number }}</span>
-          </div>
-          <div>
-            <label class="d-block small text-muted">Fecha Inscripción</label>
-            <span class="small">{{ enrollmentData.registration_date }}</span>
-          </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="d-block small text-muted mb-1">Estado de Matrícula</label>
-            <span class="badge" 
-              :class="enrollmentData.active === 'Y' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
-              {{ enrollmentData.status_label || 'Desconocido' }}
-            </span>
-        </div>
+      <!-- 4. PAGADO -->
+      <div class="d-flex justify-content-between mb-2 text-success">
+        <span class="small fw-600">Pagado:</span>
+        <span class="fw-bold">
+          {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}
+        </span>
       </div>
-
-      <div class="col-md-6">
-        <h6 class="text-muted small fw-bold text-uppercase mb-3">Estado Financiero</h6>
-
-        <div class="card bg-light border-0 mb-3">
-          <div class="card-body p-3">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="small text-secondary">Costo Total:</span>
-              <span class="fw-bold text-dark">
-                {{ formatMoney(enrollmentData.status_alias, enrollmentData.total_amount) }}
-              </span>
-            </div>
-            
-            <div class="d-flex justify-content-between mb-2 text-success">
-              <span class="small">Pagado:</span>
-              <span class="fw-bold">
-                - {{ formatMoney(enrollmentData.status_alias, enrollmentData.total_paid) }}
-              </span>
-            </div>
-            
-            <hr class="my-2 border-secondary opacity-25">
-            
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-dark">Pendiente:</span>
-              <span class="fs-4 fw-bold" :class="enrollmentData.pending_amount > 0 ? 'text-danger' : 'text-success'">
-                 {{ formatMoney(enrollmentData.status_alias, enrollmentData.pending_amount) }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="enrollmentData.pending_amount > 0" class="alert alert-warning py-2 px-3 small mb-3 border-warning">
-          <div class="d-flex align-items-start">
-             <i class="fa-solid fa-clock mt-1 me-2 text-warning-emphasis"></i>
-             <div>
-                <strong class="d-block text-warning-emphasis">Próximo vencimiento:</strong>
-                <span v-if="enrollmentData.next_due_date">
-                   {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.status_alias, enrollmentData.next_due_amount) }}</b>
-                </span>
-                <span v-else class="text-muted fst-italic">
-                   No hay fecha de cuota programada.
-                </span>
-             </div>
-          </div>
-        </div>
-        
-        <div v-else class="alert alert-success py-2 px-3 small mb-3 border-success">
-          <i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!
-        </div>
-
-        <div class="text-end">
-           <span class="badge border" :class="{
-             'bg-danger text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_debt',
-             'bg-success text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_paid',
-             'bg-warning text-dark': enrollmentData.financial_status_alias === 'we_enrollment_status_pending'
-           }">{{ enrollmentData.financial_status_label || 'Estado Pendiente' }}</span>
-        </div>
+      
+      <hr class="my-2 border-success opacity-50">
+      
+      <!-- 5. PENDIENTE (DESTACADO) -->
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-dark">Saldo Pendiente:</span>
+        <span class="fs-4 fw-bold" :class="enrollmentData.pending_amount > 0 ? 'text-danger' : 'text-success'">
+           {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}
+        </span>
       </div>
     </div>
   </div>
 
-  <template #footer>
-    <div v-if="enrollmentData" class="d-flex justify-content-between w-100">
-      <div class="d-flex gap-2">
-        <a v-if="enrollmentData.student_attachment_url" 
-           :href="enrollmentData.student_attachment_url" 
-           target="_blank" 
-           class="btn btn-outline-secondary btn-sm"
-           title="Descargar Ficha">
-           <i class="fa-regular fa-file-pdf me-1"></i> Ficha
-        </a>
-        <a v-if="enrollmentData.payment_attachment_url" 
-           :href="enrollmentData.payment_attachment_url" 
-           target="_blank" 
-           class="btn btn-outline-secondary btn-sm"
-           title="Descargar Voucher">
-           <i class="fa-regular fa-image me-1"></i> Voucher
-        </a>
-      </div>
-      <button class="btn btn-primary btn-sm px-4" @click="showEnrollmentModal = false">Cerrar</button>
+  <!-- ALERTA DE PRÓXIMO VENCIMIENTO (sin cambios) -->
+  <div v-if="enrollmentData.pending_amount > 0" class="alert alert-warning py-2 px-3 small mb-3 border-warning">
+    <div class="d-flex align-items-start">
+       <i class="fa-solid fa-clock mt-1 me-2 text-warning-emphasis"></i>
+       <div>
+          <strong class="d-block text-warning-emphasis">Próximo vencimiento:</strong>
+          <span v-if="enrollmentData.next_due_date">
+             {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b>
+          </span>
+          <span v-else class="text-muted fst-italic">
+             No hay fecha de cuota programada.
+          </span>
+       </div>
     </div>
-  </template>
-</BaseModal>
+  </div>
+  
+  <div v-else class="alert alert-success py-2 px-3 small mb-3 border-success">
+    <i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!
+  </div>
+
+  <!-- BADGE DE ESTADO FINANCIERO (sin cambios) -->
+  <div class="text-end">
+     <span class="badge border" :class="{
+       'bg-danger text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_debt',
+       'bg-success text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_paid',
+       'bg-warning text-dark': enrollmentData.financial_status_alias === 'we_enrollment_status_pending'
+     }">{{ enrollmentData.financial_status_label || 'Estado Pendiente' }}</span>
+  </div>
+</div>
+
+        <div class="col-12 mt-2">
+           <hr class="opacity-10 mb-3">
+           <h6 class="text-muted small fw-bold text-uppercase mb-3">
+              <i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos
+           </h6>
+
+           <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="list-group list-group-flush border rounded-3">
+              <div v-for="(file, idx) in enrollmentData.files_list" :key="idx" 
+                   class="list-group-item list-group-item-action d-flex align-items-center justify-content-between px-3 py-2">
+                  
+                  <div class="d-flex align-items-center gap-3 overflow-hidden">
+                      <div class="file-icon text-center" style="width: 24px;">
+                          <i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i>
+                      </div>
+                      <div class="d-flex flex-column text-truncate">
+                          <span class="fw-medium text-dark small text-truncate" :title="file.name">
+                              {{ file.name || 'Documento Adjunto' }}
+                          </span>
+                          <span class="text-muted x-small">
+                              {{ file.date || 'Archivo histórico' }} 
+                              <span v-if="file.source === 'enrollment'" class="badge badge-light border text-secondary ms-1" style="font-size:0.6rem">LEGACY</span>
+                          </span>
+                      </div>
+                  </div>
+
+                  <a :href="file.url" target="_blank" class="btn btn-sm btn-light border text-primary ms-2" title="Ver Documento">
+                      <i class="fas fa-external-link-alt"></i>
+                  </a>
+              </div>
+           </div>
+
+           <div v-else class="text-center py-3 bg-light rounded border border-dashed">
+              <span class="text-muted small fst-italic">No hay archivos adjuntos en esta matrícula.</span>
+           </div>
+        </div>
+
+      </div>
+    </div>
+
+    <template #footer>
+      <div v-if="enrollmentData" class="d-flex justify-content-end w-100">
+        <button class="btn btn-primary btn-sm px-4" @click="showEnrollmentModal = false">
+            Cerrar
+        </button>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
@@ -764,6 +822,7 @@ const filtroFollow = ref(catalog.options('we_follow_lead') || [])
 const filtroMoment = ref(catalog.options('we_moment') || [])
 const filtroQuery = ref(catalog.options('we_category_query') || [])
 const filtroInterest = ref(catalog.options('we_lead_interest') || [])
+const lAttempts = ref(catalog.options('we_attempt') || [])
 const strategyCatalog = ref(catalog.options('we_type_strategy') || [])
 const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
 const filtroCalling = ref(catalog.options('we_calling') || [])
@@ -806,18 +865,21 @@ const encodeFilter = (arr) => {
 
 const getCurrencySymbol = (alias) => {
   if (!alias) return '';
-  if (alias.includes('soles') || alias === 'PEN') return 'S/';
-  if (alias.includes('dollar') || alias.includes('usd') || alias === 'USD') return '$';
+  if (alias.includes('we_currency_soles') || alias === 'PEN') return 'S/';
+  if (alias.includes('we_currency_dollars') || alias.includes('usd') || alias === 'USD') return '$';
   return alias; // Si no reconoce, devuelve el texto original
 }
 
 // Formatea el monto: S/ 338.00
-const formatMoney = (alias, amount) => {
-  const symbol = getCurrencySymbol(alias);
+const formatMoney = (symbolOrAlias, amount) => {
+  // Si ya viene como "S/" o "$", úsalo directo. Si es alias, tradúcelo.
+  let symbol = symbolOrAlias;
+  if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
+  if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
+  
   const val = Number(amount) || 0;
   return `${symbol} ${val.toFixed(2)}`;
 }
-
 
 async function parseQueryAndApply() {
   const q = route.query
@@ -919,8 +981,8 @@ function openFollowModal(lead) {
             calling_alias: d?.cat_result_alias || d?.cat_result_label,
             contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
             response: d?.response || '',
-            
-            // --> AGREGAR ESTOS CAMPOS:
+            cat_type_attempt: d?.cat_type_attempt,
+            cat_type_attempt_label: d?.cat_type_attempt_label,
             contact_duration: d?.contact_duration || 0, 
             timerActive: false,
             timerId: null
@@ -938,7 +1000,18 @@ function openFollowModal(lead) {
 }
 
 // --- 3. MODIFICAR NUEVO INTENTO (addLocalAttempt) ---
-
+const getFileIcon = (type) => {
+  if (!type) return 'fa-file text-secondary'
+  const t = type.toLowerCase()
+  
+  if (t.includes('pdf')) return 'fa-file-pdf text-danger'
+  if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg')) return 'fa-file-image text-success'
+  if (t.includes('legacy')) return 'fa-file-contract text-warning' // Para los antiguos del SP
+  if (t.includes('xml')) return 'fa-file-code text-info'
+  if (t.includes('zip') || t.includes('rar')) return 'fa-file-zipper text-dark'
+  
+  return 'fa-file-lines text-primary'
+}
 // === COMPROBACIÓN INICIAL PARA EL BOTÓN ===
 async function checkMyRestrictions() {
   if (!isComercial) return; // Si es líder/admin, no necesita alerta
@@ -1088,6 +1161,7 @@ async function saveFastFollow() {
        id: item.id,
        cat_status: getIdFromAlias(item.status_alias, filtroFollow.value),
        cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
+       cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
        contact_datetime: item.contact_datetime,
        response: item.response,
        
@@ -1211,19 +1285,27 @@ const showEnrollmentModal = ref(false)
 const enrollmentData = ref(null)
 const isLoadingEnrollment = ref(false)
 
-// Función para abrir el modal (llámala desde el botón verde)
 async function openEnrollmentModal(enrollmentId) {
   if (!enrollmentId) return;
   
   isLoadingEnrollment.value = true;
-  enrollmentData.value = null; // Limpiar data vieja
+  enrollmentData.value = null; 
   showEnrollmentModal.value = true;
 
   try {
-    // Ajusta la ruta a tu servicio de API real
     const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId }); 
-    // Asumiendo que tu servicio devuelve response.data o response
-    enrollmentData.value = response.data || response; 
+    
+    // 1. Extraemos la data (si viene envuelta en 'data', la sacamos)
+    const data = response.data || response;
+    
+    // 2. Aseguramos que files_list sea un array
+    let files = data.files_list || [];
+    
+    // 3. --- FIX CRÍTICO ---
+    // Filtramos los nulos para que el template no explote al hacer "file.type"
+    data.files_list = files.filter(f => f !== null);
+    
+    enrollmentData.value = data; 
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar la información de la matrícula");
@@ -1336,6 +1418,7 @@ function addLocalAttempt() {
         status_alias: 'we_follow_lead_pending', 
         calling_alias: null, 
         contact_datetime: isoString, 
+        cat_type_attempt: 'we_attempt_call',
         response: '',
         
         // --> AGREGAR ESTOS CAMPOS:
@@ -1463,5 +1546,12 @@ tr.row-pressing::after { width: 100%; transition: width 1s linear; }
   0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
   70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
   100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.border-dashed {
+  border-style: dashed !important;
+}
+.list-group-item:hover {
+  background-color: #f8fafc;
 }
 </style>

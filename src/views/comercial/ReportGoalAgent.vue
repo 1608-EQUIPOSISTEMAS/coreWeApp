@@ -152,8 +152,8 @@
               <th class="ps-3 py-2 border-0" rowspan="2" style="vertical-align:middle">ASESOR</th>
               <th colspan="3" class="text-center py-2 border-0 border-start group-header-blue">OBJETIVOS (VACANTES)</th>
               <th colspan="3" class="text-center py-2 border-0 border-start group-header-green">FINANCIERO (S/.)</th>
-              <th colspan="3" class="text-center py-2 border-0 border-start group-header-gray">GESTIÓN</th>
-              <th colspan="4" class="text-center py-2 border-0 border-start group-header-dark">EFICIENCIA</th>
+              <th colspan="3" class="text-center py-2 border-0 border-start group-header-gray">RESULTADOS</th>
+              <th colspan="4" class="text-center py-2 border-0 border-start group-header-dark">LOGROS</th>
             </tr>
             <tr class="table-light">
               <th class="text-center py-2 border-0 border-start sub-blue">META #</th>
@@ -218,8 +218,8 @@
                 <span :class="getConvClass(row.conv)">{{ row.conv }}%</span>
               </td>
               <td class="text-center pe-3 py-2 border-0">
-                <span class="badge rounded-pill" :class="getStatusBadge(row.ven, row.obj)">
-                  {{ getStatusLabel(row.ven, row.obj) }}
+                <span class="badge rounded-pill" :class="getStatusBadge(row.ratio)">
+                  {{ getStatusLabel(row.ratio) }}
                 </span>
               </td>
             </tr>
@@ -309,7 +309,7 @@
                     </div>
                     <!-- Cierres -->
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                      <span class="x-small fw-bold text-uppercase text-primary">Cierres</span>
+                      <span class="x-small fw-bold text-uppercase text-primary">Ventas Dia</span>
                       <div class="text-end">
                         <span
                           class="fw-bold text-primary d-block pointer-badge"
@@ -798,16 +798,15 @@ const formatCurrency = (val) => new Intl.NumberFormat('es-PE', { style: 'currenc
 const getConvClass = (val) => val > 20 ? 'text-success fw-bold' : (val >= 10 ? 'text-primary fw-bold' : 'text-muted')
 
 // Status como badge Bootstrap en lugar de círculo de color
-const getStatusBadge = (ven, obj) => {
-  const pct = obj > 0 ? ven / obj : 0
-  if (pct >= 0.9) return 'bg-success-subtle text-success border border-success-subtle'
-  if (pct >= 0.5) return 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
+const getStatusBadge = (RATIO) => {
+  // Cambiamos 0.9 (90%) por 0.15 (15%)
+  if (RATIO >= 15) return 'bg-success-subtle text-success border border-success-subtle'
   return 'bg-danger-subtle text-danger border border-danger-subtle'
 }
-const getStatusLabel = (ven, obj) => {
-  const pct = obj > 0 ? ven / obj : 0
-  if (pct >= 0.9) return '✓ OK'
-  if (pct >= 0.5) return '~ Par'
+
+const getStatusLabel = (RATIO) => {
+  // Cambiamos 0.9 (90%) por 0.15 (15%)
+  if (RATIO >= 15) return '✓ OK'
   return '✗ Bajo'
 }
 

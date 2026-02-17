@@ -26,19 +26,18 @@
     <div v-if="safeModelValue.length > 0" class="file-chips mt-2">
       
       <div 
-        v-for="(url, index) in safeModelValue" 
+        v-for="(item, index) in safeModelValue" 
         :key="index" 
         class="file-chip"
         title="Clic para ver"
       >
-        <span class="chip-icon" @click="verArchivo(url)">
-            <i class="fas fa-file-pdf text-danger" v-if="esPdf(url)"></i>
+        <span class="chip-icon" @click="verArchivo(item)">
+            <i class="fas fa-file-pdf text-danger" v-if="esPdf(item)"></i>
             <i class="fas fa-image text-primary" v-else></i>
         </span>
         
-        <span class="chip-text" @click="verArchivo(url)">
-          {{ getFileName(url) }}
-        </span>
+        <span class="chip-text" @click="verArchivo(item)">
+          {{ item.name }} </span>
 
         <span class="chip-remove" @click.stop="removerArchivo(index)">
           <i class="fas fa-times"></i>
@@ -56,7 +55,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services' 
 
 const props = defineProps({
-  modelValue: { type: Array, default: () => [] }, // Array de URLs
+  modelValue: { type: Array, default: () => [] }, 
   label: { type: String, default: 'Adjuntar' },
   accept: { type: String, default: '.pdf,.png,.jpg,.jpeg' },
   maxSize: { type: Number, default: 20 }
@@ -64,27 +63,22 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-// Inyecciones
 const integrationService = inject(ServiceKeys.Integration)
 const toast = useToast()
 
-// Estado Local
 const fileInput = ref(null)
-const loading = ref(false) // <--- El estado vive aquí, aislado por instancia
+const loading = ref(false)
 
-// Computada segura por si modelValue viene null
 const safeModelValue = computed(() => props.modelValue || [])
 
 function triggerInput() {
-  if (!loading.value) fileInput.value.click()
+  if (!loading.value && fileInput.value) fileInput.value.click()
 }
 
-// Lógica de Subida Interna
 async function handleFileChange(event) {
   const file = event.target.files[0]
   if (!file) return
 
-  // 1. Validar tamaño
   if (file.size > props.maxSize * 1024 * 1024) {
     toast.warning(`El archivo pesa más de ${props.maxSize}MB`)
     event.target.value = ''
@@ -94,12 +88,17 @@ async function handleFileChange(event) {
   loading.value = true
 
   try {
-    // 2. Subir
     const res = await integrationService.uploadFile(file)
     
-    // 3. Actualizar la lista (Inmutabilidad: creamos nuevo array)
-    // Agregamos la nueva URL al array existente
-    const newList = [...safeModelValue.value, res.url]
+    // --- CAMBIO CLAVE AQUÍ ---
+    // Creamos el objeto con la estructura que pide tu Backend
+    const newFileObj = {
+        url: res.url,           // La URL que devuelve AWS/Servidor
+        name: file.name,        // El nombre original (ej: "Mi CV.pdf")
+        type: file.type         // El tipo MIME (ej: "application/pdf")
+    }
+
+    const newList = [...safeModelValue.value, newFileObj]
     
     emit('update:modelValue', newList)
     toast.success('Adjunto agregado')
@@ -109,36 +108,31 @@ async function handleFileChange(event) {
     toast.error('Error al subir adjunto')
   } finally {
     loading.value = false
-    event.target.value = '' // Limpiar input para permitir subir el mismo archivo
+    if(event.target) event.target.value = '' 
   }
 }
 
 function removerArchivo(index) {
-  // Copiamos el array y quitamos el elemento
   const newList = [...safeModelValue.value]
   newList.splice(index, 1)
   emit('update:modelValue', newList)
 }
 
-// Utilidades visuales
-function verArchivo(url) {
-  if(url) window.open(url, '_blank')
+// Helpers adaptados para recibir Objeto
+function verArchivo(item) {
+  if(item && item.url) window.open(item.url, '_blank')
 }
 
-function getFileName(url) {
-  if (!url) return ''
-  const parts = url.split('/')
-  const name = parts[parts.length - 1]
-  return name.length > 15 ? name.substring(0, 12) + '...' : name
-}
-
-function esPdf(url) {
-  return url && url.toLowerCase().includes('.pdf')
+// Ya no necesitamos 'getFileName' complejo porque tenemos item.name real
+function esPdf(item) {
+  // Verificamos por tipo MIME o por extensión en la URL como fallback
+  if (item.type) return item.type.includes('pdf')
+  return item.url && item.url.toLowerCase().includes('.pdf')
 }
 </script>
 
 <style scoped>
-/* Tus estilos se mantienen idénticos, son excelentes */
+/* Tus estilos están perfectos, no hace falta tocarlos */
 .upload-trigger {
   border: 1px dashed #cbd5e1;
   border-radius: 6px;
@@ -174,7 +168,7 @@ function esPdf(url) {
   max-width: 100%;
 }
 .chip-icon { margin-right: 4px; cursor: pointer; display: flex; align-items: center; }
-.chip-text { color: #475569; font-weight: 500; cursor: pointer; margin-right: 6px; white-space: nowrap; }
+.chip-text { color: #475569; font-weight: 500; cursor: pointer; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
 .chip-text:hover { text-decoration: underline; color: #2563eb; }
 .chip-remove { color: #94a3b8; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; transition: background 0.2s, color 0.2s; }
 .chip-remove:hover { color: #ef4444; background-color: #fee2e2; }

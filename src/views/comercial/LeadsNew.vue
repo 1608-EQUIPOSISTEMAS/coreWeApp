@@ -263,7 +263,7 @@
             </div>
 
             <div class="col-6 col-md-2"></div>
-            <div class="col-6 col-md-1">
+            <!-- <div class="col-6 col-md-1">
               <label class="form-label mb-1">WEB<span class="required-star">*</span></label>
               <br>
               <label class="form-switch">
@@ -279,7 +279,7 @@
                 <input type="checkbox" v-model="form.b2b" />
                 <span></span>
               </label>
-            </div>
+            </div> -->
 
             <!-- <div class="col-md-1" v-if="isEdit">
               <label class="form-label mb-1">BOT<span class="required-star">*</span></label>
@@ -409,105 +409,129 @@
             </button>
           </div>
 
-          <div class="contacto-table">
-            <!-- Header solo en desktop -->
-            <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-3">
-              <div class="col-md-6 col-lg-1 text-center">#</div>
-              <div class="col-md-6 col-lg-2">Estado<span class="required-star">*</span></div>
-              <div class="col-md-6 col-lg-3">Fecha y Hora<span class="required-star">*</span></div>
-              <div class="col-md-6 col-lg-3">T. Respuesta</div>
-              <div class="col-md-6 col-lg-2">Obsv.</div>
-              <div class="col-md-6 col-lg-1 text-center"></div>
+<div class="contacto-table">
+  <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-2">
+    <div class="col-lg-1 text-center">#</div>
+    <div class="col-lg-2">Tipo / Duración</div> <div class="col-lg-2">Estado<span class="required-star">*</span></div>
+    <div class="col-lg-2">Fecha y Hora<span class="required-star">*</span></div>
+    <div class="col-lg-2">T. Respuesta</div>
+    <div class="col-lg-2">Obsv.</div>
+    <div class="col-lg-1 text-center"></div>
+  </div>
+
+  <div
+    v-for="(c, idx) in form.contactos"
+    :key="c.id || idx"
+    class="contacto-table__row mb-3"
+  >
+    <div class="row gx-2 gy-2 align-items-start">
+      
+      <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
+        <div class="contacto-index">
+          <span class="d-lg-none me-2">Intento:</span>
+          <strong>{{ idx + 1 }}</strong>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-2">
+        <label class="form-label d-lg-none mb-1">Tipo / Duración</label>
+        <div class="d-flex flex-column gap-2">
+            <SearchSelect
+              v-model="c.cat_type_attempt"
+              :items="lAttempts"
+              label-field="description"
+              value-field="alias"
+              placeholder="TIPO..."
+              :disabled="!!c.id"
+              class="form-control-sm p-0"
+            />
+            
+            <div class="d-flex align-items-center gap-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
+               <button 
+                  type="button"
+                  class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                  style="width: 28px; height: 28px;"
+                  :class="c.timerActive ? 'btn-danger' : 'btn-outline-success'"
+                  @click="toggleTimer(c)"
+                  :disabled="!!c.id && c.status_alias !== 'we_follow_lead_pending'"
+                  :title="c.timerActive ? 'Detener' : 'Iniciar'"
+              >
+                  <i class="fa-solid" :class="c.timerActive ? 'fa-stop' : 'fa-play'" style="font-size: 0.7rem;"></i>
+              </button>
+              <span class="font-mono fw-bold small" :class="c.timerActive ? 'text-danger' : 'text-dark'">
+                  {{ formatDuration(c.contact_duration) }}
+              </span>
             </div>
+        </div>
+      </div>
 
-            <!-- Filas -->
-            <div
-              v-for="(c, idx) in form.contactos"
-              :key="c.uid"
-              class="contacto-table__row mb-3"
-            >
-              <div class="row gx-3 gy-2">
-                <!-- Índice -->
-                <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
-                  <div class="contacto-index">
-                    <span class="d-lg-none me-2">Intento:</span>
-                    <strong>{{ idx + 1 }}</strong>
-                  </div>
-                </div>
+      <div class="col-12 col-lg-2">
+        <label class="form-label d-lg-none mb-1">Estado<span class="required-star">*</span></label>
+        <SearchSelect
+          v-model="c.status_alias"
+          :items="contactAttemptStatusCat"
+          required
+          :disabled="c.status_alias == 'we_follow_lead_answered' || c.status_alias == 'we_follow_lead_no_answer'"
+          label-field="description"
+          value-field="alias"
+          placeholder="ESTADO..."
+          :model-label="c.status_label"
+        />
+      </div>
 
-                <!-- Estado -->
-                <div class="col-12 col-lg-2">
-                  <label class="form-label d-lg-none mb-1">
-                    Estado<span class="required-star">*</span>
-                  </label>
-                  <SearchSelect
-                    v-model="c.status_alias"
-                    :items="contactAttemptStatusCat"
-                    required
-                    :disabled="c.status_alias == 'we_follow_lead_answered' || c.status_alias == 'we_follow_lead_no_answer'"
-                    label-field="description"
-                    value-field="alias"
-                    placeholder="ESTADO..."
-                    :model-label="c.status_label"
-                  />
-                </div>
+      <div class="col-12 col-lg-2">
+        <label class="form-label d-lg-none mb-1">Fecha y Hora<span class="required-star">*</span></label>
+        <DateTime12
+            v-model="c.fechaContactoProximo"
+            required
+            clearable
+            :onlyHours="true"
+            :disabled="c.status_alias != 'we_follow_lead_pending'"
+            :config="dateLimitConfig"
+          />
+      </div>
 
-                <!-- Fecha y Hora -->
-                <div class="col-12 col-lg-3">
-                  <label class="form-label d-lg-none mb-1">
-                    Fecha y Hora<span class="required-star">*</span>
-                  </label>
-                  <DateTime12
-                      v-model="c.fechaContactoProximo"
-                      required
-                      clearable
-                      :onlyHours="true"
-                      :disabled="c.status_alias != 'we_follow_lead_pending'"
-                      :config="dateLimitConfig"
-                    />
-                </div>
-                <!-- T. LLamada -->
-                <div class="col-12 col-lg-3">
-                  <label class="form-label d-lg-none mb-1">T. Resultado</label>
-                  <SearchSelect
-                    v-model="c.calling_alias"
-                    :items="callingCatalog"
-                    label-field="description"
-                    required
-                    value-field="alias"
-                    placeholder="T. RESPUESTA..."
-                    :model-label="c.calling_label"
-                    :disabled="c.status_alias != 'we_follow_lead_pending'"
-                  />
-                </div>
+      <div class="col-12 col-lg-2">
+        <label class="form-label d-lg-none mb-1">T. Resultado</label>
+        <SearchSelect
+          v-model="c.calling_alias"
+          :items="callingCatalog"
+          label-field="description"
+          required
+          value-field="alias"
+          placeholder="T. RESPUESTA..."
+          :model-label="c.calling_label"
+          :disabled="c.status_alias != 'we_follow_lead_pending'"
+        />
+      </div>
 
-                <!-- Respuesta -->
-                <div class="col-12 col-lg-2">
-                  <label class="form-label d-lg-none mb-1">Respuesta / Resultado</label>
-                  <input
-                    autocomplete="off"
-                    v-model="c.respuesta"
-                    type="text"
-                    class="form-control"
-                    placeholder="RESULTADO"
-                    :disabled="c.status_alias != 'we_follow_lead_pending'"
-                  />
-                </div>
+      <div class="col-12 col-lg-2">
+        <label class="form-label d-lg-none mb-1">Respuesta / Obsv.</label>
+        <textarea
+          v-model="c.respuesta"
+          class="form-control form-control-sm"
+          rows="2"
+          placeholder="Observación..."
+          :disabled="c.status_alias != 'we_follow_lead_pending'"
+          style="resize: vertical; min-height: 38px;"
+        ></textarea>
+      </div>
 
-                <!-- Acciones -->
-                <div class="col-12 col-lg-1 d-flex align-items-start justify-content-lg-center" v-if="!c.id">
-                  <button
-                    type="button"
-                    class="btn btn-outline-danger btn-sm w-100 w-lg-auto"
-                    @click="removeContacto(idx)"
-                  >
-                    <i class="fa-solid fa-square-minus"></i>
-                    <span class="d-lg-none ms-2">Eliminar intento</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
+        <button
+          v-if="!c.id"
+          type="button"
+          class="btn btn-outline-danger btn-sm w-100 w-lg-auto"
+          @click="removeContacto(idx)"
+        >
+          <i class="fa-solid fa-trash-can"></i>
+          <span class="d-lg-none ms-2">Eliminar</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
         </section>
 
         <div class="form-section mb-0 mt-3" v-if=" isEdit">
@@ -938,11 +962,21 @@
               required 
               v-model="insc.document" 
               type="text" 
-              placeholder="DOCUMENTO" 
+              :placeholder="docConfig.placeholder" 
               class="form-control"  
+              :maxlength="docConfig.maxLength"
               @keyup.enter="searchSunat" 
-              v-restrict="{ trim: true, spaces: false, max: 15 }"
+              v-restrict="{ 
+                  trim: true, 
+                  spaces: false, 
+                  max: docConfig.maxLength,
+                  only: docConfig.isNumeric ? 'numbers' : undefined,
+                  transform: 'upper'
+              }"
             />
+            <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric" class="text-warning d-block mt-1" style="font-size: 0.7rem;">
+              <i class="fa-solid fa-circle-exclamation me-1"></i> Se esperan {{ docConfig.maxLength }} dígitos
+            </small>
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Correo<span class="required-star">*</span></label>
@@ -982,7 +1016,8 @@
           </div>
           <div class="col-md-4">
             <label class="form-label mb-1">Apellido Materno<span class="required-star">*</span></label>
-            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" />
+            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" 
+              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }"/>
           </div>
 
           <div class="col-md-4">
@@ -1025,6 +1060,18 @@
               value-field="alias"
             />
           </div>
+
+          <div class="col-md-4" v-if="insc.selectedCurrencyAlias">
+          <label class="form-label mb-1">Medio de Pago<span class="required-star">*</span></label>
+          <SearchSelect
+            v-model="insc.cat_method_payment"
+            :items="paymentMethodCatalog"
+            required
+            label-field="description"
+            value-field="alias"
+            placeholder="MEDIO..."
+          />
+        </div>
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'" >
             <label class="form-label mb-1">Adelanto / Reserva<span class="required-star">*</span></label>
             <CurrencyInput
@@ -1037,16 +1084,8 @@
               placeholder="0.00"
             />
           </div>
-          <div class="col-6" v-if="!insc.cat_type_payment || insc.cat_type_payment=='we_payment_way_single'"></div>
-          <div class="col-2" v-if="insc.cat_type_payment && insc.cat_type_payment!='we_payment_way_single'"></div>
-          <!-- <div class="col-md-2">
-            <label class="form-label mb-1">Convenio Empresarial<span class="required-star">*</span></label>
-            <br>
-            <label class="form-switch">
-              <input type="checkbox" v-model="form.b2b" />
-              <span></span>
-            </label>
-          </div> -->
+          <div class="col-2" v-if="!insc.cat_type_payment || insc.cat_type_payment=='we_payment_way_single'"></div>
+          <div class="col-0" v-if="insc.cat_type_payment && insc.cat_type_payment!='we_payment_way_single'"></div>
 
           <div class="col-md-4" v-if="isEdit || (validateInscriptionPaymentInfo())">
           <label class="form-label mb-1">Descuento</label>
@@ -1108,7 +1147,7 @@
         </div>
       </section>
 
-      <section class="insc-section" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
+      <section class="insc-section" v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web' ">
         <h6 class="insc-section__title">
           Documentación Adjunta
         </h6>
@@ -1118,6 +1157,7 @@
             <label class="form-label mb-2 fw-semibold">Comprobante de Pago</label>
             <FileUploader
                 label="Clic para subir Voucher"
+                :required="true"
                 v-model="form.ticket_payment_url"
                 accept=".pdf,.doc,.docx"
             />
@@ -1178,14 +1218,29 @@
        <section class="insc-section">
             <h6 class="insc-section__title">OBSERVACIONES</h6>
             <div class="row g-3">
+              
+            <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6 mt-2':'col-md-12 mt-2'">
               <textarea
                 v-model="insc.observacions"
                 class="form-control"
+                required
                 rows="2"
                 style="resize: vertical; min-height: 80px; max-height: none;"
               ></textarea>
             </div>
+            <div class="col-md-6 mt-2" v-if="insc.cat_method_payment=='we_payment_method_web'">
+                  <label class="form-label small mb-1 fw-bold">Adjuntos</label>
+                  <MultiFileUploader 
+                  v-model="insc.attachments"
+                  
+                  label="Agregar Constancia"
+                                        
+                  />
+            </div>
+            </div>
+                
         </section>
+        
     </div>
 
     <template #footer>
@@ -1198,9 +1253,11 @@
 </template>
 
 <script setup>
-  import { ref, reactive, computed, onMounted, inject, nextTick } from 'vue'
+  import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
+  
+import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
@@ -1220,7 +1277,6 @@ sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 const dateLimitConfig = {
     minDate: sevenDaysAgo
 };
-
   const programService   = inject(ServiceKeys.Program)
   const comercialService = inject(ServiceKeys.Comercial)
   const customerService = inject(ServiceKeys.Customer)
@@ -1228,6 +1284,7 @@ const dateLimitConfig = {
   const editionService = inject(ServiceKeys.Edition)
   const catalog          = inject('catalog')
 
+const lAttempts = ref(catalog.options('we_attempt'))
   const leadIdParam = computed(() => {
     const raw = route.params?.id
     const n = Number(raw)
@@ -1246,7 +1303,34 @@ const dateLimitConfig = {
 const showProgramDetail = ref(false);
 const selectedProgram = ref(null);
 const activeTab = ref('info'); // 'info' | 'editions'
+const formatDuration = (seconds) => {
+  if (!seconds) return '00:00'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
 
+const toggleTimer = (attempt) => {
+  if (attempt.timerActive) {
+    clearInterval(attempt.timerId)
+    attempt.timerActive = false
+    attempt.timerId = null
+  } else {
+    attempt.timerActive = true
+    attempt.timerId = setInterval(() => {
+      attempt.contact_duration = (attempt.contact_duration || 0) + 1
+    }, 1000)
+  }
+}
+
+// 3. LIMPIEZA DE TIMERS AL SALIR
+onBeforeUnmount(() => {
+  if (form.contactos) {
+    form.contactos.forEach(item => {
+      if (item.timerId) clearInterval(item.timerId)
+    })
+  }
+})
 
 // Resetear tab al abrir modal
 watch(showProgramDetail, (val) => {
@@ -1298,6 +1382,7 @@ const formatDate = (dateString) => {
   const queryCatalog            = ref(catalog.options('we_category_query'))
   const inscModalidades         = ref(catalog.options('we_insc_modality'))
   const discountCatalog         = ref(catalog.options('we_discount_type'))
+  const paymentMethodCatalog    = ref(catalog.options('we_payment_method'))
   const docTypeCatalog          = ref(catalog.options('we_type_document'))
   const programTypeCatalog      = ref(catalog.options('we_program_type'))
   const programModalityCatalog  = ref(catalog.options('we_modality'))
@@ -1411,6 +1496,7 @@ const hcEnrollmentData = ref([
     modalidadPrograma: 'NORMAL',
     promocion_id: null,
     descuento_id: null,
+    cat_method_payment: null,
     modalidadPago: 'CONTADO',
     montoOriginal: 0,
     dsct_porcent_id: null,
@@ -1426,6 +1512,7 @@ const hcEnrollmentData = ref([
     dsct_porcent_id: null,
     dsct_stick_id: null,
     dsct_benefit_id: null,
+    attachments: []
   })
 
   function onChangeDescuentoPorcentual(opt) {
@@ -1610,11 +1697,16 @@ watchEffect(() => {
       contactos: (l.contact_attempts || []).map(att => ({
         id: att.lead_contact_attempt_id,
         status_alias: att.cat_status_alias,
+        cat_type_attempt: att.cat_type_attempt_alias || 'we_attempt_call',
         calling_alias: att.cat_result_alias,
         calling_label: att.cat_result_label,
         status_label: att.cat_status_label,
         fechaContactoProximo: normalizeDateTime(att.contact_datetime),
-        respuesta: att.response || ''
+        respuesta: att.response || '',
+        // Mapear Duración y Timer
+  contact_duration: att.contact_duration || 0,
+  timerActive: false,
+  timerId: null
       })),
 
       enrollment_id: l.enrollment_id
@@ -1624,7 +1716,42 @@ watchEffect(() => {
     createdLeadId.value   = l.id ?? l.lead_id ?? id
     createdPersonId.value = l.person_id ?? null
   }
+const docConfig = computed(() => {
+  // Buscamos el objeto completo en el catálogo usando el alias seleccionado
+  const selected = docTypeCatalog.value.find(item => item.alias === insc.cat_type_document);
+    console.log(selected)
+  // Obtenemos variable_1 (longitud). Si no existe, default a 15.
+  const maxLength = selected?.variable_1 ? Number(selected.variable_1) : 15;
 
+  // Detectamos si debe ser solo números. 
+  // Usualmente DNI (2.300) y RUC (2.301) son numéricos. 
+  // Pasaporte y Carnet de Extranjería suelen permitir letras.
+  const isNumeric = ['we_type_document_dni', 'we_type_document_ruc'].includes(insc.cat_type_document);
+
+  return {
+    maxLength,
+    isNumeric,
+    placeholder: isNumeric ? `MÁX. ${maxLength} DÍGITOS` : `MÁX. ${maxLength} CARACTERES`
+  };
+});
+
+// 2. Watcher para limpiar/ajustar si cambia el tipo
+watch(() => insc.cat_type_document, (newVal) => {
+  if (!insc.document) return;
+  
+  // Opción A: Limpiar el campo al cambiar de tipo (Más seguro para evitar errores)
+  // insc.document = ''; 
+
+  // Opción B: Recortar si el nuevo tipo es más corto que el valor actual
+  if (docConfig.value.maxLength && insc.document.length > docConfig.value.maxLength) {
+     insc.document = insc.document.slice(0, docConfig.value.maxLength);
+  }
+  
+  // Si cambiamos a numérico y hay letras, limpiar
+  if (docConfig.value.isNumeric && isNaN(Number(insc.document))) {
+     insc.document = insc.document.replace(/\D/g, '');
+  }
+});
   async function loadDataForCloning(sourceId) {
       try {
       console.log(sourceId)
@@ -1661,8 +1788,7 @@ watchEffect(() => {
               strategy_alias: originalData.strategy_alias,
               observacion: originalData.observations ?? '',
               categoriaCliente: originalData.t_lead ?? 'NEW',
-              categoriaMember: originalData.membresia ?? '',
-              contactos: [createEmptyAttempt()]
+              categoriaMember: originalData.membresia ?? ''
           })
           createdLeadId.value = null
           createdPersonId.value = null
@@ -1691,14 +1817,12 @@ watchEffect(() => {
       return
     }
 
-    form.contactos.push(createEmptyAttempt())
 
     form.canal_alias   = 'we_social_media_other'
     form.medium_alias  = 'we_social_media_whatsapp'
     form.nivel_alias   = 'we_lead_interest_low'
     form.country_alias = 'we_country_peru'
     form.status_alias  = 'we_lead_status_atendido'
-    form.query_alias   = 'we_category_query_general'
     form.client_status   = 'we_client_person'
     form.active = true
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
@@ -1708,13 +1832,17 @@ watchEffect(() => {
     loaded.value = true
   })
 
-  function createEmptyAttempt() {
-    return {
-      status_alias: 'we_follow_lead_pending',
-      fechaContactoProximo: todayIso,
-      respuesta: ''
-    }
+function createEmptyAttempt() {
+  return {
+    cat_type_attempt: 'we_attempt_call', // Valor por defecto
+    status_alias: 'we_follow_lead_pending',
+    fechaContactoProximo: todayIso,
+    respuesta: '',
+    contact_duration: 0, // Inicia en 0
+    timerActive: false,
+    timerId: null
   }
+}
   function addContacto() { form.contactos.push(createEmptyAttempt()) }
   function removeContacto(idx) { form.contactos.splice(idx, 1) }
 
@@ -1864,7 +1992,57 @@ function onStrategyChange(option){
   }
 }
 
+// Función centralizada para limpiar todo el estado de la inscripción
+function resetInscriptionData() {
+  console.log('Reseteando formulario de inscripción...');
+  
+  // 1. Limpiar objeto de inscripción (insc)
+  Object.assign(insc, {
+    dni: '',
+    // No limpiamos nombres/apellidos aquí si queremos que se mantengan los del lead, 
+    // pero si quieres limpieza total, déjalos vacíos:
+    document: '', 
+    cat_type_document: null,
+    nombres: '',
+    apellidos: '',
+    mother_last_name: '',
+    email: '',
+    
+    // Financiero
+    saved_money: 0,
+    selectedCurrencyAlias: 'we_currency_soles', // Valor por defecto
+    cat_insc_modality: 'we_insc_modality_normal', // Valor por defecto
+    cat_type_payment: 'we_payment_way_single',    // Valor por defecto
+    cat_method_payment: null,
+    modalidadPago: 'CONTADO',
+    
+    // Montos y Descuentos
+    montoOriginal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    
+    // Valores numéricos auxiliares para la reactividad
+    val_porcentaje: 0,
+    val_fijo: 0,
+    val_beneficio: 0,
+    montoDescuentoPorcentaje: 0,
+    montoDescuentoFijo: 0,
+    montoBeneficio: 0,
+    montoFinal: 0,
+    
+    // Observaciones y Adjuntos
+    observacions: '',
+    attachments: [], // IMPORTANTE: Limpiar el array de adjuntos múltiples
+    flag_agreement: false,
+    b2b_contract_id: null
+  });
 
+  // 2. Limpiar campos del 'form' que se usan dentro de la modal (Archivos únicos)
+  // Como usas v-model="form.ticket_payment_url" dentro de la modal, hay que limpiarlo también
+  form.ticket_payment_url = null;
+  form.carnet_url = null;
+}
 
 function onChannelChange(option){
   if(!option){
@@ -1907,10 +2085,12 @@ function formatDateTime(isoString) {
       return {
         id: c.id,
         attempt_number: idx + 1,
+        cat_type_attempt: idByAlias(c.cat_type_attempt, lAttempts.value),
         cat_status,
         contact_datetime,
         cat_result: idByAlias(c.calling_alias, callingCatalog.value),
-        response: c.respuesta || ''
+        response: c.respuesta || '',
+        contact_duration: c.contact_duration || 0
       }
     })
 
@@ -1986,18 +2166,24 @@ async function openProgramVersionDetail() {
 }
 
 function buildEnrollmentPayload() {
-  //obtengo las ID's
+  // ... obtengo las ID's (código existente) ...
   const cat_type_document = idByAlias(insc.cat_type_document, docTypeCatalog.value)
   const cat_insc_modality = idByAlias(insc.cat_insc_modality, inscModalidades.value)
   const cat_type_payment  = idByAlias(insc.cat_type_payment, inscPaymentModes.value)
   const cat_currency      = idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
   const cat_country       = idByAlias(form.country_alias, countryCatalog.value)
+  const cat_method_payment = idByAlias(insc.cat_method_payment, paymentMethodCatalog.value)
+
+  // Transformación de los adjuntos múltiples (lo que vimos antes)
+  const formattedAttachments = (insc.attachments || []).map(file => {
+      if (typeof file === 'object' && file.url) return file;
+      return { url: file, name: file.split('/').pop() || 'Adjunto', type: null };
+  });
 
   return {
-
     inscription: {
       lead_id: createdLeadId.value,
-      program_version_id: form.edition_id?null:form.program_version_id,
+      program_version_id: form.edition_id ? null : form.program_version_id,
       program_edition_id: form.edition_id,
       document: insc.document,
       cat_type_document: cat_type_document,
@@ -2010,13 +2196,22 @@ function buildEnrollmentPayload() {
       cat_type_payment: cat_type_payment,
       cat_currency:  cat_currency,
       total_amount: Number(insc.total_amount),
+      cat_method_payment: cat_method_payment,
       saved_money: Number(insc.saved_money),
       dsct_porcent_id: insc.dsct_porcent_id,
       dsct_stick_id: insc.dsct_stick_id,
       dsct_benefit_id: insc.dsct_benefit_id,
       observations: insc.observacions,
       flag_agreement: insc.flag_agreement,
-      b2b_contract_id: null //por ahora siempre null eso
+      b2b_contract_id: null,
+      list_price: insc.montoOriginal,
+      // --- AQUÍ ESTÁ LA CORRECCIÓN DEL MAPEO ---
+      // Asignamos la variable del form al nombre que espera el SP
+      payment_attachment_url: form.ticket_payment_url || null, 
+      student_attachment_url: form.carnet_url || null,
+      
+      // Adjuntos múltiples (Array)
+      attachments: formattedAttachments 
     }
   }
 }
@@ -2104,28 +2299,27 @@ async function confirmarInscripcion() {
     }
   }
 
-  function openInscription() {
+function openInscription() {
+    // 1. Primero limpiamos todo rastro anterior
+    resetInscriptionData();
 
-    // if (!form.price_student_dollars || !form.price_student_soles || !form.price_profesional_soles || !form.price_profesional_dollars) {
-    //   toast.info('No se encontraron precios para el programa seleccionado. Por favor, verifique la configuración del programa.', { timeout: 5000 })
-    //   return
-    // }
+    // 2. Pre-llenamos datos desde el Lead (form)
+    insc.full_name = form.full_name || '';
+    insc.email     = ''; // O form.email si tuvieras ese dato
+    
+    // 3. Configuraciones por defecto iniciales
+    insc.cat_insc_modality = 'we_insc_modality_normal';
+    insc.selectedCurrencyAlias = 'we_currency_soles';
+    insc.cat_type_payment  = 'we_payment_way_single';
+    
+    // 4. Recalcular precio base según el Lead actual (Importante para que aparezca el precio)
+    // Forzamos la actualización del precio base basado en la moneda por defecto
+    const basePrice = calculatedBasePrice.value; 
+    insc.montoOriginal = basePrice; 
 
-    insc.cat_type_document = null
-    insc.document          = ''
-    insc.email             = ''
-    insc.full_name         = form.full_name || ''
-    insc.last_name         = ''
-    insc.mother_last_name  = ''
-    insc.cat_insc_modality = 'we_insc_modality_normal'
-    insc.selectedCurrencyAlias = 'we_currency_soles'
-    insc.cat_type_payment  = 'we_payment_way_single'
-    insc.saved_money       = 0
-    insc.dsct_porcent_id   = null
-    insc.dsct_money_id     = null
-    insc.observacions       = ''
-    showViewModal.value = true
-  }
+    // 5. Mostrar modal
+    showViewModal.value = true;
+}
 
   function validateLeadInfo() {
     const required = ['fechaContactoInicial']
@@ -2152,7 +2346,7 @@ async function confirmarInscripcion() {
     return required.every(f => !!insc[f])
   }
   function validateInscriptionPaymentInfo() {
-    const required = ['selectedCurrencyAlias','cat_type_payment','saved_money']
+    const required = ['selectedCurrencyAlias','cat_type_payment','saved_money','cat_method_payment']
     return required.every(f => insc[f] || insc[f] === 0)
   }
 
@@ -2282,6 +2476,7 @@ async function confirmarInscripcion() {
         promocion_id: null,
         descuento_id: null,
         modalidadPago: 'CONTADO',
+        cat_method_payment: null,
         montoOriginal: 0,
         adelanto: 0,
         observacion: '',
@@ -2304,7 +2499,7 @@ async function confirmarInscripcion() {
 
     watch(showViewModal, (estaAbierto) => {
       if (!estaAbierto) {
-        alCerrarModal()
+        resetInscriptionData();
       }
     })
 
