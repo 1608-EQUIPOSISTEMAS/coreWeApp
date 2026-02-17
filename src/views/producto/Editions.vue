@@ -308,7 +308,17 @@
                   v-for="(e, eIndex) in week.items"
                   :key="e.edition_num_id"
                   v-show="week.isOpen"
-                  :class="e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : ''"
+                  :class="[
+                      e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
+                      { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id } /* Opcional: clase visual */
+                  ]"
+                  @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
+                  
+                  @mousemove="cancelLongPress" 
+                  @touchstart="startLongPress(e); currentPressId = e.edition_num_id" 
+                  @mouseup="clearLongPress(); currentPressId = null"
+                  @mouseleave="clearLongPress(); currentPressId = null"
+                  @touchend="clearLongPress(); currentPressId = null"
                 >
                 <td class="ta-right nowrap p-0 m-0">
                   <div class="d-flex justify-content-center gap-1">
@@ -610,7 +620,16 @@
             <tr
               v-for="(e, eIndex) in historyList"
               :key="e.edition_num_id"
-              :class="e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : ''"
+              :class="[
+                  e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
+                  { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id } /* Opcional: clase visual */
+              ]"
+              @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
+              @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
+              @mousemove="cancelLongPress" 
+              @mouseup="clearLongPress(); currentPressId = null"
+              @mouseleave="clearLongPress(); currentPressId = null"
+              @touchend="clearLongPress(); currentPressId = null"
             >
               <td class="ta-right nowrap">
                 <div class="d-flex justify-content-center gap-1">
@@ -2427,6 +2446,37 @@ watch(
   }
 )
 
+
+const longPressTimer = ref(null)
+const currentPressId = ref(null)
+
+function startLongPress(item) {
+  clearLongPress()
+  currentPressId.value = item.edition_num_id
+  longPressTimer.value = setTimeout(() => {
+    handleFamilyFilter(item)
+  }, 2000)
+}
+
+function clearLongPress() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  currentPressId.value = null
+}
+
+function handleFamilyFilter(item) {
+  if (!item.family_filter_value) {
+    toast.info('Sin clasificaciones de familia relacionadas.')
+    return
+  }
+  if (navigator.vibrate) navigator.vibrate(50)
+  toast.success(`Filtrando familia: ${item.family_filter_value}`, { timeout: 2500 })
+  filterForm.clasification = item.family_filter_value
+  applyFilters()
+}
+
 function calculateMetaSummary() {
   // 1. USAR EL COMPUTED QUE YA TIENE TODOS LOS FILTROS APLICADOS
   const allItems = effectiveItems.value
@@ -2548,7 +2598,13 @@ async function openMonthlyGoalsModal() {
   // 4. Abrimos el modal
   showMonthlyGoalsModal.value = true
 }
-
+function cancelLongPress() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  currentPressId.value = null
+}
 async function saveMonthlyGoals() {
   try {
     // Aquí mapeas los datos que necesitas enviar a tu backend
@@ -5109,5 +5165,10 @@ tr[class*="row-segment-"]:hover td {
 }
 .table.compact-borders td {
   padding: 0.05rem 0.75rem;
+}
+.row-pressing td {
+  background-color: #dbeafe !important;
+  cursor: progress !important;
+  transition: background-color 0.3s;
 }
 </style>

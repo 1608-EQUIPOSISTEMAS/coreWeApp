@@ -1,21 +1,19 @@
 <template>
-  <div class="multi-select-wrapper" ref="wrapperEl">
+  <div class="ms-wrapper" ref="wrapperEl">
+
+    <!-- ── Trigger ── -->
     <div
-      class="multi-select-trigger"
+      class="ms-trigger"
       :class="{
         'is-disabled': disabled,
-        'is-active': modalOpen,
+        'is-open': dropdownOpen,
         'has-selection': selected.length > 0
       }"
-      @click="openModal"
-      @mouseenter="onMouseEnter"
-      @mouseleave="onMouseLeave"
-      ref="controlRef"
+      @click="toggleDropdown"
+      ref="triggerRef"
     >
       <div class="trigger-content">
-        <span v-if="selected.length === 0" class="placeholder-text">
-          {{ placeholder }}
-        </span>
+        <span v-if="selected.length === 0" class="placeholder-text">{{ placeholder }}</span>
         <span v-else class="value-text">
           <span class="badge-count">{{ selected.length }}</span>
           <span class="badge-label">{{ selected.length === 1 ? 'opción' : 'opciones' }}</span>
@@ -23,146 +21,126 @@
       </div>
 
       <div class="trigger-actions">
-        <button 
-          v-if="selected.length > 0 && !disabled" 
-          @click.stop="clearAllSelection" 
+        <button
+          v-if="selected.length > 0 && !disabled"
+          @click.stop="clearAllSelection"
           class="btn-quick-clear"
           title="Limpiar selección"
         >
           <i class="fa-solid fa-xmark"></i>
         </button>
-
-        <div class="trigger-icon">
-          <i class="fa-solid fa-border-all"></i>
-        </div>
+        <!-- Ícono de filtro igual al que usa la tabla -->
+        <i class="fa-solid fa-filter trigger-icon" :class="{ active: dropdownOpen || selected.length > 0 }"></i>
       </div>
-
-      <Transition name="fade-scale">
-        <div
-          v-if="showHoverList && selected.length > 0"
-          class="hover-tooltip"
-          :class="hoverListPosition === 'top' ? 'pos-top' : 'pos-bottom'"
-        >
-          <div class="tooltip-header">Seleccionados:</div>
-          <div class="tooltip-body">
-            <div v-for="(item, index) in selected.slice(0, 10)" :key="index" class="tooltip-item">
-               {{ item.label }}
-            </div>
-            <div v-if="selected.length > 10" class="tooltip-more">
-              + {{ selected.length - 10 }} más...
-            </div>
-          </div>
-        </div>
-      </Transition>
     </div>
 
     <div v-if="hint" class="control-hint">{{ hint }}</div>
 
+    <!-- ── Dropdown Panel ── -->
     <Teleport to="body">
-      <Transition name="modal-fade">
-        <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-          <Transition name="modal-zoom">
-            <div v-if="modalOpen" class="modal-card">
-              
-              <div class="card-header">
-                <div class="header-title-row">
-                  <h3>{{ modalTitle }}</h3>
-                  <button class="btn-icon-close" @click="closeModal">
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
-                
-                <!-- Search sin ícono de lupa -->
-                <div class="search-container">
-                  <input
-                    ref="searchInputRef"
-                    type="text"
-                    class="search-input"
-                    placeholder="Filtrar opciones..."
-                    v-model="searchQuery"
-                    @input="onSearchInput"
-                  />
-                  <button v-if="searchQuery" @click="clearSearch" class="btn-input-clear">
-                    <i class="fa-solid fa-circle-xmark"></i>
-                  </button>
-                </div>
+      <Transition name="dropdown">
+        <div
+          v-if="dropdownOpen"
+          class="ms-dropdown"
+          :style="dropdownStyle"
+          ref="dropdownRef"
+        >
 
-                <div class="toolbar-row">
-                  <span class="selection-status">
-                    {{ tempSelection.size }} seleccionados
-                  </span>
-                  <div class="toolbar-buttons">
-                    <button @click="selectAll" :disabled="filteredItems.length === 0" class="btn-link">
-                      Todos
-                    </button>
-                    <button @click="deselectAll" :disabled="!hasVisibleSelection" class="btn-link danger">
-                      Ninguno
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <!-- Search -->
+          <div class="dropdown-header">
+            <div class="search-wrap">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                ref="searchInputRef"
+                type="text"
+                class="search-input"
+                :placeholder="`Filtrar ${placeholder.toLowerCase()}...`"
+                v-model="searchQuery"
+                @input="onSearchInput"
+              />
+              <button v-if="searchQuery" @click="clearSearch" class="btn-input-clear">
+                <i class="fa-solid fa-circle-xmark"></i>
+              </button>
+            </div>
 
-              <div class="card-body">
-                <div v-if="loading" class="state-container">
-                  <div class="spinner"></div>
-                  <span>Cargando datos...</span>
-                </div>
-
-                <div v-else-if="filteredItems.length === 0" class="state-container">
-                  <i class="fa-regular fa-folder-open"></i>
-                  <span>No se encontraron resultados</span>
-                </div>
-
-                <div v-else class="list-container">
-                  <label
-                    v-for="item in filteredItems"
-                    :key="item[valueKey]"
-                    class="list-row"
-                    :class="{ 'is-selected': tempSelection.has(item[valueKey]) }"
-                  >
-                    <div class="custom-checkbox">
-                      <input
-                        type="checkbox"
-                        :checked="tempSelection.has(item[valueKey])"
-                        @change="toggleItem(item)"
-                      />
-                      <span class="checkmark">
-                        <i class="fa-solid fa-check"></i>
-                      </span>
-                    </div>
-
-                    <div class="row-info">
-                      <span class="row-label">{{ item[labelKey] }}</span>
-                      <span v-if="sublabelKey && item[sublabelKey]" class="row-sublabel">
-                        {{ item[sublabelKey] }}
-                      </span>
-                    </div>
-
-                    <!-- Botón "Solo este" -->
-                    <button
-                      class="btn-only"
-                      :class="{ 'is-exclusive': tempSelection.size === 1 && tempSelection.has(item[valueKey]) }"
-                      @click.prevent.stop="selectOnly(item)"
-                      title="Seleccionar solo este"
-                    >
-                      <i class="fa-solid fa-filter-circle-dot"></i>
-                    </button>
-                  </label>
-                </div>
-              </div>
-
-              <div class="card-footer">
-                <button class="btn-secondary" @click="closeModal">Cancelar</button>
-                <button class="btn-primary" @click="acceptSelection">
-                  Aplicar selección
+            <div class="toolbar-row">
+              <span class="selection-status">
+                <span class="count-pill">{{ tempSelection.size }}</span>
+                seleccionados
+              </span>
+              <div class="toolbar-buttons">
+                <button @click="selectAll" :disabled="filteredItems.length === 0" class="btn-link">
+                  Todos
+                </button>
+                <span class="divider-dot">·</span>
+                <button @click="deselectAll" :disabled="!hasVisibleSelection" class="btn-link danger">
+                  Ninguno
                 </button>
               </div>
-
             </div>
-          </Transition>
+          </div>
+
+          <!-- List -->
+          <div class="dropdown-body">
+            <div v-if="loading" class="state-container">
+              <div class="spinner"></div>
+              <span>Cargando...</span>
+            </div>
+
+            <div v-else-if="filteredItems.length === 0" class="state-container">
+              <i class="fa-regular fa-folder-open"></i>
+              <span>Sin resultados</span>
+            </div>
+
+            <template v-else>
+              <label
+                v-for="item in filteredItems"
+                :key="item[valueKey]"
+                class="list-row"
+                :class="{ 'is-selected': tempSelection.has(item[valueKey]) }"
+              >
+                <div class="custom-checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="tempSelection.has(item[valueKey])"
+                    @change="toggleItem(item)"
+                  />
+                  <span class="checkmark">
+                    <i class="fa-solid fa-check"></i>
+                  </span>
+                </div>
+
+                <div class="row-info">
+                  <span class="row-label">{{ item[labelKey] }}</span>
+                  <span v-if="sublabelKey && item[sublabelKey]" class="row-sublabel">
+                    {{ item[sublabelKey] }}
+                  </span>
+                </div>
+
+                <button
+                  class="btn-only"
+                  :class="{ 'is-exclusive': tempSelection.size === 1 && tempSelection.has(item[valueKey]) }"
+                  @click.prevent.stop="selectOnly(item)"
+                  title="Solo este"
+                >
+                  <i class="fa-solid fa-filter-circle-dot"></i>
+                </button>
+              </label>
+            </template>
+          </div>
+
+          <!-- Footer -->
+          <div class="dropdown-footer">
+            <button class="btn-cancel" @click="closeDropdown">Cancelar</button>
+            <button class="btn-apply" @click="acceptSelection">
+              Aplicar
+            </button>
+          </div>
+
         </div>
       </Transition>
     </Teleport>
+
   </div>
 </template>
 
@@ -170,51 +148,52 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: Array, default: () => [] },
-  items: { type: Array, default: () => [] },
-  labelKey: { type: String, required: true },
-  valueKey: { type: String, required: true },
-  sublabelKey: { type: String, default: '' },
-  placeholder: { type: String, default: 'Seleccionar...' },
-  modalTitle: { type: String, default: 'Seleccionar opciones' },
-  hint: { type: String, default: '' },
-  disabled: { type: Boolean, default: false },
-  required: { type: Boolean, default: false },
-  mode: { type: String, default: 'local' },
-  fetcher: { type: Function, default: null },
-  minSearchChars: { type: Number, default: 0 },
-  debounceMs: { type: Number, default: 300 }
+  modelValue:     { type: Array,    default: () => [] },
+  items:          { type: Array,    default: () => [] },
+  labelKey:       { type: String,   required: true },
+  valueKey:       { type: String,   required: true },
+  sublabelKey:    { type: String,   default: '' },
+  placeholder:    { type: String,   default: 'Seleccionar...' },
+  hint:           { type: String,   default: '' },
+  disabled:       { type: Boolean,  default: false },
+  required:       { type: Boolean,  default: false },
+  mode:           { type: String,   default: 'local' },
+  fetcher:        { type: Function, default: null },
+  minSearchChars: { type: Number,   default: 0 },
+  debounceMs:     { type: Number,   default: 300 },
 })
 
 const emit = defineEmits(['update:modelValue', 'change', 'search'])
 
-// --- Estado ---
-const internalCache = ref(new Map())
-const controlRef = ref(null)
-const showHoverList = ref(false)
-const hoverListPosition = ref('bottom')
+// ── Estado
+const internalCache  = ref(new Map())
+const wrapperEl      = ref(null)
+const triggerRef     = ref(null)
+const dropdownRef    = ref(null)
 const searchInputRef = ref(null)
-const modalOpen = ref(false)
-const searchQuery = ref('')
-const tempSelection = ref(new Set())
-const loading = ref(false)
-const remoteItems = ref([])
-let closeTimer = null
+
+const dropdownOpen   = ref(false)
+const dropdownStyle  = ref({})
+const searchQuery    = ref('')
+const tempSelection  = ref(new Set())
+const loading        = ref(false)
+const remoteItems    = ref([])
+
 let debounceTimer = null
 
-// --- Computadas ---
-const isRemote = computed(() => props.mode === 'remote')
-const selected = computed(() => props.modelValue || [])
+// ── Computadas
+const isRemote  = computed(() => props.mode === 'remote')
+const selected  = computed(() => props.modelValue || [])
 
-const currentSourceItems = computed(() => {
-  return isRemote.value ? remoteItems.value : props.items
-})
+const currentSourceItems = computed(() =>
+  isRemote.value ? remoteItems.value : props.items
+)
 
 const filteredItems = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (query) {
     return currentSourceItems.value.filter(item => {
-      const label = String(item[props.labelKey] || '').toLowerCase()
+      const label    = String(item[props.labelKey]    || '').toLowerCase()
       const sublabel = props.sublabelKey ? String(item[props.sublabelKey] || '').toLowerCase() : ''
       return label.includes(query) || sublabel.includes(query)
     })
@@ -223,7 +202,9 @@ const filteredItems = computed(() => {
   tempSelection.value.forEach(id => {
     if (internalCache.value.has(id)) selectedObjects.push(internalCache.value.get(id))
   })
-  const unselected = currentSourceItems.value.filter(item => !tempSelection.value.has(item[props.valueKey]))
+  const unselected = currentSourceItems.value.filter(
+    item => !tempSelection.value.has(item[props.valueKey])
+  )
   return [...selectedObjects, ...unselected]
 })
 
@@ -232,7 +213,7 @@ const hasVisibleSelection = computed(() => {
   return filteredItems.value.some(item => tempSelection.value.has(item[props.valueKey]))
 })
 
-// Cache management
+// ── Cache
 function updateCache(items) {
   if (!Array.isArray(items)) return
   items.forEach(item => {
@@ -252,12 +233,46 @@ watch(() => props.modelValue, (val) => {
   }
 }, { immediate: true, deep: true })
 
-// --- Métodos de UI ---
-function openModal() {
+// ── Posicionamiento
+function calcDropdownPosition() {
+  if (!triggerRef.value) return
+  const rect        = triggerRef.value.getBoundingClientRect()
+  const vH          = window.innerHeight
+  const spaceBelow  = vH - rect.bottom
+  const spaceAbove  = rect.top
+  const maxH        = 320
+
+  const style = {
+    position: 'fixed',
+    left:     `${rect.left}px`,
+    width:    `${Math.max(rect.width, 260)}px`,
+    zIndex:   '99999',
+  }
+
+  if (spaceBelow >= maxH || spaceBelow >= spaceAbove) {
+    style.top       = `${rect.bottom + 3}px`
+    style.maxHeight = `${Math.min(maxH, spaceBelow - 8)}px`
+  } else {
+    style.bottom    = `${vH - rect.top + 3}px`
+    style.maxHeight = `${Math.min(maxH, spaceAbove - 8)}px`
+  }
+
+  dropdownStyle.value = style
+}
+
+// ── Open / Close
+function toggleDropdown() {
   if (props.disabled) return
-  modalOpen.value = true
-  searchQuery.value = ''
-  const initialIds = selected.value.map(item => (typeof item === 'object' && item !== null) ? (item.value || item[props.valueKey]) : item)
+  dropdownOpen.value ? closeDropdown() : openDropdown()
+}
+
+function openDropdown() {
+  calcDropdownPosition()
+  dropdownOpen.value  = true
+  searchQuery.value   = ''
+  const initialIds    = selected.value.map(item =>
+    (typeof item === 'object' && item !== null) ? (item.value || item[props.valueKey]) : item
+  )
   tempSelection.value = new Set(initialIds)
   nextTick(() => {
     searchInputRef.value?.focus()
@@ -265,12 +280,13 @@ function openModal() {
   })
 }
 
-function closeModal() {
-  modalOpen.value = false
+function closeDropdown() {
+  dropdownOpen.value = false
   tempSelection.value.clear()
-  searchQuery.value = ''
+  searchQuery.value  = ''
 }
 
+// ── Acciones
 function clearAllSelection() {
   emit('update:modelValue', [])
   emit('change', [])
@@ -287,10 +303,8 @@ function toggleItem(item) {
   }
 }
 
-// Selecciona solo este ítem y desmarca todos los demás
 function selectOnly(item) {
   const value = item[props.valueKey]
-  // Si ya es el único seleccionado, lo desmarca (toggle)
   if (tempSelection.value.size === 1 && tempSelection.value.has(value)) {
     tempSelection.value.clear()
   } else {
@@ -322,7 +336,9 @@ function clearSearch() {
   searchInputRef.value?.focus()
 }
 
-function onSearchInput() { if (isRemote.value) queueRemoteSearch() }
+function onSearchInput() {
+  if (isRemote.value) queueRemoteSearch()
+}
 
 function queueRemoteSearch() {
   if (debounceTimer) clearTimeout(debounceTimer)
@@ -337,10 +353,10 @@ async function fetchRemoteData(query) {
   loading.value = true
   emit('search', query)
   try {
-    const result = await props.fetcher(query)
+    const result  = await props.fetcher(query)
     remoteItems.value = Array.isArray(result) ? result : []
-  } catch (error) {
-    console.error(error)
+  } catch (e) {
+    console.error(e)
     remoteItems.value = []
   } finally {
     loading.value = false
@@ -348,262 +364,330 @@ async function fetchRemoteData(query) {
 }
 
 function acceptSelection() {
-  const selectedIds = Array.from(tempSelection.value)
+  const selectedIds     = Array.from(tempSelection.value)
   const selectedObjects = selectedIds.map(id => {
-    const cachedItem = internalCache.value.get(id)
-    return cachedItem ? { value: cachedItem[props.valueKey], label: cachedItem[props.labelKey] } : { value: id, label: String(id) }
+    const cached = internalCache.value.get(id)
+    return cached
+      ? { value: cached[props.valueKey], label: cached[props.labelKey] }
+      : { value: id, label: String(id) }
   })
   emit('update:modelValue', selectedObjects)
   emit('change', selectedObjects)
-  modalOpen.value = false
+  dropdownOpen.value = false
 }
 
-// Hover logic
-function onMouseEnter() {
-  if (props.disabled || selected.value.length === 0) return
-  if (closeTimer) clearTimeout(closeTimer)
-  const rect = controlRef.value.getBoundingClientRect()
-  hoverListPosition.value = (window.innerHeight - rect.bottom) < 200 ? 'top' : 'bottom'
-  showHoverList.value = true
+// ── Click fuera & Escape
+function onClickOutside(e) {
+  if (!dropdownOpen.value) return
+  if (!triggerRef.value?.contains(e.target) && !dropdownRef.value?.contains(e.target)) {
+    closeDropdown()
+  }
 }
-function onMouseLeave() { closeTimer = setTimeout(() => { showHoverList.value = false }, 200) }
 
-onMounted(() => { document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalOpen.value) closeModal() }) })
-onBeforeUnmount(() => { if (debounceTimer) clearTimeout(debounceTimer) })
+function onKeyDown(e) {
+  if (e.key === 'Escape' && dropdownOpen.value) closeDropdown()
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onClickOutside)
+  document.addEventListener('keydown', onKeyDown)
+  window.addEventListener('scroll', calcDropdownPosition, true)
+  window.addEventListener('resize', calcDropdownPosition)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onClickOutside)
+  document.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('scroll', calcDropdownPosition, true)
+  window.removeEventListener('resize', calcDropdownPosition)
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
 </script>
-
 <style scoped>
-.multi-select-wrapper {
+/* ── Wrapper ── */
+.ms-wrapper {
   position: relative;
   width: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
 }
 
-/* --- Trigger --- */
-.multi-select-trigger {
-  display: flex;
+/* ── Trigger ── */
+.ms-trigger {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0 10px;
+  height: 34px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+  white-space: nowrap;
+  width: 100%;
+}
+.ms-trigger:hover:not(.is-disabled) {
+  border-color: #1a232e; /* Azul Navy Hover */
+  background: #f8fafc;
+}
+.ms-trigger.is-open,
+.ms-trigger.has-selection {
+  border-color: #9b8412; /* Dorado activo */
+  box-shadow: 0 0 0 2px rgba(155, 132, 18, 0.15); /* Sombra dorada */
+}
+.ms-trigger.is-disabled { opacity: 0.5; cursor: not-allowed; }
+
+.trigger-content { flex: 1; overflow: hidden; display: flex; align-items: center; }
+.placeholder-text { color: #9ca3af; font-size: 0.82rem; }
+.value-text { display: flex; gap: 5px; align-items: center; }
+
+.badge-count {
+  background: #9b8412; /* Dorado */
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  line-height: 1.6;
+}
+.badge-label { color: #1a232e; font-size: 0.82rem; font-weight: 500; }
+
+.trigger-actions { display: flex; align-items: center; gap: 5px; }
+.btn-quick-clear {
+  background: none; border: none;
+  color: #9ca3af; padding: 2px; cursor: pointer;
+  border-radius: 50%; font-size: 0.72rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.btn-quick-clear:hover { background: #fee2e2; color: #ef4444; }
+
+.trigger-icon {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  transition: color 0.15s;
+}
+.trigger-icon.active { color: #9b8412; }
+
+.control-hint { font-size: 0.72rem; color: #9ca3af; margin-top: 3px; padding-left: 2px; }
+
+/* ── Dropdown Panel ── */
+.ms-dropdown {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0 12px;
-  height: 42px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-.multi-select-trigger:hover:not(.is-disabled) { border-color: #cbd5e1; background: #f8fafc; }
-.multi-select-trigger.is-active { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-.trigger-content { flex: 1; display: flex; align-items: center; overflow: hidden; }
-.placeholder-text { color: #64748b; font-size: 0.9rem; }
-.value-text { display: flex; gap: 6px; align-items: center; }
-.badge-count { background: #eff6ff; color: #2563eb; font-weight: 600; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; }
-.badge-label { color: #334155; font-weight: 500; font-size: 0.9rem; }
-.trigger-actions { display: flex; align-items: center; gap: 8px; }
-.btn-quick-clear { background: none; border: none; color: #94a3b8; padding: 4px; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
-.btn-quick-clear:hover { background: #fee2e2; color: #ef4444; }
-.trigger-icon { color: #94a3b8; font-size: 0.8rem; }
-
-/* --- Tooltip Hover --- */
-.hover-tooltip {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  background: #1e293b;
-  color: white;
   border-radius: 6px;
-  padding: 8px 12px;
-  z-index: 50;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  font-size: 0.8rem;
-}
-.hover-tooltip.pos-bottom { top: calc(100% + 6px); }
-.hover-tooltip.pos-top { bottom: calc(100% + 6px); }
-.tooltip-header { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em; }
-.tooltip-item { margin-bottom: 2px; }
-.tooltip-more { color: #94a3b8; font-style: italic; margin-top: 4px; }
-
-/* --- Modal Backdrop --- */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(5, 10, 20, 0.65);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-}
-
-/* --- Modal Card (estilo oscuro) --- */
-.modal-card {
-  background: #1a2235;
-  width: 100%;
-  max-width: 480px;
-  border-radius: 14px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.07),
+    0 12px 24px -4px rgba(26, 35, 46, 0.15); /* Sombra con tinte navy */
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
-  border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
 }
 
-/* Header oscuro */
-.card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: #1e2a3e;
+/* Header */
+.dropdown-header {
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
 }
-.header-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.header-title-row h3 { margin: 0; font-size: 1.05rem; font-weight: 600; color: #e2e8f0; }
-.btn-icon-close { background: transparent; border: none; color: #64748b; font-size: 1.05rem; cursor: pointer; transition: color 0.2s; }
-.btn-icon-close:hover { color: #cbd5e1; }
 
-/* Buscador limpio sin ícono */
-.search-container { position: relative; display: flex; align-items: center; }
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-icon {
+  position: absolute; left: 9px;
+  color: #9ca3af; font-size: 0.72rem;
+  pointer-events: none;
+}
 .search-input {
   width: 100%;
-  padding: 9px 36px 9px 14px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 7px;
-  font-size: 0.88rem;
+  padding: 6px 28px 6px 28px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #1a232e;
+  font-size: 0.8rem;
   outline: none;
-  transition: border-color 0.2s, background 0.2s;
-  background: rgba(255,255,255,0.06);
-  color: #e2e8f0;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.search-input::placeholder { color: #475569; }
+.search-input::placeholder { color: #9ca3af; }
 .search-input:focus {
-  background: rgba(255,255,255,0.09);
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  border-color: #1a232e; /* Foco Azul Navy */
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(26, 35, 46, 0.12);
 }
-.btn-input-clear { position: absolute; right: 10px; background: none; border: none; color: #475569; cursor: pointer; font-size: 0.9rem; }
-.btn-input-clear:hover { color: #94a3b8; }
+.btn-input-clear {
+  position: absolute; right: 8px;
+  background: none; border: none;
+  color: #9ca3af; cursor: pointer; font-size: 0.8rem;
+}
+.btn-input-clear:hover { color: #64748b; }
 
-/* Toolbar */
-.toolbar-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; }
-.selection-status { color: #60a5fa; font-weight: 600; }
-.toolbar-buttons { display: flex; gap: 2px; }
-.btn-link { background: none; border: none; cursor: pointer; font-size: 0.8rem; color: #64748b; font-weight: 500; padding: 3px 8px; border-radius: 5px; transition: all 0.15s; }
-.btn-link:hover:not(:disabled) { background: rgba(255,255,255,0.07); color: #94a3b8; }
-.btn-link.danger:hover:not(:disabled) { color: #f87171; background: rgba(239, 68, 68, 0.1); }
-.btn-link:disabled { opacity: 0.35; cursor: default; }
+.toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 7px;
+  font-size: 0.74rem;
+}
+.selection-status { color: #64748b; display: flex; align-items: center; gap: 4px; }
 
-/* Body oscuro */
-.card-body {
+.count-pill {
+  background: #fdfae6; /* Dorado muy claro */
+  color: #9b8412;      /* Texto Dorado */
+  font-weight: 700;
+  padding: 0px 5px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+.toolbar-buttons { display: flex; align-items: center; gap: 1px; }
+.divider-dot { color: #d1d5db; font-size: 0.7rem; }
+
+.btn-link {
+  background: none; border: none;
+  color: #64748b; font-size: 0.74rem;
+  font-weight: 500; padding: 2px 5px;
+  border-radius: 3px; cursor: pointer;
+  transition: all 0.1s;
+}
+.btn-link:hover:not(:disabled) { background: #f1f5f9; color: #1a232e; }
+.btn-link.danger:hover:not(:disabled) { color: #ef4444; background: #fee2e2; }
+.btn-link:disabled { opacity: 0.3; cursor: default; }
+
+/* Body */
+.dropdown-body {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
-  background: #1a2235;
+  padding: 3px 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: #e2e8f0 transparent;
 }
-.card-body::-webkit-scrollbar { width: 5px; }
-.card-body::-webkit-scrollbar-track { background: transparent; }
-.card-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+.dropdown-body::-webkit-scrollbar { width: 4px; }
+.dropdown-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
-.state-container { padding: 40px; text-align: center; color: #475569; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 0.9rem; }
-.spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+.state-container {
+  padding: 20px;
+  text-align: center;
+  color: #9ca3af;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #9b8412; /* Spinner Dorado */
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Lista Items */
+/* Rows */
 .list-row {
   display: flex;
   align-items: center;
-  padding: 9px 16px 9px 20px;
-  cursor: pointer;
-  transition: background 0.12s;
-  user-select: none;
+  padding: 6px 10px;
   gap: 4px;
+  cursor: pointer;
+  transition: background 0.08s;
+  user-select: none;
 }
-.list-row:hover { background-color: rgba(255,255,255,0.05); }
-.list-row.is-selected { background-color: rgba(59, 130, 246, 0.12); }
+.list-row:hover { background: #f8fafc; }
+.list-row.is-selected { background: #faf9f0; } /* Fondo seleccionado crema/dorado suave */
+.list-row + .list-row { border-top: 1px solid #f8fafc; }
 
 /* Checkbox */
-.custom-checkbox { position: relative; width: 20px; height: 20px; margin-right: 12px; flex-shrink: 0; }
-.custom-checkbox input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+.custom-checkbox { position: relative; width: 16px; height: 16px; margin-right: 9px; flex-shrink: 0; }
+.custom-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; }
 .checkmark {
-  position: absolute; top: 0; left: 0; height: 20px; width: 20px;
-  background-color: rgba(255,255,255,0.05);
-  border: 2px solid rgba(255,255,255,0.15);
-  border-radius: 5px;
+  position: absolute; inset: 0;
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 3px;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.12s;
 }
-.checkmark i { color: white; font-size: 0.72rem; transform: scale(0); transition: transform 0.2s; }
-.list-row:hover .checkmark { border-color: rgba(255,255,255,0.3); }
-.custom-checkbox input:checked ~ .checkmark { background-color: #3b82f6; border-color: #3b82f6; }
+.checkmark i { color: #fff; font-size: 0.55rem; transform: scale(0); transition: transform 0.12s; }
+
+.list-row:hover .checkmark { border-color: #1a232e; } /* Hover checkbox Navy */
+.custom-checkbox input:checked ~ .checkmark { background: #9b8412; border-color: #9b8412; } /* Check Dorado */
 .custom-checkbox input:checked ~ .checkmark i { transform: scale(1); }
 
-/* Textos */
-.row-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.row-label { font-size: 0.88rem; color: #cbd5e1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.list-row.is-selected .row-label { color: #93c5fd; }
-.row-sublabel { font-size: 0.74rem; color: #475569; }
+.row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row-label {
+  font-size: 0.82rem;
+  color: #1e293b;
+  font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.list-row.is-selected .row-label { color: #9b8412; font-weight: 600; } /* Label seleccionado Dorado */
+.row-sublabel { font-size: 0.68rem; color: #9ca3af; }
 
 /* Botón "Solo este" */
 .btn-only {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #334155;
-  font-size: 0.78rem;
-  padding: 4px 6px;
-  border-radius: 5px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
+  background: none; border: none; cursor: pointer;
+  color: transparent; font-size: 0.68rem;
+  padding: 2px 4px; border-radius: 3px;
+  flex-shrink: 0; transition: all 0.1s;
 }
-.list-row:hover .btn-only { opacity: 1; color: #64748b; }
-.btn-only:hover { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
-/* Cuando ya ES el único seleccionado */
-.btn-only.is-exclusive { opacity: 1; color: #3b82f6; }
-.btn-only.is-exclusive:hover { background: rgba(239, 68, 68, 0.1) !important; color: #f87171 !important; }
+.list-row:hover .btn-only { color: #9ca3af; }
+.btn-only:hover { background: #fdfae6 !important; color: #9b8412 !important; } /* Hover "Solo este" Dorado */
+.btn-only.is-exclusive { color: #84a6d0 !important; }
+.btn-only.is-exclusive:hover { background: #fee2e2 !important; color: #ef4444 !important; }
 
-/* Footer oscuro */
-.card-footer {
-  padding: 14px 20px;
-  border-top: 1px solid rgba(255,255,255,0.07);
+/* Footer */
+.dropdown-footer {
+  padding: 7px 10px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  background: #1e2a3e;
+  gap: 6px;
 }
-.btn-secondary {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 8px 16px;
-  border-radius: 7px;
-  color: #94a3b8;
+.btn-cancel {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  padding: 4px 12px;
+  border-radius: 4px;
+  color: #64748b;
+  font-size: 0.78rem;
   font-weight: 500;
-  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.12s;
 }
-.btn-secondary:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.2); color: #cbd5e1; }
-.btn-primary {
-  background: #3b82f6;
-  border: 1px solid #3b82f6;
-  padding: 8px 18px;
-  border-radius: 7px;
-  color: white;
-  font-weight: 600;
-  font-size: 0.88rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-  transition: all 0.2s;
-}
-.btn-primary:hover { background: #2563eb; box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4); }
+.btn-cancel:hover { border-color: #1a232e; color: #1a232e; }
 
-/* Transitions */
-.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s; }
-.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-.modal-zoom-enter-active, .modal-zoom-leave-active { transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
-.modal-zoom-enter-from, .modal-zoom-leave-to { opacity: 0; transform: scale(0.96) translateY(8px); }
+.btn-apply {
+  background: #1a232e; /* Botón principal Navy */
+  border: none;
+  padding: 4px 14px;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+  box-shadow: 0 1px 4px rgba(26, 35, 46, 0.3);
+}
+.btn-apply:hover { background: #2c3a4d; } /* Hover ligeramente más claro */
+
+/* ── Transition ── */
+.dropdown-enter-active {
+  transition: opacity 0.12s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dropdown-leave-active {
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.99);
+}
 </style>
