@@ -8,27 +8,54 @@ export default [
     name: 'Áreas',
   },
 
+  //
+  // ACADÉMICA
+  //
+  {
+    component: 'CNavGroup',
+    name: 'Académica',
+    to: '/academica',
+    icon: 'cil-notes', // Icono de edificio institucional / academia
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Gestión de Alumnos',
+        to: '/academica/alumnos',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Calificaciones',
+        to: '/academica/notas',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Asistencia',
+        to: '/academica/asistencia',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Actas y Certificados',
+        to: '/academica/certificados',
+      },
+      {
+        component: 'CNavItem',
+        name: 'Horarios',
+        to: '/academica/horarios',
+      },
+    ],
+  },
+
   {
     component: 'CNavGroup',
     name: 'Finanzas',
     to: '/fico',
-    icon: 'cil-layers', // icono sugerido
+    icon: 'cil-calculator',
     items: [
-      // {
-      //   component: 'CNavItem',
-      //   name: 'Overview',
-      //   to: '/fico/overview',
-      // },
       {
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
       },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'Reportes',
-      //   to: '/fico/reportes',
-      // },
     ],
   },
 
@@ -39,7 +66,7 @@ export default [
     component: 'CNavGroup',
     name: 'Producto',
     to: '/producto',
-    icon: 'cil-layers', // icono sugerido
+    icon: 'cil-layers',
     items: [
       {
         component: 'CNavItem',
@@ -70,43 +97,13 @@ export default [
     component: 'CNavGroup',
     name: 'Comercial',
     to: '/comercial',
-    icon: 'cil-people', // icono sugerido
+    icon: 'cil-dollar',
     items: [
-      // {
-      //   component: 'CNavItem',
-      //   name: 'Overview',
-      //   to: '/comercial/overview',
-      // },
       {
         component: 'CNavItem',
         name: 'Comercial',
         to: '/comercial/leads',
       },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'Descuento',
-      //   to: '/comercial/discount',
-      // },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'R. Producto',
-      //   to: '/comercial/RptMktProduct',
-      // },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'R. SLA',
-      //   to: '/comercial/RptSLA',
-      // },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'R. LLamadas',
-      //   to: '/comercial/RptCalling',
-      // },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'R. Rendimiento',
-      //   to: '/comercial/RptPerformanceMarketing',
-      // },
       {
         component: 'CNavItem',
         name: 'Control Comercial',
@@ -122,11 +119,6 @@ export default [
         name: 'Cronograma - Objetivos',
         to: '/comercial/RptGoalEdition',
       },
-      // {
-      //   component: 'CNavItem',
-      //   name: 'R. Cobertura',
-      //   to: '/comercial/RptCoverageForecast',
-      // }
     ],
   },
 
@@ -137,7 +129,7 @@ export default [
     component: 'CNavGroup',
     name: 'B2B',
     to: '/business',
-    icon: 'cil-layers', // icono sugerido
+    icon: 'cil-people',
     items: [
       {
         component: 'CNavItem',
@@ -154,7 +146,7 @@ export default [
     component: 'CNavGroup',
     name: 'Marketing',
     to: '/marketing',
-    icon: 'cil-layers', // icono sugerido
+    icon: 'cil-speech',
     items: [
       {
         component: 'CNavItem',
@@ -176,7 +168,7 @@ export default [
     component: 'CNavGroup',
     name: 'Cliente',
     to: '/cliente',
-    icon: 'cil-user', // icono sugerido
+    icon: 'cil-user',
     items: [
       {
         component: 'CNavItem',
@@ -199,40 +191,4 @@ export default [
       },
     ],
   },
-
-  //
-  // EXTRAS
-  //
-  /*{
-    component: 'CNavTitle',
-    name: 'Extras',
-  },
-  {
-    component: 'CNavGroup',
-    name: 'Pages',
-    to: '/pages',
-    icon: 'cil-star',
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Login',
-        to: '/pages/login',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Register',
-        to: '/pages/register',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Error 404',
-        to: '/pages/404',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Error 500',
-        to: '/pages/500',
-      },
-    ],
-  },*/
 ]
