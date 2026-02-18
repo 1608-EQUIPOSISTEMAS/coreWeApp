@@ -111,7 +111,7 @@
               </div>
            </div>
            
-           <div class="col-xl-3 col-md-6" @click="drillDown('follow', 'we_follow_lead_pending')">
+           <div class="col-xl-3 col-md-6" @click="drillDown('follow', 'we_calling_pending')">
               <div class="card border-0 shadow-sm h-100 p-3 text-center kpi-card cursor-pointer bg-white">
                  <div class="text-secondary x-small fw-bold uppercase ls-1 mb-1">Seg. Pendientes</div>
                  <h2 class="fw-bold text-warning mb-2">{{ stats.general.followUpPending }}</h2>
@@ -655,12 +655,15 @@ else if (type === 'medium') {
     if (r) query.moment_ids = r
   }
   else if (type === 'follow') {
-    const opts  = catalog.options('we_follow_lead')
+    const opts  = catalog.options('we_calling')
     const found = opts.find(x => x.description === valueName)
       ?? opts.find(x => x.alias === valueName)
+console.log(opts)
+console.log(found)
     if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
+console.log(valueName)
   }
-
+console.log(query)
   const routeData = router.resolve({ name: 'ComercialListado', query })
   window.open(routeData.href, '_blank')
 }

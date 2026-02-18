@@ -2,7 +2,10 @@
 @use "@coreui/coreui/scss/variables" as *;
 @use "@coreui/coreui/scss/mixins/breakpoints" as *;
 @use "@coreui/coreui/scss/mixins/color-mode" as *;
-
+:root {
+  --bs-primary: #0b1f33;   /* azul oscuro corporativo */
+  --bs-info: #1f4e79;      /* azul formal */
+}
 .example {
   &:not(:first-child) {
     margin-top: 1.5rem;

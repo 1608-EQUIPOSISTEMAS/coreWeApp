@@ -236,11 +236,10 @@
     <thead class="table-light">
       <tr>
         <th style="width: 50px;" class="text-center">#</th>
-        <th style="min-width: 140px;">T. Seguimiento</th>
-        <th style="min-width: 140px;">Estado</th>
-        <th style="min-width: 140px;">Resultado</th>
-        <th style="min-width: 210px;">Fecha/Hora</th>
-        <th style="min-width: 130px;" class="text-center">Duración</th> 
+        <th style="min-width: 160px;">T. Seguimiento</th>
+        <th style="min-width: 160px;">Resultado</th>
+        <th style="min-width: 230px;">Fecha/Hora</th>
+        <th style="min-width: 140px;" class="text-center">Duración</th> 
         <th style="min-width: 200px;">Observación</th>
       </tr>
     </thead>
@@ -250,9 +249,9 @@
         <td class="align-top">
           <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt"  label-field="description" value-field="alias" placeholder="T. Seguimiento..." :disabled="attempt.id" class="form-control-sm p-0 border-0" required />
         </td>
-        <td class="align-top">
-          <SearchSelect required v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
-        </td>
+        <!-- <td class="align-top">
+          <SearchSelect required v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="attempt.id && attempt.status_alias !== 'we_follow_lead_pending' && attempt.status_alias != null" class="form-control-sm p-0 border-0" />
+        </td> -->
 
         <td class="align-top">
           <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Resultado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
@@ -377,6 +376,7 @@
           <div class="col-md-6"><label class="form-label">Rango Inicio Edición</label><BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango" @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')" /></div>
         </div>
       </div>
+      
       <div>
         <h6 class="section-title">Auditoría del Registro</h6>
         <div class="row g-3">
@@ -394,7 +394,52 @@
           <div class="col-md-4"><label class="form-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango" @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
               
         </div>
+
+        <br>
+        <div class="finance-filter-box mb-4">
+        <h6 class="section-title">Filtros Financieros y Matrícula</h6>
+        
+        <div class="row g-3">
+          
+          <div class="col-md-3 col-6">
+            <label class="form-label">Estado FICO (Deuda)</label>
+            <MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="ESTADO FICO..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Perfil de Precio</label>
+            <MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="PERFIL..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Moneda</label>
+            <MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="abbreviation" value-key="id" placeholder="MONEDA..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Mod. Inscripción</label>
+            <MultiSelect v-model="filters.inscription_modality_ids" :items="filtroInscriptionModality" label-key="description" value-key="id" placeholder="MOD. INSCRIPCIÓN..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Estado Cuotas</label>
+            <MultiSelect v-model="filters.installment_status_ids" :items="filtroPaymentStatus" label-key="description" value-key="id" placeholder="EST. CUOTA..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Método de Pago</label>
+            <MultiSelect v-model="filters.payment_method_ids" :items="filtroPaymentMethod" label-key="description" value-key="id" placeholder="METODO..." />
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label class="form-label">Conciliación Bancaria</label>
+            <MultiSelect v-model="filters.settlement_status_ids" :items="filtroSettlementStatus" label-key="description" value-key="id" placeholder="CONCILIACIÓN..." />
+          </div>
+
+        </div>
       </div>
+      </div>
+      
     </div>
     <template #footer>
       <div class="d-flex justify-content-between w-100 align-items-center">
@@ -425,7 +470,7 @@
             <tr class="small text-muted">
               <th class="bg-primary-subtle minW-200">Tipos</th>
               <th class="bg-primary-subtle minW-200">Modalidades</th>
-              <th class="bg-primary-subtle minW-200">Específicos</th>
+              <th class="bg-primary-subtle minW-300">Específicos</th>
               <th class="bg-success-subtle minW-200">Estatus (Pipeline)</th>
               <th class="bg-success-subtle minW-200">Seguimiento</th>
               <th class="bg-success-subtle minW-200">Niv. Interés</th>
@@ -442,8 +487,21 @@
               
               <td><MultiSelect v-model="asesor.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></td>
               <td><MultiSelect v-model="asesor.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></td>
-              <td><MultiSelect v-model="asesor.program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              
+              <td>
+                <MultiSelect
+                    v-model="asesor.program_ids"
+
+                    mode="remote"
+                    :fetcher="q => programService.programVersionCaller({ q })"
+                    :debounce-ms="400"
+
+                    labelKey="abbreviation"
+                    valueKey="program_version_id"
+
+                    placeholder="todos..."
+                  />
+          
+              </td>
               <td><MultiSelect v-model="asesor.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></td>
               <td><MultiSelect v-model="asesor.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></td>
               <td><MultiSelect v-model="asesor.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></td>
@@ -765,6 +823,7 @@ const comercialService = inject(ServiceKeys.Comercial)
 const authService = inject(ServiceKeys.Auth)
 const catalog = inject('catalog')
 
+const programService = inject(ServiceKeys.Program)
 const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
 
 // === ESTADO ===
@@ -812,7 +871,14 @@ const filters = reactive({
   medium_contact_ids: [],
   code_country_ids: [],
   moment_ids: [],
-
+fico_status_ids: [],
+  profile_ids: [],
+  currency_ids: [],
+  inscription_modality_ids: [],
+  installment_status_ids: [],
+  payment_method_ids: [],
+  // payment_type_ids: [], // Ignorado como solicitaste
+  settlement_status_ids: [],
   // Fechas siguen siendo strings
   rangoFechas: { start: '', end: '' },
   rangoModificacion: { start: '', end: '' },
@@ -831,7 +897,7 @@ const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
-const filtroFollow = ref(catalog.options('we_follow_lead') || [])
+const filtroFollow = ref(catalog.options('we_calling') || [])
 const filtroMoment = ref(catalog.options('we_moment') || [])
 const filtroQuery = ref(catalog.options('we_category_query') || [])
 const filtroInterest = ref(catalog.options('we_lead_interest') || [])
@@ -841,6 +907,14 @@ const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
 const filtroCalling = ref(catalog.options('we_calling') || [])
 const filtroMedios = ref(catalog.options('we_social_media') || []) // Ojo: we_medium_contact
 const filtroPaises = ref(catalog.options('we_country') || [])   // Ojo: we_code_country
+const filtroFicoStatus = ref(catalog.options('we_fico_status') || catalog.options('we_enrollment_status') || []) 
+const filtroProfile = ref(catalog.options('we_profile') || [])
+const filtroCurrency = ref(catalog.options('we_currency') || [])
+const filtroInscriptionModality = ref(catalog.options('we_inscription_modality') || []) 
+const filtroPaymentStatus = ref(catalog.options('we_payment_status') || [])
+const filtroPaymentMethod = ref(catalog.options('we_payment_method') || [])
+// Reutilizamos we_payment_status para settlement si comparten estados (pagado, pendiente, anulado)
+const filtroSettlementStatus = ref(catalog.options('we_settlement_status') || catalog.options('we_payment_status') || [])
 // === MAPAS COMPUTADOS (OPTIMIZACIÓN) ===
 const createMap = (arr) => {
   if (!Array.isArray(arr)) return {}
@@ -938,6 +1012,13 @@ async function parseQueryAndApply() {
   filters.medium_contact_ids = decodeFilter(q.medium_contact_ids)
   filters.code_country_ids   = decodeFilter(q.code_country_ids)
   filters.moment_ids         = decodeFilter(q.moment_ids)
+  filters.fico_status_ids          = decodeFilter(q.fico_status_ids)
+  filters.profile_ids              = decodeFilter(q.profile_ids)
+  filters.currency_ids             = decodeFilter(q.currency_ids)
+  filters.inscription_modality_ids = decodeFilter(q.inscription_modality_ids)
+  filters.installment_status_ids   = decodeFilter(q.installment_status_ids)
+  filters.payment_method_ids       = decodeFilter(q.payment_method_ids)
+  filters.settlement_status_ids    = decodeFilter(q.settlement_status_ids)
 
   await router.replace({ query: {} })
   return true
@@ -990,7 +1071,6 @@ function openFollowModal(lead) {
           if (!d) return null;
           return {
             id: d?.id || d?.lead_contact_attempt_id,
-            status_alias: d?.cat_status_alias || d?.cat_status_label,
             calling_alias: d?.cat_result_alias || d?.cat_result_label,
             contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
             response: d?.response || '',
@@ -1060,37 +1140,38 @@ async function openControlModal() {
   asesoresControl.value = []; 
   
   try {
-    // 1. Asegurar carga de asesores
+    // 1. Asegurar carga de asesores (esto sí se mantiene para la lista de usuarios)
     if (filtroOwners.value.length === 0) {
       await loadOwners();
     }
 
-    // 2. Traer restricciones desde BD
+    // 2. Traer restricciones desde BD (Ahora ya vienen con LABEL)
     const savedRestrictions = await comercialService.restrictionsList({
       user_id: currentUserId,
       is_comercial: isComercial
     });
 
-    // 3. Función local para mapear e hidratar un asesor a la vez
+    // 3. Función local SIMPLIFICADA (sin hidratación)
     const buildAsesorRecord = (userId, userName, bdRest = {}) => {
+      // Como el BD ya devuelve [{value:1, label:'Web'}], lo pasamos directo.
+      // Si viene null o undefined, pasamos array vacío.
       return {
         user_id: userId,
         name: userName,
-        type_program_ids: hydrateCatalog(bdRest.type_program_ids, filtroTiposPrograma.value),
-        model_modality_ids: hydrateCatalog(bdRest.model_modality_ids, filtroModalidad.value),
-        program_ids: hydrateCatalog(bdRest.program_ids, filtroProgramasEspec.value),
-        status_lead_ids: hydrateCatalog(bdRest.status_lead_ids, filtroPipeline.value),
-        last_follow_ids: hydrateCatalog(bdRest.last_follow_ids, filtroFollow.value),
-        interest_level_ids: hydrateCatalog(bdRest.interest_level_ids, filtroInterest.value),
-        channel_ids: hydrateCatalog(bdRest.channel_ids, filtroCanales.value),
-        strategy_ids: hydrateCatalog(bdRest.strategy_ids, strategyCatalog.value),
-        moment_ids: hydrateCatalog(bdRest.moment_ids, filtroMoment.value)
+        type_program_ids: bdRest.type_program_ids || [],
+        model_modality_ids: bdRest.model_modality_ids || [],
+        program_ids: bdRest.program_ids || [],
+        status_lead_ids: bdRest.status_lead_ids || [],
+        last_follow_ids: bdRest.last_follow_ids || [],
+        interest_level_ids: bdRest.interest_level_ids || [],
+        channel_ids: bdRest.channel_ids || [],
+        strategy_ids: bdRest.strategy_ids || [],
+        moment_ids: bdRest.moment_ids || []
       };
     };
 
-    // 4. Asignación según rol
+    // 4. Asignación según rol (Lógica idéntica, pero más datos limpios)
     if (isComercial) {
-      // VISTA ASESOR: Solo mi usuario
       const bdRest = savedRestrictions[0] || {};
       const myName = storedUser?.first_name 
         ? `${storedUser.first_name} ${storedUser.last_name || ''}` 
@@ -1099,27 +1180,13 @@ async function openControlModal() {
       asesoresControl.value = [buildAsesorRecord(currentUserId, myName, bdRest)];
       
     } else {
-      // VISTA ADMIN/LÍDER: Todos los usuarios
       asesoresControl.value = filtroOwners.value.map(owner => {
         const bdRest = savedRestrictions.find(r => r.user_id === owner.id) || {};
         return buildAsesorRecord(owner.id, owner.description, bdRest);
       });
     }
 
-    // 5. TRUCO DE REHIDRATACIÓN (Fallback por si Vue tardó en cargar los catálogos inyectados)
-    // Si la modalidad está vacía en los catálogos al principio, le damos 500ms y re-evaluamos
-    if (filtroModalidad.value.length === 0 || filtroTiposPrograma.value.length === 0) {
-      setTimeout(() => {
-         console.log("Re-hidratando catálogos retrasados...");
-         // Forzamos la reactividad recargando los valores con los catálogos llenos
-         asesoresControl.value = asesoresControl.value.map(asesor => {
-            const originalBdRest = isComercial 
-              ? savedRestrictions[0] || {}
-              : savedRestrictions.find(r => r.user_id === asesor.user_id) || {};
-            return buildAsesorRecord(asesor.user_id, asesor.name, originalBdRest);
-         });
-      }, 500);
-    }
+    // ¡ADIÓS AL SETTIMEOUT Y REHIDRATACIÓN! :)
 
   } catch (error) {
     console.error("Error cargando permisos:", error);
@@ -1132,10 +1199,10 @@ async function saveControlRestrictions() {
   isSavingRestrictions.value = true;
   
   try {
-    // Preparar el payload masivo limpiando los objetos a Arrays planos de Enteros [1, 2]
     const payloadMasivo = asesoresControl.value.map(asesor => ({
       user_id: asesor.user_id,
       is_active: true,
+      // La función extractIds ya manejaba {value, label} -> value, así que esto funciona perfecto
       type_program_ids: extractIds(asesor.type_program_ids),
       model_modality_ids: extractIds(asesor.model_modality_ids),
       program_ids: extractIds(asesor.program_ids),
@@ -1148,7 +1215,6 @@ async function saveControlRestrictions() {
     }));
 
     await comercialService.restrictionsUpdate(payloadMasivo);
-    
     toast.success('Filtros restrictivos aplicados correctamente');
     showControlModal.value = false;
     
@@ -1172,7 +1238,6 @@ async function saveFastFollow() {
   try {
     const attemptsPayload = editableHistory.value.map(item => ({
        id: item.id,
-       cat_status: getIdFromAlias(item.status_alias, filtroFollow.value),
        cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
        cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
        contact_datetime: item.contact_datetime,
@@ -1238,6 +1303,13 @@ function rebuildChips() {
   makeChip('medium_contact_ids', 'Medio',      filters.medium_contact_ids)
   makeChip('code_country_ids',   'País',       filters.code_country_ids)
   makeChip('moment_ids',         'Etapa',      filters.moment_ids)
+  makeChip('fico_status_ids',          'FICO',           filters.fico_status_ids)
+  makeChip('profile_ids',              'Perfil',         filters.profile_ids)
+  makeChip('currency_ids',             'Moneda',         filters.currency_ids)
+  makeChip('inscription_modality_ids', 'Mod. Insc.',     filters.inscription_modality_ids)
+  makeChip('installment_status_ids',   'Est. Cuota',     filters.installment_status_ids)
+  makeChip('payment_method_ids',       'Método Pago',    filters.payment_method_ids)
+  makeChip('settlement_status_ids',    'Conciliación',   filters.settlement_status_ids)
   if (!isComercial) makeChip('owner_user_ids', 'Asesor', filters.owner_user_ids)
 
   activeFilterChips.value = chips
@@ -1266,7 +1338,13 @@ async function fetchLeads() {
       pay_date_to:         filters.pay_date_to               || null,
       edition_start_from:  filters.edition_start_from        || null,
       edition_start_to:    filters.edition_start_to          || null,
-
+fico_status_ids:            getIds(filters.fico_status_ids),
+      profile_ids:                getIds(filters.profile_ids),
+      currency_ids:               getIds(filters.currency_ids),
+      inscription_modality_ids:   getIds(filters.inscription_modality_ids),
+      installment_status_ids:     getIds(filters.installment_status_ids),
+      payment_method_ids:         getIds(filters.payment_method_ids),
+      settlement_status_ids:      getIds(filters.settlement_status_ids),
       owner_user_ids:      getIds(filters.owner_user_ids),
       status_lead_ids:     getIds(filters.status_lead_ids),
       last_follow_ids:     getIds(filters.last_follow_ids),
@@ -1347,7 +1425,9 @@ function clearFilters(reload = true) {
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
     created_range_string: null, updated_range_string: null,
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
-    pay_date_from: '', pay_date_to: '', pay_date_range_string: null
+    pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
+    inscription_modality_ids: [], installment_status_ids: [],
+    payment_method_ids: [], settlement_status_ids: []
   })
 
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
@@ -1540,6 +1620,9 @@ tr.row-pressing::after { width: 100%; transition: width 1s linear; }
 }
 .minW-200 {
   min-width: 220px;
+}
+.minW-300 {
+  min-width: 320px;
 }
 .sticky-col {
   position: sticky;

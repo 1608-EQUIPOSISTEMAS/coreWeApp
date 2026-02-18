@@ -5,7 +5,9 @@ import { sygnet } from '@/assets/brand/sygnet'
 import { AppSidebarNav } from '@/components/AppSidebarNav.js'
 import { useSidebarStore } from '@/stores/sidebar.js'
 
+import { useFilteredNav } from '@/composables/useFilteredNav.js'
 const sidebar = useSidebarStore()
+const { filteredNav } = useFilteredNav()
 </script>
 
 <template>
@@ -30,7 +32,7 @@ const sidebar = useSidebarStore()
       </RouterLink>
       <CCloseButton class="d-lg-none" dark @click="sidebar.toggleVisible()" />
     </CSidebarHeader>
-    <AppSidebarNav />
+    <AppSidebarNav :items="filteredNav" />
     <CSidebarFooter class="border-top d-none d-lg-flex">
       <CSidebarToggler @click="sidebar.toggleUnfoldable()" />
     </CSidebarFooter>

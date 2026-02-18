@@ -32,6 +32,23 @@
     
   }
 
+  //updateEnrollmentBase
+  async function updateEnrollmentBase() {
+    try {
+      const response = await integrationService.updateEnrollmentBase()
+      
+      if (response && response.ok) {
+        toast.success(`Base de inscritos actualizada correctamente`);
+      } else {
+        throw new Error(response?.message || 'Error desconocido al actualizar inscritos');
+      }
+    } catch (error) {
+      console.error('Error al actualizar la base de inscritos:', error)
+      toast.error('Error al actualizar la base de inscritos')
+    }
+  }
+  
+
   //syncScheduleToSheet
   async function syncScheduleToSheet() {
     try {
@@ -69,10 +86,6 @@
       >
         Cuenta
       </CDropdownHeader>
-      <!-- <CDropdownItem>
-        <CIcon icon="cil-bell" /> Updates
-        <CBadge color="info" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem> -->
       <CDropdownItem>
         <CIcon icon="cil-envelope-open" /> Mensajes
         <CBadge color="success" class="ms-auto">{{ itemsCount }}</CBadge>
@@ -80,20 +93,12 @@
        <CDropdownItem @click="updateBase()" v-if="$hasRole(['COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
-       <CDropdownItem @click="updateBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
+       <CDropdownItem @click="updateEnrollmentBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem>
        <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole(['ADMIN','PRODUCTO','LIDER GERENCIA'])">
         <CIcon  icon="cil-cloud-download" /> Planeamiento
       </CDropdownItem>
-      <!-- <CDropdownItem>
-        <CIcon icon="cil-task" /> Tasks
-        <CBadge color="danger" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem>
-      <CDropdownItem>
-        <CIcon icon="cil-comment-square" /> Comments
-        <CBadge color="warning" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem> -->
       <CDropdownHeader
         component="h6"
         class="bg-body-secondary text-body-secondary fw-semibold my-2"
@@ -102,16 +107,7 @@
       </CDropdownHeader>
       <CDropdownItem> <CIcon icon="cil-user" /> Perfil </CDropdownItem>
       <CDropdownItem> <CIcon icon="cil-settings" /> Ajustes </CDropdownItem>
-      <!-- <CDropdownItem>
-        <CIcon icon="cil-dollar" /> Payments
-        <CBadge color="secondary" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem>
-      <CDropdownItem>
-        <CIcon icon="cil-file" /> Projects
-        <CBadge color="primary" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem> -->
       <CDropdownDivider />
-      <!-- <CDropdownItem> <CIcon icon="cil-shield-alt" /> Lock Account </CDropdownItem> -->
       <CDropdownItem @click="logout()"> <CIcon icon="cil-lock-locked"/> Cerrar Sesión </CDropdownItem>
     </CDropdownMenu>
   </CDropdown>

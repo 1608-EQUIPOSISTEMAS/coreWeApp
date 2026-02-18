@@ -47,7 +47,13 @@ const AppSidebarNav = defineComponent({
     CNavGroup,
     CNavTitle,
   },
-  setup() {
+  props: {
+    items: {
+      type: Array,
+      default: () => nav, // si no pasan items, usa el nav original como fallback
+    },
+  },
+  setup(props) {
     const route = useRoute()
     const firstRender = ref(true)
 
@@ -179,7 +185,7 @@ const AppSidebarNav = defineComponent({
           as: simplebar,
         },
         {
-          default: () => nav.map((item) => renderItem(item)),
+          default: () => props.items.map((item) => renderItem(item)),
         },
       )
   },

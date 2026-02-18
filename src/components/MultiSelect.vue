@@ -10,6 +10,8 @@
         'has-selection': selected.length > 0
       }"
       @click="toggleDropdown"
+      @mouseenter="onMouseEnter" 
+      @mouseleave="hovering = false"
       ref="triggerRef"
     >
       <div class="trigger-content">
@@ -29,14 +31,30 @@
         >
           <i class="fa-solid fa-xmark"></i>
         </button>
-        <!-- Ícono de filtro igual al que usa la tabla -->
         <i class="fa-solid fa-filter trigger-icon" :class="{ active: dropdownOpen || selected.length > 0 }"></i>
       </div>
+
+      <!-- Hover Preview -->
+       <Teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="hovering && !dropdownOpen && selected.length > 0"
+            class="hover-preview"
+            :style="previewStyle" 
+          >
+            <div class="preview-header">Selección actual:</div>
+            <ul class="preview-list">
+              <li v-for="(item, index) in selectedPreview" :key="index">• {{ item.label }}</li>
+              <li v-if="selected.length > 5" class="preview-more">+ {{ selected.length - 5 }} más...</li>
+            </ul>
+          </div>
+        </Transition>
+      </Teleport>
     </div>
 
     <div v-if="hint" class="control-hint">{{ hint }}</div>
 
-    <!-- ── Dropdown Panel ── -->
+    <!-- ── Dropdown Panel (Teleported al body) ── -->
     <Teleport to="body">
       <Transition name="dropdown">
         <div
@@ -49,7 +67,6 @@
           <!-- Search -->
           <div class="dropdown-header">
             <div class="search-wrap">
-              <i class="fa-solid fa-magnifying-glass search-icon"></i>
               <input
                 ref="searchInputRef"
                 type="text"
@@ -69,11 +86,10 @@
                 seleccionados
               </span>
               <div class="toolbar-buttons">
-                <button @click="selectAll" :disabled="filteredItems.length === 0" class="btn-link">
+                <button @click="selectAll" :disabled="filteredItems.length === 0" class="btn-pill">
                   Todos
                 </button>
-                <span class="divider-dot">·</span>
-                <button @click="deselectAll" :disabled="!hasVisibleSelection" class="btn-link danger">
+                <button @click="deselectAll" :disabled="!hasVisibleSelection" class="btn-pill outline">
                   Ninguno
                 </button>
               </div>
@@ -93,48 +109,43 @@
             </div>
 
             <template v-else>
-              <label
+              <div
                 v-for="item in filteredItems"
                 :key="item[valueKey]"
                 class="list-row"
                 :class="{ 'is-selected': tempSelection.has(item[valueKey]) }"
               >
-                <div class="custom-checkbox">
-                  <input
-                    type="checkbox"
-                    :checked="tempSelection.has(item[valueKey])"
-                    @change="toggleItem(item)"
-                  />
-                  <span class="checkmark">
-                    <i class="fa-solid fa-check"></i>
-                  </span>
-                </div>
+                <div class="row-click-area" @click="toggleItem(item)">
+                  <div class="custom-checkbox" :class="{ 'is-checked': tempSelection.has(item[valueKey]) }">
+                    <span class="checkmark">
+                      <i class="fa-solid fa-check"></i>
+                    </span>
+                  </div>
 
-                <div class="row-info">
-                  <span class="row-label">{{ item[labelKey] }}</span>
-                  <span v-if="sublabelKey && item[sublabelKey]" class="row-sublabel">
-                    {{ item[sublabelKey] }}
-                  </span>
+                  <div class="row-info">
+                    <span class="row-label">{{ item[labelKey] }}</span>
+                    <span v-if="sublabelKey && item[sublabelKey]" class="row-sublabel">
+                      {{ item[sublabelKey] }}
+                    </span>
+                  </div>
                 </div>
 
                 <button
                   class="btn-only"
                   :class="{ 'is-exclusive': tempSelection.size === 1 && tempSelection.has(item[valueKey]) }"
-                  @click.prevent.stop="selectOnly(item)"
-                  title="Solo este"
+                  @click.stop="selectOnly(item)"
+                  title="Seleccionar solo este"
                 >
-                  <i class="fa-solid fa-filter-circle-dot"></i>
+                  <i class="fa-solid fa-crosshairs"></i>
                 </button>
-              </label>
+              </div>
             </template>
           </div>
 
           <!-- Footer -->
           <div class="dropdown-footer">
             <button class="btn-cancel" @click="closeDropdown">Cancelar</button>
-            <button class="btn-apply" @click="acceptSelection">
-              Aplicar
-            </button>
+            <button class="btn-apply" @click="acceptSelection">Aplicar</button>
           </div>
 
         </div>
@@ -146,7 +157,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-
+const previewStyle = ref({})
 const props = defineProps({
   modelValue:     { type: Array,    default: () => [] },
   items:          { type: Array,    default: () => [] },
@@ -165,7 +176,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change', 'search'])
 
-// ── Estado
 const internalCache  = ref(new Map())
 const wrapperEl      = ref(null)
 const triggerRef     = ref(null)
@@ -173,6 +183,7 @@ const dropdownRef    = ref(null)
 const searchInputRef = ref(null)
 
 const dropdownOpen   = ref(false)
+const hovering       = ref(false)
 const dropdownStyle  = ref({})
 const searchQuery    = ref('')
 const tempSelection  = ref(new Set())
@@ -181,14 +192,31 @@ const remoteItems    = ref([])
 
 let debounceTimer = null
 
-// ── Computadas
-const isRemote  = computed(() => props.mode === 'remote')
-const selected  = computed(() => props.modelValue || [])
+const isRemote        = computed(() => props.mode === 'remote')
+const selected        = computed(() => props.modelValue || [])
+const selectedPreview = computed(() => selected.value.slice(0, 5))
 
 const currentSourceItems = computed(() =>
   isRemote.value ? remoteItems.value : props.items
 )
-
+function updatePreviewPosition() {
+  if (!triggerRef.value) return
+  
+  const rect = triggerRef.value.getBoundingClientRect()
+  
+  // Posicionamos justo debajo del trigger, alineado a la izquierda
+  previewStyle.value = {
+    position: 'fixed', // Usamos fixed porque está en el body
+    top: `${rect.bottom + 8}px`, // +8px es tu margen visual
+    left: `${rect.left}px`,
+    width: `${rect.width}px`, // Que tenga el mismo ancho del trigger
+    zIndex: '99999' // Aseguramos que esté encima del modal
+  }
+}
+function onMouseEnter() {
+  hovering.value = true
+  updatePreviewPosition()
+}
 const filteredItems = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (query) {
@@ -213,15 +241,14 @@ const hasVisibleSelection = computed(() => {
   return filteredItems.value.some(item => tempSelection.value.has(item[props.valueKey]))
 })
 
-// ── Cache
 function updateCache(items) {
   if (!Array.isArray(items)) return
   items.forEach(item => {
     if (item && item[props.valueKey]) internalCache.value.set(item[props.valueKey], item)
   })
 }
-watch(() => props.items, (n) => updateCache(n), { immediate: true })
-watch(remoteItems, (n) => updateCache(n), { deep: true })
+watch(() => props.items,      (n) => updateCache(n), { immediate: true })
+watch(remoteItems,            (n) => updateCache(n), { deep: true })
 watch(() => props.modelValue, (val) => {
   if (val && Array.isArray(val)) {
     val.forEach(v => {
@@ -233,34 +260,32 @@ watch(() => props.modelValue, (val) => {
   }
 }, { immediate: true, deep: true })
 
-// ── Posicionamiento
 function calcDropdownPosition() {
   if (!triggerRef.value) return
-  const rect        = triggerRef.value.getBoundingClientRect()
-  const vH          = window.innerHeight
-  const spaceBelow  = vH - rect.bottom
-  const spaceAbove  = rect.top
-  const maxH        = 320
+  const rect       = triggerRef.value.getBoundingClientRect()
+  const vH         = window.innerHeight
+  const spaceBelow = vH - rect.bottom
+  const spaceAbove = rect.top
+  const maxH       = 320
 
   const style = {
     position: 'fixed',
     left:     `${rect.left}px`,
-    width:    `${Math.max(rect.width, 260)}px`,
+    width:    `${Math.max(rect.width, 270)}px`,
     zIndex:   '99999',
   }
 
   if (spaceBelow >= maxH || spaceBelow >= spaceAbove) {
-    style.top       = `${rect.bottom + 3}px`
+    style.top       = `${rect.bottom + 4}px`
     style.maxHeight = `${Math.min(maxH, spaceBelow - 8)}px`
   } else {
-    style.bottom    = `${vH - rect.top + 3}px`
+    style.bottom    = `${vH - rect.top + 4}px`
     style.maxHeight = `${Math.min(maxH, spaceAbove - 8)}px`
   }
 
   dropdownStyle.value = style
 }
 
-// ── Open / Close
 function toggleDropdown() {
   if (props.disabled) return
   dropdownOpen.value ? closeDropdown() : openDropdown()
@@ -269,6 +294,7 @@ function toggleDropdown() {
 function openDropdown() {
   calcDropdownPosition()
   dropdownOpen.value  = true
+  hovering.value      = false
   searchQuery.value   = ''
   const initialIds    = selected.value.map(item =>
     (typeof item === 'object' && item !== null) ? (item.value || item[props.valueKey]) : item
@@ -286,7 +312,6 @@ function closeDropdown() {
   searchQuery.value  = ''
 }
 
-// ── Acciones
 function clearAllSelection() {
   emit('update:modelValue', [])
   emit('change', [])
@@ -353,10 +378,10 @@ async function fetchRemoteData(query) {
   loading.value = true
   emit('search', query)
   try {
-    const result  = await props.fetcher(query)
+    const result = await props.fetcher(query)
     remoteItems.value = Array.isArray(result) ? result : []
   } catch (e) {
-    console.error(e)
+    console.error('[MultiSelect] Error al cargar datos remotos:', e)
     remoteItems.value = []
   } finally {
     loading.value = false
@@ -376,7 +401,6 @@ function acceptSelection() {
   dropdownOpen.value = false
 }
 
-// ── Click fuera & Escape
 function onClickOutside(e) {
   if (!dropdownOpen.value) return
   if (!triggerRef.value?.contains(e.target) && !dropdownRef.value?.contains(e.target)) {
@@ -403,7 +427,19 @@ onBeforeUnmount(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
 </script>
+
 <style scoped>
+/*
+ * Sin variables CSS custom properties en este componente.
+ *
+ * Por qué: <style scoped> transforma `:root` en `:root[data-v-xxxx]` (inválido).
+ * Además, <Teleport to="body"> saca el dropdown del árbol DOM del componente,
+ * por lo que tampoco hereda las propiedades definidas en `.ms-wrapper`.
+ * Solución definitiva: colores hardcodeados en cada regla CSS.
+ *
+ * Paleta:  Navy #002060 | Dark #001540 | BG #eff6ff | Light #f0f9ff
+ */
+
 /* ── Wrapper ── */
 .ms-wrapper {
   position: relative;
@@ -412,84 +448,209 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
-/* ── Trigger ── */
+/* ── Trigger ──
+   FIX 3: min-height en vez de height fija, y overflow:hidden para que
+   el trigger NUNCA crezca hacia los lados — el texto desbordante se
+   recorta o el contenedor crece hacia abajo.
+*/
 .ms-trigger {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
   gap: 6px;
   background: #ffffff;
-  border: 1px solid #d1d5db;
+  border: 1px solid #cbd5e1;
   border-radius: 4px;
-  padding: 0 10px;
-  height: 34px;
+  padding: 6px 10px;
+  min-height: 38px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
-  white-space: nowrap;
   width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .ms-trigger:hover:not(.is-disabled) {
-  border-color: #1a232e; /* Azul Navy Hover */
+  border-color: #002060;
   background: #f8fafc;
 }
 .ms-trigger.is-open,
 .ms-trigger.has-selection {
-  border-color: #9b8412; /* Dorado activo */
-  box-shadow: 0 0 0 2px rgba(155, 132, 18, 0.15); /* Sombra dorada */
+  border-color: #002060;
+  box-shadow: 0 0 0 3px rgba(0, 32, 96, 0.1);
 }
-.ms-trigger.is-disabled { opacity: 0.5; cursor: not-allowed; }
-
-.trigger-content { flex: 1; overflow: hidden; display: flex; align-items: center; }
-.placeholder-text { color: #9ca3af; font-size: 0.82rem; }
-.value-text { display: flex; gap: 5px; align-items: center; }
-
-.badge-count {
-  background: #9b8412; /* Dorado */
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.7rem;
-  padding: 1px 6px;
-  border-radius: 10px;
-  line-height: 1.6;
+.ms-trigger.is-disabled {
+  opacity: 0.6;
+  background: #f1f5f9;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
 }
-.badge-label { color: #1a232e; font-size: 0.82rem; font-weight: 500; }
 
-.trigger-actions { display: flex; align-items: center; gap: 5px; }
-.btn-quick-clear {
-  background: none; border: none;
-  color: #9ca3af; padding: 2px; cursor: pointer;
-  border-radius: 50%; font-size: 0.72rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.12s, color 0.12s;
-}
-.btn-quick-clear:hover { background: #fee2e2; color: #ef4444; }
-
-.trigger-icon {
-  color: #9ca3af;
-  font-size: 0.72rem;
-  transition: color 0.15s;
-}
-.trigger-icon.active { color: #9b8412; }
-
-.control-hint { font-size: 0.72rem; color: #9ca3af; margin-top: 3px; padding-left: 2px; }
-
-/* ── Dropdown Panel ── */
-.ms-dropdown {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.07),
-    0 12px 24px -4px rgba(26, 35, 46, 0.15); /* Sombra con tinte navy */
+.trigger-content {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   overflow: hidden;
 }
 
-/* Header */
+.placeholder-text {
+  color: #64748b;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value-text {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* FIX 1: badge con color hardcodeado (no usa variables CSS) */
+.badge-count {
+  background: #002060;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.badge-label {
+  color: #1e293b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trigger-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-quick-clear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+.btn-quick-clear:hover { background: #f1f5f9; color: #ef4444; }
+
+.trigger-icon {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.trigger-icon.active { color: #002060; }
+
+.control-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── Hover Preview — fondo Azul Navy oscuro ── */
+.hover-preview {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background: #002060;
+  border: 1px solid #001540;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  padding: 10px 12px;
+  z-index: 200;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+.hover-preview::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 14px;
+  width: 9px;
+  height: 9px;
+  background: #002060;
+  border-left: 1px solid #001540;
+  border-top: 1px solid #001540;
+  transform: rotate(45deg);
+}
+.preview-header {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 7px;
+}
+.preview-list {
+  list-style: none!important;
+  padding: 0;
+  margin: 0;
+}
+.preview-list li {
+  color: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.preview-list li::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+.preview-more {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 0.73rem;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ── Dropdown Panel ──
+   FIX 2: todos los colores hardcodeados. El Teleport mueve este elemento
+   al <body>, fuera del árbol del componente, por lo que no hereda
+   ningún estilo scoped ni variables de .ms-wrapper.
+*/
+.ms-dropdown {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
 .dropdown-header {
-  padding: 10px 10px 8px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
 }
 
@@ -499,91 +660,124 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .search-icon {
-  position: absolute; left: 9px;
-  color: #9ca3af; font-size: 0.72rem;
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  font-size: 0.75rem;
   pointer-events: none;
 }
 .search-input {
   width: 100%;
-  padding: 6px 28px 6px 28px;
+  padding: 8px 32px 8px 30px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
-  color: #1a232e;
-  font-size: 0.8rem;
+  color: #1e293b;
+  font-size: 0.82rem;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
-.search-input::placeholder { color: #9ca3af; }
+.search-input::placeholder { color: #94a3b8; }
 .search-input:focus {
-  border-color: #1a232e; /* Foco Azul Navy */
+  border-color: #002060;
   background: #ffffff;
-  box-shadow: 0 0 0 2px rgba(26, 35, 46, 0.12);
+  box-shadow: 0 0 0 2px rgba(0, 32, 96, 0.06);
 }
 .btn-input-clear {
-  position: absolute; right: 8px;
-  background: none; border: none;
-  color: #9ca3af; cursor: pointer; font-size: 0.8rem;
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: color 0.15s;
 }
-.btn-input-clear:hover { color: #64748b; }
+.btn-input-clear:hover { color: #475569; }
 
 .toolbar-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 7px;
-  font-size: 0.74rem;
+  margin-top: 8px;
+  font-size: 0.75rem;
 }
-.selection-status { color: #64748b; display: flex; align-items: center; gap: 4px; }
 
+.selection-status {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 .count-pill {
-  background: #fdfae6; /* Dorado muy claro */
-  color: #9b8412;      /* Texto Dorado */
+  background: #eff6ff;
+  color: #002060;
   font-weight: 700;
-  padding: 0px 5px;
-  border-radius: 8px;
+  padding: 1px 7px;
+  border-radius: 10px;
   font-size: 0.7rem;
-  line-height: 1.6;
 }
-.toolbar-buttons { display: flex; align-items: center; gap: 1px; }
-.divider-dot { color: #d1d5db; font-size: 0.7rem; }
 
-.btn-link {
-  background: none; border: none;
-  color: #64748b; font-size: 0.74rem;
-  font-weight: 500; padding: 2px 5px;
-  border-radius: 3px; cursor: pointer;
-  transition: all 0.1s;
+.toolbar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.btn-link:hover:not(:disabled) { background: #f1f5f9; color: #1a232e; }
-.btn-link.danger:hover:not(:disabled) { color: #ef4444; background: #fee2e2; }
-.btn-link:disabled { opacity: 0.3; cursor: default; }
+
+.btn-pill {
+  background: #e2e8f0;
+  border: none;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-pill:hover:not(:disabled) {
+  background: #002060;
+  color: #ffffff;
+}
+.btn-pill.outline {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+}
+.btn-pill.outline:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #ffffff;
+}
+.btn-pill:disabled { opacity: 0.4; cursor: default; }
 
 /* Body */
 .dropdown-body {
   flex: 1;
   overflow-y: auto;
-  padding: 3px 0;
+  padding: 4px 0;
   scrollbar-width: thin;
-  scrollbar-color: #e2e8f0 transparent;
+  scrollbar-color: #cbd5e1 transparent;
 }
-.dropdown-body::-webkit-scrollbar { width: 4px; }
-.dropdown-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+.dropdown-body::-webkit-scrollbar { width: 5px; }
+.dropdown-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
 .state-container {
-  padding: 20px;
+  padding: 24px;
   text-align: center;
-  color: #9ca3af;
+  color: #64748b;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 8px;
+  font-size: 0.85rem;
 }
+
 .spinner {
-  width: 16px; height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid #e2e8f0;
-  border-top-color: #9b8412; /* Spinner Dorado */
+  border-top-color: #002060;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -592,95 +786,159 @@ onBeforeUnmount(() => {
 /* Rows */
 .list-row {
   display: flex;
-  align-items: center;
-  padding: 6px 10px;
-  gap: 4px;
+  align-items: stretch;
   cursor: pointer;
-  transition: background 0.08s;
-  user-select: none;
+  transition: background 0.1s;
+  border-left: 3px solid transparent;
 }
 .list-row:hover { background: #f8fafc; }
-.list-row.is-selected { background: #faf9f0; } /* Fondo seleccionado crema/dorado suave */
-.list-row + .list-row { border-top: 1px solid #f8fafc; }
-
-/* Checkbox */
-.custom-checkbox { position: relative; width: 16px; height: 16px; margin-right: 9px; flex-shrink: 0; }
-.custom-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; }
-.checkmark {
-  position: absolute; inset: 0;
-  background: #ffffff;
-  border: 1.5px solid #d1d5db;
-  border-radius: 3px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s;
+.list-row.is-selected {
+  background: #eff6ff;
+  border-left-color: #002060;
 }
-.checkmark i { color: #fff; font-size: 0.55rem; transform: scale(0); transition: transform 0.12s; }
+.list-row + .list-row {
+  border-top: 1px solid #f8fafc;
+}
 
-.list-row:hover .checkmark { border-color: #1a232e; } /* Hover checkbox Navy */
-.custom-checkbox input:checked ~ .checkmark { background: #9b8412; border-color: #9b8412; } /* Check Dorado */
-.custom-checkbox input:checked ~ .checkmark i { transform: scale(1); }
+.row-click-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  gap: 8px;
+  min-width: 0;
+}
 
-.row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* Checkbox — FIX: controlado por clase .is-checked, sin input nativo */
+.custom-checkbox {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.checkmark {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  border: 1.5px solid #94a3b8;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.checkmark i {
+  color: #ffffff;
+  font-size: 0.6rem;
+  transform: scale(0);
+  transition: transform 0.15s;
+}
+.list-row:hover .checkmark {
+  border-color: #002060;
+}
+.custom-checkbox.is-checked .checkmark {
+  background: #002060;
+  border-color: #002060;
+}
+.custom-checkbox.is-checked .checkmark i {
+  transform: scale(1);
+}
+
+.row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 .row-label {
   font-size: 0.82rem;
-  color: #1e293b;
+  color: #334155;
   font-weight: 500;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.list-row.is-selected .row-label { color: #9b8412; font-weight: 600; } /* Label seleccionado Dorado */
-.row-sublabel { font-size: 0.68rem; color: #9ca3af; }
+.list-row.is-selected .row-label {
+  color: #002060;
+  font-weight: 600;
+}
+.row-sublabel {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
 
-/* Botón "Solo este" */
+/* Botón Solo Este */
 .btn-only {
-  background: none; border: none; cursor: pointer;
-  color: transparent; font-size: 0.68rem;
-  padding: 2px 4px; border-radius: 3px;
-  flex-shrink: 0; transition: all 0.1s;
+  background: none;
+  border: none;
+  color: transparent;
+  font-size: 0.7rem;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 1px solid transparent;
+  flex-shrink: 0;
 }
-.list-row:hover .btn-only { color: #9ca3af; }
-.btn-only:hover { background: #fdfae6 !important; color: #9b8412 !important; } /* Hover "Solo este" Dorado */
-.btn-only.is-exclusive { color: #84a6d0 !important; }
-.btn-only.is-exclusive:hover { background: #fee2e2 !important; color: #ef4444 !important; }
+.list-row:hover .btn-only {
+  color: #94a3b8;
+  border-left-color: #f1f5f9;
+}
+.btn-only:hover {
+  background: #f0f9ff !important;
+  color: #0284c7 !important;
+}
+.btn-only.is-exclusive { color: #0284c7 !important; }
 
 /* Footer */
 .dropdown-footer {
-  padding: 7px 10px;
-  border-top: 1px solid #f1f5f9;
+  padding: 8px 12px;
+  border-top: 1px solid #e2e8f0;
   background: #f8fafc;
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
+
 .btn-cancel {
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  padding: 4px 12px;
+  border: 1px solid #cbd5e1;
+  padding: 5px 14px;
   border-radius: 4px;
-  color: #64748b;
+  color: #475569;
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s;
 }
-.btn-cancel:hover { border-color: #1a232e; color: #1a232e; }
+.btn-cancel:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
 
+/* FIX 2: Aplicar — hardcodeado, sin variables CSS */
 .btn-apply {
-  background: #1a232e; /* Botón principal Navy */
-  border: none;
-  padding: 4px 14px;
+  background: #002060;
+  border: 1px solid #002060;
+  padding: 5px 16px;
   border-radius: 4px;
   color: #ffffff;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.12s;
-  box-shadow: 0 1px 4px rgba(26, 35, 46, 0.3);
+  transition: background 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.btn-apply:hover { background: #2c3a4d; } /* Hover ligeramente más claro */
+.btn-apply:hover {
+  background: #001540;
+  border-color: #001540;
+}
 
-/* ── Transition ── */
+/* ── Transiciones Vue ── */
 .dropdown-enter-active {
-  transition: opacity 0.12s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .dropdown-leave-active {
   transition: opacity 0.1s ease, transform 0.1s ease;
@@ -688,6 +946,11 @@ onBeforeUnmount(() => {
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-4px) scale(0.99);
+  transform: translateY(-6px);
 }
+
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
 </style>

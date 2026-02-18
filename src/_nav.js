@@ -1,193 +1,136 @@
 export default [
-
-  //
-  // ÁREAS OPERATIVAS
-  //
   {
     component: 'CNavTitle',
     name: 'Áreas',
+    // Sin roles = siempre visible
   },
-
-  //
-  // ACADÉMICA
-  //
-  {
-    component: 'CNavGroup',
-    name: 'Académica',
-    to: '/academica',
-    icon: 'cil-notes', // Icono de edificio institucional / academia
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Gestión de Alumnos',
-        to: '/academica/alumnos',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Calificaciones',
-        to: '/academica/notas',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Asistencia',
-        to: '/academica/asistencia',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Actas y Certificados',
-        to: '/academica/certificados',
-      },
-      {
-        component: 'CNavItem',
-        name: 'Horarios',
-        to: '/academica/horarios',
-      },
-    ],
-  },
-
   {
     component: 'CNavGroup',
     name: 'Finanzas',
     to: '/fico',
     icon: 'cil-calculator',
+    roles: ['ADMIN', 'FICO', 'GERENCIA'], // 👈 agrega esto
     items: [
       {
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
+        roles: ['ADMIN', 'FICO', 'GERENCIA'], // 👈 agrega esto
       },
     ],
   },
-
-  //
-  // PRODUCTO
-  //
   {
     component: 'CNavGroup',
     name: 'Producto',
     to: '/producto',
     icon: 'cil-layers',
+    roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Programas',
         to: '/producto/programas',
+        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Docentes',
         to: '/producto/docentes',
+        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Cronograma',
         to: '/producto/cronograma',
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Lista de Precios',
         to: '/producto/precios',
+        roles: ['ADMIN', 'GERENCIA'], // 👈
       },
     ],
   },
- //
-  // COMERCIAL
-  //
   {
     component: 'CNavGroup',
     name: 'Comercial',
     to: '/comercial',
     icon: 'cil-dollar',
+    roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Comercial',
         to: '/comercial/leads',
+        roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Control Comercial',
         to: '/comercial/RptControlComercial',
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Asesor - Objetivos',
         to: '/comercial/RptGoalAgent',
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
         name: 'Cronograma - Objetivos',
         to: '/comercial/RptGoalEdition',
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
     ],
   },
-
-  //
-  // B2B
-  //
   {
     component: 'CNavGroup',
     name: 'B2B',
     to: '/business',
     icon: 'cil-people',
+    roles: ['ADMIN', 'B2B', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Convenios',
-        to: '/Business/agreement',
+        to: '/business/agreement',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'], // 👈
       },
     ],
   },
-
-  //
-  // MARKETING
-  //
   {
     component: 'CNavGroup',
     name: 'Marketing',
     to: '/marketing',
     icon: 'cil-speech',
+    roles: ['ADMIN', 'MARKETING', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Overview',
         to: '/marketing/overview',
+        roles: ['ADMIN', 'MARKETING', 'GERENCIA'], // 👈
       },
     ],
   },
- 
-  
   {
     component: 'CNavTitle',
     name: 'General',
   },
-  //
-  // CLIENTE
-  //
   {
     component: 'CNavGroup',
     name: 'Cliente',
     to: '/cliente',
     icon: 'cil-user',
+    roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Cliente',
         to: '/cliente/cliente',
-      },
-    ],
-  },
-  
-  {
-    component: 'CNavGroup',
-    name: 'Reportes',
-    to: '/comercial/reportes',
-    icon: 'cil-chart-pie',
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Embudo',
-        to: '/comercial/reportes/embudo',
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
       },
     ],
   },

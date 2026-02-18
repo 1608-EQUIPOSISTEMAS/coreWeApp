@@ -412,8 +412,8 @@
 <div class="contacto-table">
   <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-2">
     <div class="col-lg-1 text-center">#</div>
-    <div class="col-lg-2">Tipo / Duración</div> <div class="col-lg-2">Estado<span class="required-star">*</span></div>
-    <div class="col-lg-2">Fecha y Hora<span class="required-star">*</span></div>
+    <div class="col-lg-2">Tipo / Duración</div> 
+    <div class="col-lg-4">Fecha y Hora<span class="required-star">*</span></div>
     <div class="col-lg-2">T. Respuesta</div>
     <div class="col-lg-2">Obsv.</div>
     <div class="col-lg-1 text-center"></div>
@@ -453,7 +453,7 @@
                   style="width: 28px; height: 28px;"
                   :class="c.timerActive ? 'btn-danger' : 'btn-outline-success'"
                   @click="toggleTimer(c)"
-                  :disabled="!!c.id && c.status_alias !== 'we_follow_lead_pending'"
+                  :disabled="!!c.id && c.calling_alias !== 'we_calling_pending'"
                   :title="c.timerActive ? 'Detener' : 'Iniciar'"
               >
                   <i class="fa-solid" :class="c.timerActive ? 'fa-stop' : 'fa-play'" style="font-size: 0.7rem;"></i>
@@ -465,28 +465,15 @@
         </div>
       </div>
 
-      <div class="col-12 col-lg-2">
-        <label class="form-label d-lg-none mb-1">Estado<span class="required-star">*</span></label>
-        <SearchSelect
-          v-model="c.status_alias"
-          :items="contactAttemptStatusCat"
-          required
-          :disabled="c.status_alias == 'we_follow_lead_answered' || c.status_alias == 'we_follow_lead_no_answer'"
-          label-field="description"
-          value-field="alias"
-          placeholder="ESTADO..."
-          :model-label="c.status_label"
-        />
-      </div>
 
-      <div class="col-12 col-lg-2">
+      <div class="col-12 col-lg-4">
         <label class="form-label d-lg-none mb-1">Fecha y Hora<span class="required-star">*</span></label>
         <DateTime12
             v-model="c.fechaContactoProximo"
             required
             clearable
             :onlyHours="true"
-            :disabled="c.status_alias != 'we_follow_lead_pending'"
+            :disabled="c.calling_alias != 'we_calling_pending'"
             :config="dateLimitConfig"
           />
       </div>
@@ -501,7 +488,7 @@
           value-field="alias"
           placeholder="T. RESPUESTA..."
           :model-label="c.calling_label"
-          :disabled="c.status_alias != 'we_follow_lead_pending'"
+          :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
         />
       </div>
 
@@ -512,7 +499,7 @@
           class="form-control form-control-sm"
           rows="2"
           placeholder="Observación..."
-          :disabled="c.status_alias != 'we_follow_lead_pending'"
+          :disabled="c.calling_alias != 'we_calling_pending'"
           style="resize: vertical; min-height: 38px;"
         ></textarea>
       </div>
@@ -1159,7 +1146,7 @@
                 label="Clic para subir Voucher"
                 :required="true"
                 v-model="form.ticket_payment_url"
-                accept=".pdf,.doc,.docx"
+                accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
             />
           </div>
 
@@ -1756,13 +1743,14 @@ watch(() => insc.cat_type_document, (newVal) => {
       try {
       console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
+          
 
           Object.assign(form, {
               fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
               query_alias: originalData.query_alias ?? null,
               category_alias: originalData.cat_type_program_alias || originalData.category_alias || null,
               program_modality_alias: originalData.program_modality_alias ?? null,
-              program_modality_selected_alias: originalData.cat_model_modality_alias ?? originalData.program_modality_selected_alias ?? null,
+              program_modality_selected_alias: originalData.program_modality_alias  ?? null,
               program_version_id: originalData.program_version_id ?? null,
               edition_id: originalData.program_edition_id ?? originalData.edition_id ?? null,
               full_name: originalData.full_name ?? originalData.full_name_label ?? '',
@@ -1835,7 +1823,7 @@ watch(() => insc.cat_type_document, (newVal) => {
 function createEmptyAttempt() {
   return {
     cat_type_attempt: 'we_attempt_call', // Valor por defecto
-    status_alias: 'we_follow_lead_pending',
+    calling_alias: 'we_calling_pending',
     fechaContactoProximo: todayIso,
     respuesta: '',
     contact_duration: 0, // Inicia en 0
