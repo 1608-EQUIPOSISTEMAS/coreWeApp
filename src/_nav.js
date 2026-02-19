@@ -68,7 +68,7 @@ export default [
       {
         component: 'CNavItem',
         name: 'Control - Gestión',
-        to: '/comercial/RptGoalEdition',
+        to: '/comercial/RptControlComercial',
         roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
       },
       {
