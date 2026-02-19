@@ -1,46 +1,68 @@
 <template>
-  <div class="marketing-dashboard">
+  <div class="followup-dashboard">
     <div class="header-section">
       <div class="header-content">
-        <h1 class="page-title">REPORTE DE INTELIGENCIA DE MERCADO & ADQUISICIÓN</h1>
-        <p class="page-meta">ANÁLISIS DE CANALES, ESTRATEGIAS Y PALABRAS CLAVE</p>
+        <h1 class="page-title">RENTABILIDAD DE SEGUIMIENTO & CONTACTABILIDAD</h1>
+        <p class="page-meta">ANÁLISIS DE EFICIENCIA OPERATIVA (OUTBOUND & INBOUND)</p>
       </div>
       <div class="controls">
-        <div class="date-range">01/01/2026 - 31/01/2026</div>
-        <button class="btn-action">EXPORTAR DATA</button>
+        <div class="filter-group">
+          <label>Campaña:</label>
+          <select class="select-clean">
+            <option>Todas las Campañas</option>
+            <option>Cierre Mes Enero</option>
+          </select>
+        </div>
+        <button class="btn-action">ACTUALIZAR DATOS</button>
       </div>
     </div>
 
     <div class="kpi-strip">
       <div class="kpi-box">
-        <span class="kpi-label">LEADS TOTALES (VOLUMEN)</span>
-        <span class="kpi-value">2,845</span>
-        <span class="kpi-delta positive">+12.5% vs mes anterior</span>
+        <span class="kpi-label">INTENTOS DE CONTACTO</span>
+        <span class="kpi-value">3,850</span>
+        <div class="kpi-footer">
+          <span class="text-muted">Promedio: 4.2 intentos/lead</span>
+        </div>
       </div>
       <div class="kpi-box">
-        <span class="kpi-label">LEADS CALIFICADOS (SQL)</span>
-        <span class="kpi-value">420</span>
-        <span class="kpi-sub">14.7% del total</span>
+        <span class="kpi-label">TASA DE CONTACTABILIDAD</span>
+        <span class="kpi-value warning">42.5%</span>
+        <div class="kpi-footer">
+          <span class="negative">▼ 2.1% vs semana ant.</span>
+        </div>
       </div>
       <div class="kpi-box">
-        <span class="kpi-label">COSTO ADQUISICIÓN (CAC)</span>
-        <span class="kpi-value">S/ 18.50</span>
-        <span class="kpi-delta negative">-2.3% optimización</span>
+        <span class="kpi-label">EFECTIVIDAD DE CIERRE</span>
+        <span class="kpi-value success">18.2%</span>
+        <div class="kpi-footer">
+          <span class="text-muted">Sobre llamadas contestadas</span>
+        </div>
       </div>
       <div class="kpi-box highlight">
-        <span class="kpi-label">INGRESOS ATRIBUIDOS</span>
-        <span class="kpi-value">S/ 85,400</span>
-        <span class="kpi-sub">Canal Principal: TikTok Ads</span>
+        <span class="kpi-label">INGRESO RECUPERADO (SEGUIMIENTO)</span>
+        <span class="kpi-value">S/ 142,500</span>
+        <div class="kpi-footer">
+          <span class="highlight-text">ROI de Llamadas: 12x</span>
+        </div>
       </div>
     </div>
 
     <div class="section-container">
       <div class="chart-header">
-        <h3>EFICIENCIA DE CANAL: TRÁFICO VS. CIERRE</h3>
-        <span class="chart-desc">Comparativa entre volumen de leads generados y ventas efectivas (Pagó).</span>
+        <div class="header-text">
+          <h3>TENDENCIA HORARIA: DEL INTENTO AL PAGO</h3>
+          <span class="chart-desc">Correlación entre esfuerzo (llamadas), éxito de contacto y cierre final por franja horaria.</span>
+        </div>
+        <div class="legend-inline">
+          <span class="dot-gray"></span> Intentos
+          <span class="dot-blue"></span> Contestó
+          <span class="dot-purple"></span> Interesado
+          <span class="dot-green"></span> PAGÓ
+        </div>
       </div>
       <div class="chart-wrapper-large">
-        <Bar :data="channelChartData" :options="channelChartOptions" />
+        <Line :data="hourlyFlowData" :options="hourlyFlowOptions" />
       </div>
     </div>
 
@@ -48,74 +70,105 @@
 
       <div class="panel">
         <div class="panel-header">
-          <h4>INTENCIÓN DE LEADS (PALABRAS CLAVE)</h4>
-          <p>Análisis de las palabras detectadas en el primer mensaje (Variable: we_key_word)</p>
+          <h4>CURVA DE PERSISTENCIA</h4>
+          <p>Distribución de ventas según el número de intento de contacto (N° de Toque).</p>
         </div>
         <div class="chart-wrapper-medium">
-          <Bar :data="keywordChartData" :options="horizontalChartOptions" />
+          <Bar :data="persistenceChartData" :options="persistenceChartOptions" />
         </div>
-        <div class="insight-text">
-          <strong>HALLAZGO:</strong> Leads que usan "QUIERO" o "NECESITO" tienen un 40% más de probabilidad de cierre que los que usan "PRECIO".
+        <div class="insight-box">
+          <strong>INSIGHT:</strong> El 65% de las ventas ocurren entre el 2do y 3er intento. Después del 5to intento, la probabilidad de venta cae al 2%.
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-header">
-          <h4>PENETRACIÓN POR ESTRATEGIA</h4>
-          <p>Participación de mercado según tipo de campaña (Variable: we_type_strategy)</p>
+          <h4>ANÁLISIS DE OBJECIONES</h4>
+          <p>Razones principales registradas en llamadas "No Exitosas".</p>
         </div>
-        <div class="doughnut-container">
-          <Doughnut :data="strategyChartData" :options="doughnutOptions" />
-        </div>
-        <div class="legend-table">
-          <div v-for="(item, i) in strategyLegend" :key="i" class="legend-row">
-            <span class="color-box" :style="{ backgroundColor: item.color }"></span>
-            <span class="legend-name">{{ item.label }}</span>
-            <span class="legend-val">{{ item.value }}%</span>
-          </div>
+        <div class="table-compact-wrapper">
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Objeción</th>
+                <th class="text-right">Frecuencia</th>
+                <th class="text-right">% Total</th>
+                <th>Tendencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Falta Dinero / Muy Caro</td>
+                <td class="text-right">450</td>
+                <td class="text-right font-bold">45%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 45%"></span></td>
+              </tr>
+              <tr>
+                <td>Solo quería información</td>
+                <td class="text-right">280</td>
+                <td class="text-right font-bold">28%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 28%"></span></td>
+              </tr>
+              <tr>
+                <td>Horarios no coinciden</td>
+                <td class="text-right">150</td>
+                <td class="text-right font-bold">15%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 15%"></span></td>
+              </tr>
+              <tr>
+                <td>Lo consultará (Pareja/Jefe)</td>
+                <td class="text-right">120</td>
+                <td class="text-right font-bold">12%</td>
+                <td class="text-center"><span class="bar-indic" style="width: 12%"></span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
     <div class="section-container">
       <div class="panel-header">
-        <h4>MATRIZ DE CALIDAD DE TRÁFICO</h4>
-        <p>Desglose de estados finales agrupados por origen del lead.</p>
+        <h4>MATRIZ DE DESEMPEÑO INDIVIDUAL</h4>
+        <p>Evaluación de productividad: Volumen vs. Eficacia en Cierres.</p>
       </div>
       <table class="matrix-table">
         <thead>
           <tr>
-            <th class="col-main">ORIGEN / CANAL</th>
-            <th class="text-right">TOTAL LEADS</th>
-            <th class="text-right">SIN INTERÉS</th>
-            <th class="text-right">INTERESADO</th>
-            <th class="text-right">PAGÓ (CIERRE)</th>
+            <th class="col-main">ASESOR</th>
+            <th class="text-right">LEADS GESTIONADOS</th>
+            <th class="text-right">LLAMADAS REALIZADAS</th>
+            <th class="text-right">CONTACTADOS</th>
+            <th class="text-right">% CONTACT.</th>
+            <th class="text-right">PAGÓ (CIERRES)</th>
             <th class="text-right">TASA CONVERSIÓN</th>
-            <th class="text-right">TICKET PROM.</th>
+            <th class="text-right">TIEMPO PROM. LLAMADA</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in matrixData" :key="index">
-            <td class="font-bold">{{ row.channel }}</td>
-            <td class="text-right bg-gray-light">{{ row.total }}</td>
-            <td class="text-right text-muted">{{ row.lost }}</td>
-            <td class="text-right text-blue">{{ row.interested }}</td>
-            <td class="text-right font-bold text-dark">{{ row.paid }}</td>
+          <tr v-for="(advisor, index) in advisorData" :key="index">
+            <td class="font-bold text-dark">{{ advisor.name }}</td>
+            <td class="text-right">{{ advisor.leads }}</td>
+            <td class="text-right bg-gray-light">{{ advisor.calls }}</td>
+            <td class="text-right">{{ advisor.contacted }}</td>
             <td class="text-right">
-              <span :class="getConversionClass(row.rate)">{{ row.rate }}%</span>
+              <span :class="getScoreColor(advisor.contactRate)">{{ advisor.contactRate }}%</span>
             </td>
-            <td class="text-right">{{ row.ticket }}</td>
+            <td class="text-right font-bold text-green">{{ advisor.sales }}</td>
+            <td class="text-right font-bold">{{ advisor.conversion }}%</td>
+            <td class="text-right text-muted">{{ advisor.avgTime }} min</td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
-            <td>TOTAL GLOBAL</td>
-            <td class="text-right">2,845</td>
-            <td class="text-right">1,420</td>
-            <td class="text-right">1,005</td>
-            <td class="text-right">420</td>
-            <td class="text-right">14.7%</td>
-            <td class="text-right">S/ 450</td>
+            <td>TOTAL / PROMEDIO</td>
+            <td class="text-right">1,250</td>
+            <td class="text-right">3,850</td>
+            <td class="text-right">1,636</td>
+            <td class="text-right">42.5%</td>
+            <td class="text-right">298</td>
+            <td class="text-right">18.2%</td>
+            <td class="text-right">4.5 min</td>
           </tr>
         </tfoot>
       </table>
@@ -126,125 +179,123 @@
 
 <script setup>
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
+import { Line, Bar } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
-// --- CONFIGURACIÓN DE DATOS (MOCKUP BASADO EN TU INPUT) ---
-
-// 1. Gráfico de Barras Agrupadas: Leads vs Ventas por Canal
-const channelChartData = {
-  labels: ['TikTok', 'Facebook Ads', 'WhatsApp Orgánico', 'Web SEO', 'Referidos'],
+// --- 1. DATA FLUJO HORARIO (Main Chart) ---
+// Muestra: A qué hora llamamos (gris), a qué hora contestan (azul), y a qué hora pagan (verde).
+const hourlyFlowData = {
+  labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
   datasets: [
     {
-      label: 'Leads Totales',
-      data: [1200, 800, 450, 250, 145],
-      backgroundColor: '#cbd5e1', // Gris claro (Volumen)
-      barPercentage: 0.6,
-      categoryPercentage: 0.8
+      label: 'Intentos (Volumen)',
+      data: [40, 120, 150, 140, 80, 40, 60, 130, 160, 180, 150, 90, 30],
+      borderColor: '#cbd5e1',
+      backgroundColor: 'rgba(203, 213, 225, 0.2)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      order: 4
     },
     {
-      label: 'Ventas (Pagó)',
-      data: [120, 95, 110, 45, 50],
-      backgroundColor: '#0f172a', // Azul oscuro casi negro (Resultado)
-      barPercentage: 0.6,
-      categoryPercentage: 0.8
+      label: 'Contestó',
+      data: [10, 40, 50, 45, 20, 15, 25, 60, 80, 110, 100, 60, 20],
+      borderColor: '#3b82f6', // Azul fuerte
+      backgroundColor: '#3b82f6',
+      tension: 0.3,
+      borderWidth: 2,
+      pointRadius: 2,
+      order: 3
+    },
+    {
+      label: 'Interesado (Calificado)',
+      data: [5, 20, 30, 35, 15, 10, 20, 40, 55, 70, 65, 40, 15],
+      borderColor: '#8b5cf6', // Morado
+      backgroundColor: '#8b5cf6',
+      tension: 0.3,
+      borderDash: [5, 5], // Línea punteada para diferenciar "intención"
+      borderWidth: 2,
+      pointRadius: 0,
+      order: 2
+    },
+    {
+      label: 'PAGÓ (Cierre)',
+      data: [2, 12, 18, 22, 8, 5, 8, 25, 35, 45, 40, 25, 8],
+      borderColor: '#10b981', // Verde Éxito
+      backgroundColor: '#10b981',
+      type: 'bar', // Barra para resaltar el volumen de ventas concreto
+      barPercentage: 0.3,
+      order: 1
     }
   ]
 }
 
-const channelChartOptions = {
+const hourlyFlowOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'top', align: 'end' },
+    legend: { display: false }, // Usamos leyenda custom
     tooltip: { mode: 'index', intersect: false }
   },
   scales: {
-    y: { grid: { color: '#f1f5f9' }, beginAtZero: true },
+    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
     x: { grid: { display: false } }
   }
 }
 
-// 2. Gráfico Horizontal: Palabras Clave (we_key_word)
-const keywordChartData = {
-  labels: ['QUIERO (Alta Intención)', 'NECESITO (Alta Intención)', 'PRECIO (Media Intención)', 'INFO (Baja Intención)', 'COMO (Baja Intención)'],
-  datasets: [
-    {
-      label: 'Tasa de Cierre %',
-      data: [28, 24, 12, 8, 5],
-      backgroundColor: (ctx) => {
-        const val = ctx.raw
-        if (val > 20) return '#1e293b' // Alta conversión
-        if (val > 10) return '#64748b' // Media
-        return '#cbd5e1' // Baja
-      },
-      borderRadius: 4
-    }
-  ]
-}
-
-const horizontalChartOptions = {
-  indexAxis: 'y',
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: { x: { display: true, max: 35 }, y: { grid: { display: false } } }
-}
-
-// 3. Gráfico Donut: Estrategias (we_type_strategy)
-const strategyChartData = {
-  labels: ['Eventos / Webinars', 'Sorteo Redes', 'Difusión Grupos', 'Partners'],
+// --- 2. DATA CURVA DE PERSISTENCIA ---
+const persistenceChartData = {
+  labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+', 'Entrante'],
   datasets: [{
-    data: [45, 25, 20, 10],
-    backgroundColor: ['#0f172a', '#334155', '#64748b', '#94a3b8'],
-    borderWidth: 0
+    label: 'Ventas Cerradas',
+    data: [15, 45, 35, 12, 5, 25], // Mayoría en 2do y 3ero
+    backgroundColor: [
+      '#94a3b8', '#3b82f6', '#2563eb', '#1d4ed8', '#0f172a', '#10b981'
+    ],
+    borderRadius: 3
   }]
 }
 
-const strategyLegend = [
-  { label: 'Eventos / Webinars', value: 45, color: '#0f172a' },
-  { label: 'Sorteo Redes', value: 25, color: '#334155' },
-  { label: 'Difusión Grupos', value: 20, color: '#64748b' },
-  { label: 'Partners / Alianzas', value: 10, color: '#94a3b8' }
-]
-
-const doughnutOptions = {
+const persistenceChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: '70%',
-  plugins: { legend: { display: false } }
+  plugins: { legend: { display: false } },
+  scales: {
+    y: { display: false },
+    x: { grid: { display: false } }
+  }
 }
 
-// 4. Datos Matriz (Totalizadores)
-const matrixData = [
-  { channel: 'TikTok', total: 1200, lost: 800, interested: 280, paid: 120, rate: 10.0, ticket: 'S/ 350' },
-  { channel: 'WhatsApp', total: 450, lost: 100, interested: 240, paid: 110, rate: 24.4, ticket: 'S/ 480' },
-  { channel: 'Referidos', total: 145, lost: 20, interested: 75, paid: 50, rate: 34.5, ticket: 'S/ 550' },
-  { channel: 'Facebook', total: 800, lost: 500, interested: 205, paid: 95, rate: 11.8, ticket: 'S/ 380' }
+// --- 3. DATA MATRIZ ASESORES ---
+const advisorData = [
+  { name: 'Eliuth D.', leads: 420, calls: 1100, contacted: 550, contactRate: 50.0, sales: 115, conversion: 20.9, avgTime: 5.2 },
+  { name: 'Raúl P.', leads: 380, calls: 1450, contacted: 480, contactRate: 33.1, sales: 85, conversion: 17.7, avgTime: 3.8 },
+  { name: 'Arleth C.', leads: 300, calls: 950, contacted: 420, contactRate: 44.2, sales: 78, conversion: 18.5, avgTime: 4.5 },
+  { name: 'Bot AI', leads: 150, calls: 350, contacted: 186, contactRate: 53.1, sales: 20, conversion: 10.7, avgTime: 1.2 }
 ]
 
-const getConversionClass = (rate) => {
-  if (rate >= 20) return 'badge-high'
-  if (rate >= 10) return 'badge-mid'
-  return 'badge-low'
+const getScoreColor = (rate) => {
+  if (rate >= 45) return 'text-green'
+  if (rate >= 35) return 'text-dark'
+  return 'text-red'
 }
 </script>
 
 <style scoped>
-/* ESTILOS CORPORATIVOS / MINIMALISTAS */
-.marketing-dashboard {
+/* ESTILOS HARDCORE / DATA-DENSE */
+.followup-dashboard {
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #f8fafc;
-  color: #0f172a;
+  color: #1e293b;
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* HEADER */
+/* Header */
 .header-section {
   display: flex;
   justify-content: space-between;
@@ -256,148 +307,163 @@ const getConversionClass = (rate) => {
 .page-title {
   font-size: 1.5rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
   margin: 0;
   text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 .page-meta {
   color: #64748b;
-  font-size: 0.85rem;
-  margin: 0.5rem 0 0 0;
+  font-size: 0.8rem;
+  margin: 0.4rem 0 0 0;
   font-weight: 600;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
-.controls {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-.date-range {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #334155;
-  background: white;
-  padding: 0.5rem 1rem;
+.controls { display: flex; align-items: flex-end; gap: 1rem; }
+.filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.filter-group label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.select-clean {
+  padding: 0.5rem 2rem 0.5rem 0.8rem;
   border: 1px solid #cbd5e1;
+  background-color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
 }
 .btn-action {
   background: #0f172a;
   color: white;
   border: none;
-  padding: 0.5rem 1.5rem;
+  padding: 0.6rem 1.5rem;
   font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
+  font-size: 0.75rem;
   text-transform: uppercase;
+  cursor: pointer;
+  height: 34px;
 }
 
-/* KPI STRIP */
+/* KPIs */
 .kpi-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 .kpi-box {
   background: white;
-  padding: 1.5rem;
   border: 1px solid #e2e8f0;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 .kpi-box.highlight {
   background: #0f172a;
-  color: white;
   border-color: #0f172a;
-}
-.kpi-box.highlight .kpi-label, .kpi-box.highlight .kpi-sub {
-  color: #94a3b8;
-}
-.kpi-box.highlight .kpi-value {
   color: white;
 }
+.kpi-box.highlight .kpi-label { color: #94a3b8; }
+.kpi-box.highlight .kpi-value { color: white; }
 .kpi-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #64748b;
+  text-transform: uppercase;
   margin-bottom: 0.5rem;
-  letter-spacing: 0.05em;
 }
 .kpi-value {
   font-size: 2rem;
   font-weight: 800;
   color: #0f172a;
   line-height: 1;
-  margin-bottom: 0.5rem;
 }
-.kpi-delta { font-size: 0.8rem; font-weight: 600; }
-.positive { color: #16a34a; }
-.negative { color: #dc2626; }
-.kpi-sub { font-size: 0.8rem; color: #64748b; }
+.kpi-value.warning { color: #d97706; }
+.kpi-value.success { color: #16a34a; }
 
-/* SECTIONS & CHARTS */
+.kpi-footer { margin-top: 0.8rem; font-size: 0.75rem; font-weight: 500; }
+.text-muted { color: #94a3b8; }
+.negative { color: #dc2626; }
+.highlight-text { color: #a5b4fc; font-weight: 700; }
+
+/* MAIN CHART */
 .section-container {
   background: white;
   border: 1px solid #e2e8f0;
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
-.chart-header { margin-bottom: 1.5rem; }
-.chart-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; }
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+.header-text h3 { margin: 0; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
 .chart-desc { font-size: 0.85rem; color: #64748b; }
 
-.chart-wrapper-large { height: 350px; width: 100%; }
-.chart-wrapper-medium { height: 250px; width: 100%; }
+.legend-inline { display: flex; gap: 1rem; font-size: 0.8rem; font-weight: 600; align-items: center; }
+.dot-gray { width: 10px; height: 10px; background: #cbd5e1; display: inline-block; }
+.dot-blue { width: 10px; height: 10px; background: #3b82f6; display: inline-block; }
+.dot-purple { width: 10px; height: 10px; background: #8b5cf6; display: inline-block; }
+.dot-green { width: 10px; height: 10px; background: #10b981; display: inline-block; }
+
+.chart-wrapper-large { height: 320px; width: 100%; }
 
 /* SPLIT SECTION */
-.split-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
+.split-section { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
 .panel {
   background: white;
   border: 1px solid #e2e8f0;
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
 }
 .panel-header { margin-bottom: 1.5rem; }
-.panel-header h4 { margin: 0; font-size: 1rem; font-weight: 700; text-transform: uppercase; }
+.panel-header h4 { margin: 0; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; }
 .panel-header p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #64748b; }
+.chart-wrapper-medium { height: 220px; width: 100%; }
 
-.doughnut-container { height: 200px; margin-bottom: 1rem; }
-.legend-table { display: flex; flex-direction: column; gap: 0.5rem; }
-.legend-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.25rem; }
-.color-box { width: 12px; height: 12px; display: block; margin-right: 10px; }
-.legend-name { flex-grow: 1; font-weight: 500; }
-.legend-val { font-weight: 700; }
-
-.insight-text {
-  margin-top: 1rem;
+.insight-box {
+  margin-top: auto;
   padding: 1rem;
-  background: #f8fafc;
-  border-left: 4px solid #0f172a;
-  font-size: 0.85rem;
+  background: #f1f5f9;
+  border-left: 3px solid #0f172a;
+  font-size: 0.8rem;
   color: #334155;
+  margin-top: 1rem;
 }
+
+/* COMPACT TABLE */
+.table-compact-wrapper { overflow-x: auto; }
+.compact-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.compact-table th { text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
+.compact-table td { padding: 0.6rem 0; border-bottom: 1px solid #f8fafc; color: #334155; }
+.bar-indic { display: block; height: 6px; background: #cbd5e1; border-radius: 2px; }
 
 /* MATRIX TABLE */
 .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.matrix-table th { text-align: left; padding: 1rem; background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 0.75rem; }
-.matrix-table td { padding: 1rem; border-bottom: 1px solid #e2e8f0; color: #334155; }
+.matrix-table th {
+  text-align: left;
+  padding: 1rem;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+.matrix-table td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; color: #334155; }
 .matrix-table tfoot td { font-weight: 800; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
 
-.col-main { width: 20%; }
 .text-right { text-align: right; }
+.text-center { text-align: center; }
+.col-main { width: 20%; }
 .bg-gray-light { background: #f8fafc; font-weight: 600; }
-.text-muted { color: #94a3b8; }
-.text-blue { color: #2563eb; font-weight: 600; }
-.text-dark { color: #0f172a; }
 .font-bold { font-weight: 700; }
-
-.badge-high { color: #16a34a; font-weight: 800; }
-.badge-mid { color: #d97706; font-weight: 700; }
-.badge-low { color: #dc2626; font-weight: 600; }
+.text-dark { color: #0f172a; }
+.text-green { color: #16a34a; }
+.text-red { color: #dc2626; }
 
 @media (max-width: 1024px) {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
