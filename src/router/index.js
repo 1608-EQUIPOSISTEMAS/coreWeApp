@@ -318,7 +318,7 @@ const routes = [
           path: 'RptControlComercial',
           name: 'ReportControlComercial',
           component: () => import('@/views/comercial/ReportControlComercial.vue'),
-          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         },
         // Reportes generales — todos los comerciales
         {

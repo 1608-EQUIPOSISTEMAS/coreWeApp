@@ -1,301 +1,301 @@
 <template>
-  <div class="card leads-card">
-    <div class="card-header">
-      <div class="title">
-        <span>Gestión Comercial</span>
-        <span class="sub">Listado de Leads</span>
-      </div>
+  <div class="exec-shell list-shell">
 
-      <div class="actions-bar">
-        <button 
-          class="btn me-2" 
-          :class="hasActiveRestrictions ? 'btn-outline-danger text-danger fw-bold pulse-alert bg-white' : 'btn-outline-warning text-dark bg-white'" 
-          @click="openControlModal"
-          :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
-        >
-          <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i> 
-          <span class="ms-1">{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
-        </button>
-        <button
-          class="btn me-2"
-          :class="isCompact ? 'bg-info text-light' : 'bg-outline-info text-dark'"
-          @click="isCompact = !isCompact"
-          title="Alternar entre vista agrupada y vista detallada por columnas"
-        >
-          <i class="fa-solid" :class="isCompact ? 'fa-list' : 'fa-table-columns'"></i>
-          <span class="ms-1">Compactado</span>
-        </button>
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">Gestión Comercial</span>
+            <h1 class="brand-title">Listado de Leads</h1>
+          </div>
+        </div>
         
-        <button class="btn btn-primary" @click="goNew" >
-          <i class="fa-solid fa-plus me-1"></i> Nuevo
-        </button>
       </div>
-    </div>
+    </header>
 
-    <div class="card-body">
+    <main class="exec-body">
+      
+        <div class="toolbar-chips">
+          <BaseFilterChips
+            :items="activeFilterChips"
+            @remove="clearFilter"
+            @clear-all="clearFilters"
+          />
+        </div>
+      <div class="exec-toolbar">
+        
+        <div class="toolbar-pagination">
+          <BasePagination
+            v-model="pagin"
+            @open-filters="openFilterModal"
+            @change="handlePaginationChange"
+          />
+        </div>
+        <div class="masthead-actions">
+          <button 
+            class="btn-exec" 
+            :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'" 
+            @click="openControlModal"
+            :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
+          >
+            <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i> 
+            <span>{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
+          </button>
 
-      <BaseFilterChips
-        :items="activeFilterChips"
-        @remove="clearFilter"
-        @clear-all="clearFilters"
-      />
-
-      <div class="pagination-bar">
-        <BasePagination
-          v-model="pagin"
-          @open-filters="openFilterModal"
-          @change="handlePaginationChange"
-        />
-      </div>
-
-      <div class="table-responsive">
-        <table class="table table-hover" :class="{ dense, 'compact-table': isCompact }">
+          <button
+            class="btn-exec"
+            :class="isCompact ? 'btn-exec-active' : 'btn-exec-ghost'"
+            @click="isCompact = !isCompact"
+            title="Alternar entre vista agrupada y vista detallada por columnas"
+          >
+            <i class="fa-solid" :class="isCompact ? 'fa-list' : 'fa-table-columns'"></i>
+            <span>Compactado</span>
+          </button>
           
-          <thead>
-            <tr v-if="!isCompact">
-              <th class="ta-center">Acciones</th>
-              <th>Status</th>
-              <th>Contacto</th>
-              <th>T. Consulta</th>
-              <th>Programa / Interés</th>
-              <th>Ini. Edición</th>
-              <th>F. Pago</th>
-              <th>Nivel Interés</th>
-              <th>Registro</th>
-              <th>Seguimiento</th>
-            </tr>
-            <tr v-else>
-              <th class="ta-center">Acciones</th>
-              <th>Fecha Reg.</th>
-              <th>Status</th>
-              <th>Teléfono</th>
-              <th>E. Cliente</th>
-              <th>Nombre</th>
-              <th>T. Consulta</th>
-              <th>Programa</th>
-              <th>Tipo</th>
-              <th>Modalidad</th>
-              <th>Edición</th>
-              <th>F. Pago</th>
-              <th>Canal origen</th>
-              <th>Medio</th>
-              <th>Palabra Clave</th>
-              <th>Estrategia</th>
-              <th>Interés</th>
-              <th>Asesor/Usuario</th>
-              <th>Seguimiento</th>
-            </tr>
-          </thead>
-
-          <tbody v-if="!isCompact">
-            <tr v-for="l in leadsRaw" :key="l.id" 
-                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                @mousedown.left="startPress(l)" 
-                @mouseup="cancelPress" 
-                @mouseleave="cancelPress">
-                
-              <td class="ta-center nowrap">
-                <button 
-  class="btn btn-outline btn-sm me-1" 
-  @click="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" 
-  :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
->
-  <i class="fa-solid" 
-    :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'">
-  </i>
-</button>
-                
-                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver">
-                  <i class="fa-solid fa-clone text-primary"></i>
-                </button>
-              </td>
-
-              <td><span class="fw-600 small text-dark">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</span></td>
-              <td style="min-width:160px">
-                <div class="d-flex flex-column">
-                  <span class="name text-dark">{{ l.origin_phone }}</span>
-                  <span class="small muted">{{ l.full_name_label || 'Sin nombre' }}</span>
-                </div>
-              </td>
-              <td class="minW"><span class="badge badge-neutral">{{ queryMap[l.cat_promotion_alias] || '—' }}</span></td>
-              <td style="min-width:280px">
-                <div v-if="l.program_label">
-                  <div class="name">{{ l.program_label }}</div>
-                  <div class="small muted mt-1">
-                    {{ l.cat_type_program_label }} <span v-if="l.cat_model_modality_label">• {{ l.cat_model_modality_label }}</span>
-                  </div>
-                </div>
-                <div v-else class="muted small">—</div>
-              </td>
-              <td class="nowrap"><div class="font-mono small fw-600 text-primary">{{ l.edition_label || '—' }}</div></td>
-              <td class="small nowrap text-success fw-bold">{{ l.pay_date || '—' }}</td>
-              <td>
-                <span v-if="l.cat_interest_alias" class="badge" :class="badgeForInterest(l.cat_interest_alias)">{{ interestMap[l.cat_interest_alias] }}</span>
-                <span v-else class="muted small">—</span>
-              </td>
-              <td style="min-width:120px">
-                <div v-if="l.user_registration_label">
-                  <div class="small fw-600">{{ l.user_registration_label }}</div>
-                  <div class="muted x-small">{{ l.registration_date }}</div>
-                </div>
-              </td>
-              <td class="ta-center" style="min-width:140px">
-                <div v-if="l.cat_last_follow_alias" class="badge d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
-                  <span>{{ followMap[l.cat_last_follow_alias] }}</span>
-                  <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75"></i>
-                </div>
-                <span v-else class="muted small">—</span>
-              </td>
-            </tr>
-            <tr v-if="!leadsRaw.length"><td colspan="9" class="empty-state">No se encontraron leads con los filtros actuales.</td></tr>
-          </tbody>
-
-          <tbody v-else>
-            <tr v-for="l in leadsRaw" :key="l.id" 
-                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                @mousedown.left="startPress(l)" 
-                @mouseup="cancelPress" 
-                @mouseleave="cancelPress">
-
-              <td class="ta-center nowrap">
-                <button 
-                  class="btn btn-outline btn-sm me-1" 
-                  @click="editLead(l)" 
-                  :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
-                >
-                  <i class="fa-solid" 
-                    :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'">
-                  </i>
-                </button>
-
-                <button class="btn btn-outline btn-sm" @click="viewLead(l)" title="Clonar/Ver">
-                  <i class="fa-solid fa-clone text-primary"></i>
-                </button>
-              </td>
-
-              <td class="small nowrap">{{ l.registration_date }}</td>
-              <td><span class="badge badge-neutral text-dark border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span></td>
-              <td class="nowrap fw-bold text-dark">{{ l.origin_phone }}</td>
-              <td class="nowrap fw-bold text-dark">{{ l.cat_client_moment_description }}</td>
-              
-              <td class="nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
-              <td class="small" style="min-width:120px">{{ l.cat_promotion_description || '—' }}</td>
-              <td class="small fw-600 text-primary">{{ l.program_label || '—' }}</td>
-              <td class="small" style="min-width:120px">{{ l.cat_type_program_label || '—' }}</td>
-              <td class="small" style="min-width:120px">{{ l.cat_model_modality_label || '—' }}</td>
-              <td class="nowrap small font-mono">{{ l.edition_label || '—' }}</td>
-              <td>
-                <div class="small fw-600 text-success">{{ l.pay_date || '—' }}</div>
-              </td>
-              <td class="small text-muted fst-italic">{{ l.cat_channel_description || '—' }}</td>
-              <td class="small text-muted fst-italic">{{ l.cat_medium_contact_description || '—' }}</td>
-              <td class="small text-muted fst-italic">{{ l.cat_word_description || '—' }}</td>
-              <td class="small text-info">{{ l.cat_strategy_description || '—' }}</td>
-              <td>
-                <span v-if="l.cat_interest_alias" class="badge" :class="badgeForInterest(l.cat_interest_alias)">{{ l.cat_interest_description }}</span>
-              </td>
-              <td class="small">{{ l.user_registration_label }}</td>
-              <td class="ta-center">
-                <i v-if="l.cat_last_follow_alias" class="fa-solid fa-circle cursor-pointer" 
-                   :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'text-success' : 'text-secondary'"
-                   :title="l.cat_last_follow_alias"></i>
-                <span v-else>—</span>
-              </td>
-            </tr>
-            <tr v-if="!leadsRaw.length"><td colspan="17" class="empty-state">No se encontraron leads con los filtros actuales.</td></tr>
-          </tbody>
-        </table>
+          <button class="btn-exec btn-exec-primary" @click="goNew" v-if="!hasActiveRestrictions">
+            <i class="fa-solid fa-plus"></i> Nuevo Lead
+          </button>
+        </div>
       </div>
-    </div>
+
+      <div class="table-shell">
+        <div class="table-responsive-custom">
+          <table class="exec-table" :class="{ 'compact-table': isCompact }">
+            <thead>
+              <tr v-if="!isCompact" class="thead-sub">
+                <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
+                <th class="ts ts-c">Status</th>
+                <th class="ts ts-c">Contacto</th>
+                <th class="ts ts-c">T. Consulta</th>
+                <th class="ts ts-c">Programa / Interés</th>
+                <th class="ts ts-c">Ini. Edición</th>
+                <th class="ts ts-c">F. Pago</th>
+                <th class="ts ts-c">Nivel Interés</th>
+                <th class="ts ts-c">Registro</th>
+                <th class="ts ts-c text-center">Seguimiento</th>
+              </tr>
+              <tr v-else class="thead-sub">
+                <th class="ts ts-c text-center">Acciones</th>
+                <th class="ts ts-c">Fecha Reg.</th>
+                <th class="ts ts-c">Status</th>
+                <th class="ts ts-c">Teléfono</th>
+                <th class="ts ts-c">E. Cliente</th>
+                <th class="ts ts-c">Nombre</th>
+                <th class="ts ts-c">T. Consulta</th>
+                <th class="ts ts-c">Programa</th>
+                <th class="ts ts-c">Tipo</th>
+                <th class="ts ts-c">Modalidad</th>
+                <th class="ts ts-c">Edición</th>
+                <th class="ts ts-c">F. Pago</th>
+                <th class="ts ts-c">Canal origen</th>
+                <th class="ts ts-c">Medio</th>
+                <th class="ts ts-c">Palabra Clave</th>
+                <th class="ts ts-c">Estrategia</th>
+                <th class="ts ts-c">Interés</th>
+                <th class="ts ts-c">Asesor/Usuario</th>
+                <th class="ts ts-c">Seguimiento</th>
+              </tr>
+            </thead>
+
+            <tbody v-if="!isCompact">
+              <tr v-for="l in leadsRaw" :key="l.id" 
+                  class="tbody-row"
+                  :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
+                  @mousedown.left="startPress(l)" 
+                  @mouseup="cancelPress" 
+                  @mouseleave="cancelPress">
+                
+                <td class="td-a text-center nowrap">
+                  <button 
+                    class="btn-icon" 
+                    @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" 
+                    :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
+                  >
+                    <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
+                  </button>
+                  <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
+                    <i class="fa-solid fa-clone text-primary"></i>
+                  </button>
+                </td>
+
+                <td class="td-a fw-600 text-dark">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</td>
+                <td class="td-a" style="min-width:160px">
+                  <div class="d-flex flex-column">
+                    <span class="fw-700 text-dark">{{ l.origin_phone }}</span>
+                    <span class="small text-muted">{{ l.full_name_label || 'Sin nombre' }}</span>
+                  </div>
+                </td>
+                <td class="td-a minW"><span class="pill pill-slate border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span></td>
+                <td class="td-a" style="min-width:280px">
+                  <div v-if="l.program_label">
+                    <div class="fw-600 text-dark">{{ l.program_label }}</div>
+                    <div class="small text-muted mt-1">
+                      {{ l.cat_type_program_label }} <span v-if="l.cat_model_modality_label">• {{ l.cat_model_modality_label }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="text-muted small">—</div>
+                </td>
+                <td class="td-a nowrap"><div class="text-mono small fw-600 accent-text">{{ l.edition_label || '—' }}</div></td>
+                <td class="td-a small nowrap fw-700" style="color: #15803d;">{{ l.pay_date || '—' }}</td>
+                <td class="td-a">
+                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ interestMap[l.cat_interest_alias] }}</span>
+                  <span v-else class="text-muted small">—</span>
+                </td>
+                <td class="td-a" style="min-width:120px">
+                  <div v-if="l.user_registration_label">
+                    <div class="small fw-600 text-dark">{{ l.user_registration_label }}</div>
+                    <div class="text-muted x-small">{{ l.registration_date }}</div>
+                  </div>
+                </td>
+                <td class="td-a text-center" style="min-width:140px">
+                  <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
+                    <span>{{ followMap[l.cat_last_follow_alias] }}</span>
+                    <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
+                  </div>
+                  <span v-else class="text-muted small">—</span>
+                </td>
+              </tr>
+              <tr v-if="!leadsRaw.length">
+                <td colspan="10" class="empty-state">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <p>No se encontraron leads con los filtros actuales.</p>
+                </td>
+              </tr>
+            </tbody>
+
+            <tbody v-else>
+              <tr v-for="l in leadsRaw" :key="l.id" 
+                  class="tbody-row"
+                  :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
+                  @mousedown.left="startPress(l)" 
+                  @mouseup="cancelPress" 
+                  @mouseleave="cancelPress">
+
+                <td class="td-a text-center nowrap">
+                  <button class="btn-icon" @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+                    <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
+                  </button>
+                  <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
+                    <i class="fa-solid fa-clone text-primary"></i>
+                  </button>
+                </td>
+                <td class="td-a small nowrap">{{ l.registration_date }}</td>
+                <td class="td-a"><span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span></td>
+                <td class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
+                <td class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
+                <td class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
+                <td class="td-a small" style="min-width:120px">{{ l.cat_promotion_description || '—' }}</td>
+                <td class="td-a small fw-600 accent-text">{{ l.program_label || '—' }}</td>
+                <td class="td-a small" style="min-width:120px">{{ l.cat_type_program_label || '—' }}</td>
+                <td class="td-a small" style="min-width:120px">{{ l.cat_model_modality_label || '—' }}</td>
+                <td class="td-a nowrap small text-mono">{{ l.edition_label || '—' }}</td>
+                <td class="td-a">
+                  <div class="small fw-700" style="color: #15803d;">{{ l.pay_date || '—' }}</div>
+                </td>
+                <td class="td-a small text-muted">{{ l.cat_channel_description || '—' }}</td>
+                <td class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
+                <td class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
+                <td class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
+                <td class="td-a">
+                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ l.cat_interest_description }}</span>
+                </td>
+                <td class="td-a small">{{ l.user_registration_label }}</td>
+                <td class="td-a text-center">
+                  <i v-if="l.cat_last_follow_alias" class="fa-solid fa-circle cursor-pointer" 
+                     :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'c-green' : 'text-slate-400'"
+                     :title="l.cat_last_follow_alias"></i>
+                  <span v-else class="text-muted">—</span>
+                </td>
+              </tr>
+              <tr v-if="!leadsRaw.length">
+                <td colspan="19" class="empty-state">No se encontraron leads con los filtros actuales.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
   </div>
 
-  <BaseModal v-model="showFollowModal" title="Seguimiento" size="xl">
-    <div v-if="selectedFollowLead" class="d-flex flex-column h-100">
-      <div class="px-4 py-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-          <div class="avatar-placeholder me-3 bg-white border text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:45px; height:45px; font-size:1.2rem;">
+  <BaseModal v-model="showFollowModal" title="Gestión de Seguimiento" size="xl">
+    <div v-if="selectedFollowLead" class="exec-modal-body h-100">
+      <div class="modal-header-strip px-4 py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-circle">
             <i class="fa-regular fa-user"></i>
           </div>
           <div>
-             <h6 class="mb-0 fw-bold text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-             <div class="d-flex gap-3 text-secondary small">
+             <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+             <div class="d-flex gap-3 text-secondary small mt-1 fw-500">
                <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
                <span><i class="fa-solid fa-bullseye me-1"></i>{{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || 'Estado desc.' }}</span>
              </div>
           </div>
         </div>
-        <button class="btn btn-primary btn-sm" @click="addLocalAttempt">
+        <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
           <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
         </button>
       </div>
-      <div class="p-3 bg-white scroll-area">
-        <div v-if="editableHistory.length > 0">
-          <div class="table-responsive">
-<div class="table-responsive">
-  <table class="table table-sm align-middle mb-0" style="font-size: 0.85rem;">
-    <thead class="table-light">
-      <tr>
-        <th style="width: 50px;" class="text-center">#</th>
-        <th style="min-width: 160px;">T. Seguimiento</th>
-        <th style="min-width: 160px;">Resultado</th>
-        <th style="min-width: 230px;">Fecha/Hora</th>
-        <th style="min-width: 140px;" class="text-center">Duración</th> 
-        <th style="min-width: 200px;">Observación</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(attempt, idx) in editableHistory" :key="idx" :class="{'bg-blue-50': !attempt.id}">
-        <td class="text-center fw-bold text-muted align-top pt-2">{{ idx + 1 }}</td>
-        <td class="align-top">
-          <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt"  label-field="description" value-field="alias" placeholder="T. Seguimiento..." :disabled="attempt.id" class="form-control-sm p-0 border-0" required />
-        </td>
-        <!-- <td class="align-top">
-          <SearchSelect required v-model="attempt.status_alias" :items="filtroFollow" label-field="description" value-field="alias" placeholder="Estado..." :disabled="attempt.id && attempt.status_alias !== 'we_follow_lead_pending' && attempt.status_alias != null" class="form-control-sm p-0 border-0" />
-        </td> -->
 
-        <td class="align-top">
-          <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Resultado..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="form-control-sm p-0 border-0" />
-        </td>
-
-        <td class="align-top">
-          <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="w-100" />
-        </td>
-
-        <td class="align-top text-center">
-          <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt=='we_attempt_call'">
-            <button 
-                class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
-                style="width: 32px; height: 32px;"
-                :class="attempt.timerActive ? 'btn-danger' : 'btn-outline-success'"
-                @click="toggleTimer(attempt)"
-                :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
-                :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
-            >
-                <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
-            </button>
-            
-            <div class="font-mono fw-bold" :class="attempt.timerActive ? 'text-danger' : 'text-dark'">
-                {{ formatDuration(attempt.contact_duration) }}
-            </div>
-          </div>
-        </td>
-
-        <td class="align-top">
-          <textarea v-model="attempt.response" class="form-control form-control-sm text-area-resize" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"></textarea>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-          </div>
+      <div class="p-4 bg-white scroll-area">
+        <div v-if="editableHistory.length > 0" class="table-shell">
+          <table class="exec-table">
+            <thead>
+              <tr class="thead-sub">
+                <th class="ts ts-c text-center" style="width: 50px;">#</th>
+                <th class="ts ts-c" style="min-width: 160px;">T. Seguimiento</th>
+                <th class="ts ts-c" style="min-width: 160px;">Resultado</th>
+                <th class="ts ts-c" style="min-width: 230px;">Fecha/Hora</th>
+                <th class="ts ts-c text-center" style="min-width: 140px;">Duración</th> 
+                <th class="ts ts-c" style="min-width: 200px;">Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{'row-highlight': !attempt.id}">
+                <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ idx + 1 }}</td>
+                <td class="td-a align-top pt-2">
+                  <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required />
+                </td>
+                <td class="td-a align-top pt-2">
+                  <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="exec-select-light w-100" />
+                </td>
+                <td class="td-a align-top pt-2">
+                  <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="exec-input-light w-100" />
+                </td>
+                <td class="td-a align-top text-center pt-2">
+                  <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt=='we_attempt_call'">
+                    <button 
+                        class="btn-icon"
+                        :class="attempt.timerActive ? 'c-red' : 'c-green'"
+                        @click="toggleTimer(attempt)"
+                        :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                        :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
+                    >
+                        <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop-circle fa-xl' : 'fa-play-circle fa-xl'"></i>
+                    </button>
+                    <div class="text-mono fw-700" :class="attempt.timerActive ? 'c-red' : 'text-dark'" style="font-size: 14px;">
+                        {{ formatDuration(attempt.contact_duration) }}
+                    </div>
+                  </div>
+                </td>
+                <td class="td-a align-top pt-2">
+                  <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"></textarea>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div v-else class="text-center py-5 text-muted"><p>No hay historial previo. Agrega el primer intento.</p></div>
+        <div v-else class="empty-state">
+           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+           <p>No hay historial previo. Agrega el primer intento.</p>
+        </div>
       </div>
     </div>
     <template #footer>
       <div class="d-flex justify-content-between w-100">
-        <button class="btn btn-outline-secondary btn-sm" @click="showFollowModal = false">Cancelar</button>
-        <button class="btn btn-success btn-sm px-4" @click="saveFastFollow" :disabled="isSavingFollow">
+        <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
+        <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
            <i class="fa-solid fa-save me-1"></i> {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
         </button>
       </div>
@@ -303,150 +303,85 @@
   </BaseModal>
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="xl">
-      <div class="px-3 py-2">
+    <div class="px-4 py-3">
+      
       <div class="row g-3 mb-4">
         <div class="col-md-6">
-          <label class="form-label"><i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> Búsqueda General</label>
-          <input v-model.trim="filters.q" type="text" class="form-control" placeholder="Nombre, teléfono..." @keyup.enter="applyFilters" />
+          <label class="exec-label">BÚSQUEDA GENERAL</label>
+          <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Nombre, teléfono..." @keyup.enter="applyFilters" />
         </div>
         <div class="col-md-3" v-if="!isComercial">
-          <label class="form-label"><i class="fa-solid fa-user-tie me-1 text-primary"></i> Asesor Asignado</label>
-          <MultiSelect v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="USUARIO..." />
+          <label class="exec-label">ASESOR ASIGNADO</label>
+          <MultiSelect v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Todos..." />
         </div>
         <div class="col-md-3">
-          <label class="form-label"><i class="fa-solid fa-user-tag me-1 text-primary"></i> E. Cliente</label>
-           <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="E. CLIENTE..." />
+          <label class="exec-label">ETAPA DEL CLIENTE</label>
+           <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todas..." />
         </div>
       </div>
-      <hr class="border-secondary opacity-10 my-3">
-<div class="mb-4">
-  <h6 class="section-title">Estado, Origen y Ubicación</h6>
-  <div class="row g-3">
-    <div class="col-md-3 col-6">
-      <label class="form-label">Estatus (Pipeline)</label>
-      <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="ESTATUS..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Seguimiento</label>
-      <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="SEGUIMIENTO..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Nivel de Interés</label>
-      <MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="INTERES..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">País</label> <MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="PAÍS..." />
-    </div>
 
-    <div class="col-md-3 col-6">
-      <label class="form-label">Canal (Red Social)</label>
-      <MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="CANAL..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Medio de Contacto</label> <MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="MEDIO..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Estrategia</label>
-      <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="ESTRATEGIA..." />
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Palabra Clave</label>
-      <MultiSelect v-model="filters.word_ids" :items="mktWordsCatalog" label-key="description" value-key="id" placeholder="PALABRA..." />
-    </div>
-
-    <div class="col-md-3 col-6">
-      <label class="form-label">Origen Web</label>
-      <select class="form-select form-select-sm" v-model="filters.web"><option :value="null">Todos</option><option value="Y">Sí (Web)</option><option value="N">No</option></select>
-    </div>
-    <div class="col-md-3 col-6">
-      <label class="form-label">Es B2B</label>
-      <select class="form-select form-select-sm" v-model="filters.b2b"><option :value="null">Todos</option><option value="Y">Sí (Empresas)</option><option value="N">No</option></select>
-    </div>
-  </div>
-</div>
-      <div class="program-filter-box mb-4">
-        <h6 class="section-title text-primary mb-3"><i class="fa-solid fa-graduation-cap me-1"></i> Interés Académico</h6>
-        <div class="row g-3 mb-3">
-          <div class="col-md-6"><label class="form-label">Nombre del Programa</label><input v-model="filters.program_text" type="text" class="form-control" placeholder="Ej. Gestión de Proyectos..."></div>
-          <div class="col-md-6"><label class="form-label">Promoción</label><MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="PROMO..." /></div>
-        </div>
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3 col-6"><label class="form-label">Tipo</label><MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="TIPO..." /></div>
-          <div class="col-md-3 col-6"><label class="form-label">Modalidad</label><MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="MODALIDAD..." /></div>
-          <div class="col-md-6"><label class="form-label">Rango Inicio Edición</label><BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango" @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')" /></div>
-        </div>
-      </div>
-      
-      <div>
-        <h6 class="section-title">Auditoría del Registro</h6>
+      <div class="exec-fieldset mb-4">
+        <h6 class="fieldset-title">Estado, Origen y Ubicación</h6>
         <div class="row g-3">
-          <div class="col-md-4">
-              <label class="form-label">Rango Fecha de Pago</label>
-              <BaseDatePicker
-                v-model="filters.pay_date_range_string"
-                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-                placeholder="Seleccione rango"
-                
-                @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'pay_date')"
-              />
-            </div>
-          <div class="col-md-4"><label class="form-label">Fecha de Creación</label><BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango" @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')" /></div>
-          <div class="col-md-4"><label class="form-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango" @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
-              
+          <div class="col-md-3 col-6"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Nivel de Interés</label><MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">País</label><MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Canal (Red Social)</label><MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Medio de Contacto</label><MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Estrategia</label><MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Palabra Clave</label><MultiSelect v-model="filters.word_ids" :items="mktWordsCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6">
+            <label class="exec-label">Origen Web</label>
+            <select class="exec-select-light w-100" v-model="filters.web"><option :value="null">Todos</option><option value="Y">Sí (Web)</option><option value="N">No</option></select>
+          </div>
+          <div class="col-md-3 col-6">
+            <label class="exec-label">Es B2B</label>
+            <select class="exec-select-light w-100" v-model="filters.b2b"><option :value="null">Todos</option><option value="Y">Sí (Empresas)</option><option value="N">No</option></select>
+          </div>
         </div>
+      </div>
 
-        <br>
-        <div class="finance-filter-box mb-4">
-        <h6 class="section-title">Filtros Financieros y Matrícula</h6>
-        
+      <div class="exec-fieldset mb-4">
+        <h6 class="fieldset-title" style="color: var(--teal-600);">Interés Académico</h6>
         <div class="row g-3">
-          
-          <div class="col-md-3 col-6">
-            <label class="form-label">Estado FICO (Deuda)</label>
-            <MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="ESTADO FICO..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Perfil de Precio</label>
-            <MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="PERFIL..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Moneda</label>
-            <MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="abbreviation" value-key="id" placeholder="MONEDA..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Mod. Inscripción</label>
-            <MultiSelect v-model="filters.inscription_modality_ids" :items="filtroInscriptionModality" label-key="description" value-key="id" placeholder="MOD. INSCRIPCIÓN..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Estado Cuotas</label>
-            <MultiSelect v-model="filters.installment_status_ids" :items="filtroPaymentStatus" label-key="description" value-key="id" placeholder="EST. CUOTA..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Método de Pago</label>
-            <MultiSelect v-model="filters.payment_method_ids" :items="filtroPaymentMethod" label-key="description" value-key="id" placeholder="METODO..." />
-          </div>
-
-          <div class="col-md-3 col-6">
-            <label class="form-label">Conciliación Bancaria</label>
-            <MultiSelect v-model="filters.settlement_status_ids" :items="filtroSettlementStatus" label-key="description" value-key="id" placeholder="CONCILIACIÓN..." />
-          </div>
-
+          <div class="col-md-6"><label class="exec-label">Nombre del Programa</label><input v-model="filters.program_text" type="text" class="exec-input-light w-100" placeholder="Ej. Gestión de Proyectos..."></div>
+          <div class="col-md-6"><label class="exec-label">Promoción</label><MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Tipo</label><MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Modalidad</label><MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-6"><label class="exec-label">Rango Inicio Edición</label><BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')" /></div>
         </div>
       </div>
+
+      <div class="exec-fieldset mb-4">
+        <h6 class="fieldset-title">Auditoría del Registro</h6>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="exec-label">Rango Fecha de Pago</label><BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'pay_date')" /></div>
+          <div class="col-md-4"><label class="exec-label">Fecha de Creación</label><BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')" /></div>
+          <div class="col-md-4"><label class="exec-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
+        </div>
       </div>
-      
+
+      <div class="exec-fieldset">
+        <h6 class="fieldset-title" style="color: var(--blue-600);">Filtros Financieros y Matrícula</h6>
+        <div class="row g-3">
+          <div class="col-md-3 col-6"><label class="exec-label">Estado FICO (Deuda)</label><MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Perfil de Precio</label><MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Moneda</label><MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="abbreviation" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Mod. Inscripción</label><MultiSelect v-model="filters.inscription_modality_ids" :items="filtroInscriptionModality" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Estado Cuotas</label><MultiSelect v-model="filters.installment_status_ids" :items="filtroPaymentStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Método de Pago</label><MultiSelect v-model="filters.payment_method_ids" :items="filtroPaymentMethod" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Conciliación Bancaria</label><MultiSelect v-model="filters.settlement_status_ids" :items="filtroSettlementStatus" label-key="description" value-key="id" placeholder="Todas..." /></div>
+        </div>
+      </div>
+
     </div>
     <template #footer>
       <div class="d-flex justify-content-between w-100 align-items-center">
-        <button class="btn btn-outline btn-sm" @click="clearFilters"><i class="fa-solid fa-eraser me-1"></i> Limpiar todo</button>
+        <button class="btn-exec btn-exec-outline" @click="clearFilters"><i class="fa-solid fa-eraser me-1"></i> Limpiar todo</button>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">Cerrar</button>
-          <button class="btn btn-primary btn-sm px-4" @click="applyFilters"><i class="fa-solid fa-filter me-1"></i> Aplicar Filtros</button>
+          <button class="btn-exec btn-exec-outline" @click="showFilterModal = false">Cerrar</button>
+          <button class="btn-exec btn-exec-primary" @click="applyFilters"><i class="fa-solid fa-filter me-1"></i> Aplicar Filtros</button>
         </div>
       </div>
     </template>
@@ -454,350 +389,243 @@
 
   <BaseModal v-model="showControlModal" :title="isComercial ? 'Mis Permisos de Visualización' : 'Panel de Control: Restricciones de Asesores'" size="xl">
     
-    <div v-if="!isComercial" class="px-3 py-2">
-      <div class="alert alert-info py-2 small mb-3">
-        <i class="fa-solid fa-circle-info me-1"></i> Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
+    <div v-if="!isComercial" class="px-4 py-3">
+      <div class="exec-alert alert-info mb-4">
+        <i class="fa-solid fa-circle-info me-2"></i> Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
       </div>
       
-      <div class="table-responsive control-table-wrapper">
-        <table class="table table-bordered table-hover align-middle control-table">
-          <thead class="table-light text-center">
-            <tr>
-              <th rowspan="2" class="align-middle bg-light sticky-col">Asesor Comercial</th>
-              <th colspan="3" class="bg-primary-subtle text-primary">PROGRAMAS</th>
-              <th colspan="6" class="bg-success-subtle text-success">GLOBAL</th>
+      <div class="table-shell control-table-wrapper">
+        <table class="exec-table">
+          <thead>
+            <tr class="thead-group">
+              <th rowspan="2" class="th-cat sticky-col bg-dark text-white" style="min-width: 200px;">Asesor Comercial</th>
+              <th colspan="3" class="th-group th-group-a text-center">PROGRAMAS</th>
+              <th colspan="6" class="th-group th-group-b text-center">GLOBAL</th>
             </tr>
-            <tr class="small text-muted">
-              <th class="bg-primary-subtle minW-200">Tipos</th>
-              <th class="bg-primary-subtle minW-200">Modalidades</th>
-              <th class="bg-primary-subtle minW-300">Específicos</th>
-              <th class="bg-success-subtle minW-200">Estatus (Pipeline)</th>
-              <th class="bg-success-subtle minW-200">Seguimiento</th>
-              <th class="bg-success-subtle minW-200">Niv. Interés</th>
-              <th class="bg-success-subtle minW-200">Canal</th>
-              <th class="bg-success-subtle minW-200">Estrategia</th>
-              <th class="bg-success-subtle minW-200">E. Cliente</th>
+            <tr class="thead-sub">
+              <th class="ts ts-a minW-200">Tipos</th>
+              <th class="ts ts-a minW-200">Modalidades</th>
+              <th class="ts ts-a minW-300">Específicos</th>
+              <th class="ts ts-b minW-200">Estatus (Pipeline)</th>
+              <th class="ts ts-b minW-200">Seguimiento</th>
+              <th class="ts ts-b minW-200">Niv. Interés</th>
+              <th class="ts ts-b minW-200">Canal</th>
+              <th class="ts ts-b minW-200">Estrategia</th>
+              <th class="ts ts-b minW-200">E. Cliente</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="asesor in asesoresControl" :key="asesor.user_id">
-              <td class="fw-bold small sticky-col bg-white">
-                <i class="fa-solid fa-user-tie text-secondary me-2"></i>{{ asesor.name }}
+            <tr v-for="asesor in asesoresControl" :key="asesor.user_id" class="tbody-row">
+              <td class="td-cat sticky-col fw-700">
+                <i class="fa-solid fa-user-tie text-slate-400 me-2"></i>{{ asesor.name }}
               </td>
-              
-              <td><MultiSelect v-model="asesor.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              <td><MultiSelect v-model="asesor.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></td>
-              <td>
-                <MultiSelect
-                    v-model="asesor.program_ids"
-
-                    mode="remote"
-                    :fetcher="q => programService.programVersionCaller({ q })"
-                    :debounce-ms="400"
-
-                    labelKey="abbreviation"
-                    valueKey="program_version_id"
-
-                    placeholder="todos..."
-                  />
-          
+              <td class="td-a"><MultiSelect v-model="asesor.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-a"><MultiSelect v-model="asesor.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></td>
+              <td class="td-a">
+                <MultiSelect v-model="asesor.program_ids" mode="remote" :fetcher="q => programService.programVersionCaller({ q })" :debounce-ms="400" labelKey="abbreviation" valueKey="program_version_id" placeholder="Todos..." />
               </td>
-              <td><MultiSelect v-model="asesor.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              <td><MultiSelect v-model="asesor.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              <td><MultiSelect v-model="asesor.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              <td><MultiSelect v-model="asesor.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></td>
-              <td><MultiSelect v-model="asesor.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></td>
-              <td><MultiSelect v-model="asesor.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></td>
+              <td class="td-b"><MultiSelect v-model="asesor.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todos..." /></td>
             </tr>
             <tr v-if="asesoresControl.length === 0">
-              <td colspan="10" class="text-center py-4 text-muted">Cargando asesores...</td>
+              <td colspan="10" class="empty-state">Cargando asesores...</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <div v-else class="px-4 py-3">
-      <div class="alert d-flex align-items-center mb-4 border-0" :class="hasActiveRestrictions ? 'alert-danger bg-danger-subtle text-danger' : 'alert-success bg-success-subtle text-success'">
-        <i class="fa-solid fa-3x me-3" :class="hasActiveRestrictions ? 'fa-user-lock' : 'fa-check-circle'"></i>
-        <div>
-          <h5 class="alert-heading fw-bold mb-1">
-            {{ hasActiveRestrictions ? 'Filtros de Seguridad Activos' : 'Acceso Total Permitido' }}
-          </h5>
-          <p class="mb-0 small text-dark">
-            <span v-if="hasActiveRestrictions">Actualmente tu perfil tiene restricciones operativas asignadas por administración. Solo puedes acceder a los leads que coincidan <b>estrictamente</b> con los parámetros mostrados a continuación. Los campos vacíos indican que tienes acceso a todas las opciones de esa categoría.</span>
+    <div v-else class="px-4 py-4">
+      <div class="exec-alert-banner mb-4" :class="hasActiveRestrictions ? 'banner-danger' : 'banner-success'">
+        <i class="fa-solid fa-3x" :class="hasActiveRestrictions ? 'fa-user-lock' : 'fa-check-circle'"></i>
+        <div class="banner-content">
+          <h5 class="banner-title">{{ hasActiveRestrictions ? 'Filtros de Seguridad Activos' : 'Acceso Total Permitido' }}</h5>
+          <p class="banner-text">
+            <span v-if="hasActiveRestrictions">Actualmente tu perfil tiene restricciones operativas asignadas. Solo puedes acceder a los leads que coincidan <b>estrictamente</b> con los parámetros mostrados a continuación. Los campos vacíos indican acceso total en esa categoría.</span>
             <span v-else>Tu perfil no cuenta con restricciones en este momento. Tienes visibilidad completa sobre todos los leads del sistema.</span>
           </p>
         </div>
       </div>
 
       <div class="row g-4" v-if="asesoresControl.length > 0">
-        <div class="col-12">
-          <h6 class="section-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Tipos de Programa</label>
-          <MultiSelect disabled v-model="asesoresControl[0].type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Modalidades</label>
-          <MultiSelect disabled v-model="asesoresControl[0].model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Programas Específicos</label>
-          <MultiSelect disabled v-model="asesoresControl[0].program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
+        <div class="col-12"><h6 class="fieldset-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6></div>
+        <div class="col-md-4"><label class="exec-label">Tipos de Programa</label><MultiSelect disabled v-model="asesoresControl[0].type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Modalidades</label><MultiSelect disabled v-model="asesoresControl[0].model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Programas Específicos</label><MultiSelect disabled v-model="asesoresControl[0].program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
 
-        <div class="col-12 mt-4">
-          <h6 class="section-title text-success"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Estatus (Pipeline)</label>
-          <MultiSelect disabled v-model="asesoresControl[0].status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">E. Cliente</label>
-          <MultiSelect disabled v-model="asesoresControl[0].moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Seguimiento</label>
-          <MultiSelect disabled v-model="asesoresControl[0].last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Canal de Origen</label>
-          <MultiSelect disabled v-model="asesoresControl[0].channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Estrategia MKT</label>
-          <MultiSelect disabled v-model="asesoresControl[0].strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label text-muted small fw-bold">Nivel de Interés</label>
-          <MultiSelect disabled v-model="asesoresControl[0].interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Accesibilidad total" />
-        </div>
+        <div class="col-12 mt-4"><h6 class="fieldset-title" style="color: var(--teal-600);"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6></div>
+        <div class="col-md-4"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect disabled v-model="asesoresControl[0].status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">E. Cliente</label><MultiSelect disabled v-model="asesoresControl[0].moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Seguimiento</label><MultiSelect disabled v-model="asesoresControl[0].last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Canal de Origen</label><MultiSelect disabled v-model="asesoresControl[0].channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Estrategia MKT</label><MultiSelect disabled v-model="asesoresControl[0].strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
+        <div class="col-md-4"><label class="exec-label">Nivel de Interés</label><MultiSelect disabled v-model="asesoresControl[0].interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
       </div>
     </div>
     
     <template #footer>
       <div class="d-flex justify-content-end w-100 gap-2">
-        <button class="btn btn-outline-secondary btn-sm px-4" @click="showControlModal = false">
+        <button class="btn-exec btn-exec-outline px-4" @click="showControlModal = false">
           {{ isComercial ? 'Entendido, cerrar' : 'Cancelar' }}
         </button>
-        
-        <button v-if="!isComercial" class="btn btn-warning btn-sm px-4 fw-bold" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
+        <button v-if="!isComercial" class="btn-exec btn-exec-warning px-4" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
           <i class="fa-solid fa-save me-1"></i> {{ isSavingRestrictions ? 'Guardando...' : 'Guardar Restricciones' }}
         </button>
       </div>
     </template>
   </BaseModal>
-<BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
-    <div v-if="isLoadingEnrollment" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="mt-2 text-muted">Cargando información financiera...</p>
+
+  <BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
+    <div v-if="isLoadingEnrollment" class="exec-loader py-5">
+      <div class="loader-ring"></div>
+      <p class="loader-text mt-2">Cargando información financiera...</p>
     </div>
 
-    <div v-else-if="enrollmentData" class="px-3 py-2">
-      <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
+    <div v-else-if="enrollmentData" class="px-4 py-3">
+      <div class="enrollment-header mb-4">
         <div>
-          <h6 class="fw-bold mb-1 text-primary text-uppercase">{{ enrollmentData.abbreviation }}</h6>
-          
-          <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="small text-muted mt-1">
-            <span v-if="enrollmentData.version_name">
-               <i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}
-            </span>
-            <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2">|</span> 
-            <span v-if="enrollmentData.edition_label">
-               <i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}
-            </span>
+          <h6 class="enrollment-title">{{ enrollmentData.abbreviation }}</h6>
+          <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="enrollment-sub">
+            <span v-if="enrollmentData.version_name"><i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}</span>
+            <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2 text-slate-300">|</span> 
+            <span v-if="enrollmentData.edition_label"><i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}</span>
           </div>
         </div>
-        
-        <span v-if="enrollmentData.modality_label" class="badge bg-white text-dark border">
-          {{ enrollmentData.modality_label }}
-        </span>
+        <span v-if="enrollmentData.modality_label" class="pill pill-slate border">{{ enrollmentData.modality_label }}</span>
       </div>
 
       <div class="row g-4">
-        <div class="col-md-6 border-end">
-          <h6 class="text-muted small fw-bold text-uppercase mb-3">Información del Alumno</h6>
-          <div class="mb-3">
-            <label class="d-block small text-muted">Nombre Completo</label>
-            <span class="fw-bold text-dark fs-6">{{ enrollmentData.student_name }}</span>
+        <div class="col-md-6 border-end pe-4">
+          <h6 class="fieldset-title">Información del Alumno</h6>
+          <div class="info-block mb-3">
+            <label class="exec-label">Nombre Completo</label>
+            <span class="info-value">{{ enrollmentData.student_name }}</span>
           </div>
           
           <div class="d-flex justify-content-between mb-3">
-            <div>
-              <label class="d-block small text-muted">Documento</label>
-              <span class="font-mono small fw-bold">{{ enrollmentData.document_number }}</span>
+            <div class="info-block">
+              <label class="exec-label">Documento</label>
+              <span class="info-value text-mono">{{ enrollmentData.document_number }}</span>
             </div>
-            <div>
-              <label class="d-block small text-muted">Fecha Inscripción</label>
-              <span class="small">{{ enrollmentData.registration_date }}</span>
+            <div class="info-block text-right">
+              <label class="exec-label">Fecha Inscripción</label>
+              <span class="info-value text-muted" style="font-weight: 500;">{{ enrollmentData.registration_date }}</span>
             </div>
           </div>
 
-          <div class="mb-3">
-             <label class="d-block small text-muted mb-1">Estado de Matrícula</label>
-             <span class="badge" 
-               :class="enrollmentData.active === 'Y' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+          <div class="info-block mb-3">
+             <label class="exec-label mb-1">Estado de Matrícula</label>
+             <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">
                {{ enrollmentData.status_label || 'Desconocido' }}
              </span>
           </div>
-          <div class="mb-3">
-            <label class="d-block small text-muted">Asesor que Registró</label>
-            <span class="small fw-bold text-dark">
-              <i class="fa-solid fa-user-tie me-1 text-secondary"></i>
-              {{ enrollmentData.seller_name || '—' }}
+          <div class="info-block mb-3">
+            <label class="exec-label">Asesor que Registró</label>
+            <span class="info-value">
+              <i class="fa-solid fa-user-tie me-1 text-slate-400"></i> {{ enrollmentData.seller_name || '—' }}
             </span>
           </div>
         </div>
 
-<div class="col-md-6">
-  <h6 class="text-muted small fw-bold text-uppercase mb-3">Desglose Financiero</h6>
-<div class="d-flex align-items-center gap-2 mb-3">
-  <i class="fa-solid fa-credit-card text-secondary"></i>
-  <span class="small fw-bold text-dark">{{ enrollmentData.payment_plan_label || '—' }}</span>
-  <span class="badge bg-light border text-secondary" style="font-size:0.65rem">Plan de Pago</span>
-</div>
+        <div class="col-md-6 ps-3">
+          <h6 class="fieldset-title">Desglose Financiero</h6>
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="fa-solid fa-credit-card text-slate-400"></i>
+            <span class="fw-700 text-dark" style="font-size: 13px;">{{ enrollmentData.payment_plan_label || '—' }}</span>
+            <span class="pill pill-slate" style="font-size: 9px;">Plan de Pago</span>
+          </div>
 
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-3">
-      
-      <div class="d-flex justify-content-between mb-2 pb-2">
-        <span class="small text-secondary fw-600">Precio de Lista:
-          <span class="badge bg-light border text-secondary ms-1" style="font-size:0.65rem">
-            {{ enrollmentData.profile_label || 'General' }}
-          </span>
-        </span>
-        <span class="fw-bold text-dark fs-6">
-          {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}
-        </span>
-      </div>
-      <!-- 2. DESCUENTOS APLICADOS (Si existen) -->
-      <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
-         <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" 
-              class="d-flex justify-content-between align-items-center text-danger small py-1">
-            <span class="text-muted">
-               <i class="fa-solid fa-tag me-1"></i> 
-               <span class="fw-600">{{ desc.label || desc.name }}</span>
-               <span v-if="desc.value" class="text-secondary ms-1 fst-italic" style="font-size: 0.7rem;">
-                 ({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})
-               </span>
-            </span>
-            <span class="fw-bold text-danger">
-               - {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}
-            </span>
-         </div>
-         <hr class="my-2 border-secondary opacity-25">
-      </div>
+          <div class="finance-card">
+            <div class="d-flex justify-content-between mb-2 pb-2">
+              <span class="text-secondary fw-600" style="font-size: 12px;">Precio de Lista:
+                <span class="pill pill-slate ms-1" style="font-size: 9px;">{{ enrollmentData.profile_label || 'General' }}</span>
+              </span>
+              <span class="fw-700 text-dark" style="font-size: 14px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}</span>
+            </div>
 
-      <!-- 3. SUBTOTAL / TOTAL A PAGAR -->
-      <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-        <span class="fw-bold text-dark">Total a Pagar:</span>
-        <span class="fs-5 fw-bold text-primary">
-           {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}
-        </span>
-      </div>
-      
-      <!-- 4. PAGADO -->
-      <div class="d-flex justify-content-between mb-2 text-success">
-        <span class="small fw-600">Pagado:</span>
-        <span class="fw-bold">
-          {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}
-        </span>
-      </div>
-      
-      <hr class="my-2 border-success opacity-50">
-      
-      <!-- 5. PENDIENTE (DESTACADO) -->
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="fw-bold text-dark">Saldo Pendiente:</span>
-        <span class="fs-4 fw-bold" :class="enrollmentData.pending_amount > 0 ? 'text-danger' : 'text-success'">
-           {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}
-        </span>
-      </div>
-    </div>
-  </div>
+            <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
+               <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" class="d-flex justify-content-between align-items-center c-red py-1">
+                  <span class="text-muted" style="font-size: 11.5px;">
+                     <i class="fa-solid fa-tag me-1"></i> <span class="fw-600">{{ desc.label || desc.name }}</span>
+                     <span v-if="desc.value" class="text-slate-400 ms-1 fst-italic">({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})</span>
+                  </span>
+                  <span class="fw-700 c-red" style="font-size: 12.5px;">- {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}</span>
+               </div>
+               <hr class="my-2" style="border-color: var(--slate-100);">
+            </div>
 
-  <!-- ALERTA DE PRÓXIMO VENCIMIENTO (sin cambios) -->
-  <div v-if="enrollmentData.pending_amount > 0" class="alert alert-warning py-2 px-3 small mb-3 border-warning">
-    <div class="d-flex align-items-start">
-       <i class="fa-solid fa-clock mt-1 me-2 text-warning-emphasis"></i>
-       <div>
-          <strong class="d-block text-warning-emphasis">Próximo vencimiento:</strong>
-          <span v-if="enrollmentData.next_due_date">
-             {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b>
-          </span>
-          <span v-else class="text-muted fst-italic">
-             No hay fecha de cuota programada.
-          </span>
-       </div>
-    </div>
-  </div>
-  
-  <div v-else class="alert alert-success py-2 px-3 small mb-3 border-success">
-    <i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!
-  </div>
-
-  <!-- BADGE DE ESTADO FINANCIERO (sin cambios) -->
-  <div class="text-end">
-     <span class="badge border" :class="{
-       'bg-danger text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_debt',
-       'bg-success text-white': enrollmentData.financial_status_alias === 'we_enrollment_status_paid',
-       'bg-warning text-dark': enrollmentData.financial_status_alias === 'we_enrollment_status_pending'
-     }">{{ enrollmentData.financial_status_label || 'Estado Pendiente' }}</span>
-  </div>
-</div>
-
-        <div class="col-12 mt-2">
-           <hr class="opacity-10 mb-3">
-           <h6 class="text-muted small fw-bold text-uppercase mb-3">
-              <i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos
-           </h6>
-
-           <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="list-group list-group-flush border rounded-3">
-              <div v-for="(file, idx) in enrollmentData.files_list" :key="idx" 
-                   class="list-group-item list-group-item-action d-flex align-items-center justify-content-between px-3 py-2">
-                  
-                  <div class="d-flex align-items-center gap-3 overflow-hidden">
-                      <div class="file-icon text-center" style="width: 24px;">
-                          <i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i>
-                      </div>
-                      <div class="d-flex flex-column text-truncate">
-                          <span class="fw-medium text-dark small text-truncate" :title="file.name">
-                              {{ file.name || 'Documento Adjunto' }}
-                          </span>
-                          <span class="text-muted x-small">
-                              {{ file.date || 'Archivo histórico' }} 
-                              <span v-if="file.source === 'enrollment'" class="badge badge-light border text-secondary ms-1" style="font-size:0.6rem">LEGACY</span>
-                          </span>
-                      </div>
-                  </div>
-
-                  <a :href="file.url" target="_blank" class="btn btn-sm btn-light border text-primary ms-2" title="Ver Documento">
-                      <i class="fas fa-external-link-alt"></i>
-                  </a>
-              </div>
-           </div>
-
-           <div v-else class="text-center py-3 bg-light rounded border border-dashed">
-              <span class="text-muted small fst-italic">No hay archivos adjuntos en esta matrícula.</span>
-           </div>
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+              <span class="fw-700 text-dark" style="font-size: 12.5px;">Total a Pagar:</span>
+              <span class="fw-700 accent-text" style="font-size: 16px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}</span>
+            </div>
+            
+            <div class="d-flex justify-content-between mb-2 c-green">
+              <span class="fw-600" style="font-size: 12px;">Pagado:</span>
+              <span class="fw-700" style="font-size: 13px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}</span>
+            </div>
+            
+            <hr class="my-2" style="border-color: #dcfce7;">
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-700 text-dark" style="font-size: 12.5px;">Saldo Pendiente:</span>
+              <span class="fw-700" style="font-size: 18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">
+                 {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}
+              </span>
+            </div>
+          </div>
         </div>
-
       </div>
-    </div>
 
+      <div v-if="enrollmentData.pending_amount > 0" class="exec-alert alert-warning mt-4">
+        <i class="fa-solid fa-clock mt-1 me-2" style="color: var(--amber-500)"></i>
+        <div>
+           <strong class="d-block text-dark">Próximo vencimiento:</strong>
+           <span v-if="enrollmentData.next_due_date" style="color: #92400e;">
+              {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b>
+           </span>
+           <span v-else class="text-muted fst-italic">No hay fecha de cuota programada.</span>
+        </div>
+      </div>
+      <div v-else class="exec-alert alert-success mt-4">
+        <i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!
+      </div>
+
+      <div class="mt-4 pt-2">
+         <h6 class="fieldset-title"><i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos</h6>
+         <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="file-list">
+            <div v-for="(file, idx) in enrollmentData.files_list" :key="idx" class="file-item">
+               <div class="d-flex align-items-center gap-3 overflow-hidden">
+                   <div class="file-icon"><i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i></div>
+                   <div class="d-flex flex-column text-truncate">
+                       <span class="fw-600 text-dark text-truncate" style="font-size: 12.5px;" :title="file.name">{{ file.name || 'Documento Adjunto' }}</span>
+                       <span class="text-muted" style="font-size: 10.5px;">
+                           {{ file.date || 'Archivo histórico' }} 
+                           <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
+                       </span>
+                   </div>
+               </div>
+               <a :href="file.url" target="_blank" class="btn-icon" title="Ver Documento">
+                   <i class="fas fa-external-link-alt accent-text"></i>
+               </a>
+            </div>
+         </div>
+         <div v-else class="empty-state" style="padding: 1.5rem;">
+            <p>No hay archivos adjuntos en esta matrícula.</p>
+         </div>
+      </div>
+
+    </div>
     <template #footer>
       <div v-if="enrollmentData" class="d-flex justify-content-end w-100">
-        <button class="btn btn-primary btn-sm px-4" @click="showEnrollmentModal = false">
-            Cerrar
-        </button>
+        <button class="btn-exec btn-exec-primary px-4" @click="showEnrollmentModal = false">Cerrar</button>
       </div>
     </template>
   </BaseModal>
 </template>
-
 <script setup>
 import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -1499,9 +1327,38 @@ function handleDateFilterChange(dateStr, type) {
   else if (type === 'edition_start') { filters.edition_start_from = start; filters.edition_start_to = end; filters.edition_range_string = dateStr }
 }
 // Helpers visuales
-function rowClassForStatus(s) { const map = { 'we_lead_status_insc': 'row-inscrito', 'we_lead_status_interesado': 'row-blue', 'we_lead_status_bought': 'row-emerald', 'we_lead_status_will_pay': 'row-emerald', 'we_lead_status_proximo': 'row-yellow', 'we_lead_status_indiferente': 'row-gray', 'we_lead_status_closed': 'row-red', 'we_lead_status_desestimado': 'row-red' }; return map[s] || '' }
-function badgeForInterest(s) { const map = { 'we_lead_interest_high': 'badge-success', 'we_lead_interest_medium': 'badge-warning', 'we_lead_interest_low': 'badge-danger' }; return map[s] || 'badge-neutral' }
-function badgeForFollow(s) { const map = { 'we_follow_lead_pending': 'badge-light', 'we_follow_lead_answered': 'badge-success', 'we_follow_lead_no_answer': 'badge-danger' }; return map[s] || 'badge-neutral' }
+// Helpers visuales actualizados
+function rowClassForStatus(s) { 
+  const map = { 
+    'we_lead_status_insc': 'row-inscrito', 
+    'we_lead_status_interesado': 'row-blue', 
+    'we_lead_status_bought': 'row-emerald', 
+    'we_lead_status_will_pay': 'row-emerald', 
+    'we_lead_status_proximo': 'row-yellow', 
+    'we_lead_status_indiferente': 'row-gray', 
+    'we_lead_status_closed': 'row-red', 
+    'we_lead_status_desestimado': 'row-red' 
+  }; 
+  return map[s] || '' 
+}
+
+function badgeForInterest(s) { 
+  const map = { 
+    'we_lead_interest_high': 'pill-red', 
+    'we_lead_interest_medium': 'pill-amber', 
+    'we_lead_interest_low': 'pill-slate' 
+  }; 
+  return map[s] || 'pill-slate' 
+}
+
+function badgeForFollow(s) { 
+  const map = { 
+    'we_follow_lead_pending': 'pill-slate', 
+    'we_follow_lead_answered': 'pill-teal', 
+    'we_follow_lead_no_answer': 'pill-red' 
+  }; 
+  return map[s] || 'pill-slate' 
+}
 function addLocalAttempt() { 
     const now = new Date(); 
     const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); 
@@ -1532,7 +1389,7 @@ function handlePaginationChange() {
 onMounted(async () => {
   if (isComercial && currentUserId) {
     filters.owner_user_ids = [currentUserId]
-    checkMyRestrictions() 
+    checkMyRestrictions()
   }
   loadOwners()
   await parseQueryAndApply()
@@ -1542,112 +1399,230 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Los mismos estilos optimizados que te pasé antes */
-.leads-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.6rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-top: 4px solid #6366f1; margin-bottom: 2rem; }
-.card-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
-.title { display: flex; flex-direction: column; gap: 4px; }
-.title span { font-weight: 700; font-size: 1.1rem; color: #111827; }
-.title .sub { font-weight: 600; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
-.card-body { padding: 1.25rem; }
-.table-responsive { width: 100%; overflow-x: auto; margin-top: 1rem; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
-.table thead th { background: #f9fafb; padding: 0.85rem 0.75rem; text-align: left; font-weight: 600; color: #4b5563; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
-.table td { padding: 0.85rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-.table-hover tbody tr:hover { background-color: #f8fafc; }
-.ta-center { text-align: center; }
+/* ═══════════════════════════════════════════════
+   TOKENS & BASE
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #0d9488; --teal-500:  #14b8a6;
+  --blue-600:  #2563eb;
+  --amber-500: #f59e0b;
+  --red-600:   #dc2626;
+  --gold-400:  #fbbf24;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════
+   MASTHEAD
+═══════════════════════════════════════════════ */
+.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 2px 28px; }
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
+
+.masthead-actions { display: flex; gap: 10px; align-items: center; }
+.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.btn-exec-ghost { background: rgba(255,255,255,0.07); color: var(--slate-300); border: 1px solid rgba(255,255,255,0.12); }
+.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
+.btn-exec-active { background: var(--white); color: var(--navy-900); border: 1px solid var(--white); }
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
+.btn-exec-danger { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
+.btn-exec-warning { background: var(--amber-500); color: var(--navy-900); border: 1px solid var(--amber-500); }
+.btn-exec-success { background: #15803d; color: var(--white); }
+.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════════
+   BODY & TOOLBAR
+═══════════════════════════════════════════════ */
+.exec-body { flex: 1; padding: 24px 28px; }
+.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; }
+.toolbar-chips { flex: 1; min-width: 0; }
+.toolbar-pagination { flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════
+   DATA GRID (TABLA)
+═══════════════════════════════════════════════ */
+.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.table-responsive-custom { width: 100%; overflow-x: auto; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+/* Cabeceras (Sub) */
+.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; background: #fafbfc; color: var(--text-secondary); }
+.thead-sub .ts.text-center { text-align: center; }
+
+/* Cabeceras (Grupos Control) */
+.thead-group .th-cat { background: var(--navy-900); color: var(--slate-300); padding-left: 14px; border-right: 2px solid var(--navy-700); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+.th-group { padding: 8px 10px; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border); }
+.th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
+.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; }
+.ts-a { background: #f8fbff; color: #3b82f6; border-left: 1px solid #dbeafe; }
+.ts-b { background: #f7fdf9; color: #16a34a; border-left: 1px solid #d1fae5; }
+
+/* Filas Body */
+.tbody-row { transition: background 0.15s; position: relative; }
+.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
+.tbody-row:last-child td { border-bottom: none; }
+.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
+
+/* Colores de estado (Pipeline) */
+.row-inscrito { border-left: 3px solid #10b981; } .row-inscrito > td { background: #f0fdf4; }
+.row-blue { border-left: 3px solid #3b82f6; }    .row-blue > td { background: #f0f9ff; }
+.row-emerald { border-left: 3px solid #14b8a6; } .row-emerald > td { background: #f0fdfa; }
+.row-yellow { border-left: 3px solid #f59e0b; }  .row-yellow > td { background: #fffbeb; }
+.row-gray { border-left: 3px solid var(--slate-400); } .row-gray > td { background: var(--slate-50); color: var(--text-secondary); }
+.row-red { border-left: 3px solid #ef4444; }     .row-red > td { background: #fef2f2; }
+.row-highlight > td { background: #eff6ff !important; }
+
+/* Efecto Long Press */
+.tbody-row::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background-color: rgba(20, 184, 166, 0.15); transition: width 0.3s ease-out; pointer-events: none; z-index: 5; }
+.row-pressing::after { width: 100%; transition: width 1s linear; }
+
+/* Celdas específicas */
+.td-cat { padding-left: 14px; border-right: 2px solid var(--navy-800); background: var(--navy-900) !important; color: var(--white) !important; }
+.td-a { border-left: 1px solid transparent; } /* Helper for standard cells */
+.td-b { border-left: 1px solid transparent; }
+
+/* Utilidades Texto */
+.text-center { text-align: center; } .text-right { text-align: right; }
+.text-mono { font-family: 'IBM Plex Mono', monospace; }
+.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
+.c-green { color: #15803d; } .c-red { color: #dc2626; }
+.small { font-size: 11.5px; } .x-small { font-size: 10px; }
 .nowrap { white-space: nowrap; }
-.fw-600 { font-weight: 600; }
-.name { font-weight: 600; color: #1e293b; line-height: 1.2; font-size: 0.9rem; }
-.muted { color: #6b7280; }
-.text-dark { color: #111827; }
-.text-primary { color: #4f46e5; }
-.text-warning { color: #d97706; }
-.small { font-size: 0.75rem; }
-.x-small { font-size: 0.68rem; }
-.minW { min-width: 120px; }
-.badge { padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 600; display: inline-block; border: 1px solid transparent; }
-.badge-neutral { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-.badge-light { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
-.badge-info { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
-.badge-warning { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-.badge-success { background: #ecfdf5; color: #065f46; border-color: #d1fae5; }
-.badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
-.btn { border: 1px solid #d1d5db; padding: 0.45rem 0.75rem; border-radius: 0.4rem; cursor: pointer; transition: all 0.2s; background: #fff; font-size: 0.8rem; font-weight: 600; }
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-.btn-primary:hover { background: #4338ca; }
-.btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
-.form-label { font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; display: block; }
-.form-control { width: 100%; border: 1px solid #d1d5db; border-radius: 0.4rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
-.form-control:focus { outline: none; border-color: #6366f1; ring: 2px rgba(99, 102, 241, 0.2); }
-.section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.25rem; }
-.program-filter-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; }
-.empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
-.row-inscrito, .row-inscrito > td { background-color: #d1fae5 !important; }
-.row-inscrito { border-left: 4px solid #059669 !important; }
-.row-inscrito:hover, .row-inscrito:hover > td { background-color: #a7f3d0 !important; }
-.row-blue, .row-blue > td { background-color: #f0f9ff !important; }
-.row-blue:hover, .row-blue:hover > td { background-color: #e0f2fe !important; }
-.row-emerald, .row-emerald > td { background-color: #ecfdf5 !important; }
-.row-emerald { border-left: 3px solid #10b981 !important; }
-.row-emerald:hover, .row-emerald:hover > td { background-color: #d1fae5 !important; }
-.row-yellow, .row-yellow > td { background-color: #fffbeb !important; }
-.row-yellow:hover, .row-yellow:hover > td { background-color: #fef3c7 !important; }
-.row-red, .row-red > td { background-color: #fef2f2 !important; opacity: 0.95; }
-.row-red:hover, .row-red:hover > td { background-color: #fee2e2 !important; }
-.row-gray, .row-gray > td { background-color: #f8fafc !important; color: #64748b; }
-.row-gray:hover, .row-gray:hover > td { background-color: #f1f5f9 !important; }
-tr, td { transition: background-color 0.2s ease; }
-.cursor-pointer { cursor: pointer; }
-.avatar-placeholder { width: 40px; height: 40px; background-color: #e0e7ff; color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-.scroll-area { max-height: 60vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-.compact-table { font-size: 0.75rem !important; }
-.compact-table th, .compact-table td { padding: 0.25rem 0.5rem !important; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-.compact-table td:hover { white-space: normal; overflow: visible; position: relative; z-index: 10; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-tr { position: relative; user-select: none; will-change: background-color; transition: background-color 0.1s ease-in-out; }
-tr::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background-color: rgba(99, 102, 241, 0.25); transition: width 0.3s ease-out; pointer-events: none; z-index: 5; }
-tr.row-pressing::after { width: 100%; transition: width 1s linear; }
-/* Estilos adicionales para el Panel de Control */
+
+/* Badges / Pills */
+.pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+.pill-slate { background: var(--slate-100); color: var(--text-secondary); }
+.pill-teal  { background: #ccfbf1; color: #0f766e; }
+.pill-blue  { background: #dbeafe; color: #1d4ed8; }
+.pill-amber { background: #fef3c7; color: #92400e; }
+.pill-red   { background: #fee2e2; color: #b91c1c; }
+
+/* Botones Icono Tabla */
+.btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
+.btn-icon:hover { background: var(--slate-100); color: var(--text-primary); border-color: var(--slate-300); }
+
+/* Empty state / Loaders */
+
+.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
+.loader-ring { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--teal-600); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tabla Compacta */
+.compact-table { font-size: 11px; }
+.compact-table .ts { padding: 6px 10px; font-size: 10px; }
+.compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
+
+/* ═══════════════════════════════════════════════
+   MODALES (Estilos internos)
+═══════════════════════════════════════════════ */
+.exec-modal-body { display: flex; flex-direction: column; background: var(--slate-50); }
+.modal-header-strip { background: var(--white); border-bottom: 1px solid var(--border); }
+.avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: #f0f9ff; color: var(--blue-600); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid #e0f2fe; }
+
+/* Formularios Modales */
+.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
+.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100); padding-bottom: 6px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+.exec-input-light, .exec-select-light, .exec-textarea { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary); transition: border-color 0.15s; }
+.exec-input-light:focus, .exec-select-light:focus, .exec-textarea:focus { outline: none; border-color: var(--teal-500); }
+
+/* Control de Asesores Banners */
+.exec-alert { padding: 12px 16px; border-radius: 6px; font-size: 12.5px; border-left: 4px solid; display: flex; align-items: flex-start; gap: 10px; }
+.alert-info { background: #f0f9ff; color: #0369a1; border-color: #3b82f6; }
+.alert-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
+.alert-success { background: #f0fdf4; color: #166534; border-color: #22c55e; }
+
+.exec-alert-banner { display: flex; align-items: center; padding: 20px; border-radius: 8px; gap: 20px; border: 1px solid; }
+.banner-danger { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.banner-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.banner-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.banner-text { font-size: 12.5px; color: var(--text-primary); margin: 0; line-height: 1.4; }
+
+/* Detalle de Matrícula */
+.enrollment-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--white); border: 1px solid var(--border); border-radius: 6px; }
+.enrollment-title { font-size: 15px; font-weight: 700; color: var(--teal-600); margin: 0; text-transform: uppercase; letter-spacing: 0.03em; }
+.enrollment-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+.info-block { display: flex; flex-direction: column; gap: 2px; }
+.info-value { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+
+.finance-card { background: var(--slate-50); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+
+.file-list { display: flex; flex-direction: column; gap: 8px; }
+.file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--white); border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s; }
+.file-item:hover { border-color: var(--teal-500); }
+.file-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--slate-50); border-radius: 4px; }
+
+/* Utilidades adicionales */
+.scroll-area { max-height: 500px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--slate-300) transparent; }
+.pulse-alert { animation: pulse-red 2s infinite; }
+@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
+/* ═══════════════════════════════════════════════
+   SCROLL Y COLUMNAS FIJAS (PANEL DE CONTROL)
+═══════════════════════════════════════════════ */
 .control-table-wrapper {
   max-height: 60vh;
-  overflow: auto;
+  overflow: auto; /* Habilita el scroll vertical y horizontal */
 }
-.control-table th {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.minW-200 {
-  min-width: 220px;
-}
-.minW-300 {
-  min-width: 320px;
-}
-.sticky-col {
+
+/* Fijar la primera columna a la izquierda */
+.control-table-wrapper .sticky-col {
   position: sticky;
   left: 0;
   z-index: 2;
-  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
-}
-.control-table thead .sticky-col {
-  z-index: 3; /* Para que la cabecera del sticky quede por encima del scroll horizontal Y vertical */
+  /* Sombra sutil para separar la columna fija del resto de la tabla al scrollear */
+  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15); 
 }
 
-.pulse-alert {
-  animation: pulse-red 2s infinite;
+/* Color de fondo para las celdas del cuerpo para que el texto de atrás no se transparente */
+.control-table-wrapper tbody .sticky-col {
+  background-color: var(--white, #ffffff);
 }
 
-@keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+/* La cabecera de la columna fija necesita un Z-index mayor para estar por encima de todo */
+.control-table-wrapper thead .sticky-col {
+  z-index: 3;
+  background-color: var(--navy-900, #0f172a); 
 }
 
-.border-dashed {
-  border-style: dashed !important;
+/* Anchos mínimos para que el scroll horizontal se active correctamente */
+.minW-200 { min-width: 220px; }
+.minW-300 { min-width: 320px; }
+.empty-state { 
+  padding: 40px; 
+  text-align: center; 
+  color: var(--slate-400); 
+  font-size: 13px; 
+  font-weight: 500; 
+  /* Eliminamos el display: flex, flex-direction, align-items y gap */
 }
-.list-group-item:hover {
-  background-color: #f8fafc;
+
+/* Agregamos esta regla para centrar el ícono SVG y darle la separación (gap) hacia abajo */
+.empty-state svg {
+  display: block;
+  margin: 0 auto 10px auto; 
 }
 </style>

@@ -1,9 +1,9 @@
 <template>
-  <div class="pagination-container">
+  <div class="exec-pagination">
 
     <div class="pagination-left">
       <button
-        class="btn btn-filter"
+        class="btn-exec btn-exec-outline"
         @click="$emit('open-filters')"
         title="Configurar filtros avanzados"
       >
@@ -12,22 +12,22 @@
       </button>
 
       <button
-        class="btn btn-filter"
+        class="btn-exec btn-exec-outline"
         @click="$emit('change')"
         title="Recargar tabla"
       >
         <i class="fa-solid fa-rotate-right"></i>
       </button>
 
-      <div class="separator"></div>
+      <div class="separator mobile-hide"></div>
 
       <div class="page-size-control">
-        <label for="pageSize" class="text-muted mobile-hide">Mostrar</label>
+        <label for="pageSize" class="exec-label mobile-hide" style="margin: 0;">Mostrar</label>
         <select
           id="pageSize"
           :value="modelValue.size"
           @change="updateSize($event.target.value)"
-          class="form-select-sm"
+          class="exec-select-light"
         >
           <option :value="5">5</option>
           <option :value="10">10</option>
@@ -36,23 +36,21 @@
           <option :value="100">100</option>
           <option :value="200">200</option>
           <option :value="500">500</option>
-           <!-- <option :value="1000">1000</option> -->
-          <!--<option :value="2000">2000</option> -->
         </select>
-        <span class="text-muted mobile-hide">filas</span>
+        <span class="text-muted small mobile-hide">filas</span>
       </div>
     </div>
 
     <div class="pagination-right">
-      <span class="pagination-info mobile-hide">
+      <span class="pagination-info mobile-hide text-mono">
         <strong>{{ minimun }} - {{ maximun }}</strong>
-        <span class="text-muted">&nbsp;de&nbsp;</span>
+        <span class="text-muted text-sans">&nbsp;de&nbsp;</span>
         <strong>{{ modelValue.total }}</strong>
       </span>
 
-      <div class="btn-group">
+      <div class="pagination-actions">
         <button
-          class="btn btn-icon"
+          class="page-btn"
           :disabled="modelValue.page === 1"
           @click="changePage(modelValue.page - 1)"
           title="Página anterior"
@@ -61,12 +59,10 @@
         </button>
 
         <template v-for="(p, index) in visiblePages" :key="index">
-
-          <span v-if="p === '...'" class="dots">...</span>
-
+          <span v-if="p === '...'" class="page-dots">...</span>
           <button
             v-else
-            class="btn btn-icon btn-number"
+            class="page-btn text-mono"
             :class="{ 'active': p === modelValue.page }"
             @click="changePage(p)"
           >
@@ -75,7 +71,7 @@
         </template>
 
         <button
-          class="btn btn-icon"
+          class="page-btn"
           :disabled="modelValue.page >= totalPages"
           @click="changePage(modelValue.page + 1)"
           title="Página siguiente"
@@ -87,7 +83,6 @@
 
   </div>
 </template>
-
 <script setup>
 import { computed } from 'vue'
 
@@ -169,147 +164,173 @@ function changePage(newPage) {
   emit('change')
 }
 </script>
-
 <style scoped>
-.pagination-container {
+/* ═══════════════════════════════════════════════
+   PAGINACIÓN - DISEÑO EJECUTIVO
+═══════════════════════════════════════════════ */
+.exec-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background-color: #ffffff;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 0;
+  background-color: transparent;
   flex-wrap: wrap;
-  gap: 1rem;
-  font-family: system-ui, -apple-system, sans-serif;
+  gap: 16px;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 12px;
 }
 
-/* --- Left Side --- */
+/* --- Lado Izquierdo --- */
 .pagination-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 10px;
 }
 
 .separator {
   width: 1px;
-  height: 24px;
-  background-color: #e5e7eb;
+  height: 20px;
+  background-color: var(--border, #e2e8f0);
+  margin: 0 4px;
 }
 
 .page-size-control {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: 8px;
 }
 
-.form-select-sm {
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  padding: 0.25rem 2rem 0.25rem 0.5rem;
-  font-size: 0.875rem;
-  background-color: #fff;
-  cursor: pointer;
-  outline: none;
-}
-.form-select-sm:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-/* --- Right Side --- */
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.pagination-info {
-  font-size: 0.875rem;
-  color: #374151;
-  white-space: nowrap;
-}
-
-.btn-group {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center; /* Alinea verticalmente los puntos y botones */
-}
-
-/* --- Buttons Styles --- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-}
-
-.btn-filter {
-  background-color: #fff;
-  border-color: #d1d5db;
-  color: #374151;
-}
-.btn-filter:hover {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
-}
-
-/* Estilos Específicos para botones cuadrados (Iconos y Números) */
-.btn-icon {
-  padding: 0;           /* Quitamos padding lateral para centrar mejor */
-  min-width: 32px;      /* Usamos min-width para números grandes (ej: 100) */
-  height: 32px;
-  background-color: #fff;
-  border-color: #d1d5db;
-  color: #6b7280;
-}
-
-.btn-icon:hover:not(:disabled):not(.active) {
-  background-color: #f3f4f6;
-  color: #111827;
-  border-color: #9ca3af;
-}
-
-.btn-icon:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: #f9fafb;
-}
-
-/* Estilo para la página ACTIVA */
-.btn-icon.active {
-  background-color: #2563eb; /* Azul primary */
-  border-color: #2563eb;
-  color: #ffffff;
-  z-index: 1; /* Para que el borde quede por encima si hubiera overlap */
+.exec-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: default;
 }
 
-/* Estilo para los puntos suspensivos (...) */
-.dots {
-  color: #9ca3af;
-  padding: 0 0.25rem;
-  font-size: 0.875rem;
-  user-select: none;
+.exec-select-light {
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 4px 24px 4px 10px;
+  font-size: 11.5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.exec-select-light:focus {
+  border-color: var(--teal-500, #14b8a6);
 }
 
-.text-muted { color: #6b7280; }
+/* Botones Auxiliares */
+.btn-exec {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-exec-outline {
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--text-secondary, #475569);
+}
+.btn-exec-outline:hover {
+  background: var(--slate-50, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+/* --- Lado Derecho --- */
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 11.5px;
+  color: var(--text-primary, #0f172a);
+}
+.pagination-info strong {
+  font-weight: 600;
+}
+.text-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+.text-sans {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+.text-muted {
+  color: var(--text-muted, #94a3b8);
+}
+.small {
+  font-size: 11px;
+}
+
+/* Botones de Páginas */
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary, #475569);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.page-btn:hover:not(:disabled):not(.active) {
+  background: var(--slate-100, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+}
+
+.page-btn.active {
+  background: var(--teal-600, #0d9488);
+  color: var(--white, #ffffff);
+  font-weight: 600;
+  border-color: var(--teal-600, #0d9488);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--slate-400, #94a3b8);
+}
+
+.page-dots {
+  color: var(--slate-400, #94a3b8);
+  font-size: 12px;
+  padding: 0 2px;
+  letter-spacing: 1px;
+  user-select: none;
+}
 
 /* Responsive */
 @media (max-width: 600px) {
   .mobile-hide { display: none; }
-  .pagination-container { justify-content: center; gap: 0.75rem; }
+  .exec-pagination { justify-content: center; gap: 12px; padding: 12px; }
   .pagination-left, .pagination-right { width: 100%; justify-content: center; }
-
-  /* En móviles ocultamos el texto info para que quepan los números */
-  .pagination-info { display: none; }
 }
 </style>

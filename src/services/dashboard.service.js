@@ -41,5 +41,10 @@ async getDetailLeads(payload) {
 
 
 
+  
+  async contactabilityList(payload) {
+    const response = (await api.post('/dashboard/contactability', payload)).data;
+    return response.data;
+  }
 
 }

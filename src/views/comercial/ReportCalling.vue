@@ -1,183 +1,248 @@
 <template>
-  <div class="followup-dashboard">
-    <div class="header-section">
-      <div class="header-content">
-        <h1 class="page-title">RENTABILIDAD DE SEGUIMIENTO & CONTACTABILIDAD</h1>
-        <p class="page-meta">ANÁLISIS DE EFICIENCIA OPERATIVA (OUTBOUND & INBOUND)</p>
+  <div class="exec-shell">
+
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">Análisis de Eficiencia Operativa (Outbound & Inbound)</span>
+            <h1 class="brand-title">Rentabilidad de Seguimiento & Contactabilidad</h1>
+          </div>
+        </div>
+        
+        <div class="masthead-actions">
+          <button class="btn-exec btn-exec-primary" @click="loadData" :disabled="isLoading">
+            <i class="fa-solid fa-rotate-right" :class="{'spin': isLoading}"></i> 
+            <span>{{ isLoading ? 'Procesando...' : 'Actualizar Datos' }}</span>
+          </button>
+        </div>
       </div>
-      <div class="controls">
+
+      <div class="masthead-filters">
         <div class="filter-group">
-          <label>Campaña:</label>
-          <select class="select-clean">
-            <option>Todas las Campañas</option>
-            <option>Cierre Mes Enero</option>
+          <label class="filter-label">AÑO</label>
+          <select class="exec-select-dark" v-model="filters.year" @change="loadData">
+            <option :value="2026">2026</option>
+            <option :value="2025">2025</option>
+            <option :value="2024">2024</option>
           </select>
         </div>
-        <button class="btn-action">ACTUALIZAR DATOS</button>
+        <div class="filter-sep"></div>
+        <div class="filter-group">
+          <label class="filter-label">MES</label>
+          <select class="exec-select-dark" v-model="filters.month" @change="loadData">
+            <option :value="0">Todos los meses (Anual)</option>
+            <option :value="1">Enero</option>
+            <option :value="2">Febrero</option>
+            <option :value="3">Marzo</option>
+            <option :value="4">Abril</option>
+            <option :value="5">Mayo</option>
+            <option :value="6">Junio</option>
+            <option :value="7">Julio</option>
+            <option :value="8">Agosto</option>
+            <option :value="9">Septiembre</option>
+            <option :value="10">Octubre</option>
+            <option :value="11">Noviembre</option>
+            <option :value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="filter-sep"></div>
+        <div class="filter-group">
+          <label class="filter-label">ASESOR</label>
+          <select class="exec-select-dark" v-model="filters.advisor" @change="loadData">
+            <option value="all">Todos los Asesores</option>
+            <option v-for="user in filtroOwners" :key="user.id" :value="user.id">
+              {{ user.description }}
+            </option>
+          </select>
+        </div>
       </div>
-    </div>
+    </header>
 
-    <div class="kpi-strip">
-      <div class="kpi-box">
-        <span class="kpi-label">INTENTOS DE CONTACTO</span>
-        <span class="kpi-value">3,850</span>
-        <div class="kpi-footer">
-          <span class="text-muted">Promedio: 4.2 intentos/lead</span>
-        </div>
-      </div>
-      <div class="kpi-box">
-        <span class="kpi-label">TASA DE CONTACTABILIDAD</span>
-        <span class="kpi-value warning">42.5%</span>
-        <div class="kpi-footer">
-          <span class="negative">▼ 2.1% vs semana ant.</span>
-        </div>
-      </div>
-      <div class="kpi-box">
-        <span class="kpi-label">EFECTIVIDAD DE CIERRE</span>
-        <span class="kpi-value success">18.2%</span>
-        <div class="kpi-footer">
-          <span class="text-muted">Sobre llamadas contestadas</span>
-        </div>
-      </div>
-      <div class="kpi-box highlight">
-        <span class="kpi-label">INGRESO RECUPERADO (SEGUIMIENTO)</span>
-        <span class="kpi-value">S/ 142,500</span>
-        <div class="kpi-footer">
-          <span class="highlight-text">ROI de Llamadas: 12x</span>
-        </div>
-      </div>
-    </div>
+    <main class="exec-body">
 
-    <div class="section-container">
-      <div class="chart-header">
-        <div class="header-text">
-          <h3>TENDENCIA HORARIA: DEL INTENTO AL PAGO</h3>
-          <span class="chart-desc">Correlación entre esfuerzo (llamadas), éxito de contacto y cierre final por franja horaria.</span>
-        </div>
-        <div class="legend-inline">
-          <span class="dot-gray"></span> Intentos
-          <span class="dot-blue"></span> Contestó
-          <span class="dot-purple"></span> Interesado
-          <span class="dot-green"></span> PAGÓ
-        </div>
-      </div>
-      <div class="chart-wrapper-large">
-        <Line :data="hourlyFlowData" :options="hourlyFlowOptions" />
-      </div>
-    </div>
-
-    <div class="split-section">
-
-      <div class="panel">
-        <div class="panel-header">
-          <h4>CURVA DE PERSISTENCIA</h4>
-          <p>Distribución de ventas según el número de intento de contacto (N° de Toque).</p>
-        </div>
-        <div class="chart-wrapper-medium">
-          <Bar :data="persistenceChartData" :options="persistenceChartOptions" />
-        </div>
-        <div class="insight-box">
-          <strong>INSIGHT:</strong> El 65% de las ventas ocurren entre el 2do y 3er intento. Después del 5to intento, la probabilidad de venta cae al 2%.
-        </div>
+      <div v-if="isLoading" class="exec-loader">
+        <div class="loader-ring"></div>
+        <p class="loader-text">Analizando registros de contacto...</p>
       </div>
 
-      <div class="panel">
-        <div class="panel-header">
-          <h4>ANÁLISIS DE OBJECIONES</h4>
-          <p>Razones principales registradas en llamadas "No Exitosas".</p>
-        </div>
-        <div class="table-compact-wrapper">
-          <table class="compact-table">
-            <thead>
-              <tr>
-                <th>Objeción</th>
-                <th class="text-right">Frecuencia</th>
-                <th class="text-right">% Total</th>
-                <th>Tendencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Falta Dinero / Muy Caro</td>
-                <td class="text-right">450</td>
-                <td class="text-right font-bold">45%</td>
-                <td class="text-center"><span class="bar-indic" style="width: 45%"></span></td>
-              </tr>
-              <tr>
-                <td>Solo quería información</td>
-                <td class="text-right">280</td>
-                <td class="text-right font-bold">28%</td>
-                <td class="text-center"><span class="bar-indic" style="width: 28%"></span></td>
-              </tr>
-              <tr>
-                <td>Horarios no coinciden</td>
-                <td class="text-right">150</td>
-                <td class="text-right font-bold">15%</td>
-                <td class="text-center"><span class="bar-indic" style="width: 15%"></span></td>
-              </tr>
-              <tr>
-                <td>Lo consultará (Pareja/Jefe)</td>
-                <td class="text-right">120</td>
-                <td class="text-right font-bold">12%</td>
-                <td class="text-center"><span class="bar-indic" style="width: 12%"></span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      <div v-else class="fade-in">
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <span class="kpi-card-label">INTENTOS DE CONTACTO</span>
+              <div class="kpi-indicator ind-slate"></div>
+            </div>
+            <div class="kpi-card-value">{{ formatNum(globalKPIs.intentos) }}</div>
+            <div class="kpi-card-sub text-muted">
+              Promedio: <strong class="text-dark">{{ globalKPIs.promIntentos }}</strong> intentos/lead
+            </div>
+          </div>
 
-    <div class="section-container">
-      <div class="panel-header">
-        <h4>MATRIZ DE DESEMPEÑO INDIVIDUAL</h4>
-        <p>Evaluación de productividad: Volumen vs. Eficacia en Cierres.</p>
-      </div>
-      <table class="matrix-table">
-        <thead>
-          <tr>
-            <th class="col-main">ASESOR</th>
-            <th class="text-right">LEADS GESTIONADOS</th>
-            <th class="text-right">LLAMADAS REALIZADAS</th>
-            <th class="text-right">CONTACTADOS</th>
-            <th class="text-right">% CONTACT.</th>
-            <th class="text-right">PAGÓ (CIERRES)</th>
-            <th class="text-right">TASA CONVERSIÓN</th>
-            <th class="text-right">TIEMPO PROM. LLAMADA</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(advisor, index) in advisorData" :key="index">
-            <td class="font-bold text-dark">{{ advisor.name }}</td>
-            <td class="text-right">{{ advisor.leads }}</td>
-            <td class="text-right bg-gray-light">{{ advisor.calls }}</td>
-            <td class="text-right">{{ advisor.contacted }}</td>
-            <td class="text-right">
-              <span :class="getScoreColor(advisor.contactRate)">{{ advisor.contactRate }}%</span>
-            </td>
-            <td class="text-right font-bold text-green">{{ advisor.sales }}</td>
-            <td class="text-right font-bold">{{ advisor.conversion }}%</td>
-            <td class="text-right text-muted">{{ advisor.avgTime }} min</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td>TOTAL / PROMEDIO</td>
-            <td class="text-right">1,250</td>
-            <td class="text-right">3,850</td>
-            <td class="text-right">1,636</td>
-            <td class="text-right">42.5%</td>
-            <td class="text-right">298</td>
-            <td class="text-right">18.2%</td>
-            <td class="text-right">4.5 min</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <span class="kpi-card-label">TASA DE CONTACTABILIDAD</span>
+              <div class="kpi-indicator" :class="globalKPIs.tasaContactabilidad >= 40 ? 'ind-green' : 'ind-amber'"></div>
+            </div>
+            <div class="kpi-card-value" :class="globalKPIs.tasaContactabilidad >= 40 ? 'c-green' : 'c-amber'">
+              {{ globalKPIs.tasaContactabilidad }}%
+            </div>
+            <div class="kpi-card-sub text-muted">
+              <strong class="text-dark">{{ formatNum(globalKPIs.contactados) }}</strong> leads contactados
+            </div>
+          </div>
 
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <span class="kpi-card-label">EFECTIVIDAD DE CIERRE</span>
+              <div class="kpi-indicator ind-green"></div>
+            </div>
+            <div class="kpi-card-value c-green">{{ globalKPIs.tasaConversion }}%</div>
+            <div class="kpi-card-sub text-muted">
+              <strong class="text-dark">{{ formatNum(globalKPIs.ventas) }}</strong> ventas concretadas
+            </div>
+          </div>
+
+          <div class="kpi-card kpi-card-highlight">
+            <div class="kpi-card-header">
+              <span class="kpi-card-label" style="color: var(--slate-400)">INGRESOS RECUPERADOS</span>
+              <div class="kpi-indicator ind-blue"></div>
+            </div>
+            <div class="kpi-card-value" style="color: var(--white)">
+              {{ formatMoney(globalKPIs.ingresos) }}
+            </div>
+            <div class="kpi-card-sub" style="color: var(--blue-400); font-weight: 600;">
+              Por gestión activa de asesores
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-panel mb-4">
+          <div class="chart-panel-header d-flex justify-content-between align-items-start">
+            <div>
+              <div class="chart-panel-title">TENDENCIA HORARIA: DEL INTENTO AL PAGO</div>
+              <div class="chart-panel-sub">Correlación entre esfuerzo (llamadas), éxito de contacto y cierre final por franja horaria.</div>
+            </div>
+            <div class="chart-legend-inline">
+              <span class="legend-dot" style="background:#cbd5e1"></span><span>Intentos</span>
+              <span class="legend-dot" style="background:var(--blue-600)"></span><span>Contestó</span>
+              <span class="legend-dot" style="background:var(--teal-500)"></span><span class="fw-700 text-dark">Pagó</span>
+            </div>
+          </div>
+          <div class="chart-area" style="height: 320px;">
+            <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
+          </div>
+        </div>
+
+        <div class="chart-grid-2 mb-4">
+          <div class="chart-panel">
+            <div class="chart-panel-header">
+              <div class="chart-panel-title">CURVA DE PERSISTENCIA</div>
+              <div class="chart-panel-sub">Distribución de ventas según el N° de intento de contacto.</div>
+            </div>
+            <div class="chart-area" style="height: 240px; padding-bottom: 0;">
+              <Bar :data="persistenceChartData" :options="persistenceChartOptions" />
+            </div>
+            <div class="insight-box mt-3">
+              <i class="fa-solid fa-lightbulb" style="color: var(--amber-500)"></i>
+              <span><strong>Insight:</strong> Evalúa si el esfuerzo después del 4to intento justifica el costo operativo basándote en la caída de esta curva.</span>
+            </div>
+          </div>
+
+          <div class="chart-panel">
+            <div class="chart-panel-header d-flex justify-content-between align-items-center">
+              <div>
+                <div class="chart-panel-title">RESULTADOS DE LLAMADA</div>
+                <div class="chart-panel-sub">Desglose de motivos categorizados por efectividad.</div>
+              </div>
+              <div class="toggle-group">
+                <button class="toggle-btn" :class="{'active-teal': isEffectiveFilter === 1}" @click="isEffectiveFilter = 1">Efectivos</button>
+                <button class="toggle-btn" :class="{'active-red': isEffectiveFilter === 0}" @click="isEffectiveFilter = 0">No Efectivos</button>
+              </div>
+            </div>
+            <div class="chart-area p-0 panel-scroll-area">
+              <table class="exec-table">
+                <thead>
+                  <tr class="thead-sub">
+                    <th class="ts ts-c">Razón Registrada</th>
+                    <th class="ts ts-c text-right">Frecuencia</th>
+                    <th class="ts ts-c text-right">% Total</th>
+                    <th class="ts ts-c" style="width: 30%;">Distribución</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(obj, i) in objectionsData" :key="i" class="tbody-row">
+                    <td class="td-a fw-600">{{ obj.reason }}</td>
+                    <td class="td-a text-right">{{ formatNum(obj.count) }}</td>
+                    <td class="td-a text-right fw-700 text-dark">{{ obj.pct }}%</td>
+                    <td class="td-a">
+                      <div class="progress-track">
+                        <div class="progress-fill" :class="isEffectiveFilter === 1 ? 'bg-teal-500' : 'bg-red-500'" :style="`width: ${obj.pct}%`"></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="objectionsData.length === 0">
+                    <td colspan="4" class="text-center text-muted py-4">No hay registros en esta categoría.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-shell mb-4">
+          <div class="table-panel-header">
+            <h6 class="table-panel-title">MATRIZ DE DESEMPEÑO INDIVIDUAL (ASESORES)</h6>
+            <div class="chart-panel-sub">Evaluación de productividad operativa.</div>
+          </div>
+          
+          <div class="table-responsive-custom control-table-wrapper">
+            <table class="exec-table">
+              <thead>
+                <tr class="thead-sub">
+                  <th class="ts ts-c sticky-col" style="min-width: 180px;">Asesor</th>
+                  <th class="ts ts-c text-right">Leads Gestionados</th>
+                  <th class="ts ts-c text-right">Llamadas Realizadas</th>
+                  <th class="ts ts-c text-right">Contactos Efectivos</th>
+                  <th class="ts ts-c text-right">% Contactabilidad</th>
+                  <th class="ts ts-c text-right">Ventas (Cierres)</th>
+                  <th class="ts ts-c text-right">Tasa Conversión</th>
+                  <th class="ts ts-c text-right">Ingresos</th>
+                  <th class="ts ts-c text-right">Duración Prom. (min)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(advisor, index) in aggregatedAdvisors" :key="index" class="tbody-row">
+                  <td class="td-a sticky-col fw-700 bg-white">
+                    <i class="fa-solid fa-user-tie text-slate-400 me-2"></i>{{ advisor.name }}
+                  </td>
+                  <td class="td-a text-right">{{ formatNum(advisor.leads) }}</td>
+                  <td class="td-a text-right bg-slate-50 fw-600">{{ formatNum(advisor.calls) }}</td>
+                  <td class="td-a text-right">{{ formatNum(advisor.contacted) }}</td>
+                  <td class="td-a text-right fw-700" :class="getScoreColor(advisor.contactRate)">{{ advisor.contactRate }}%</td>
+                  <td class="td-a text-right fw-700 c-green">{{ formatNum(advisor.sales) }}</td>
+                  <td class="td-a text-right fw-700">{{ advisor.conversion }}%</td>
+                  <td class="td-a text-right fw-600 text-dark">{{ formatMoney(advisor.revenue) }}</td>
+                  <td class="td-a text-right text-muted text-mono">{{ advisor.avgTime }}</td>
+                </tr>
+                <tr v-if="aggregatedAdvisors.length === 0">
+                  <td colspan="9" class="text-center text-muted py-4">No hay datos para mostrar en este período.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
   </div>
 </template>
 
 <script setup>
+import { ref, computed, onMounted, inject } from 'vue'
+import { ServiceKeys } from '@/services'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
@@ -185,288 +250,373 @@ import { Line, Bar } from 'vue-chartjs'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
-// --- 1. DATA FLUJO HORARIO (Main Chart) ---
-// Muestra: A qué hora llamamos (gris), a qué hora contestan (azul), y a qué hora pagan (verde).
-const hourlyFlowData = {
-  labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
-  datasets: [
-    {
-      label: 'Intentos (Volumen)',
-      data: [40, 120, 150, 140, 80, 40, 60, 130, 160, 180, 150, 90, 30],
-      borderColor: '#cbd5e1',
-      backgroundColor: 'rgba(203, 213, 225, 0.2)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 0,
-      order: 4
-    },
-    {
-      label: 'Contestó',
-      data: [10, 40, 50, 45, 20, 15, 25, 60, 80, 110, 100, 60, 20],
-      borderColor: '#3b82f6', // Azul fuerte
-      backgroundColor: '#3b82f6',
-      tension: 0.3,
-      borderWidth: 2,
-      pointRadius: 2,
-      order: 3
-    },
-    {
-      label: 'Interesado (Calificado)',
-      data: [5, 20, 30, 35, 15, 10, 20, 40, 55, 70, 65, 40, 15],
-      borderColor: '#8b5cf6', // Morado
-      backgroundColor: '#8b5cf6',
-      tension: 0.3,
-      borderDash: [5, 5], // Línea punteada para diferenciar "intención"
-      borderWidth: 2,
-      pointRadius: 0,
-      order: 2
-    },
-    {
-      label: 'PAGÓ (Cierre)',
-      data: [2, 12, 18, 22, 8, 5, 8, 25, 35, 45, 40, 25, 8],
-      borderColor: '#10b981', // Verde Éxito
-      backgroundColor: '#10b981',
-      type: 'bar', // Barra para resaltar el volumen de ventas concreto
-      barPercentage: 0.3,
-      order: 1
-    }
-  ]
+const dashboardService = inject(ServiceKeys.Dashboard)
+const authService = inject(ServiceKeys.Auth)
+
+const filters = ref({ year: 2026, month: 1, advisor: 'all' })
+const isLoading = ref(false)
+const rawData = ref([])
+const filtroOwners = ref([])
+
+// Toggle para el panel de Objeciones (0 = No Efectivos, 1 = Efectivos)
+const isEffectiveFilter = ref(0) 
+
+onMounted(async () => {
+  await loadOwners()
+  await loadData()
+})
+
+async function loadOwners() {
+  try {
+    const arr = await authService.userList({})
+    filtroOwners.value = arr.map(u => ({
+      id: u.user_id,
+      description: `${u.first_name || ''} ${(u.last_name || '').charAt(0)}.`.trim() || u.alias || `User ${u.user_id}`
+    }))
+  } catch (e) { console.error("Error cargando usuarios:", e) }
 }
 
-const hourlyFlowOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false }, // Usamos leyenda custom
-    tooltip: { mode: 'index', intersect: false }
-  },
-  scales: {
-    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-    x: { grid: { display: false } }
+async function loadData() {
+  isLoading.value = true
+  try {
+    const payload = {
+      year: filters.value.year,
+      month: filters.value.month,
+      advisor: filters.value.advisor
+    }
+    const res = await dashboardService.contactabilityList(payload)
+    rawData.value = res.items || []
+  } catch(e) {
+    console.error("Error consultando contactabilidad:", e)
+  } finally {
+    isLoading.value = false
   }
 }
 
-// --- 2. DATA CURVA DE PERSISTENCIA ---
-const persistenceChartData = {
-  labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+', 'Entrante'],
-  datasets: [{
-    label: 'Ventas Cerradas',
-    data: [15, 45, 35, 12, 5, 25], // Mayoría en 2do y 3ero
-    backgroundColor: [
-      '#94a3b8', '#3b82f6', '#2563eb', '#1d4ed8', '#0f172a', '#10b981'
-    ],
-    borderRadius: 3
-  }]
+// ==========================================
+// LÓGICA DE AGREGACIÓN FRONTEND (COMPUTED)
+// ==========================================
+
+const globalKPIs = computed(() => {
+  let intentos = 0, contactados = 0, ventas = 0, ingresos = 0, leads = 0;
+  
+  rawData.value.forEach(r => {
+    intentos += r.total_intentos || 0;
+    contactados += r.total_contactados || 0;
+    ventas += r.total_ventas || 0;
+    ingresos += r.ingresos_recuperados || 0;
+    leads += r.total_leads_gestionados || 0;
+  });
+
+  const tasaContactabilidad = intentos > 0 ? ((contactados / intentos) * 100).toFixed(1) : 0;
+  const tasaConversion = contactados > 0 ? ((ventas / contactados) * 100).toFixed(1) : 0;
+  const promIntentos = leads > 0 ? (intentos / leads).toFixed(1) : 0;
+
+  return { intentos, contactados, ventas, ingresos, leads, tasaContactabilidad, tasaConversion, promIntentos };
+})
+
+const hourlyFlowChartData = computed(() => {
+  const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  const dataMap = {};
+  hours.forEach(h => dataMap[h] = { intentos: 0, contactados: 0, ventas: 0 });
+
+  rawData.value.forEach(row => {
+    (row.chart_tendencia_horaria || []).forEach(item => {
+      if (dataMap[item.hora]) {
+        dataMap[item.hora].intentos += item.intentos || 0;
+        dataMap[item.hora].contactados += item.contactados || 0;
+        dataMap[item.hora].ventas += item.ventas || 0;
+      }
+    });
+  });
+
+  return {
+    labels: hours.map(h => `${h.toString().padStart(2, '0')}:00`),
+    datasets: [
+      { 
+        label: 'Intentos', 
+        data: hours.map(h => dataMap[h].intentos), 
+        borderColor: '#cbd5e1', 
+        backgroundColor: 'rgba(203, 213, 225, 0.2)', 
+        fill: true, tension: 0.4, order: 3, 
+        yAxisID: 'y' // <--- Eje izquierdo (escala grande)
+      },
+      { 
+        label: 'Contestó', 
+        data: hours.map(h => dataMap[h].contactados), 
+        borderColor: '#2563eb', 
+        backgroundColor: '#2563eb', 
+        tension: 0.3, borderWidth: 2, pointRadius: 2, order: 2, 
+        yAxisID: 'y1' // <--- CAMBIO AQUÍ: Eje derecho (escala pequeña)
+      },
+      { 
+        label: 'PAGÓ (Cierre)', 
+        data: hours.map(h => dataMap[h].ventas), 
+        borderColor: '#14b8a6', 
+        backgroundColor: '#14b8a6', 
+        type: 'bar', barPercentage: 0.5, borderRadius: 3, order: 1, 
+        yAxisID: 'y1' // <--- Eje derecho (escala pequeña)
+      }
+    ]
+  }
+})
+const baseFont = { family: 'inherit', size: 11 }
+const hourlyFlowOptions = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+  scales: {
+    x: { grid: { display: false }, ticks: { font: baseFont } },
+    y: { type: 'linear', position: 'left', beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } },
+    y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { display: false }, ticks: { font: baseFont, color: '#14b8a6', stepSize: 1 } }
+  }
 }
+
+const persistenceChartData = computed(() => {
+  const pMap = { 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0 };
+  
+  rawData.value.forEach(row => {
+    (row.chart_curva_persistencia || []).forEach(item => {
+      if (item.intento_num >= 5) {
+        pMap['5+'] += item.ventas;
+      } else if (item.intento_num >= 1 && item.intento_num <= 4) {
+        pMap[item.intento_num] += item.ventas;
+      }
+    });
+  });
+
+  return {
+    labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+'],
+    datasets: [{
+      label: 'Ventas Cerradas',
+      data: [pMap[1], pMap[2], pMap[3], pMap[4], pMap['5+']],
+      backgroundColor: [ '#94a3b8', '#0ea5e9', '#3b82f6', '#1d4ed8', '#0f172a' ],
+      borderRadius: 3
+    }]
+  }
+})
 
 const persistenceChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
+  responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  scales: {
-    y: { display: false },
-    x: { grid: { display: false } }
-  }
+  scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: baseFont } } }
 }
 
-// --- 3. DATA MATRIZ ASESORES ---
-const advisorData = [
-  { name: 'Eliuth D.', leads: 420, calls: 1100, contacted: 550, contactRate: 50.0, sales: 115, conversion: 20.9, avgTime: 5.2 },
-  { name: 'Raúl P.', leads: 380, calls: 1450, contacted: 480, contactRate: 33.1, sales: 85, conversion: 17.7, avgTime: 3.8 },
-  { name: 'Arleth C.', leads: 300, calls: 950, contacted: 420, contactRate: 44.2, sales: 78, conversion: 18.5, avgTime: 4.5 },
-  { name: 'Bot AI', leads: 150, calls: 350, contacted: 186, contactRate: 53.1, sales: 20, conversion: 10.7, avgTime: 1.2 }
-]
+// Tabla de objeciones filtrada por el toggle "isEffectiveFilter"
+const objectionsData = computed(() => {
+  const objMap = {};
+  let totalObj = 0;
+  
+  rawData.value.forEach(row => {
+    (row.chart_objeciones || []).forEach(item => {
+      // Filtrar según el botón seleccionado (Efectivos vs No Efectivos)
+      if (item.es_efectivo === isEffectiveFilter.value) {
+        const nom = item.nombre || 'Desconocido';
+        if (!objMap[nom]) objMap[nom] = 0;
+        objMap[nom] += item.frecuencia;
+        totalObj += item.frecuencia;
+      }
+    });
+  });
+
+  return Object.entries(objMap)
+    .map(([reason, count]) => ({
+      reason,
+      count,
+      pct: totalObj > 0 ? Math.round((count / totalObj) * 100) : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6); // Mostrar Top 6
+})
+
+const aggregatedAdvisors = computed(() => {
+  const advMap = {};
+
+  rawData.value.forEach(r => {
+    if (!advMap[r.cod_asesor]) {
+      advMap[r.cod_asesor] = {
+        name: r.asesor_nombre || r.asesor_alias,
+        leads: 0, calls: 0, contacted: 0, sales: 0, revenue: 0, 
+        sumTime: 0, countTime: 0
+      }
+    }
+    const a = advMap[r.cod_asesor];
+    a.leads += r.total_leads_gestionados;
+    a.calls += r.total_intentos;
+    a.contacted += r.total_contactados;
+    a.sales += r.total_ventas;
+    a.revenue += r.ingresos_recuperados;
+    
+    if (r.tiempo_prom_minutos > 0) {
+      a.sumTime += r.tiempo_prom_minutos;
+      a.countTime++;
+    }
+  });
+
+  return Object.values(advMap).map(a => {
+    const contactRate = a.calls > 0 ? ((a.contacted / a.calls) * 100).toFixed(1) : 0;
+    const conversion = a.contacted > 0 ? ((a.sales / a.contacted) * 100).toFixed(1) : 0;
+    const avgTime = a.countTime > 0 ? (a.sumTime / a.countTime).toFixed(1) : 0;
+    
+    return { ...a, contactRate, conversion, avgTime };
+  }).sort((a, b) => b.sales - a.sales);
+})
+
+const formatNum = (v) => new Intl.NumberFormat('es-PE').format(v || 0)
+const formatMoney = (v) => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(v || 0)
 
 const getScoreColor = (rate) => {
-  if (rate >= 45) return 'text-green'
-  if (rate >= 35) return 'text-dark'
-  return 'text-red'
+  const r = Number(rate);
+  if (r >= 40) return 'c-green'
+  if (r >= 25) return 'c-amber'
+  return 'c-red'
 }
 </script>
 
 <style scoped>
-/* ESTILOS HARDCORE / DATA-DENSE */
-.followup-dashboard {
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
-  padding: 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
+/* ═══════════════════════════════════════════════
+   TOKENS Y BASE
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #0d9488; --teal-500:  #14b8a6;
+  --blue-600:  #2563eb; --blue-400:  #60a5fa;
+  --purple-500:#8b5cf6;
+  --amber-500: #f59e0b;
+  --red-600:   #dc2626; --red-500:   #ef4444;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
 }
 
-/* Header */
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 1.5rem;
-  margin-bottom: 2rem;
-}
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin: 0;
-  text-transform: uppercase;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
-.page-meta {
-  color: #64748b;
-  font-size: 0.8rem;
-  margin: 0.4rem 0 0 0;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.controls { display: flex; align-items: flex-end; gap: 1rem; }
-.filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
-.filter-group label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
-.select-clean {
-  padding: 0.5rem 2rem 0.5rem 0.8rem;
-  border: 1px solid #cbd5e1;
-  background-color: white;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-.btn-action {
-  background: #0f172a;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  cursor: pointer;
-  height: 34px;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50); min-height: 100vh;
+  display: flex; flex-direction: column; color: var(--text-primary);
 }
 
-/* KPIs */
-.kpi-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-.kpi-box {
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.kpi-box.highlight {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: white;
-}
-.kpi-box.highlight .kpi-label { color: #94a3b8; }
-.kpi-box.highlight .kpi-value { color: white; }
-.kpi-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-}
-.kpi-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1;
-}
-.kpi-value.warning { color: #d97706; }
-.kpi-value.success { color: #16a34a; }
+/* ═══════════════════════════════════════════════
+   MASTHEAD
+═══════════════════════════════════════════════ */
+.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.masthead-brand { display: flex; align-items: center; gap: 14px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-eyebrow { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate-400); font-weight: 600; display: block; margin-bottom: 2px; }
+.brand-title { font-size: 20px; font-weight: 700; margin: 0; color: var(--white); letter-spacing: -0.02em; }
 
-.kpi-footer { margin-top: 0.8rem; font-size: 0.75rem; font-weight: 500; }
-.text-muted { color: #94a3b8; }
-.negative { color: #dc2626; }
-.highlight-text { color: #a5b4fc; font-weight: 700; }
+.masthead-actions { display: flex; gap: 8px; align-items: center; }
+.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
+.btn-exec-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* MAIN CHART */
-.section-container {
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+.masthead-filters { display: flex; align-items: center; gap: 0; padding: 0 28px; min-height: 52px; }
+.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
+.filter-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate-400); font-weight: 600; cursor: default; }
+.filter-sep { width: 1px; height: 32px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
+
+.exec-select-dark { 
+  background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.18); 
+  color: var(--white); font-family: inherit; font-size: 12.5px; font-weight: 500; 
+  padding: 3px 0; outline: none; cursor: pointer; min-width: 140px; 
 }
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
-}
-.header-text h3 { margin: 0; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
-.chart-desc { font-size: 0.85rem; color: #64748b; }
+.exec-select-dark option { color: var(--text-primary); background: var(--white); }
 
-.legend-inline { display: flex; gap: 1rem; font-size: 0.8rem; font-weight: 600; align-items: center; }
-.dot-gray { width: 10px; height: 10px; background: #cbd5e1; display: inline-block; }
-.dot-blue { width: 10px; height: 10px; background: #3b82f6; display: inline-block; }
-.dot-purple { width: 10px; height: 10px; background: #8b5cf6; display: inline-block; }
-.dot-green { width: 10px; height: 10px; background: #10b981; display: inline-block; }
+/* ═══════════════════════════════════════════════
+   CUERPO Y KPIs
+═══════════════════════════════════════════════ */
+.exec-body { padding: 24px 28px; flex: 1; }
 
-.chart-wrapper-large { height: 320px; width: 100%; }
+.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 16px; }
+.loader-ring { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--teal-600); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loader-text { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 
-/* SPLIT SECTION */
-.split-section { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-.panel {
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-}
-.panel-header { margin-bottom: 1.5rem; }
-.panel-header h4 { margin: 0; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; }
-.panel-header p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #64748b; }
-.chart-wrapper-medium { height: 220px; width: 100%; }
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--white); border: 1px solid rgba(15,23,42,0.08); border-radius: 8px; padding: 18px 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04); transition: transform 0.2s; }
+.kpi-card:hover { transform: translateY(-3px); }
+.kpi-card-highlight { background: var(--navy-900); border-color: var(--navy-800); }
 
-.insight-box {
-  margin-top: auto;
-  padding: 1rem;
-  background: #f1f5f9;
-  border-left: 3px solid #0f172a;
-  font-size: 0.8rem;
-  color: #334155;
-  margin-top: 1rem;
-}
+.kpi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.kpi-card-label { font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; font-weight: 700; color: var(--text-muted); }
+.kpi-indicator { width: 7px; height: 7px; border-radius: 50%; }
+.ind-slate { background: var(--slate-400); } .ind-amber { background: var(--amber-500); } .ind-green { background: #22c55e; } .ind-blue { background: var(--blue-600); }
 
-/* COMPACT TABLE */
-.table-compact-wrapper { overflow-x: auto; }
-.compact-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.compact-table th { text-align: left; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
-.compact-table td { padding: 0.6rem 0; border-bottom: 1px solid #f8fafc; color: #334155; }
-.bar-indic { display: block; height: 6px; background: #cbd5e1; border-radius: 2px; }
+.kpi-card-value { font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.kpi-card-sub { font-size: 11px; font-weight: 500; }
 
-/* MATRIX TABLE */
-.matrix-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.matrix-table th {
-  text-align: left;
-  padding: 1rem;
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
-  font-weight: 800;
-  color: #475569;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-}
-.matrix-table td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; color: #334155; }
-.matrix-table tfoot td { font-weight: 800; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
+/* ═══════════════════════════════════════════════
+   GRÁFICOS, PANELES Y TOGGLE
+═══════════════════════════════════════════════ */
+.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.text-right { text-align: right; }
-.text-center { text-align: center; }
-.col-main { width: 20%; }
-.bg-gray-light { background: #f8fafc; font-weight: 600; }
-.font-bold { font-weight: 700; }
-.text-dark { color: #0f172a; }
-.text-green { color: #16a34a; }
-.text-red { color: #dc2626; }
+.chart-panel { background: var(--white); border: 1px solid rgba(15,23,42,0.08); border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+.chart-panel-header { padding: 16px 20px; border-bottom: 1px solid var(--slate-100); background: #fafbfc; }
+.chart-panel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.03em; }
+.chart-panel-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.chart-area { padding: 20px; flex: 1; }
+
+.chart-legend-inline { display: flex; gap: 14px; align-items: center; font-size: 11.5px; color: var(--text-secondary); }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+.insight-box { background: var(--slate-50); border-top: 1px solid var(--border); padding: 12px 20px; font-size: 11.5px; color: var(--text-secondary); display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; }
+
+/* Toggle Button Group */
+.toggle-group { display: flex; background: var(--slate-100); border-radius: 4px; padding: 2px; }
+.toggle-btn { background: transparent; border: none; padding: 4px 12px; font-size: 11px; font-weight: 600; color: var(--text-secondary); border-radius: 3px; cursor: pointer; transition: all 0.2s; }
+.toggle-btn.active-teal { background: var(--white); color: var(--teal-600); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.toggle-btn.active-red { background: var(--white); color: var(--red-600); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+/* ═══════════════════════════════════════════════
+   TABLAS (EXEC-TABLE)
+═══════════════════════════════════════════════ */
+.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); }
+.table-panel-header { padding: 16px 20px; background: #fafbfc; border-bottom: 1px solid var(--border); }
+.table-panel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.control-table-wrapper { width: 100%; overflow-x: auto; max-height: 50vh; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.thead-sub .ts { padding: 10px 14px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; color: var(--text-secondary); background: #fafbfc; }
+
+.tbody-row { transition: background 0.15s; }
+.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
+.tbody-row:hover td:not(.sticky-col) { background: #f8fafc; cursor: pointer; }
+
+.tfoot-row td { background: var(--slate-50); border-top: 2px solid var(--border); padding: 12px 14px; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); }
+
+/* Barras de progreso en tabla */
+.progress-track { width: 100%; height: 6px; background: var(--slate-100); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease, background-color 0.4s; }
+.bg-teal-500 { background: var(--teal-500); }
+.bg-red-500 { background: var(--red-500); }
+
+/* Sticky Col (Matriz) */
+.sticky-col { position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15); }
+.exec-table tbody .sticky-col { border-right: 2px solid var(--border); }
+.exec-table thead .sticky-col, .exec-table tfoot .sticky-col { z-index: 3; background: #fafbfc; border-right: 2px solid var(--border); }
+.exec-table tfoot .sticky-col { background: var(--slate-50); }
+
+/* Helper Classes */
+.text-center { text-align: center; } .text-right { text-align: right; }
+.fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-dark { color: var(--text-primary); } .text-muted { color: var(--text-muted); }
+.c-green { color: #15803d; } .c-red { color: #dc2626; } .c-amber { color: #d97706; }
+.bg-slate-50 { background: var(--slate-50); }
+.text-mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.p-0 { padding: 0 !important; }
+
+/* Animaciones */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 
 @media (max-width: 1024px) {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
-  .split-section { grid-template-columns: 1fr; }
+  .chart-grid-2 { grid-template-columns: 1fr; }
 }
 </style>

@@ -1,46 +1,55 @@
 <template>
-  <div class="container-fluid px-3 py-3 lead-form">
-    <div class="card shadow-sm border-0">
+  <div class="lf-wrapper">
 
-      <div class="card-header border-0 pb-3 pt-3 d-flex flex-wrap justify-content-between align-items-start">
-        <div class="pe-3">
-          <div class="h3">Formulario Comercial</div>
-        </div>
-
-        <button type="button" v-if="!form.enrollment_id &&form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
-          class="btn btn-warning"
-          :disabled="form.enrollment_id"
-          @click="openInscription()">
-          INSCRIBIR
-        </button>
+    <!-- ══════════════════════════════════════════════
+         ENCABEZADO
+    ══════════════════════════════════════════════ -->
+    <div class="lf-page-header">
+      <div class="lf-page-header__left">
+        <div class="lf-page-header__eyebrow">CRM Comercial</div>
+        <h1 class="lf-page-header__title">Formulario Comercial</h1>
       </div>
+      <button
+        type="button"
+        v-if="!form.enrollment_id && form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
+        class="lf-btn lf-btn--warning lf-btn--lg"
+        :disabled="form.enrollment_id"
+        @click="openInscription()"
+      >
+        <i class="fa-solid fa-graduation-cap me-2"></i> INSCRIBIR
+      </button>
+    </div>
 
-      <div class="card-body pt-4 pb-4" v-if="loaded">
+    <!-- ══════════════════════════════════════════════
+         BODY
+    ══════════════════════════════════════════════ -->
+    <div v-if="loaded" class="lf-body">
 
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Información del lead</span>
-          </div>
+      <!-- ─── SECCIÓN 1: Información del lead ─── -->
+      <div class="lf-card">
+        <div class="lf-card__header">
+          <span class="lf-card__icon lf-card__icon--blue"><i class="fa-solid fa-bullseye"></i></span>
+          <span class="lf-card__title">Información del lead</span>
+        </div>
+        <div class="lf-card__body">
+          <div class="row g-3">
 
-          <div class="row g-3 form-section__body">
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                Fecha contacto inicial <span class="required-star">*</span>
-              </label>
+              <label class="lf-label">Fecha contacto inicial <span class="lf-required">*</span></label>
               <DateTime12
-                    :onlyHours="true"
-                    :disabled="isEdit"
-                    v-model="form.fechaContactoInicial"
-                    required
-                    clearable
-                    :config="dateLimitConfig"
-                />
+                :onlyHours="true"
+                :disabled="isEdit"
+                v-model="form.fechaContactoInicial"
+                required
+                clearable
+                :config="dateLimitConfig"
+              />
             </div>
 
             <div class="col-md-5"></div>
 
             <div class="col-6 col-md-4">
-              <label class="form-label mb-1">T. Consulta</label>
+              <label class="lf-label">T. Consulta</label>
               <SearchSelect
                 v-model="form.query_alias"
                 :items="queryCatalog"
@@ -48,12 +57,11 @@
                 value-field="alias"
                 placeholder="PROMOCIÓN..."
                 :model-label="form.query_label"
-
               />
             </div>
 
             <div class="col-6 col-md-4 col-lg-3">
-              <label class="form-label mb-1">Categoría<span class="required-star">*</span></label>
+              <label class="lf-label">Categoría <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.category_alias"
                 :items="programTypeCatalog"
@@ -65,8 +73,9 @@
               />
             </div>
 
-            <div class="col-6 col-md-4 col-lg-2" v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias" >
-              <label class="form-label mb-1">Modalidad<span class="required-star">*</span></label>
+            <div class="col-6 col-md-4 col-lg-2"
+              v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias">
+              <label class="lf-label">Modalidad <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.program_modality_alias"
                 :items="programModalityCatalog"
@@ -78,26 +87,29 @@
               />
             </div>
 
-            <div class="col-6 col-md-4" v-if="form.category_alias &&
-                                      (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
-                                      (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
-              <label class="form-label mb-1">Producto / Programa<span class="required-star">*</span></label>
-              <button
-                v-if="form.program_version_id"
-                type="button"
-                class="btn btn-sm btn-outline-info border-0 py-0 mb-1 "
-                @click="openProgramVersionDetail()"
-                title="Ver detalles del programa"
-            >
-                <i class="fa-solid fa-circle-info fa-lg"></i>
-            </button>
+            <div class="col-6 col-md-4"
+              v-if="form.category_alias &&
+                (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
+                (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
+              <label class="lf-label">
+                Producto / Programa <span class="lf-required">*</span>
+                <button
+                  v-if="form.program_version_id"
+                  type="button"
+                  class="lf-icon-btn ms-1"
+                  @click="openProgramVersionDetail()"
+                  title="Ver detalles del programa"
+                >
+                  <i class="fa-solid fa-circle-info"></i>
+                </button>
+              </label>
               <SearchSelect
                 v-model="form.program_version_id"
                 mode="remote"
                 :fetcher="q => programService.programVersionCaller({ q,
-                                                            cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
-                                                            cat_model_modality: !form.program_modality_alias?null:programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
-                                                          })"
+                  cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
+                  cat_model_modality: !form.program_modality_alias ? null : programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
+                })"
                 label-field="abbreviation"
                 sublabel-field="version_code"
                 value-field="program_version_id"
@@ -108,10 +120,11 @@
                 :cache="false"
                 @change="onProgramaChange"
               />
-
             </div>
-            <div class="col-12 col-lg-3" v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))">
-              <label class="form-label mb-1">Edición / Fecha prevista<span class="required-star">*</span></label>
+
+            <div class="col-12 col-lg-3"
+              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))">
+              <label class="lf-label">Edición / Fecha prevista <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.edition_id"
                 mode="remote"
@@ -119,29 +132,34 @@
                 label-field="start_date_label"
                 value-field="edition_num_id"
                 :viewOpen="6"
-                placeholder="Buscar Edicion…"
+                placeholder="Buscar Edición…"
                 :model-label="form.edition_label"
                 :minChars="0"
                 :cache="false"
               />
-              <div v-if="currentEdition">
-                <div class="text-label-aux"><b>Inicio:</b> {{ currentEdition.inicio }}</div>
-                <div class="text-label-aux"><b>Fin:</b> {{ currentEdition.fin }}</div>
-                <div class="text-label-aux"><b>Docente:</b> {{ currentEdition.docente }}</div>
-                <div class="text-label-aux"><b>Horario:</b> {{ currentEdition.horario }}</div>
+              <div v-if="currentEdition" class="lf-edition-meta mt-2">
+                <div><b>Inicio:</b> {{ currentEdition.inicio }}</div>
+                <div><b>Fin:</b> {{ currentEdition.fin }}</div>
+                <div><b>Docente:</b> {{ currentEdition.docente }}</div>
+                <div><b>Horario:</b> {{ currentEdition.horario }}</div>
               </div>
             </div>
-          </div>
-        </section>
 
-        <section class="form-section mb-4" v-if="isEdit || validateLeadInfo()">
-          <div class="form-section__header">
-            <span class="form-section__title">Datos del contacto</span>
           </div>
+        </div>
+      </div>
 
-          <div class="row g-3 form-section__body">
+      <!-- ─── SECCIÓN 2: Datos del contacto ─── -->
+      <div class="lf-card" v-if="isEdit || validateLeadInfo()">
+        <div class="lf-card__header">
+          <span class="lf-card__icon lf-card__icon--emerald"><i class="fa-solid fa-user"></i></span>
+          <span class="lf-card__title">Datos del contacto</span>
+        </div>
+        <div class="lf-card__body">
+          <div class="row g-3">
+
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="form-label mb-1">T. Contacto</label>
+              <label class="lf-label">T. Contacto</label>
               <SearchSelect
                 v-model="form.client_status"
                 :items="clientCatalog"
@@ -154,52 +172,51 @@
             </div>
 
             <div class="col-6 col-md-6 col-lg-3">
-              <label class="form-label mb-1">Nombre/Razón Social</label>
-              <input 
-                required 
-                autocomplete="off" 
-                v-model="form.full_name" 
-                type="text" 
-                class="form-control" 
+              <label class="lf-label">Nombre / Razón Social</label>
+              <input
+                required
+                autocomplete="off"
+                v-model="form.full_name"
+                type="text"
+                class="form-control"
                 placeholder="NOMBRE COMPLETO"
-                v-restrict="{ transform: 'upper', trim: true }" 
+                v-restrict="{ transform: 'upper', trim: true }"
               />
             </div>
 
             <div class="col-6 col-md-3 col-lg-3">
-              <label class="form-label mb-1">
-                Teléfono <span class="required-star">*</span>
+              <label class="lf-label">
+                Teléfono <span class="lf-required">*</span>
                 <span v-if="searchingPhone" class="ms-2 badge bg-warning text-dark scale-in-center">
                   <i class="fas fa-spinner fa-spin"></i> Buscando...
                 </span>
-              </label>
-
-              <button
+                <button
                   type="button"
-                  class="btn btn-sm btn-outline-primary border-0 py-0 mb-1"
+                  class="lf-icon-btn ms-1"
                   @click="openPhoneDetail()"
                   title="Ver historial del cliente"
-              >
-                  <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
-              </button>
+                >
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </button>
+              </label>
               <div class="input-group flex-nowrap">
-                <input autocomplete="off"
-                    v-model="form.telefono"
-                    type="text"
-                    v-restrict="{ only: 'numbers', max: 15 }"
-                    required
-                    class="form-control"
-                    :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
-                    placeholder="TELEFONO + ENTER"
-                    @keyup.enter="searchLeadByPhone"
-                    :disabled="searchingPhone"
-                  />
-                  </div>
+                <input
+                  autocomplete="off"
+                  v-model="form.telefono"
+                  type="text"
+                  v-restrict="{ only: 'numbers', max: 15 }"
+                  required
+                  class="form-control"
+                  :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
+                  placeholder="TELÉFONO + ENTER"
+                  @keyup.enter="searchLeadByPhone"
+                  :disabled="searchingPhone"
+                />
+              </div>
             </div>
 
-
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="form-label mb-1">E. Cliente</label>
+              <label class="lf-label">E. Cliente</label>
               <SearchSelect
                 v-model="form.cat_client_moment_alias"
                 :items="momentCatalog"
@@ -212,18 +229,19 @@
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="form-label mb-1">Membresía</label>
+              <label class="lf-label">Membresía</label>
               <SearchSelect
                 v-model="form.membership_moment_id"
                 :items="membershipList"
                 label-field="tier_name"
                 value-field="membership_tier_id"
                 placeholder="MEMBRESÍA..."
-                :model-label="form.membership_tier_label"/>
+                :model-label="form.membership_tier_label"
+              />
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="form-label mb-1">Status<span class="required-star">*</span></label>
+              <label class="lf-label">Status <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.status_alias"
                 :items="leadStatusCatalog"
@@ -236,8 +254,9 @@
                 @change="onStatusChange"
               />
             </div>
+
             <div class="col-6 col-md-3">
-              <label class="form-label mb-1">Ocupación / Situación<span class="required-star">*</span></label>
+              <label class="lf-label">Ocupación / Situación <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.ocupacion_alias"
                 :items="prospectSituationCatalog"
@@ -250,7 +269,7 @@
             </div>
 
             <div class="col-6 col-md-3 col-md-2">
-              <label class="form-label mb-1">País<span class="required-star">*</span></label>
+              <label class="lf-label">País <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.country_alias"
                 :items="countryCatalog"
@@ -262,44 +281,21 @@
               />
             </div>
 
-            <div class="col-6 col-md-2"></div>
-            <!-- <div class="col-6 col-md-1">
-              <label class="form-label mb-1">WEB<span class="required-star">*</span></label>
-              <br>
-              <label class="form-switch">
-                <input type="checkbox" v-model="form.web" />
-                <span></span>
-              </label>
-            </div>
-
-            <div class="col-6 col-md-1">
-              <label class="form-label mb-1">B2B<span class="required-star">*</span></label>
-              <br>
-              <label class="form-switch">
-                <input type="checkbox" v-model="form.b2b" />
-                <span></span>
-              </label>
-            </div> -->
-
-            <!-- <div class="col-md-1" v-if="isEdit">
-              <label class="form-label mb-1">BOT<span class="required-star">*</span></label>
-              <br>
-              <label class="form-switch">
-                <input type="checkbox" v-model="form.bot" />
-                <span></span>
-              </label>
-            </div> -->
           </div>
-        </section>
+        </div>
+      </div>
 
-        <section class="form-section mb-4" v-if="isEdit || (validateLeadInfo() && validateContactInfo())">
-          <div class="form-section__header">
-            <span class="form-section__title">Estado comercial y marketing</span>
-          </div>
+      <!-- ─── SECCIÓN 3: Estado comercial y marketing ─── -->
+      <div class="lf-card" v-if="isEdit || (validateLeadInfo() && validateContactInfo())">
+        <div class="lf-card__header">
+          <span class="lf-card__icon lf-card__icon--violet"><i class="fa-solid fa-chart-line"></i></span>
+          <span class="lf-card__title">Estado comercial y marketing</span>
+        </div>
+        <div class="lf-card__body">
+          <div class="row g-3">
 
-          <div class="row g-3 form-section__body">
             <div class="col-md-3">
-              <label class="form-label mb-1">F. Pago (prevista)</label>
+              <label class="lf-label">F. Pago (prevista)</label>
               <BaseDatePicker
                 v-model="form.pay_date"
                 :required="form.status_alias=='we_lead_status_bought'"
@@ -309,7 +305,7 @@
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">Nivel de interés<span class="required-star">*</span></label>
+              <label class="lf-label">Nivel de interés <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.nivel_alias"
                 :items="leadInterestCatalog"
@@ -322,8 +318,7 @@
             </div>
 
             <div class="col-md-6">
-              <label class="form-label mb-1">Mensaje de chat<span class="required-star">*</span></label>
-
+              <label class="lf-label">Mensaje de chat <span class="lf-required">*</span></label>
               <textarea
                 v-model="form.mensajeChat"
                 class="form-control"
@@ -331,12 +326,12 @@
                 required
                 rows="2"
                 @input="handleMensajeChatInput"
-                style="resize: vertical; min-height: 80px; max-height: none;"
+                style="resize: vertical; min-height: 80px;"
               ></textarea>
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">Canal prospección<span class="required-star">*</span></label>
+              <label class="lf-label">Canal prospección <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.canal_alias"
                 :items="socialMediaCatalog"
@@ -350,7 +345,7 @@
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">Medio de llegada<span class="required-star">*</span></label>
+              <label class="lf-label">Medio de llegada <span class="lf-required">*</span></label>
               <SearchSelect
                 v-model="form.medium_alias"
                 :items="socialMediaCatalog"
@@ -363,7 +358,7 @@
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">Palabra MKT</label>
+              <label class="lf-label">Palabra MKT</label>
               <SearchSelect
                 v-model="form.key_word_alias"
                 :items="mktWordsCatalog"
@@ -375,10 +370,10 @@
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">Estrategia</label>
+              <label class="lf-label">Estrategia</label>
               <SearchSelect
                 v-model="form.strategy_alias"
-                :disabled=" !form.canal_alias||form.canal_alias!='we_social_media_other'"
+                :disabled="!form.canal_alias || form.canal_alias!='we_social_media_other'"
                 :items="strategyCatalog"
                 label-field="description"
                 value-field="alias"
@@ -388,376 +383,357 @@
             </div>
 
             <div class="col-md-12">
-              <label class="form-label mb-1">Observaciones</label>
+              <label class="lf-label">Observaciones</label>
               <textarea
                 v-model="form.observacion"
                 class="form-control"
                 rows="2"
-                style="resize: vertical; min-height: 80px; max-height: none;"
+                style="resize: vertical; min-height: 80px;"
               ></textarea>
             </div>
+
           </div>
-        </section>
-
-        <section class="form-section mb-0" v-if="isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo())">
-          <div class="form-section__header d-flex justify-content-between align-items-center gap-2">
-            <div>
-              <span class="form-section__title">Seguimiento / intentos de contacto</span>
-            </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm" @click="addContacto">
-              + Añadir intento
-            </button>
-          </div>
-
-<div class="contacto-table">
-  <div class="row contacto-table__head d-none d-lg-flex mb-2 gx-2">
-    <div class="col-lg-1 text-center">#</div>
-    <div class="col-lg-2">Tipo / Duración</div> 
-    <div class="col-lg-4">Fecha y Hora<span class="required-star">*</span></div>
-    <div class="col-lg-2">T. Respuesta</div>
-    <div class="col-lg-2">Obsv.</div>
-    <div class="col-lg-1 text-center"></div>
-  </div>
-
-  <div
-    v-for="(c, idx) in form.contactos"
-    :key="c.id || idx"
-    class="contacto-table__row mb-3"
-  >
-    <div class="row gx-2 gy-2 align-items-start">
-      
-      <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
-        <div class="contacto-index">
-          <span class="d-lg-none me-2">Intento:</span>
-          <strong>{{ idx + 1 }}</strong>
         </div>
       </div>
 
-      <div class="col-12 col-lg-2">
-        <label class="form-label d-lg-none mb-1">Tipo / Duración</label>
-        <div class="d-flex flex-column gap-2">
-            <SearchSelect
-              v-model="c.cat_type_attempt"
-              :items="lAttempts"
-              label-field="description"
-              value-field="alias"
-              placeholder="TIPO..."
-              :disabled="!!c.id"
-              class="form-control-sm p-0"
-            />
-            
-            <div class="d-flex align-items-center gap-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
-               <button 
+      <!-- ─── SECCIÓN 4: Seguimiento ─── -->
+      <div class="lf-card" v-if="isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo())">
+        <div class="lf-card__header">
+          <span class="lf-card__icon lf-card__icon--amber"><i class="fa-solid fa-phone-volume"></i></span>
+          <span class="lf-card__title">Seguimiento / Intentos de contacto</span>
+          <button type="button" class="lf-btn lf-btn--outline lf-btn--sm ms-auto" @click="addContacto">
+            <i class="fa-solid fa-plus me-1"></i> Añadir intento
+          </button>
+        </div>
+        <div class="lf-card__body">
+
+          <!-- Cabecera de tabla (solo desktop) -->
+          <div class="lf-attempt-head d-none d-lg-grid mb-2">
+            <div class="text-center">#</div>
+            <div>Tipo / Duración</div>
+            <div>Fecha y Hora <span class="lf-required">*</span></div>
+            <div>T. Respuesta</div>
+            <div>Observación</div>
+            <div></div>
+          </div>
+
+          <!-- Filas -->
+          <div
+            v-for="(c, idx) in form.contactos"
+            :key="c.id || idx"
+            class="lf-attempt-row"
+          >
+            <!-- # -->
+            <div class="lf-attempt-row__num">
+              <span class="d-lg-none me-1 text-muted" style="font-size:.75rem">Intento</span>
+              <strong>{{ idx + 1 }}</strong>
+            </div>
+
+            <!-- Tipo / Duración -->
+            <div class="lf-attempt-row__type">
+              <label class="lf-label d-lg-none">Tipo / Duración</label>
+              <SearchSelect
+                v-model="c.cat_type_attempt"
+                :items="lAttempts"
+                label-field="description"
+                value-field="alias"
+                placeholder="TIPO..."
+                :disabled="!!c.id"
+              />
+              <div class="lf-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
+                <button
                   type="button"
-                  class="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
-                  style="width: 28px; height: 28px;"
-                  :class="c.timerActive ? 'btn-danger' : 'btn-outline-success'"
+                  class="lf-timer__btn"
+                  :class="c.timerActive ? 'lf-timer__btn--stop' : 'lf-timer__btn--start'"
                   @click="toggleTimer(c)"
                   :disabled="!!c.id && c.calling_alias !== 'we_calling_pending'"
                   :title="c.timerActive ? 'Detener' : 'Iniciar'"
-              >
-                  <i class="fa-solid" :class="c.timerActive ? 'fa-stop' : 'fa-play'" style="font-size: 0.7rem;"></i>
-              </button>
-              <span class="font-mono fw-bold small" :class="c.timerActive ? 'text-danger' : 'text-dark'">
+                >
+                  <i class="fa-solid" :class="c.timerActive ? 'fa-stop' : 'fa-play'"></i>
+                </button>
+                <span class="lf-timer__display" :class="c.timerActive ? 'lf-timer__display--active' : ''">
                   {{ formatDuration(c.contact_duration) }}
-              </span>
+                </span>
+              </div>
             </div>
+
+            <!-- Fecha -->
+            <div class="lf-attempt-row__date">
+              <label class="lf-label d-lg-none">Fecha y Hora <span class="lf-required">*</span></label>
+              <DateTime12
+                v-model="c.fechaContactoProximo"
+                required
+                clearable
+                :onlyHours="true"
+                :disabled="c.calling_alias != 'we_calling_pending'"
+                :config="dateLimitConfig"
+              />
+            </div>
+
+            <!-- Resultado -->
+            <div class="lf-attempt-row__result">
+              <label class="lf-label d-lg-none">T. Resultado</label>
+              <SearchSelect
+                v-model="c.calling_alias"
+                :items="callingCatalog"
+                label-field="description"
+                required
+                value-field="alias"
+                placeholder="T. RESPUESTA..."
+                :model-label="c.calling_label"
+                :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
+              />
+            </div>
+
+            <!-- Observación -->
+            <div class="lf-attempt-row__obs">
+              <label class="lf-label d-lg-none">Observación</label>
+              <textarea
+                v-model="c.respuesta"
+                class="form-control form-control-sm"
+                rows="2"
+                placeholder="Observación..."
+                :disabled="c.calling_alias != 'we_calling_pending'"
+                style="resize: vertical; min-height: 38px;"
+              ></textarea>
+            </div>
+
+            <!-- Eliminar -->
+            <div class="lf-attempt-row__del">
+              <button
+                v-if="!c.id"
+                type="button"
+                class="lf-btn lf-btn--danger-ghost lf-btn--sm w-100"
+                @click="removeContacto(idx)"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+                <span class="d-lg-none ms-2">Eliminar</span>
+              </button>
+            </div>
+
+          </div>
+
         </div>
       </div>
 
-
-      <div class="col-12 col-lg-4">
-        <label class="form-label d-lg-none mb-1">Fecha y Hora<span class="required-star">*</span></label>
-        <DateTime12
-            v-model="c.fechaContactoProximo"
-            required
-            clearable
-            :onlyHours="true"
-            :disabled="c.calling_alias != 'we_calling_pending'"
-            :config="dateLimitConfig"
-          />
-      </div>
-
-      <div class="col-12 col-lg-2">
-        <label class="form-label d-lg-none mb-1">T. Resultado</label>
-        <SearchSelect
-          v-model="c.calling_alias"
-          :items="callingCatalog"
-          label-field="description"
-          required
-          value-field="alias"
-          placeholder="T. RESPUESTA..."
-          :model-label="c.calling_label"
-          :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
-        />
-      </div>
-
-      <div class="col-12 col-lg-2">
-        <label class="form-label d-lg-none mb-1">Respuesta / Obsv.</label>
-        <textarea
-          v-model="c.respuesta"
-          class="form-control form-control-sm"
-          rows="2"
-          placeholder="Observación..."
-          :disabled="c.calling_alias != 'we_calling_pending'"
-          style="resize: vertical; min-height: 38px;"
-        ></textarea>
-      </div>
-
-      <div class="col-12 col-lg-1 d-flex align-items-center justify-content-lg-center">
-        <button
-          v-if="!c.id"
-          type="button"
-          class="btn btn-outline-danger btn-sm w-100 w-lg-auto"
-          @click="removeContacto(idx)"
-        >
-          <i class="fa-solid fa-trash-can"></i>
-          <span class="d-lg-none ms-2">Eliminar</span>
-        </button>
-      </div>
-
-    </div>
-  </div>
-</div>
-        </section>
-
-        <div class="form-section mb-0 mt-3" v-if=" isEdit">
-          <label class="form-label mb-1">Estado del Registro<span class="required-star">*</span></label>
-          <br>
-          <label class="form-switch">
+      <!-- ─── SECCIÓN 5: Estado del Registro ─── -->
+      <div class="lf-card lf-card--flat" v-if="isEdit">
+        <div class="lf-card__body d-flex align-items-center gap-3">
+          <span class="lf-label mb-0">Estado del Registro <span class="lf-required">*</span></span>
+          <label class="lf-switch">
             <input type="checkbox" v-model="form.active" />
             <span></span>
           </label>
+          <span class="lf-switch-label">{{ form.active ? 'Activo' : 'Inactivo' }}</span>
         </div>
-
       </div>
 
-      <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
-        <button type="button" class="btn btn-outline-secondary" @click="cancelar">
-          {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
-        </button>
-        <button v-if="!form.enrollment_id && ( isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))" type="button" class="btn btn-primary" @click="guardar" :disabled="saving || form.enrollment_id" >
-          {{ saving ? 'Guardando...' : 'Guardar lead' }}
-        </button>
-      </div>
+    </div><!-- /lf-body -->
+
+    <!-- ══════════════════════════════════════════════
+         FOOTER
+    ══════════════════════════════════════════════ -->
+    <div class="lf-footer">
+      <button type="button" class="lf-btn lf-btn--outline" @click="cancelar">
+        {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
+      </button>
+      <button
+        v-if="!form.enrollment_id && (isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))"
+        type="button"
+        class="lf-btn lf-btn--primary"
+        @click="guardar"
+        :disabled="saving || form.enrollment_id"
+      >
+        <i class="fa-solid fa-floppy-disk me-2" v-if="!saving"></i>
+        <i class="fa-solid fa-spinner fa-spin me-2" v-else></i>
+        {{ saving ? 'Guardando...' : 'Guardar lead' }}
+      </button>
     </div>
-  </div>
 
+  </div><!-- /lf-wrapper -->
+
+
+  <!-- ════════════════════════════════════════════════════════
+       MODAL: Historial del Cliente
+  ════════════════════════════════════════════════════════ -->
   <BaseModal v-model="showClientHistory" title="Historial Completo del Cliente" size="xl">
 
-  <div v-if="loadingHistory" class="d-flex justify-content-center align-items-center py-5 h-100">
-     <div class="spinner-border text-primary" role="status">
+    <div v-if="loadingHistory" class="d-flex justify-content-center align-items-center py-5">
+      <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Cargando historial...</span>
-     </div>
-  </div>
-
-  <div v-else class="d-flex flex-column h-100">
-
-    <div class="px-3 py-2 bg-light border-bottom mb-3 rounded">
-      <div class="d-flex gap-4 align-items-center">
-        <div><small class="text-muted d-block">Cliente (Formulario)</small> <strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
-        <div><small class="text-muted d-block">Teléfono Consultando</small> <strong>{{ form.telefono || '---' }}</strong></div>
       </div>
     </div>
 
-    <ul class="nav nav-tabs px-3 border-bottom-0">
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
-          <i class="fa-solid fa-list me-2"></i>Histórico
-          <span class="badge bg-secondary ms-1 rounded-pill" v-if="clientHistoryLegacy.length">{{ clientHistoryLegacy.length }}</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeHistoryTab === 'asesoria' }" href="#" @click.prevent="activeHistoryTab = 'asesoria'">
-          <i class="fa-solid fa-headset me-2"></i>Asesoría / CRM
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeHistoryTab === 'inscripcion' }" href="#" @click.prevent="activeHistoryTab = 'inscripcion'">
-          <i class="fa-solid fa-graduation-cap me-2"></i>Inscripciones
-        </a>
-      </li>
-    </ul>
+    <div v-else class="d-flex flex-column">
 
-    <div class="modal-tab-content p-3 border-top bg-white">
-
-      <div v-if="activeHistoryTab === 'historico'" class="fade-in">
-
-        <div v-if="clientHistoryLegacy.length === 0" class="alert alert-info text-center">
-            No se encontró historial legado para este número.
-        </div>
-
-        <div v-else class="table-responsive">
-          <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th width="20%">Fecha</th>
-                <th width="40%">Programa / Interés</th>
-                <th width="30%">Nombre registrado</th>
-                <th width="10%">E. CLIENTE</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, i) in clientHistoryLegacy" :key="i">
-                <td><small>{{ item.date }}</small></td>
-                <td>
-                  <div class="fw-bold text-primary">{{ item.program }}</div>
-                </td>
-                <td>{{ item.full_name }}</td>
-                <td>{{ item.cat_client_moment_label }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- Info rápida -->
+      <div class="lf-modal-info-bar">
+        <div><small class="text-muted d-block">Cliente (Formulario)</small><strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
+        <div><small class="text-muted d-block">Teléfono</small><strong>{{ form.telefono || '---' }}</strong></div>
       </div>
 
-      <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
+      <!-- Tabs -->
+      <ul class="lf-tabs">
+        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
+          <i class="fa-solid fa-list me-1"></i> Histórico
+          <span class="lf-badge" v-if="clientHistoryLegacy.length">{{ clientHistoryLegacy.length }}</span>
+        </a></li>
+        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'asesoria' }" href="#" @click.prevent="activeHistoryTab = 'asesoria'">
+          <i class="fa-solid fa-headset me-1"></i> Asesoría / CRM
+        </a></li>
+        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'inscripcion' }" href="#" @click.prevent="activeHistoryTab = 'inscripcion'">
+          <i class="fa-solid fa-graduation-cap me-1"></i> Inscripciones
+        </a></li>
+      </ul>
 
-        <div v-if="clientHistoryLeads.length === 0" class="alert alert-info text-center">
-            No se encontraron gestiones de CRM recientes.
+      <div class="lf-tabs__panel">
+
+        <!-- Histórico -->
+        <div v-if="activeHistoryTab === 'historico'" class="fade-in">
+          <div v-if="clientHistoryLegacy.length === 0" class="alert alert-info text-center">
+            No se encontró historial legado para este número.
+          </div>
+          <div v-else class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th width="20%">Fecha</th>
+                  <th width="40%">Programa / Interés</th>
+                  <th width="30%">Nombre registrado</th>
+                  <th width="10%">E. Cliente</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, i) in clientHistoryLegacy" :key="i">
+                  <td><small>{{ item.date }}</small></td>
+                  <td><div class="fw-bold text-primary">{{ item.program }}</div></td>
+                  <td>{{ item.full_name }}</td>
+                  <td>{{ item.cat_client_moment_label }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div v-else class="table-responsive">
-          <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th width="20%">Fecha Gestión</th>
-                <th width="35%">Interés / Edición</th>
-                <th width="20%">Asesor</th>
-                <th width="15%">Estatus</th>
-                <th width="10%" class="text-center">Intentos</th>
-              </tr>
-            </thead>
-            <tbody>
-               <tr v-for="(lead, i) in clientHistoryLeads" :key="i">
-
-                <td>
+        <!-- Asesoría -->
+        <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
+          <div v-if="clientHistoryLeads.length === 0" class="alert alert-info text-center">
+            No se encontraron gestiones de CRM recientes.
+          </div>
+          <div v-else class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th width="20%">Fecha Gestión</th>
+                  <th width="35%">Interés / Edición</th>
+                  <th width="20%">Asesor</th>
+                  <th width="15%">Estatus</th>
+                  <th width="10%" class="text-center">Intentos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(lead, i) in clientHistoryLeads" :key="i">
+                  <td>
                     <div class="fw-semibold">{{ formatDateTime(lead.date).split(' ')[0] }} {{ formatDateTime(lead.date).split(' ')[1] }} {{ formatDateTime(lead.date).split(' ')[2] }}</div>
                     <small class="text-muted">{{ formatDateTime(lead.date).split(' ').slice(3).join(' ') }}</small>
-                </td>
-
-                <td>
-                  <div class="fw-bold text-primary" style="font-size: 0.9rem;">
-                    {{ lead.program || 'Sin programa' }}
-                  </div>
-                  <div v-if="lead.edition">
+                  </td>
+                  <td>
+                    <div class="fw-bold text-primary" style="font-size:.9rem">{{ lead.program || 'Sin programa' }}</div>
+                    <div v-if="lead.edition">
                       <span class="badge bg-light text-dark border mt-1">
                         <i class="fa-regular fa-calendar me-1"></i> {{ lead.edition }}
                       </span>
-                  </div>
-                </td>
-
-                <td>
-                  <div class="d-flex align-items-center">
-                    <div class="avatar-circle me-2 bg-secondary text-white d-flex align-items-center justify-content-center rounded-circle" style="width: 25px; height: 25px; font-size: 0.75rem;">
-                        {{ lead.user_registration_full_name ? lead.user_registration_full_name.charAt(0) : '?' }}
                     </div>
-                    <small class="text-truncate" style="max-width: 120px;" :title="lead.user_registration_full_name">
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="lf-avatar me-2">{{ lead.user_registration_full_name ? lead.user_registration_full_name.charAt(0) : '?' }}</div>
+                      <small class="text-truncate" style="max-width:120px" :title="lead.user_registration_full_name">
                         {{ lead.user_registration_full_name || 'Sistema' }}
-                    </small>
-                  </div>
-                </td>
-
-                <td>
-                  <span class="badge"
-                    :class="{
-                        'bg-success': ['Inscrito', 'Pagó', 'Matriculado'].includes(lead.cat_status_lead_label),
-                        'bg-warning text-dark': ['Interesado', 'En Seguimiento', 'Prox. Inicio'].includes(lead.cat_status_lead_label),
+                      </small>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge"
+                      :class="{
+                        'bg-success': ['Inscrito','Pagó','Matriculado'].includes(lead.cat_status_lead_label),
+                        'bg-warning text-dark': ['Interesado','En Seguimiento','Prox. Inicio'].includes(lead.cat_status_lead_label),
                         'bg-info text-dark': ['Atendido'].includes(lead.cat_status_lead_label),
-                        'bg-danger': ['No Interesado', 'Rechazado'].includes(lead.cat_status_lead_label),
+                        'bg-danger': ['No Interesado','Rechazado'].includes(lead.cat_status_lead_label),
                         'bg-secondary': !['Inscrito','Pagó','Interesado','Atendido','No Interesado'].includes(lead.cat_status_lead_label)
-                    }">
-                    {{ lead.cat_status_lead_label || 'Pendiente' }}
-                  </span>
-                </td>
-
-                <td class="text-center">
-                  <span class="badge bg-white text-dark border">
-                    {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size: 0.7rem;"></i>
-                  </span>
-                </td>
-
-              </tr>
-            </tbody>
-          </table>
+                      }">
+                      {{ lead.cat_status_lead_label || 'Pendiente' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-white text-dark border">
+                      {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size:.7rem"></i>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <div v-if="activeHistoryTab === 'inscripcion'" class="fade-in">
-        <div class="table-responsive">
-          <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th width="15%">Fecha</th>
-                <th width="45%">Programa</th>
-                <th width="20%">Estado</th>
-                <th width="20%" class="text-center">Nota Obtenida</th>
-              </tr>
-            </thead>
-            <tbody>
-               <tr v-for="(item, i) in hcEnrollmentData" :key="i">
-                <td><small>{{ item.fecha }}</small></td>
-                <td>
-                  <div class="fw-bold">{{ item.programa }}</div>
-                  <small class="text-muted">Edición: {{ item.edicion }}</small>
-                </td>
-                <td>
-                  <span class="badge" :class="item.estado === 'Finalizado' ? 'bg-success' : 'bg-warning text-dark'">{{ item.estado }}</span>
-                </td>
-                <td class="text-center">
-                  <span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Inscripciones -->
+        <div v-if="activeHistoryTab === 'inscripcion'" class="fade-in">
+          <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th width="15%">Fecha</th>
+                  <th width="45%">Programa</th>
+                  <th width="20%">Estado</th>
+                  <th width="20%" class="text-center">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, i) in hcEnrollmentData" :key="i">
+                  <td><small>{{ item.fecha }}</small></td>
+                  <td>
+                    <div class="fw-bold">{{ item.programa }}</div>
+                    <small class="text-muted">Edición: {{ item.edicion }}</small>
+                  </td>
+                  <td><span class="badge" :class="item.estado === 'Finalizado' ? 'bg-success' : 'bg-warning text-dark'">{{ item.estado }}</span></td>
+                  <td class="text-center"><span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
+      </div>
     </div>
-  </div>
-</BaseModal>
+  </BaseModal>
 
-<BaseModal
-    v-model="showProgramDetail"
-    title="Detalle del Programa"
-    size="lg"
-  >
+
+  <!-- ════════════════════════════════════════════════════════
+       MODAL: Detalle del Programa
+  ════════════════════════════════════════════════════════ -->
+  <BaseModal v-model="showProgramDetail" title="Detalle del Programa" size="lg">
+
     <div v-if="loadingDetail" class="d-flex justify-content-center align-items-center py-5">
-       <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Cargando...</span>
-       </div>
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>
     </div>
 
-    <div v-else-if="modelProgramVersion" class="d-flex flex-column h-100">
-
-      <ul class="nav nav-tabs px-3 border-bottom-0 mt-2" v-if="hasEditions">
-        <li class="nav-item">
-          <a class="nav-link"
-             :class="{ active: activeTab === 'info' }"
-             href="#"
-             @click.prevent="activeTab = 'info'">
-             <i class="fa-solid fa-file-lines me-2"></i>General
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link"
-             :class="{ active: activeTab === 'editions' }"
-             href="#"
-             @click.prevent="activeTab = 'editions'">
-             <i class="fa-solid fa-calendar-days me-2"></i>Ediciones ({{ modelProgramVersion.editions_json.length }})
-          </a>
-        </li>
+    <div v-else-if="modelProgramVersion" class="d-flex flex-column">
+      <ul class="lf-tabs mt-2" v-if="hasEditions">
+        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeTab === 'info' }" href="#" @click.prevent="activeTab = 'info'">
+          <i class="fa-solid fa-file-lines me-1"></i> General
+        </a></li>
+        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeTab === 'editions' }" href="#" @click.prevent="activeTab = 'editions'">
+          <i class="fa-solid fa-calendar-days me-1"></i> Ediciones ({{ modelProgramVersion.editions_json.length }})
+        </a></li>
       </ul>
 
-      <div class="modal-tab-content p-3 border-top" :class="{'rounded-top': !hasEditions}">
+      <div class="lf-tabs__panel" :class="{'rounded-top': !hasEditions}">
 
         <div v-if="activeTab === 'info'" class="fade-in">
-
           <div class="text-center mb-4 mt-2">
             <h4 class="fw-bold text-primary mb-0">{{ modelProgramVersion.program_name }}</h4>
             <small class="text-muted">Versión: {{ modelProgramVersion.version_code }}</small>
           </div>
-
           <div class="row g-3 mb-4 text-center">
             <div class="col-4">
               <small class="d-block text-secondary">Tipo</small>
@@ -773,24 +749,18 @@
             </div>
           </div>
 
-          <div class="card bg-light border-0 mb-4">
-            <div class="card-body">
-              <h6 class="card-title text-muted mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Precios Referenciales</h6>
-              <div class="row">
-                <div class="col-6 border-end">
-                  <div class="d-flex flex-column text-center">
-                    <span class="text-muted small">Estudiante</span>
-                    <span class="fw-bold text-dark">S/ {{ modelProgramVersion.price_student_soles }}</span>
-                    <span class="small text-secondary">$ {{ modelProgramVersion.price_student_dollars }}</span>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="d-flex flex-column text-center">
-                    <span class="text-muted small">Profesional</span>
-                    <span class="fw-bold text-dark">S/ {{ modelProgramVersion.price_profesional_soles }}</span>
-                    <span class="small text-secondary">$ {{ modelProgramVersion.price_profesional_dollars }}</span>
-                  </div>
-                </div>
+          <div class="lf-price-panel mb-4">
+            <div class="lf-price-panel__title">Precios Referenciales</div>
+            <div class="row">
+              <div class="col-6 border-end text-center">
+                <small class="text-muted">Estudiante</small>
+                <div class="fw-bold">S/ {{ modelProgramVersion.price_student_soles }}</div>
+                <small class="text-secondary">$ {{ modelProgramVersion.price_student_dollars }}</small>
+              </div>
+              <div class="col-6 text-center">
+                <small class="text-muted">Profesional</small>
+                <div class="fw-bold">S/ {{ modelProgramVersion.price_profesional_soles }}</div>
+                <small class="text-secondary">$ {{ modelProgramVersion.price_profesional_dollars }}</small>
               </div>
             </div>
           </div>
@@ -800,7 +770,6 @@
               <i class="fa-solid fa-external-link-alt me-2"></i> Ver landing page / Temario
             </a>
           </div>
-
           <div v-if="!hasEditions" class="alert alert-secondary text-center mt-3 mb-0 py-2 small">
             <i class="fa-solid fa-calendar-xmark me-1"></i> No hay ediciones programadas visibles.
           </div>
@@ -808,385 +777,229 @@
 
         <div v-if="activeTab === 'editions'" class="fade-in">
           <div class="editions-scroll-container">
-
-            <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="card mb-3 shadow-sm border">
-
-              <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+            <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="lf-edition-card mb-3">
+              <div class="lf-edition-card__header">
                 <div>
                   <span class="badge bg-primary me-2">{{ edition.global_code }}</span>
-                  <span class="fw-bold text-dark" style="font-size: 0.9rem;">Inicio: {{ formatDate(edition.start_date) }}</span>
+                  <span class="fw-bold" style="font-size:.9rem">Inicio: {{ formatDate(edition.start_date) }}</span>
                 </div>
-                <div class="text-end">
-                  <span class="badge" :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger') : 'bg-secondary'">
-                    {{ (edition.vacant !== null && edition.vacant !== undefined)
-                      ? (edition.vacant > 0 ? `${edition.vacant} Vacantes` : 'Lleno')
-                      : 'Sin Vacantes' }}
-                  </span>
-                </div>
+                <span class="badge"
+                  :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger') : 'bg-secondary'">
+                  {{ (edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? `${edition.vacant} Vacantes` : 'Lleno') : 'Sin Vacantes' }}
+                </span>
               </div>
-
-              <div class="card-body p-3">
-                <div class="row g-2 mb-2" style="font-size: 0.85rem;"  v-if="!edition.edition_children || edition.edition_children.length == 0">
+              <div class="lf-edition-card__body">
+                <div class="row g-2" style="font-size:.85rem" v-if="!edition.edition_children || edition.edition_children.length == 0">
                   <div class="col-md-6">
-                      <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
-                      <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
+                    <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
+                    <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
                   </div>
                   <div class="col-md-6">
-                      <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
-                      <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">
-                         {{ sch.day_combination_label }} {{ sch.hour_combination_label }}
-                      </div>
-                      <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
+                    <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
+                    <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">{{ sch.day_combination_label }} {{ sch.hour_combination_label }}</div>
+                    <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
                   </div>
                 </div>
-
                 <div v-if="edition.edition_children && edition.edition_children.length > 0" class="mt-3">
                   <div class="p-2 bg-light rounded border">
-                    <h6 class="text-uppercase text-muted mb-2" style="font-size: 0.7rem; letter-spacing: 0.5px;">Estructura Académica / Módulos</h6>
+                    <h6 class="text-uppercase text-muted mb-2" style="font-size:.7rem;letter-spacing:.5px">Estructura Académica / Módulos</h6>
                     <div class="table-responsive">
                       <table class="table table-sm table-borderless mb-0 small align-middle">
                         <thead class="text-secondary border-bottom">
-                          <tr>
-                            <th>Módulo</th>
-                            <th>Fecha</th>
-                            <th>Horario</th>
-                            <th>Docente</th>
-                          </tr>
+                          <tr><th>Módulo</th><th>Fecha</th><th>Horario</th><th>Docente</th></tr>
                         </thead>
                         <tbody>
                           <tr v-for="child in edition.edition_children" :key="child.edition_num_id">
                             <td class="fw-bold text-primary">{{ child.abbreviation }}</td>
                             <td>{{ formatDate(child.start_date) }}</td>
-                            <td>
-                               <div v-for="(csch, ci) in child.schedules" :key="ci" style="line-height: 1.1;">
-                                  <small>{{ csch.day_combination_label }}</small>
-                               </div>
-                            </td>
-                            <td><small class="text-truncate d-block" style="max-width: 120px;">{{ child.instructor }}</small></td>
+                            <td><div v-for="(csch,ci) in child.schedules" :key="ci" style="line-height:1.1"><small>{{ csch.day_combination_label }}</small></div></td>
+                            <td><small class="text-truncate d-block" style="max-width:120px">{{ child.instructor }}</small></td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </div>
-
-              </div> </div> </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
     </div>
 
     <div v-else class="text-center py-5 text-muted">
-       No se encontró información detallada para este programa.
+      No se encontró información detallada para este programa.
     </div>
-
   </BaseModal>
 
+
+  <!-- ════════════════════════════════════════════════════════
+       MODAL: Inscripción
+  ════════════════════════════════════════════════════════ -->
   <BaseModal v-model="showViewModal" title="Inscripción del lead" size="xl">
     <div class="insc-modal">
+
+      <!-- Header programa -->
       <header class="insc-header">
         <div class="insc-info">
-          <div class="mb-3">
-            <h5 class="program-title">
-              {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
-            </h5>
-
-            <div class="program-edition" v-if="form.edition_label">
-              <i class="fa-solid fa-calendar-days me-1"></i>
-              <span>Edición: {{ form.edition_label }}</span>
-            </div>
+          <h5 class="program-title">
+            {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
+          </h5>
+          <div class="program-edition" v-if="form.edition_label">
+            <i class="fa-solid fa-calendar-days me-1"></i>
+            <span>Edición: {{ form.edition_label }}</span>
           </div>
-
-          <div class="user-meta">
+          <div class="user-meta mt-2">
             <div class="user-badge">
-              <div class="user-icon">
-                <i class="fa-solid fa-user"></i>
-              </div>
+              <div class="user-icon"><i class="fa-solid fa-user"></i></div>
               <span class="user-name text-truncate">{{ form.telefono }}</span>
             </div>
-
             <div v-if="clientProfileType"
-                class="profile-badge"
-                :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
+              class="profile-badge"
+              :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
               <i class="fa-solid" :class="clientProfileType === 'estudiante' ? 'fa-graduation-cap' : 'fa-briefcase'"></i>
               <span>{{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}</span>
             </div>
           </div>
         </div>
         <div class="insc-price-box">
-            <span class="price-label">Precio Base</span>
-            <div class="price-amount d-flex align-items-center">
-              <CurrencyInput
-                v-model="insc.montoOriginal"
-                :currency="selectedCurrency"
-                :storeAsMinor="false"
-                class="form-control form-control-sm fw-bold border-0 bg-transparent text-end p-0"
-                style="font-size: 1.5rem; color: var(--primary-color); max-width: 150px;"
-                placeholder="0.00"
-              />
-            </div>
+          <span class="price-label">Precio Base</span>
+          <div class="price-amount d-flex align-items-center">
+            <CurrencyInput
+              v-model="insc.montoOriginal"
+              :currency="selectedCurrency"
+              :storeAsMinor="false"
+              class="form-control form-control-sm fw-bold border-0 bg-transparent text-end p-0"
+              style="font-size:1.5rem;color:var(--lf-blue);max-width:150px"
+              placeholder="0.00"
+            />
+          </div>
         </div>
       </header>
 
-      <section class="insc-section">
+      <!-- Datos cliente -->
+      <div class="insc-section">
         <h6 class="insc-section__title">Datos del Cliente / Inscripción</h6>
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label mb-1">T. documento<span class="required-star">*</span></label>
-            <SearchSelect
-              required
-              v-model="insc.cat_type_document"
-              :items="docTypeCatalog"
-              label-field="description"
-              placeholder="T. DOCUMENTO"
-              value-field="alias"
-            />
+            <label class="lf-label">T. documento <span class="lf-required">*</span></label>
+            <SearchSelect required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" />
           </div>
           <div class="col-md-4">
-            <label class="form-label mb-1">Documento<span class="required-star">*</span></label>
-            <input 
-              autocomplete="off" 
-              required 
-              v-model="insc.document" 
-              type="text" 
-              :placeholder="docConfig.placeholder" 
-              class="form-control"  
-              :maxlength="docConfig.maxLength"
-              @keyup.enter="searchSunat" 
-              v-restrict="{ 
-                  trim: true, 
-                  spaces: false, 
-                  max: docConfig.maxLength,
-                  only: docConfig.isNumeric ? 'numbers' : undefined,
-                  transform: 'upper'
-              }"
+            <label class="lf-label">Documento <span class="lf-required">*</span></label>
+            <input
+              autocomplete="off" required v-model="insc.document" type="text"
+              :placeholder="docConfig.placeholder" class="form-control"
+              :maxlength="docConfig.maxLength" @keyup.enter="searchSunat"
+              v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:docConfig.isNumeric?'numbers':undefined, transform:'upper' }"
             />
-            <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric" class="text-warning d-block mt-1" style="font-size: 0.7rem;">
+            <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric" class="text-warning d-block mt-1" style="font-size:.7rem">
               <i class="fa-solid fa-circle-exclamation me-1"></i> Se esperan {{ docConfig.maxLength }} dígitos
             </small>
           </div>
           <div class="col-md-4">
-            <label class="form-label mb-1">Correo<span class="required-star">*</span></label>
-            <input 
-              autocomplete="off" 
-              required 
-              v-model="insc.email" 
-              type="email" 
-              placeholder="CORREO" 
-              class="form-control"
-              v-restrict="{ trim: true, spaces: false, transform: 'lower' }"
-            />
+            <label class="lf-label">Correo <span class="lf-required">*</span></label>
+            <input autocomplete="off" required v-model="insc.email" type="email" placeholder="CORREO" class="form-control" v-restrict="{ trim:true, spaces:false, transform:'lower' }" />
           </div>
           <div class="col-md-4">
-            <label class="form-label mb-1">Nombres<span class="required-star">*</span></label>
-            <input 
-              autocomplete="off" 
-              required 
-              v-model="insc.full_name" 
-              type="text" 
-              placeholder="NOMBRES" 
-              class="form-control"
-              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }" 
-            />
+            <label class="lf-label">Nombres <span class="lf-required">*</span></label>
+            <input autocomplete="off" required v-model="insc.full_name" type="text" placeholder="NOMBRES" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
           <div class="col-md-4">
-            <label class="form-label mb-1">Apellido Paterno<span class="required-star">*</span></label>
-            <input 
-              autocomplete="off" 
-              required 
-              v-model="insc.last_name" 
-              type="text" 
-              placeholder="A. PATERNO" 
-              class="form-control"
-              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }"
-            />
+            <label class="lf-label">Apellido Paterno <span class="lf-required">*</span></label>
+            <input autocomplete="off" required v-model="insc.last_name" type="text" placeholder="A. PATERNO" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
           <div class="col-md-4">
-            <label class="form-label mb-1">Apellido Materno<span class="required-star">*</span></label>
-            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" 
-              v-restrict="{ transform: 'upper', trim: true, only: 'letters' }"/>
+            <label class="lf-label">Apellido Materno <span class="lf-required">*</span></label>
+            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
-
           <div class="col-md-4">
-            <label required class="form-label mb-1">Modalidad del programa<span class="required-star">*</span></label>
-            <SearchSelect
-              required
-              v-model="insc.cat_insc_modality"
-              :model-label="form.program_modality_label"
-              :items="inscModalidades"
-              label-field="description"
-              placeholder="M. PROGRAMA"
-              value-field="alias"
-            />
+            <label class="lf-label">Modalidad del programa <span class="lf-required">*</span></label>
+            <SearchSelect required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" />
           </div>
         </div>
-      </section>
+      </div>
 
-      <section class="insc-section" v-if="isEdit || validateInscriptionClientInfo()">
+      <!-- Condiciones de pago -->
+      <div class="insc-section" v-if="isEdit || validateInscriptionClientInfo()">
         <h6 class="insc-section__title">Condiciones de pago</h6>
         <div class="row g-3">
           <div class="col-md-2">
-            <label class="form-label mb-1">T. moneda<span class="required-star">*</span></label>
-            <SearchSelect
-              v-model="insc.selectedCurrencyAlias"
-              :items="currencyCatalog"
-              label-field="description"
-              required
-              value-field="alias"
-              placeholder="MONEDA..."
-            />
+            <label class="lf-label">T. moneda <span class="lf-required">*</span></label>
+            <SearchSelect v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." />
           </div>
           <div class="col-md-2" v-if="insc.selectedCurrencyAlias">
-            <label class="form-label mb-1">Modalidad de pago<span class="required-star">*</span></label>
-            <SearchSelect
-              v-model="insc.cat_type_payment"
-              required
-              :items="inscPaymentModes"
-              placeholder="M. PAGO"
-              label-field="description"
-              value-field="alias"
-            />
+            <label class="lf-label">Modalidad de pago <span class="lf-required">*</span></label>
+            <SearchSelect v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" />
           </div>
-
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias">
-          <label class="form-label mb-1">Medio de Pago<span class="required-star">*</span></label>
-          <SearchSelect
-            v-model="insc.cat_method_payment"
-            :items="paymentMethodCatalog"
-            required
-            label-field="description"
-            value-field="alias"
-            placeholder="MEDIO..."
-          />
+            <label class="lf-label">Medio de Pago <span class="lf-required">*</span></label>
+            <SearchSelect v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." />
+          </div>
+          <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'">
+            <label class="lf-label">Adelanto / Reserva <span class="lf-required">*</span></label>
+            <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
+          </div>
+
+          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
+            <label class="lf-label">Descuento</label>
+            <SearchSelect v-model="insc.dsct_porcent_id" mode="remote"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
+              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" @change="onChangeDescuentoPorcentual" />
+          </div>
+          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
+            <label class="lf-label">Promoción</label>
+            <SearchSelect v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
+              label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" @change="onChangeDescuentoFijo" />
+          </div>
+          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
+            <label class="lf-label">Beneficio</label>
+            <SearchSelect v-model="insc.dsct_benefit_id" mode="remote"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
+              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" @change="onChangeBeneficio" />
+          </div>
         </div>
-          <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'" >
-            <label class="form-label mb-1">Adelanto / Reserva<span class="required-star">*</span></label>
-            <CurrencyInput
-              v-model="insc.saved_money"
-              :currency="selectedCurrency"
-              required
-              :storeAsMinor="true"
-              :softMinorTyping="true"
-              zero-counts-as-empty
-              placeholder="0.00"
-            />
-          </div>
-          <div class="col-2" v-if="!insc.cat_type_payment || insc.cat_type_payment=='we_payment_way_single'"></div>
-          <div class="col-0" v-if="insc.cat_type_payment && insc.cat_type_payment!='we_payment_way_single'"></div>
+      </div>
 
-          <div class="col-md-4" v-if="isEdit || (validateInscriptionPaymentInfo())">
-          <label class="form-label mb-1">Descuento</label>
-          <SearchSelect
-            v-model="insc.dsct_porcent_id"
-            mode="remote"
-            :fetcher="q => discountService.discountCaller({ q,
-                                                        cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id,
-                                                        cat_currency: selectedCurrencyAlias
-                                                      })"
-            label-field="full_label"
-            value-field="id"
-            :viewOpen="6"
-            placeholder="DESCUENTO (%)"
-            :minChars="0"
-            :cache="false"
-            @change="onChangeDescuentoPorcentual"
-          />
-          </div>
-
-        <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-          <label class="form-label mb-1">Promoción</label>
-          <SearchSelect
-            v-model="insc.dsct_stick_id"
-            mode="remote"
-            :viewOpen="6"
-            :fetcher="q => discountService.discountCaller({ q,
-                                                        cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id,
-                                                        cat_currency: selectedCurrency.alias
-                                                      })"
-            label-field="full_label"
-            value-field="id"
-            placeholder="DESCUENTO (S/)"
-            :minChars="0"
-            :cache="false"
-            @change="onChangeDescuentoFijo"
-          />
-          </div>
-
-        <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-          <label class="form-label mb-1">Beneficio</label>
-          <SearchSelect
-            v-model="insc.dsct_benefit_id"
-            mode="remote"
-            :fetcher="q => discountService.discountCaller({ q,
-                                                        cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id,
-                                                        cat_currency: selectedCurrency.alias
-                                                      })"
-            label-field="full_label"
-            value-field="id"
-            :viewOpen="6"
-            placeholder="DESCUENTO (S/)"
-            :minChars="0"
-            :cache="false"
-            @change="onChangeBeneficio"
-          />
-          </div>
-
-        </div>
-      </section>
-
-      <section class="insc-section" v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web' ">
-        <h6 class="insc-section__title">
-          Documentación Adjunta
-        </h6>
-
+      <!-- Documentación -->
+      <div class="insc-section" v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web'">
+        <h6 class="insc-section__title">Documentación Adjunta</h6>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label mb-2 fw-semibold">Comprobante de Pago</label>
-            <FileUploader
-                label="Clic para subir Voucher"
-                :required="true"
-                v-model="form.ticket_payment_url"
-                accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-            />
+            <label class="lf-label fw-semibold mb-2">Comprobante de Pago</label>
+            <FileUploader label="Clic para subir Voucher" :required="true" v-model="form.ticket_payment_url" accept=".png,.jpg,.jpeg,.pdf,.doc,.docx" />
           </div>
-
           <div class="col-md-6">
-            <label class="form-label mb-2 fw-semibold">Carnet / Documento ID</label>
-            <FileUploader
-                label="Subir carnet estudiantil"
-                v-model="form.carnet_url"
-                accept=".pdf,.doc,.docx"
-            />
+            <label class="lf-label fw-semibold mb-2">Carnet / Documento ID</label>
+            <FileUploader label="Subir carnet estudiantil" v-model="form.carnet_url" accept=".pdf,.doc,.docx" />
           </div>
         </div>
-      </section>
+      </div>
 
-      <section class="insc-section mt-4" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
+      <!-- Resumen -->
+      <div class="insc-section" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
         <div class="summary-card">
-          <div class="summary-header">
-            <i class="fa-solid fa-receipt me-2"></i> Resumen de Transacción
-          </div>
+          <div class="summary-header"><i class="fa-solid fa-receipt me-2"></i> Resumen de Transacción</div>
           <div class="summary-body">
             <div class="summary-row">
               <span class="label">Precio del programa</span>
-              <span class="value text-muted"> {{ selectedCurrency.symbol }} {{ insc.montoOriginal?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+              <span class="value text-muted">{{ selectedCurrency.symbol }} {{ insc.montoOriginal?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
-
             <div class="summary-row" v-if="insc.dsct_porcent_id">
               <span class="label">Descuento</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoPorcentaje?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoPorcentaje?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
             <div class="summary-row" v-if="insc.dsct_stick_id">
               <span class="label">Promoción</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoFijo?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoFijo?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
             <div class="summary-row" v-if="insc.dsct_benefit_id">
               <span class="label">Beneficio</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoBeneficio?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}</span>
+              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoBeneficio?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
-
             <div class="summary-divider"></div>
-
             <div class="summary-row total">
               <div class="d-flex flex-column">
                 <span class="label-total">MONTO FINAL A PAGAR</span>
@@ -1194,50 +1007,535 @@
                   (Adelanto requerido: {{ selectedCurrency.symbol }}{{ insc.saved_money }})
                 </small>
               </div>
-              <span class="value-total">
-                {{ selectedCurrency.symbol }} {{ insc.total_amount?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00' }}
-              </span>
+              <span class="value-total">{{ selectedCurrency.symbol }} {{ insc.total_amount?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-       <section class="insc-section">
-            <h6 class="insc-section__title">OBSERVACIONES</h6>
-            <div class="row g-3">
-              
-            <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6 mt-2':'col-md-12 mt-2'">
-              <textarea
-                v-model="insc.observacions"
-                class="form-control"
-                required
-                rows="2"
-                style="resize: vertical; min-height: 80px; max-height: none;"
-              ></textarea>
-            </div>
-            <div class="col-md-6 mt-2" v-if="insc.cat_method_payment=='we_payment_method_web'">
-                  <label class="form-label small mb-1 fw-bold">Adjuntos</label>
-                  <MultiFileUploader 
-                  v-model="insc.attachments"
-                  
-                  label="Agregar Constancia"
-                                        
-                  />
-            </div>
-            </div>
-                
-        </section>
-        
-    </div>
+      <!-- Observaciones -->
+      <div class="insc-section">
+        <h6 class="insc-section__title">Observaciones</h6>
+        <div class="row g-3">
+          <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6':'col-md-12'">
+            <textarea v-model="insc.observacions" class="form-control" required rows="2" style="resize:vertical;min-height:80px"></textarea>
+          </div>
+          <div class="col-md-6" v-if="insc.cat_method_payment=='we_payment_method_web'">
+            <label class="lf-label fw-bold mb-1">Adjuntos</label>
+            <MultiFileUploader v-model="insc.attachments" label="Agregar Constancia" />
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /insc-modal -->
 
     <template #footer>
-      <button class="btn btn-outline btn-sm" @click="showViewModal = false">Cerrar</button>
-      <button  class="btn btn-primary btn-sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
+      <button class="lf-btn lf-btn--outline lf-btn--sm" @click="showViewModal = false">Cerrar</button>
+      <button class="lf-btn lf-btn--primary lf-btn--sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
+        <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
         {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
       </button>
     </template>
   </BaseModal>
+
 </template>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     STYLES
+═══════════════════════════════════════════════════════════════════ -->
+<style scoped>
+
+/* ── Variables ─────────────────────────────────────────────────── */
+:root {
+  --lf-blue:    #2563eb;
+  --lf-emerald: #059669;
+  --lf-violet:  #7c3aed;
+  --lf-amber:   #d97706;
+  --lf-gray-50: #f8fafc;
+  --lf-gray-100:#f1f5f9;
+  --lf-gray-200:#e2e8f0;
+  --lf-gray-400:#94a3b8;
+  --lf-gray-600:#475569;
+  --lf-gray-800:#1e293b;
+  --lf-radius:  10px;
+  --lf-shadow:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --lf-shadow-md: 0 4px 12px rgba(0,0,0,.08);
+}
+
+/* ── Layout ────────────────────────────────────────────────────── */
+.lf-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
+  font-size: .9rem;
+  color: var(--lf-gray-800);
+}
+
+/* ── Page Header ───────────────────────────────────────────────── */
+.lf-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--lf-gray-200);
+}
+.lf-page-header__eyebrow {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--lf-gray-400);
+  font-weight: 600;
+  margin-bottom: .2rem;
+}
+.lf-page-header__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--lf-gray-800);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* ── Body ──────────────────────────────────────────────────────── */
+.lf-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.lf-card {
+  background: #fff;
+  border: 1px solid var(--lf-gray-200);
+  border-radius: var(--lf-radius);
+  box-shadow: var(--lf-shadow);
+  overflow: hidden;
+}
+.lf-card--flat {
+  box-shadow: none;
+}
+
+.lf-card__header {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .65rem 1rem;
+  background: var(--lf-gray-50);
+  border-bottom: 1px solid var(--lf-gray-200);
+  min-height: 44px;
+}
+
+.lf-card__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  flex-shrink: 0;
+}
+.lf-card__icon--blue   { background: #eff6ff; color: var(--lf-blue); }
+.lf-card__icon--emerald{ background: #ecfdf5; color: var(--lf-emerald); }
+.lf-card__icon--violet { background: #f5f3ff; color: var(--lf-violet); }
+.lf-card__icon--amber  { background: #fffbeb; color: var(--lf-amber); }
+
+.lf-card__title {
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--lf-gray-600);
+}
+
+.lf-card__body {
+  padding: 1rem 1rem 1.1rem;
+}
+
+/* ── Labels ────────────────────────────────────────────────────── */
+.lf-label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--lf-gray-600);
+  margin-bottom: .3rem;
+  line-height: 1.3;
+}
+.lf-required { color: #dc2626; margin-left: .1rem; }
+
+/* ── Form controls ─────────────────────────────────────────────── */
+.form-control,
+.form-select,
+textarea.form-control {
+  font-size: .83rem;
+  border-color: var(--lf-gray-200);
+  border-radius: 7px;
+  color: var(--lf-gray-800);
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+.form-control:focus,
+textarea.form-control:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.lf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  font-size: .83rem;
+  font-weight: 600;
+  padding: .45rem .9rem;
+  cursor: pointer;
+  transition: all .15s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.lf-btn--sm  { padding: .3rem .65rem; font-size: .78rem; }
+.lf-btn--lg  { padding: .55rem 1.2rem; font-size: .9rem; }
+
+.lf-btn--primary {
+  background: var(--lf-blue);
+  color: #fff;
+}
+.lf-btn--primary:hover:not(:disabled) { background: #1d4ed8; }
+.lf-btn--primary:disabled { opacity: .55; cursor: default; }
+
+.lf-btn--warning {
+  background: #f59e0b;
+  color: #fff;
+}
+.lf-btn--warning:hover:not(:disabled) { background: #d97706; }
+
+.lf-btn--outline {
+  background: #fff;
+  border-color: var(--lf-gray-200);
+  color: var(--lf-gray-600);
+}
+.lf-btn--outline:hover { background: var(--lf-gray-50); border-color: var(--lf-gray-400); }
+
+.lf-btn--danger-ghost {
+  background: transparent;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+.lf-btn--danger-ghost:hover { background: #fef2f2; border-color: #f87171; }
+
+/* ── Icon Button ───────────────────────────────────────────────── */
+.lf-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--lf-blue);
+  padding: 0 .2rem;
+  font-size: .9rem;
+  vertical-align: middle;
+  opacity: .8;
+  transition: opacity .15s;
+}
+.lf-icon-btn:hover { opacity: 1; }
+
+/* ── Switch ────────────────────────────────────────────────────── */
+.lf-switch { position: relative; width: 42px; height: 24px; display: inline-block; vertical-align: middle; }
+.lf-switch input { display: none; }
+.lf-switch span {
+  position: absolute; inset: 0; background: #e2e8f0; border-radius: 9999px; transition: .2s; cursor: pointer;
+}
+.lf-switch span::after {
+  content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+.lf-switch input:checked + span { background: var(--lf-blue); }
+.lf-switch input:checked + span::after { left: 21px; }
+.lf-switch-label { font-size: .78rem; color: var(--lf-gray-600); vertical-align: middle; }
+
+/* ── Attempt / Seguimiento table ───────────────────────────────── */
+.lf-attempt-head {
+  display: grid;
+  grid-template-columns: 40px 160px 1fr 160px 160px 60px;
+  gap: .5rem;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 700;
+  color: var(--lf-gray-400);
+  padding: .4rem .75rem;
+  border-bottom: 1px solid var(--lf-gray-200);
+}
+.lf-attempt-row {
+  display: grid;
+  grid-template-columns: 40px 160px 1fr 160px 160px 60px;
+  gap: .5rem;
+  align-items: start;
+  padding: .75rem;
+  border-bottom: 1px solid var(--lf-gray-100);
+  transition: background .12s;
+}
+.lf-attempt-row:last-child { border-bottom: none; }
+.lf-attempt-row:hover { background: var(--lf-gray-50); }
+
+.lf-attempt-row__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--lf-gray-400);
+  padding-top: .3rem;
+  font-size: .85rem;
+}
+
+/* Timer */
+.lf-timer {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.lf-timer__btn {
+  width: 26px; height: 26px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: .6rem; transition: all .15s;
+}
+.lf-timer__btn--start { background: #d1fae5; color: #059669; }
+.lf-timer__btn--start:hover { background: #a7f3d0; }
+.lf-timer__btn--stop  { background: #fee2e2; color: #dc2626; }
+.lf-timer__btn--stop:hover  { background: #fecaca; }
+.lf-timer__display { font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--lf-gray-600); }
+.lf-timer__display--active { color: #dc2626; }
+
+/* ── Edition Meta ──────────────────────────────────────────────── */
+.lf-edition-meta {
+  font-size: .72rem;
+  color: var(--lf-gray-400);
+  line-height: 1.6;
+}
+.lf-edition-meta b { color: var(--lf-gray-600); }
+
+/* ── Footer ────────────────────────────────────────────────────── */
+.lf-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .6rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lf-gray-200);
+}
+
+/* ── Modals shared ─────────────────────────────────────────────── */
+.lf-modal-info-bar {
+  display: flex;
+  gap: 2rem;
+  padding: .65rem 1rem;
+  background: var(--lf-gray-50);
+  border-bottom: 1px solid var(--lf-gray-200);
+  border-radius: 6px;
+  margin-bottom: .75rem;
+  font-size: .85rem;
+}
+
+.lf-tabs {
+  list-style: none;
+  display: flex;
+  gap: .25rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--lf-gray-200);
+  margin: 0 0 0 0;
+}
+.lf-tabs__item {
+  display: block;
+  padding: .55rem .85rem;
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--lf-gray-400);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.lf-tabs__item:hover { color: var(--lf-gray-600); }
+.lf-tabs__item--active {
+  color: var(--lf-blue);
+  border-bottom-color: var(--lf-blue);
+  font-weight: 700;
+}
+.lf-tabs__panel {
+  padding: 1rem;
+  background: #fff;
+}
+
+.lf-badge {
+  display: inline-block;
+  background: var(--lf-gray-200);
+  color: var(--lf-gray-600);
+  border-radius: 999px;
+  padding: .05rem .45rem;
+  font-size: .68rem;
+  font-weight: 700;
+  margin-left: .35rem;
+}
+
+.lf-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--lf-blue); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 700; flex-shrink: 0;
+}
+
+/* ── Price panel (modal programa) ──────────────────────────────── */
+.lf-price-panel {
+  background: var(--lf-gray-50);
+  border: 1px solid var(--lf-gray-200);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.lf-price-panel__title {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--lf-gray-400);
+  font-weight: 700;
+  margin-bottom: .75rem;
+}
+
+/* ── Edition card ──────────────────────────────────────────────── */
+.lf-edition-card {
+  border: 1px solid var(--lf-gray-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.lf-edition-card__header {
+  background: var(--lf-gray-50);
+  padding: .55rem .85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--lf-gray-200);
+}
+.lf-edition-card__body { padding: .75rem .85rem; }
+
+/* ── Inscription modal ─────────────────────────────────────────── */
+.insc-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.insc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  background: #fff;
+  border: 1px solid var(--lf-gray-200);
+  border-radius: var(--lf-radius);
+  padding: 1.1rem 1.25rem;
+}
+.insc-info { flex: 1; min-width: 0; }
+.program-title { font-size: 1rem; font-weight: 700; color: var(--lf-gray-800); margin-bottom: .3rem; line-height: 1.3; }
+.program-edition { display: inline-flex; align-items: center; font-size: .82rem; color: var(--lf-gray-400); background: var(--lf-gray-100); padding: .15rem .55rem; border-radius: 4px; }
+.user-meta { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .65rem; }
+.user-badge { display: inline-flex; align-items: center; gap: .4rem; background: var(--lf-gray-50); border: 1px solid var(--lf-gray-200); padding: .25rem .65rem; border-radius: 999px; font-size: .82rem; color: var(--lf-gray-600); }
+.user-icon { width: 18px; height: 18px; background: var(--lf-gray-200); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .6rem; }
+.profile-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .65rem; border-radius: 6px; font-size: .78rem; font-weight: 600; }
+.profile-badge.is-student { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.profile-badge.is-pro { background: var(--lf-gray-100); color: var(--lf-gray-800); border: 1px solid var(--lf-gray-200); }
+
+.insc-price-box {
+  text-align: right;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: .7rem 1.1rem;
+  border-radius: 8px;
+  min-width: 135px;
+  flex-shrink: 0;
+}
+.price-label { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: #166534; font-weight: 700; margin-bottom: .2rem; }
+.price-amount { font-weight: 800; color: #15803d; }
+
+.insc-section {
+  background: #fff;
+  border: 1px solid var(--lf-gray-200);
+  border-radius: var(--lf-radius);
+  padding: .85rem 1rem .95rem;
+}
+.insc-section__title {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--lf-gray-400);
+  font-weight: 700;
+  margin-bottom: .75rem;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+.insc-section__title::before {
+  content: '';
+  width: 3px; height: 13px;
+  background: var(--lf-blue);
+  border-radius: 9999px;
+}
+
+/* Summary */
+.summary-card { background: #fff; border: 1px solid var(--lf-gray-200); border-radius: 10px; overflow: hidden; }
+.summary-header { background: var(--lf-gray-100); padding: .65rem 1.1rem; font-weight: 700; color: var(--lf-gray-600); font-size: .85rem; border-bottom: 1px solid var(--lf-gray-200); }
+.summary-body { padding: 1rem 1.1rem; }
+.summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; font-size: .88rem; }
+.summary-divider { height: 0; border-top: 1px dashed var(--lf-gray-200); margin: .85rem 0; }
+.summary-row.total { margin-bottom: 0; align-items: flex-end; }
+.label-total { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--lf-gray-400); font-weight: 700; }
+.value-total { font-size: 1.45rem; font-weight: 800; color: var(--lf-gray-800); line-height: 1; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 991px) {
+  .lf-attempt-head { display: none; }
+  .lf-attempt-row {
+    display: flex;
+    flex-direction: column;
+    background: var(--lf-gray-50);
+    border: 1px solid var(--lf-gray-200);
+    border-radius: 8px;
+    margin-bottom: .75rem;
+    padding: .85rem;
+    gap: .6rem;
+  }
+  .lf-attempt-row__num {
+    justify-content: flex-start;
+    font-size: 1rem;
+    color: var(--lf-blue);
+    border-bottom: 1px solid var(--lf-gray-200);
+    padding-bottom: .5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .lf-page-header { flex-direction: column; align-items: stretch; }
+  .insc-header { flex-direction: column; }
+  .insc-price-box { text-align: left; }
+}
+
+/* ── Animations ────────────────────────────────────────────────── */
+.fade-in {
+  animation: lfFadeIn .25s ease;
+}
+@keyframes lfFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Editions scroll */
+.editions-scroll-container {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.editions-scroll-container::-webkit-scrollbar { width: 5px; }
+.editions-scroll-container::-webkit-scrollbar-thumb { background: var(--lf-gray-200); border-radius: 4px; }
+
+</style>
 
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
@@ -2495,967 +2793,3 @@ function openInscription() {
 
 </script>
 
-<style scoped>
-
-    .lead-form {
-    font-size: 0.95rem;
-    color: #111827;
-    }
-
-    .card-header {
-    background-color: #ffffff;
-    border-bottom: 1px solid #e5e7eb !important;
-    }
-
-    .card-title-main {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #111827;
-    line-height: 1.2;
-    }
-
-    .card-subtitle {
-    font-size: 0.8rem;
-    color: #6b7280;
-    line-height: 1.2;
-    margin-top: .25rem;
-    }
-
-    .timestamp-chip {
-    display: inline-block;
-    font-size: 0.8rem;
-    font-weight: 500;
-    line-height: 1.2;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: .4rem;
-    padding: .4rem .5rem;
-    color: #374151;
-    min-width: max-content;
-    }
-
-    .label-chip {
-    font-size: .7rem;
-    line-height: 1;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    }
-
-    .form-section {
-    background-color: #ffffff;
-    }
-
-    .form-section__header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 1rem;
-    position: relative;
-    padding-left: .75rem;
-    min-height: 1.25rem;
-    row-gap: .35rem;
-    column-gap: .75rem;
-    }
-
-    .form-section__header::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: .15rem;
-    bottom: .15rem;
-    width: 3px;
-    border-radius: 2px;
-    background-color: #3b82f6;
-    }
-
-    .form-section__title {
-    font-size: .8rem;
-    font-weight: 600;
-    color: #111827;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    line-height: 1.2;
-    }
-
-    .form-section__note {
-    font-size: .7rem;
-    font-weight: 400;
-    line-height: 1.2;
-    color: #6b7280 !important;
-    }
-
-    .form-section__body {
-    margin-left: .1rem;
-    margin-right: .1rem;
-    }
-
-    .form-label {
-    color: #1f2937;
-    font-weight: 500;
-    font-size: .8rem;
-    line-height: 1.2;
-    margin-bottom: .25rem;
-    }
-
-    .text-label-aux {
-    font-size: .7rem;
-    line-height: 1.3;
-    color: #6b7280;
-    margin-top: .35rem;
-    }
-
-    .form-control,
-    .form-select,
-    textarea.form-control {
-    font-size: .85rem;
-    line-height: 1.4;
-    border-color: #d1d5db;
-    color: #111827;
-    }
-
-    .form-control:focus,
-    .form-select:focus,
-    textarea.form-control:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
-    outline: 0;
-    }
-
-    .required-star {
-    color: #dc2626;
-    font-weight: 600;
-    margin-left: .15rem;
-    }
-
-    .card-footer {
-    border-top: 1px solid #e5e7eb !important;
-    background-color: #fff;
-    }
-
-    .btn-outline-secondary {
-    border-color: #d1d5db;
-    background-color: #fff;
-    color: #374151;
-    font-size: .85rem;
-    font-weight: 500;
-    }
-
-    .btn-outline-secondary:hover {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
-    color: #1f2937;
-    }
-
-    .btn-primary {
-    font-size: .85rem;
-    font-weight: 500;
-    line-height: 1.4;
-    padding: .45rem .9rem;
-    border-radius: .5rem;
-    }
-
-    .gap-2 {
-    gap: .5rem;
-    }
-
-    .card-body {
-    background-color: #fff;
-    }
-
-    section + section {
-    border-top: 1px solid #f3f4f6;
-    padding-top: 1.5rem;
-    }
-
-.contacto-table {
-  margin-top: .75rem;
-}
-
-.contacto-table__head {
-  font-size: .7rem;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  font-weight: 600;
-  padding: .5rem 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.contacto-table__row {
-  padding: .75rem;
-  border-radius: .5rem;
-  background-color: #fff;
-  border: 1px solid #e5e7eb;
-  transition: all .2s;
-}
-
-.contacto-table__row:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
-}
-
-.contacto-index {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: #6b7280;
-  font-size: .9rem;
-  height: 100%;
-}
-
-.btn-outline-danger {
-  border-color: #fca5a5;
-  color: #b91c1c;
-  background: #fff;
-  padding: .35rem .65rem;
-  font-size: .8rem;
-  transition: all .2s;
-}
-
-.btn-outline-danger:hover {
-  background-color: #fef2f2;
-  border-color: #f87171;
-  color: #991b1b;
-}
-
-@media (max-width: 767px) {
-  .contacto-table__row {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
-  }
-
-  .contacto-index {
-    justify-content: flex-start;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid #e2e8f0;
-    margin-bottom: .25rem;
-    font-size: 1rem;
-    color: #3b82f6;
-  }
-
-  .form-label {
-    font-size: .75rem;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    color: #64748b;
-    font-weight: 600;
-  }
-
-  .btn-outline-danger {
-    margin-top: .5rem;
-    padding: .5rem 1rem;
-  }
-}
-    .insc-head {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid #f3f4f6;
-      padding-bottom: .75rem;
-    }
-    .insc-title {
-    font-weight: 600;
-    font-size: .9rem;
-    }
-    .insc-sub {
-    font-size: .7rem;
-    color: #6b7280;
-    }
-    .insc-amount {
-    background: #ecfdf3;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-    border-radius: .5rem;
-    padding: .35rem .75rem;
-    font-weight: 600;
-    font-size: .85rem;
-    }
-    .pagos-table {
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    }
-    .pagos-head {
-    display: grid;
-    grid-template-columns: 40px 160px 160px 60px;
-    gap: .5rem;
-    font-size: .7rem;
-    text-transform: uppercase;
-    color: #6b7280;
-    }
-    .pagos-row {
-    display: grid;
-    grid-template-columns: 40px 160px 160px 60px;
-    gap: .5rem;
-    align-items: center;
-    }
-    .pagos-row .idx {
-    font-weight: 600;
-    }
-    @media (max-width: 768px) {
-    .pagos-head {
-        display: none;
-    }
-    .pagos-row {
-        grid-template-columns: 1fr;
-        background: #f9fafb;
-        padding: .5rem .75rem;
-        border-radius: .5rem;
-        border: 1px solid #e5e7eb;
-    }
-    }
-    .insc-modal {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    }
-
-    .insc-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: .6rem;
-    padding: .75rem .85rem;
-    }
-    .insc-title {
-    font-weight: 600;
-    font-size: .9rem;
-    color: #111827;
-    }
-    .insc-sub {
-    font-size: .75rem;
-    color: #6b7280;
-    }
-    .insc-amount {
-    background: #ecfdf3;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-    font-weight: 600;
-    padding: .25rem .65rem;
-    border-radius: .75rem;
-    font-size: .8rem;
-    }
-
-    .insc-section {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: .6rem;
-    padding: .75rem .85rem .85rem;
-    }
-    .insc-section__title {
-    font-size: .75rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #6b7280;
-    margin-bottom: .75rem;
-    display: flex;
-    align-items: center;
-    gap: .35rem;
-    }
-    .insc-section__title::before {
-    content: '';
-    width: 4px;
-    height: 14px;
-    background: #3b82f6;
-    border-radius: 9999px;
-    }
-.contacto-table {
-  margin-top: .75rem;
-}
-
-.contacto-table__head {
-  font-size: .7rem;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  font-weight: 600;
-  padding: .5rem 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.contacto-table__row {
-  padding: .75rem;
-  border-radius: .5rem;
-  background-color: #fff;
-  border: 1px solid #e5e7eb;
-  transition: all .2s;
-}
-
-.contacto-table__row:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
-}
-
-.contacto-index {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: #6b7280;
-  font-size: .9rem;
-}
-
-.btn-outline-danger {
-  border-color: #fca5a5;
-  color: #b91c1c;
-  background: #fff;
-  padding: .35rem .65rem;
-  font-size: .8rem;
-  transition: all .2s;
-}
-
-.btn-outline-danger:hover {
-  background-color: #fef2f2;
-  border-color: #f87171;
-  color: #991b1b;
-}
-
-@media (max-width: 991px) {
-  .contacto-table__row {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
-  }
-
-  .contacto-index {
-    padding-bottom: .5rem;
-    border-bottom: 1px solid #e2e8f0;
-    margin-bottom: .25rem;
-    font-size: 1rem;
-    color: #3b82f6;
-  }
-
-  .form-label {
-    font-size: .75rem;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    color: #64748b;
-    font-weight: 600;
-  }
-
-  .btn-outline-danger {
-    margin-top: .5rem;
-    padding: .5rem 1rem;
-  }
-}
-    .insc-lead {
-    background: #f9fafb;
-    }
-    .insc-lead__top {
-    display: flex;
-    justify-content: space-between;
-    gap: .5rem;
-    align-items: center;
-    margin-bottom: .35rem;
-    }
-    .insc-lead__name {
-    font-weight: 600;
-    color: #111827;
-    }
-    .insc-lead__meta {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    font-size: .7rem;
-    }
-
-    .pagos-table {
-    display: flex;
-    flex-direction: column;
-    gap: .4rem;
-    }
-    .pagos-head {
-    display: grid;
-    grid-template-columns: 40px 170px 150px 40px;
-    gap: .5rem;
-    font-size: .7rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    }
-    .pagos-row {
-    display: grid;
-    grid-template-columns: 40px 170px 150px 40px;
-    gap: .5rem;
-    align-items: center;
-    }
-    .pagos-row .form-control-sm {
-    height: 30px;
-    font-size: .75rem;
-    }
-    .idx {
-    font-weight: 600;
-    color: #6b7280;
-    font-size: .75rem;
-    }
-
-    @media (max-width: 768px) {
-    .insc-head {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .pagos-head,
-    .pagos-row {
-        grid-template-columns: 1fr;
-    }
-    .insc-section {
-        padding: .75rem .65rem;
-    }
-    }
-
-    .insc-amount-summary {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    }
-
-    .amount-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: .75rem;
-    }
-
-    .amount-item {
-    display: flex;
-    flex-direction: column;
-    gap: .25rem;
-    }
-
-    .amount-label {
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #6b7280;
-    font-weight: 500;
-    }
-
-    .amount-value {
-    font-size: 1rem;
-    font-weight: 600;
-    }
-
-    .amount-original {
-    color: #0f172a;
-    }
-
-    .amount-discount {
-    color: #b91c1c;
-    }
-
-    .amount-final-box {
-    background: #ecfdf3;
-    border: 1px solid #bbf7d0;
-    border-radius: .5rem;
-    padding: .4rem .6rem;
-    }
-
-    .amount-final {
-    color: #166534;
-    font-size: 1.05rem;
-    }
-
-    .form-switch { position: relative; width: 42px; height: 24px; display: inline-block; }
-    .form-switch input { display: none; }
-    .form-switch span {
-      position: absolute; inset: 0; background: #e5e7eb; border-radius: 9999px; transition: .2s;
-    }
-    .form-switch span::after {
-      content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
-      position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
-    }
-    .form-switch input:checked + span { background: #3b82f6; }
-    .form-switch input:checked + span::after { left: 21px; }
-
-  .upload-zone {
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 1.5rem;
-    background-color: #f8fafc;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-    min-height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .upload-zone:hover {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
-  }
-
-  .upload-zone--filled {
-    border-style: solid;
-    border-color: #10b981;
-    background-color: #f0fdf4;
-    cursor: default;
-  }
-
-  .upload-zone__empty {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .upload-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    background-color: #e2e8f0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    font-size: 1.2rem;
-    margin-bottom: 4px;
-  }
-
-  .upload-zone:hover .upload-icon-wrapper {
-    background-color: #dbeafe;
-    color: #2563eb;
-  }
-
-  .upload-text {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #334155;
-  }
-
-  .upload-hint {
-    font-size: 0.75rem;
-    color: #94a3b8;
-  }
-
-  .upload-zone__file {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .file-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    overflow: hidden;
-  }
-
-  .file-icon {
-    font-size: 2rem;
-    color: #10b981;
-  }
-
-  .file-details {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .file-name {
-    font-weight: 600;
-    color: #1e293b;
-    font-size: 0.95rem;
-  }
-
-  .file-status {
-    font-size: 0.75rem;
-    color: #10b981;
-    font-weight: 500;
-  }
-
-  .btn-remove-file {
-    background: white;
-    border: 1px solid #fee2e2;
-    color: #ef4444;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-
-  .btn-remove-file:hover {
-    background: #fecaca;
-    color: #b91c1c;
-    border-color: #fecaca;
-  }
-
-  .summary-card {
-    background-color: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  }
-
-  .summary-header {
-    background-color: #f1f5f9;
-    padding: 12px 20px;
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.95rem;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
-  .summary-body {
-    padding: 20px;
-  }
-
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    font-size: 0.95rem;
-  }
-
-  .summary-row.discount {
-    color: #16a34a;
-  }
-
-  .summary-divider {
-    height: 1px;
-    background-color: #e2e8f0;
-    margin: 16px 0;
-    border-top: 1px dashed #cbd5e1;
-    background: none;
-  }
-
-  .summary-row.total {
-    margin-bottom: 0;
-    align-items: flex-end;
-  }
-
-  .label-total {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    font-weight: 700;
-  }
-
-  .value-total {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1;
-  }
-
-  @media (max-width: 768px) {
-    .upload-zone {
-      min-height: 100px;
-      padding: 1rem;
-    }
-  }
-.insc-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1.5rem;
-  border-radius: 0.5rem 0.5rem 0 0;
-}
-
-.insc-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.program-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.35rem;
-  line-height: 1.3;
-}
-
-.program-edition {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.85rem;
-  color: #64748b;
-  background: #f1f5f9;
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-}
-
-.user-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.user-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #334155;
-  max-width: 100%;
-}
-
-.user-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background-color: #cbd5e1;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 0.7rem;
-}
-
-.profile-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.profile-badge.is-student {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
-}
-
-.profile-badge.is-pro {
-  background-color: #f1f5f9;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
-}
-
-.insc-price-box {
-  text-align: right;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  min-width: 140px;
-  flex-shrink: 0;
-}
-
-.price-label {
-  display: block;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #166534;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
-}
-
-.price-amount {
-  font-weight: 800;
-  color: #15803d;
-  line-height: 1;
-}
-
-.price-amount .currency {
-  font-size: 1rem;
-  vertical-align: top;
-  margin-right: 2px;
-}
-
-.price-amount .value {
-  font-size: 1.5rem;
-}
-
-@media (max-width: 576px) {
-  .insc-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .insc-price-box {
-    text-align: left;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-  }
-}
-/* Estilos para las pestañas tipo Bootstrap */
-.nav-tabs .nav-link {
-  color: #6c757d;
-  cursor: pointer;
-  border: none;
-  border-bottom: 3px solid transparent;
-  padding-bottom: 0.8rem;
-}
-
-.nav-tabs .nav-link.active {
-  color: #0d6efd; /* Color primario */
-  background-color: transparent;
-  border-color: transparent;
-  border-bottom-color: #0d6efd;
-  font-weight: 600;
-}
-
-.nav-tabs .nav-link:hover:not(.active) {
-  border-color: transparent;
-  color: #495057;
-}
-
-/* Scroll para la lista de ediciones si es muy larga */
-.editions-scroll-container {
-  max-height: 60vh; /* Ajusta esto según el alto de tu pantalla */
-  overflow-y: auto;
-  padding-right: 5px; /* Espacio para scrollbar */
-}
-
-/* Animación suave al cambiar tabs */
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Estilo para scrollbar bonito (opcional) */
-.editions-scroll-container::-webkit-scrollbar {
-  width: 6px;
-}
-.editions-scroll-container::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 4px;
-}
-.avatar-circle {
-  width: 24px;
-  height: 24px;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-.table-hover tbody tr:hover {
-  background-color: #f8fafc;
-}
-</style>
