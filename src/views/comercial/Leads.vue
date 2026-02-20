@@ -369,9 +369,13 @@
     <div class="px-4 py-3">
 
       <div class="row g-3 mb-4">
-        <div class="col-md-6">
+        <div class="col-md-3">
           <label class="exec-label">Búsqueda General</label>
           <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Nombre, teléfono..." @keyup.enter="applyFilters" />
+        </div>
+        <div class="col-md-3">
+          <label class="exec-label text-primary">Ordenar resultados por</label>
+          <SearchSelect v-model="filters.order_by" :items="filtroOrden" label-field="description" value-field="value" placeholder="Seleccionar orden..." class="exec-select-light w-100" />
         </div>
         <div class="col-md-3" v-if="!isComercial">
           <label class="exec-label">Asesor Asignado</label>
@@ -394,21 +398,25 @@
           <div class="col-md-3 col-6"><label class="exec-label">Medio de Contacto</label><MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Estrategia</label><MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Palabra Clave</label><MultiSelect v-model="filters.word_ids" :items="mktWordsCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
-          <div class="col-md-3 col-6">
-            <label class="exec-label">Origen Web</label>
-            <select class="exec-select-light w-100" v-model="filters.web">
-              <option :value="null">Todos</option>
-              <option value="Y">Sí (Web)</option>
-              <option value="N">No</option>
-            </select>
+<div class="col-md-3 col-6">
+            <label class="exec-label mb-2">Origen Web</label>
+            <div class="d-flex align-items-center gap-2">
+              <label class="exec-switch">
+                <input type="checkbox" v-model="filters.web" true-value="Y" :false-value="null" />
+                <span></span>
+              </label>
+              <span class="x-small text-muted fw-600">{{ filters.web === 'Y' ? 'SÍ ' : 'TODOS' }}</span>
+            </div>
           </div>
           <div class="col-md-3 col-6">
-            <label class="exec-label">Es B2B</label>
-            <select class="exec-select-light w-100" v-model="filters.b2b">
-              <option :value="null">Todos</option>
-              <option value="Y">Sí (Empresas)</option>
-              <option value="N">No</option>
-            </select>
+            <label class="exec-label mb-2">Es B2B</label>
+            <div class="d-flex align-items-center gap-2">
+              <label class="exec-switch">
+                <input type="checkbox" v-model="filters.b2b" true-value="Y" :false-value="null" />
+                <span></span>
+              </label>
+              <span class="x-small text-muted fw-600">{{ filters.b2b === 'Y' ? 'SÍ ' : 'TODOS' }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -439,9 +447,10 @@
       <div class="exec-fieldset">
         <h6 class="fieldset-title" style="color: var(--blue-600);">Filtros Financieros y Matrícula</h6>
         <div class="row g-3">
+          
           <div class="col-md-3 col-6"><label class="exec-label">Estado FICO (Deuda)</label><MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Perfil de Precio</label><MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="Todos..." /></div>
-          <div class="col-md-3 col-6"><label class="exec-label">Moneda</label><MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="abbreviation" value-key="id" placeholder="Todas..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Moneda</label><MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Mod. Inscripción</label><MultiSelect v-model="filters.inscription_modality_ids" :items="filtroInscriptionModality" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Estado Cuotas</label><MultiSelect v-model="filters.installment_status_ids" :items="filtroPaymentStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Método de Pago</label><MultiSelect v-model="filters.payment_method_ids" :items="filtroPaymentMethod" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -1262,7 +1271,7 @@ const filters = reactive({
   estado: null,
   web: null,
   b2b: null,
-
+order_by: 0,
   // Ahora todos los MultiSelect guardan [{value, label}]
   owner_user_ids: [],
   status_lead_ids: [],
@@ -1313,10 +1322,36 @@ const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
 const filtroCalling = ref(catalog.options('we_calling') || [])
 const filtroMedios = ref(catalog.options('we_social_media') || []) // Ojo: we_medium_contact
 const filtroPaises = ref(catalog.options('we_country') || [])   // Ojo: we_code_country
-const filtroFicoStatus = ref(catalog.options('we_fico_status') || catalog.options('we_enrollment_status') || [])
+const filtroFicoStatus = ref(catalog.options('we_enrollment_status'))
 const filtroProfile = ref(catalog.options('we_profile') || [])
-const filtroCurrency = ref(catalog.options('we_currency') || [])
-const filtroInscriptionModality = ref(catalog.options('we_inscription_modality') || [])
+
+const filtroOrden = [
+  { value: 0, description: 'Fecha de Registro (Más recientes)' },
+  { value: 1, description: 'Fecha Inicio Edición (Próximos)' },
+  { value: 2, description: 'Fecha de Pago (Próximos)' }
+]
+
+const filtroCurrency = ref(
+  catalog.options('we_currency', {
+    mapItem: x => ({
+      id: x.id,
+      description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
+      alias: x.alias,
+      raw: {
+        code: x.code ?? x.abbreviation,
+        symbol: x.symbol ?? x.prefix,
+        minorUnit: x.minorUnit ?? Number(x.precision ?? 2),
+        locale: x.locale ?? (x.abbreviation === 'USD' ? 'en-US' : 'es-PE'),
+        decimal: x.decimal ?? '.',
+        thousands: x.thousands ?? ',',
+        position: x.position ?? (x.suffix ? 'suffix' : 'prefix'),
+        allowNegative: x.allowNegative ?? false,
+        allowZero: x.allowZero ?? true,
+      }
+    })
+  })
+)
+const filtroInscriptionModality = ref(catalog.options('we_insc_modality') || [])
 const filtroPaymentStatus = ref(catalog.options('we_payment_status') || [])
 const filtroPaymentMethod = ref(catalog.options('we_payment_method') || [])
 // Reutilizamos we_payment_status para settlement si comparten estados (pagado, pendiente, anulado)
@@ -1688,7 +1723,8 @@ function rebuildChips() {
   if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
   if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
   if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
-
+if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio Edición' })
+  if (filters.order_by === 2) chips.push({ key: 'order_by', text: 'Orden: Fecha Pago' })
   if (filters.rangoFechas?.start)
     chips.push({ key: 'rangoFechas', label: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
   if (filters.pay_date_from)
@@ -1824,7 +1860,7 @@ function cancelPress() {
 function clearFilters(reload = true) {
   Object.assign(filters, {
     q: '', program_text: '', estado: null, web: null, b2b: null,
-    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],
+    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
     word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
@@ -1837,7 +1873,7 @@ function clearFilters(reload = true) {
   })
 
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
-
+else if (key === 'order_by') filters.order_by = 0
   if (reload) {
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_filter_state_v1')

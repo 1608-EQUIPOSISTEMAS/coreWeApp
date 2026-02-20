@@ -103,45 +103,46 @@
                 @change="onProgramaTypeChange"
               />
             </div>
-
-            <div
+<div
               class="col-6 col-md-4"
               v-if="form.category_alias &&
                 (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
                 (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))"
             >
-              <label class="exec-label">
-                Producto / Programa <span class="c-red">*</span>
+              <label class="exec-label">Producto / Programa <span class="c-red">*</span></label>
+              
+              <div class="d-flex gap-2">
+                <SearchSelect
+                  v-model="form.program_version_id"
+                  mode="remote"
+                  :fetcher="q => programService.programVersionCaller({ q,
+                    cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
+                    cat_model_modality: !form.program_modality_alias ? null : programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
+                  })"
+                  label-field="abbreviation"
+                  sublabel-field="version_code"
+                  value-field="program_version_id"
+                  :viewOpen="6"
+                  :model-label="form.program_label"
+                  placeholder="Buscar programa…"
+                  :minChars="0"
+                  :cache="false"
+                  class="w-100"
+                  @change="onProgramaChange"
+                />
+                
                 <button
                   v-if="form.program_version_id"
                   type="button"
-                  class="btn-icon btn-icon-sm ms-1"
+                  class="btn-exec btn-exec-outline px-0"
+                  style="height: 38px; width: 38px; flex-shrink: 0;"
                   @click="openProgramVersionDetail()"
                   title="Ver detalles del programa"
                 >
-                  <i class="fa-solid fa-circle-info"></i>
+                  <i class="fa-solid fa-circle-info" style="color: var(--teal-600, #12274e);"></i>
                 </button>
-              </label>
-              <SearchSelect
-                v-model="form.program_version_id"
-                mode="remote"
-                :fetcher="q => programService.programVersionCaller({ q,
-                  cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
-                  cat_model_modality: !form.program_modality_alias ? null : programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
-                })"
-                label-field="abbreviation"
-                sublabel-field="version_code"
-                value-field="program_version_id"
-                :viewOpen="6"
-                :model-label="form.program_label"
-                placeholder="Buscar programa…"
-                :minChars="0"
-                :cache="false"
-                class="exec-select-light w-100"
-                @change="onProgramaChange"
-              />
+              </div>
             </div>
-
             <div
               class="col-12 col-lg-3"
               v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))"

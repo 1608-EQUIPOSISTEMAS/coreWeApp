@@ -1,7 +1,6 @@
 <template>
   <div class="exec-shell">
 
-    <!-- ══════════════ MASTHEAD ══════════════ -->
     <header class="exec-masthead">
       <div class="masthead-inner">
         <div class="masthead-brand">
@@ -24,7 +23,6 @@
         </div>
       </div>
 
-      <!-- Filtros integrados en masthead -->
       <div class="masthead-filters">
         <div class="filter-group">
           <label class="filter-label">AÑO</label>
@@ -54,7 +52,6 @@
 
         <div class="filter-spacer"></div>
 
-        <!-- KPIs en línea (solo en tabla) -->
         <transition name="slide-fade">
           <div class="masthead-kpis" v-if="!isDashboard && !isLoading">
             <div class="inline-kpi">
@@ -84,154 +81,182 @@
       </div>
     </header>
 
-    <!-- ══════════════ CUERPO ══════════════ -->
     <main class="exec-body">
 
-      <!-- Estado: Cargando -->
       <div v-if="isLoading" class="exec-loader">
         <div class="loader-ring"></div>
         <p class="loader-text">Procesando datos del período…</p>
       </div>
 
-      <!-- ── VISTA TABLA ── -->
       <div v-else-if="!isDashboard" class="view-table">
         <div class="table-shell">
-          <table class="exec-table">
-            <thead>
-              <!-- FILA 1: Grupos principales -->
-              <tr class="thead-group">
-                <th class="th-cat" rowspan="3">Cat.</th>
-                <th colspan="5" class="th-group th-group-a" rowspan="2">DATOS DEL PROGRAMA</th>
-                <th colspan="6" class="th-group th-group-b" rowspan="2">OBJETIVOS &amp; RESULTADOS</th>
-                <th :colspan="currentDynamicColumnsFlat.length || 1" class="th-group th-group-c">
-                  {{ currentGroupTitle }}
-                </th>
-              </tr>
-
-              <!-- FILA 2: Sub-grupos (MARKETING / ESTRATEGIAS / OTROS, o "General") -->
-              <tr class="thead-sub-group">
-                <template v-if="currentDynamicColumnGroups.length > 0">
-                  <th
-                    v-for="g in currentDynamicColumnGroups"
-                    :key="g.groupName"
-                    :colspan="g.colspan"
-                    class="th-subgroup"
-                    :class="subgroupClass(g.groupName)"
-                  >
-                    {{ selectedMetricGroup === 'origen' ? g.groupName : 'Detalle General' }}
+          <div class="table-responsive-custom">
+            <table class="exec-table">
+              <thead>
+                <tr class="thead-group">
+                  <th class="th-cat" rowspan="3">
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 gap-2">
+                      <span>CAT.</span>
+                      <ColumnFilterDropdown 
+                        column-label="Categoría" 
+                        :all-items="processedData" 
+                        :value-extractor="item => item.catg" 
+                        v-model="columnFilters.catg" 
+                      />
+                    </div>
                   </th>
-                </template>
-                <th v-else class="th-subgroup th-subgroup-general">—</th>
-              </tr>
+                  <th colspan="6" class="th-group th-group-a" rowspan="2">DATOS DEL PROGRAMA</th>
+                  <th colspan="6" class="th-group th-group-b" rowspan="2">OBJETIVOS &amp; RESULTADOS</th>
+                  <th :colspan="currentDynamicColumnsFlat.length || 1" class="th-group th-group-c">
+                    {{ currentGroupTitle }}
+                  </th>
+                </tr>
 
-              <!-- FILA 3: Columnas individuales -->
-              <tr class="thead-sub">
-                <th class="ts ts-a text-center">LÍNEA</th>
-                <th class="ts ts-a">PROGRAMA</th>
-                <th class="ts ts-a text-center">TIPO</th>
-                <th class="ts ts-a text-center">INICIO</th>
-                <th class="ts ts-a text-center">ED.</th>
+                <tr class="thead-sub-group">
+                  <template v-if="currentDynamicColumnGroups.length > 0">
+                    <th
+                      v-for="g in currentDynamicColumnGroups"
+                      :key="g.groupName"
+                      :colspan="g.colspan"
+                      class="th-subgroup"
+                      :class="subgroupClass(g.groupName)"
+                    >
+                      {{ selectedMetricGroup === 'origen' ? g.groupName : 'Detalle General' }}
+                    </th>
+                  </template>
+                  <th v-else class="th-subgroup th-subgroup-general">—</th>
+                </tr>
 
-                <th class="ts ts-b text-right">META S/.</th>
-                <th class="ts ts-b text-right">VENTA S/.</th>
-                <th class="ts ts-b text-center" style="border-right: 1px solid #d1fae5;">LOGRO M.</th>
-                <th class="ts ts-b text-center">META VAC.</th>
-                <th class="ts ts-b text-center">INSCRITOS</th>
-                <th class="ts ts-b text-center">LOGRO V.</th>
+                <tr class="thead-sub">
+                  <th class="ts ts-a text-center" style="width: 40px;">#</th>
+                  <th class="ts ts-a">
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                      <span>LÍNEA</span>
+                      <ColumnFilterDropdown column-label="Línea" :all-items="processedData" :value-extractor="item => item.linea" v-model="columnFilters.linea" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a">
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                      <span>PROGRAMA</span>
+                      <ColumnFilterDropdown column-label="Programa" :all-items="processedData" :value-extractor="item => item.programa" v-model="columnFilters.programa" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a">
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                      <span>TIPO</span>
+                      <ColumnFilterDropdown column-label="Tipo" :all-items="processedData" :value-extractor="item => item.tipo" v-model="columnFilters.tipo" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a text-center">INICIO</th>
+                  <th class="ts ts-a">
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                      <span>ED.</span>
+                      <ColumnFilterDropdown column-label="Edición" :all-items="processedData" :value-extractor="item => item.edicion" v-model="columnFilters.edicion" />
+                    </div>
+                  </th>
 
-                <th
-                  v-for="col in currentDynamicColumnsFlat"
-                  :key="col.key"
-                  class="ts ts-c text-center"
+                  <th class="ts ts-b text-right">META S/.</th>
+                  <th class="ts ts-b text-right">VENTA S/.</th>
+                  <th class="ts ts-b text-center" style="border-right: 1px solid #d1fae5;">LOGRO M.</th>
+                  <th class="ts ts-b text-center">META VAC.</th>
+                  <th class="ts ts-b text-center">INSCRITOS</th>
+                  <th class="ts ts-b text-center">LOGRO V.</th>
+
+                  <th
+                    v-for="col in currentDynamicColumnsFlat"
+                    :key="col.key"
+                    class="ts ts-c text-center"
+                  >
+                    <span class="col-dyn-name">{{ col.displayName }}</span>
+                    <span class="col-dyn-sub"># / %</span>
+                  </th>
+                  <th v-if="currentDynamicColumnsFlat.length === 0" class="ts ts-c text-center text-muted">—</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  v-for="(row, i) in filteredProcessedData"
+                  :key="i"
+                  class="tbody-row"
+                  :class="{ 'row-alt': i % 2 === 0 }"
                 >
-                  <span class="col-dyn-name">{{ col.displayName }}</span>
-                  <span class="col-dyn-sub"># / %</span>
-                </th>
-                <th v-if="currentDynamicColumnsFlat.length === 0" class="ts ts-c text-center text-muted">—</th>
-              </tr>
-            </thead>
+                  <td class="td-cat">
+                    <span class="pill" :class="pillClass(row.catg)">{{ row.catg }}</span>
+                  </td>
+                  <td class="td-a text-center text-muted fw-bold" style="font-size: 11px;">
+                  {{ i + 1 }}
+                </td>
+                  <td class="td-a text-center text-mono text-muted">{{ row.linea }}</td>
+                  <td class="td-a td-prog" :title="row.programa">{{ row.programa }}</td>
+                  <td class="td-a text-center">
+                    <span class="tipo-tag">{{ row.tipo }}</span>
+                  </td>
+                  <td class="td-a text-center text-mono text-muted small">{{ formatDate(row.fecha) }}</td>
+                  <td class="td-a text-center text-mono text-muted small">{{ row.edicion }}</td>
 
-            <tbody>
-              <tr
-                v-for="(row, i) in processedData"
-                :key="i"
-                class="tbody-row"
-                :class="{ 'row-alt': i % 2 === 0 }"
-              >
-                <td class="td-cat">
-                  <span class="pill" :class="pillClass(row.catg)">{{ row.catg }}</span>
-                </td>
-                <td class="td-a text-center text-mono text-muted">{{ row.linea }}</td>
-                <td class="td-a td-prog" :title="row.programa">{{ row.programa }}</td>
-                <td class="td-a text-center">
-                  <span class="tipo-tag">{{ row.tipo }}</span>
-                </td>
-                <td class="td-a text-center text-mono text-muted small">{{ formatDate(row.fecha) }}</td>
-                <td class="td-a text-center text-mono text-muted small">{{ row.edicion }}</td>
+                  <td class="td-b text-right text-muted small">{{ formatMoney(row.objetivo) }}</td>
+                  <td class="td-b text-right fw-600">{{ formatMoney(row.venta) }}</td>
+                  <td class="td-b text-center" style="border-right: 1px solid #d5f5e0;">
+                    <span class="logro-badge" :class="logroBadgeClass(calcPct(row.venta, row.objetivo))">
+                      {{ calcPct(row.venta, row.objetivo) }}%
+                    </span>
+                  </td>
+                  <td class="td-b text-center text-muted small">{{ row.objetivo_vacantes }}</td>
+                  <td class="td-b text-center fw-600" style="color: #0f766e;">{{ row.venta_vacantes }}</td>
+                  <td class="td-b text-center">
+                    <span class="logro-badge" :class="logroBadgeClass(calcPct(row.venta_vacantes, row.objetivo_vacantes))">
+                      {{ calcPct(row.venta_vacantes, row.objetivo_vacantes) }}%
+                    </span>
+                  </td>
 
-                <td class="td-b text-right text-muted small">{{ formatMoney(row.objetivo) }}</td>
-                <td class="td-b text-right fw-600">{{ formatMoney(row.venta) }}</td>
-                <td class="td-b text-center" style="border-right: 1px solid #d5f5e0;">
-                  <span class="logro-badge" :class="logroBadgeClass(calcPct(row.venta, row.objetivo))">
-                    {{ calcPct(row.venta, row.objetivo) }}%
-                  </span>
-                </td>
-                <td class="td-b text-center text-muted small">{{ row.objetivo_vacantes }}</td>
-                <td class="td-b text-center fw-600" style="color: #0f766e;">{{ row.venta_vacantes }}</td>
-                <td class="td-b text-center">
-                  <span class="logro-badge" :class="logroBadgeClass(calcPct(row.venta_vacantes, row.objetivo_vacantes))">
-                    {{ calcPct(row.venta_vacantes, row.objetivo_vacantes) }}%
-                  </span>
-                </td>
+                  <td
+                    v-for="col in currentDynamicColumnsFlat"
+                    :key="col.key"
+                    class="td-c text-center"
+                    :class="getDynBgClass(row._raw, currentGroupField, col.originalName)"
+                  >
+                    <span class="dyn-count">{{ getDynamicValue(row._raw, currentGroupField, col.originalName, 'cant') }}</span>
+                    <span class="dyn-pct">{{ getDynamicValue(row._raw, currentGroupField, col.originalName, 'pct') }}%</span>
+                  </td>
+                  <td v-if="currentDynamicColumnsFlat.length === 0" class="td-c text-center text-muted">—</td>
+                </tr>
+              </tbody>
 
-                <td
-                  v-for="col in currentDynamicColumnsFlat"
-                  :key="col.key"
-                  class="td-c text-center"
-                  :class="getDynBgClass(row._raw, currentGroupField, col.originalName)"
-                >
-                  <span class="dyn-count">{{ getDynamicValue(row._raw, currentGroupField, col.originalName, 'cant') }}</span>
-                  <span class="dyn-pct">{{ getDynamicValue(row._raw, currentGroupField, col.originalName, 'pct') }}%</span>
-                </td>
-                <td v-if="currentDynamicColumnsFlat.length === 0" class="td-c text-center text-muted">—</td>
-              </tr>
-            </tbody>
-
-            <tfoot>
-              <tr class="tfoot-row">
-                <td colspan="6" class="tfoot-label">TOTALES CONSOLIDADOS</td>
-                <td class="text-right fw-600 text-muted">{{ formatMoney(totalObjetivo) }}</td>
-                <td class="text-right fw-700 accent-text">{{ formatMoney(totalVenta) }}</td>
-                <td class="text-center" style="border-right: 1px solid var(--navy-700);">
-                  <span class="logro-badge logro-lg" :class="logroBadgeClass(calcPct(totalVenta, totalObjetivo))">
-                    {{ calcPct(totalVenta, totalObjetivo) }}%
-                  </span>
-                </td>
-                <td class="text-center fw-600 text-muted">{{ totalObjetivoVacantes }}</td>
-                <td class="text-center fw-700 accent-text">{{ totalVentaVacantes }}</td>
-                <td class="text-center">
-                  <span class="logro-badge logro-lg" :class="logroBadgeClass(calcPct(totalVentaVacantes, totalObjetivoVacantes))">
-                    {{ calcPct(totalVentaVacantes, totalObjetivoVacantes) }}%
-                  </span>
-                </td>
-                <td
-                  v-for="col in currentDynamicColumnsFlat"
-                  :key="`t-${col.key}`"
-                  class="text-center fw-600"
-                >
-                  {{ getDynamicTotal(currentGroupField, col.originalName) }}
-                </td>
-                <td v-if="currentDynamicColumnsFlat.length === 0" class="text-center">—</td>
-              </tr>
-            </tfoot>
-          </table>
+              <tfoot>
+                <tr class="tfoot-row">
+                  <td colspan="7" class="tfoot-label">TOTALES CONSOLIDADOS (FILTRADOS)</td>
+                  <td class="text-right fw-600 text-muted">{{ formatMoney(totalObjetivo) }}</td>
+                  <td class="text-right fw-700 accent-text">{{ formatMoney(totalVenta) }}</td>
+                  <td class="text-center" style="border-right: 1px solid var(--navy-700);">
+                    <span class="logro-badge logro-lg" :class="logroBadgeClass(calcPct(totalVenta, totalObjetivo))">
+                      {{ calcPct(totalVenta, totalObjetivo) }}%
+                    </span>
+                  </td>
+                  <td class="text-center fw-600 text-muted">{{ totalObjetivoVacantes }}</td>
+                  <td class="text-center fw-700 accent-text">{{ totalVentaVacantes }}</td>
+                  <td class="text-center">
+                    <span class="logro-badge logro-lg" :class="logroBadgeClass(calcPct(totalVentaVacantes, totalObjetivoVacantes))">
+                      {{ calcPct(totalVentaVacantes, totalObjetivoVacantes) }}%
+                    </span>
+                  </td>
+                  <td
+                    v-for="col in currentDynamicColumnsFlat"
+                    :key="`t-${col.key}`"
+                    class="text-center fw-600"
+                  >
+                    {{ getDynamicTotal(currentGroupField, col.originalName) }}
+                  </td>
+                  <td v-if="currentDynamicColumnsFlat.length === 0" class="text-center">—</td>
+                </tr>
+              </tfoot>
+            </table>
+            </div>
         </div>
       </div>
 
-      <!-- ── VISTA DASHBOARD ── -->
       <div v-else class="view-dashboard">
 
-        <!-- KPI Strip -->
         <div class="kpi-strip">
           <div class="kpi-card">
             <div class="kpi-card-header">
@@ -260,7 +285,7 @@
               <span class="kpi-card-label">PROGRAMAS ACTIVOS</span>
               <div class="kpi-indicator ind-slate"></div>
             </div>
-            <div class="kpi-card-value accent-text">{{ processedData.length }}</div>
+            <div class="kpi-card-value accent-text">{{ filteredProcessedData.length }}</div>
             <div class="kpi-card-sub">Registros del período seleccionado</div>
           </div>
 
@@ -330,7 +355,6 @@
           </div>
         </div>
 
-        <!-- Matriz BCG -->
         <div class="chart-panel chart-panel-full">
           <div class="chart-panel-header">
             <div>
@@ -351,14 +375,15 @@
               <span class="qlab qlab-bl">PERROS</span>
               <span class="qlab qlab-br">VACAS</span>
             </div>
-            <Scatter :data="bcgChartData" :options="bcgChartOptions" />
+            <div class="chart-area">
+              <Scatter :data="bcgChartData" :options="bcgChartOptions" />
+            </div>
           </div>
         </div>
 
       </div>
     </main>
 
-    <!-- Footer de estado -->
     <footer class="exec-footer">
       <span>Período: <strong>{{ monthName }} {{ filters.year }}</strong></span>
       <span class="footer-sep">·</span>
@@ -372,15 +397,15 @@
 
   </div>
 </template>
-
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { ServiceKeys } from '@/services'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
 import { Bar, Doughnut, Scatter } from 'vue-chartjs'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue' // <-- IMPORTANTE
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
 
@@ -394,10 +419,19 @@ const selectedMetricGroup = ref('origen')
 const filters = ref({ year: 2026, month: 1 })
 const rawData = ref([])
 
+// === ESTADO DE FILTROS DE COLUMNA ===
+const columnFilters = reactive({
+  catg: [],
+  linea: [],
+  programa: [],
+  tipo: [],
+  edicion: []
+})
+
 const metricGroupDefinitions = {
-  clientes:  { title: 'CLIENTES',         field: 'breakdown_clientes' },
-  origen:    { title: 'ORIGEN / VÍAS',    field: 'breakdown_origen' },
-  asesores:  { title: 'ASESORES',         field: 'breakdown_asesores' },
+  clientes:  { title: 'CLIENTES',        field: 'breakdown_clientes' },
+  origen:    { title: 'ORIGEN / VÍAS',   field: 'breakdown_origen' },
+  asesores:  { title: 'ASESORES',        field: 'breakdown_asesores' },
   comercial: { title: 'ESTADO COMERCIAL', field: 'breakdown_estados' }
 }
 
@@ -407,6 +441,10 @@ onMounted(() => loadData())
 
 async function loadData() {
   isLoading.value = true
+  
+  // Limpiar filtros rápidos de columna al cambiar de mes/año
+  Object.keys(columnFilters).forEach(k => columnFilters[k] = [])
+
   try {
     const payload = { year: filters.value.year, month_num: filters.value.month }
     const response = await dashboardService.programGoalsList(payload)
@@ -423,11 +461,7 @@ const monthName = computed(() => months[filters.value.month - 1])
 
 // ══════════════════════════════════════════════════════════════════
 // LÓGICA DE COLUMNAS AGRUPADAS
-// Para "breakdown_origen" el backend incluye el campo "group" en cada
-// ítem del JSON: { group: "MARKETING"|"ESTRATEGIAS"|"OTROS", name, count }
-// Para otras dimensiones el grupo se asume "General".
 // ══════════════════════════════════════════════════════════════════
-
 const currentDynamicColumnGroups = computed(() => {
   const field = currentGroupField.value
   const groupsMap = {}
@@ -435,7 +469,6 @@ const currentDynamicColumnGroups = computed(() => {
   rawData.value.forEach(row => {
     ;(row[field] || []).forEach(item => {
       if (!item.name) return
-      // En breakdown_origen el backend envía "group"; en los demás usamos "General"
       const groupName = item.group || 'General'
       if (!groupsMap[groupName]) groupsMap[groupName] = new Set()
       groupsMap[groupName].add(item.name)
@@ -453,7 +486,6 @@ const currentDynamicColumnGroups = computed(() => {
     result.push({ groupName, colspan: sortedNames.length, columns: sortedNames })
   }
 
-  // Ordenar grupos: MARKETING → ESTRATEGIAS → OTROS para origen; alfabético para el resto
   if (field === 'breakdown_origen') {
     const order = { 'MARKETING': 1, 'ESTRATEGIAS': 2, 'OTROS': 3 }
     result.sort((a, b) => (order[a.groupName] || 99) - (order[b.groupName] || 99))
@@ -464,32 +496,27 @@ const currentDynamicColumnGroups = computed(() => {
   return result
 })
 
-// Lista plana de columnas respetando el orden de los grupos
 const currentDynamicColumnsFlat = computed(() =>
   currentDynamicColumnGroups.value.flatMap(g => g.columns)
 )
 
-// Clase visual para cada sub-grupo en el encabezado
 function subgroupClass(groupName) {
-  const map = {
-    'MARKETING':   'th-subgroup-marketing',
-    'ESTRATEGIAS': 'th-subgroup-estrategias',
-    'OTROS':       'th-subgroup-otros',
-  }
+  const map = { 'MARKETING': 'th-subgroup-marketing', 'ESTRATEGIAS': 'th-subgroup-estrategias', 'OTROS': 'th-subgroup-otros' }
   return map[groupName] || 'th-subgroup-general'
 }
 
 // ══════════════════════════════════════════════════════════════════
-// DATOS PROCESADOS
+// DATOS PROCESADOS Y FILTRADOS
 // ══════════════════════════════════════════════════════════════════
 
+// 1. Data Mapeada base
 const processedData = computed(() => rawData.value.map(item => ({
   catg: item.categoria || 'GEN',
   linea: item.linea || '—',
-  programa: item.programa,
-  tipo: item.tipo,
+  programa: item.programa || '—',
+  tipo: item.tipo || '—',
   fecha: item.fecha_inicio || item.inicio,
-  edicion: item.codigo_edicion || item.codigo,
+  edicion: item.codigo_edicion || item.codigo || '—',
   objetivo: item.meta_monto,
   venta: item.venta_monto,
   objetivo_vacantes: item.meta_vacantes || 0,
@@ -497,14 +524,27 @@ const processedData = computed(() => rawData.value.map(item => ({
   _raw: item
 })))
 
-const totalObjetivo         = computed(() => processedData.value.reduce((s, r) => s + (r.objetivo || 0), 0))
-const totalVenta            = computed(() => processedData.value.reduce((s, r) => s + (r.venta || 0), 0))
-const totalObjetivoVacantes = computed(() => processedData.value.reduce((s, r) => s + (r.objetivo_vacantes || 0), 0))
-const totalVentaVacantes    = computed(() => processedData.value.reduce((s, r) => s + (r.venta_vacantes || 0), 0))
+// 2. Data Filtrada por las columnas
+const filteredProcessedData = computed(() => {
+  return processedData.value.filter(row => {
+    if (columnFilters.catg.length && !columnFilters.catg.includes(row.catg)) return false;
+    if (columnFilters.linea.length && !columnFilters.linea.includes(row.linea)) return false;
+    if (columnFilters.programa.length && !columnFilters.programa.includes(row.programa)) return false;
+    if (columnFilters.tipo.length && !columnFilters.tipo.includes(row.tipo)) return false;
+    if (columnFilters.edicion.length && !columnFilters.edicion.includes(row.edicion)) return false;
+    return true;
+  })
+})
+
+// === TODOS LOS TOTALES AHORA ESCUCHAN A 'filteredProcessedData' ===
+const totalObjetivo         = computed(() => filteredProcessedData.value.reduce((s, r) => s + (r.objetivo || 0), 0))
+const totalVenta            = computed(() => filteredProcessedData.value.reduce((s, r) => s + (r.venta || 0), 0))
+const totalObjetivoVacantes = computed(() => filteredProcessedData.value.reduce((s, r) => s + (r.objetivo_vacantes || 0), 0))
+const totalVentaVacantes    = computed(() => filteredProcessedData.value.reduce((s, r) => s + (r.venta_vacantes || 0), 0))
 
 const kpiStats = computed(() => {
   const globalPct = totalObjetivo.value > 0 ? Math.round((totalVenta.value / totalObjetivo.value) * 100) : 0
-  const sorted = [...processedData.value].sort((a, b) => b.venta - a.venta)
+  const sorted = [...filteredProcessedData.value].sort((a, b) => b.venta - a.venta)
   return {
     globalPct,
     topProgram: sorted.length ? { name: sorted[0].programa, venta: sorted[0].venta } : { name: '—', venta: 0 }
@@ -512,7 +552,7 @@ const kpiStats = computed(() => {
 })
 
 // ══════════════════════════════════════════════════════════════════
-// HELPERS
+// HELPERS DINÁMICOS
 // ══════════════════════════════════════════════════════════════════
 
 function getDynamicValue(rawRow, field, searchName, type) {
@@ -525,8 +565,8 @@ function getDynamicValue(rawRow, field, searchName, type) {
 }
 
 function getDynamicTotal(field, searchName) {
-  return rawData.value.reduce((sum, raw) => {
-    const found = (raw[field] || []).find(x => x.name === searchName)
+  return filteredProcessedData.value.reduce((sum, row) => {
+    const found = (row._raw[field] || []).find(x => x.name === searchName)
     return sum + (found ? Number(found.count) : 0)
   }, 0)
 }
@@ -538,9 +578,7 @@ function getDynBgClass(rawRow, field, searchName) {
   return ''
 }
 
-function formatMoney(v) {
-  return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(v || 0)
-}
+function formatMoney(v) { return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(v || 0) }
 function formatDate(d)      { return d ? d.split('T')[0].split('-').reverse().join('/') : '—' }
 function calcPct(v, o)      { return (!o || o === 0) ? 0 : Math.round((v / o) * 100) }
 function truncate(s, n)     { return s && s.length > n ? s.substring(0, n) + '…' : (s || '') }
@@ -553,7 +591,7 @@ function pillClass(catg) {
 
 function groupDataBy(key) {
   const grouped = {}
-  processedData.value.forEach(d => {
+  filteredProcessedData.value.forEach(d => {
     const val = d[key] || 'Sin Asignar'
     if (!grouped[val]) grouped[val] = { name: val, objetivo: 0, venta: 0, rawItems: [] }
     grouped[val].objetivo += (d.objetivo || 0)
@@ -564,7 +602,7 @@ function groupDataBy(key) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// DATOS DE GRÁFICOS
+// DATOS DE GRÁFICOS (Ahora escuchan los filtros)
 // ══════════════════════════════════════════════════════════════════
 
 const dynamicDoughnutChartData = computed(() => ({
@@ -622,8 +660,8 @@ const tipoRankingChartData = computed(() => {
 })
 
 const bcgChartData = computed(() => {
-  const avgVenta = totalVenta.value / (processedData.value.length || 1)
-  const points = processedData.value.map(d => ({
+  const avgVenta = totalVenta.value / (filteredProcessedData.value.length || 1)
+  const points = filteredProcessedData.value.map(d => ({
     x: d.venta, y: calcPct(d.venta, d.objetivo),
     programa: truncate(d.programa, 28), catg: d.catg
   }))
@@ -649,19 +687,13 @@ const baseFont = { family: 'inherit', size: 11 }
 const groupedBarOptions = {
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: baseFont } },
-    y: { grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
-  }
+  scales: { x: { grid: { display: false }, ticks: { font: baseFont } }, y: { grid: { color: '#f1f5f9' }, ticks: { font: baseFont } } }
 }
 
 const rankingBarOptions = {
   responsive: true, maintainAspectRatio: false, indexAxis: 'y',
   plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } } },
-  scales: {
-    x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } },
-    y: { grid: { display: false }, ticks: { font: baseFont } }
-  }
+  scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } }, y: { grid: { display: false }, ticks: { font: baseFont } } }
 }
 
 const doughnutOptions = {
@@ -671,18 +703,12 @@ const doughnutOptions = {
 
 const stackedBarOptions = {
   responsive: true, maintainAspectRatio: false,
-  plugins: {
-    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: baseFont } },
-    tooltip: { mode: 'index', intersect: false }
-  },
-  scales: {
-    x: { stacked: true, grid: { display: false }, ticks: { font: baseFont } },
-    y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
-  }
+  plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: baseFont } }, tooltip: { mode: 'index', intersect: false } },
+  scales: { x: { stacked: true, grid: { display: false }, ticks: { font: baseFont } }, y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } } }
 }
 
 const bcgChartOptions = computed(() => {
-  const avgVenta = totalVenta.value / (processedData.value.length || 1)
+  const avgVenta = totalVenta.value / (filteredProcessedData.value.length || 1)
   return {
     responsive: true, maintainAspectRatio: false,
     plugins: {
@@ -691,26 +717,15 @@ const bcgChartOptions = computed(() => {
         callbacks: {
           label: ctx => {
             const d = ctx.raw
-            const quad = d.x >= avgVenta && d.y >= 100 ? 'Estrella'
-              : d.x >= avgVenta ? 'Vaca'
-              : d.y >= 100      ? 'Interrogante'
-              :                   'Perro'
+            const quad = d.x >= avgVenta && d.y >= 100 ? 'Estrella' : d.x >= avgVenta ? 'Vaca' : d.y >= 100 ? 'Interrogante' : 'Perro'
             return [` ${d.programa}`, ` S/ ${new Intl.NumberFormat('es-PE').format(d.x)}`, ` Logro: ${d.y}%`, ` ▸ ${quad}`]
           }
         }
       }
     },
     scales: {
-      x: {
-        title: { display: true, text: 'Ventas (S/.) →', font: { ...baseFont, weight: 600 } },
-        grid: { color: '#f1f5f9' }, ticks: { font: baseFont }
-      },
-      y: {
-        title: { display: true, text: '% Cumplimiento →', font: { ...baseFont, weight: 600 } },
-        beginAtZero: true,
-        grid: { color: ctx => ctx.tick.value === 100 ? 'rgba(0,0,0,0.2)' : '#f1f5f9' },
-        ticks: { font: baseFont }
-      }
+      x: { title: { display: true, text: 'Ventas (S/.) →', font: { ...baseFont, weight: 600 } }, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } },
+      y: { title: { display: true, text: '% Cumplimiento →', font: { ...baseFont, weight: 600 } }, beginAtZero: true, grid: { color: ctx => ctx.tick.value === 100 ? 'rgba(0,0,0,0.2)' : '#f1f5f9' }, ticks: { font: baseFont } }
     }
   }
 })
@@ -718,48 +733,23 @@ const bcgChartOptions = computed(() => {
 
 <style scoped>
 /* ═══════════════════════════════════════════════
-   TOKENS
+   ESTRUCTURA BASE DE LA VISTA
+   (Los tokens, .btn-exec, .pill y tipografías vienen del CSS Global)
 ═══════════════════════════════════════════════ */
-:root {
-  --navy-900: #0f172a;
-  --navy-800: #1e293b;
-  --navy-700: #334155;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-100: #f1f5f9;
-  --slate-50:  #f8fafc;
-  --teal-600:  #12274e;
-  --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --red-600:   #dc2626;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--slate-50);
+  background: var(--slate-50, #f8fafc);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: var(--text-primary);
-  --teal-500: #12274e;
-  --gold-400: #fbbf24;
 }
 
 /* ═══════════════════════════════════════════════
-   MASTHEAD
+   MASTHEAD & FILTROS INLINE
 ═══════════════════════════════════════════════ */
 .exec-masthead {
-  background: var(--navy-900);
-  color: var(--white);
-  border-bottom: 1px solid var(--navy-700);
+  background: var(--navy-900, #0f172a);
+  color: var(--white, #ffffff);
+  border-bottom: 1px solid var(--navy-700, #334155);
 }
 
 .masthead-inner {
@@ -774,14 +764,15 @@ const bcgChartOptions = computed(() => {
 
 .brand-rule {
   width: 3px; height: 42px;
-  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
+  background: var(--teal-600, #12274e); /* Alineado a color marca */
+  border-radius: 2px; flex-shrink: 0;
 }
 
 .brand-eyebrow {
   font-size: 10px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--slate-400);
+  color: var(--slate-400, #94a3b8);
   font-weight: 500;
   display: block;
   margin-bottom: 3px;
@@ -792,38 +783,12 @@ const bcgChartOptions = computed(() => {
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.01em;
-  color: var(--white);
+  color: var(--white, #ffffff);
 }
 
 .masthead-actions { display: flex; gap: 10px; align-items: center; }
 
-.btn-exec {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-  transition: background 0.15s, opacity 0.15s;
-}
-
-.btn-exec-ghost {
-  background: rgba(255,255,255,0.07);
-  color: var(--slate-300);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
-
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-primary:disabled { opacity: 0.55; cursor: default; }
-
-/* Filtros */
+/* Filtros en línea del Header */
 .masthead-filters {
   display: flex;
   align-items: center;
@@ -843,7 +808,7 @@ const bcgChartOptions = computed(() => {
   font-size: 9.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--slate-400);
+  color: var(--slate-400, #94a3b8);
   font-weight: 600;
   cursor: default;
 }
@@ -852,8 +817,8 @@ const bcgChartOptions = computed(() => {
   background: transparent;
   border: none;
   border-bottom: 1px solid rgba(255,255,255,0.18);
-  color: var(--white);
-  font-family: 'IBM Plex Sans', inherit;
+  color: var(--white, #ffffff);
+  font-family: inherit;
   font-size: 12.5px;
   font-weight: 500;
   padding: 3px 0;
@@ -862,7 +827,7 @@ const bcgChartOptions = computed(() => {
   min-width: 110px;
   appearance: auto;
 }
-.exec-select option { color: var(--text-primary); background: var(--white); }
+.exec-select option { color: var(--text-primary, #0f172a); background: var(--white, #ffffff); }
 
 .filter-sep {
   width: 1px;
@@ -882,7 +847,7 @@ const bcgChartOptions = computed(() => {
   font-size: 9.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--slate-400);
+  color: var(--slate-400, #94a3b8);
   font-weight: 600;
   margin-bottom: 2px;
 }
@@ -890,13 +855,13 @@ const bcgChartOptions = computed(() => {
 .inline-kpi-value {
   font-size: 15px;
   font-weight: 700;
-  color: var(--white);
+  color: var(--white, #ffffff);
   font-variant-numeric: tabular-nums;
 }
-.inline-kpi-value.accent { color: var(--teal-500); }
+.inline-kpi-value.accent { color: #5eead4; } /* Teal más claro para resaltar en fondo oscuro */
 
 /* ═══════════════════════════════════════════════
-   BODY
+   BODY & LOADER
 ═══════════════════════════════════════════════ */
 .exec-body { flex: 1; padding: 24px 28px; }
 
@@ -911,25 +876,23 @@ const bcgChartOptions = computed(() => {
 
 .loader-ring {
   width: 40px; height: 40px;
-  border: 3px solid var(--border);
-  border-top-color: var(--teal-600);
+  border: 3px solid var(--border, #e2e8f0);
+  border-top-color: var(--teal-600, #12274e);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-.loader-text { font-size: 13px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.02em; }
+.loader-text { font-size: 13px; color: var(--text-secondary, #475569); font-weight: 500; letter-spacing: 0.02em; }
 
 /* ═══════════════════════════════════════════════
-   TABLA EJECUTIVA
+   TABLA EJECUTIVA (Compleja / Multi-nivel)
 ═══════════════════════════════════════════════ */
 .table-shell {
-  background: var(--white);
-  border: 1px solid var(--border);
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* IMPORTANTE: Dejar solo hidden en X si es necesario, pero quitamos el overflow-y oculto */
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
 .exec-table {
@@ -939,21 +902,24 @@ const bcgChartOptions = computed(() => {
   min-width: 1400px;
 }
 
+/* El thead hereda el position: sticky del CSS global, 
+   solo definimos los estilos específicos de esta tabla */
+
 .thead-group th {
   padding: 8px 10px;
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 700;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
 
 .th-cat {
-  background: var(--navy-900);
-  color: var(--slate-400);
+  background: var(--navy-900, #0f172a);
+  color: var(--slate-400, #94a3b8);
   width: 72px;
   padding-left: 14px;
-  border-right: 2px solid var(--navy-700);
+  border-right: 2px solid var(--navy-700, #334155);
 }
 
 .th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
@@ -970,40 +936,13 @@ const bcgChartOptions = computed(() => {
   text-transform: uppercase;
   font-weight: 800;
   text-align: center;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--border, #e2e8f0);
 }
 
-/* MARKETING: azul índigo */
-.th-subgroup-marketing {
-  background: #eef2ff;
-  color: #3730a3;
-  border-left: 2px solid #c7d2fe;
-  border-top: 2px solid #818cf8;
-}
-
-/* ESTRATEGIAS: ámbar dorado */
-.th-subgroup-estrategias {
-  background: #fffbeb;
-  color: #92400e;
-  border-left: 2px solid #fde68a;
-  border-top: 2px solid #f59e0b;
-}
-
-/* OTROS: gris pizarra */
-.th-subgroup-otros {
-  background: #f8fafc;
-  color: #475569;
-  border-left: 2px solid #cbd5e1;
-  border-top: 2px solid #94a3b8;
-}
-
-/* Genérico (otras dimensiones) */
-.th-subgroup-general {
-  background: #f0fdf4;
-  color: #0f766e;
-  border-left: 2px solid #bbf7d0;
-  border-top: 2px solid #6ee7b7;
-}
+.th-subgroup-marketing { background: #eef2ff; color: #3730a3; border-left: 2px solid #c7d2fe; border-top: 2px solid #818cf8; }
+.th-subgroup-estrategias { background: #fffbeb; color: #92400e; border-left: 2px solid #fde68a; border-top: 2px solid #f59e0b; }
+.th-subgroup-otros { background: #f8fafc; color: #475569; border-left: 2px solid #cbd5e1; border-top: 2px solid #94a3b8; }
+.th-subgroup-general { background: #f0fdf4; color: #0f766e; border-left: 2px solid #bbf7d0; border-top: 2px solid #6ee7b7; }
 
 .thead-sub .ts {
   padding: 7px 10px;
@@ -1011,7 +950,7 @@ const bcgChartOptions = computed(() => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 600;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--border, #e2e8f0);
 }
 
 .ts-a { background: #f0f7ff; color: #3b82f6; border-left: 1px solid #dbeafe; }
@@ -1021,6 +960,7 @@ const bcgChartOptions = computed(() => {
 .col-dyn-name { display: block; }
 .col-dyn-sub  { display: block; font-size: 9px; color: #6b7280; font-weight: 400; letter-spacing: 0; margin-top: 1px; }
 
+/* Filas */
 .tbody-row td {
   padding: 9px 10px;
   border-bottom: 1px solid #f8fafc;
@@ -1031,46 +971,36 @@ const bcgChartOptions = computed(() => {
 .tbody-row:hover td:not(.td-c):not(.td-cat) { background: #f0f9ff !important; transition: background 0.1s; }
 .tbody-row:hover td.td-c { background: #f1f5f9 !important; transition: background 0.1s; }
 
-.td-cat { padding-left: 14px; border-right: 2px solid var(--navy-800); background: var(--navy-900) !important; }
+.td-cat { padding-left: 14px; border-right: 2px solid var(--navy-800, #1e293b); background: var(--navy-900, #0f172a) !important; color: #fff; }
 .td-a { background: #f8fbff; border-left: 1px solid #e0eeff; }
 .td-b { background: #f7fdf9; border-left: 1px solid #d5f5e0; }
-.td-c { background: #f8fafc; color: var(--text-primary); border-left: 1px solid var(--border); }
+.td-c { background: #f8fafc; color: var(--text-primary, #0f172a); border-left: 1px solid var(--border, #e2e8f0); }
 .td-prog { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 
+/* TFoot Fijo (Opcional: Si quieres que el TFoot también flote abajo) */
 .tfoot-row td {
   padding: 10px 10px;
-  background: var(--navy-900);
-  color: var(--white);
+  background: var(--navy-900, #0f172a);
+  color: var(--white, #ffffff);
   font-size: 12px;
   font-weight: 600;
-  border-top: 2px solid var(--navy-700);
+  border-top: 2px solid var(--navy-700, #334155);
+  position: sticky; /* Hacemos el tfoot sticky también */
+  bottom: 0;
+  z-index: 10;
 }
-.tfoot-label { padding-left: 14px; letter-spacing: 0.05em; font-size: 11px; text-transform: uppercase; color: var(--slate-400); }
+.tfoot-label { padding-left: 14px; letter-spacing: 0.05em; font-size: 11px; text-transform: uppercase; color: var(--slate-400, #94a3b8); }
 
-/* Badges */
-.pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-.pill-blue   { background: #dbeafe; color: #1d4ed8; }
-.pill-violet { background: #ede9fe; color: #6d28d9; }
-.pill-amber  { background: #fef3c7; color: #92400e; }
-.pill-teal   { background: #ccfbf1; color: #0f766e; }
-.pill-slate  { background: #f1f5f9; color: #475569; }
-
+/* Badges Especiales y Tags */
 .tipo-tag {
   display: inline-block;
   padding: 2px 7px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 3px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--white);
+  color: var(--text-secondary, #475569);
+  background: var(--white, #ffffff);
 }
 
 .logro-badge {
@@ -1089,185 +1019,75 @@ const bcgChartOptions = computed(() => {
 .dyn-count { font-weight: 700; color: #0f766e; margin-right: 6px; }
 .dyn-pct   { font-size: 11px; color: #94a3b8; border-left: 1px solid #e2e8f0; padding-left: 6px; }
 
-/* Text utilities */
-.text-center { text-align: center; }
+/* Utilidades Locales (Solo las que no están en global) */
 .text-right  { text-align: right; }
-.text-mono   { font-family: 'IBM Plex Mono', monospace; }
-.text-muted  { color: var(--text-muted); }
-.small       { font-size: 11.5px; }
-.fw-600      { font-weight: 600; }
-.fw-700      { font-weight: 700; }
-.accent-text { color: var(--teal-600); }
 .c-green { color: #15803d; }
 .c-blue  { color: #1d4ed8; }
 .c-red   { color: #b91c1c; }
 
+/* Celdas Dinámicas de Color */
+.bg-dyn-high { background-color: #d1fae5 !important; border-left-color: #6ee7b7 !important; }
+.bg-dyn-low { background-color: #fee2e2 !important; border-left-color: #fca5a5 !important; }
+.tbody-row:hover td.bg-dyn-high { background-color: #a7f3d0 !important; }
+.tbody-row:hover td.bg-dyn-low  { background-color: #fecaca !important; }
+
+/* Columnas dinámicas: ancho mínimo */
+.th-group-c, .ts-c, .td-c { white-space: nowrap; min-width: 90px; }
+
+
 /* ═══════════════════════════════════════════════
-   DASHBOARD VIEW
+   DASHBOARD VIEW (Resto del código sin tocar)
 ═══════════════════════════════════════════════ */
 .view-dashboard { display: flex; flex-direction: column; gap: 20px; }
 
-.kpi-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.kpi-card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 18px 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.15s, transform 0.15s;
-}
+/* ... (Todo el CSS de .kpi-strip, .chart-panel, y matriz BCG se mantiene idéntico) ... */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.kpi-card { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.15s, transform 0.15s; }
 .kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
 .kpi-card-highlight { background: var(--navy-900); border-color: var(--navy-700); }
-
-.kpi-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.kpi-card-label {
-  font-size: 10px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
+.kpi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.kpi-card-label { font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; font-weight: 700; color: var(--text-muted); }
 .kpi-indicator { width: 7px; height: 7px; border-radius: 50%; }
-.ind-green { background: #22c55e; }
-.ind-amber { background: #f59e0b; }
-.ind-blue  { background: #3b82f6; }
-.ind-slate { background: var(--slate-400); }
-
-.kpi-card-value {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 8px;
-}
-.kpi-card-top-name {
-  font-size: 13px;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  color: var(--white);
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-.kpi-progress {
-  height: 3px;
-  background: var(--slate-100);
-  border-radius: 2px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
+.ind-green { background: #22c55e; } .ind-amber { background: #f59e0b; } .ind-blue  { background: #3b82f6; } .ind-slate { background: var(--slate-400); }
+.kpi-card-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.kpi-card-top-name { font-size: 13px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: var(--white); font-weight: 600; letter-spacing: 0; }
+.kpi-progress { height: 3px; background: var(--slate-100); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
 .kpi-progress-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
-.fill-green { background: #22c55e; }
-.fill-amber { background: #f59e0b; }
-
+.fill-green { background: #22c55e; } .fill-amber { background: #f59e0b; }
 .kpi-card-sub { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .meta-line { font-variant-numeric: tabular-nums; }
 
-/* Chart Panels */
-.chart-panel {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.chart-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--slate-100);
-}
-
+.chart-panel { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.chart-panel-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px; border-bottom: 1px solid var(--slate-100); }
 .chart-panel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
 .chart-panel-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
 .chart-area         { padding: 16px 20px; height: 300px; }
 .chart-area-donut   { height: 300px; }
 .chart-area-bcg     { position: relative; height: 370px; padding: 16px 20px 16px; }
 
-.chart-legend-inline {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.legend-dot {
-  display: inline-block;
-  width: 8px; height: 8px;
-  border-radius: 2px;
-  margin-right: 4px;
-}
+.chart-legend-inline { display: flex; gap: 14px; align-items: center; font-size: 11.5px; color: var(--text-secondary); font-weight: 500; }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 
 .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .chart-grid-3 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
 
-/* BCG */
 .bcg-quadrant-labels { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-.qlab {
-  position: absolute;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.06;
-  color: var(--text-primary);
-}
-.qlab-tl { top: 12%; left: 8%; }
-.qlab-tr { top: 12%; right: 8%; }
-.qlab-bl { bottom: 18%; left: 8%; }
-.qlab-br { bottom: 18%; right: 8%; }
-
+.qlab { position: absolute; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.06; color: var(--text-primary); }
+.qlab-tl { top: 12%; left: 8%; } .qlab-tr { top: 12%; right: 8%; } .qlab-bl { bottom: 18%; left: 8%; } .qlab-br { bottom: 18%; right: 8%; }
 .bcg-legend { display: flex; gap: 16px; align-items: center; }
-.bcg-leg {
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+.bcg-leg { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 .bcg-leg::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
-.bcg-star::before { background: rgba(15,118,110,0.85); }
-.bcg-cow::before  { background: rgba(3,105,161,0.85); }
-.bcg-q::before    { background: rgba(180,83,9,0.85); }
-.bcg-dog::before  { background: rgba(190,18,60,0.85); }
-.bcg-star { color: #0f766e; }
-.bcg-cow  { color: #0369a1; }
-.bcg-q    { color: #b45309; }
-.bcg-dog  { color: #be123c; }
+.bcg-star::before { background: rgba(15,118,110,0.85); } .bcg-cow::before  { background: rgba(3,105,161,0.85); }
+.bcg-q::before    { background: rgba(180,83,9,0.85); } .bcg-dog::before  { background: rgba(190,18,60,0.85); }
+.bcg-star { color: #0f766e; } .bcg-cow  { color: #0369a1; } .bcg-q    { color: #b45309; } .bcg-dog  { color: #be123c; }
 
 /* ═══════════════════════════════════════════════
-   FOOTER
+   FOOTER & ANIMACIONES
 ═══════════════════════════════════════════════ */
 .exec-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 28px;
-  background: var(--white);
-  border-top: 1px solid var(--border);
-  font-size: 11.5px;
-  color: var(--text-muted);
-  font-weight: 500;
+  display: flex; align-items: center; gap: 10px; padding: 10px 28px;
+  background: var(--white); border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--text-muted); font-weight: 500;
 }
 .exec-footer strong { color: var(--text-secondary); }
 .footer-sep { color: var(--border); }
@@ -1276,32 +1096,8 @@ const bcgChartOptions = computed(() => {
 .dot-ok      { background: #22c55e; }
 .dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
 
-/* ═══════════════════════════════════════════════
-   CELDAS DINÁMICAS CONDICIONALES
-═══════════════════════════════════════════════ */
-.bg-dyn-high {
-  background-color: #d1fae5 !important;
-  border-left-color: #6ee7b7 !important;
-}
-.bg-dyn-low {
-  background-color: #fee2e2 !important;
-  border-left-color: #fca5a5 !important;
-}
-.tbody-row:hover td.bg-dyn-high { background-color: #a7f3d0 !important; }
-.tbody-row:hover td.bg-dyn-low  { background-color: #fecaca !important; }
-
-/* Columnas dinámicas: ancho mínimo y no wrap */
-.th-group-c, .ts-c, .td-c {
-  white-space: nowrap;
-  min-width: 90px;
-}
-
-/* ═══════════════════════════════════════════════
-   ANIMACIONES
-═══════════════════════════════════════════════ */
 @keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-
 .spin { animation: spin 0.8s linear infinite; }
 
 .slide-fade-enter-active { transition: all 0.2s ease; }

@@ -15,6 +15,7 @@
           type="date"
           class="native-input"
           v-model="innerStart"
+          @keydown="(e) => { if(e.key !== 'Tab') e.preventDefault() }"
           @focus="onFocus"
           @blur="onBlur"
           @change="onManualChange"
@@ -32,6 +33,7 @@
           class="native-input"
           v-model="innerEnd"
           :min="innerStart || undefined"
+          @keydown="(e) => { if(e.key !== 'Tab') e.preventDefault() }"
           @focus="onFocus"
           @blur="onBlur"
           @change="onManualChange"
@@ -58,7 +60,6 @@
 
   </div>
 </template>
-
 <script setup>
 import { computed, ref } from 'vue'
 

@@ -101,121 +101,309 @@
     <main class="exec-body">
       <div class="view-table">
         <div class="table-shell">
-          <table class="exec-table" :class="{ 'exec-table-dense': isCompact }">
-            <thead>
-              <!-- FILA 1: Grupos principales -->
-              <tr class="thead-group">
-                <th class="th-act" rowspan="2">
-                  <div class="d-flex justify-content-center" v-if="!hasActiveFilters">
-                    <button type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
-                      + Nueva
-                    </button>
-                  </div>
-                </th>
-                <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
-                <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
-                <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
-                <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
-              </tr>
-
-              <!-- FILA 2: Columnas individuales -->
-              <tr class="thead-sub">
-                <!-- Identificación -->
-                <th class="ts ts-a">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>PROGRAMA</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-a" v-if="!isCompact">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>DETALLE</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-a" v-if="isCompact">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>LÍNEA</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-a" v-if="isCompact">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>TIPADO</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-a text-center" v-if="isCompact">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>SEG.</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
-
-                <!-- Cronograma -->
-                <th class="ts ts-b text-center">F. INICIO</th>
-                <th class="ts ts-b text-center" v-if="isCompact">D.P.</th>
-                <th class="ts ts-b text-center">F. FIN</th>
-                <th class="ts ts-b" v-if="isCompact">DÍAS CLASE</th>
-                <th class="ts ts-b">HORARIO</th>
-                <th class="ts ts-b">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>DOCENTE</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-
-                <!-- Seguimiento -->
-                <th class="ts ts-c text-center">FICHA / MEJORA</th>
-                <th class="ts ts-c text-center">CONFIRM.</th>
-
-                <!-- Referencia -->
-                <th class="ts ts-d">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>OBSERVACIÓN</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-                <th class="ts ts-d">
-                  <div class="d-flex align-items-center justify-content-between">
-                    <span>EDICIÓN</span>
-                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
-                  </div>
-                </th>
-              </tr>
-            </thead>
-
-            <!-- ── TBODY: Vista Mensual ── -->
-            <tbody v-if="!hasActiveFilters">
-              <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
-                <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
-                  <td :colspan="isCompact ? 16 : 11" class="week-header-cell">
-                    <div class="week-header-inner">
-                      <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                      <span class="week-label">Semana {{ week.schedule }}</span>
-                      <span class="week-badge">{{ week.items.length }} Ediciones</span>
+          <div class="table-responsive-custom">
+            <table class="exec-table" :class="{ 'exec-table-dense': isCompact }">
+              <thead>
+                <!-- FILA 1: Grupos principales -->
+                <tr class="thead-group">
+                  <th class="th-act" rowspan="2">
+                    <div class="d-flex justify-content-center" v-if="!hasActiveFilters">
+                      <button type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
+                        + Nueva
+                      </button>
                     </div>
-                  </td>
+                  </th>
+                  <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
+                  <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
+                  <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
+                  <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
                 </tr>
 
+                <!-- FILA 2: Columnas individuales -->
+                <tr class="thead-sub">
+                  <!-- Identificación -->
+                  <th class="ts ts-a">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>PROGRAMA</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a" v-if="!isCompact">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>DETALLE</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a" v-if="isCompact">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>LÍNEA</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a" v-if="isCompact">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>TIPADO</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a text-center" v-if="isCompact">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>SEG.</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
+
+                  <!-- Cronograma -->
+                  <th class="ts ts-b text-center">F. INICIO</th>
+                  <th class="ts ts-b text-center" v-if="isCompact">D.P.</th>
+                  <th class="ts ts-b text-center">F. FIN</th>
+                  <th class="ts ts-b" v-if="isCompact">DÍAS CLASE</th>
+                  <th class="ts ts-b">HORARIO</th>
+                  <th class="ts ts-b">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>DOCENTE</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+
+                  <!-- Seguimiento -->
+                  <th class="ts ts-c text-center">FICHA / MEJORA</th>
+                  <th class="ts ts-c text-center">CONFIRM.</th>
+
+                  <!-- Referencia -->
+                  <th class="ts ts-d">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>OBSERVACIÓN</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                  <th class="ts ts-d">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>EDICIÓN</span>
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+
+              <!-- ── TBODY: Vista Mensual ── -->
+              <tbody v-if="!hasActiveFilters">
+                <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
+                  <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
+                    <td :colspan="isCompact ? 16 : 11" class="week-header-cell">
+                      <div class="week-header-inner">
+                        <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        <span class="week-label">Semana {{ week.schedule }}</span>
+                        <span class="week-badge">{{ week.items.length }} Ediciones</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-for="(e, eIndex) in week.items"
+                    :key="e.edition_num_id"
+                    v-show="week.isOpen"
+                    class="tbody-row"
+                    :class="[
+                      e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
+                      { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
+                    ]"
+                    @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
+                    @mousemove="cancelLongPress"
+                    @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
+                    @mouseup="clearLongPress(); currentPressId = null"
+                    @mouseleave="clearLongPress(); currentPressId = null"
+                    @touchend="clearLongPress(); currentPressId = null"
+                  >
+                    <!-- Acciones -->
+                    <td class="td-act">
+                      <div class="action-btns">
+                        <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
+                          <i class="fa-solid fa-hamsa"></i>
+                        </button>
+                        <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
+                          <i class="fa-solid fa-book-bookmark"></i>
+                        </button>
+                        <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                          <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          
+                          
+                          <i v-else class="fa-solid fa-sitemap"></i>
+                        </button>
+                      </div>
+                    </td>
+
+                    <!-- IDENTIFICACIÓN -->
+                    <td class="td-a td-prog">
+                      <div class="prog-name">
+                        <span class="prog-link" style="cursor:pointer;" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
+                          <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                          <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
+                        </span>
+                      </div>
+                      <div class="prog-sub text-muted small" v-if="!isCompact">
+                        <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                        <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                      </div>
+                    </td>
+
+                    <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
+                      <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
+                      <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                    </td>
+
+                    <td class="td-a" v-if="isCompact" style="min-width:120px;max-width:300px;">
+                      {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                    </td>
+                    <td class="td-a text-center" v-if="isCompact">
+                      <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
+                    </td>
+                    <td class="td-a text-center" v-if="isCompact">
+                      <span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span>
+                    </td>
+                    <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
+
+                    <!-- CRONOGRAMA -->
+                    <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) ? 1060 : 'inherit' }">
+                      <div class="date-link" title="Click derecho: proyección"
+                        @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
+                        @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
+                      >{{ formatDate(e.start_date) }}</div>
+                      <div class="small text-muted" v-if="!isCompact">
+                        {{ 'CA: ' + e.calc_da || 0 }}
+                        <span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span>
+                      </div>
+                      <!-- GAP POPOVER -->
+                      <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:360px;left:0;">
+                        <div class="popover-header-exec">
+                          <span>Proyección: {{ e.program_abreviature }}</span>
+                          <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
+                        </div>
+                        <div class="popover-content">
+                          <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                          <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
+                          <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
+                            <table class="table table-borderless mb-0 align-middle w-100 clean-table">
+                              <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
+                              <tbody>
+                                <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
+                                  <td class="text-center fw-bold text-muted small">
+                                    <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
+                                    <div v-else>{{ idx + 1 }}</div>
+                                  </td>
+                                  <td>
+                                    <div class="d-flex flex-column lh-sm py-1">
+                                      <span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
+                                      <div class="d-flex justify-content-between">
+                                        <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span>
+                                        <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td class="text-end pe-3">
+                                    <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
+                                    <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
+                                    <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                    </td>
+
+                    <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
+
+                    <td class="td-b text-center">
+                      <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
+                    </td>
+
+                    <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
+
+                    <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
+                      <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
+                      <div v-else-if="e.schedules.length === 1">
+                        <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0]?.day_combination_label || '—' }}</div>
+                        <div class="small text-muted">{{ e.schedules[0]?.hour_combination_label }}</div>
+                      </div>
+                      <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
+                        <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                          <div>
+                            <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
+                            <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
+                          </div>
+                          <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
+                        </div>
+                        <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
+                          <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
+                          <div class="popover-body-sm">
+                            <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
+                              <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
+                              <div class="text-muted small">{{ sch.hour_combination_label }}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                      </div>
+                    </td>
+
+                    <td class="td-b" style="min-width:100px;max-width:130px;">
+                      <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
+                    </td>
+
+                    <!-- SEGUIMIENTO -->
+                    <td class="td-c text-center">
+                      <label class="exec-switch scale-75" title="Ficha / Expediente">
+                        <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span>
+                      </label>
+                      <label class="exec-switch scale-75" title="Mejora / Upgrade">
+                        <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
+                      </label>
+                    </td>
+                    <td class="td-c text-center">
+                      <label class="exec-switch scale-75" title="Pre-Confirmación">
+                        <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
+                      </label>
+                      <label class="exec-switch scale-75" title="Confirmación">
+                        <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
+                      </label>
+                    </td>
+
+                    <!-- REFERENCIA -->
+                    <td class="td-d">
+                      <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
+                      <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
+                    </td>
+                    <td class="td-d">
+                      <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
+                      <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                        <span v-if="!isCompact && e.specific_code">A: </span><b v-if="e.specific_code">{{ e.specific_code }}</b>
+                      </div>
+                      <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
+                        <b v-if="e.clasification">{{ e.clasification }}</b>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+
+              <!-- ── TBODY: Vista Histórica ── -->
+              <tbody v-if="hasActiveFilters">
                 <tr
-                  v-for="(e, eIndex) in week.items"
+                  v-for="(e, eIndex) in historyList"
                   :key="e.edition_num_id"
-                  v-show="week.isOpen"
                   class="tbody-row"
-                  :class="[
-                    e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
-                    { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
-                  ]"
+                  :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
                   @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-                  @mousemove="cancelLongPress"
                   @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
+                  @mousemove="cancelLongPress"
                   @mouseup="clearLongPress(); currentPressId = null"
                   @mouseleave="clearLongPress(); currentPressId = null"
                   @touchend="clearLongPress(); currentPressId = null"
                 >
-                  <!-- Acciones -->
                   <td class="td-act">
                     <div class="action-btns">
                       <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
@@ -231,13 +419,10 @@
                     </div>
                   </td>
 
-                  <!-- IDENTIFICACIÓN -->
                   <td class="td-a td-prog">
                     <div class="prog-name">
-                      <span class="prog-link" style="cursor:pointer;" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
-                        <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
-                        <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
-                      </span>
+                      <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                      <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
                     </div>
                     <div class="prog-sub text-muted small" v-if="!isCompact">
                       <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
@@ -249,82 +434,24 @@
                     <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
                     <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
                   </td>
-
-                  <td class="td-a" v-if="isCompact" style="min-width:120px;max-width:300px;">
-                    {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                  </td>
-                  <td class="td-a text-center" v-if="isCompact">
-                    <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
-                  </td>
-                  <td class="td-a text-center" v-if="isCompact">
-                    <span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span>
-                  </td>
+                  <td class="td-a" v-if="isCompact" style="min-width:10px;max-width:300px;">{{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b></td>
+                  <td class="td-a text-center" v-if="isCompact"><span class="tipo-tag">{{ e.cat_course_category_label }}</span></td>
+                  <td class="td-a text-center" v-if="isCompact"><span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span></td>
                   <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
 
-                  <!-- CRONOGRAMA -->
-                  <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) ? 1060 : 'inherit' }">
-                    <div class="date-link" title="Click derecho: proyección"
-                      @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
-                      @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
-                    >{{ formatDate(e.start_date) }}</div>
-                    <div class="small text-muted" v-if="!isCompact">
-                      {{ 'CA: ' + e.calc_da || 0 }}
-                      <span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span>
-                    </div>
-                    <!-- GAP POPOVER -->
-                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:360px;left:0;">
-                      <div class="popover-header-exec">
-                        <span>Proyección: {{ e.program_abreviature }}</span>
-                        <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
-                      </div>
-                      <div class="popover-content">
-                        <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                        <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
-                        <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
-                          <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-                            <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
-                            <tbody>
-                              <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                                <td class="text-center fw-bold text-muted small">
-                                  <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-                                  <div v-else>{{ idx + 1 }}</div>
-                                </td>
-                                <td>
-                                  <div class="d-flex flex-column lh-sm py-1">
-                                    <span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
-                                    <div class="d-flex justify-content-between">
-                                      <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span>
-                                      <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td class="text-end pe-3">
-                                  <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
-                                  <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
-                                  <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                  <td class="td-b">
+                    <div class="date-link small">{{ formatDate(e.start_date) }}</div>
+                    <div class="small text-muted" v-if="!isCompact">{{ 'CA: ' + e.calc_da || 0 }}<span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span></div>
                   </td>
-
                   <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
-
-                  <td class="td-b text-center">
-                    <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
-                  </td>
-
+                  <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
                   <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
 
                   <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
                     <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
                     <div v-else-if="e.schedules.length === 1">
-                      <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0]?.day_combination_label || '—' }}</div>
-                      <div class="small text-muted">{{ e.schedules[0]?.hour_combination_label }}</div>
+                      <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0].day_combination_label || '—' }}</div>
+                      <div class="small text-muted">{{ e.schedules[0].hour_combination_label }}</div>
                     </div>
                     <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
                       <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
@@ -351,25 +478,15 @@
                     <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
                   </td>
 
-                  <!-- SEGUIMIENTO -->
                   <td class="td-c text-center">
-                    <label class="exec-switch scale-75" title="Ficha / Expediente">
-                      <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span>
-                    </label>
-                    <label class="exec-switch scale-75" title="Mejora / Upgrade">
-                      <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
-                    </label>
+                    <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span></label>
+                    <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
                   </td>
                   <td class="td-c text-center">
-                    <label class="exec-switch scale-75" title="Pre-Confirmación">
-                      <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
-                    </label>
-                    <label class="exec-switch scale-75" title="Confirmación">
-                      <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
-                    </label>
+                    <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
+                    <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
                   </td>
 
-                  <!-- REFERENCIA -->
                   <td class="td-d">
                     <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
                     <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
@@ -377,129 +494,16 @@
                   <td class="td-d">
                     <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
                     <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
-                      <span v-if="!isCompact && e.specific_code">A: </span><b v-if="e.specific_code">{{ e.specific_code }}</b>
+                      <b v-if="e.specific_code">{{ e.specific_code }}</b>
                     </div>
                     <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
                       <b v-if="e.clasification">{{ e.clasification }}</b>
                     </div>
                   </td>
                 </tr>
-              </template>
-            </tbody>
-
-            <!-- ── TBODY: Vista Histórica ── -->
-            <tbody v-if="hasActiveFilters">
-              <tr
-                v-for="(e, eIndex) in historyList"
-                :key="e.edition_num_id"
-                class="tbody-row"
-                :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
-                @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-                @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
-                @mousemove="cancelLongPress"
-                @mouseup="clearLongPress(); currentPressId = null"
-                @mouseleave="clearLongPress(); currentPressId = null"
-                @touchend="clearLongPress(); currentPressId = null"
-              >
-                <td class="td-act">
-                  <div class="action-btns">
-                    <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="11"/><line x1="12" y1="11" x2="5" y2="14"/><line x1="12" y1="11" x2="19" y2="14"/></svg>
-                    </button>
-                    <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
-                      <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    </button>
-                  </div>
-                </td>
-
-                <td class="td-a td-prog">
-                  <div class="prog-name">
-                    <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
-                    <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
-                  </div>
-                  <div class="prog-sub text-muted small" v-if="!isCompact">
-                    <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                    <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
-                  </div>
-                </td>
-
-                <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
-                  <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
-                  <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
-                </td>
-                <td class="td-a" v-if="isCompact" style="min-width:10px;max-width:300px;">{{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b></td>
-                <td class="td-a text-center" v-if="isCompact"><span class="tipo-tag">{{ e.cat_course_category_label }}</span></td>
-                <td class="td-a text-center" v-if="isCompact"><span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span></td>
-                <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
-
-                <td class="td-b">
-                  <div class="date-link small">{{ formatDate(e.start_date) }}</div>
-                  <div class="small text-muted" v-if="!isCompact">{{ 'CA: ' + e.calc_da || 0 }}<span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span></div>
-                </td>
-                <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
-                <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
-                <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
-
-                <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
-                  <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-                  <div v-else-if="e.schedules.length === 1">
-                    <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0].day_combination_label || '—' }}</div>
-                    <div class="small text-muted">{{ e.schedules[0].hour_combination_label }}</div>
-                  </div>
-                  <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
-                    <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                      <div>
-                        <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
-                        <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
-                      </div>
-                      <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
-                    </div>
-                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                      <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
-                      <div class="popover-body-sm">
-                        <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
-                          <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
-                          <div class="text-muted small">{{ sch.hour_combination_label }}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
-                  </div>
-                </td>
-
-                <td class="td-b" style="min-width:100px;max-width:130px;">
-                  <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
-                </td>
-
-                <td class="td-c text-center">
-                  <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span></label>
-                  <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
-                </td>
-                <td class="td-c text-center">
-                  <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
-                  <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
-                </td>
-
-                <td class="td-d">
-                  <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
-                  <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
-                </td>
-                <td class="td-d">
-                  <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
-                  <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
-                    <b v-if="e.specific_code">{{ e.specific_code }}</b>
-                  </div>
-                  <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
-                    <b v-if="e.clasification">{{ e.clasification }}</b>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+            </div>
         </div>
       </div>
     </main>
@@ -1335,7 +1339,7 @@
   font-size: 15px; font-weight: 700; color: var(--white);
   font-variant-numeric: tabular-nums; font-family: 'IBM Plex Mono', monospace;
 }
-.inline-kpi-value.accent { color: var(--teal-500); }
+.inline-kpi-value.accent { color: #6366f1; }
 
 /* Filtros activos en masthead */
 .filter-chips-bar { flex: 1; padding: 8px 0; }
@@ -1381,10 +1385,13 @@
 .view-table { width: 100%; }
 
 .table-shell {
-  background: var(--white); border: 1px solid var(--border); border-radius: 6px;
-  overflow-x: auto; overflow-y: hidden;
+  background: var(--white); 
+  border: 1px solid var(--border); 
+  border-radius: 6px;
+  /* overflow-x: auto;  <-- ELIMINAR */
+  /* overflow-y: hidden; <-- ELIMINAR */
   box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  -webkit-overflow-scrolling: touch;
+  /* -webkit-overflow-scrolling: touch; <-- ELIMINAR */
 }
 
 /* ═══════════════════════════════════════════════
@@ -1406,7 +1413,7 @@
 }
 
 .th-act {
-  background: var(--navy-900); color: var(--slate-400);
+  background:rgb(217, 217, 237);
   width: 86px; padding: 8px 10px;
   border-right: 2px solid var(--navy-700);
 }
@@ -1474,7 +1481,7 @@
   border-right: 2px solid var(--navy-800) !important;
   padding: 6px 8px !important;
 }
-.tbody-row:hover .td-act { background: var(--navy-800) !important; }
+.tbody-row:hover .td-act { background: #152c711d !important; }
 
 .td-a { background: var(--col-a-td); border-left: 1px solid var(--col-a-tdbdr); }
 .td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
@@ -1489,7 +1496,7 @@
 .action-btn {
   width: 26px; height: 26px; border-radius: 4px; border: none;
   display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0; border: solid 1px #0a0a1e32;
 }
 
 .action-btn-view   { background: rgba(14,165,233,0.12); color: #0284c7; }

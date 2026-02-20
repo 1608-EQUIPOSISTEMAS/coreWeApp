@@ -253,3 +253,31 @@ textarea.form-control {
 .accent-text { color: var(--teal-600, #12274e); }
 .small { font-size: 11.5px; }
 .x-small { font-size: 10px; }
+
+
+/* ═══════════════════════════════════════════════
+   TABLAS STICKY HEADER (Encabezados Fijos)
+═══════════════════════════════════════════════ */
+.table-responsive-custom {
+  /* Necesario para que el sticky funcione dentro de un contenedor con scroll */
+  max-height: calc(100vh - 220px); /* Ajusta este valor si tienes un header o toolbar más grande */
+  overflow-y: auto; 
+}
+
+.exec-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10; /* Asegura que el thead pase por encima del tbody al scrollear */
+}
+
+/* Evitar que el thead pierda el color de fondo al hacer scroll */
+.exec-table thead tr {
+  background-color: var(--white, #ffffff);
+}
+
+.exec-table thead th {
+  /* Asegurar que las celdas hereden el fondo si el tr falla en algunos navegadores */
+  /* Para tapar el borde que se "escapa" al scrollear, forzamos un box-shadow en lugar de un border-bottom */
+  border-bottom: none !important;
+  box-shadow: inset 0 -2px 0 var(--border, #e2e8f0); 
+}

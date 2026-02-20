@@ -118,6 +118,246 @@
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   DISEÑO ESTÁNDAR "EXEC" PARA SEARCH SELECT
+═══════════════════════════════════════════════ */
+.searchselect-wrapper {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.searchselect-control {
+  position: relative;
+  padding: 0.25rem 2.25rem 0.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  background-color: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  cursor: text;
+  transition: all 0.2s ease;
+  width: 100%; 
+}
+
+/* Hover general del input vacio */
+.searchselect-control:hover:not(.is-disabled):not(.is-locked) {
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+/* Foco del input */
+.searchselect-control:focus-within:not(.is-disabled) {
+  border-color: var(--teal-500, #12274e);
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); /* Sombra corporativa */
+  outline: none;
+}
+
+.searchselect-control.is-disabled {
+  background-color: var(--slate-50, #f8fafc);
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* === ESTADO BLOQUEADO (CON SELECCIÓN) === */
+.searchselect-control.is-locked {
+  cursor: default;
+  background-color: var(--slate-50, #f8fafc);
+  border-color: var(--border, #e2e8f0);
+}
+
+/* Nuevo hover para el estado bloqueado: se ve interactivo y limpio */
+.searchselect-control.is-locked:hover:not(.is-disabled) {
+  background-color: var(--white, #ffffff);
+  border-color: var(--slate-300, #cbd5e1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.ss-locked-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--teal-600, #12274e); /* Color de marca para la selección activa */
+  font-weight: 600; /* Resalta que hay un dato ingresado */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* === VALIDACIÓN VISUAL === */
+.searchselect-control.has-error {
+  border-color: var(--red-600, #dc2626) !important;
+}
+
+.searchselect-control.has-error:focus-within {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.searchselect-control.has-success {
+  border-color: #10b981 !important;
+}
+
+/* Input nativo */
+.searchselect-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
+  outline: none;
+  box-shadow: none !important;
+}
+
+.searchselect-input::placeholder {
+  color: var(--slate-400, #94a3b8);
+  font-weight: 400;
+}
+
+.searchselect-input[disabled] {
+  background-color: transparent;
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* Iconos de la derecha */
+.searchselect-affordance {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-arrow {
+  color: var(--text-muted, #94a3b8);
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.searchselect-control:focus-within .dropdown-arrow {
+  transform: translateY(-50%) rotate(180deg);
+  color: var(--teal-500, #12274e); /* Flecha azul corporativo al abrir */
+}
+
+/* Botón X (Limpiar) */
+.btn-clear {
+  border: 0;
+  background: transparent;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-400, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clear:hover {
+  background-color: #fee2e2; /* Fondo rojo clarito */
+  color: var(--red-600, #dc2626); /* Equis roja */
+}
+
+/* ═══════════════════════════════════════════════
+   MENÚ DESPLEGABLE Y OPCIONES
+═══════════════════════════════════════════════ */
+.searchselect-dropdown {
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  padding: 4px 0; /* Un pequeño padding arriba y abajo */
+}
+
+.dropdown-message {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary, #475569);
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-message--empty {
+  color: var(--slate-400, #94a3b8);
+  font-style: italic;
+}
+
+.dropdown-item-exec {
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover adaptado al color corporativo (#12274e) */
+.dropdown-item-exec:hover {
+  background-color: rgba(18, 39, 78, 0.04); /* Gris/Azul muy tenue */
+}
+
+.dropdown-item-exec:hover .dropdown-item-exec__label {
+  color: var(--teal-600, #12274e); /* El texto resalta en tu color corporativo */
+}
+
+.dropdown-item-exec:active {
+  background-color: rgba(18, 39, 78, 0.08);
+}
+
+.dropdown-item-exec__label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.3;
+  transition: color 0.15s ease;
+}
+
+.dropdown-item-exec__sublabel {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.form-text-exec {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* Spinners */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border, #e2e8f0);
+  border-top-color: var(--teal-500, #12274e);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border, #e2e8f0);
+  border-top-color: var(--teal-500, #12274e);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
@@ -413,233 +653,3 @@ function clearSelection () {
   })
 }
 </script>
-
-<style scoped>
-/* ═══════════════════════════════════════════════
-   DISEÑO ESTÁNDAR "EXEC" PARA SEARCH SELECT
-═══════════════════════════════════════════════ */
-.searchselect-wrapper {
-  width: 100%;
-  /* IMPORTANTE: Eliminamos cualquier border, padding o background del wrapper 
-     para que no interfiera con el control interno */
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-.searchselect-control {
-  position: relative;
-  padding: 0.25rem 2.25rem 0.25rem 0.75rem;
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  background-color: var(--white, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  width: 100%; /* Asegura que ocupe todo el wrapper */
-}
-
-.searchselect-control:hover:not(.is-disabled):not(.is-locked) {
-  border-color: var(--slate-300, #cbd5e1);
-}
-
-.searchselect-control:focus-within:not(.is-disabled) {
-  border-color: var(--teal-500, #12274e);
-  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1);
-  outline: none;
-}
-
-.searchselect-control.is-disabled {
-  background-color: var(--slate-50, #f8fafc);
-  color: var(--slate-400, #94a3b8);
-  cursor: not-allowed;
-}
-
-.searchselect-control.is-locked {
-  cursor: default;
-  background-color: var(--slate-50, #f8fafc);
-}
-
-/* === LÓGICA DE VALIDACIÓN CORREGIDA === */
-/* Solo aplica rojo al borde si tiene la clase has-error y está requerido pero vacío */
-.searchselect-control.has-error {
-  border-color: var(--red-600, #dc2626) !important;
-}
-
-.searchselect-control.has-error:focus-within {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
-}
-
-.searchselect-control.has-success {
-  border-color: #10b981 !important;
-}
-
-.ss-locked-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--text-primary, #0f172a);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.searchselect-input {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--text-primary, #0f172a);
-  outline: none;
-  box-shadow: none !important; /* Previene sombras internas */
-}
-
-.searchselect-input::placeholder {
-  color: var(--slate-400, #94a3b8);
-  font-weight: 400;
-}
-
-.searchselect-input[disabled] {
-  background-color: transparent;
-  color: var(--slate-400, #94a3b8);
-  cursor: not-allowed;
-}
-
-.searchselect-affordance {
-  position: absolute;
-  right: 0.6rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown-arrow {
-  color: var(--text-muted, #94a3b8);
-  pointer-events: none;
-  transition: transform 0.2s ease;
-}
-
-.searchselect-control:focus-within .dropdown-arrow {
-  transform: translateY(-50%) rotate(180deg);
-  color: var(--teal-500, #12274e);
-}
-
-.btn-clear {
-  border: 0;
-  background: transparent;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--slate-400, #94a3b8);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-clear:hover {
-  background-color: var(--slate-100, #f1f5f9);
-  color: var(--red-600, #dc2626);
-}
-
-/* ═══════════════════════════════════════════════
-   MENÚ DESPLEGABLE
-═══════════════════════════════════════════════ */
-.searchselect-dropdown {
-  background: var(--white, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 4px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.dropdown-message {
-  padding: 10px 14px;
-  font-size: 12.5px;
-  color: var(--text-secondary, #475569);
-  display: flex;
-  align-items: center;
-}
-
-.dropdown-message--empty {
-  color: var(--slate-400, #94a3b8);
-  font-style: italic;
-}
-
-.dropdown-item-exec {
-  width: 100%;
-  text-align: left;
-  padding: 8px 14px;
-  border: 0;
-  background: var(--white, #ffffff);
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-  border-bottom: 1px solid var(--slate-50, #f8fafc);
-}
-
-.dropdown-item-exec:last-child {
-  border-bottom: none;
-}
-
-.dropdown-item-exec:hover {
-  background-color: #f0f9ff;
-}
-
-.dropdown-item-exec:active {
-  background-color: #e0f2fe;
-}
-
-.dropdown-item-exec__label {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-primary, #0f172a);
-  line-height: 1.3;
-}
-
-.dropdown-item-exec__sublabel {
-  font-size: 11px;
-  color: var(--text-muted, #94a3b8);
-  margin-top: 2px;
-  line-height: 1.2;
-}
-
-.form-text-exec {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--text-muted, #94a3b8);
-}
-
-/* Spinner */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border, #e2e8f0);
-  border-top-color: var(--teal-500, #12274e);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-.spinner-small {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--border, #e2e8f0);
-  border-top-color: var(--teal-500, #12274e);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-</style>
