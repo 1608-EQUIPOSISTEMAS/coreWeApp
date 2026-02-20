@@ -1,41 +1,53 @@
 <template>
-  <div class="lf-wrapper">
+  <div class="exec-shell form-shell">
 
-    <!-- ══════════════════════════════════════════════
-         ENCABEZADO
-    ══════════════════════════════════════════════ -->
-    <div class="lf-page-header">
-      <div class="lf-page-header__left">
-        <div class="lf-page-header__eyebrow">CRM Comercial</div>
-        <h1 class="lf-page-header__title">Formulario Comercial</h1>
-      </div>
-      <button
-        type="button"
-        v-if="!form.enrollment_id && form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
-        class="lf-btn lf-btn--warning lf-btn--lg"
-        :disabled="form.enrollment_id"
-        @click="openInscription()"
-      >
-        <i class="fa-solid fa-graduation-cap me-2"></i> INSCRIBIR
-      </button>
-    </div>
-
-    <!-- ══════════════════════════════════════════════
-         BODY
-    ══════════════════════════════════════════════ -->
-    <div v-if="loaded" class="lf-body">
-
-      <!-- ─── SECCIÓN 1: Información del lead ─── -->
-      <div class="lf-card">
-        <div class="lf-card__header">
-          <span class="lf-card__icon lf-card__icon--blue"><i class="fa-solid fa-bullseye"></i></span>
-          <span class="lf-card__title">Información del lead</span>
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text d-flex align-items-center gap-3">
+            <div>
+              <span class="brand-eyebrow">CRM Comercial</span>
+              <h1 class="brand-title">Formulario Comercial</h1>
+            </div>
+          </div>
         </div>
-        <div class="lf-card__body">
+        <div class="masthead-actions">
+          <button
+            type="button"
+            v-if="!form.enrollment_id && form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
+            class="btn-exec btn-exec-warning"
+            :disabled="form.enrollment_id"
+            @click="openInscription()"
+          >
+            <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
+          </button>
+          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
+            <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
+          </button>
+          <button
+            v-if="!form.enrollment_id && (isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))"
+            type="button"
+            class="btn-exec btn-exec-primary px-4"
+            @click="guardar"
+            :disabled="saving || form.enrollment_id"
+          >
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+            {{ saving ? 'Guardando...' : 'Guardar lead' }}
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="exec-body pb-5 d-flex justify-content-center" v-if="loaded">
+      <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
+
+        <div class="exec-fieldset mb-4">
+          <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
           <div class="row g-3">
 
             <div class="col-md-3">
-              <label class="lf-label">Fecha contacto inicial <span class="lf-required">*</span></label>
+              <label class="exec-label">Fecha contacto inicial <span class="c-red">*</span></label>
               <DateTime12
                 :onlyHours="true"
                 :disabled="isEdit"
@@ -49,7 +61,7 @@
             <div class="col-md-5"></div>
 
             <div class="col-6 col-md-4">
-              <label class="lf-label">T. Consulta</label>
+              <label class="exec-label">T. Consulta</label>
               <SearchSelect
                 v-model="form.query_alias"
                 :items="queryCatalog"
@@ -57,11 +69,12 @@
                 value-field="alias"
                 placeholder="PROMOCIÓN..."
                 :model-label="form.query_label"
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-6 col-md-4 col-lg-3">
-              <label class="lf-label">Categoría <span class="lf-required">*</span></label>
+              <label class="exec-label">Categoría <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.category_alias"
                 :items="programTypeCatalog"
@@ -69,13 +82,16 @@
                 value-field="alias"
                 :viewOpen="6"
                 placeholder="CATEGORÍA..."
+                class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
             </div>
 
-            <div class="col-6 col-md-4 col-lg-2"
-              v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias">
-              <label class="lf-label">Modalidad <span class="lf-required">*</span></label>
+            <div
+              class="col-6 col-md-4 col-lg-2"
+              v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias"
+            >
+              <label class="exec-label">Modalidad <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.program_modality_alias"
                 :items="programModalityCatalog"
@@ -83,20 +99,23 @@
                 :viewOpen="6"
                 value-field="alias"
                 placeholder="MODALIDAD..."
+                class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
             </div>
 
-            <div class="col-6 col-md-4"
+            <div
+              class="col-6 col-md-4"
               v-if="form.category_alias &&
                 (!['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) ||
-                (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))">
-              <label class="lf-label">
-                Producto / Programa <span class="lf-required">*</span>
+                (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))"
+            >
+              <label class="exec-label">
+                Producto / Programa <span class="c-red">*</span>
                 <button
                   v-if="form.program_version_id"
                   type="button"
-                  class="lf-icon-btn ms-1"
+                  class="btn-icon btn-icon-sm ms-1"
                   @click="openProgramVersionDetail()"
                   title="Ver detalles del programa"
                 >
@@ -118,13 +137,16 @@
                 placeholder="Buscar programa…"
                 :minChars="0"
                 :cache="false"
+                class="exec-select-light w-100"
                 @change="onProgramaChange"
               />
             </div>
 
-            <div class="col-12 col-lg-3"
-              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))">
-              <label class="lf-label">Edición / Fecha prevista <span class="lf-required">*</span></label>
+            <div
+              class="col-12 col-lg-3"
+              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))"
+            >
+              <label class="exec-label">Edición / Fecha prevista <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.edition_id"
                 mode="remote"
@@ -136,8 +158,9 @@
                 :model-label="form.edition_label"
                 :minChars="0"
                 :cache="false"
+                class="exec-select-light w-100"
               />
-              <div v-if="currentEdition" class="lf-edition-meta mt-2">
+              <div v-if="currentEdition" class="edition-meta mt-2">
                 <div><b>Inicio:</b> {{ currentEdition.inicio }}</div>
                 <div><b>Fin:</b> {{ currentEdition.fin }}</div>
                 <div><b>Docente:</b> {{ currentEdition.docente }}</div>
@@ -147,19 +170,13 @@
 
           </div>
         </div>
-      </div>
 
-      <!-- ─── SECCIÓN 2: Datos del contacto ─── -->
-      <div class="lf-card" v-if="isEdit || validateLeadInfo()">
-        <div class="lf-card__header">
-          <span class="lf-card__icon lf-card__icon--emerald"><i class="fa-solid fa-user"></i></span>
-          <span class="lf-card__title">Datos del contacto</span>
-        </div>
-        <div class="lf-card__body">
+        <div class="exec-fieldset mb-4" v-if="isEdit || validateLeadInfo()">
+          <h6 class="fieldset-title"><i class="fa-solid fa-user me-2 text-success"></i> Datos del Contacto</h6>
           <div class="row g-3">
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="lf-label">T. Contacto</label>
+              <label class="exec-label">T. Contacto</label>
               <SearchSelect
                 v-model="form.client_status"
                 :items="clientCatalog"
@@ -168,55 +185,51 @@
                 placeholder="TIPO..."
                 required
                 :model-label="form.client_status_label"
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-6 col-md-6 col-lg-3">
-              <label class="lf-label">Nombre / Razón Social</label>
+              <label class="exec-label">Nombre / Razón Social</label>
               <input
                 required
                 autocomplete="off"
                 v-model="form.full_name"
                 type="text"
-                class="form-control"
+                class="exec-input-light w-100"
                 placeholder="NOMBRE COMPLETO"
                 v-restrict="{ transform: 'upper', trim: true }"
               />
             </div>
-
-            <div class="col-6 col-md-3 col-lg-3">
-              <label class="lf-label">
-                Teléfono <span class="lf-required">*</span>
-                <span v-if="searchingPhone" class="ms-2 badge bg-warning text-dark scale-in-center">
-                  <i class="fas fa-spinner fa-spin"></i> Buscando...
-                </span>
-                <button
-                  type="button"
-                  class="lf-icon-btn ms-1"
-                  @click="openPhoneDetail()"
-                  title="Ver historial del cliente"
-                >
-                  <i class="fa-solid fa-clock-rotate-left"></i>
-                </button>
-              </label>
-              <div class="input-group flex-nowrap">
+<div class="col-6 col-md-3 col-lg-3">
+              <label class="exec-label">Teléfono <span class="c-red">*</span></label>
+              <div class="d-flex gap-2">
                 <input
                   autocomplete="off"
                   v-model="form.telefono"
                   type="text"
                   v-restrict="{ only: 'numbers', max: 15 }"
                   required
-                  class="form-control"
-                  :class="{ 'is-valid': leadDataHistory && !searchingPhone }"
+                  class="exec-input-light w-100"
+                  :class="{ 'input-valid': leadDataHistory && !searchingPhone }"
                   placeholder="TELÉFONO + ENTER"
                   @keyup.enter="searchLeadByPhone"
                   :disabled="searchingPhone"
                 />
+                <button
+                  type="button"
+                  class="btn-exec btn-exec-outline px-0"
+                  style="height: 38px; width: 38px; flex-shrink: 0;"
+                  @click="openPhoneDetail()"
+                  title="Ver historial del cliente"
+                >
+                  <i class="fa-solid fa-clock-rotate-left" style="color: var(--teal-600, #12274e);"></i>
+                </button>
               </div>
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="lf-label">E. Cliente</label>
+              <label class="exec-label">E. Cliente</label>
               <SearchSelect
                 v-model="form.cat_client_moment_alias"
                 :items="momentCatalog"
@@ -225,11 +238,12 @@
                 placeholder="E. Cliente..."
                 required
                 :model-label="form.cat_client_moment_label"
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="lf-label">Membresía</label>
+              <label class="exec-label">Membresía</label>
               <SearchSelect
                 v-model="form.membership_moment_id"
                 :items="membershipList"
@@ -237,11 +251,12 @@
                 value-field="membership_tier_id"
                 placeholder="MEMBRESÍA..."
                 :model-label="form.membership_tier_label"
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="lf-label">Status <span class="lf-required">*</span></label>
+              <label class="exec-label">Status <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.status_alias"
                 :items="leadStatusCatalog"
@@ -251,12 +266,13 @@
                 placeholder="STATUS..."
                 required
                 :model-label="form.status_label"
+                class="exec-select-light w-100"
                 @change="onStatusChange"
               />
             </div>
 
             <div class="col-6 col-md-3">
-              <label class="lf-label">Ocupación / Situación <span class="lf-required">*</span></label>
+              <label class="exec-label">Ocupación / Situación <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.ocupacion_alias"
                 :items="prospectSituationCatalog"
@@ -265,11 +281,12 @@
                 value-field="alias"
                 :model-label="form.ocupacion_label"
                 placeholder="OCUPACIÓN..."
+                class="exec-select-light w-100"
               />
             </div>
 
-            <div class="col-6 col-md-3 col-md-2">
-              <label class="lf-label">País <span class="lf-required">*</span></label>
+            <div class="col-6 col-md-3">
+              <label class="exec-label">País <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.country_alias"
                 :items="countryCatalog"
@@ -278,24 +295,19 @@
                 value-field="alias"
                 required
                 placeholder="PAÍS..."
+                class="exec-select-light w-100"
               />
             </div>
 
           </div>
         </div>
-      </div>
 
-      <!-- ─── SECCIÓN 3: Estado comercial y marketing ─── -->
-      <div class="lf-card" v-if="isEdit || (validateLeadInfo() && validateContactInfo())">
-        <div class="lf-card__header">
-          <span class="lf-card__icon lf-card__icon--violet"><i class="fa-solid fa-chart-line"></i></span>
-          <span class="lf-card__title">Estado comercial y marketing</span>
-        </div>
-        <div class="lf-card__body">
+        <div class="exec-fieldset mb-4" v-if="isEdit || (validateLeadInfo() && validateContactInfo())">
+          <h6 class="fieldset-title"><i class="fa-solid fa-chart-line me-2 text-info"></i> Estado Comercial y Marketing</h6>
           <div class="row g-3">
 
             <div class="col-md-3">
-              <label class="lf-label">F. Pago (prevista)</label>
+              <label class="exec-label">F. Pago (prevista)</label>
               <BaseDatePicker
                 v-model="form.pay_date"
                 :required="form.status_alias=='we_lead_status_bought'"
@@ -305,7 +317,7 @@
             </div>
 
             <div class="col-md-3">
-              <label class="lf-label">Nivel de interés <span class="lf-required">*</span></label>
+              <label class="exec-label">Nivel de interés <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.nivel_alias"
                 :items="leadInterestCatalog"
@@ -314,24 +326,24 @@
                 value-field="alias"
                 :model-label="form.nivel_label"
                 placeholder="NIVEL..."
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-md-6">
-              <label class="lf-label">Mensaje de chat <span class="lf-required">*</span></label>
+              <label class="exec-label">Mensaje de chat <span class="c-red">*</span></label>
               <textarea
                 v-model="form.mensajeChat"
-                class="form-control"
+                class="exec-textarea w-100"
                 placeholder="MENSAJE CHAT"
                 required
                 rows="2"
                 @input="handleMensajeChatInput"
-                style="resize: vertical; min-height: 80px;"
               ></textarea>
             </div>
 
             <div class="col-md-3">
-              <label class="lf-label">Canal prospección <span class="lf-required">*</span></label>
+              <label class="exec-label">Canal prospección <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.canal_alias"
                 :items="socialMediaCatalog"
@@ -339,13 +351,14 @@
                 label-field="description"
                 value-field="alias"
                 :model-label="form.canal_label"
+                class="exec-select-light w-100"
                 @change="onChannelChange"
                 placeholder="CANAL..."
               />
             </div>
 
             <div class="col-md-3">
-              <label class="lf-label">Medio de llegada <span class="lf-required">*</span></label>
+              <label class="exec-label">Medio de llegada <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.medium_alias"
                 :items="socialMediaCatalog"
@@ -354,11 +367,12 @@
                 :model-label="form.medium_label"
                 value-field="alias"
                 placeholder="MEDIO..."
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-md-3">
-              <label class="lf-label">Palabra MKT</label>
+              <label class="exec-label">Palabra MKT</label>
               <SearchSelect
                 v-model="form.key_word_alias"
                 :items="mktWordsCatalog"
@@ -366,100 +380,93 @@
                 label-field="description"
                 value-field="alias"
                 placeholder="MKT..."
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-md-3">
-              <label class="lf-label">Estrategia</label>
+              <label class="exec-label">Estrategia</label>
               <SearchSelect
                 v-model="form.strategy_alias"
                 :disabled="!form.canal_alias || form.canal_alias!='we_social_media_other'"
                 :items="strategyCatalog"
                 label-field="description"
                 value-field="alias"
+                class="exec-select-light w-100"
                 @change="onStrategyChange"
                 placeholder="ESTRATEGIA..."
               />
             </div>
 
             <div class="col-md-12">
-              <label class="lf-label">Observaciones</label>
+              <label class="exec-label">Observaciones</label>
               <textarea
                 v-model="form.observacion"
-                class="form-control"
+                class="exec-textarea w-100"
                 rows="2"
-                style="resize: vertical; min-height: 80px;"
               ></textarea>
             </div>
 
           </div>
         </div>
-      </div>
 
-      <!-- ─── SECCIÓN 4: Seguimiento ─── -->
-      <div class="lf-card" v-if="isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo())">
-        <div class="lf-card__header">
-          <span class="lf-card__icon lf-card__icon--amber"><i class="fa-solid fa-phone-volume"></i></span>
-          <span class="lf-card__title">Seguimiento / Intentos de contacto</span>
-          <button type="button" class="lf-btn lf-btn--outline lf-btn--sm ms-auto" @click="addContacto">
-            <i class="fa-solid fa-plus me-1"></i> Añadir intento
-          </button>
-        </div>
-        <div class="lf-card__body">
+        <div class="exec-fieldset mb-4" v-if="isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo())">
+          <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-phone-volume me-2 text-warning"></i> Seguimiento / Intentos de Contacto</h6>
+            <button type="button" class="btn-exec btn-exec-outline btn-exec-sm" @click="addContacto">
+              <i class="fa-solid fa-plus me-1"></i> Añadir intento
+            </button>
+          </div>
 
-          <!-- Cabecera de tabla (solo desktop) -->
-          <div class="lf-attempt-head d-none d-lg-grid mb-2">
+          <div class="attempt-head d-none d-lg-grid mb-2">
             <div class="text-center">#</div>
             <div>Tipo / Duración</div>
-            <div>Fecha y Hora <span class="lf-required">*</span></div>
+            <div>Fecha y Hora <span class="c-red">*</span></div>
             <div>T. Respuesta</div>
             <div>Observación</div>
             <div></div>
           </div>
 
-          <!-- Filas -->
           <div
             v-for="(c, idx) in form.contactos"
             :key="c.id || idx"
-            class="lf-attempt-row"
+            class="attempt-row"
           >
-            <!-- # -->
-            <div class="lf-attempt-row__num">
+            <div class="attempt-row__num">
               <span class="d-lg-none me-1 text-muted" style="font-size:.75rem">Intento</span>
               <strong>{{ idx + 1 }}</strong>
             </div>
 
-            <!-- Tipo / Duración -->
-            <div class="lf-attempt-row__type">
-              <label class="lf-label d-lg-none">Tipo / Duración</label>
+            <div class="attempt-row__type">
+              <label class="exec-label d-lg-none">Tipo / Duración</label>
               <SearchSelect
                 v-model="c.cat_type_attempt"
                 :items="lAttempts"
                 label-field="description"
                 value-field="alias"
                 placeholder="TIPO..."
+                class="exec-select-light w-100"
                 :disabled="!!c.id"
               />
-              <div class="lf-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
+              <div class="attempt-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
                 <button
                   type="button"
-                  class="lf-timer__btn"
-                  :class="c.timerActive ? 'lf-timer__btn--stop' : 'lf-timer__btn--start'"
+                  class="timer-btn"
+                  :class="c.timerActive ? 'timer-btn--stop' : 'timer-btn--start'"
                   @click="toggleTimer(c)"
                   :disabled="!!c.id && c.calling_alias !== 'we_calling_pending'"
                   :title="c.timerActive ? 'Detener' : 'Iniciar'"
                 >
                   <i class="fa-solid" :class="c.timerActive ? 'fa-stop' : 'fa-play'"></i>
                 </button>
-                <span class="lf-timer__display" :class="c.timerActive ? 'lf-timer__display--active' : ''">
+                <span class="timer-display" :class="c.timerActive ? 'timer-display--active' : ''">
                   {{ formatDuration(c.contact_duration) }}
                 </span>
               </div>
             </div>
 
-            <!-- Fecha -->
-            <div class="lf-attempt-row__date">
-              <label class="lf-label d-lg-none">Fecha y Hora <span class="lf-required">*</span></label>
+            <div class="attempt-row__date">
+              <label class="exec-label d-lg-none">Fecha y Hora <span class="c-red">*</span></label>
               <DateTime12
                 v-model="c.fechaContactoProximo"
                 required
@@ -470,9 +477,8 @@
               />
             </div>
 
-            <!-- Resultado -->
-            <div class="lf-attempt-row__result">
-              <label class="lf-label d-lg-none">T. Resultado</label>
+            <div class="attempt-row__result">
+              <label class="exec-label d-lg-none">T. Resultado</label>
               <SearchSelect
                 v-model="c.calling_alias"
                 :items="callingCatalog"
@@ -481,121 +487,102 @@
                 value-field="alias"
                 placeholder="T. RESPUESTA..."
                 :model-label="c.calling_label"
+                class="exec-select-light w-100"
                 :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
               />
             </div>
 
-            <!-- Observación -->
-            <div class="lf-attempt-row__obs">
-              <label class="lf-label d-lg-none">Observación</label>
+            <div class="attempt-row__obs">
+              <label class="exec-label d-lg-none">Observación</label>
               <textarea
                 v-model="c.respuesta"
-                class="form-control form-control-sm"
+                class="exec-textarea w-100"
                 rows="2"
                 placeholder="Observación..."
                 :disabled="c.calling_alias != 'we_calling_pending'"
-                style="resize: vertical; min-height: 38px;"
               ></textarea>
             </div>
 
-            <!-- Eliminar -->
-            <div class="lf-attempt-row__del">
+            <div class="attempt-row__del">
               <button
                 v-if="!c.id"
                 type="button"
-                class="lf-btn lf-btn--danger-ghost lf-btn--sm w-100"
+                class="btn-exec btn-exec-danger-ghost btn-exec-sm w-100"
                 @click="removeContacto(idx)"
               >
                 <i class="fa-solid fa-trash-can"></i>
                 <span class="d-lg-none ms-2">Eliminar</span>
               </button>
             </div>
-
           </div>
 
+          <div v-if="form.contactos.length === 0" class="empty-state">
+            <i class="fa-solid fa-inbox fa-2x mb-2 text-slate-300"></i>
+            <p class="mb-0">No hay intentos de contacto registrados. Añade al menos uno.</p>
+          </div>
         </div>
-      </div>
 
-      <!-- ─── SECCIÓN 5: Estado del Registro ─── -->
-      <div class="lf-card lf-card--flat" v-if="isEdit">
-        <div class="lf-card__body d-flex align-items-center gap-3">
-          <span class="lf-label mb-0">Estado del Registro <span class="lf-required">*</span></span>
-          <label class="lf-switch">
-            <input type="checkbox" v-model="form.active" />
-            <span></span>
-          </label>
-          <span class="lf-switch-label">{{ form.active ? 'Activo' : 'Inactivo' }}</span>
+        <div class="exec-fieldset" v-if="isEdit">
+          <div class="d-flex align-items-center gap-3">
+            <label class="exec-label mb-0">Estado del Registro <span class="c-red">*</span></label>
+            <label class="exec-switch exec-switch-lg">
+              <input type="checkbox" v-model="form.active" />
+              <span></span>
+            </label>
+            <span class="x-small text-muted fw-600">{{ form.active ? 'ACTIVO EN SISTEMA' : 'INACTIVO' }}</span>
+          </div>
         </div>
+
       </div>
+    </main>
 
-    </div><!-- /lf-body -->
+    <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height:50vh;">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+        <p class="text-muted fw-600">Cargando formulario...</p>
+      </div>
+    </main>
 
-    <!-- ══════════════════════════════════════════════
-         FOOTER
-    ══════════════════════════════════════════════ -->
-    <div class="lf-footer">
-      <button type="button" class="lf-btn lf-btn--outline" @click="cancelar">
-        {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
-      </button>
-      <button
-        v-if="!form.enrollment_id && (isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))"
-        type="button"
-        class="lf-btn lf-btn--primary"
-        @click="guardar"
-        :disabled="saving || form.enrollment_id"
-      >
-        <i class="fa-solid fa-floppy-disk me-2" v-if="!saving"></i>
-        <i class="fa-solid fa-spinner fa-spin me-2" v-else></i>
-        {{ saving ? 'Guardando...' : 'Guardar lead' }}
-      </button>
-    </div>
-
-  </div><!-- /lf-wrapper -->
+  </div>
 
 
-  <!-- ════════════════════════════════════════════════════════
-       MODAL: Historial del Cliente
-  ════════════════════════════════════════════════════════ -->
   <BaseModal v-model="showClientHistory" title="Historial Completo del Cliente" size="xl">
-
     <div v-if="loadingHistory" class="d-flex justify-content-center align-items-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Cargando historial...</span>
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+        <p class="text-muted fw-600">Cargando historial...</p>
       </div>
     </div>
-
     <div v-else class="d-flex flex-column">
-
-      <!-- Info rápida -->
-      <div class="lf-modal-info-bar">
+      <div class="modal-info-bar">
         <div><small class="text-muted d-block">Cliente (Formulario)</small><strong>{{ form.full_name || 'Nombre Desconocido' }}</strong></div>
         <div><small class="text-muted d-block">Teléfono</small><strong>{{ form.telefono || '---' }}</strong></div>
       </div>
-
-      <!-- Tabs -->
-      <ul class="lf-tabs">
-        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
-          <i class="fa-solid fa-list me-1"></i> Histórico
-          <span class="lf-badge" v-if="clientHistoryLegacy.length">{{ clientHistoryLegacy.length }}</span>
-        </a></li>
-        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'asesoria' }" href="#" @click.prevent="activeHistoryTab = 'asesoria'">
-          <i class="fa-solid fa-headset me-1"></i> Asesoría / CRM
-        </a></li>
-        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeHistoryTab === 'inscripcion' }" href="#" @click.prevent="activeHistoryTab = 'inscripcion'">
-          <i class="fa-solid fa-graduation-cap me-1"></i> Inscripciones
-        </a></li>
+      <ul class="exec-tabs">
+        <li>
+          <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
+            <i class="fa-solid fa-list me-1"></i> Histórico
+            <span v-if="clientHistoryLegacy.length" class="pill pill-slate border ms-1" style="font-size:.67rem;">{{ clientHistoryLegacy.length }}</span>
+          </a>
+        </li>
+        <li>
+          <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeHistoryTab === 'asesoria' }" href="#" @click.prevent="activeHistoryTab = 'asesoria'">
+            <i class="fa-solid fa-headset me-1"></i> Asesoría / CRM
+          </a>
+        </li>
+        <li>
+          <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeHistoryTab === 'inscripcion' }" href="#" @click.prevent="activeHistoryTab = 'inscripcion'">
+            <i class="fa-solid fa-graduation-cap me-1"></i> Inscripciones
+          </a>
+        </li>
       </ul>
+      <div class="exec-tabs__panel">
 
-      <div class="lf-tabs__panel">
-
-        <!-- Histórico -->
         <div v-if="activeHistoryTab === 'historico'" class="fade-in">
-          <div v-if="clientHistoryLegacy.length === 0" class="alert alert-info text-center">
-            No se encontró historial legado para este número.
-          </div>
+          <div v-if="clientHistoryLegacy.length === 0" class="empty-state">No se encontró historial legado para este número.</div>
           <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle mb-0">
-              <thead class="table-light">
+            <table class="exec-table">
+              <thead>
                 <tr>
                   <th width="20%">Fecha</th>
                   <th width="40%">Programa / Interés</th>
@@ -615,14 +602,11 @@
           </div>
         </div>
 
-        <!-- Asesoría -->
         <div v-if="activeHistoryTab === 'asesoria'" class="fade-in">
-          <div v-if="clientHistoryLeads.length === 0" class="alert alert-info text-center">
-            No se encontraron gestiones de CRM recientes.
-          </div>
+          <div v-if="clientHistoryLeads.length === 0" class="empty-state">No se encontraron gestiones de CRM recientes.</div>
           <div v-else class="table-responsive">
-            <table class="table table-hover table-sm align-middle mb-0">
-              <thead class="table-light">
+            <table class="exec-table">
+              <thead>
                 <tr>
                   <th width="20%">Fecha Gestión</th>
                   <th width="35%">Interés / Edición</th>
@@ -640,34 +624,28 @@
                   <td>
                     <div class="fw-bold text-primary" style="font-size:.9rem">{{ lead.program || 'Sin programa' }}</div>
                     <div v-if="lead.edition">
-                      <span class="badge bg-light text-dark border mt-1">
+                      <span class="pill pill-slate border mt-1">
                         <i class="fa-regular fa-calendar me-1"></i> {{ lead.edition }}
                       </span>
                     </div>
                   </td>
                   <td>
-                    <div class="d-flex align-items-center">
-                      <div class="lf-avatar me-2">{{ lead.user_registration_full_name ? lead.user_registration_full_name.charAt(0) : '?' }}</div>
-                      <small class="text-truncate" style="max-width:120px" :title="lead.user_registration_full_name">
-                        {{ lead.user_registration_full_name || 'Sistema' }}
-                      </small>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="user-avatar">{{ lead.user_registration_full_name ? lead.user_registration_full_name.charAt(0) : '?' }}</div>
+                      <small class="text-truncate" style="max-width:110px" :title="lead.user_registration_full_name">{{ lead.user_registration_full_name || 'Sistema' }}</small>
                     </div>
                   </td>
                   <td>
-                    <span class="badge"
-                      :class="{
-                        'bg-success': ['Inscrito','Pagó','Matriculado'].includes(lead.cat_status_lead_label),
-                        'bg-warning text-dark': ['Interesado','En Seguimiento','Prox. Inicio'].includes(lead.cat_status_lead_label),
-                        'bg-info text-dark': ['Atendido'].includes(lead.cat_status_lead_label),
-                        'bg-danger': ['No Interesado','Rechazado'].includes(lead.cat_status_lead_label),
-                        'bg-secondary': !['Inscrito','Pagó','Interesado','Atendido','No Interesado'].includes(lead.cat_status_lead_label)
-                      }">
-                      {{ lead.cat_status_lead_label || 'Pendiente' }}
-                    </span>
+                    <span class="pill border" :class="{
+                      'pill-teal':  ['Inscrito','Pagó','Matriculado'].includes(lead.cat_status_lead_label),
+                      'pill-amber': ['Interesado','En Seguimiento','Prox. Inicio'].includes(lead.cat_status_lead_label),
+                      'pill-slate': ['Atendido'].includes(lead.cat_status_lead_label),
+                      'pill-red':   ['No Interesado','Rechazado'].includes(lead.cat_status_lead_label),
+                    }">{{ lead.cat_status_lead_label || 'Pendiente' }}</span>
                   </td>
                   <td class="text-center">
-                    <span class="badge bg-white text-dark border">
-                      {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size:.7rem"></i>
+                    <span class="pill pill-slate border">
+                      {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size:.65rem"></i>
                     </span>
                   </td>
                 </tr>
@@ -676,11 +654,10 @@
           </div>
         </div>
 
-        <!-- Inscripciones -->
         <div v-if="activeHistoryTab === 'inscripcion'" class="fade-in">
           <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle mb-0">
-              <thead class="table-light">
+            <table class="exec-table">
+              <thead>
                 <tr>
                   <th width="15%">Fecha</th>
                   <th width="45%">Programa</th>
@@ -695,8 +672,12 @@
                     <div class="fw-bold">{{ item.programa }}</div>
                     <small class="text-muted">Edición: {{ item.edicion }}</small>
                   </td>
-                  <td><span class="badge" :class="item.estado === 'Finalizado' ? 'bg-success' : 'bg-warning text-dark'">{{ item.estado }}</span></td>
-                  <td class="text-center"><span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span></td>
+                  <td>
+                    <span class="pill border" :class="item.estado === 'Finalizado' ? 'pill-teal' : 'pill-amber'">{{ item.estado }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -708,26 +689,27 @@
   </BaseModal>
 
 
-  <!-- ════════════════════════════════════════════════════════
-       MODAL: Detalle del Programa
-  ════════════════════════════════════════════════════════ -->
   <BaseModal v-model="showProgramDetail" title="Detalle del Programa" size="lg">
-
     <div v-if="loadingDetail" class="d-flex justify-content-center align-items-center py-5">
-      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+        <p class="text-muted fw-600">Cargando detalle...</p>
+      </div>
     </div>
-
     <div v-else-if="modelProgramVersion" class="d-flex flex-column">
-      <ul class="lf-tabs mt-2" v-if="hasEditions">
-        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeTab === 'info' }" href="#" @click.prevent="activeTab = 'info'">
-          <i class="fa-solid fa-file-lines me-1"></i> General
-        </a></li>
-        <li><a class="lf-tabs__item" :class="{ 'lf-tabs__item--active': activeTab === 'editions' }" href="#" @click.prevent="activeTab = 'editions'">
-          <i class="fa-solid fa-calendar-days me-1"></i> Ediciones ({{ modelProgramVersion.editions_json.length }})
-        </a></li>
+      <ul class="exec-tabs mt-2" v-if="hasEditions">
+        <li>
+          <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeTab === 'info' }" href="#" @click.prevent="activeTab = 'info'">
+            <i class="fa-solid fa-file-lines me-1"></i> General
+          </a>
+        </li>
+        <li>
+          <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeTab === 'editions' }" href="#" @click.prevent="activeTab = 'editions'">
+            <i class="fa-solid fa-calendar-days me-1"></i> Ediciones ({{ modelProgramVersion.editions_json.length }})
+          </a>
+        </li>
       </ul>
-
-      <div class="lf-tabs__panel" :class="{'rounded-top': !hasEditions}">
+      <div class="exec-tabs__panel" :class="{'rounded-top': !hasEditions}">
 
         <div v-if="activeTab === 'info'" class="fade-in">
           <div class="text-center mb-4 mt-2">
@@ -736,59 +718,57 @@
           </div>
           <div class="row g-3 mb-4 text-center">
             <div class="col-4">
-              <small class="d-block text-secondary">Tipo</small>
-              <span class="badge bg-light text-dark border">{{ modelProgramVersion.cat_type_program_label }}</span>
+              <small class="d-block text-secondary mb-1">Tipo</small>
+              <span class="pill pill-slate border">{{ modelProgramVersion.cat_type_program_label }}</span>
             </div>
             <div class="col-4">
-              <small class="d-block text-secondary">Modalidad</small>
-              <span class="badge bg-info bg-opacity-10 text-info border-info">{{ modelProgramVersion.cat_model_modality_label }}</span>
+              <small class="d-block text-secondary mb-1">Modalidad</small>
+              <span class="pill pill-teal border">{{ modelProgramVersion.cat_model_modality_label }}</span>
             </div>
             <div class="col-4">
-              <small class="d-block text-secondary">Sesiones</small>
-              <span class="fw-bold">{{ modelProgramVersion.sessions }}</span>
+              <small class="d-block text-secondary mb-1">Sesiones</small>
+              <span class="fw-bold fs-5">{{ modelProgramVersion.sessions }}</span>
             </div>
           </div>
-
-          <div class="lf-price-panel mb-4">
-            <div class="lf-price-panel__title">Precios Referenciales</div>
+          <div class="price-panel mb-4">
+            <div class="price-panel__title">Precios Referenciales</div>
             <div class="row">
               <div class="col-6 border-end text-center">
-                <small class="text-muted">Estudiante</small>
+                <small class="text-muted d-block">Estudiante</small>
                 <div class="fw-bold">S/ {{ modelProgramVersion.price_student_soles }}</div>
                 <small class="text-secondary">$ {{ modelProgramVersion.price_student_dollars }}</small>
               </div>
               <div class="col-6 text-center">
-                <small class="text-muted">Profesional</small>
+                <small class="text-muted d-block">Profesional</small>
                 <div class="fw-bold">S/ {{ modelProgramVersion.price_profesional_soles }}</div>
                 <small class="text-secondary">$ {{ modelProgramVersion.price_profesional_dollars }}</small>
               </div>
             </div>
           </div>
-
-          <div class="d-grid gap-2" v-if="modelProgramVersion.link">
-            <a :href="modelProgramVersion.link" target="_blank" class="btn btn-outline-primary">
+          <div class="d-grid" v-if="modelProgramVersion.link">
+            <a :href="modelProgramVersion.link" target="_blank" class="btn-exec btn-exec-outline text-center">
               <i class="fa-solid fa-external-link-alt me-2"></i> Ver landing page / Temario
             </a>
           </div>
-          <div v-if="!hasEditions" class="alert alert-secondary text-center mt-3 mb-0 py-2 small">
+          <div v-if="!hasEditions" class="empty-state mt-3">
             <i class="fa-solid fa-calendar-xmark me-1"></i> No hay ediciones programadas visibles.
           </div>
         </div>
 
         <div v-if="activeTab === 'editions'" class="fade-in">
           <div class="editions-scroll-container">
-            <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="lf-edition-card mb-3">
-              <div class="lf-edition-card__header">
-                <div>
-                  <span class="badge bg-primary me-2">{{ edition.global_code }}</span>
+            <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="edition-card mb-3">
+              <div class="edition-card__header">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="pill pill-slate border">{{ edition.global_code }}</span>
                   <span class="fw-bold" style="font-size:.9rem">Inicio: {{ formatDate(edition.start_date) }}</span>
                 </div>
-                <span class="badge"
-                  :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger') : 'bg-secondary'">
+                <span class="pill border"
+                  :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'pill-teal' : 'pill-red') : 'pill-slate'">
                   {{ (edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? `${edition.vacant} Vacantes` : 'Lleno') : 'Sin Vacantes' }}
                 </span>
               </div>
-              <div class="lf-edition-card__body">
+              <div class="edition-card__body">
                 <div class="row g-2" style="font-size:.85rem" v-if="!edition.edition_children || edition.edition_children.length == 0">
                   <div class="col-md-6">
                     <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
@@ -801,18 +781,22 @@
                   </div>
                 </div>
                 <div v-if="edition.edition_children && edition.edition_children.length > 0" class="mt-3">
-                  <div class="p-2 bg-light rounded border">
-                    <h6 class="text-uppercase text-muted mb-2" style="font-size:.7rem;letter-spacing:.5px">Estructura Académica / Módulos</h6>
+                  <div class="p-2 rounded border" style="background:var(--slate-50)">
+                    <div class="fieldset-title mb-2" style="border:none;padding:0;margin:0 0 8px 0;">Estructura Académica / Módulos</div>
                     <div class="table-responsive">
-                      <table class="table table-sm table-borderless mb-0 small align-middle">
-                        <thead class="text-secondary border-bottom">
+                      <table class="exec-table exec-table--sm">
+                        <thead>
                           <tr><th>Módulo</th><th>Fecha</th><th>Horario</th><th>Docente</th></tr>
                         </thead>
                         <tbody>
                           <tr v-for="child in edition.edition_children" :key="child.edition_num_id">
                             <td class="fw-bold text-primary">{{ child.abbreviation }}</td>
                             <td>{{ formatDate(child.start_date) }}</td>
-                            <td><div v-for="(csch,ci) in child.schedules" :key="ci" style="line-height:1.1"><small>{{ csch.day_combination_label }}</small></div></td>
+                            <td>
+                              <div v-for="(csch,ci) in child.schedules" :key="ci" style="line-height:1.1">
+                                <small>{{ csch.day_combination_label }}</small>
+                              </div>
+                            </td>
                             <td><small class="text-truncate d-block" style="max-width:120px">{{ child.instructor }}</small></td>
                           </tr>
                         </tbody>
@@ -827,21 +811,14 @@
 
       </div>
     </div>
-
-    <div v-else class="text-center py-5 text-muted">
-      No se encontró información detallada para este programa.
-    </div>
+    <div v-else class="empty-state py-5">No se encontró información detallada para este programa.</div>
   </BaseModal>
 
 
-  <!-- ════════════════════════════════════════════════════════
-       MODAL: Inscripción
-  ════════════════════════════════════════════════════════ -->
-  <BaseModal v-model="showViewModal" title="Inscripción del lead" size="xl">
+  <BaseModal v-model="showViewModal" title="Inscripción del Lead" size="xl">
     <div class="insc-modal">
 
-      <!-- Header programa -->
-      <header class="insc-header">
+      <div class="insc-header mb-3">
         <div class="insc-info">
           <h5 class="program-title">
             {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
@@ -855,9 +832,7 @@
               <div class="user-icon"><i class="fa-solid fa-user"></i></div>
               <span class="user-name text-truncate">{{ form.telefono }}</span>
             </div>
-            <div v-if="clientProfileType"
-              class="profile-badge"
-              :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
+            <div v-if="clientProfileType" class="profile-badge" :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
               <i class="fa-solid" :class="clientProfileType === 'estudiante' ? 'fa-graduation-cap' : 'fa-briefcase'"></i>
               <span>{{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}</span>
             </div>
@@ -870,27 +845,26 @@
               v-model="insc.montoOriginal"
               :currency="selectedCurrency"
               :storeAsMinor="false"
-              class="form-control form-control-sm fw-bold border-0 bg-transparent text-end p-0"
-              style="font-size:1.5rem;color:var(--lf-blue);max-width:150px"
+              class="exec-input-light border-0 bg-transparent text-end p-0 fw-bold"
+              style="font-size:1.5rem;color:var(--teal-600,#0d9488);max-width:150px"
               placeholder="0.00"
             />
           </div>
         </div>
-      </header>
+      </div>
 
-      <!-- Datos cliente -->
-      <div class="insc-section">
-        <h6 class="insc-section__title">Datos del Cliente / Inscripción</h6>
+      <div class="exec-fieldset mb-3">
+        <h6 class="fieldset-title">Datos del Cliente / Inscripción</h6>
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="lf-label">T. documento <span class="lf-required">*</span></label>
-            <SearchSelect required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" />
+            <label class="exec-label">T. documento <span class="c-red">*</span></label>
+            <SearchSelect required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Documento <span class="lf-required">*</span></label>
+            <label class="exec-label">Documento <span class="c-red">*</span></label>
             <input
               autocomplete="off" required v-model="insc.document" type="text"
-              :placeholder="docConfig.placeholder" class="form-control"
+              :placeholder="docConfig.placeholder" class="exec-input-light w-100"
               :maxlength="docConfig.maxLength" @keyup.enter="searchSunat"
               v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:docConfig.isNumeric?'numbers':undefined, transform:'upper' }"
             />
@@ -899,87 +873,85 @@
             </small>
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Correo <span class="lf-required">*</span></label>
-            <input autocomplete="off" required v-model="insc.email" type="email" placeholder="CORREO" class="form-control" v-restrict="{ trim:true, spaces:false, transform:'lower' }" />
+            <label class="exec-label">Correo <span class="c-red">*</span></label>
+            <input autocomplete="off" required v-model="insc.email" type="email" placeholder="CORREO" class="exec-input-light w-100" v-restrict="{ trim:true, spaces:false, transform:'lower' }" />
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Nombres <span class="lf-required">*</span></label>
-            <input autocomplete="off" required v-model="insc.full_name" type="text" placeholder="NOMBRES" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <label class="exec-label">Nombres <span class="c-red">*</span></label>
+            <input autocomplete="off" required v-model="insc.full_name" type="text" placeholder="NOMBRES" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Apellido Paterno <span class="lf-required">*</span></label>
-            <input autocomplete="off" required v-model="insc.last_name" type="text" placeholder="A. PATERNO" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <label class="exec-label">Apellido Paterno <span class="c-red">*</span></label>
+            <input autocomplete="off" required v-model="insc.last_name" type="text" placeholder="A. PATERNO" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Apellido Materno <span class="lf-required">*</span></label>
-            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="form-control" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <label class="exec-label">Apellido Materno <span class="c-red">*</span></label>
+            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
           </div>
           <div class="col-md-4">
-            <label class="lf-label">Modalidad del programa <span class="lf-required">*</span></label>
-            <SearchSelect required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" />
+            <label class="exec-label">Modalidad del programa <span class="c-red">*</span></label>
+            <SearchSelect required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
           </div>
         </div>
       </div>
 
-      <!-- Condiciones de pago -->
-      <div class="insc-section" v-if="isEdit || validateInscriptionClientInfo()">
-        <h6 class="insc-section__title">Condiciones de pago</h6>
+      <div class="exec-fieldset mb-3" v-if="isEdit || validateInscriptionClientInfo()">
+        <h6 class="fieldset-title">Condiciones de Pago</h6>
         <div class="row g-3">
           <div class="col-md-2">
-            <label class="lf-label">T. moneda <span class="lf-required">*</span></label>
-            <SearchSelect v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." />
+            <label class="exec-label">T. moneda <span class="c-red">*</span></label>
+            <SearchSelect v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
           </div>
           <div class="col-md-2" v-if="insc.selectedCurrencyAlias">
-            <label class="lf-label">Modalidad de pago <span class="lf-required">*</span></label>
-            <SearchSelect v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" />
+            <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
+            <SearchSelect v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias">
-            <label class="lf-label">Medio de Pago <span class="lf-required">*</span></label>
-            <SearchSelect v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." />
+            <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
+            <SearchSelect v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." class="exec-select-light w-100" />
           </div>
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'">
-            <label class="lf-label">Adelanto / Reserva <span class="lf-required">*</span></label>
+            <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
             <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
           </div>
-
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="lf-label">Descuento</label>
+            <label class="exec-label">Descuento</label>
             <SearchSelect v-model="insc.dsct_porcent_id" mode="remote"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
-              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" @change="onChangeDescuentoPorcentual" />
+              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoPorcentual" />
           </div>
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="lf-label">Promoción</label>
+            <label class="exec-label">Promoción</label>
             <SearchSelect v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" @change="onChangeDescuentoFijo" />
+              label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoFijo" />
           </div>
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="lf-label">Beneficio</label>
+            <label class="exec-label">Beneficio</label>
             <SearchSelect v-model="insc.dsct_benefit_id" mode="remote"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" @change="onChangeBeneficio" />
+              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeBeneficio" />
           </div>
         </div>
       </div>
 
-      <!-- Documentación -->
-      <div class="insc-section" v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web'">
-        <h6 class="insc-section__title">Documentación Adjunta</h6>
+      <div class="exec-fieldset mb-3"
+        v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web'"
+      >
+        <h6 class="fieldset-title">Documentación Adjunta</h6>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="lf-label fw-semibold mb-2">Comprobante de Pago</label>
+            <label class="exec-label mb-2">Comprobante de Pago</label>
             <FileUploader label="Clic para subir Voucher" :required="true" v-model="form.ticket_payment_url" accept=".png,.jpg,.jpeg,.pdf,.doc,.docx" />
           </div>
           <div class="col-md-6">
-            <label class="lf-label fw-semibold mb-2">Carnet / Documento ID</label>
+            <label class="exec-label mb-2">Carnet / Documento ID</label>
             <FileUploader label="Subir carnet estudiantil" v-model="form.carnet_url" accept=".pdf,.doc,.docx" />
           </div>
         </div>
       </div>
 
-      <!-- Resumen -->
-      <div class="insc-section" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
+      <div class="exec-fieldset mb-3" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
         <div class="summary-card">
           <div class="summary-header"><i class="fa-solid fa-receipt me-2"></i> Resumen de Transacción</div>
           <div class="summary-body">
@@ -1013,25 +985,24 @@
         </div>
       </div>
 
-      <!-- Observaciones -->
-      <div class="insc-section">
-        <h6 class="insc-section__title">Observaciones</h6>
+      <div class="exec-fieldset">
+        <h6 class="fieldset-title">Observaciones</h6>
         <div class="row g-3">
           <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6':'col-md-12'">
-            <textarea v-model="insc.observacions" class="form-control" required rows="2" style="resize:vertical;min-height:80px"></textarea>
+            <textarea v-model="insc.observacions" class="exec-textarea w-100" required rows="2"></textarea>
           </div>
           <div class="col-md-6" v-if="insc.cat_method_payment=='we_payment_method_web'">
-            <label class="lf-label fw-bold mb-1">Adjuntos</label>
+            <label class="exec-label mb-1">Adjuntos</label>
             <MultiFileUploader v-model="insc.attachments" label="Agregar Constancia" />
           </div>
         </div>
       </div>
 
-    </div><!-- /insc-modal -->
+    </div>
 
     <template #footer>
-      <button class="lf-btn lf-btn--outline lf-btn--sm" @click="showViewModal = false">Cerrar</button>
-      <button class="lf-btn lf-btn--primary lf-btn--sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
+      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
+      <button class="btn-exec btn-exec-primary btn-exec-sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
         {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
       </button>
@@ -1041,385 +1012,451 @@
 </template>
 
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     STYLES
-═══════════════════════════════════════════════════════════════════ -->
 <style scoped>
-
-/* ── Variables ─────────────────────────────────────────────────── */
-:root {
-  --lf-blue:    #2563eb;
-  --lf-emerald: #059669;
-  --lf-violet:  #7c3aed;
-  --lf-amber:   #d97706;
-  --lf-gray-50: #f8fafc;
-  --lf-gray-100:#f1f5f9;
-  --lf-gray-200:#e2e8f0;
-  --lf-gray-400:#94a3b8;
-  --lf-gray-600:#475569;
-  --lf-gray-800:#1e293b;
-  --lf-radius:  10px;
-  --lf-shadow:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-  --lf-shadow-md: 0 4px 12px rgba(0,0,0,.08);
-}
-
-/* ── Layout ────────────────────────────────────────────────────── */
-.lf-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 2rem;
-  font-size: .9rem;
-  color: var(--lf-gray-800);
-}
-
-/* ── Page Header ───────────────────────────────────────────────── */
-.lf-page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--lf-gray-200);
-}
-.lf-page-header__eyebrow {
-  font-size: .7rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--lf-gray-400);
-  font-weight: 600;
-  margin-bottom: .2rem;
-}
-.lf-page-header__title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--lf-gray-800);
-  margin: 0;
-  line-height: 1.2;
-}
-
-/* ── Body ──────────────────────────────────────────────────────── */
-.lf-body {
+.exec-shell {
+  background: var(--slate-50, #f8fafc);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
 
-/* ── Card ──────────────────────────────────────────────────────── */
-.lf-card {
-  background: #fff;
-  border: 1px solid var(--lf-gray-200);
-  border-radius: var(--lf-radius);
-  box-shadow: var(--lf-shadow);
-  overflow: hidden;
+.exec-masthead {
+  background: var(--navy-900, #0f172a);
+  color: #fff;
+  border-bottom: 1px solid var(--navy-700, #334155);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-.lf-card--flat {
-  box-shadow: none;
-}
-
-.lf-card__header {
+.masthead-inner {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: .6rem;
-  padding: .65rem 1rem;
-  background: var(--lf-gray-50);
-  border-bottom: 1px solid var(--lf-gray-200);
-  min-height: 44px;
+  padding: 12px 28px;
 }
-
-.lf-card__icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .75rem;
-  flex-shrink: 0;
-}
-.lf-card__icon--blue   { background: #eff6ff; color: var(--lf-blue); }
-.lf-card__icon--emerald{ background: #ecfdf5; color: var(--lf-emerald); }
-.lf-card__icon--violet { background: #f5f3ff; color: var(--lf-violet); }
-.lf-card__icon--amber  { background: #fffbeb; color: var(--lf-amber); }
-
-.lf-card__title {
-  font-size: .78rem;
-  font-weight: 700;
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; }
+.brand-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--lf-gray-600);
-}
-
-.lf-card__body {
-  padding: 1rem 1rem 1.1rem;
-}
-
-/* ── Labels ────────────────────────────────────────────────────── */
-.lf-label {
+  color: var(--slate-400, #94a3b8);
+  font-weight: 500;
   display: block;
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--lf-gray-600);
-  margin-bottom: .3rem;
-  line-height: 1.3;
+  margin-bottom: 3px;
 }
-.lf-required { color: #dc2626; margin-left: .1rem; }
+.brand-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+.masthead-actions { display: flex; gap: 10px; align-items: center; }
 
-/* ── Form controls ─────────────────────────────────────────────── */
-.form-control,
-.form-select,
-textarea.form-control {
-  font-size: .83rem;
-  border-color: var(--lf-gray-200);
-  border-radius: 7px;
-  color: var(--lf-gray-800);
+.exec-body { padding: 32px 28px; }
+.exec-form-wrapper {
   background: #fff;
-  transition: border-color .15s, box-shadow .15s;
-}
-.form-control:focus,
-textarea.form-control:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  margin: 0 auto;
 }
 
-/* ── Buttons ───────────────────────────────────────────────────── */
-.lf-btn {
+.exec-fieldset {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.fieldset-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  padding-bottom: 10px;
+}
+.exec-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 6px;
+}
+.c-red { color: var(--red-600, #dc2626); font-weight: 600; margin-left: .15rem; }
+
+.exec-input-light,
+.exec-select-light {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
+  transition: all 0.15s;
+  height: 38px;
+}
+.exec-input-light:focus,
+.exec-select-light:focus {
+  outline: none;
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
+}
+.exec-input-light:disabled,
+.exec-select-light:disabled {
+  background-color: var(--slate-50, #f8fafc);
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+  opacity: 1;
+}
+.exec-input-light.input-valid {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34,197,94,.1);
+}
+
+.exec-textarea {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
+  transition: border-color .15s, box-shadow .15s;
+  resize: vertical;
+  min-height: 80px;
+  display: block;
+}
+.exec-textarea:focus {
+  outline: none;
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
+}
+.exec-textarea:disabled {
+  background-color: var(--slate-50, #f8fafc);
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+.btn-exec {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
-  font-size: .83rem;
+  gap: 6px;
+  border-radius: 5px;
+  font-size: 12.5px;
   font-weight: 600;
-  padding: .45rem .9rem;
+  padding: 8px 14px;
   cursor: pointer;
   transition: all .15s;
   border: 1px solid transparent;
   white-space: nowrap;
   text-decoration: none;
+  line-height: 1.2;
 }
-.lf-btn--sm  { padding: .3rem .65rem; font-size: .78rem; }
-.lf-btn--lg  { padding: .55rem 1.2rem; font-size: .9rem; }
+.btn-exec:disabled { opacity: .5; cursor: default; }
 
+.btn-exec-primary {
+  background: var(--navy-900, #0f172a);
+  color: #fff;
+  border-color: var(--navy-900, #0f172a);
+}
+.btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
 
+.btn-exec-ghost {
+  background: transparent;
+  color: var(--slate-300, #cbd5e1);
+  border-color: var(--slate-600, #475569);
+}
+.btn-exec-ghost:hover:not(:disabled) {
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  border-color: var(--slate-400, #94a3b8);
+}
 
-.lf-btn--primary:hover:not(:disabled) { background: #0d1a3e; color: white; }
-.lf-btn--primary:disabled { opacity: .55; cursor: default; }
+.btn-exec-outline {
+  background: #fff;
+  color: var(--text-secondary, #475569);
+  border-color: var(--border, #e2e8f0);
+}
+.btn-exec-outline:hover:not(:disabled) {
+  background: var(--slate-50, #f8fafc);
+  border-color: var(--slate-400, #94a3b8);
+}
 
-.lf-btn--warning {
+.btn-exec-warning {
   background: #f59e0b;
   color: #fff;
+  border-color: #f59e0b;
 }
-.lf-btn--warning:hover:not(:disabled) { background: #d97706; }
+.btn-exec-warning:hover:not(:disabled) { background: #d97706; }
 
-.lf-btn--outline {
-  background: #fff;
-  border-color: var(--lf-gray-200);
-  color: var(--lf-gray-600);
-}
-.lf-btn--outline:hover { background: var(--lf-gray-50); border-color: var(--lf-gray-400); }
-
-.lf-btn--danger-ghost {
+.btn-exec-danger-ghost {
   background: transparent;
   border-color: #fca5a5;
   color: #b91c1c;
 }
-.lf-btn--danger-ghost:hover { background: #fef2f2; border-color: #f87171; }
+.btn-exec-danger-ghost:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
 
-/* ── Icon Button ───────────────────────────────────────────────── */
-.lf-icon-btn {
+.btn-exec-sm { padding: 5px 10px; font-size: 11.5px; }
+
+.btn-icon {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--lf-blue);
+  color: var(--teal-500, #14b8a6);
   padding: 0 .2rem;
   font-size: .9rem;
   vertical-align: middle;
   opacity: .8;
   transition: opacity .15s;
 }
-.lf-icon-btn:hover { opacity: 1; }
+.btn-icon:hover { opacity: 1; }
+.btn-icon-sm { font-size: .8rem; }
 
-/* ── Switch ────────────────────────────────────────────────────── */
-.lf-switch { position: relative; width: 42px; height: 24px; display: inline-block; vertical-align: middle; }
-.lf-switch input { display: none; }
-.lf-switch span {
-  position: absolute; inset: 0; background: #e2e8f0; border-radius: 9999px; transition: .2s; cursor: pointer;
+.exec-switch { position: relative; width: 42px; height: 24px; display: inline-block; vertical-align: middle; }
+.exec-switch input { display: none; }
+.exec-switch span {
+  position: absolute;
+  inset: 0;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  transition: .2s;
+  cursor: pointer;
 }
-.lf-switch span::after {
-  content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
-  position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
+.exec-switch span::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: .2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
 }
-.lf-switch input:checked + span { background: var(--lf-blue); }
-.lf-switch input:checked + span::after { left: 21px; }
-.lf-switch-label { font-size: .78rem; color: var(--lf-gray-600); vertical-align: middle; }
+.exec-switch input:checked + span { background: var(--teal-500, #14b8a6); }
+.exec-switch input:checked + span::after { left: 21px; }
+.exec-switch-lg { width: 52px; height: 28px; }
+.exec-switch-lg span::after { width: 22px; height: 22px; top: 3px; left: 3px; }
+.exec-switch-lg input:checked + span::after { left: 27px; }
 
-/* ── Attempt / Seguimiento table ───────────────────────────────── */
-.lf-attempt-head {
+.x-small { font-size: .72rem; }
+.fw-600 { font-weight: 600; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--slate-600, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
+.pill-teal   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4 !important; }
+.pill-red    { background: #fef2f2; color: #b91c1c; border-color: #fecaca !important; }
+.pill-amber  { background: #fffbeb; color: #92400e; border-color: #fde68a !important; }
+
+.empty-state {
+  text-align: center;
+  color: var(--slate-400, #94a3b8);
+  font-size: 13px;
+  font-style: italic;
+  padding: 20px;
+  background: var(--slate-50, #f8fafc);
+  border-radius: 6px;
+  border: 1px dashed var(--slate-300, #cbd5e1);
+}
+
+.edition-meta {
+  font-size: .72rem;
+  color: var(--slate-400, #94a3b8);
+  line-height: 1.7;
+}
+.edition-meta b { color: var(--slate-600, #475569); }
+
+.attempt-head {
   display: grid;
-  grid-template-columns: 40px 160px 1fr 160px 160px 60px;
+  grid-template-columns: 40px 170px 1fr 165px 165px 64px;
   gap: .5rem;
   font-size: .68rem;
   text-transform: uppercase;
   letter-spacing: .04em;
   font-weight: 700;
-  color: var(--lf-gray-400);
+  color: var(--slate-400, #94a3b8);
   padding: .4rem .75rem;
-  border-bottom: 1px solid var(--lf-gray-200);
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
-.lf-attempt-row {
+.attempt-row {
   display: grid;
-  grid-template-columns: 40px 160px 1fr 160px 160px 60px;
+  grid-template-columns: 40px 170px 1fr 165px 165px 64px;
   gap: .5rem;
   align-items: start;
   padding: .75rem;
-  border-bottom: 1px solid var(--lf-gray-100);
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
   transition: background .12s;
 }
-.lf-attempt-row:last-child { border-bottom: none; }
-.lf-attempt-row:hover { background: var(--lf-gray-50); }
-
-.lf-attempt-row__num {
+.attempt-row:last-child { border-bottom: none; }
+.attempt-row:hover { background: var(--slate-50, #f8fafc); }
+.attempt-row__num {
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: var(--lf-gray-400);
+  color: var(--slate-400, #94a3b8);
   padding-top: .3rem;
-  font-size: .85rem;
+  font-size: .88rem;
 }
 
-/* Timer */
-.lf-timer {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-}
-.lf-timer__btn {
-  width: 26px; height: 26px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center;
+.attempt-timer { display: flex; align-items: center; gap: .4rem; }
+.timer-btn {
+  width: 26px; height: 26px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: .6rem; transition: all .15s;
 }
-.lf-timer__btn--start { background: #d1fae5; color: #059669; }
-.lf-timer__btn--start:hover { background: #a7f3d0; }
-.lf-timer__btn--stop  { background: #fee2e2; color: #dc2626; }
-.lf-timer__btn--stop:hover  { background: #fecaca; }
-.lf-timer__display { font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--lf-gray-600); }
-.lf-timer__display--active { color: #dc2626; }
-
-/* ── Edition Meta ──────────────────────────────────────────────── */
-.lf-edition-meta {
-  font-size: .72rem;
-  color: var(--lf-gray-400);
-  line-height: 1.6;
+.timer-btn--start { background: #d1fae5; color: #059669; }
+.timer-btn--start:hover { background: #a7f3d0; }
+.timer-btn--stop  { background: #fee2e2; color: #dc2626; }
+.timer-btn--stop:hover  { background: #fecaca; }
+.timer-btn:disabled { opacity: .5; cursor: default; }
+.timer-display {
+  font-size: .78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--slate-600, #475569);
 }
-.lf-edition-meta b { color: var(--lf-gray-600); }
+.timer-display--active { color: #dc2626; }
 
-/* ── Footer ────────────────────────────────────────────────────── */
-.lf-footer {
+.exec-tabs {
+  list-style: none;
   display: flex;
-  justify-content: flex-end;
-  gap: .6rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--lf-gray-200);
+  gap: .2rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  margin: 0;
+}
+.exec-tabs__item {
+  display: block;
+  padding: .55rem .85rem;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--slate-400, #94a3b8);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all .15s;
+}
+.exec-tabs__item:hover { color: var(--slate-600, #475569); }
+.exec-tabs__item--active {
+  color: var(--navy-900, #0f172a);
+  border-bottom-color: var(--teal-500, #14b8a6);
+  font-weight: 700;
+}
+.exec-tabs__panel {
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
 }
 
-/* ── Modals shared ─────────────────────────────────────────────── */
-.lf-modal-info-bar {
+.exec-table {
+  width: 100%;
+  font-size: .82rem;
+  border-collapse: collapse;
+}
+.exec-table thead tr {
+  background: var(--slate-50, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.exec-table th {
+  padding: 8px 12px;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 700;
+  color: var(--slate-400, #94a3b8);
+  text-align: left;
+}
+.exec-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  vertical-align: middle;
+}
+.exec-table tbody tr:last-child td { border-bottom: none; }
+.exec-table tbody tr:hover { background: var(--slate-50, #f8fafc); }
+.exec-table--sm th { padding: 6px 8px; font-size: .66rem; }
+.exec-table--sm td { padding: 6px 8px; }
+
+.modal-info-bar {
   display: flex;
   gap: 2rem;
   padding: .65rem 1rem;
-  background: var(--lf-gray-50);
-  border-bottom: 1px solid var(--lf-gray-200);
+  background: var(--slate-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
   margin-bottom: .75rem;
   font-size: .85rem;
 }
 
-.lf-tabs {
-  list-style: none;
-  display: flex;
-  gap: .25rem;
-  padding: 0 1rem;
-  border-bottom: 1px solid var(--lf-gray-200);
-  margin: 0 0 0 0;
-}
-.lf-tabs__item {
-  display: block;
-  padding: .55rem .85rem;
-  font-size: .82rem;
-  font-weight: 500;
-  color: var(--lf-gray-400);
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: all .15s;
-}
-.lf-tabs__item:hover { color: var(--lf-gray-600); }
-.lf-tabs__item--active {
-  color: var(--lf-blue);
-  border-bottom-color: var(--lf-blue);
-  font-weight: 700;
-}
-.lf-tabs__panel {
-  padding: 1rem;
-  background: #fff;
-}
-
-.lf-badge {
-  display: inline-block;
-  background: var(--lf-gray-200);
-  color: var(--lf-gray-600);
-  border-radius: 999px;
-  padding: .05rem .45rem;
-  font-size: .68rem;
-  font-weight: 700;
-  margin-left: .35rem;
-}
-
-.lf-avatar {
+.user-avatar {
   width: 26px; height: 26px; border-radius: 50%;
-  background: var(--lf-blue); color: #fff;
+  background: var(--navy-900, #0f172a); color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-size: .72rem; font-weight: 700; flex-shrink: 0;
 }
 
-/* ── Price panel (modal programa) ──────────────────────────────── */
-.lf-price-panel {
-  background: var(--lf-gray-50);
-  border: 1px solid var(--lf-gray-200);
-  border-radius: 8px;
+.price-panel {
+  background: var(--slate-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
   padding: 1rem;
 }
-.lf-price-panel__title {
+.price-panel__title {
   font-size: .7rem;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--lf-gray-400);
+  color: var(--slate-400, #94a3b8);
   font-weight: 700;
   margin-bottom: .75rem;
 }
 
-/* ── Edition card ──────────────────────────────────────────────── */
-.lf-edition-card {
-  border: 1px solid var(--lf-gray-200);
-  border-radius: 8px;
+.edition-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
   overflow: hidden;
 }
-.lf-edition-card__header {
-  background: var(--lf-gray-50);
+.edition-card__header {
+  background: var(--slate-50, #f8fafc);
   padding: .55rem .85rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--lf-gray-200);
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
-.lf-edition-card__body { padding: .75rem .85rem; }
+.edition-card__body { padding: .75rem .85rem; }
 
-/* ── Inscription modal ─────────────────────────────────────────── */
-.insc-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.editions-scroll-container {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
 }
+.editions-scroll-container::-webkit-scrollbar { width: 5px; }
+.editions-scroll-container::-webkit-scrollbar-thumb { background: var(--slate-200, #e2e8f0); border-radius: 4px; }
+
+.insc-modal { display: flex; flex-direction: column; gap: 0; }
 
 .insc-header {
   display: flex;
@@ -1427,118 +1464,160 @@ textarea.form-control:focus {
   align-items: flex-start;
   gap: 1.5rem;
   background: #fff;
-  border: 1px solid var(--lf-gray-200);
-  border-radius: var(--lf-radius);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
   padding: 1.1rem 1.25rem;
 }
 .insc-info { flex: 1; min-width: 0; }
-.program-title { font-size: 1rem; font-weight: 700; color: var(--lf-gray-800); margin-bottom: .3rem; line-height: 1.3; }
-.program-edition { display: inline-flex; align-items: center; font-size: .82rem; color: var(--lf-gray-400); background: var(--lf-gray-100); padding: .15rem .55rem; border-radius: 4px; }
-.user-meta { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .65rem; }
-.user-badge { display: inline-flex; align-items: center; gap: .4rem; background: var(--lf-gray-50); border: 1px solid var(--lf-gray-200); padding: .25rem .65rem; border-radius: 999px; font-size: .82rem; color: var(--lf-gray-600); }
-.user-icon { width: 18px; height: 18px; background: var(--lf-gray-200); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .6rem; }
-.profile-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .65rem; border-radius: 6px; font-size: .78rem; font-weight: 600; }
+.program-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy-900, #0f172a);
+  margin-bottom: .3rem;
+  line-height: 1.3;
+}
+.program-edition {
+  display: inline-flex;
+  align-items: center;
+  font-size: .82rem;
+  color: var(--slate-400, #94a3b8);
+  background: var(--slate-100, #f1f5f9);
+  padding: .15rem .55rem;
+  border-radius: 4px;
+}
+.user-meta { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--slate-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  padding: .25rem .65rem;
+  border-radius: 999px;
+  font-size: .82rem;
+  color: var(--slate-600, #475569);
+}
+.user-icon {
+  width: 18px; height: 18px;
+  background: var(--slate-300, #cbd5e1);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem;
+}
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .25rem .65rem;
+  border-radius: 6px;
+  font-size: .78rem;
+  font-weight: 600;
+}
 .profile-badge.is-student { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-.profile-badge.is-pro { background: var(--lf-gray-100); color: var(--lf-gray-800); border: 1px solid var(--lf-gray-200); }
+.profile-badge.is-pro     { background: var(--slate-100, #f1f5f9); color: var(--navy-900, #0f172a); border: 1px solid var(--border, #e2e8f0); }
 
 .insc-price-box {
   text-align: right;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   padding: .7rem 1.1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   min-width: 135px;
   flex-shrink: 0;
 }
-.price-label { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: #166534; font-weight: 700; margin-bottom: .2rem; }
+.price-label {
+  display: block;
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #166534;
+  font-weight: 700;
+  margin-bottom: .2rem;
+}
 .price-amount { font-weight: 800; color: #15803d; }
 
-.insc-section {
-  background: #fff;
-  border: 1px solid var(--lf-gray-200);
-  border-radius: var(--lf-radius);
-  padding: .85rem 1rem .95rem;
+.summary-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
 }
-.insc-section__title {
-  font-size: .7rem;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--lf-gray-400);
+.summary-header {
+  background: var(--slate-50, #f8fafc);
+  padding: .65rem 1.1rem;
   font-weight: 700;
-  margin-bottom: .75rem;
-  display: flex;
-  align-items: center;
-  gap: .35rem;
+  color: var(--slate-600, #475569);
+  font-size: .85rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
 }
-.insc-section__title::before {
-  content: '';
-  width: 3px; height: 13px;
-  background: var(--lf-blue);
-  border-radius: 9999px;
-}
-
-/* Summary */
-.summary-card { background: #fff; border: 1px solid var(--lf-gray-200); border-radius: 10px; overflow: hidden; }
-.summary-header { background: var(--lf-gray-100); padding: .65rem 1.1rem; font-weight: 700; color: var(--lf-gray-600); font-size: .85rem; border-bottom: 1px solid var(--lf-gray-200); }
 .summary-body { padding: 1rem 1.1rem; }
-.summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; font-size: .88rem; }
-.summary-divider { height: 0; border-top: 1px dashed var(--lf-gray-200); margin: .85rem 0; }
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .6rem;
+  font-size: .88rem;
+}
+.summary-divider {
+  height: 0;
+  border-top: 1px dashed var(--border, #e2e8f0);
+  margin: .85rem 0;
+}
 .summary-row.total { margin-bottom: 0; align-items: flex-end; }
-.label-total { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--lf-gray-400); font-weight: 700; }
-.value-total { font-size: 1.45rem; font-weight: 800; color: var(--lf-gray-800); line-height: 1; }
+.label-total {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--slate-400, #94a3b8);
+  font-weight: 700;
+}
+.value-total {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--navy-900, #0f172a);
+  line-height: 1;
+}
 
-/* ── Responsive ────────────────────────────────────────────────── */
+.fade-in { animation: execFadeIn .2s ease; }
+@keyframes execFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 991px) {
-  .lf-attempt-head { display: none; }
-  .lf-attempt-row {
+  .attempt-head { display: none; }
+  .attempt-row {
     display: flex;
     flex-direction: column;
-    background: var(--lf-gray-50);
-    border: 1px solid var(--lf-gray-200);
-    border-radius: 8px;
+    background: var(--slate-50, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 6px;
     margin-bottom: .75rem;
     padding: .85rem;
     gap: .6rem;
   }
-  .lf-attempt-row__num {
+  .attempt-row__num {
     justify-content: flex-start;
     font-size: 1rem;
-    color: var(--lf-blue);
-    border-bottom: 1px solid var(--lf-gray-200);
+    color: var(--teal-500, #14b8a6);
+    border-bottom: 1px solid var(--border, #e2e8f0);
     padding-bottom: .5rem;
   }
 }
 
+@media (max-width: 768px) {
+  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 14px 16px; }
+  .masthead-actions { width: 100%; justify-content: flex-end; }
+  .exec-body { padding: 16px 12px; }
+  .exec-form-wrapper { padding: 16px; }
+  .exec-fieldset { padding: 14px 16px; }
+}
+
 @media (max-width: 576px) {
-  .lf-page-header { flex-direction: column; align-items: stretch; }
   .insc-header { flex-direction: column; }
-  .insc-price-box { text-align: left; }
-}
-
-/* ── Animations ────────────────────────────────────────────────── */
-.fade-in {
-  animation: lfFadeIn .25s ease;
-}
-@keyframes lfFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Editions scroll */
-.editions-scroll-container {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-.editions-scroll-container::-webkit-scrollbar { width: 5px; }
-.editions-scroll-container::-webkit-scrollbar-thumb { background: var(--lf-gray-200); border-radius: 4px; }
-
-.brand-rule {
-  width: 3px; height: 42px;
-  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
+  .insc-price-box { text-align: left; width: 100%; }
 }
 </style>
-
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
   import { useRouter, useRoute } from 'vue-router'

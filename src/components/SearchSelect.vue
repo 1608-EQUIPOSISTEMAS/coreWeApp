@@ -1,7 +1,7 @@
 <template>
-  <div class="position-relative" ref="wrapperEl">
+  <div class="position-relative searchselect-wrapper" ref="wrapperEl">
     <div
-      class="form-control searchselect-control"
+      class="searchselect-control"
       :class="[{ 'is-locked': isLocked, 'is-disabled': isDisabled }, validationClass]"
       @mousedown.prevent="onControlMouseDown"
       :aria-disabled="isDisabled"
@@ -62,7 +62,6 @@
         v-if="dropdownOpen && !isLocked && !isDisabled"
         ref="dropdownEl"
         class="searchselect-dropdown"
-        :class="validationClass"
         :style="dropdownStyle"
         role="listbox"
       >
@@ -77,7 +76,7 @@
           v-else-if="isRemote && loading"
           class="dropdown-message"
         >
-          <span class="spinner"></span>
+          <span class="spinner-small me-2"></span>
           Cargando…
         </div>
 
@@ -93,16 +92,16 @@
           v-for="opt in listItems"
           :key="opt[valueField]"
           type="button"
-          class="dropdown-item"
+          class="dropdown-item-exec"
           @click="selectOption(opt)"
           role="option"
         >
-          <div class="dropdown-item__label">
+          <div class="dropdown-item-exec__label">
             {{ opt[labelField] }}
           </div>
           <div
             v-if="showSubValue"
-            class="dropdown-item__sublabel"
+            class="dropdown-item-exec__sublabel"
           >
             {{ opt[sublabelField] ? opt[sublabelField] : opt[valueField] }}
           </div>
@@ -112,7 +111,7 @@
 
     <div
       v-if="hint"
-      class="form-text"
+      class="form-text-exec"
     >
       {{ hint }}
     </div>
@@ -174,6 +173,9 @@ const isLocked = computed(
     props.modelValue !== ''
 )
 
+// === AQUÍ ESTÁ EL AJUSTE ===
+// Aseguramos que la clase de validación solo se retorne si el componente ha sido "tocado"
+// Si necesitas que siempre se muestre, quítale el `|| !isLocked.value`
 const validationClass = computed(() => {
   if (!props.required || props.disabled) return ''
   return isLocked.value ? 'has-success' : 'has-error'
@@ -413,47 +415,73 @@ function clearSelection () {
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════════
+   DISEÑO ESTÁNDAR "EXEC" PARA SEARCH SELECT
+═══════════════════════════════════════════════ */
+.searchselect-wrapper {
+  width: 100%;
+  /* IMPORTANTE: Eliminamos cualquier border, padding o background del wrapper 
+     para que no interfiera con el control interno */
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .searchselect-control {
   position: relative;
-  padding: 0.5rem 2.75rem 0.5rem 0.875rem;
+  padding: 0.25rem 2.25rem 0.25rem 0.75rem;
   display: flex;
   align-items: center;
-  min-height: 42px;
-  background-color: #ffffff;
-  border: 1.5px solid #d1d5db; /* ✅ Mantener esto */
-  border-radius: 0.5rem;
+  min-height: 38px;
+  background-color: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  width: 100%; /* Asegura que ocupe todo el wrapper */
 }
 
 .searchselect-control:hover:not(.is-disabled):not(.is-locked) {
-  border-color: #9ca3af;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-color: var(--slate-300, #cbd5e1);
 }
 
 .searchselect-control:focus-within:not(.is-disabled) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--teal-500, #12274e);
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1);
   outline: none;
 }
 
 .searchselect-control.is-disabled {
-  background-color: #f9fafb;
-  color: #9ca3af;
+  background-color: var(--slate-50, #f8fafc);
+  color: var(--slate-400, #94a3b8);
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .searchselect-control.is-locked {
   cursor: default;
-  background-color: #fafafa;
+  background-color: var(--slate-50, #f8fafc);
+}
+
+/* === LÓGICA DE VALIDACIÓN CORREGIDA === */
+/* Solo aplica rojo al borde si tiene la clase has-error y está requerido pero vacío */
+.searchselect-control.has-error {
+  border-color: var(--red-600, #dc2626) !important;
+}
+
+.searchselect-control.has-error:focus-within {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.searchselect-control.has-success {
+  border-color: #10b981 !important;
 }
 
 .ss-locked-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.9375rem;
-  color: #1f2937;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -465,26 +493,27 @@ function clearSelection () {
   border: 0;
   background: transparent;
   padding: 0;
-  font-size: 0.9375rem;
-  color: #1f2937;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
   outline: none;
-  box-shadow: none;
+  box-shadow: none !important; /* Previene sombras internas */
 }
 
 .searchselect-input::placeholder {
-  color: #9ca3af;
+  color: var(--slate-400, #94a3b8);
   font-weight: 400;
 }
 
 .searchselect-input[disabled] {
   background-color: transparent;
-  color: #9ca3af;
+  color: var(--slate-400, #94a3b8);
   cursor: not-allowed;
 }
 
 .searchselect-affordance {
   position: absolute;
-  right: 0.75rem;
+  right: 0.6rem;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -493,139 +522,117 @@ function clearSelection () {
 }
 
 .dropdown-arrow {
-  color: #6b7280;
+  color: var(--text-muted, #94a3b8);
   pointer-events: none;
   transition: transform 0.2s ease;
 }
 
 .searchselect-control:focus-within .dropdown-arrow {
   transform: translateY(-50%) rotate(180deg);
+  color: var(--teal-500, #12274e);
 }
 
 .btn-clear {
   border: 0;
   background: transparent;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.375rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--slate-400, #94a3b8);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .btn-clear:hover {
-  background-color: #f3f4f6;
-  color: #dc2626;
+  background-color: var(--slate-100, #f1f5f9);
+  color: var(--red-600, #dc2626);
 }
 
+/* ═══════════════════════════════════════════════
+   MENÚ DESPLEGABLE
+═══════════════════════════════════════════════ */
 .searchselect-dropdown {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
 .dropdown-message {
-  padding: 1rem 1.25rem;
-  font-size: 0.875rem;
-  color: #6b7280;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary, #475569);
   display: flex;
   align-items: center;
-  gap: 0.625rem;
 }
 
 .dropdown-message--empty {
-  color: #9ca3af;
+  color: var(--slate-400, #94a3b8);
   font-style: italic;
 }
 
-.dropdown-item {
+.dropdown-item-exec {
   width: 100%;
   text-align: left;
-  padding: 0.75rem 1.25rem;
+  padding: 8px 14px;
   border: 0;
-  background: #ffffff;
+  background: var(--white, #ffffff);
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.1s ease;
+  border-bottom: 1px solid var(--slate-50, #f8fafc);
 }
 
-.dropdown-item:last-child {
+.dropdown-item-exec:last-child {
   border-bottom: none;
 }
 
-.dropdown-item:hover {
-  background-color: #f9fafb;
+.dropdown-item-exec:hover {
+  background-color: #f0f9ff;
 }
 
-.dropdown-item:active {
-  background-color: #f3f4f6;
+.dropdown-item-exec:active {
+  background-color: #e0f2fe;
 }
 
-.dropdown-item__label {
-  font-size: 0.875rem;
+.dropdown-item-exec__label {
+  font-size: 12.5px;
   font-weight: 500;
-  color: #1f2937;
-  line-height: 1.4;
-}
-
-.dropdown-item__sublabel {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
+  color: var(--text-primary, #0f172a);
   line-height: 1.3;
 }
-/* ✅ AÑADIR - Barra lateral para validación */
-.has-error.searchselect-control {
-  border-color: #e5e7eb;
-  border-left-width: 3px;
-  border-left-color: #f87171;
-  transition: all 0.15s ease;
+
+.dropdown-item-exec__sublabel {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+  line-height: 1.2;
 }
 
-.has-error.searchselect-control:focus-within {
-  border-color: #fecaca;
-  border-left-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+.form-text-exec {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
 }
 
-.has-success.searchselect-control {
-  border-color: #e5e7eb;
-  border-left-width: 3px;
-  border-left-color: #34d399;
-  transition: all 0.15s ease;
-}
-
-.has-success.searchselect-control:focus-within {
-  border-color: #d1fae5;
-  border-left-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
-}
-
-/* Dropdown con bordes sutiles */
-.has-error.searchselect-dropdown {
-  border-color: #fecaca;
-}
-
-.has-success.searchselect-dropdown {
-  border-color: #d1fae5;
-}
-
-.form-text {
-  margin-top: 0.375rem;
-  font-size: 0.8125rem;
-  color: #6b7280;
-}
-
+/* Spinner */
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border: 2px solid var(--border, #e2e8f0);
+  border-top-color: var(--teal-500, #12274e);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border, #e2e8f0);
+  border-top-color: var(--teal-500, #12274e);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }

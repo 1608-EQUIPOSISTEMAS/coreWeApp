@@ -13,7 +13,7 @@
     </header>
 
     <main class="exec-body">
-      <div class="toolbar-chips">
+      <div class="toolbar-chips mb-3">
         <BaseFilterChips
           :items="activeFilterChips"
           @remove="clearFilter"
@@ -29,8 +29,9 @@
             @change="handlePaginationChange"
           />
         </div>
-        <div class="masthead-actions">
-          <button class="btn-exec btn-exec-primary" @click="goNew">
+        
+        <div class="toolbar-actions">
+          <button class="btn-exec btn-exec-primary w-sm-100" @click="goNew">
             <i class="fa-solid fa-plus"></i> Nuevo Instructor
           </button>
         </div>
@@ -43,8 +44,8 @@
               <tr class="thead-sub">
                 <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
                 <th class="ts ts-c">Estado</th>
-                <th class="ts ts-c">Instructor / Documento</th>
-                <th class="ts ts-c">Ocupación / País</th>
+                <th class="ts ts-c">Instructor</th>
+                <th class="ts ts-c">Documento</th>
                 <th class="ts ts-c">Registro</th>
                 <th class="ts ts-c">Última modif.</th>
               </tr>
@@ -52,30 +53,26 @@
             <tbody>
               <tr v-for="i in instructors" :key="i.instructor_id" class="tbody-row">
                 <td class="td-a text-center nowrap">
-                  <button class="btn-icon" @click="editInstructor(i)" title="Editar">
+                  <button class="btn-icon btn-icon-sm" @click="editInstructor(i)" title="Editar">
                     <i class="fa-solid fa-pen-to-square text-warning"></i>
                   </button>
                 </td>
 
                 <td class="td-a">
-                  <span class="pill" :class="i.instructor_active === 'Y' ? 'pill-teal' : 'pill-red'">
+                  <span class="pill border" :class="i.instructor_active === 'Y' ? 'pill-teal' : 'pill-red'">
                     {{ i.instructor_active === 'Y' ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
 
                 <td class="td-a">
                   <div class="fw-600 text-dark">{{ buildFullName(i) }}</div>
+                </td>
+                <td class="td-a">
                   <div class="text-mono small mt-1 accent-text">
-                    <span v-if="i.cat_type_document_label">{{ i.cat_type_document_label }}:</span>
+                    <span v-if="i.cat_type_document_label">{{ i.cat_type_document_label|| 'S/N' }}:</span>
                     {{ i.document_number || 'S/N' }}
                   </div>
                 </td>
-
-                <td class="td-a">
-                  <div class="small fw-600 text-dark">{{ i.cat_occupation_label || '—' }}</div>
-                  <div class="small text-muted">{{ i.cat_country_label || '—' }}</div>
-                </td>
-
                 <td class="td-a small text-muted">{{ formatDate(i.registration_date) }}</td>
                 <td class="td-a small text-muted">{{ formatDate(i.modification_date) }}</td>
               </tr>
@@ -94,7 +91,7 @@
   </div>
 
   <BaseModal v-model="showFilterModal" title="Filtros de Instructores" size="lg">
-    <div class="px-4 py-3">
+    <div class="px-4 py-3 form-contrast">
       <div class="exec-fieldset mb-4">
         <h6 class="fieldset-title">Búsqueda General y Estado</h6>
         <div class="row g-3">
@@ -106,7 +103,7 @@
               label-field="description"
               value-field="value"
               placeholder="Todos..."
-              class="exec-select-light w-100"
+              class="w-100"
             />
           </div>
 
@@ -115,7 +112,7 @@
             <input
               v-model.trim="filters.q"
               type="text"
-              class="exec-input-light w-100"
+              class="form-control w-100"
               placeholder="Buscar por nombre, documento..."
               @keyup.enter="applyFilters"
             />
@@ -142,110 +139,118 @@
 
 <style scoped>
 /* ═══════════════════════════════════════════════
-   TOKENS & BASE
+   ESTRUCTURA BASE DE LA VISTA
+   (Asumiendo uso de CSS Global para botones, inputs y pills)
 ═══════════════════════════════════════════════ */
-:root {
-  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
-  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #12274e; --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --amber-500: #f59e0b;
-  --red-600:   #dc2626;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--slate-50);
+  background: var(--slate-50, #f8fafc);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: var(--text-primary);
 }
 
-/* ═══════════════════════════════════════════════
-   MASTHEAD
-═══════════════════════════════════════════════ */
-.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 2px 28px; }
+/* Masthead */
+.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #ffffff); border-bottom: 1px solid var(--navy-700, #334155); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
 .masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #ffffff); }
 
-.brand-rule {
-  width: 3px; height: 42px;
-  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
-}
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
-
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
-.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
+.exec-body { flex: 1; padding: 24px 28px; }
 
 /* ═══════════════════════════════════════════════
-   BODY & TOOLBAR
+   TOOLBAR RESPONSIVE
 ═══════════════════════════════════════════════ */
-.exec-body { flex: 1; padding: 24px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; }
-.toolbar-chips { flex: 1; min-width: 0; }
-.toolbar-pagination { flex-shrink: 0; }
+.exec-toolbar { 
+  display: flex; 
+  flex-wrap: wrap; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 20px; 
+  gap: 16px; 
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .exec-toolbar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .toolbar-actions {
+    justify-content: flex-end;
+  }
+  .toolbar-pagination {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .w-sm-100 {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
 /* ═══════════════════════════════════════════════
    DATA GRID (TABLA)
 ═══════════════════════════════════════════════ */
-.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.table-shell { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .table-responsive-custom { width: 100%; overflow-x: auto; }
 .exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 
 /* Cabeceras */
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; background: #fafbfc; color: var(--text-secondary); }
+.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); text-align: left; background: #fafbfc; color: var(--text-secondary, #475569); }
 .thead-sub .ts.text-center { text-align: center; }
 
 /* Filas Body */
 .tbody-row { transition: background 0.15s; }
-.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
+.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; color: var(--text-primary, #0f172a); }
 .tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
+.tbody-row:hover td { background: var(--slate-50, #f8fafc); cursor: pointer; }
 
-/* Utilidades Texto */
-.text-center { text-align: center; }
-.text-mono { font-family: 'IBM Plex Mono', monospace; }
-.fw-600 { font-weight: 600; }
-.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
-.small { font-size: 11.5px; }
+/* Celdas específicas */
+.td-a { border-left: 1px solid transparent; }
+
+/* Utilidades Texto de Tabla */
+.text-center { text-align: center; } 
 .nowrap { white-space: nowrap; }
 
-/* Badges / Pills */
-.pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
-.pill-teal  { background: #ccfbf1; color: #0f766e; }
-.pill-red   { background: #fee2e2; color: #b91c1c; }
-
-/* Botones Icono Tabla */
-.btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
-.btn-icon:hover { background: var(--slate-100); color: var(--text-primary); border-color: var(--slate-300); }
-
 /* Empty state */
-.empty-state { padding: 40px; text-align: center; color: var(--slate-400); font-size: 13px; font-weight: 500; }
-.empty-state svg { display: block; margin: 0 auto 10px auto; }
+.empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+.empty-state svg { display: block; margin: 0 auto 10px auto; color: var(--slate-300, #cbd5e1); }
 
 /* ═══════════════════════════════════════════════
-   MODALES (Estilos internos)
+   MODAL DE FILTROS & CONTRASTE
 ═══════════════════════════════════════════════ */
-.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
-.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100); padding-bottom: 6px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-.exec-input-light, .exec-select-light { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary); transition: border-color 0.15s; }
-.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500); }
+.exec-fieldset { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
+.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+
+/* Contraste forzado para inputs dentro del modal */
+.form-contrast .form-control,
+.form-contrast :deep(.searchselect-control),
+.form-contrast :deep(.multiselect-control) {
+  background-color: var(--slate-50, #f8fafc) !important;
+  border-color: var(--slate-300, #cbd5e1) !important;
+}
+
+.form-contrast .form-control:focus,
+.form-contrast :deep(.searchselect-control:focus-within),
+.form-contrast :deep(.multiselect-control:focus-within) {
+  background-color: var(--white, #ffffff) !important;
+  border-color: var(--teal-500, #12274e) !important;
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1) !important;
+}
 </style>
 
 <script setup>

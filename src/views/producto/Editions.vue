@@ -1552,25 +1552,6 @@
   background: var(--white);
 }
 
-/* ── Switch ejecutivo ── */
-.exec-switch {
-  position: relative; width: 36px; height: 22px; display: inline-block;
-  vertical-align: middle; cursor: pointer;
-}
-.exec-switch input { display: none; }
-.exec-switch span {
-  position: absolute; inset: 0; background: #cbd5e1;
-  border-radius: 9999px; transition: 0.2s;
-}
-.exec-switch span::after {
-  content: ''; width: 16px; height: 16px; background: var(--white);
-  border-radius: 50%; position: absolute; top: 3px; left: 3px;
-  transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.18);
-}
-.exec-switch input:checked + span { background: var(--teal-600); }
-.exec-switch input:checked + span::after { left: 17px; }
-.scale-75 { transform: scale(0.75); transform-origin: center; }
-
 /* ── Textarea ── */
 .exec-textarea {
   width: 100%; resize: none; background-color: transparent;

@@ -1,5 +1,5 @@
 <template>
-  <div class="compact-uploader">
+  <div class="exec-multi-uploader">
     
     <div 
       class="upload-trigger d-flex align-items-center justify-content-center"
@@ -14,17 +14,16 @@
         @change="handleFileChange" 
       />
 
-      <div v-if="loading" class="text-primary small fw-bold">
+      <div v-if="loading" class="text-teal-600 small fw-bold">
         <i class="fas fa-spinner fa-spin me-1"></i> Subiendo...
       </div>
       
-      <div v-else class="text-muted small user-select-none">
+      <div v-else class="text-muted small user-select-none fw-600">
         <i class="fas fa-paperclip me-1"></i> {{ label }}
       </div>
     </div>
 
     <div v-if="safeModelValue.length > 0" class="file-chips mt-2">
-      
       <div 
         v-for="(item, index) in safeModelValue" 
         :key="index" 
@@ -33,22 +32,124 @@
       >
         <span class="chip-icon" @click="verArchivo(item)">
             <i class="fas fa-file-pdf text-danger" v-if="esPdf(item)"></i>
-            <i class="fas fa-image text-primary" v-else></i>
+            <i class="fas fa-image text-teal-600" v-else></i>
         </span>
         
         <span class="chip-text" @click="verArchivo(item)">
-          {{ item.name }} </span>
+          {{ item.name }} 
+        </span>
 
-        <span class="chip-remove" @click.stop="removerArchivo(index)">
+        <span class="chip-remove" @click.stop="removerArchivo(index)" title="Quitar">
           <i class="fas fa-times"></i>
         </span>
       </div>
-
     </div>
 
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   ESTILOS EXEC PARA MULTI UPLOADER COMPACTO
+═══════════════════════════════════════════════ */
+.exec-multi-uploader {
+  width: 100%;
+}
+
+.upload-trigger {
+  border: 1px dashed var(--border, #e2e8f0);
+  border-radius: 4px; /* Estándar Exec */
+  background-color: var(--white, #ffffff);
+  min-height: 38px; /* Mismo alto que un exec-input-light */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-trigger:hover {
+  background-color: var(--slate-50, #f8fafc);
+  border-color: var(--teal-500, #12274e);
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.upload-trigger.is-loading {
+  background-color: rgba(18, 39, 78, 0.05); /* Teal claro */
+  border-color: var(--teal-500, #12274e);
+  cursor: wait;
+}
+
+/* Área de los archivos (Chips) */
+.file-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px; /* Cambiado a bordes cuadrados suavizados */
+  padding: 3px 6px;
+  font-size: 11.5px; /* Tamaño "small" del estándar */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  max-width: 100%;
+  transition: border-color 0.15s;
+}
+
+.file-chip:hover {
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+.chip-icon { 
+  margin-right: 6px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  font-size: 13px;
+}
+
+.chip-text { 
+  color: var(--text-secondary, #475569); 
+  font-weight: 500; 
+  cursor: pointer; 
+  margin-right: 8px; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  max-width: 180px; 
+  transition: color 0.15s;
+}
+
+.chip-text:hover { 
+  text-decoration: underline; 
+  color: var(--teal-600, #12274e); 
+}
+
+.chip-remove { 
+  color: var(--slate-400, #94a3b8); 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px; 
+  transition: background 0.2s, color 0.2s; 
+}
+
+.chip-remove:hover { 
+  color: var(--red-600, #dc2626); 
+  background-color: #fee2e2; 
+}
+
+/* Utilidades Locales */
+.text-teal-600 { color: var(--teal-600, #12274e); }
+.text-danger { color: var(--red-600, #dc2626); }
+.text-muted { color: var(--text-muted, #94a3b8); }
+.fw-600 { font-weight: 600; }
+.small { font-size: 12.5px; }
+</style>
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { useToast } from 'vue-toastification'
@@ -130,46 +231,3 @@ function esPdf(item) {
   return item.url && item.url.toLowerCase().includes('.pdf')
 }
 </script>
-
-<style scoped>
-/* Tus estilos están perfectos, no hace falta tocarlos */
-.upload-trigger {
-  border: 1px dashed #cbd5e1;
-  border-radius: 6px;
-  background-color: #f8fafc;
-  height: 36px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.upload-trigger:hover {
-  background-color: #e2e8f0;
-  border-color: #94a3b8;
-  color: #334155 !important;
-}
-.upload-trigger.is-loading {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  cursor: wait;
-}
-.file-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.file-chip {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 2px 8px 2px 4px;
-  font-size: 0.75rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  max-width: 100%;
-}
-.chip-icon { margin-right: 4px; cursor: pointer; display: flex; align-items: center; }
-.chip-text { color: #475569; font-weight: 500; cursor: pointer; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-.chip-text:hover { text-decoration: underline; color: #2563eb; }
-.chip-remove { color: #94a3b8; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; transition: background 0.2s, color 0.2s; }
-.chip-remove:hover { color: #ef4444; background-color: #fee2e2; }
-</style>

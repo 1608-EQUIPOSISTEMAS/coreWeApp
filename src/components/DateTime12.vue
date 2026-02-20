@@ -1,25 +1,29 @@
 <template>
-  <div class="dt12" :class="stateClass">
+  <div class="dt12" :class="[stateClass, { 'is-disabled': disabled }]">
     <div class="dt12__date-wrapper">
       <flat-pickr
         v-model="datePart"
         :config="flatpickrConfig"
         class="dt12__input dt12__input--date"
         :disabled="disabled"
-        placeholder="Selecciona fecha"
+        placeholder="Selecciona fecha..."
       />
     </div>
-<select
+    
+    <select
       class="dt12__input dt12__input--hour"
       v-model.number="hour12"
       @change="emitChange"
       :required="required"
       :disabled="disabled"
+      title="Hora"
     >
       <option v-for="h in hours12" :key="h" :value="h">
         {{ h }}
       </option>
     </select>
+
+    <span class="dt12__separator">:</span>
 
     <select
       v-if="!onlyHours"
@@ -27,6 +31,7 @@
       v-model.number="minutePart"
       @change="emitChange"
       :disabled="disabled"
+      title="Minutos"
     >
       <option v-for="m in minutes" :key="m" :value="m">
         {{ String(m).padStart(2, '0') }}
@@ -38,6 +43,7 @@
       v-model="ampmPart"
       @change="emitChange"
       :disabled="disabled"
+      title="AM / PM"
     >
       <option value="AM">AM</option>
       <option value="PM">PM</option>
@@ -49,8 +55,9 @@
       class="dt12__clear"
       @click="clearValue"
       title="Limpiar"
+      aria-label="Limpiar fecha y hora"
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
@@ -58,6 +65,197 @@
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   DISEÑO ESTÁNDAR "EXEC" PARA DATE-TIME PICKER
+═══════════════════════════════════════════════ */
+
+/* Contenedor Principal */
+.dt12 {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  background-color: var(--white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px; /* Estándar Exec */
+  padding: 2px 6px;
+  min-height: 38px; /* Coincide con .exec-input-light */
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.dt12:hover:not(.dt12--error):not(.is-disabled) {
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+.dt12:focus-within:not(.is-disabled) {
+  outline: none;
+  border-color: var(--teal-500, #12274e);
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1);
+}
+
+/* Estados Globales */
+.dt12.is-disabled {
+  background-color: var(--slate-50, #f8fafc);
+  border-color: var(--border, #e2e8f0);
+  cursor: not-allowed;
+}
+
+.dt12--error {
+  border-color: var(--red-600, #dc2626) !important;
+}
+
+.dt12--error:focus-within {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+/* Wrapper de la Fecha */
+.dt12__date-wrapper {
+  flex: 1 1 auto;
+  min-width: 80px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Separador visual de hora y minutos */
+.dt12__separator {
+  color: var(--slate-400, #94a3b8);
+  font-weight: 600;
+  margin: 0 1px;
+  user-select: none;
+}
+
+/* Inputs Internos Comunes */
+.dt12__input {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 13px; /* Estándar Exec */
+  color: var(--text-primary, #0f172a);
+  line-height: 1;
+  height: 28px;
+  transition: all 0.15s ease;
+  outline: none;
+  cursor: pointer;
+}
+
+.dt12__input:hover:not(:disabled):not(.dt12__input--date) {
+  background-color: var(--slate-50, #f8fafc);
+}
+
+.dt12__input:focus:not(:disabled):not(.dt12__input--date) {
+  background-color: var(--slate-100, #f1f5f9);
+  color: var(--teal-600, #12274e);
+}
+
+.dt12__input:disabled {
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* Selectores de Tiempo */
+.dt12__input--hour,
+.dt12__input--minute {
+  width: 38px;
+  text-align: center;
+  font-weight: 500;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align-last: center;
+  padding: 0;
+}
+
+.dt12__input--ampm {
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align-last: center;
+  padding: 0;
+  margin-left: 2px;
+}
+
+/* Botón Limpiar (Estilo SearchSelect) */
+.dt12__clear {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-400, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 4px;
+  padding: 0;
+}
+
+.dt12__clear:hover {
+  background-color: var(--slate-100, #f1f5f9);
+  color: var(--red-600, #dc2626);
+}
+
+/* ═══════════════════════════════════════════════
+   FLATPICKR OVERRIDES (Asegura integración)
+═══════════════════════════════════════════════ */
+:deep(.flatpickr-input) {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  height: 100% !important;
+  width: 100%;
+  font-size: 13px !important;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a) !important;
+  font-weight: 400;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+:deep(.flatpickr-input::placeholder) {
+  color: var(--slate-400, #94a3b8) !important;
+}
+
+:deep(.flatpickr-input:disabled) {
+  color: var(--slate-400, #94a3b8) !important;
+  cursor: not-allowed !important;
+}
+
+:deep(.flatpickr-input:focus) {
+  outline: none !important;
+}
+
+/* Responsive para pantallas muy pequeñas */
+@media (max-width: 400px) {
+  .dt12 {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 6px;
+  }
+  .dt12__date-wrapper {
+    flex: 1 1 100%;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--slate-100, #f1f5f9);
+    padding-bottom: 4px;
+  }
+  .dt12__input--hour,
+  .dt12__input--minute,
+  .dt12__input--ampm {
+    flex: 1;
+  }
+}
+</style>
 <script setup>
 import { computed } from 'vue'
 import flatPickr from 'vue-flatpickr-component'
@@ -219,179 +417,3 @@ function to24h(h12, ampm) {
   return String(h).padStart(2, '0')
 }
 </script>
-
-<style scoped>
-/* Contenedor Principal */
-.dt12 {
-  display: flex;
-  flex-wrap: nowrap; /* IMPORTANTE: Evita que salten de línea */
-  gap: 2px; /* Gap mínimo para maximizar espacio */
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  padding: 2px 4px; /* Padding reducido */
-  position: relative;
-  width: 100%; /* Ocupa el 100% del padre */
-  /* min-width eliminado para evitar desbordes */
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-  height: 38px;
-}
-
-.dt12:hover:not(.dt12--error) {
-  border-color: #9ca3af;
-}
-
-.dt12:focus-within {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Wrapper de la Fecha (Flexible) */
-.dt12__date-wrapper {
-  flex: 1 1 auto; /* Crece y se encoge */
-  min-width: 80px; /* Mínimo aceptable para ver la fecha */
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-
-/* Inputs Internos Comunes */
-.dt12__input {
-  border: 1px solid transparent;
-  background: #f9fafb;
-  border-radius: 0.25rem;
-  padding: 0 2px; /* Padding interno mínimo */
-  font-size: 0.8rem; /* Fuente un pelín más pequeña para que quepa */
-  line-height: 1;
-  height: 28px; /* Altura interna */
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.dt12__input:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.dt12__input:focus {
-  background: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
-}
-
-.dt12__input:disabled {
-  background: transparent;
-  color: #9ca3af;
-  cursor: not-allowed;
-}
-
-/* Input Fecha */
-.dt12__input--date {
-  width: 100%;
-  background: transparent;
-}
-.dt12__input--date:focus {
-  background: #fff;
-}
-
-/* Selectores de Hora (Ancho Fijo Compacto) */
-.dt12__input--hour,
-.dt12__input--minute {
-  width: 42px; /* Ancho fijo reducido */
-  text-align: center;
-  font-weight: 500;
-  flex-shrink: 0; /* No encogerse más de esto */
-  appearance: none;
-  -webkit-appearance: none;
-  /* Hack para centrar texto en select en algunos navegadores */
-  text-align-last: center;
-}
-
-/* Selector AM/PM */
-.dt12__input--ampm {
-  width: 40px;
-  text-align: center;
-  font-weight: 500;
-  color: #6b7280;
-  flex-shrink: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  text-align-last: center;
-}
-
-/* Botón Limpiar */
-.dt12__clear {
-  width: 20px; /* Más pequeño */
-  height: 20px;
-  border: none;
-  border-radius: 50%;
-  background: #ef4444;
-  cursor: pointer;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  margin-left: 2px;
-}
-
-.dt12__clear:hover {
-  background: #dc2626;
-}
-
-.dt12__clear svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Estados */
-.dt12--error {
-  border-color: #ef4444;
-  background: #fff5f5;
-}
-
-.dt12--success {
-  border-color: #10b981;
-  background: #f0fdf4;
-}
-
-/* Estilos FlatPickr */
-:deep(.flatpickr-input) {
-  border: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  height: 100% !important;
-  width: 100%;
-  font-size: 0.85rem;
-  color: #111827;
-  font-weight: 500;
-  box-shadow: none !important;
-  line-height: 28px;
-}
-
-:deep(.flatpickr-input:focus) {
-  outline: none !important;
-}
-
-/* Ajustes Responsive extremos (opcional) */
-/* Si la pantalla es muy pequeña, forzar wrap */
-@media (max-width: 400px) {
-  .dt12 {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 4px;
-  }
-  .dt12__date-wrapper {
-    flex: 1 1 100%; /* Fecha ocupa toda la fila arriba */
-    margin-bottom: 4px;
-  }
-  .dt12__input--hour,
-  .dt12__input--minute,
-  .dt12__input--ampm {
-    flex: 1; /* Horas se distribuyen abajo */
-  }
-}
-</style>

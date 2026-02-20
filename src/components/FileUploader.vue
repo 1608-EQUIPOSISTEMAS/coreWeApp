@@ -1,7 +1,7 @@
 <template>
   <div 
-    class="file-uploader" 
-    :class="{ 'is-dragging': isDragging, 'is-loading': loading, 'has-file': !!modelValue,'has-error': isInvalid }"
+    class="exec-file-uploader" 
+    :class="{ 'is-dragging': isDragging, 'is-loading': loading, 'has-file': !!modelValue, 'has-error': isInvalid }"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
     @drop.prevent="handleDrop"
@@ -15,31 +15,31 @@
       @change="handleFileChange" 
     />
 
-    <div v-if="loading" class="content-wrapper text-primary">
+    <div v-if="loading" class="content-wrapper text-teal-600">
       <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
       <div class="small fw-bold">Subiendo archivo...</div>
     </div>
 
-    <div v-else-if="modelValue" class="content-wrapper text-success">
-      <div class="icon-circle bg-success-subtle mb-2">
-         <i class="fas fa-check text-success fa-lg"></i>
+    <div v-else-if="modelValue" class="content-wrapper">
+      <div class="icon-circle bg-success-subtle mb-2 text-success">
+         <i class="fas fa-check fa-lg"></i>
       </div>
-      <div class="small fw-bold text-dark mb-1">Archivo cargado</div>
+      <div class="small fw-bold text-primary mb-1">Archivo cargado</div>
       <div class="actions mt-2 d-flex gap-2" @click.stop>
-        <button class="btn btn-xs btn-outline-primary py-1 px-3" @click="verArchivo">
+        <button class="btn-exec btn-exec-outline btn-sm text-primary border-primary py-1" @click="verArchivo">
           <i class="fas fa-eye me-1"></i> Ver
         </button>
-        <button class="btn btn-xs btn-outline-danger py-1 px-3" @click="triggerInput">
+        <button class="btn-exec btn-exec-outline btn-sm text-danger border-danger py-1" @click="triggerInput">
           <i class="fas fa-sync me-1"></i> Cambiar
         </button>
       </div>
     </div>
 
     <div v-else class="content-wrapper text-muted">
-      <div class="icon-circle bg-primary-subtle mb-2">
-        <i class="fas fa-cloud-upload-alt text-primary fa-lg"></i>
+      <div class="icon-circle bg-slate-100 mb-2 text-slate-400">
+        <i class="fas fa-cloud-upload-alt fa-lg"></i>
       </div>
-      <div class="upload-text text-dark fw-bold mb-1">
+      <div class="upload-text text-primary fw-bold mb-1">
         {{ label }} <span v-if="required" class="text-danger">*</span>
       </div>
       
@@ -51,6 +51,94 @@
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   ESTILOS EXEC PARA UPLOADER SIMPLE
+═══════════════════════════════════════════════ */
+.exec-file-uploader {
+  border-radius: 6px; /* Estándar Exec */
+  border: 2px dashed var(--border, #e2e8f0);
+  background-color: var(--slate-50, #f8fafc);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 140px; /* Un poco más compacto */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exec-file-uploader:hover, 
+.exec-file-uploader.is-dragging {
+  border-color: var(--teal-500, #12274e);
+  background-color: var(--white, #ffffff);
+}
+
+.exec-file-uploader.has-file {
+  border-style: solid;
+  border-color: #10b981; /* Success Green */
+  background-color: #f0fdf4;
+}
+
+.exec-file-uploader.has-error {
+  border-color: var(--red-600, #dc2626) !important;
+  background-color: #fef2f2 !important;
+  border-style: solid !important;
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.exec-file-uploader:hover:not(.has-file):not(.has-error) .icon-circle {
+  background-color: rgba(18, 39, 78, 0.1) !important;
+  color: var(--teal-500, #12274e) !important;
+}
+
+.upload-text { font-size: 13px; color: var(--text-primary, #0f172a) !important; }
+.upload-hint { font-size: 11.5px; color: var(--text-muted, #94a3b8) !important; }
+
+/* Utilidades de texto local */
+.text-teal-600 { color: var(--teal-600, #12274e); }
+.text-primary { color: var(--text-primary, #0f172a) !important; }
+.text-danger { color: var(--red-600, #dc2626); }
+.border-primary { border-color: var(--slate-300, #cbd5e1) !important; }
+.border-danger { border-color: #fca5a5 !important; }
+.bg-slate-100 { background-color: var(--slate-100, #f1f5f9); }
+.text-slate-400 { color: var(--slate-400, #94a3b8); }
+
+/* Animaciones */
+.anim-fade-in { animation: fadeIn 0.3s ease-in-out; }
+
+@keyframes shake {
+  0% { margin-left: 0rem; }
+  25% { margin-left: 0.5rem; }
+  75% { margin-left: -0.5rem; }
+  100% { margin-left: 0rem; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
 <script setup>
 import { ref, inject, computed } from 'vue'
 import { useToast } from 'vue-toastification'
@@ -127,100 +215,3 @@ async function processUpload(file) {
   }
 }
 </script>
-
-<style scoped>
-/* Tus estilos se mantienen igual */
-.file-uploader {
-  border-radius: 12px;
-  border: 2px dashed #cbd5e1;
-  background-color: #f8fafc;
-  padding: 1.5rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.file-uploader:hover, .file-uploader.is-dragging {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-}
-.file-uploader.has-file {
-  border-style: solid;
-  border-color: #86efac;
-  background-color: #f0fdf4;
-}
-.content-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-.icon-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.upload-text { font-size: 0.95rem; }
-.upload-hint { font-size: 0.8rem; }
-
-.file-uploader.has-error {
-  border-color: #ef4444; /* Rojo de Bootstrap o Tailwind */
-  background-color: #fef2f2;
-  border-style: solid;
-}
-
-.error-text {
-  position: absolute;
-  bottom: 10px;
-  font-weight: 600;
-}
-
-/* Opcional: Animación de error */
-.has-error {
-  animation: shake 0.2s ease-in-out 0s 2;
-}
-
-@keyframes shake {
-  0% { margin-left: 0rem; }
-  25% { margin-left: 0.5rem; }
-  75% { margin-left: -0.5rem; }
-  100% { margin-left: 0rem; }
-}
-
-.anim-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 2. Estado Hover (Solo si NO tiene error) */
-.file-uploader:not(.has-error):hover {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-}
-
-/* 3. Estado Error (Usa selectores más específicos para forzar el color) */
-.file-uploader.has-error {
-  border-color: #ef4444 !important; /* Aquí el important es válido para asegurar el aviso */
-  background-color: #fef2f2 !important;
-  border-style: solid !important;
-}
-
-/* 4. Estado Éxito (Archivo cargado) */
-.file-uploader.has-file {
-  border-style: solid;
-  border-color: #86efac;
-  background-color: #f0fdf4;
-}
-</style>

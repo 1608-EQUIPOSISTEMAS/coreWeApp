@@ -4,6 +4,9 @@
 @use "@coreui/chartjs/scss/coreui-chartjs";
 @use "vendors/simplebar";
 
+/* ==========================================================================
+   CONFIGURACIÓN BASE
+   ========================================================================== */
 html, body {
   font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif !important;
 }
@@ -11,10 +14,11 @@ html, body {
 body {
   background-color: var(--cui-tertiary-bg);
 }
-/* En tu style.css global o App.vue */
+
 .Vue-Toastification__container {
-    z-index: 100000 !important; /* Mayor que 9999 */
+  z-index: 100000 !important; /* Mayor que 9999 para que siempre esté arriba */
 }
+
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
@@ -22,13 +26,12 @@ body {
   @include transition(padding .15s);
 }
 
-/* BOTONES PEQUEÑOS EN TABLA */
-.btn-icon-sm { width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid transparent; transition: all 0.2s; }
-.btn-icon-sm:hover { border-color: #d1d5db; background: #fff; transform: translateY(-1px); }
-
+/* ==========================================================================
+   COMPONENTES COREUI (Header, Sidebar, Footer)
+   ========================================================================== */
 .header > .container-fluid,
 .sidebar-header {
-  min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+  min-height: calc(4rem + 1px);
 }
 
 .sidebar-brand-full {
@@ -44,7 +47,7 @@ body {
   .nav-link {
     display: flex;
     align-items: center;
-    min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+    min-height: calc(4rem + 1px);
   }
 }
 
@@ -64,7 +67,7 @@ body {
 }
 
 .footer {
-  min-height: calc(3rem + 1px); // stylelint-disable-line function-disallowed-list
+  min-height: calc(3rem + 1px);
 }
 
 @include color-mode(dark) {
@@ -77,45 +80,41 @@ body {
   }
 }
 
-
-/* Opción A: Sobreescribir variables CSS (Recomendado) */
+/* ==========================================================================
+   COMPONENTES EXTERNOS (Flatpickr / Datepicker)
+   ========================================================================== */
+/* Datepicker (Asumiendo vue-datepicker o similar por la clase dp__) */
 .dp__theme_light {
-   /* Reduce el padding interno (arriba/abajo, izq/der) */
-   --dp-input-padding: 6px 8px; /* Ajusta este 6px a tu gusto, por defecto es mayor */
-
-   /* Si necesitas ajustar el tamaño de fuente */
-   --dp-font-size: 0.875rem;
+   --dp-input-padding: 6px 8px;
+   --dp-font-size: 13px; /* Cambiado a 13px para alinear con el estándar Exec */
 }
 
-/* Opción B: Forzar altura si usas Bootstrap (clase form-control-xs) */
 .dp__input {
-    height: 30px; /* O la altura exacta que tengan tus otros inputs */
+    height: 38px; /* Cambiado a 38px para que coincida con .form-control y exec-input-light */
 }
+
 /* =========================================================
    ESTILOS GLOBALES ARMONIZADOS AL ESTÁNDAR "EXEC"
-   Para componentes legacy que sigan usando .form-control
+   (Para componentes legacy que sigan usando .form-control)
    ========================================================= */
 
-/* Limpiar y unificar inputs genéricos */
-.form-control:not(textarea):not(.flatpickr-input):not(.searchselect-control),
-input[type="text"]:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
-input[type="email"]:not(.flatpickr-input),
-input[type="password"]:not(.flatpickr-input),
-input[type="number"]:not(.flatpickr-input):not(.numInput),
-input[type="tel"]:not(.flatpickr-input),
-select.form-control {
+/* Inputs genéricos y Selects */
+/* Nota: Se incluye :not(.form-switch input) por precaución */
+.form-control:not(textarea):not(.flatpickr-input):not(.searchselect-control):not(.dp__input),
+.form-select:not(.searchselect-control) {
   height: 38px;
   min-height: 38px;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0; /* Color var(--border) del estandar exec */
-  font-size: 13px; /* Igual que exec-input-light */
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  color: #0f172a; /* var(--text-primary) */
+  color: #0f172a;
   background-color: #ffffff;
   border-radius: 4px;
   width: 100%;
   transition: all 0.15s ease-in-out;
   outline: none;
+  box-shadow: none; /* Previene sombras raras de Bootstrap por defecto */
 }
 
 /* Textareas (Altura variable) */
@@ -129,40 +128,128 @@ textarea.form-control {
   resize: vertical;
   transition: all 0.15s ease-in-out;
   outline: none;
+  box-shadow: none;
 }
 
 /* Estados Focus usando el Teal del estándar */
-.form-control:focus:not(.flatpickr-input):not(.searchselect-control),
-input:focus:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
-select:focus, textarea:focus {
+.form-control:focus:not(.flatpickr-input):not(.searchselect-control):not(.dp__input),
+.form-select:focus:not(.searchselect-control) {
   background-color: #ffffff;
-  border-color: #12274e; /* var(--teal-500) */
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); /* Sombra Teal suave */
+  border-color: #12274e;
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); /* Ajustado rgba para coincidir con el Teal #12274e */
 }
 
 /* Estados Hover */
-.form-control:hover:not(:disabled):not([readonly]),
-input:hover:not(:disabled):not([readonly]),
-select:hover:not(:disabled):not([readonly]),
-textarea:hover:not(:disabled):not([readonly]) {
-  border-color: #94a3b8; /* var(--slate-400) */
+.form-control:hover:not(:disabled):not([readonly]):not(:focus),
+.form-select:hover:not(:disabled):not([readonly]):not(:focus) {
+  border-color: #94a3b8;
 }
 
 /* Estados Disabled */
-.form-control:disabled, input:disabled, select:disabled, textarea:disabled {
-  background-color: #f8fafc; /* var(--slate-50) */
-  color: #94a3b8; /* var(--slate-400) */
+.form-control:disabled, 
+.form-control[readonly], /* Añadido readonly para consistencia */
+.form-select:disabled {
+  background-color: #f8fafc;
+  color: #94a3b8;
   border-color: #e2e8f0;
   cursor: not-allowed;
+  opacity: 1; /* Previene opacidad reducida en Safari/iOS */
 }
 
-/* Validaciones sutiles (Reemplaza el borde grueso verde/rojo de Bootstrap) */
-.form-control:required:invalid:not(:disabled):not([readonly]):focus {
+/* Validaciones sutiles */
+/* Se utiliza :invalid solo si el input ha sido tocado o no tiene placeholder-shown para evitar que esté rojo por defecto */
+.form-control:required:invalid:not(:placeholder-shown):not(:disabled):not([readonly]):not(.searchselect-control) {
+  border-color: #ef4444;
+}
+
+.form-control:required:invalid:not(:placeholder-shown):not(:disabled):not([readonly]):focus:not(.searchselect-control) {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-.form-control:required:valid:not(:disabled):not([readonly]):focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+/* ==========================================================================
+   COMPONENTES UI "EXEC" (Clases de Utilidad)
+   ========================================================================== */
+
+/* 1. SWITCHES (Base y Modificadores) */
+.exec-switch {
+  position: relative; width: 36px; height: 22px; display: inline-block;
+  vertical-align: middle; cursor: pointer; margin: 0; /* Asegura que no tenga márgenes indeseados */
 }
+.exec-switch input { display: none; }
+.exec-switch span {
+  position: absolute; inset: 0; background: var(--slate-300, #cbd5e1);
+  border-radius: 9999px; transition: 0.2s;
+}
+.exec-switch span::after {
+  content: ''; width: 16px; height: 16px; background: var(--white, #fff);
+  border-radius: 50%; position: absolute; top: 3px; left: 3px;
+  transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.exec-switch input:checked + span { background: var(--teal-600, #12274e); }
+.exec-switch input:checked + span::after { left: 17px; }
+
+/* Modificador para Switch Grande */
+.exec-switch-lg { width: 44px; height: 24px; }
+.exec-switch-lg span::after { width: 18px; height: 18px; top: 3px; left: 3px; }
+.exec-switch-lg input:checked + span::after { left: 23px; }
+
+.scale-75 { transform: scale(0.75); transform-origin: center; }
+
+/* 2. BOTONES EJECUTIVOS (.btn-exec) */
+.btn-exec {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 16px; border-radius: 4px; font-size: 12.5px;
+  font-weight: 600; cursor: pointer; border: 1px solid transparent; /* Border base para evitar saltos */
+  font-family: inherit; transition: all 0.15s; line-height: 1.2;
+}
+.btn-exec-ghost { background: transparent; color: var(--slate-400, #94a3b8); } /* Color un poco más oscuro para mejor contraste */
+.btn-exec-ghost:hover { background: rgba(0,0,0,0.04); color: var(--text-primary, #0f172a); } /* Ajustado hover para ghost buttons sobre fondos claros */
+
+.btn-exec-primary { background: var(--teal-600, #12274e); color: var(--white, #fff); }
+.btn-exec-primary:hover:not(:disabled) { background: #0c1a35; } /* Oscurece el teal-600 */
+.btn-exec-primary:disabled { background: var(--slate-300, #cbd5e1); color: var(--slate-500); cursor: not-allowed; opacity: 1; border-color: transparent;}
+
+.btn-exec-outline { background: transparent; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
+.btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); color: var(--text-primary, #0f172a); border-color: var(--slate-300); }
+
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* 3. BOTONES DE ICONO (Para tablas y acciones pequeñas) */
+.btn-icon { 
+  background: transparent; 
+  border: 1px solid var(--border, #e2e8f0); 
+  border-radius: 4px; 
+  padding: 4px 8px; 
+  cursor: pointer; 
+  color: var(--text-secondary, #475569); 
+  transition: all 0.15s; 
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-icon:hover:not(:disabled) { 
+  background: var(--slate-50, #f8fafc); 
+  color: var(--text-primary, #0f172a); 
+  border-color: var(--slate-300, #cbd5e1); 
+}
+.btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-icon-sm { width: 26px; height: 26px; padding: 0; }
+.btn-icon-sm:hover:not(:disabled) { border-color: var(--slate-300); background: var(--white); transform: translateY(-1px); box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+
+/* 4. PILLS / ETIQUETAS (.pill) */
+.pill {
+  display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.03em; line-height: 1;
+}
+.pill-slate { background: var(--slate-50, #f8fafc); color: var(--text-secondary, #475569); border: 1px solid var(--border) !important;}
+.pill-teal  { background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4 !important;}
+.pill-red   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca !important;}
+
+/* 5. CLASES DE UTILIDAD DE TEXTO */
+.text-mono { font-family: 'IBM Plex Mono', monospace; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.text-muted { color: var(--text-muted, #94a3b8) !important; }
+.accent-text { color: var(--teal-600, #12274e); }
+.small { font-size: 11.5px; }
+.x-small { font-size: 10px; }

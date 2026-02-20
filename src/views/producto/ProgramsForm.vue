@@ -11,6 +11,9 @@
               <h1 class="brand-title">{{ isEdit ? 'Editar Programa' : 'Nuevo Programa' }}</h1>
             </div>
             <span v-if="isEdit" class="pill pill-slate border mt-3">ID: {{ idParam }}</span>
+            <span v-if="isEdit" :class="['pill', form.active ? 'pill-teal' : 'pill-red', 'border', 'mt-3']">
+              {{ form.active ? 'ACTIVO' : 'INACTIVO' }}
+            </span>
           </div>
         </div>
 
@@ -36,7 +39,6 @@
 
         <div class="exec-fieldset mb-4">
           <h6 class="fieldset-title"><i class="fa-solid fa-cube me-2 text-primary"></i> Datos Generales del Programa</h6>
-
           <div class="row g-3">
             <div class="col-md-6">
               <label class="exec-label">Nombre General <span class="c-red">*</span></label>
@@ -64,13 +66,15 @@
 
             <div class="col-md-3">
               <label class="exec-label">URL Web</label>
-              <input
-                v-restrict="{ transform: 'upper' }"
-                v-model.trim="form.link"
-                type="text"
-                class="exec-input-light w-100"
-                placeholder="https://..."
-              />
+              <div class="input-group-custom">
+                <i class="fa-solid fa-link input-icon text-primary"></i>
+                <input
+                  v-model.trim="form.link"
+                  type="url"
+                  class="exec-input-light w-100 icon-padded"
+                  placeholder="https://..."
+                />
+              </div>
             </div>
 
             <div class="col-md-3">
@@ -118,11 +122,11 @@
 
             <div class="col-md-3 d-flex flex-column justify-content-center align-items-center border-start ps-3">
               <label class="exec-label mb-2">Estado del Programa</label>
-              <label class="exec-switch">
+              <label class="exec-switch exec-switch-lg">
                 <input type="checkbox" v-model="form.active" />
                 <span></span>
               </label>
-              <span class="x-small text-muted mt-1 fw-600">{{ form.active ? 'ACTIVO' : 'INACTIVO' }}</span>
+              <span class="x-small text-muted mt-1 fw-600">{{ form.active ? 'ACTIVO EN SISTEMA' : 'INACTIVO' }}</span>
             </div>
           </div>
         </div>
@@ -130,7 +134,7 @@
         <div class="exec-fieldset">
           <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
             <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-layer-group me-2 text-info"></i> Versiones y Estructura</h6>
-            <button type="button" class="btn-exec btn-exec-outline text-primary border-primary" @click="agregarVersion">
+            <button type="button" class="btn-exec btn-exec-outline text-primary border-primary btn-sm" @click="agregarVersion">
               <i class="fa-solid fa-plus me-1"></i> Agregar Versión
             </button>
           </div>
@@ -150,9 +154,12 @@
                 <span class="version-badge">V{{ idx + 1 }}</span>
                 <span v-if="ver.version_code" class="text-mono fw-700 accent-text">{{ ver.version_code }}</span>
               </div>
-              <div class="d-flex gap-2">
+              <div class="d-flex gap-2 align-items-center">
                 <span v-if="ver.sessions" class="pill pill-slate border"><i class="fa-solid fa-calendar-days me-1"></i> {{ ver.sessions }} sesiones</span>
                 <span v-if="ver.abbreviation" class="pill pill-slate border">{{ ver.abbreviation }}</span>
+                <button type="button" class="btn-icon btn-icon-sm ms-2" v-if="form.program_versions.length > 1 && ver.new" @click="form.program_versions.splice(idx, 1)" title="Eliminar Versión">
+                    <i class="fa-solid fa-trash text-danger"></i>
+                </button>
               </div>
             </div>
 
@@ -219,7 +226,7 @@
               <div class="col-md-4">
                 <label class="exec-label">URL Ficha Técnica</label>
                 <div class="input-group-custom">
-                  <i class="fa-solid fa-link input-icon"></i>
+                  <i class="fa-solid fa-file-pdf input-icon"></i>
                   <input
                     v-model.trim="ver.expedient_link"
                     type="url"
@@ -252,14 +259,13 @@
               </div>
             </div>
 
-            <div class="version-footer p-3 bg-slate-50 border-top">
+            <div class="version-footer p-3 bg-slate-50 border-top" v-if="form.cat_type_program != 'we_program_type_course'">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="exec-label mb-0" style="color: var(--teal-600);">Programas / Versiones Hijas</div>
+                <div class="exec-label mb-0" style="color: var(--teal-600);"><i class="fa-solid fa-link me-1"></i> Programas / Versiones Hijas</div>
                 <button
                   type="button"
                   class="btn-exec btn-exec-ghost text-teal-600 btn-sm p-1"
                   @click="onAddChildClick(ver)"
-                  v-if="form.cat_type_program != 'we_program_type_course'"
                   :disabled="!ver.program_version_id"
                 >
                   <i class="fa-solid fa-plus-circle me-1"></i> Agregar curso hijo
@@ -268,7 +274,7 @@
 
               <div v-if="childrenByParent(ver).length" class="row g-2">
                 <div class="col-md-4" v-for="(child, idy) in ver.childs" :key="idy">
-                  <div class="child-select-wrapper">
+                  <div class="child-select-wrapper position-relative">
                     <span class="child-order">{{ idy + 1 }}</span>
                     <SearchSelect
                       v-model="child.program_version_id"
@@ -277,7 +283,7 @@
                       sublabel-field="version_code"
                       :fetcher="q => programService.programVersionCaller({ q })"
                       label-field="abbreviation"
-                      :disabled="child.program_version_id"
+                      :disabled="child.program_version_id && !child.isNewAssigned"
                       value-field="program_version_id"
                       placeholder="Buscar hijo..."
                       :minChars="0"
@@ -285,12 +291,16 @@
                       :model-label="child.label"
                       class="exec-select-light w-100"
                       required
+                      @change="(val) => { if(val) child.isNewAssigned = true; }"
                     />
+                    <button class="btn-icon btn-icon-sm position-absolute" style="right: -30px; top: 6px;" @click="removeChildVersion(parentKey(ver), child.program_version_id || idy)" title="Quitar">
+                        <i class="fa-solid fa-xmark text-danger"></i>
+                    </button>
                   </div>
                 </div>
               </div>
               <div v-else class="text-muted small fst-italic">
-                No hay cursos hijos vinculados a esta versión.
+                No hay cursos hijos vinculados a esta versión. (Guarde el programa primero para asignar).
               </div>
             </div>
           </div>
@@ -298,105 +308,74 @@
 
       </div>
     </main>
+
+    <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height: 50vh;">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+        <p class="text-muted fw-600">Cargando información del programa...</p>
+      </div>
+    </main>
+
   </div>
 </template>
 
 <style scoped>
 /* ═══════════════════════════════════════════════
-   TOKENS & BASE (Mismos que el listado)
+   TOKENS DE DISEÑO LOCALES Y ESTRUCTURA
+   (Se asume que switches, pills y botones están en CSS Global)
 ═══════════════════════════════════════════════ */
-:root {
-  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
-  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #12274e; --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --amber-500: #f59e0b;
-  --red-600:   #dc2626;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--slate-50);
+  background: var(--slate-50, #f8fafc);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: var(--text-primary);
 }
 
 /* Masthead */
-.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); position: sticky; top: 0; z-index: 100;}
+.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #fff); border-bottom: 1px solid var(--navy-700, #334155); position: sticky; top: 0; z-index: 100;}
 .masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
 .masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
-
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #fff); }
 .masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-.btn-exec-ghost { background: transparent; color: var(--slate-300); border: 1px solid transparent; }
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.07); color: var(--white); }
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-primary:disabled { background: var(--slate-400); cursor: not-allowed; opacity: 0.8;}
-.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
-.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
-.btn-sm { padding: 4px 10px; font-size: 11px; }
 
 /* Wrapper Central */
 .exec-body { padding: 32px 28px; }
-.exec-form-wrapper { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.exec-form-wrapper { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
 /* Fieldsets y Labels */
-.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
-.fieldset-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--slate-100); padding-bottom: 10px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
-.c-red { color: var(--red-600); }
+.exec-fieldset { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
+.fieldset-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 10px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+.c-red { color: var(--red-600, #dc2626); font-weight: 600; margin-left: .15rem; }
 
-/* Inputs estándar */
-.exec-input-light, .exec-select-light { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); transition: all 0.15s; height: 38px; }
-.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); }
-.exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50); color: var(--slate-400); cursor: not-allowed; }
+/* Inputs estándar (Heredados del estándar) */
+.exec-input-light, .exec-select-light { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary, #0f172a); transition: all 0.15s; height: 38px; }
+.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
+.exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50, #f8fafc); color: var(--slate-400, #94a3b8); cursor: not-allowed; opacity: 1; }
+
+.exec-input-light:required:invalid:not(:placeholder-shown):not(:disabled) {
+    border-color: var(--red-600, #dc2626) !important;
+}
+
+/* Iconos dentro de inputs */
 .input-group-custom { position: relative; display: flex; align-items: center; }
-.input-icon { position: absolute; left: 12px; color: var(--slate-400); font-size: 12px; }
+.input-icon { position: absolute; left: 12px; color: var(--slate-400, #94a3b8); font-size: 13px; }
 .icon-padded { padding-left: 32px; }
 
-/* Switch Toggle Custom */
-.exec-switch { position: relative; width: 44px; height: 24px; display: inline-block; cursor: pointer; }
-.exec-switch input { display: none; }
-.exec-switch span { position: absolute; inset: 0; background: var(--slate-300); border-radius: 9999px; transition: .2s; }
-.exec-switch span::after { content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
-.exec-switch input:checked + span { background: var(--teal-500); }
-.exec-switch input:checked + span::after { left: 23px; }
-
-/* Text Utils */
-.text-mono { font-family: 'IBM Plex Mono', monospace; }
-.fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
-.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
-.small { font-size: 11.5px; } .x-small { font-size: 10px; }
-
-/* Pills */
-.pill { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
-.pill-slate { background: var(--slate-50); color: var(--text-secondary); }
-.pill-teal  { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important;}
-.pill-red   { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important;}
-
 /* Bloques de Versión */
-.exec-version-card { border: 1px solid var(--border); border-radius: 6px; background: var(--white); overflow: hidden;}
-.version-header { background: var(--slate-50); border-bottom: 1px solid var(--border); padding: 10px 16px; }
-.version-badge { background: var(--navy-900); color: var(--white); font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
-.empty-state { text-align: center; color: var(--slate-400); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50); border-radius: 6px; border: 1px dashed var(--slate-300);}
+.exec-version-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: var(--white, #fff); overflow: hidden; transition: box-shadow 0.2s;}
+.exec-version-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+.version-header { background: var(--slate-50, #f8fafc); border-bottom: 1px solid var(--border, #e2e8f0); padding: 10px 16px; }
+.version-badge { background: var(--navy-900, #0f172a); color: var(--white, #fff); font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+.empty-state { text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50, #f8fafc); border-radius: 6px; border: 1px dashed var(--slate-300, #cbd5e1);}
 
 /* Selector de hijos */
-.child-select-wrapper { display: flex; align-items: center; gap: 8px; }
-.child-order { background: var(--teal-600); color: var(--white); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 700; flex-shrink: 0;}
+.child-select-wrapper { display: flex; align-items: center; gap: 8px; margin-right: 30px; /* Margen para el boton de borrar */ }
+.child-order { background: var(--teal-600, #12274e); color: var(--white, #fff); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 700; flex-shrink: 0;}
 </style>
+
 <script setup>
   import { ref, reactive, computed, onMounted, inject } from 'vue'
   import { useRouter, useRoute } from 'vue-router'

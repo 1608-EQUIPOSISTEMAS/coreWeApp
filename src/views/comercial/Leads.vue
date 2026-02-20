@@ -10,21 +10,20 @@
             <h1 class="brand-title">Listado de Leads</h1>
           </div>
         </div>
-
       </div>
     </header>
 
     <main class="exec-body">
 
-        <div class="toolbar-chips">
-          <BaseFilterChips
-            :items="activeFilterChips"
-            @remove="clearFilter"
-            @clear-all="clearFilters"
-          />
-        </div>
-      <div class="exec-toolbar">
+      <div class="toolbar-chips mb-2">
+        <BaseFilterChips
+          :items="activeFilterChips"
+          @remove="clearFilter"
+          @clear-all="clearFilters"
+        />
+      </div>
 
+      <div class="exec-toolbar">
         <div class="toolbar-pagination">
           <BasePagination
             v-model="pagin"
@@ -32,7 +31,7 @@
             @change="handlePaginationChange"
           />
         </div>
-        <div class="masthead-actions">
+        <div class="toolbar-actions">
           <button
             class="btn-exec"
             :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'"
@@ -99,13 +98,15 @@
             </thead>
 
             <tbody v-if="!isCompact">
-              <tr v-for="l in leadsRaw" :key="l.id"
-                  class="tbody-row"
-                  :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                  @mousedown.left="startPress(l)"
-                  @mouseup="cancelPress"
-                  @mouseleave="cancelPress">
-
+              <tr
+                v-for="l in leadsRaw"
+                :key="l.id"
+                class="tbody-row"
+                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
+                @mousedown.left="startPress(l)"
+                @mouseup="cancelPress"
+                @mouseleave="cancelPress"
+              >
                 <td class="td-a text-center nowrap">
                   <button
                     class="btn-icon"
@@ -118,7 +119,6 @@
                     <i class="fa-solid fa-clone text-primary"></i>
                   </button>
                 </td>
-
                 <td class="td-a fw-600 text-dark">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</td>
                 <td class="td-a" style="min-width:160px">
                   <div class="d-flex flex-column">
@@ -126,20 +126,27 @@
                     <span class="small text-muted">{{ l.full_name_label || 'Sin nombre' }}</span>
                   </div>
                 </td>
-                <td class="td-a minW"><span class="pill pill-slate border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span></td>
+                <td class="td-a minW">
+                  <span class="pill pill-slate border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span>
+                </td>
                 <td class="td-a" style="min-width:280px">
                   <div v-if="l.program_label">
                     <div class="fw-600 text-dark">{{ l.program_label }}</div>
                     <div class="small text-muted mt-1">
-                      {{ l.cat_type_program_label }} <span v-if="l.cat_model_modality_label">• {{ l.cat_model_modality_label }}</span>
+                      {{ l.cat_type_program_label }}
+                      <span v-if="l.cat_model_modality_label"> • {{ l.cat_model_modality_label }}</span>
                     </div>
                   </div>
                   <div v-else class="text-muted small">—</div>
                 </td>
-                <td class="td-a nowrap"><div class="text-mono small fw-600 accent-text">{{ l.edition_label || '—' }}</div></td>
-                <td class="td-a small nowrap fw-700" style="color: #15803d;">{{ l.pay_date || '—' }}</td>
+                <td class="td-a nowrap">
+                  <div class="text-mono small fw-600 accent-text">{{ l.edition_label || '—' }}</div>
+                </td>
+                <td class="td-a small nowrap fw-700 pay-date-cell">{{ l.pay_date || '—' }}</td>
                 <td class="td-a">
-                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ interestMap[l.cat_interest_alias] }}</span>
+                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">
+                    {{ interestMap[l.cat_interest_alias] }}
+                  </span>
                   <span v-else class="text-muted small">—</span>
                 </td>
                 <td class="td-a" style="min-width:120px">
@@ -149,7 +156,11 @@
                   </div>
                 </td>
                 <td class="td-a text-center" style="min-width:140px">
-                  <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
+                  <div
+                    v-if="l.cat_last_follow_alias"
+                    class="pill d-inline-flex align-items-center gap-1"
+                    :class="badgeForFollow(l.cat_last_follow_alias)"
+                  >
                     <span>{{ followMap[l.cat_last_follow_alias] }}</span>
                     <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
                   </div>
@@ -158,20 +169,22 @@
               </tr>
               <tr v-if="!leadsRaw.length">
                 <td colspan="10" class="empty-state">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
               </tr>
             </tbody>
 
             <tbody v-else>
-              <tr v-for="l in leadsRaw" :key="l.id"
-                  class="tbody-row"
-                  :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                  @mousedown.left="startPress(l)"
-                  @mouseup="cancelPress"
-                  @mouseleave="cancelPress">
-
+              <tr
+                v-for="l in leadsRaw"
+                :key="l.id"
+                class="tbody-row"
+                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
+                @mousedown.left="startPress(l)"
+                @mouseup="cancelPress"
+                @mouseleave="cancelPress"
+              >
                 <td class="td-a text-center nowrap">
                   <button class="btn-icon" @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
                     <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
@@ -181,7 +194,9 @@
                   </button>
                 </td>
                 <td class="td-a small nowrap">{{ l.registration_date }}</td>
-                <td class="td-a"><span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span></td>
+                <td class="td-a">
+                  <span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
+                </td>
                 <td class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
                 <td class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
                 <td class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
@@ -191,20 +206,25 @@
                 <td class="td-a small" style="min-width:120px">{{ l.cat_model_modality_label || '—' }}</td>
                 <td class="td-a nowrap small text-mono">{{ l.edition_label || '—' }}</td>
                 <td class="td-a">
-                  <div class="small fw-700" style="color: #15803d;">{{ l.pay_date || '—' }}</div>
+                  <div class="small fw-700 pay-date-cell">{{ l.pay_date || '—' }}</div>
                 </td>
                 <td class="td-a small text-muted">{{ l.cat_channel_description || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
                 <td class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
                 <td class="td-a">
-                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ l.cat_interest_description }}</span>
+                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">
+                    {{ l.cat_interest_description }}
+                  </span>
                 </td>
                 <td class="td-a small">{{ l.user_registration_label }}</td>
                 <td class="td-a text-center">
-                  <i v-if="l.cat_last_follow_alias" class="fa-solid fa-circle cursor-pointer"
-                     :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'c-green' : 'text-slate-400'"
-                     :title="l.cat_last_follow_alias"></i>
+                  <i
+                    v-if="l.cat_last_follow_alias"
+                    class="fa-solid fa-circle cursor-pointer"
+                    :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'c-green' : 'text-slate-400'"
+                    :title="l.cat_last_follow_alias"
+                  ></i>
                   <span v-else class="text-muted">—</span>
                 </td>
               </tr>
@@ -218,19 +238,21 @@
     </main>
   </div>
 
+
   <BaseModal v-model="showFollowModal" title="Gestión de Seguimiento" size="xl">
-    <div v-if="selectedFollowLead" class="exec-modal-body h-100">
-      <div class="modal-header-strip px-4 py-3 d-flex justify-content-between align-items-center">
+    <div v-if="selectedFollowLead" class="exec-modal-body">
+
+      <div class="modal-lead-strip">
         <div class="d-flex align-items-center gap-3">
-          <div class="avatar-circle">
+          <div class="lead-avatar">
             <i class="fa-regular fa-user"></i>
           </div>
           <div>
-             <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-             <div class="d-flex gap-3 text-secondary small mt-1 fw-500">
-               <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
-               <span><i class="fa-solid fa-bullseye me-1"></i>{{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || 'Estado desc.' }}</span>
-             </div>
+            <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+            <div class="d-flex gap-3 text-secondary small mt-1 fw-500">
+              <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
+              <span><i class="fa-solid fa-bullseye me-1"></i>{{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || 'Estado desc.' }}</span>
+            </div>
           </div>
         </div>
         <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
@@ -238,57 +260,96 @@
         </button>
       </div>
 
-      <div class="p-4 bg-white scroll-area">
+      <div class="p-3 scroll-area">
         <div v-if="editableHistory.length > 0" class="table-shell">
           <table class="exec-table">
             <thead>
               <tr class="thead-sub">
-                <th class="ts ts-c text-center" style="width: 50px;">#</th>
-                <th class="ts ts-c" style="min-width: 160px;">T. Seguimiento</th>
-                <th class="ts ts-c" style="min-width: 160px;">Resultado</th>
-                <th class="ts ts-c" style="min-width: 230px;">Fecha/Hora</th>
-                <th class="ts ts-c text-center" style="min-width: 140px;">Duración</th>
-                <th class="ts ts-c" style="min-width: 200px;">Observación</th>
+                <th class="ts ts-c text-center" style="width: 46px;">#</th>
+                <th class="ts ts-c" style="min-width: 155px;">T. Seguimiento</th>
+                <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
+                <th class="ts ts-c" style="min-width: 220px;">Fecha / Hora</th>
+                <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
+                <th class="ts ts-c" style="min-width: 190px;">Observación</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{'row-highlight': !attempt.id}">
+              <tr
+                v-for="(attempt, idx) in editableHistory"
+                :key="idx"
+                class="tbody-row"
+                :class="{ 'row-highlight': !attempt.id }"
+              >
                 <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ idx + 1 }}</td>
                 <td class="td-a align-top pt-2">
-                  <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required />
+                  <SearchSelect
+                    :items="lAttempts"
+                    v-model="attempt.cat_type_attempt"
+                    label-field="description"
+                    value-field="alias"
+                    placeholder="Seleccionar..."
+                    :disabled="attempt.id"
+                    class="exec-select-light w-100"
+                    required
+                  />
                 </td>
                 <td class="td-a align-top pt-2">
-                  <SearchSelect v-model="attempt.calling_alias" :items="filtroCalling" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="exec-select-light w-100" />
+                  <SearchSelect
+                    v-model="attempt.calling_alias"
+                    :items="filtroCalling"
+                    label-field="description"
+                    value-field="alias"
+                    placeholder="Seleccionar..."
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    class="exec-select-light w-100"
+                  />
                 </td>
                 <td class="td-a align-top pt-2">
-                  <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'" class="exec-input-light w-100" />
+                  <DateTime12
+                    v-model="attempt.contact_datetime"
+                    :onlyHours="true"
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    class="exec-input-light w-100"
+                  />
                 </td>
                 <td class="td-a align-top text-center pt-2">
-                  <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt=='we_attempt_call'">
+                  <div
+                    class="d-flex align-items-center justify-content-center gap-2"
+                    v-if="attempt.cat_type_attempt == 'we_attempt_call'"
+                  >
                     <button
-                        class="btn-icon"
-                        :class="attempt.timerActive ? 'c-red' : 'c-green'"
-                        @click="toggleTimer(attempt)"
-                        :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
-                        :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
+                      class="timer-btn"
+                      :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'"
+                      @click="toggleTimer(attempt)"
+                      :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                      :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
                     >
-                        <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop-circle fa-xl' : 'fa-play-circle fa-xl'"></i>
+                      <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
                     </button>
-                    <div class="text-mono fw-700" :class="attempt.timerActive ? 'c-red' : 'text-dark'" style="font-size: 14px;">
-                        {{ formatDuration(attempt.contact_duration) }}
+                    <div
+                      class="text-mono fw-700 timer-display"
+                      :class="attempt.timerActive ? 'timer-display--active' : ''"
+                    >
+                      {{ formatDuration(attempt.contact_duration) }}
                     </div>
                   </div>
                 </td>
                 <td class="td-a align-top pt-2">
-                  <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"></textarea>
+                  <textarea
+                    v-model="attempt.response"
+                    class="exec-textarea w-100"
+                    rows="2"
+                    placeholder="Escribe una observación..."
+                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                  ></textarea>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <div v-else class="empty-state">
-           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-           <p>No hay historial previo. Agrega el primer intento.</p>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <p>No hay historial previo. Agrega el primer intento.</p>
         </div>
       </div>
     </div>
@@ -296,27 +357,29 @@
       <div class="d-flex justify-content-between w-100">
         <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
         <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
-           <i class="fa-solid fa-save me-1"></i> {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
+          <i class="fa-solid fa-save me-1"></i>
+          {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
         </button>
       </div>
     </template>
   </BaseModal>
+
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="xl">
     <div class="px-4 py-3">
 
       <div class="row g-3 mb-4">
         <div class="col-md-6">
-          <label class="exec-label">BÚSQUEDA GENERAL</label>
+          <label class="exec-label">Búsqueda General</label>
           <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Nombre, teléfono..." @keyup.enter="applyFilters" />
         </div>
         <div class="col-md-3" v-if="!isComercial">
-          <label class="exec-label">ASESOR ASIGNADO</label>
+          <label class="exec-label">Asesor Asignado</label>
           <MultiSelect v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Todos..." />
         </div>
         <div class="col-md-3">
-          <label class="exec-label">ETAPA DEL CLIENTE</label>
-           <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todas..." />
+          <label class="exec-label">Etapa del Cliente</label>
+          <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Todas..." />
         </div>
       </div>
 
@@ -333,11 +396,19 @@
           <div class="col-md-3 col-6"><label class="exec-label">Palabra Clave</label><MultiSelect v-model="filters.word_ids" :items="mktWordsCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6">
             <label class="exec-label">Origen Web</label>
-            <select class="exec-select-light w-100" v-model="filters.web"><option :value="null">Todos</option><option value="Y">Sí (Web)</option><option value="N">No</option></select>
+            <select class="exec-select-light w-100" v-model="filters.web">
+              <option :value="null">Todos</option>
+              <option value="Y">Sí (Web)</option>
+              <option value="N">No</option>
+            </select>
           </div>
           <div class="col-md-3 col-6">
             <label class="exec-label">Es B2B</label>
-            <select class="exec-select-light w-100" v-model="filters.b2b"><option :value="null">Todos</option><option value="Y">Sí (Empresas)</option><option value="N">No</option></select>
+            <select class="exec-select-light w-100" v-model="filters.b2b">
+              <option :value="null">Todos</option>
+              <option value="Y">Sí (Empresas)</option>
+              <option value="N">No</option>
+            </select>
           </div>
         </div>
       </div>
@@ -349,7 +420,10 @@
           <div class="col-md-6"><label class="exec-label">Promoción</label><MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Tipo</label><MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Modalidad</label><MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
-          <div class="col-md-6"><label class="exec-label">Rango Inicio Edición</label><BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')" /></div>
+          <div class="col-md-6">
+            <label class="exec-label">Rango Inicio Edición</label>
+            <BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'edition_start')" />
+          </div>
         </div>
       </div>
 
@@ -387,18 +461,20 @@
     </template>
   </BaseModal>
 
+
   <BaseModal v-model="showControlModal" :title="isComercial ? 'Mis Permisos de Visualización' : 'Panel de Control: Restricciones de Asesores'" size="xl">
 
     <div v-if="!isComercial" class="px-4 py-3">
       <div class="exec-alert alert-info mb-4">
-        <i class="fa-solid fa-circle-info me-2"></i> Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
+        <i class="fa-solid fa-circle-info me-2"></i>
+        Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
       </div>
 
       <div class="table-shell control-table-wrapper">
         <table class="exec-table">
           <thead>
             <tr class="thead-group">
-              <th rowspan="2" class="th-cat sticky-col bg-dark text-white" style="min-width: 200px;">Asesor Comercial</th>
+              <th rowspan="2" class="th-cat sticky-col" style="min-width: 200px;">Asesor Comercial</th>
               <th colspan="3" class="th-group th-group-a text-center">PROGRAMAS</th>
               <th colspan="6" class="th-group th-group-b text-center">GLOBAL</th>
             </tr>
@@ -452,12 +528,16 @@
       </div>
 
       <div class="row g-4" v-if="asesoresControl.length > 0">
-        <div class="col-12"><h6 class="fieldset-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6></div>
+        <div class="col-12">
+          <h6 class="fieldset-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6>
+        </div>
         <div class="col-md-4"><label class="exec-label">Tipos de Programa</label><MultiSelect disabled v-model="asesoresControl[0].type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Modalidades</label><MultiSelect disabled v-model="asesoresControl[0].model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Programas Específicos</label><MultiSelect disabled v-model="asesoresControl[0].program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
 
-        <div class="col-12 mt-4"><h6 class="fieldset-title" style="color: var(--teal-600);"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6></div>
+        <div class="col-12 mt-4">
+          <h6 class="fieldset-title" style="color: var(--teal-600);"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6>
+        </div>
         <div class="col-md-4"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect disabled v-model="asesoresControl[0].status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">E. Cliente</label><MultiSelect disabled v-model="asesoresControl[0].moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Seguimiento</label><MultiSelect disabled v-model="asesoresControl[0].last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
@@ -473,19 +553,22 @@
           {{ isComercial ? 'Entendido, cerrar' : 'Cancelar' }}
         </button>
         <button v-if="!isComercial" class="btn-exec btn-exec-warning px-4" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
-          <i class="fa-solid fa-save me-1"></i> {{ isSavingRestrictions ? 'Guardando...' : 'Guardar Restricciones' }}
+          <i class="fa-solid fa-save me-1"></i>
+          {{ isSavingRestrictions ? 'Guardando...' : 'Guardar Restricciones' }}
         </button>
       </div>
     </template>
   </BaseModal>
 
+
   <BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
     <div v-if="isLoadingEnrollment" class="exec-loader py-5">
       <div class="loader-ring"></div>
-      <p class="loader-text mt-2">Cargando información financiera...</p>
+      <p class="text-muted small mt-2 fw-600">Cargando información financiera...</p>
     </div>
 
     <div v-else-if="enrollmentData" class="px-4 py-3">
+
       <div class="enrollment-header mb-4">
         <div>
           <h6 class="enrollment-title">{{ enrollmentData.abbreviation }}</h6>
@@ -505,28 +588,27 @@
             <label class="exec-label">Nombre Completo</label>
             <span class="info-value">{{ enrollmentData.student_name }}</span>
           </div>
-
           <div class="d-flex justify-content-between mb-3">
             <div class="info-block">
               <label class="exec-label">Documento</label>
               <span class="info-value text-mono">{{ enrollmentData.document_number }}</span>
             </div>
-            <div class="info-block text-right">
+            <div class="info-block">
               <label class="exec-label">Fecha Inscripción</label>
-              <span class="info-value text-muted" style="font-weight: 500;">{{ enrollmentData.registration_date }}</span>
+              <span class="info-value text-muted" style="font-weight:500;">{{ enrollmentData.registration_date }}</span>
             </div>
           </div>
-
           <div class="info-block mb-3">
-             <label class="exec-label mb-1">Estado de Matrícula</label>
-             <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">
-               {{ enrollmentData.status_label || 'Desconocido' }}
-             </span>
+            <label class="exec-label mb-1">Estado de Matrícula</label>
+            <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">
+              {{ enrollmentData.status_label || 'Desconocido' }}
+            </span>
           </div>
           <div class="info-block mb-3">
             <label class="exec-label">Asesor que Registró</label>
             <span class="info-value">
-              <i class="fa-solid fa-user-tie me-1 text-slate-400"></i> {{ enrollmentData.seller_name || '—' }}
+              <i class="fa-solid fa-user-tie me-1 text-slate-400"></i>
+              {{ enrollmentData.seller_name || '—' }}
             </span>
           </div>
         </div>
@@ -535,45 +617,61 @@
           <h6 class="fieldset-title">Desglose Financiero</h6>
           <div class="d-flex align-items-center gap-2 mb-3">
             <i class="fa-solid fa-credit-card text-slate-400"></i>
-            <span class="fw-700 text-dark" style="font-size: 13px;">{{ enrollmentData.payment_plan_label || '—' }}</span>
-            <span class="pill pill-slate" style="font-size: 9px;">Plan de Pago</span>
+            <span class="fw-700 text-dark" style="font-size:13px;">{{ enrollmentData.payment_plan_label || '—' }}</span>
+            <span class="pill pill-slate" style="font-size:9px;">Plan de Pago</span>
           </div>
 
           <div class="finance-card">
             <div class="d-flex justify-content-between mb-2 pb-2">
-              <span class="text-secondary fw-600" style="font-size: 12px;">Precio de Lista:
-                <span class="pill pill-slate ms-1" style="font-size: 9px;">{{ enrollmentData.profile_label || 'General' }}</span>
+              <span class="text-secondary fw-600" style="font-size:12px;">
+                Precio de Lista:
+                <span class="pill pill-slate ms-1" style="font-size:9px;">{{ enrollmentData.profile_label || 'General' }}</span>
               </span>
-              <span class="fw-700 text-dark" style="font-size: 14px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}</span>
+              <span class="fw-700 text-dark" style="font-size:14px;">
+                {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}
+              </span>
             </div>
 
             <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
-               <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" class="d-flex justify-content-between align-items-center c-red py-1">
-                  <span class="text-muted" style="font-size: 11.5px;">
-                     <i class="fa-solid fa-tag me-1"></i> <span class="fw-600">{{ desc.label || desc.name }}</span>
-                     <span v-if="desc.value" class="text-slate-400 ms-1 fst-italic">({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})</span>
+              <div
+                v-for="(desc, i) in enrollmentData.discounts_list"
+                :key="i"
+                class="d-flex justify-content-between align-items-center c-red py-1"
+              >
+                <span class="text-muted" style="font-size:11.5px;">
+                  <i class="fa-solid fa-tag me-1"></i>
+                  <span class="fw-600">{{ desc.label || desc.name }}</span>
+                  <span v-if="desc.value" class="text-slate-400 ms-1 fst-italic">
+                    ({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})
                   </span>
-                  <span class="fw-700 c-red" style="font-size: 12.5px;">- {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}</span>
-               </div>
-               <hr class="my-2" style="border-color: var(--slate-100);">
+                </span>
+                <span class="fw-700 c-red" style="font-size:12.5px;">
+                  - {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}
+                </span>
+              </div>
+              <hr class="my-2" style="border-color:var(--slate-100);">
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-              <span class="fw-700 text-dark" style="font-size: 12.5px;">Total a Pagar:</span>
-              <span class="fw-700 accent-text" style="font-size: 16px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}</span>
+              <span class="fw-700 text-dark" style="font-size:12.5px;">Total a Pagar:</span>
+              <span class="fw-700 accent-text" style="font-size:16px;">
+                {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}
+              </span>
             </div>
 
             <div class="d-flex justify-content-between mb-2 c-green">
-              <span class="fw-600" style="font-size: 12px;">Pagado:</span>
-              <span class="fw-700" style="font-size: 13px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}</span>
+              <span class="fw-600" style="font-size:12px;">Pagado:</span>
+              <span class="fw-700" style="font-size:13px;">
+                {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}
+              </span>
             </div>
 
-            <hr class="my-2" style="border-color: #dcfce7;">
+            <hr class="my-2" style="border-color:#dcfce7;">
 
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-700 text-dark" style="font-size: 12.5px;">Saldo Pendiente:</span>
-              <span class="fw-700" style="font-size: 18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">
-                 {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}
+              <span class="fw-700 text-dark" style="font-size:12.5px;">Saldo Pendiente:</span>
+              <span class="fw-700" style="font-size:18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">
+                {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}
               </span>
             </div>
           </div>
@@ -581,13 +679,13 @@
       </div>
 
       <div v-if="enrollmentData.pending_amount > 0" class="exec-alert alert-warning mt-4">
-        <i class="fa-solid fa-clock mt-1 me-2" style="color: var(--amber-500)"></i>
+        <i class="fa-solid fa-clock mt-1 me-2" style="color:var(--amber-500)"></i>
         <div>
-           <strong class="d-block text-dark">Próximo vencimiento:</strong>
-           <span v-if="enrollmentData.next_due_date" style="color: #92400e;">
-              {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b>
-           </span>
-           <span v-else class="text-muted fst-italic">No hay fecha de cuota programada.</span>
+          <strong class="d-block text-dark">Próximo vencimiento:</strong>
+          <span v-if="enrollmentData.next_due_date" style="color:#92400e;">
+            {{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b>
+          </span>
+          <span v-else class="text-muted fst-italic">No hay fecha de cuota programada.</span>
         </div>
       </div>
       <div v-else class="exec-alert alert-success mt-4">
@@ -595,27 +693,31 @@
       </div>
 
       <div class="mt-4 pt-2">
-         <h6 class="fieldset-title"><i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos</h6>
-         <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="file-list">
-            <div v-for="(file, idx) in enrollmentData.files_list" :key="idx" class="file-item">
-               <div class="d-flex align-items-center gap-3 overflow-hidden">
-                   <div class="file-icon"><i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i></div>
-                   <div class="d-flex flex-column text-truncate">
-                       <span class="fw-600 text-dark text-truncate" style="font-size: 12.5px;" :title="file.name">{{ file.name || 'Documento Adjunto' }}</span>
-                       <span class="text-muted" style="font-size: 10.5px;">
-                           {{ file.date || 'Archivo histórico' }}
-                           <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
-                       </span>
-                   </div>
-               </div>
-               <a :href="file.url" target="_blank" class="btn-icon" title="Ver Documento">
-                   <i class="fas fa-external-link-alt accent-text"></i>
-               </a>
+        <h6 class="fieldset-title"><i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos</h6>
+        <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="file-list">
+          <div v-for="(file, idx) in enrollmentData.files_list" :key="idx" class="file-item">
+            <div class="d-flex align-items-center gap-3 overflow-hidden">
+              <div class="file-icon">
+                <i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i>
+              </div>
+              <div class="d-flex flex-column text-truncate">
+                <span class="fw-600 text-dark text-truncate" style="font-size:12.5px;" :title="file.name">
+                  {{ file.name || 'Documento Adjunto' }}
+                </span>
+                <span class="text-muted" style="font-size:10.5px;">
+                  {{ file.date || 'Archivo histórico' }}
+                  <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
+                </span>
+              </div>
             </div>
-         </div>
-         <div v-else class="empty-state" style="padding: 1.5rem;">
-            <p>No hay archivos adjuntos en esta matrícula.</p>
-         </div>
+            <a :href="file.url" target="_blank" class="btn-icon" title="Ver Documento">
+              <i class="fas fa-external-link-alt accent-text"></i>
+            </a>
+          </div>
+        </div>
+        <div v-else class="empty-state" style="padding:1.5rem;">
+          <p>No hay archivos adjuntos en esta matrícula.</p>
+        </div>
       </div>
 
     </div>
@@ -626,6 +728,482 @@
     </template>
   </BaseModal>
 </template>
+
+
+<style scoped>
+.exec-shell {
+  background: var(--slate-50, #f8fafc);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+}
+
+.exec-masthead {
+  background: var(--navy-900, #0f172a);
+  color: #fff;
+  border-bottom: 1px solid var(--navy-700, #334155);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.masthead-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 28px;
+}
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; }
+.brand-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--slate-400, #94a3b8);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 3px;
+}
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: #fff; }
+
+.exec-body { flex: 1; padding: 20px 28px; }
+
+.exec-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-exec {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn-exec:disabled { opacity: .5; cursor: default; }
+
+.btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
+.btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
+
+.btn-exec-ghost { background: rgba(255,255,255,.07); color: var(--slate-300, #cbd5e1); border-color: rgba(255,255,255,.12); }
+.btn-exec-ghost:hover:not(:disabled) { background: rgba(255,255,255,.13); color: #fff; }
+
+.btn-exec-active { background: #fff; color: var(--navy-900, #0f172a); border-color: #fff; }
+
+.btn-exec-danger { background: rgba(220,38,38,.15); color: #fca5a5; border-color: rgba(220,38,38,.3); }
+
+.btn-exec-warning { background: #f59e0b; color: var(--navy-900, #0f172a); border-color: #f59e0b; }
+.btn-exec-warning:hover:not(:disabled) { background: #d97706; }
+
+.btn-exec-success { background: #15803d; color: #fff; border-color: #15803d; }
+.btn-exec-success:hover:not(:disabled) { background: #166534; }
+
+.btn-exec-outline { background: #fff; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
+.btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); border-color: var(--slate-400, #94a3b8); }
+
+.table-shell {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.table-responsive-custom { width: 100%; overflow-x: auto; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+.thead-sub .ts {
+  padding: 10px 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+  text-align: left;
+  background: #fafbfc;
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+}
+.thead-sub .ts.text-center { text-align: center; }
+
+.thead-group .th-cat {
+  background: var(--navy-900, #0f172a);
+  color: var(--slate-300, #cbd5e1);
+  padding: 10px 14px;
+  border-right: 2px solid #334155;
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.th-group {
+  padding: 8px 10px;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
+.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; }
+.ts-a { background: #f8fbff; color: #3b82f6; border-left: 1px solid #dbeafe; padding: 8px 12px; }
+.ts-b { background: #f7fdf9; color: #16a34a; border-left: 1px solid #d1fae5; padding: 8px 12px; }
+
+.tbody-row { transition: background 0.12s; position: relative; }
+.tbody-row td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--slate-50, #f8fafc);
+  vertical-align: middle;
+  color: var(--text-primary, #0f172a);
+}
+.tbody-row:last-child td { border-bottom: none; }
+.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
+
+.row-inscrito  { border-left: 3px solid #10b981; } .row-inscrito > td  { background: #f0fdf4; }
+.row-blue      { border-left: 3px solid #3b82f6; } .row-blue > td      { background: #f0f9ff; }
+.row-emerald   { border-left: 3px solid #0d9488; } .row-emerald > td   { background: #f0fdfa; }
+.row-yellow    { border-left: 3px solid #f59e0b; } .row-yellow > td    { background: #fffbeb; }
+.row-gray      { border-left: 3px solid #94a3b8; } .row-gray > td      { background: var(--slate-50, #f8fafc); color: var(--text-secondary, #475569); }
+.row-red       { border-left: 3px solid #ef4444; } .row-red > td       { background: #fef2f2; }
+.row-highlight > td { background: #eff6ff !important; }
+
+.tbody-row::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0; top: 0;
+  height: 100%; width: 0%;
+  background: rgba(20,184,166,.13);
+  transition: width .3s ease-out;
+  pointer-events: none;
+  z-index: 5;
+}
+.row-pressing::after { width: 100%; transition: width 1s linear; }
+
+.td-a { border-left: 1px solid transparent; }
+.td-b { border-left: 1px solid transparent; }
+.td-cat {
+  padding-left: 14px;
+  border-right: 2px solid #1e293b;
+  background: var(--navy-900, #0f172a) !important;
+  color: #fff !important;
+}
+
+.text-center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.text-mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
+.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-muted { color: var(--text-muted, #94a3b8); }
+.accent-text { color: #0d9488; }
+.c-green { color: #15803d; } .c-red { color: #dc2626; }
+.small { font-size: 11.5px; } .x-small { font-size: 10px; }
+.pay-date-cell { color: #15803d; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--text-secondary, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
+.pill-teal   { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important; }
+.pill-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
+.pill-red    { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important; }
+
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-secondary, #475569);
+  transition: all .15s;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.btn-icon:hover:not(:disabled) { background: var(--slate-100, #f1f5f9); color: var(--text-primary, #0f172a); border-color: var(--slate-300, #cbd5e1); }
+.btn-icon:disabled { opacity: .4; cursor: default; }
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--slate-400, #94a3b8);
+  font-size: 13px;
+  font-weight: 500;
+}
+.empty-state svg { display: block; margin: 0 auto 10px auto; color: var(--slate-300, #cbd5e1); }
+.empty-state p { margin: 0; }
+
+.compact-table { font-size: 11px; }
+.compact-table .ts { padding: 6px 10px; font-size: 10px; }
+.compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
+
+.exec-fieldset {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 16px 20px;
+}
+.fieldset-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  padding-bottom: 6px;
+}
+.exec-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.exec-input-light,
+.exec-select-light {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
+  transition: border-color .15s;
+  height: 36px;
+  display: block;
+}
+.exec-input-light:focus,
+.exec-select-light:focus {
+  outline: none;
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.1);
+}
+.exec-textarea {
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text-primary, #0f172a);
+  transition: border-color .15s;
+  resize: vertical;
+  min-height: 64px;
+  display: block;
+}
+.exec-textarea:focus {
+  outline: none;
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.1);
+}
+.exec-textarea:disabled,
+.exec-input-light:disabled,
+.exec-select-light:disabled {
+  background: var(--slate-50, #f8fafc);
+  color: var(--slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+.exec-modal-body { display: flex; flex-direction: column; }
+
+.modal-lead-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.lead-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #f0f9ff; color: #2563eb;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  border: 1px solid #e0f2fe;
+  flex-shrink: 0;
+}
+
+.timer-btn {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: .65rem; transition: all .15s;
+}
+.timer-btn--start { background: #d1fae5; color: #059669; }
+.timer-btn--start:hover { background: #a7f3d0; }
+.timer-btn--stop  { background: #fee2e2; color: #dc2626; }
+.timer-btn--stop:hover  { background: #fecaca; }
+.timer-btn:disabled { opacity: .45; cursor: default; }
+.timer-display {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #475569);
+}
+.timer-display--active { color: #dc2626; }
+
+.exec-alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  border-left: 4px solid;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.alert-info    { background: #f0f9ff; color: #0369a1; border-color: #3b82f6; }
+.alert-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
+.alert-success { background: #f0fdf4; color: #166534; border-color: #22c55e; }
+
+.exec-alert-banner {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border-radius: 8px;
+  gap: 20px;
+  border: 1px solid;
+}
+.banner-danger  { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.banner-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.banner-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.banner-text  { font-size: 12.5px; color: var(--text-primary, #0f172a); margin: 0; line-height: 1.5; }
+
+.control-table-wrapper {
+  max-height: 62vh;
+  overflow: auto;
+}
+.control-table-wrapper .sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 2px 0 5px -2px rgba(0,0,0,.12);
+}
+.control-table-wrapper tbody .sticky-col {
+  background: #fff;
+}
+.control-table-wrapper thead .sticky-col {
+  z-index: 3;
+  background: var(--navy-900, #0f172a);
+}
+.minW-200 { min-width: 220px; }
+.minW-300 { min-width: 320px; }
+
+.enrollment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+}
+.enrollment-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d9488;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.enrollment-sub { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 4px; font-weight: 500; }
+
+.info-block { display: flex; flex-direction: column; gap: 2px; }
+.info-value { font-size: 13px; font-weight: 600; color: var(--text-primary, #0f172a); }
+
+.finance-card {
+  background: var(--slate-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.file-list { display: flex; flex-direction: column; gap: 8px; }
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  transition: border-color .15s;
+}
+.file-item:hover { border-color: #0d9488; }
+.file-icon {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--slate-50, #f8fafc);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.exec-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 16px;
+}
+.loader-ring {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border, #e2e8f0);
+  border-top-color: #0d9488;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.scroll-area {
+  max-height: 500px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--slate-300, #cbd5e1) transparent;
+}
+.scroll-area::-webkit-scrollbar { width: 5px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--slate-200, #e2e8f0); border-radius: 4px; }
+
+.pulse-alert { animation: pulseRed 2s infinite; }
+@keyframes pulseRed {
+  0%   { box-shadow: 0 0 0 0 rgba(220,38,38,.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+  100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+}
+
+.text-slate-400 { color: var(--slate-400, #94a3b8); }
+
+@media (max-width: 768px) {
+  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px 16px; }
+  .exec-toolbar { flex-direction: column-reverse; align-items: stretch; }
+  .toolbar-actions { justify-content: flex-end; }
+  .exec-body { padding: 16px 12px; }
+}
+</style>
 <script setup>
 import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -1397,237 +1975,3 @@ onMounted(async () => {
   fetchLeads()
 })
 </script>
-
-<style scoped>
-/* ═══════════════════════════════════════════════
-   TOKENS & BASE
-═══════════════════════════════════════════════ */
-:root {
-  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
-  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #12274e; --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --amber-500: #f59e0b;
-  --red-600:   #dc2626;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
-.exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--slate-50);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  color: var(--text-primary);
-}
-
-/* ═══════════════════════════════════════════════
-   MASTHEAD
-═══════════════════════════════════════════════ */
-.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 2px 28px; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
-
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-.btn-exec-ghost { background: rgba(255,255,255,0.07); color: var(--slate-300); border: 1px solid rgba(255,255,255,0.12); }
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
-.btn-exec-active { background: var(--white); color: var(--navy-900); border: 1px solid var(--white); }
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-danger { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
-.btn-exec-warning { background: var(--amber-500); color: var(--navy-900); border: 1px solid var(--amber-500); }
-.btn-exec-success { background: #15803d; color: var(--white); }
-.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
-.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
-
-/* ═══════════════════════════════════════════════
-   BODY & TOOLBAR
-═══════════════════════════════════════════════ */
-.exec-body { flex: 1; padding: 24px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; }
-.toolbar-chips { flex: 1; min-width: 0; }
-.toolbar-pagination { flex-shrink: 0; }
-
-/* ═══════════════════════════════════════════════
-   DATA GRID (TABLA)
-═══════════════════════════════════════════════ */
-.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.table-responsive-custom { width: 100%; overflow-x: auto; }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-
-/* Cabeceras (Sub) */
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; background: #fafbfc; color: var(--text-secondary); }
-.thead-sub .ts.text-center { text-align: center; }
-
-/* Cabeceras (Grupos Control) */
-.thead-group .th-cat { background: var(--navy-900); color: var(--slate-300); padding-left: 14px; border-right: 2px solid var(--navy-700); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
-.th-group { padding: 8px 10px; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border); }
-.th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
-.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; }
-.ts-a { background: #f8fbff; color: #3b82f6; border-left: 1px solid #dbeafe; }
-.ts-b { background: #f7fdf9; color: #16a34a; border-left: 1px solid #d1fae5; }
-
-/* Filas Body */
-.tbody-row { transition: background 0.15s; position: relative; }
-.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
-
-/* Colores de estado (Pipeline) */
-.row-inscrito { border-left: 3px solid #10b981; } .row-inscrito > td { background: #f0fdf4; }
-.row-blue { border-left: 3px solid #3b82f6; }    .row-blue > td { background: #f0f9ff; }
-.row-emerald { border-left: 3px solid #12274e; } .row-emerald > td { background: #f0fdfa; }
-.row-yellow { border-left: 3px solid #f59e0b; }  .row-yellow > td { background: #fffbeb; }
-.row-gray { border-left: 3px solid var(--slate-400); } .row-gray > td { background: var(--slate-50); color: var(--text-secondary); }
-.row-red { border-left: 3px solid #ef4444; }     .row-red > td { background: #fef2f2; }
-.row-highlight > td { background: #eff6ff !important; }
-
-/* Efecto Long Press */
-.tbody-row::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background-color: rgba(20, 184, 166, 0.15); transition: width 0.3s ease-out; pointer-events: none; z-index: 5; }
-.row-pressing::after { width: 100%; transition: width 1s linear; }
-
-/* Celdas específicas */
-.td-cat { padding-left: 14px; border-right: 2px solid var(--navy-800); background: var(--navy-900) !important; color: var(--white) !important; }
-.td-a { border-left: 1px solid transparent; } /* Helper for standard cells */
-.td-b { border-left: 1px solid transparent; }
-
-/* Utilidades Texto */
-.text-center { text-align: center; } .text-right { text-align: right; }
-.text-mono { font-family: 'IBM Plex Mono', monospace; }
-.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
-.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
-.c-green { color: #15803d; } .c-red { color: #dc2626; }
-.small { font-size: 11.5px; } .x-small { font-size: 10px; }
-.nowrap { white-space: nowrap; }
-
-/* Badges / Pills */
-.pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
-.pill-slate { background: var(--slate-100); color: var(--text-secondary); }
-.pill-teal  { background: #ccfbf1; color: #0f766e; }
-.pill-blue  { background: #dbeafe; color: #1d4ed8; }
-.pill-amber { background: #fef3c7; color: #92400e; }
-.pill-red   { background: #fee2e2; color: #b91c1c; }
-
-/* Botones Icono Tabla */
-.btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
-.btn-icon:hover { background: var(--slate-100); color: var(--text-primary); border-color: var(--slate-300); }
-
-/* Empty state / Loaders */
-
-.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
-.loader-ring { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--teal-600); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Tabla Compacta */
-.compact-table { font-size: 11px; }
-.compact-table .ts { padding: 6px 10px; font-size: 10px; }
-.compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-.compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
-
-/* ═══════════════════════════════════════════════
-   MODALES (Estilos internos)
-═══════════════════════════════════════════════ */
-.exec-modal-body { display: flex; flex-direction: column; background: var(--slate-50); }
-.modal-header-strip { background: var(--white); border-bottom: 1px solid var(--border); }
-.avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: #f0f9ff; color: var(--blue-600); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid #e0f2fe; }
-
-/* Formularios Modales */
-.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
-.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100); padding-bottom: 6px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-.exec-input-light, .exec-select-light, .exec-textarea { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary); transition: border-color 0.15s; }
-.exec-input-light:focus, .exec-select-light:focus, .exec-textarea:focus { outline: none; border-color: var(--teal-500); }
-
-/* Control de Asesores Banners */
-.exec-alert { padding: 12px 16px; border-radius: 6px; font-size: 12.5px; border-left: 4px solid; display: flex; align-items: flex-start; gap: 10px; }
-.alert-info { background: #f0f9ff; color: #0369a1; border-color: #3b82f6; }
-.alert-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
-.alert-success { background: #f0fdf4; color: #166534; border-color: #22c55e; }
-
-.exec-alert-banner { display: flex; align-items: center; padding: 20px; border-radius: 8px; gap: 20px; border: 1px solid; }
-.banner-danger { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
-.banner-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
-.banner-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.banner-text { font-size: 12.5px; color: var(--text-primary); margin: 0; line-height: 1.4; }
-
-/* Detalle de Matrícula */
-.enrollment-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--white); border: 1px solid var(--border); border-radius: 6px; }
-.enrollment-title { font-size: 15px; font-weight: 700; color: var(--teal-600); margin: 0; text-transform: uppercase; letter-spacing: 0.03em; }
-.enrollment-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-
-.info-block { display: flex; flex-direction: column; gap: 2px; }
-.info-value { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
-
-.finance-card { background: var(--slate-50); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
-
-.file-list { display: flex; flex-direction: column; gap: 8px; }
-.file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--white); border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s; }
-.file-item:hover { border-color: var(--teal-500); }
-.file-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--slate-50); border-radius: 4px; }
-
-/* Utilidades adicionales */
-.scroll-area { max-height: 500px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--slate-300) transparent; }
-.pulse-alert { animation: pulse-red 2s infinite; }
-@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
-/* ═══════════════════════════════════════════════
-   SCROLL Y COLUMNAS FIJAS (PANEL DE CONTROL)
-═══════════════════════════════════════════════ */
-.control-table-wrapper {
-  max-height: 60vh;
-  overflow: auto; /* Habilita el scroll vertical y horizontal */
-}
-
-/* Fijar la primera columna a la izquierda */
-.control-table-wrapper .sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  /* Sombra sutil para separar la columna fija del resto de la tabla al scrollear */
-  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
-}
-
-/* Color de fondo para las celdas del cuerpo para que el texto de atrás no se transparente */
-.control-table-wrapper tbody .sticky-col {
-  background-color: var(--white, #ffffff);
-}
-
-/* La cabecera de la columna fija necesita un Z-index mayor para estar por encima de todo */
-.control-table-wrapper thead .sticky-col {
-  z-index: 3;
-  background-color: var(--navy-900, #0f172a);
-}
-
-/* Anchos mínimos para que el scroll horizontal se active correctamente */
-.minW-200 { min-width: 220px; }
-.minW-300 { min-width: 320px; }
-.empty-state {
-  padding: 40px;
-  text-align: center;
-  color: var(--slate-400);
-  font-size: 13px;
-  font-weight: 500;
-  /* Eliminamos el display: flex, flex-direction, align-items y gap */
-}
-
-/* Agregamos esta regla para centrar el ícono SVG y darle la separación (gap) hacia abajo */
-.empty-state svg {
-  display: block;
-  margin: 0 auto 10px auto;
-}
-
-.brand-rule {
-  width: 3px; height: 42px;
-  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
-}
-</style>

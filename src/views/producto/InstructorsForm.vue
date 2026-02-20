@@ -1,242 +1,315 @@
 <template>
-  <div class="container-fluid px-3 py-3 lead-form">
-    <div class="card shadow-sm border-0">
-      
-      <div class="card-header border-0 pb-3 pt-3 d-flex flex-wrap justify-content-between align-items-start">
-        <div class="pe-3">
-          <div class="h3">
-            {{ isEdit ? 'Editar Instructor' : 'Nuevo Instructor' }}
-          </div>
-          <div class="text-muted small" v-if="isEdit">
-            ID: <span class="fw-bold">{{ idParam }}</span>
+  <div class="exec-shell form-shell">
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text d-flex align-items-center gap-3">
+            <div>
+              <span class="brand-eyebrow">Gestión de Instructores</span>
+              <h1 class="brand-title">{{ isEdit ? 'Editar Instructor' : 'Nuevo Instructor' }}</h1>
+            </div>
+            <span v-if="isEdit" class="pill pill-slate border mt-3">ID: {{ idParam }}</span>
+            <span v-if="isEdit" :class="['pill', form.instructor_active ? 'pill-teal' : 'pill-red', 'border', 'mt-3']">
+              {{ form.instructor_active ? 'ACTIVO' : 'INACTIVO' }}
+            </span>
           </div>
         </div>
-        
-        <div v-if="isEdit" class="d-flex align-items-center gap-2">
-            <span :class="['badge', form.instructor_active ? 'bg-success' : 'bg-danger']">
-                {{ form.instructor_active ? 'ACTIVO' : 'INACTIVO' }}
-            </span>
+
+        <div class="masthead-actions">
+          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
+            <i class="fa-solid fa-arrow-left"></i> Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-exec btn-exec-primary px-4"
+            @click="guardar"
+            :disabled="saving || isUploadingAny || !isValid"
+          >
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ saving ? 'Guardando…' : (isEdit ? 'Actualizar Datos' : 'Registrar Instructor') }}
+          </button>
         </div>
       </div>
+    </header>
 
-      <div class="card-body pt-4 pb-4" v-if="loaded">
-        
-        <section class="form-section mb-5">
-          <div class="form-section__header">
-            <span class="form-section__title">Datos personales</span>
-          </div>
-          <div class="row g-3 form-section__body">
+    <main class="exec-body pb-5 d-flex justify-content-center" v-if="loaded">
+      <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
+
+        <div class="exec-fieldset mb-4">
+          <h6 class="fieldset-title"><i class="fa-solid fa-user me-2 text-primary"></i> Datos Personales</h6>
+          <div class="row g-3">
             <div class="col-md-4">
-              <label class="form-label mb-1">Nombres <span class="required-star">*</span></label>
-              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="form-control" required placeholder="NOMBRES" />
+              <label class="exec-label">Nombres <span class="c-red">*</span></label>
+              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="exec-input-light w-100" required placeholder="NOMBRES" />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">Apellido paterno <span class="required-star">*</span></label>
-              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="form-control" required placeholder="APELLIDO PATERNO" />
+              <label class="exec-label">Apellido paterno <span class="c-red">*</span></label>
+              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="exec-input-light w-100" required placeholder="APELLIDO PATERNO" />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">Apellido materno</label>
-              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.mother_last_name" type="text" class="form-control" placeholder="APELLIDO MATERNO" />
+              <label class="exec-label">Apellido materno</label>
+              <input v-restrict="{ transform: 'upper' }" v-model.trim="form.mother_last_name" type="text" class="exec-input-light w-100" placeholder="APELLIDO MATERNO" />
+            </div>
+            
+            <div class="col-md-4">
+              <label class="exec-label">Tipo de documento <span class="c-red">*</span></label>
+              <SearchSelect v-model="form.cat_type_document" :items="catalogs.documentTypeList" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" required />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">Tipo de documento <span class="required-star">*</span></label>
-              <SearchSelect v-model="form.cat_type_document" :items="catalogs.documentTypeList" label-field="description" value-field="id" placeholder="SELECCIONAR..." required />
+              <label class="exec-label">N° documento <span class="c-red">*</span></label>
+              <input v-model.trim="form.document_number" type="text" class="exec-input-light w-100 text-mono" v-restrict="{ only: 'numbers' }" required placeholder="NÚMERO" />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">N° documento <span class="required-star">*</span></label>
-              <input v-model.trim="form.document_number" type="text" class="form-control mono" v-restrict="{ only: 'numbers' }" required placeholder="NÚMERO" />
+              <label class="exec-label">Fecha de nacimiento</label>
+              <input v-model="form.birthday" type="date" class="exec-input-light w-100" />
+            </div>
+            
+            <div class="col-md-4">
+              <label class="exec-label">País</label>
+              <SearchSelect v-model="form.cat_country" :items="catalogs.countryList" label-field="description" value-field="id" placeholder="Seleccionar país..." class="exec-select-light w-100" />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">Fecha de nacimiento</label>
-              <input v-model="form.birthday" type="date" class="form-control" />
+              <label class="exec-label">Correo</label>
+              <input v-model="form.email" type="email" class="exec-input-light w-100" placeholder="correo@ejemplo.com" />
             </div>
             <div class="col-md-4">
-              <label class="form-label mb-1">País</label>
-              <SearchSelect v-model="form.cat_country" :items="catalogs.countryList" label-field="description" value-field="id" placeholder="PAÍS..." />
+              <label class="exec-label">Teléfono</label>
+              <input v-model="form.phone" type="text" class="exec-input-light w-100 text-mono" placeholder="Ej. +51 999 999 999" />
             </div>
-            <div class="col-md-4">
-              <label class="form-label mb-1">Correo</label>
-              <input v-model="form.email" type="text" class="form-control" placeholder="Correo" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label mb-1">Telefono</label>
-              <input v-model="form.phone" type="text" class="form-control" placeholder="Telefono" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label mb-1 d-block">Activo</label>
-              <label class="form-switch">
-                  <input type="checkbox" v-model="form.instructor_active" />
+
+            <div class="col-md-12 border-top mt-4 pt-3 d-flex align-items-center gap-3">
+              <label class="exec-label mb-0">Estado del Instructor</label>
+              <label class="exec-switch exec-switch-lg">
+                <input type="checkbox" v-model="form.instructor_active" />
                 <span></span>
               </label>
+              <span class="x-small text-muted fw-600">{{ form.instructor_active ? 'ACTIVO EN EL SISTEMA' : 'INACTIVO' }}</span>
             </div>
-          </div>
-        </section>
-
-        <section class="form-section mb-5" v-if="isEdit">
-            <div class="form-section__header">
-              <span class="form-section__title">Información Profesional</span>
-            </div>
-            <div class="row g-3 form-section__body">
-              <div class="col-md-4">
-                <label class="form-label mb-1">Puesto Relevante</label>
-                <input v-model="form.relevant_work" type="text" class="form-control" placeholder="Ej. Gerente de TI" />
-              </div>
-
-              <div class="col-md-4">
-                <label class="form-label mb-1">Empresa Relevante</label>
-                <input v-model="form.relevant_company" type="text" class="form-control" placeholder="Ej. Microsoft" />
-              </div>
-              
-              <div class="col-md-4">
-                <label class="form-label mb-1">LinkedIn</label>
-                <input v-model="form.linkedin" type="text" class="form-control" placeholder="URL Perfil" />
-              </div>
-              <!--text area profile_resume-->
-                
-              <div class="col-md-12">
-                <label class="form-label mb-1">Resumen de Perfil</label>
-                <textarea v-model="form.profile_resume" class="form-control" rows="3" placeholder="Breve resumen profesional..."></textarea>
-              </div>
-              
-              
-            </div>
-            
-            <div class="row g-4 mt-1">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold mb-2">Curriculum Simplificado (CV)</label>
-                    <FileUploader 
-                        label="Clic para subir CV Simplificado"
-                        v-model="form.cv_url"
-                        accept=".pdf,.doc,.docx"
-                    />
-                </div>
-                
-                <div class="col-md-6">
-                    <label class="form-label fw-bold mb-2">Curriculum Documentado</label>
-                    <FileUploader 
-                        label="Clic para subir CV Documentado"
-                        v-model="form.cv_documents_url"
-                        accept=".pdf,.doc,.docx"
-                    />
-                </div>
-            </div>
-        </section>
-
-        <div class="row">
-          <div class="col-6">
-            <section class="form-section mb-4" v-if="isEdit">
-                <div class="form-section__header d-flex justify-content-between align-items-center w-100 pe-3">
-                  <span class="form-section__title">Programas Personalizaciòn</span>
-                  <button class="btn btn-sm btn-outline-primary" @click="addProgramItem">
-                    <i class="fas fa-plus"></i> Asignar Programa
-                  </button>
-                </div>
-
-                <div v-if="form.programs.length === 0" class="alert alert-light text-center border py-2">
-                    <small>No tiene programas personalizados.</small>
-                </div>
-
-                <div v-for="(prog, index) in form.programs" :key="'prog-'+index" class="card mb-2 bg-white border shadow-sm">
-                    <div class="card-body py-2 row align-items-center g-2">
-                        <div class="col-md-4">
-                            <label class="small text-muted d-block mb-0">Programa</label>
-                            <SearchSelect
-                              v-model="prog.program_id"
-                              mode="remote"
-                              :fetcher="q => programService.programCaller({ q })"
-                              label-field="description"
-                              value-field="id"
-                              sublabel-field="label_ui"
-                              placeholder="Buscar programa..."
-                              :cache="false"
-                              view-open="6"
-                              :model-label="prog.program_name" 
-                          />
-                          
-                        </div>
-                        <div class="col-md-8">
-                            <label class="small text-muted d-block mb-0">Perfil Específico</label>
-                            
-                            <textarea class="form-control" rows="2" v-model.trim="prog.profile_summary" placeholder="Expertise en este programa..."></textarea>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-          </div>
-          <div class="col-6">
-            
-        <section class="form-section mb-4" v-if="isEdit">
-            <div class="form-section__header d-flex justify-content-between align-items-center w-100 pe-3">
-              <span class="form-section__title">Información Financiera</span>
-              <button class="btn btn-sm btn-outline-primary" @click="addFinancialItem">
-                <i class="fas fa-plus"></i> Agregar Cuenta
-              </button>
-            </div>
-
-            <div v-if="form.financials.length === 0" class="alert alert-light text-center border">
-                No hay cuentas financieras registradas.
-            </div>
-
-            <div v-for="(item, index) in form.financials" :key="index" class="card mb-3 bg-light border">
-                <div class="card-body position-relative">
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small mb-1">Banco (Nombre)</label>
-                            <input v-model="item.bank_name" type="text" class="form-control" placeholder="Ej. BCP, Interbank..." />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small mb-1">Tipo de Pago</label>
-                            <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_payment_type" :items="catalogs.paymentTypeList" label-field="description" value-field="id" placeholder="Tipo..." />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small mb-1">Tipo Tarifa</label>
-                            <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_rate_pay_id" :items="catalogs.ratePayList" label-field="description" value-field="id" placeholder="Tarifa..." />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small mb-1">Moneda</label>
-                            <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_currency" :items="catalogs.currencyList" label-field="description" value-field="id" placeholder="Moneda..." />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small mb-1">Observaciones</label>
-                            <textarea class="form-control" rows="2" v-model.trim="item.observations" placeholder="Cta, CCI, etc."></textarea>
-                        </div>
-                        
-                        <div class="col-md-6 mt-2">
-                             <label class="form-label small mb-1 fw-bold">Constancias / Adjuntos</label>
-                             <MultiFileUploader 
-                             v-model="item.attachments"
-                              label="Agregar Constancia"
-                                                    
-                             />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
           </div>
         </div>
 
+        <div class="exec-fieldset mb-4" v-if="isEdit">
+          <h6 class="fieldset-title"><i class="fa-solid fa-briefcase me-2 text-info"></i> Información Profesional</h6>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="exec-label">Puesto Relevante</label>
+              <input v-model="form.relevant_work" type="text" class="exec-input-light w-100" placeholder="Ej. Gerente de TI" />
+            </div>
+            <div class="col-md-4">
+              <label class="exec-label">Empresa Relevante</label>
+              <input v-model="form.relevant_company" type="text" class="exec-input-light w-100" placeholder="Ej. Microsoft" />
+            </div>
+            <div class="col-md-4">
+              <label class="exec-label">LinkedIn</label>
+              <div class="input-group-custom">
+                <i class="fa-brands fa-linkedin input-icon text-primary"></i>
+                <input v-model="form.linkedin" type="url" class="exec-input-light w-100 icon-padded" placeholder="https://linkedin.com/in/..." />
+              </div>
+            </div>
+            
+            <div class="col-md-12">
+              <label class="exec-label">Resumen de Perfil</label>
+              <textarea v-model="form.profile_resume" class="exec-textarea w-100" rows="3" placeholder="Breve resumen profesional..."></textarea>
+            </div>
+          </div>
+          
+          <div class="row g-4 mt-1 border-top pt-3">
+            <div class="col-md-6">
+              <label class="exec-label mb-2">Curriculum Simplificado (CV)</label>
+              <FileUploader 
+                label="Clic para subir CV Simplificado"
+                v-model="form.cv_url"
+                accept=".pdf,.doc,.docx"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="exec-label mb-2">Curriculum Documentado</label>
+              <FileUploader 
+                label="Clic para subir CV Documentado"
+                v-model="form.cv_documents_url"
+                accept=".pdf,.doc,.docx"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4" v-if="isEdit">
+          <div class="col-lg-6">
+            <div class="exec-fieldset h-100 mb-0">
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-chalkboard-user me-2" style="color: var(--teal-600);"></i> Programas Personalización</h6>
+                <button type="button" class="btn-exec btn-exec-outline text-primary border-primary btn-sm" @click="addProgramItem">
+                  <i class="fa-solid fa-plus me-1"></i> Asignar Programa
+                </button>
+              </div>
+
+              <div v-if="form.programs.length === 0" class="empty-state">
+                <p class="mb-0">No tiene programas personalizados asignados.</p>
+              </div>
+
+              <div v-for="(prog, index) in form.programs" :key="'prog-'+index" class="exec-version-card mb-3">
+                <div class="version-body p-3 row g-2">
+                  <div class="col-md-12">
+                    <label class="exec-label text-muted">Programa Asignado</label>
+                    <SearchSelect
+                      v-model="prog.program_id"
+                      mode="remote"
+                      :fetcher="q => programService.programCaller({ q })"
+                      label-field="description"
+                      value-field="id"
+                      sublabel-field="label_ui"
+                      placeholder="Buscar programa..."
+                      :cache="false"
+                      view-open="6"
+                      :model-label="prog.program_name" 
+                      class="exec-select-light w-100"
+                    />
+                  </div>
+                  <div class="col-md-12 mt-2">
+                    <label class="exec-label text-muted">Perfil Específico</label>
+                    <textarea class="exec-textarea w-100" rows="2" v-model.trim="prog.profile_summary" placeholder="Expertise en este programa..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="exec-fieldset h-100 mb-0">
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-wallet me-2" style="color: var(--amber-500);"></i> Información Financiera</h6>
+                <button type="button" class="btn-exec btn-exec-outline text-primary border-primary btn-sm" @click="addFinancialItem">
+                  <i class="fa-solid fa-plus me-1"></i> Agregar Cuenta
+                </button>
+              </div>
+
+              <div v-if="form.financials.length === 0" class="empty-state">
+                <p class="mb-0">No hay cuentas financieras registradas.</p>
+              </div>
+
+              <div v-for="(item, index) in form.financials" :key="'fin-'+index" class="exec-version-card mb-3 bg-slate-50">
+                <div class="version-body p-3 row g-3">
+                  <div class="col-md-6">
+                    <label class="exec-label">Banco (Nombre)</label>
+                    <input v-model="item.bank_name" type="text" class="exec-input-light w-100 bg-white" placeholder="Ej. BCP, Interbank..." />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="exec-label">Tipo de Pago</label>
+                    <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_payment_type" :items="catalogs.paymentTypeList" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100 bg-white" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="exec-label">Tipo Tarifa</label>
+                    <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_rate_pay_id" :items="catalogs.ratePayList" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100 bg-white" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="exec-label">Moneda</label>
+                    <SearchSelect :disabled="!!item.instructor_financial_id" v-model="item.cat_currency" :items="catalogs.currencyList" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100 bg-white" />
+                  </div>
+                  <div class="col-md-12">
+                    <label class="exec-label">Observaciones</label>
+                    <textarea class="exec-textarea w-100 bg-white" rows="2" v-model.trim="item.observations" placeholder="Cta, CCI, etc."></textarea>
+                  </div>
+                  <div class="col-md-12 mt-2 pt-2 border-top">
+                    <label class="exec-label mb-2">Constancias / Adjuntos</label>
+                    <MultiFileUploader 
+                      v-model="item.attachments"
+                      label="Agregar Constancia"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
-      
-      <div class="card-body py-5 text-center" v-else>
-         <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-         <p class="text-muted mt-2">Cargando información...</p>
-      </div>
+    </main>
 
-      <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
-        <button type="button" class="btn btn-outline-secondary" @click="cancelar">Cancelar</button>
-        <button type="button" class="btn btn-primary" @click="guardar" :disabled="saving || isUploadingAny">
-          <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
-          {{ saving ? 'Guardando...' : (isEdit ? 'Actualizar Datos' : 'Registrar Instructor') }}
-        </button>
+    <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height: 50vh;">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+        <p class="text-muted fw-600">Cargando información del instructor...</p>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   TOKENS DE DISEÑO LOCALES Y ESTRUCTURA
+   (Los botones, switches y utilidades de texto vienen del CSS Global)
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #12274e; --teal-500:  #12274e;
+  --blue-600:  #2563eb;
+  --amber-500: #f59e0b;
+  --red-600:   #dc2626;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+}
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50, #f8fafc);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #0f172a);
+}
+
+/* Masthead */
+.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #fff); border-bottom: 1px solid var(--navy-700, #334155); position: sticky; top: 0; z-index: 100;}
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #fff); }
+.masthead-actions { display: flex; gap: 10px; align-items: center; }
+
+/* Wrapper Central */
+.exec-body { padding: 32px 28px; }
+.exec-form-wrapper { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+/* Fieldsets y Labels */
+.exec-fieldset { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
+.fieldset-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 10px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+.c-red { color: var(--red-600, #dc2626); font-weight: 600; margin-left: .15rem; }
+
+/* Inputs estándar (Heredados del estándar) */
+.exec-input-light, .exec-select-light { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary, #0f172a); transition: all 0.15s; height: 38px; }
+.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
+.exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50, #f8fafc); color: var(--slate-400, #94a3b8); cursor: not-allowed; }
+
+/* Validación de error */
+.exec-input-light:required:invalid:not(:placeholder-shown):not(:disabled),
+.exec-select-light:required:invalid:not(:disabled) {
+    border-color: var(--red-600, #dc2626) !important;
+}
+
+/* Iconos dentro de inputs */
+.input-group-custom { position: relative; display: flex; align-items: center; }
+.input-icon { position: absolute; left: 12px; color: var(--slate-400, #94a3b8); font-size: 13px; }
+.icon-padded { padding-left: 32px; }
+
+/* Textareas custom */
+.exec-textarea {
+  background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 10px 12px; 
+  font-size: 13px; font-family: inherit; color: var(--text-primary, #0f172a); resize: vertical; transition: all 0.15s;
+}
+.exec-textarea:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
+
+/* Bloques de Listas Dinámicas */
+.exec-version-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: var(--white, #fff); overflow: hidden; transition: box-shadow 0.2s; }
+.exec-version-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+.empty-state { text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50, #f8fafc); border-radius: 6px; border: 1px dashed var(--slate-300, #cbd5e1); }
+</style>
 <script setup>
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -525,38 +598,3 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-    .form-control:required:invalid:not(:disabled):not([readonly]),
-    .form-select:required:invalid:not(:disabled):not([readonly]) {
-        border-color: #ef4444 !important;
-        box-shadow: 0 0 0 .2rem rgba(239,68,68,.15);
-    }
-    
-    .lead-form { font-size: 0.95rem; color: #111827; }
-    .card-header { background-color: #ffffff; border-bottom: 1px solid #e5e7eb !important; }
-    
-    .form-switch { position: relative; width: 42px; height: 24px; display: inline-block; margin-bottom: 0; }
-    .form-switch input { display: none; }
-    .form-switch span {
-      position: absolute; inset: 0; background: #e5e7eb; border-radius: 9999px; transition: .2s;
-      cursor: pointer;
-    }
-    .form-switch span::after {
-      content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
-      position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
-    }
-    .form-switch input:checked + span { background: #3b82f6; }
-    .form-switch input:checked + span::after { left: 21px; }
-
-    .required-star { color: #dc2626; font-weight: 600; margin-left: .15rem; }
-    
-    .form-section__header {
-        display: flex; align-items: center; margin-bottom: 1rem; position: relative; padding-left: .75rem;
-    }
-    .form-section__header::before {
-        content: ""; position: absolute; left: 0; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background-color: #3b82f6;
-    }
-    .form-section__title {
-        font-size: .8rem; font-weight: 600; color: #111827; text-transform: uppercase; letter-spacing: .03em;
-    }
-</style>

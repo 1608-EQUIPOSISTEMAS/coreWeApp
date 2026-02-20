@@ -15,7 +15,7 @@
 
     <main class="exec-body">
 
-      <div class="toolbar-chips">
+      <div class="toolbar-chips mb-3">
         <BaseFilterChips
           :items="activeFilterChips"
           @remove="clearFilter($event)"
@@ -32,8 +32,8 @@
           />
         </div>
 
-        <div class="masthead-actions">
-          <div class="d-flex align-items-center gap-2 me-2">
+        <div class="toolbar-actions">
+          <div class="toolbar-view-selector">
             <span class="exec-label mb-0 text-secondary" style="font-size: 10px;">VISTA:</span>
             <SearchSelect
               v-model="selectedType"
@@ -42,12 +42,11 @@
               value-field="alias"
               placeholder="TIPO…"
               @update:modelValue="applyFilters"
-              class="exec-select-light"
-              style="width: 160px; min-height: 32px;"
+              class="flex-grow-1"
             />
           </div>
 
-          <button class="btn-exec btn-exec-primary" @click="goNew">
+          <button class="btn-exec btn-exec-primary w-sm-100" @click="goNew">
             <i class="fa-solid fa-plus"></i> Nuevo
           </button>
         </div>
@@ -71,7 +70,7 @@
             <tbody>
               <tr v-for="p in programs" :key="p.program_id" class="tbody-row">
                 <td class="td-a text-center nowrap">
-                  <button class="btn-icon" @click="editProgram(p)" title="Editar Programa">
+                  <button class="btn-icon btn-icon-sm" @click="editProgram(p)" title="Editar Programa">
                     <i class="fa-solid fa-pen-to-square text-warning"></i>
                   </button>
                 </td>
@@ -118,7 +117,7 @@
             <tbody>
               <tr v-for="v in programs" :key="v.id" class="tbody-row">
                 <td class="td-a text-center nowrap">
-                  <button class="btn-icon" @click="editProgram({ program_id: v.program_id })" title="Editar Versión">
+                  <button class="btn-icon btn-icon-sm" @click="editProgram({ program_id: v.program_id })" title="Editar Versión">
                     <i class="fa-solid fa-pen-to-square text-warning"></i>
                   </button>
                 </td>
@@ -159,12 +158,12 @@
   </div>
 
   <BaseModal v-model="showFilterModal" title="Filtros de Búsqueda" size="lg">
-    <div class="px-4 py-3">
+    <div class="px-4 py-3 form-contrast">
 
       <div class="row g-3 mb-4">
         <div class="col-12">
           <label class="exec-label">Búsqueda General</label>
-          <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Buscar por nombre o descripción..." @keyup.enter="applyFilters" />
+          <input v-model.trim="filters.q" type="text" class="form-control w-100" placeholder="Buscar por nombre o descripción..." @keyup.enter="applyFilters" />
         </div>
       </div>
 
@@ -173,15 +172,15 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="exec-label">Estado</label>
-            <SearchSelect v-model="filters.estado" :items="filtroEstado" label-field="description" value-field="value" placeholder="Todos..." class="exec-select-light w-100" />
+            <SearchSelect v-model="filters.estado" :items="filtroEstado" label-field="description" value-field="value" placeholder="Todos..." class="w-100" />
           </div>
           <div class="col-md-6">
             <label class="exec-label">Tipo de Programa</label>
-            <SearchSelect v-model="filters.cat_type_program" :items="filtroTipos" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" />
+            <SearchSelect v-model="filters.cat_type_program" :items="filtroTipos" label-field="description" value-field="id" placeholder="Seleccionar..." class="w-100" />
           </div>
           <div class="col-md-6">
             <label class="exec-label">Categoría</label>
-            <SearchSelect v-model="filters.cat_category" :items="filtroCategorias" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" />
+            <SearchSelect v-model="filters.cat_category" :items="filtroCategorias" label-field="description" value-field="id" placeholder="Seleccionar..." class="w-100" />
           </div>
           <div class="col-md-6">
             <label class="exec-label">Modalidad</label>
@@ -191,6 +190,7 @@
               label-key="description"
               value-key="id"
               placeholder="Modalidades..."
+              class="w-100"
             />
           </div>
         </div>
@@ -210,6 +210,135 @@
 
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   ESTRUCTURA BASE DE LA VISTA
+   (Asumiendo uso de CSS Global para botones, inputs y pills)
+═══════════════════════════════════════════════ */
+.exec-shell {
+  background: var(--slate-50, #f8fafc);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Masthead */
+.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #ffffff); border-bottom: 1px solid var(--navy-700, #334155); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #ffffff); }
+
+.exec-body { flex: 1; padding: 24px 28px; }
+
+/* ═══════════════════════════════════════════════
+   TOOLBAR RESPONSIVE
+═══════════════════════════════════════════════ */
+.exec-toolbar { 
+  display: flex; 
+  flex-wrap: wrap; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 20px; 
+  gap: 16px; 
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.toolbar-view-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+}
+
+@media (max-width: 768px) {
+  .exec-toolbar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .toolbar-actions {
+    justify-content: space-between;
+  }
+  .toolbar-pagination {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-view-selector {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .w-sm-100 {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   DATA GRID (TABLA)
+═══════════════════════════════════════════════ */
+.table-shell { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.table-responsive-custom { width: 100%; overflow-x: auto; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+/* Cabeceras */
+.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); text-align: left; background: #fafbfc; color: var(--text-secondary, #475569); }
+.thead-sub .ts.text-center { text-align: center; }
+
+/* Filas Body */
+.tbody-row { transition: background 0.15s; }
+.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; color: var(--text-primary, #0f172a); }
+.tbody-row:last-child td { border-bottom: none; }
+.tbody-row:hover td { background: var(--slate-50, #f8fafc); cursor: pointer; }
+
+/* Celdas específicas */
+.td-a { border-left: 1px solid transparent; }
+
+/* Utilidades Texto de Tabla */
+.text-center { text-align: center; } 
+.nowrap { white-space: nowrap; }
+
+/* Empty state */
+.empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+.empty-state svg { display: block; margin: 0 auto 10px auto; color: var(--slate-300, #cbd5e1); }
+
+/* ═══════════════════════════════════════════════
+   MODAL DE FILTROS & CONTRASTE
+═══════════════════════════════════════════════ */
+.exec-fieldset { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
+.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+
+/* Contraste forzado para inputs dentro del modal */
+.form-contrast .form-control,
+.form-contrast :deep(.searchselect-control),
+.form-contrast :deep(.multiselect-control) {
+  background-color: var(--slate-50, #f8fafc) !important;
+  border-color: var(--slate-300, #cbd5e1) !important;
+}
+
+.form-contrast .form-control:focus,
+.form-contrast :deep(.searchselect-control:focus-within),
+.form-contrast :deep(.multiselect-control:focus-within) {
+  background-color: var(--white, #ffffff) !important;
+  border-color: var(--teal-500, #12274e) !important;
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1) !important;
+}
+</style>
 <script setup>
 import { ref, reactive, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
@@ -394,124 +523,3 @@ onMounted(() => {
   fetchPrograms()
 })
 </script>
-
-<style scoped>
-/* ═══════════════════════════════════════════════
-   TOKENS & BASE
-═══════════════════════════════════════════════ */
-:root {
-  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
-  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #12274e; --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --amber-500: #f59e0b;
-  --red-600:   #dc2626;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
-.exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--slate-50);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  color: var(--text-primary);
-}
-
-/* ═══════════════════════════════════════════════
-   MASTHEAD
-═══════════════════════════════════════════════ */
-.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 2px 28px; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
-
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-.btn-exec-ghost { background: rgba(255,255,255,0.07); color: var(--slate-300); border: 1px solid rgba(255,255,255,0.12); }
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
-.btn-exec-active { background: var(--white); color: var(--navy-900); border: 1px solid var(--white); }
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-danger { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
-.btn-exec-warning { background: var(--amber-500); color: var(--navy-900); border: 1px solid var(--amber-500); }
-.btn-exec-success { background: #15803d; color: var(--white); }
-.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
-.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
-
-/* ═══════════════════════════════════════════════
-   BODY & TOOLBAR
-═══════════════════════════════════════════════ */
-.exec-body { flex: 1; padding: 24px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; }
-.toolbar-chips { flex: 1; min-width: 0; }
-.toolbar-pagination { flex-shrink: 0; }
-
-/* ═══════════════════════════════════════════════
-   DATA GRID (TABLA)
-═══════════════════════════════════════════════ */
-.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.table-responsive-custom { width: 100%; overflow-x: auto; }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-
-.brand-rule {
-  width: 3px; height: 42px;
-  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
-}
-/* Cabeceras (Sub) */
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; background: #fafbfc; color: var(--text-secondary); }
-.thead-sub .ts.text-center { text-align: center; }
-
-/* Filas Body */
-.tbody-row { transition: background 0.15s; position: relative; }
-.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
-
-/* Celdas específicas */
-.td-a { border-left: 1px solid transparent; }
-
-/* Utilidades Texto */
-.text-center { text-align: center; } .text-right { text-align: right; }
-.text-mono { font-family: 'IBM Plex Mono', monospace; }
-.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
-.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
-.c-green { color: #15803d; } .c-red { color: #dc2626; }
-.small { font-size: 11.5px; } .x-small { font-size: 10px; }
-.nowrap { white-space: nowrap; }
-
-/* Badges / Pills */
-.pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
-.pill-slate { background: var(--slate-100); color: var(--text-secondary); }
-.pill-teal  { background: #ccfbf1; color: #0f766e; }
-.pill-blue  { background: #dbeafe; color: #1d4ed8; }
-.pill-amber { background: #fef3c7; color: #92400e; }
-.pill-red   { background: #fee2e2; color: #b91c1c; }
-
-/* Botones Icono Tabla */
-.btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
-.btn-icon:hover { background: var(--slate-100); color: var(--text-primary); border-color: var(--slate-300); }
-
-/* Empty state / Loaders */
-.empty-state { padding: 40px; text-align: center; color: var(--slate-400); font-size: 13px; font-weight: 500; }
-.empty-state svg { display: block; margin: 0 auto 10px auto; }
-
-/* ═══════════════════════════════════════════════
-   MODALES (Estilos internos)
-═══════════════════════════════════════════════ */
-.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
-.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100); padding-bottom: 6px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-.exec-input-light, .exec-select-light { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary); transition: border-color 0.15s; }
-.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500); }
-
-</style>
