@@ -309,7 +309,6 @@
                     v-model="attempt.contact_datetime"
                     :onlyHours="true"
                     :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
-                    class="exec-input-light w-100"
                   />
                 </td>
                 <td class="td-a align-top text-center pt-2">
@@ -438,7 +437,7 @@
       <div class="exec-fieldset mb-4">
         <h6 class="fieldset-title">Auditoría del Registro</h6>
         <div class="row g-3">
-          <div class="col-md-4"><label class="exec-label">Rango Fecha de Pago</label><BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'pay_date')" /></div>
+          <div class="col-md-4"><label class="exec-label">Fecha de Pago</label><BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'pay_date')" /></div>
           <div class="col-md-4"><label class="exec-label">Fecha de Creación</label><BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')" /></div>
           <div class="col-md-4"><label class="exec-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
         </div>
@@ -1873,8 +1872,8 @@ function clearFilters(reload = true) {
   })
 
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
-else if (key === 'order_by') filters.order_by = 0
-  if (reload) {
+  
+if (reload === true || typeof reload !== 'boolean') { 
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_filter_state_v1')
     rebuildChips()
@@ -1917,7 +1916,9 @@ function clearFilter(key) {
     filters.pay_date_from = ''
     filters.pay_date_to = ''
     filters.pay_date_range_string = null
-  } else if (key === 'edition_start') {
+  } else if (key === 'order_by') {     // <--- AQUÍ ES DONDE VA ESTE IF
+    filters.order_by = 0
+  }else if (key === 'edition_start') {
     filters.edition_start_from = ''
     filters.edition_start_to = ''
     filters.edition_range_string = null

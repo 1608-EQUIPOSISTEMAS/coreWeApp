@@ -177,7 +177,7 @@
           <div class="row g-3">
 
             <div class="col-6 col-md-3 col-lg-2">
-              <label class="exec-label">T. Contacto</label>
+              <label class="exec-label">T. Contacto <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.client_status"
                 :items="clientCatalog"
@@ -185,13 +185,14 @@
                 value-field="alias"
                 placeholder="TIPO..."
                 required
+                disabled
                 :model-label="form.client_status_label"
                 class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-6 col-md-6 col-lg-3">
-              <label class="exec-label">Nombre / Razón Social</label>
+              <label class="exec-label">Nombre / Razón Social <span class="c-red">*</span></label>
               <input
                 required
                 autocomplete="off"
@@ -248,6 +249,7 @@
               <SearchSelect
                 v-model="form.membership_moment_id"
                 :items="membershipList"
+                :viewOpen="6"
                 label-field="tier_name"
                 value-field="membership_tier_id"
                 placeholder="MEMBRESÍA..."
@@ -347,10 +349,11 @@
               <label class="exec-label">Canal prospección <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.canal_alias"
-                :items="socialMediaCatalog"
+                :items="socialMediaCatalog.filter(e=> !['we_social_media_whatsapp','we_social_media_wechat','we_social_media_msg','we_social_media_comment'].includes(e.alias))"
                 required
                 label-field="description"
                 value-field="alias"
+                viewOpen="6"
                 :model-label="form.canal_label"
                 class="exec-select-light w-100"
                 @change="onChannelChange"
@@ -362,9 +365,10 @@
               <label class="exec-label">Medio de llegada <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.medium_alias"
-                :items="socialMediaCatalog"
+                :items="socialMediaCatalog.filter(e=> ['we_social_media_whatsapp','we_social_media_wechat','we_social_media_msg','we_social_media_comment'].includes(e.alias))"
                 required
                 label-field="description"
+                viewOpen="6"
                 :model-label="form.medium_label"
                 value-field="alias"
                 placeholder="MEDIO..."
@@ -377,6 +381,7 @@
               <SearchSelect
                 v-model="form.key_word_alias"
                 :items="mktWordsCatalog"
+                viewOpen="6"
                 :model-label="form.key_word_label"
                 label-field="description"
                 value-field="alias"
@@ -388,6 +393,7 @@
             <div class="col-md-3">
               <label class="exec-label">Estrategia</label>
               <SearchSelect
+                viewOpen="6"
                 v-model="form.strategy_alias"
                 :disabled="!form.canal_alias || form.canal_alias!='we_social_media_other'"
                 :items="strategyCatalog"
@@ -482,6 +488,7 @@
               <label class="exec-label d-lg-none">T. Resultado</label>
               <SearchSelect
                 v-model="c.calling_alias"
+                viewOpen="6"
                 :items="callingCatalog"
                 label-field="description"
                 required
@@ -523,7 +530,7 @@
           </div>
         </div>
 
-        <div class="exec-fieldset" v-if="isEdit">
+        <!-- <div class="exec-fieldset" v-if="isEdit">
           <div class="d-flex align-items-center gap-3">
             <label class="exec-label mb-0">Estado del Registro <span class="c-red">*</span></label>
             <label class="exec-switch exec-switch-lg">
@@ -532,7 +539,7 @@
             </label>
             <span class="x-small text-muted fw-600">{{ form.active ? 'ACTIVO EN SISTEMA' : 'INACTIVO' }}</span>
           </div>
-        </div>
+        </div> -->
 
       </div>
     </main>
@@ -859,7 +866,8 @@
         <div class="row g-3">
           <div class="col-md-4">
             <label class="exec-label">T. documento <span class="c-red">*</span></label>
-            <SearchSelect required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
+            <SearchSelect 
+                viewOpen="6" required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Documento <span class="c-red">*</span></label>
@@ -891,7 +899,7 @@
           </div>
           <div class="col-md-4">
             <label class="exec-label">Modalidad del programa <span class="c-red">*</span></label>
-            <SearchSelect required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
+            <SearchSelect viewOpen="6" required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
           </div>
         </div>
       </div>
@@ -901,15 +909,15 @@
         <div class="row g-3">
           <div class="col-md-2">
             <label class="exec-label">T. moneda <span class="c-red">*</span></label>
-            <SearchSelect v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+            <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
           </div>
           <div class="col-md-2" v-if="insc.selectedCurrencyAlias">
             <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
-            <SearchSelect v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
+            <SearchSelect viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias">
             <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
-            <SearchSelect v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." class="exec-select-light w-100" />
+            <SearchSelect viewOpen="6" v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." class="exec-select-light w-100" />
           </div>
           <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'">
             <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
@@ -917,19 +925,19 @@
           </div>
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
             <label class="exec-label">Descuento</label>
-            <SearchSelect v-model="insc.dsct_porcent_id" mode="remote"
+            <SearchSelect viewOpen="6" v-model="insc.dsct_porcent_id" mode="remote"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
               label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoPorcentual" />
           </div>
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
             <label class="exec-label">Promoción</label>
-            <SearchSelect v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
+            <SearchSelect viewOpen="6" v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
               label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoFijo" />
           </div>
           <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
             <label class="exec-label">Beneficio</label>
-            <SearchSelect v-model="insc.dsct_benefit_id" mode="remote"
+            <SearchSelect viewOpen="6"  v-model="insc.dsct_benefit_id" mode="remote"
               :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
               label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeBeneficio" />
           </div>
@@ -2587,16 +2595,13 @@ function buildEnrollmentPayload() {
 async function confirmarInscripcion() {
   if (!comercialService) return console.error('comercialService no inyectado')
 
-  // 1. Validar datos de INSCRIPCIÓN
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
-      toast.warning("Por favor complete los campos obligatorios de la inscripción")
-      return
+    toast.warning("Por favor complete los campos obligatorios de la inscripción")
+    return
   }
-
-  // 2. Validar datos del LEAD (Porque ahora vamos a guardar el lead primero)
   if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
-      toast.warning("Faltan datos obligatorios en el formulario del Lead. Revise la información principal.")
-      return
+    toast.warning("Faltan datos obligatorios en el formulario del Lead. Revise la información principal.")
+    return
   }
 
   savingInsc.value = true
@@ -2604,68 +2609,89 @@ async function confirmarInscripcion() {
   try {
     // --- PASO A: GUARDAR EL LEAD ---
     const leadPayload = buildLeadPayload()
-
-    // Determinamos si es edición o creación basado en si ya existe un ID en la URL o uno creado en memoria
     const currentLeadId = leadIdParam.value || createdLeadId.value
 
     if (currentLeadId) {
-      // ACTUALIZAR LEAD EXISTENTE
-      await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
-      // No necesitamos cambiar createdLeadId, ya es correcto
+      const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
+      if (leadResp.result === 0) {
+        toast.error(leadResp.message)
+        return
+      } else if (leadResp.result === 2) {
+        toast.warning(leadResp.message)
+        return
+      }
     } else {
-      // CREAR NUEVO LEAD
-      const resp = await comercialService.leadRegister(leadPayload)
-      // Asignamos los IDs recibidos para que el payload de inscripción los use
-      createdLeadId.value   = resp.lead_id
-      createdPersonId.value = resp.person_id
+      const leadResp = await comercialService.leadRegister(leadPayload)
+      if (leadResp.result === 0) {
+        toast.error(leadResp.message)
+        return
+      } else if (leadResp.result === 2) {
+        toast.warning(leadResp.message)
+        return
+      }
+      createdLeadId.value   = leadResp.lead_id
+      createdPersonId.value = leadResp.person_id
     }
 
     // --- PASO B: GUARDAR LA INSCRIPCIÓN ---
-    // Ahora que el lead está guardado y tenemos su ID actualizado en createdLeadId,
-    // construimos el payload de inscripción.
     const enrollmentPayload = buildEnrollmentPayload()
+    const enrollResp = await comercialService.enrollmentRegister(enrollmentPayload)
 
-    const response = await comercialService.enrollmentRegister(enrollmentPayload)
-
-    toast.success('Lead actualizado e Inscripción realizada con éxito!')
-
-    showViewModal.value = false
-    router.push({ name: 'ComercialListado' })
+    if (enrollResp.result === 1) {
+      toast.success(enrollResp.message)
+      showViewModal.value = false
+      router.push({ name: 'ComercialListado' })
+    } else if (enrollResp.result === 0) {
+      toast.error(enrollResp.message)
+    } else {
+      toast.warning(enrollResp.message)
+    }
 
   } catch (err) {
     console.error(err)
-    // Identificamos si el error fue al guardar el lead o la inscripción para dar mejor feedback
-    if (!createdLeadId.value && !leadIdParam.value) {
-        toast.error('Error al guardar el Lead inicial. La inscripción no se procesó.')
-    } else {
-        toast.error('El Lead se guardó, pero ocurrió un error al procesar la inscripción.')
-    }
+    toast.error('Error inesperado al procesar la inscripción.')
   } finally {
     savingInsc.value = false
   }
 }
 
-  async function guardar() {
-    if (!comercialService) return console.error('comercialService no inyectado')
-    saving.value = true
-    try {
-      const payload = buildLeadPayload()
-      if (isEdit.value) {
-        await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
-        toast.success('Lead actualizado con éxito!', { timeout: 2000 })
-      } else {
-        const resp = await comercialService.leadRegister(payload)
+async function guardar() {
+  if (!comercialService) return console.error('comercialService no inyectado')
+  saving.value = true
+  try {
+    const payload = buildLeadPayload()
+    let result, message
+
+    if (isEdit.value) {
+      const resp = await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
+      result  = resp.result
+      message = resp.message
+    } else {
+      const resp = await comercialService.leadRegister(payload)
+      result  = resp.result
+      message = resp.message
+      if (result === 1) {
         createdLeadId.value   = resp.lead_id
         createdPersonId.value = resp.person_id
-        toast.success('Lead registrado con éxito!', { timeout: 2000 })
       }
-      saving.value = false
-      router.push({ name: 'ComercialListado' })
-    } catch (err) {
-      console.error(err)
-      saving.value = false
     }
+
+    if (result === 1) {
+      toast.success(message)
+      router.push({ name: 'ComercialListado' })
+    } else if (result === 0) {
+      toast.error(message)
+    } else {
+      toast.warning(message)
+    }
+
+  } catch (err) {
+    console.error(err)
+    toast.error('Error inesperado al guardar el lead.')
+  } finally {
+    saving.value = false
   }
+}
 
 function openInscription() {
     // 1. Primero limpiamos todo rastro anterior

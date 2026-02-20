@@ -168,8 +168,8 @@
                   </th>
 
                   <!-- Seguimiento -->
-                  <th class="ts ts-c text-center">FICHA / MEJORA</th>
-                  <th class="ts ts-c text-center">CONFIRM.</th>
+                  <th class="ts ts-c text-center" style="min-width:120px;max-width:200px">FICHA / MEJORA</th>
+                  <th class="ts ts-c text-center" style="min-width:100px;max-width:180px">CONFIRM.</th>
 
                   <!-- Referencia -->
                   <th class="ts ts-d">
@@ -1470,7 +1470,7 @@
 
 /* ── Filas de datos ── */
 .tbody-row td {
-  padding: 8px 10px; border-bottom: 1px solid #f8fafc;
+  padding: 1px 4px; border-bottom: 1px solid #f8fafc;
   vertical-align: middle;
 }
 .tbody-row:last-child td { border-bottom: none; }
@@ -1479,7 +1479,7 @@
 .td-act {
   background: var(--navy-900) !important;
   border-right: 2px solid var(--navy-800) !important;
-  padding: 6px 8px !important;
+  padding: 0px 8px !important;
 }
 .tbody-row:hover .td-act { background: #152c711d !important; }
 
