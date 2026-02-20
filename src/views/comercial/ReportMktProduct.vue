@@ -1,391 +1,504 @@
 <template>
-  <div class="system-container">
-    
-    <div class="main-header">
-      <div>
-        <h1 class="system-title">TABLERO DE CRONOGRAMA OBJETIVOS</h1>
-        <p class="system-subtitle">ENERO 2026 - GESTIÓN DE CURSOS Y DIPLOMADOS</p>
-      </div>
-      
-      <button @click="toggleView" class="btn-toggle">
-        <span v-if="!isDashboard">
-          <i class="icon-chart">📊</i> VER MODO GRÁFICO
-        </span>
-        <span v-else>
-          <i class="icon-table">📋</i> VER MODO TABLA
-        </span>
-      </button>
-    </div>
+  <div class="exec-shell">
 
-    <div v-if="!isDashboard" class="table-view-container animate-fade">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr class="header-group">
-              <th colspan="7" class="text-left">DATOS DEL PROGRAMA</th>
-              <th colspan="3" class="group-blue">VENTAS (NUEVOS)</th>
-              <th colspan="3" class="group-gray">LEADS</th>
-              <th colspan="3" class="group-dark">COMUNIDAD</th>
-            </tr>
-            <tr class="header-cols">
-              <th>MES</th>
-              <th>CATEGORÍA</th>
-              <th>LÍNEA</th>
-              <th>PROGRAMA</th>
-              <th>TIPO</th>
-              <th>INICIO</th>
-              <th>EDICIÓN</th>
-              
-              <th class="sub-blue">OBJ</th>
-              <th class="sub-blue">REAL</th>
-              <th class="sub-blue">%</th>
-
-              <th class="sub-gray">OBJ</th>
-              <th class="sub-gray">REAL</th>
-              <th class="sub-gray">%</th>
-
-              <th class="sub-dark">OBJ</th>
-              <th class="sub-dark">REAL</th>
-              <th class="sub-dark">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in tableData" :key="index" class="data-row">
-              <td class="font-bold text-muted">{{ row.mes }}</td>
-              <td><span class="badge" :class="getBadgeClass(row.catg)">{{ row.catg }}</span></td>
-              <td class="font-medium">{{ row.linea }}</td>
-              <td class="text-dark">{{ row.programa }}</td>
-              <td><span class="circle-type">{{ row.tipo }}</span></td>
-              <td class="text-sm">{{ row.fecha }}</td>
-              <td class="text-xs text-muted font-mono">{{ row.edicion }}</td>
-
-              <td class="text-center bg-blue-light">{{ row.v_new_obj }}</td>
-              <td class="text-center bg-blue-light font-bold">{{ row.v_new_real }}</td>
-              <td class="text-center bg-blue-light">
-                <span :class="getPctClass(row.v_new_real, row.v_new_obj)">{{ calcPct(row.v_new_real, row.v_new_obj) }}%</span>
-              </td>
-
-              <td class="text-center">{{ row.lead_obj }}</td>
-              <td class="text-center">{{ row.lead_real }}</td>
-              <td class="text-center">
-                 <span :class="getPctClass(row.lead_real, row.lead_obj)">{{ calcPct(row.lead_real, row.lead_obj) }}%</span>
-              </td>
-
-              <td class="text-center bg-dark-light">{{ row.com_obj }}</td>
-              <td class="text-center bg-dark-light font-bold">{{ row.com_real }}</td>
-              <td class="text-center bg-dark-light">
-                 <span :class="getPctClass(row.com_real, row.com_obj)">{{ calcPct(row.com_real, row.com_obj) }}%</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div v-else class="marketing-dashboard animate-fade">
-      
-      <div class="kpi-strip">
-        <div class="kpi-box">
-          <span class="kpi-label">TOTAL OBJETIVO (VENTAS)</span>
-          <span class="kpi-value">{{ totalObjectives }}</span>
-          <span class="kpi-sub">Meta del mes</span>
-        </div>
-        <div class="kpi-box highlight">
-          <span class="kpi-label">VENTAS REALES (TOTAL)</span>
-          <span class="kpi-value">{{ totalSales }}</span>
-          <span class="kpi-delta" :class="totalSales >= totalObjectives ? 'positive' : 'negative'">
-            {{ ((totalSales / totalObjectives) * 100).toFixed(1) }}% Cumplimiento
-          </span>
-        </div>
-        <div class="kpi-box">
-          <span class="kpi-label">PROGRAMAS ACTIVOS</span>
-          <span class="kpi-value">{{ tableData.length }}</span>
-          <span class="kpi-sub">Cursos y Diplomados</span>
-        </div>
-        <div class="kpi-box">
-          <span class="kpi-label">LÍNEA TOP PERFORMER</span>
-          <span class="kpi-value text-blue">{{ topPerformerLine }}</span>
-          <span class="kpi-sub">Mayor volumen de ventas</span>
-        </div>
-      </div>
-
-      <div class="split-section">
-        <div class="panel">
-          <div class="panel-header">
-            <h4>VENTAS POR CATEGORÍA</h4>
-            <p>Comparativa Objetivo vs. Real según tipo de producto</p>
-          </div>
-          <div class="chart-wrapper-medium">
-             <Bar :data="categoryChartData" :options="barOptions" />
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">Análisis Semanal de Conversión</span>
+            <h1 class="brand-title">Reporte de Ventas por Canal</h1>
           </div>
         </div>
 
-         <div class="panel">
-          <div class="panel-header">
-            <h4>PESO COMERCIAL POR LÍNEA</h4>
-            <p>Participación de SAP, Excel, BI, etc. en la meta global</p>
-          </div>
-           <div class="doughnut-container">
-            <Doughnut :data="lineChartData" :options="doughnutOptions" />
-          </div>
+        <div class="masthead-actions">
+          <button
+            class="btn-exec"
+            :class="!isCharts ? 'btn-exec-active' : 'btn-exec-ghost'"
+            @click="isCharts = false"
+          >
+            <i class="fa-solid fa-table"></i> <span>Tablas</span>
+          </button>
+          <button
+            class="btn-exec me-2"
+            :class="isCharts ? 'btn-exec-active' : 'btn-exec-ghost'"
+            @click="isCharts = true"
+          >
+            <i class="fa-solid fa-chart-pie"></i> <span>Gráficos</span>
+          </button>
+
+          <button class="btn-exec btn-exec-primary" @click="refreshData">
+            <i class="fa-solid fa-rotate-right" :class="{'spin': isRefreshing}"></i>
+            <span>{{ isRefreshing ? 'Actualizando...' : 'Actualizar Datos' }}</span>
+          </button>
         </div>
       </div>
 
-       <div class="section-container">
-        <div class="chart-header">
-           <h3>RENDIMIENTO DETALLADO POR LÍNEA DE NEGOCIO</h3>
-           <span class="chart-desc">Análisis de cumplimiento de cuota (Barras Claras = Objetivo / Barras Oscuras = Real)</span>
+      <div class="masthead-filters">
+        <div class="filter-group">
+          <label class="filter-label">AÑO Y MES</label>
+          <select class="exec-select-dark" v-model="filters.period">
+            <option value="2026-01">Enero 2026</option>
+            <option value="2025-12">Diciembre 2025</option>
+          </select>
         </div>
-        <div class="chart-wrapper-large">
-           <Bar :data="performanceChartData" :options="groupedBarOptions" />
+        <div class="filter-sep"></div>
+        <div class="filter-group">
+          <label class="filter-label">SEDE / PROYECTO</label>
+          <select class="exec-select-dark" v-model="filters.project">
+            <option value="all">Consolidado Global</option>
+            <option value="b2c">Programas B2C</option>
+            <option value="b2b">Corporativo B2B</option>
+          </select>
+        </div>
+
+        <div class="ms-auto d-flex gap-4">
+          <div class="inline-kpi">
+            <span class="inline-kpi-label">TOTAL CONSULTAS</span>
+            <span class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
+          </div>
+          <div class="inline-kpi">
+            <span class="inline-kpi-label">TOTAL VENTAS</span>
+            <span class="inline-kpi-value" style="color: var(--teal-500)">{{ totalGlobal.ventas }}</span>
+          </div>
+          <div class="inline-kpi">
+            <span class="inline-kpi-label">CONVERSIÓN GLOBAL</span>
+            <span class="inline-kpi-value" style="color: var(--amber-500)">{{ calcPct(totalGlobal.consultas, totalGlobal.ventas) }}%</span>
+          </div>
         </div>
       </div>
+    </header>
 
-    </div>
+    <main class="exec-body">
 
+      <div v-if="!isCharts" class="view-tables fade-in">
+
+        <div v-for="(week, index) in weeklyData" :key="index" class="table-shell mb-4">
+          <div class="table-panel-header">
+            <h6 class="table-panel-title">
+              <i class="fa-regular fa-calendar text-slate-400 me-2"></i> {{ week.title }}
+            </h6>
+          </div>
+
+          <div class="table-responsive-custom control-table-wrapper">
+            <table class="exec-table table-bordered-cols">
+              <thead>
+                <tr class="thead-group text-center">
+                  <th rowspan="2" class="th-cat sticky-col">T. Cliente</th>
+                  <th colspan="3" class="th-group th-teal">LinkedIn (LK)</th>
+                  <th colspan="3" class="th-group th-teal">Instagram (IG)</th>
+                  <th colspan="3" class="th-group th-teal">Facebook (FB)</th>
+                  <th colspan="3" class="th-group th-slate">Otros (-)</th>
+                  <th colspan="3" class="th-group th-amber">Sitio WEB</th>
+                  <th colspan="3" class="th-group th-amber">Chatbot</th>
+                  <th colspan="3" class="th-group th-amber">Cotización</th>
+                  <th colspan="3" class="th-group th-purple">Comercial</th>
+                </tr>
+                <tr class="thead-sub text-center">
+                  <template v-for="i in 8" :key="i">
+                    <th class="ts ts-c-light">C.</th>
+                    <th class="ts ts-v-light">V.</th>
+                    <th class="ts ts-p-light">%</th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in week.rows" :key="row.type" class="tbody-row">
+                  <td class="td-cat sticky-col fw-700 bg-white">{{ row.type }}</td>
+
+                  <template v-for="(col, key) in row.channels" :key="key">
+                    <td class="td-data text-center">{{ col.c > 0 ? col.c : '-' }}</td>
+                    <td class="td-data text-center fw-700" :class="col.v > 0 ? 'c-green' : 'text-slate-300'">{{ col.v > 0 ? col.v : '-' }}</td>
+                    <td class="td-data text-center" :class="getPctBgClass(col.c, col.v)">
+                      {{ calcPct(col.c, col.v) }}%
+                    </td>
+                  </template>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="tfoot-row">
+                  <td class="td-cat sticky-col" style="background: var(--slate-100) !important; color: var(--text-primary) !important;">TOTAL SEMANA</td>
+                  <template v-for="(col, key) in getWeekTotals(week)" :key="key">
+                    <td class="text-center fw-600">{{ col.c }}</td>
+                    <td class="text-center fw-700 c-green">{{ col.v }}</td>
+                    <td class="text-center fw-700" :class="getPctTextClass(col.c, col.v)">{{ calcPct(col.c, col.v) }}%</td>
+                  </template>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div v-else class="view-charts fade-in">
+        <div class="chart-grid-2">
+
+          <div class="chart-panel">
+            <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Distribución de Consultas vs Ventas por Canal</div>
+                 <div class="chart-panel-sub">Acumulado del mes seleccionado</div>
+               </div>
+            </div>
+            <div class="chart-area" style="height: 350px;">
+               <Bar :data="barChartData" :options="barOptions" />
+            </div>
+          </div>
+
+          <div class="chart-panel">
+            <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Tasa de Conversión Promedio por Canal (%)</div>
+                 <div class="chart-panel-sub">Eficiencia de cierre sobre leads generados</div>
+               </div>
+            </div>
+            <div class="chart-area" style="height: 350px;">
+               <Bar :data="pctChartData" :options="pctBarOptions" />
+            </div>
+          </div>
+
+        </div>
+
+        <div class="chart-grid-3 mt-4">
+          <div class="chart-panel" style="grid-column: span 2;">
+            <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Tendencia de Ventas Semanales</div>
+                 <div class="chart-panel-sub">Evolución de cierres en las 4 semanas</div>
+               </div>
+            </div>
+            <div class="chart-area" style="height: 300px;">
+               <Line :data="lineChartData" :options="lineOptions" />
+            </div>
+          </div>
+
+          <div class="chart-panel">
+            <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Ventas por Tipo de Cliente</div>
+                 <div class="chart-panel-sub">Composición global</div>
+               </div>
+            </div>
+            <div class="chart-area d-flex justify-content-center" style="height: 300px;">
+               <Doughnut :data="doughnutChartData" :options="doughnutOptions" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+  LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
+import { Bar, Doughnut, Line } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
 
-// --- ESTADO ---
-const isDashboard = ref(false)
-const toggleView = () => isDashboard.value = !isDashboard.value
+// Estado UI
+const isCharts = ref(false)
+const isRefreshing = ref(false)
+const filters = ref({ period: '2026-01', project: 'all' })
 
-// --- DATA HARDCORE (REPLICA DE TU IMAGEN) ---
-const tableData = [
-  { mes: 'ENERO', catg: 'CURSO', linea: 'SAP', programa: 'SAP HANA MM', tipo: 'B', fecha: '22/1/2026', edicion: 'E2-26', v_new_obj: 2, v_new_real: 0, lead_obj: 3, lead_real: 0, com_obj: 1, com_real: 1 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'LOGÍSTICA', programa: 'LEAN LOGISTICS', tipo: 'D', fecha: '22/1/2026', edicion: 'E8-25', v_new_obj: 0, v_new_real: 0, lead_obj: 0, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'PROCESOS', programa: 'POWER APPS AVANZ', tipo: 'B', fecha: '22/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'DIPLOMADO', linea: 'BI', programa: 'DIP INTELIG. Y ANALIST.', tipo: 'A', fecha: '22/1/2026', edicion: 'E1-26', v_new_obj: 2, v_new_real: 0, lead_obj: 2, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'BI', programa: 'DATA ANALYTICS', tipo: 'C', fecha: '22/1/2026', edicion: 'E1-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'DIPLOMADO', linea: 'PROCESOS', programa: 'DIP PROC Y MEJORA V3', tipo: 'A', fecha: '24/1/2026', edicion: 'E1-26', v_new_obj: 1, v_new_real: 0, lead_obj: 2, lead_real: 0, com_obj: 1, com_real: 1 },
-  { mes: 'ENERO', catg: 'PEE', linea: 'PROCESOS', programa: 'PEE ANALIST PROC', tipo: 'B', fecha: '24/1/2026', edicion: 'E1-26', v_new_obj: 0, v_new_real: 0, lead_obj: 0, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'EXCEL', programa: 'EXCEL INTERM', tipo: 'C', fecha: '25/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 1, lead_obj: 1, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'PROCESOS', programa: 'MODEL BIZ', tipo: 'B', fecha: '28/1/2026', edicion: 'E1-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'ESP.', linea: 'PROCESOS', programa: 'ESP. POWER APPS Y AUT.', tipo: 'N1', fecha: '29/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 2, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'FINANZ', programa: 'COST Y PRESUP', tipo: 'C', fecha: '29/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 1, lead_obj: 2, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'ESP.', linea: 'BI', programa: 'ESP. POWER BI', tipo: 'A', fecha: '30/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 0, lead_obj: 2, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'BI', programa: 'POWER BI', tipo: 'A', fecha: '30/1/2026', edicion: 'E2-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'ESP.', linea: 'EXCEL', programa: 'ESP. MACROS', tipo: 'C', fecha: '31/1/2026', edicion: 'E1-26', v_new_obj: 1, v_new_real: 1, lead_obj: 1, lead_real: 0, com_obj: 1, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'EXCEL', programa: 'EXCEL AVANZ', tipo: 'B', fecha: '31/1/2026', edicion: 'E1-26', v_new_obj: 1, v_new_real: 0, lead_obj: 1, lead_real: 0, com_obj: 0, com_real: 0 },
-  { mes: 'ENERO', catg: 'CURSO', linea: 'SAP', programa: 'SAP HANA IN', tipo: 'A', fecha: '31/1/2026', edicion: 'E2-26', v_new_obj: 2, v_new_real: 0, lead_obj: 2, lead_real: 0, com_obj: 2, com_real: 0 }
-]
-
-// --- LOGICA DE VISUALIZACIÓN DE TABLA ---
-const calcPct = (real, obj) => {
-  if(obj === 0) return 0;
-  return Math.round((real / obj) * 100);
+const refreshData = () => {
+  isRefreshing.value = true
+  setTimeout(() => { isRefreshing.value = false }, 800)
 }
 
-const getPctClass = (real, obj) => {
-  const pct = calcPct(real, obj);
-  if(pct >= 100) return 'text-success';
-  if(pct === 0) return 'text-danger';
-  return 'text-warning';
-}
+// ─── DATA HARDCODEADA (Basada en tu Excel) ───
+const channelsOrder = ['lk', 'ig', 'fb', 'other', 'web', 'bot', 'cot', 'com']
+const channelLabels = ['LinkedIn', 'Instagram', 'Facebook', 'Otros', 'Web', 'Chatbot', 'Cotización', 'Comercial']
 
-const getBadgeClass = (catg) => {
-  const map = { 'CURSO': 'badge-blue', 'DIPLOMADO': 'badge-purple', 'PEE': 'badge-orange', 'ESP.': 'badge-teal' };
-  return map[catg] || 'badge-gray';
-}
-
-// --- LOGICA DEL DASHBOARD (PROCESAMIENTO DE DATOS) ---
-
-// 1. Cálculos de KPIs
-const totalObjectives = computed(() => tableData.reduce((acc, row) => acc + row.v_new_obj + row.com_obj, 0))
-const totalSales = computed(() => tableData.reduce((acc, row) => acc + row.v_new_real + row.com_real, 0))
-
-// 2. Agrupación por Línea para identificar Top Performer
-const lineGroups = computed(() => {
-  const groups = {}
-  tableData.forEach(row => {
-    if(!groups[row.linea]) groups[row.linea] = { obj: 0, real: 0 }
-    groups[row.linea].obj += (row.v_new_obj + row.com_obj)
-    groups[row.linea].real += (row.v_new_real + row.com_real)
-  })
-  return groups
-})
-
-const topPerformerLine = computed(() => {
-  const sorted = Object.entries(lineGroups.value).sort((a,b) => b[1].real - a[1].real)
-  return sorted[0] ? sorted[0][0] : 'N/A'
-})
-
-// 3. Data para Gráficos
-// Gráfico Barras: Categorías
-const categoryChartData = computed(() => {
-  const cats = {}
-  tableData.forEach(row => {
-    if(!cats[row.catg]) cats[row.catg] = { obj: 0, real: 0 }
-    cats[row.catg].obj += (row.v_new_obj + row.com_obj)
-    cats[row.catg].real += (row.v_new_real + row.com_real)
-  })
-  
-  return {
-    labels: Object.keys(cats),
-    datasets: [
-      { label: 'Objetivo', data: Object.values(cats).map(c => c.obj), backgroundColor: '#cbd5e1' },
-      { label: 'Real', data: Object.values(cats).map(c => c.real), backgroundColor: '#0f172a' }
+const weeklyData = ref([
+  {
+    title: 'SEM 1 - Del 29 Dic al 04 Ene',
+    rows: [
+      { type: 'NEW',     channels: { lk: {c:10, v:2}, ig: {c:74, v:7}, fb: {c:219, v:11}, other: {c:294, v:26}, web: {c:75, v:15}, bot: {c:1, v:0}, cot: {c:1, v:0}, com: {c:15, v:5} } },
+      { type: 'LDS',     channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:4, v:0}, other: {c:2, v:1}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } },
+      { type: 'CWE',     channels: { lk: {c:0, v:0}, ig: {c:5, v:4}, fb: {c:9, v:1}, other: {c:28, v:7}, web: {c:13, v:3}, bot: {c:1, v:1}, cot: {c:0, v:0}, com: {c:5, v:1} } },
+      { type: 'MEMBERS', channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } }
     ]
+  },
+  {
+    title: 'SEM 2 - Del 05 Ene al 11 Ene',
+    rows: [
+      { type: 'NEW',     channels: { lk: {c:12, v:2}, ig: {c:214, v:22}, fb: {c:571, v:38}, other: {c:120, v:35}, web: {c:105, v:39}, bot: {c:17, v:2}, cot: {c:8, v:2}, com: {c:140, v:17} } },
+      { type: 'LDS',     channels: { lk: {c:0, v:0}, ig: {c:6, v:1}, fb: {c:10, v:1}, other: {c:8, v:5}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } },
+      { type: 'CWE',     channels: { lk: {c:2, v:0}, ig: {c:17, v:6}, fb: {c:33, v:8}, other: {c:29, v:22}, web: {c:18, v:11}, bot: {c:2, v:0}, cot: {c:0, v:0}, com: {c:12, v:9} } },
+      { type: 'MEMBERS', channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } }
+    ]
+  },
+  {
+    title: 'SEM 3 - Del 12 Ene al 18 Ene',
+    rows: [
+      { type: 'NEW',     channels: { lk: {c:10, v:6}, ig: {c:243, v:21}, fb: {c:584, v:46}, other: {c:90, v:34}, web: {c:68, v:18}, bot: {c:15, v:7}, cot: {c:4, v:0}, com: {c:250, v:45} } },
+      { type: 'LDS',     channels: { lk: {c:1, v:0}, ig: {c:4, v:1}, fb: {c:4, v:1}, other: {c:1, v:1}, web: {c:1, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } },
+      { type: 'CWE',     channels: { lk: {c:1, v:1}, ig: {c:18, v:3}, fb: {c:25, v:7}, other: {c:35, v:15}, web: {c:7, v:4}, bot: {c:1, v:0}, cot: {c:0, v:0}, com: {c:23, v:9} } },
+      { type: 'MEMBERS', channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } }
+    ]
+  },
+  {
+    title: 'SEM 4 - Del 19 Ene al 25 Ene',
+    rows: [
+      { type: 'NEW',     channels: { lk: {c:8, v:1}, ig: {c:218, v:14}, fb: {c:701, v:27}, other: {c:62, v:13}, web: {c:75, v:19}, bot: {c:11, v:6}, cot: {c:7, v:0}, com: {c:58, v:12} } },
+      { type: 'LDS',     channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } },
+      { type: 'CWE',     channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } },
+      { type: 'MEMBERS', channels: { lk: {c:0, v:0}, ig: {c:0, v:0}, fb: {c:0, v:0}, other: {c:0, v:0}, web: {c:0, v:0}, bot: {c:0, v:0}, cot: {c:0, v:0}, com: {c:0, v:0} } }
+    ]
+  }
+])
+
+// ─── HELPERS MATEMÁTICOS ───
+const calcPct = (c, v) => {
+  if (!c || c === 0) return 0
+  return Math.round((v / c) * 100)
+}
+
+const getWeekTotals = (week) => {
+  const totals = {}
+  channelsOrder.forEach(ch => { totals[ch] = { c: 0, v: 0 } })
+
+  week.rows.forEach(row => {
+    channelsOrder.forEach(ch => {
+      totals[ch].c += row.channels[ch].c
+      totals[ch].v += row.channels[ch].v
+    })
+  })
+  return totals
+}
+
+const totalGlobal = computed(() => {
+  let c = 0; let v = 0;
+  weeklyData.value.forEach(week => {
+    const wTot = getWeekTotals(week)
+    Object.values(wTot).forEach(ch => { c += ch.c; v += ch.v })
+  })
+  return { consultas: c, ventas: v }
+})
+
+// ─── HELPERS VISUALES ───
+const getPctBgClass = (c, v) => {
+  const pct = calcPct(c, v)
+  if (c === 0) return 'bg-empty'
+  if (pct >= 50) return 'bg-pct-high'
+  if (pct >= 20) return 'bg-pct-med'
+  if (pct > 0) return 'bg-pct-low'
+  return ''
+}
+
+const getPctTextClass = (c, v) => {
+  const pct = calcPct(c, v)
+  if (pct >= 50) return 'text-success'
+  if (pct >= 20) return 'text-primary'
+  return 'text-muted'
+}
+
+// ─── DATA DE GRÁFICOS ───
+const aggregatedByChannel = computed(() => {
+  const agg = {}
+  channelsOrder.forEach(ch => { agg[ch] = { c: 0, v: 0 } })
+
+  weeklyData.value.forEach(week => {
+    const wTot = getWeekTotals(week)
+    channelsOrder.forEach(ch => {
+      agg[ch].c += wTot[ch].c
+      agg[ch].v += wTot[ch].v
+    })
+  })
+  return agg
+})
+
+const barChartData = computed(() => ({
+  labels: channelLabels,
+  datasets: [
+    { label: 'Consultas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].c), backgroundColor: '#cbd5e1', borderRadius: 4 },
+    { label: 'Ventas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v), backgroundColor: '#0d9488', borderRadius: 4 }
+  ]
+}))
+
+const pctChartData = computed(() => {
+  const pcts = channelsOrder.map(ch => calcPct(aggregatedByChannel.value[ch].c, aggregatedByChannel.value[ch].v))
+  return {
+    labels: channelLabels,
+    datasets: [{
+      label: '% Conversión',
+      data: pcts,
+      backgroundColor: pcts.map(p => p >= 30 ? '#10b981' : p >= 15 ? '#3b82f6' : '#94a3b8'),
+      borderRadius: 4
+    }]
   }
 })
 
-// Gráfico Donut: Peso por Línea
 const lineChartData = computed(() => {
-  const labels = Object.keys(lineGroups.value)
-  const data = Object.values(lineGroups.value).map(g => g.obj) // Peso basado en objetivo
+  const salesPerWeek = weeklyData.value.map(week => {
+    const wTot = getWeekTotals(week)
+    return Object.values(wTot).reduce((sum, ch) => sum + ch.v, 0)
+  })
   return {
-    labels,
-    datasets: [{ data, backgroundColor: ['#0f172a', '#334155', '#475569', '#64748b', '#94a3b8', '#cbd5e1'], borderWidth: 0 }]
+    labels: ['SEM 1', 'SEM 2', 'SEM 3', 'SEM 4'],
+    datasets: [{
+      label: 'Ventas Totales',
+      data: salesPerWeek,
+      borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)',
+      borderWidth: 3, pointRadius: 5, pointBackgroundColor: '#4f46e5',
+      fill: true, tension: 0.3
+    }]
   }
 })
 
-// Gráfico Barras Agrupadas: Performance por Línea
-const performanceChartData = computed(() => {
-  const labels = Object.keys(lineGroups.value)
+const doughnutChartData = computed(() => {
+  const salesByType = { NEW: 0, LDS: 0, CWE: 0, MEMBERS: 0 }
+  weeklyData.value.forEach(w => {
+    w.rows.forEach(r => {
+      salesByType[r.type] += Object.values(r.channels).reduce((s, ch) => s + ch.v, 0)
+    })
+  })
   return {
-    labels,
-    datasets: [
-      { label: 'Objetivo', data: Object.values(lineGroups.value).map(g => g.obj), backgroundColor: '#cbd5e1', categoryPercentage: 0.7 },
-      { label: 'Venta Real', data: Object.values(lineGroups.value).map(g => g.real), backgroundColor: '#0f172a', categoryPercentage: 0.7 }
-    ]
+    labels: Object.keys(salesByType),
+    datasets: [{
+      data: Object.values(salesByType),
+      backgroundColor: ['#0d9488', '#3b82f6', '#f59e0b', '#dc2626'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
   }
 })
 
-// Opciones de Gráficos (Estilo Minimalista)
-const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } } }
-const groupedBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', align: 'end' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } } }
-const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+// ─── OPCIONES DE GRÁFICOS ───
+const baseFont = { family: 'inherit', size: 11 }
+const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: baseFont } } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+const pctBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%' } }, x: { grid: { display: false } } } }
+const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: baseFont } } } }
 
 </script>
 
 <style scoped>
-/* --- FUENTES & RESET BÁSICO --- */
-.system-container {
-  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-  background-color: #f8fafc;
+/* ═══════════════════════════════════════════════
+   TOKENS Y BASE
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #0d9488; --teal-500:  #14b8a6; --teal-100:  #ccfbf1;
+  --blue-600:  #2563eb;
+  --amber-500: #f59e0b; --amber-100: #fef3c7;
+  --red-600:   #dc2626;
+  --purple-600:#7c3aed; --purple-100:#ede9fe;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50);
   min-height: 100vh;
-  color: #0f172a;
+  display: flex; flex-direction: column;
+  color: var(--text-primary);
 }
 
-/* --- ANIMACIONES --- */
-.animate-fade { animation: fadeIn 0.4s ease-in-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* ═══════════════════════════════════════════════
+   MASTHEAD Y FILTROS
+═══════════════════════════════════════════════ */
+.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.masthead-brand { display: flex; align-items: center; gap: 14px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-eyebrow { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate-400); font-weight: 600; display: block; margin-bottom: 2px; }
+.brand-title { font-size: 20px; font-weight: 700; margin: 0; color: var(--white); letter-spacing: -0.02em; }
 
-/* --- HEADER --- */
-.main-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 1rem;
-}
-.system-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; color: #0f172a; }
-.system-subtitle { font-size: 0.85rem; font-weight: 600; color: #64748b; margin-top: 0.25rem; letter-spacing: 0.05em; }
+.masthead-actions { display: flex; gap: 8px; align-items: center; }
+.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn-exec-ghost { background: rgba(255,255,255,0.07); color: var(--slate-300); border: 1px solid rgba(255,255,255,0.12); }
+.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
+.btn-exec-active { background: var(--white); color: var(--navy-900); border: 1px solid var(--white); }
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover { background: var(--teal-500); }
 
-/* BOTÓN DE TOGGLE (ESTILO CORPORATIVO) */
-.btn-toggle {
-  background: #0f172a;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
-}
-.btn-toggle:hover { background: #1e293b; transform: translateY(-1px); }
+.masthead-filters { display: flex; align-items: center; gap: 0; padding: 0 28px; min-height: 52px; }
+.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
+.filter-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate-400); font-weight: 600; cursor: default; }
+.filter-sep { width: 1px; height: 32px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
+.exec-select-dark { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.18); color: var(--white); font-family: inherit; font-size: 12.5px; font-weight: 500; padding: 3px 0; outline: none; cursor: pointer; min-width: 130px; }
+.exec-select-dark option { color: var(--text-primary); background: var(--white); }
 
-/* --- ESTILOS DE LA TABLA (MODERNA) --- */
-.table-view-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-.table-wrapper { width: 100%; }
-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.inline-kpi { text-align: right; }
+.inline-kpi-label { display: block; font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate-400); font-weight: 600; margin-bottom: 2px; }
+.inline-kpi-value { font-size: 16px; font-weight: 700; color: var(--white); font-variant-numeric: tabular-nums; }
 
-/* Headers */
-thead th { background: #f8fafc; padding: 0.75rem 1rem; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e2e8f0; }
-.header-group th { text-align: center; font-size: 0.7rem; letter-spacing: 0.05em; border-bottom: none; padding-bottom: 0.25rem; }
-.header-cols th { font-size: 0.7rem; border-top: none; }
+/* ═══════════════════════════════════════════════
+   TABLAS (ESTILO MATRIZ)
+═══════════════════════════════════════════════ */
+.exec-body { padding: 24px 28px; }
 
-/* Colores de cabecera agrupada */
-.group-blue { background: #eff6ff; color: #1e40af; border-left: 1px solid white; }
-.group-gray { background: #f1f5f9; color: #475569; border-left: 1px solid white; }
-.group-dark { background: #f8fafc; color: #0f172a; border-left: 1px solid #e2e8f0; }
+.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04); }
+.table-panel-header { padding: 14px 20px; background: #fafbfc; border-bottom: 1px solid var(--border); }
+.table-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.03em; }
 
-.sub-blue { background: #eff6ff; color: #1e40af; }
-.sub-gray { background: #f1f5f9; }
-.sub-dark { background: #f8fafc; }
+.control-table-wrapper { width: 100%; overflow-x: auto; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* Filas */
-.data-row td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-.data-row:hover { background: #f8fafc; }
+/* Sticky Col */
+.exec-table .sticky-col { position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15); }
+.exec-table tbody .sticky-col { background-color: var(--white); border-right: 2px solid var(--border); }
+.exec-table thead .sticky-col { z-index: 3; background-color: var(--navy-900); border-right: 2px solid var(--navy-800); color: var(--slate-300); }
 
-/* Celdas específicas */
-.bg-blue-light { background: #eff6ff; }
-.bg-dark-light { background: #f8fafc; }
-.text-muted { color: #94a3b8; }
-.font-bold { font-weight: 700; }
-.font-mono { font-family: 'Roboto Mono', monospace; }
+/* Thead Colors (Adaptados a tus grupos) */
+.thead-group th { padding: 8px 10px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border); border-right: 1px solid rgba(0,0,0,0.05); }
+.th-teal { background: #f0fdfa; color: #0f766e; border-top: 3px solid #14b8a6; }
+.th-slate{ background: #f8fafc; color: #475569; border-top: 3px solid #94a3b8; }
+.th-amber{ background: #fffbeb; color: #b45309; border-top: 3px solid #f59e0b; }
+.th-purple{ background: #faf5ff; color: #6d28d9; border-top: 3px solid #8b5cf6; }
+
+/* Sub-headers (C, V, %) */
+.thead-sub .ts { padding: 6px 4px; font-size: 10px; font-weight: 600; border-bottom: 2px solid var(--border); border-right: 1px solid rgba(0,0,0,0.05); color: var(--text-secondary); background: #fdfdfd; }
+
+/* Celdas Body */
+.tbody-row { transition: background 0.15s; }
+.tbody-row:hover td:not(.sticky-col) { background: #f8fafc; }
+.td-cat { padding: 10px 14px; font-size: 11.5px; }
+.td-data { padding: 8px 4px; border-bottom: 1px solid var(--slate-50); border-right: 1px solid var(--slate-50); min-width: 35px; }
+
+/* Totales */
+.tfoot-row td { background: var(--slate-50); border-top: 2px solid var(--border); padding: 10px 4px; font-size: 12.5px; }
+
+/* Helper Classes */
+.fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
 .text-center { text-align: center; }
+.c-green { color: #15803d; }
 
-/* Estados porcentuales */
-.text-success { color: #16a34a; font-weight: 700; }
-.text-danger { color: #e2e8f0; font-weight: 400; } /* Casi invisible si es 0 */
-.text-warning { color: #d97706; font-weight: 600; }
+/* Heatmap de Porcentajes */
+.bg-empty { color: var(--slate-300); }
+.bg-pct-low { background-color: #dcfce7; color: #166534; font-weight: 600; } /* Verde bajito */
+.bg-pct-med { background-color: #86efac; color: #14532d; font-weight: 700; } /* Verde medio */
+.bg-pct-high{ background-color: #22c55e; color: #ffffff; font-weight: 700; } /* Verde fuerte */
 
-/* Badges */
-.badge { padding: 0.25rem 0.6rem; border-radius: 99px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; }
-.badge-blue { background: #dbeafe; color: #1e40af; }
-.badge-purple { background: #f3e8ff; color: #6b21a8; }
-.badge-orange { background: #ffedd5; color: #9a3412; }
-.badge-teal { background: #ccfbf1; color: #115e59; }
+/* ═══════════════════════════════════════════════
+   GRÁFICOS
+═══════════════════════════════════════════════ */
+.chart-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.chart-grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 
-.circle-type { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #e2e8f0; border-radius: 50%; font-weight: 700; font-size: 0.7rem; }
+.chart-panel { background: var(--white); border: 1px solid rgba(15,23,42,0.08); border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+.chart-panel-header { padding: 16px 20px; border-bottom: 1px solid var(--slate-100); }
+.chart-panel-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.chart-panel-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.chart-area { padding: 20px; flex: 1; }
 
-/* --- ESTILOS DEL DASHBOARD (COPIADOS Y ADAPTADOS DE TU REFERENCIA) --- */
-.marketing-dashboard { display: flex; flex-direction: column; gap: 2rem; }
-
-/* KPI Strip */
-.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-.kpi-box { background: white; padding: 1.5rem; border: 1px solid #e2e8f0; display: flex; flex-direction: column; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.kpi-box.highlight { background: #0f172a; color: white; border-color: #0f172a; }
-.kpi-box.highlight .kpi-label, .kpi-box.highlight .kpi-sub { color: #94a3b8; }
-.kpi-box.highlight .kpi-value { color: white; }
-.kpi-label { font-size: 0.7rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
-.kpi-value { font-size: 1.8rem; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 0.5rem; }
-.kpi-delta.positive { color: #4ade80; font-weight: 600; font-size: 0.8rem; }
-.kpi-delta.negative { color: #f87171; font-weight: 600; font-size: 0.8rem; }
-.text-blue { color: #2563eb; }
-
-/* Secciones y Paneles */
-.split-section { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-.panel, .section-container { background: white; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 8px; }
-.panel-header { margin-bottom: 1.5rem; }
-.panel-header h4, .chart-header h3 { margin: 0; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; color: #0f172a; }
-.panel-header p, .chart-desc { margin: 0.25rem 0 0; font-size: 0.8rem; color: #64748b; }
-
-.chart-wrapper-medium { height: 250px; }
-.chart-wrapper-large { height: 350px; }
-.doughnut-container { height: 220px; }
-
-@media (max-width: 1024px) {
-  .kpi-strip { grid-template-columns: 1fr 1fr; }
-  .split-section { grid-template-columns: 1fr; }
-}
+/* Animaciones */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 </style>

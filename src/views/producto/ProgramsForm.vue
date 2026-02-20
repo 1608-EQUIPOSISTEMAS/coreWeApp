@@ -1,317 +1,402 @@
-<!-- src/views/ProgramForm.vue -->
 <template>
-  <div class="container-fluid px-3 py-3">
-    <div class="card shadow-sm border-0">
-      <div class="card-header border-0 pb-3 pt-3 d-flex flex-wrap justify-content-between align-items-start">
-        <div class="pe-3">
-          <div class="h3">{{ isEdit ? 'Editar programa' : 'Nuevo programa' }}</div>
-          <div class="text-muted small" v-if="isEdit">ID: {{ idParam }}</div>
+  <div class="exec-shell form-shell">
+
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text d-flex align-items-center gap-3">
+            <div>
+              <span class="brand-eyebrow">Gestión Académica</span>
+              <h1 class="brand-title">{{ isEdit ? 'Editar Programa' : 'Nuevo Programa' }}</h1>
+            </div>
+            <span v-if="isEdit" class="pill pill-slate border mt-3">ID: {{ idParam }}</span>
+          </div>
+        </div>
+
+        <div class="masthead-actions">
+          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
+            <i class="fa-solid fa-arrow-left"></i> Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-exec btn-exec-primary px-4"
+            @click="guardar"
+            :disabled="saving || !isValid"
+          >
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ saving ? 'Guardando…' : (isEdit ? 'Actualizar Programa' : 'Crear Programa') }}
+          </button>
         </div>
       </div>
+    </header>
 
-      <div class="card-body pt-4 pb-4" v-if="loaded">
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Datos del programa</span>
-          </div>
+    <main class="exec-body pb-5 d-flex justify-content-center" v-if="loaded">
+      <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
 
-          <div class="row g-3 form-section__body">
+        <div class="exec-fieldset mb-4">
+          <h6 class="fieldset-title"><i class="fa-solid fa-cube me-2 text-primary"></i> Datos Generales del Programa</h6>
+
+          <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label mb-1">
-                Nombre General <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">Nombre General <span class="c-red">*</span></label>
               <input
                 v-restrict="{ transform: 'upper' }"
                 v-model.trim="form.program_name"
                 type="text"
-                class="form-control"
+                class="exec-input-light w-100"
                 required
-                placeholder="NOMBRE PROGRAMA"
+                placeholder="Ej. DIPLOMADO EN GESTIÓN PÚBLICA"
               />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                Esquema de clasificaciòn <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">Esquema <span class="c-red">*</span></label>
               <input
                 v-restrict="{ transform: 'upper' }"
                 v-model.trim="form.skem_clasification"
                 type="text"
-                class="form-control"
+                class="exec-input-light w-100"
                 required
                 placeholder="ESQUEMA"
               />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                URL Web <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">URL Web</label>
               <input
                 v-restrict="{ transform: 'upper' }"
                 v-model.trim="form.link"
                 type="text"
-                class="form-control"
-                placeholder="URL WEB"
+                class="exec-input-light w-100"
+                placeholder="https://..."
               />
             </div>
 
-
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                Tipo de programa <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">Tipo de programa <span class="c-red">*</span></label>
               <SearchSelect
                 :disabled="isEdit"
                 v-model="form.cat_type_program"
                 :items="catalogs.programTypeList"
                 label-field="description"
                 value-field="id"
-                placeholder="T. PROGRAMA..."
+                placeholder="Seleccionar..."
                 :model-label="form.cat_type_program_label"
+                class="exec-select-light w-100"
                 required
               />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                Línea de negocio <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">Línea de negocio <span class="c-red">*</span></label>
               <SearchSelect
                 :disabled="isEdit"
                 v-model="form.cat_category"
                 :items="catalogs.categoryList"
                 label-field="description"
                 value-field="id"
-                placeholder="L. NEGOCIO..."
+                placeholder="Seleccionar..."
                 :model-label="form.cat_category_label"
+                class="exec-select-light w-100"
               />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label mb-1">
-                Modalidad <span class="required-star">*</span>
-              </label>
+              <label class="exec-label">Modalidad <span class="c-red">*</span></label>
               <SearchSelect
                 :disabled="isEdit"
                 v-model="form.cat_model_modality"
                 :items="catalogs.modalityList"
                 label-field="description"
                 value-field="id"
-                placeholder="MODALIDAD..."
+                placeholder="Seleccionar..."
+                class="exec-select-light w-100"
                 required
               />
             </div>
 
-
-            <div class="col-md-12">
-              <label class="form-label mb-1 d-block">Activo</label>
-              <label class="form-switch">
+            <div class="col-md-3 d-flex flex-column justify-content-center align-items-center border-start ps-3">
+              <label class="exec-label mb-2">Estado del Programa</label>
+              <label class="exec-switch">
                 <input type="checkbox" v-model="form.active" />
                 <span></span>
               </label>
+              <span class="x-small text-muted mt-1 fw-600">{{ form.active ? 'ACTIVO' : 'INACTIVO' }}</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Versiones y estructura</span>
+        <div class="exec-fieldset">
+          <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-layer-group me-2 text-info"></i> Versiones y Estructura</h6>
+            <button type="button" class="btn-exec btn-exec-outline text-primary border-primary" @click="agregarVersion">
+              <i class="fa-solid fa-plus me-1"></i> Agregar Versión
+            </button>
           </div>
 
-          <div class="form-section__body">
-            <div class="mb-3 d-flex justify-content-between align-items-center">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                @click="agregarVersion"
-              >
-                Agregar versión
-              </button>
-            </div>
+          <div v-if="form.program_versions.length === 0" class="empty-state">
+            <i class="fa-solid fa-inbox fa-2x mb-2 text-slate-300"></i>
+            <p class="mb-0">No hay versiones definidas. Agrega al menos una para continuar.</p>
+          </div>
 
-            <div v-if="form.program_versions.length === 0" class="text-muted small">
-              No hay versiones definidas. Agrega al menos una.
-            </div>
-
-            <div
-              v-for="(ver, idx) in form.program_versions"
-              :key="ver._key"
-              class="version-block"
-            >
-              <div class="version-block__header">
-                <div class="version-block__title">
-                  <span class="version-index">Versión {{ idx + 1 }}</span>
-                  <span v-if="ver.version_code" class="version-code-pill">{{ ver.version_code }}</span>
-                </div>
-                <div class="version-meta">
-                  <span v-if="ver.sessions" class="version-meta-pill">{{ ver.sessions }} sesiones</span>
-                  <span v-if="ver.abbreviation" class="version-meta-pill">{{ ver.abbreviation }}</span>
-                </div>
+          <div
+            v-for="(ver, idx) in form.program_versions"
+            :key="ver._key"
+            class="exec-version-card mb-4"
+          >
+            <div class="version-header d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center gap-2">
+                <span class="version-badge">V{{ idx + 1 }}</span>
+                <span v-if="ver.version_code" class="text-mono fw-700 accent-text">{{ ver.version_code }}</span>
               </div>
-              <div class="row g-2 align-items-end mb-2">
+              <div class="d-flex gap-2">
+                <span v-if="ver.sessions" class="pill pill-slate border"><i class="fa-solid fa-calendar-days me-1"></i> {{ ver.sessions }} sesiones</span>
+                <span v-if="ver.abbreviation" class="pill pill-slate border">{{ ver.abbreviation }}</span>
+              </div>
+            </div>
 
-                <div class="col-md-4">
-                  <label class="form-label mb-1">Certificaciòn <span class="required-star">*</span></label>
-                  <input
-                    v-model.trim="ver.description"
-                    type="text"
-                    class="form-control"
-                    placeholder="DESCRIPCION"
-                    required
-                  />
-                </div>
+            <div class="version-body p-3 row g-3">
+              <div class="col-md-4">
+                <label class="exec-label">Certificación <span class="c-red">*</span></label>
+                <input
+                  v-model.trim="ver.description"
+                  type="text"
+                  class="exec-input-light w-100"
+                  placeholder="Descripción de certificación..."
+                  required
+                />
+              </div>
 
-                <div class="col-md-4">
-                  <label class="form-label mb-1">Publicitario <span class="required-star">*</span></label>
-                  <input
-                    v-model.trim="ver.brand_name"
-                    type="text"
-                    class="form-control"
-                    placeholder="DESCRIPCION"
-                    required
-                  />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label mb-1">Abreviatura <span class="required-star">*</span></label>
-                  <input
-                    v-restrict="{ transform: 'upper' }"
-                    v-model.trim="ver.abbreviation"
-                    type="text"
-                    class="form-control"
-                    required
-                    placeholder="ABREVIATURA"
-                  />
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Código <span class="required-star">*</span>
-                  </label>
-                  <input
-                    v-restrict="{ transform: 'upper' }"
-                    v-model.trim="ver.version_code"
-                    :disabled="isEdit && !ver.new"
-                    type="text"
-                    class="form-control"
-                    placeholder="CODIGO"
-                    required
-                  />
-                </div>
+              <div class="col-md-4">
+                <label class="exec-label">Nombre Publicitario <span class="c-red">*</span></label>
+                <input
+                  v-model.trim="ver.brand_name"
+                  type="text"
+                  class="exec-input-light w-100"
+                  placeholder="Nombre comercial..."
+                  required
+                />
+              </div>
 
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Sesiones. <span class="required-star">*</span>
-                  </label>
-                  <input
-                    v-model.number="ver.sessions"
-                    type="text"
-                    v-restrict="{ only: 'numbers' }"
-                    class="form-control mono"
-                    placeholder="NRO. SESIONES"
-                    required
-                  />
-                </div>
+              <div class="col-md-4">
+                <label class="exec-label">Abreviatura <span class="c-red">*</span></label>
+                <input
+                  v-restrict="{ transform: 'upper' }"
+                  v-model.trim="ver.abbreviation"
+                  type="text"
+                  class="exec-input-light w-100"
+                  required
+                  placeholder="Ej. DGP-01"
+                />
+              </div>
 
+              <div class="col-md-2">
+                <label class="exec-label">Código <span class="c-red">*</span></label>
+                <input
+                  v-restrict="{ transform: 'upper' }"
+                  v-model.trim="ver.version_code"
+                  :disabled="isEdit && !ver.new"
+                  type="text"
+                  class="exec-input-light w-100 text-mono fw-600"
+                  placeholder="CÓDIGO"
+                  required
+                />
+              </div>
 
-                <div class="col-md-4">
-                  <label class="form-label mb-1">URL FICHA</label>
+              <div class="col-md-2">
+                <label class="exec-label">Nro. Sesiones <span class="c-red">*</span></label>
+                <input
+                  v-model.number="ver.sessions"
+                  type="text"
+                  v-restrict="{ only: 'numbers' }"
+                  class="exec-input-light w-100 text-mono"
+                  placeholder="0"
+                  required
+                />
+              </div>
+
+              <div class="col-md-4">
+                <label class="exec-label">URL Ficha Técnica</label>
+                <div class="input-group-custom">
+                  <i class="fa-solid fa-link input-icon"></i>
                   <input
                     v-model.trim="ver.expedient_link"
-                    type="text"
-                    class="form-control"
-                    placeholder="URL FICHA"
+                    type="url"
+                    class="exec-input-light w-100 icon-padded"
+                    placeholder="https://..."
                   />
                 </div>
-
-
-                    <!--active-->
-
-
-                <div class="col-md-2">
-                  <label class="form-label mb-1">
-                    Categoria <span class="required-star">*</span>
-                  </label>
-                  <SearchSelect
-                    v-model="ver.cat_course_category"
-                    :items="catalogs.courseCategoryList"
-                    label-field="description"
-                    value-field="id"
-                    placeholder="Categoria..."
-                    required
-                    :model-label="ver.cat_course_category_label"
-                  />
-                </div>
-
-                <div class="col-md-2">
-                  <label class="form-label mb-1 d-block">Activo</label>
-                  <label class="form-switch" @click="mapActiveChild(ver)">
-                    <input type="checkbox" v-model="ver.active" />
-                    <span></span>
-                  </label>
-                </div>
-
               </div>
 
+              <div class="col-md-2">
+                <label class="exec-label">Categoría Curso <span class="c-red">*</span></label>
+                <SearchSelect
+                  v-model="ver.cat_course_category"
+                  :items="catalogs.courseCategoryList"
+                  label-field="description"
+                  value-field="id"
+                  placeholder="Categoría..."
+                  required
+                  :model-label="ver.cat_course_category_label"
+                  class="exec-select-light w-100"
+                />
+              </div>
 
-              <div class="version-block__children">
-                <div class="version-block__children-head">
-                  <div class="form-label mb-1 mb-md-0">Programas / versiones hijas</div>
-                  <button
-                    type="button"
-                    class="btn btn-link btn-sm p-0"
-                    @click="onAddChildClick(ver)"
-                    v-if="form.cat_type_program!='we_program_type_course'"
-                    :disabled="!ver.program_version_id"
-                  >
-                    + Agregar curso hijo
-                  </button>
-                </div>
-                <div
-                  v-if="childrenByParent(ver).length"
-                  class="vs-chip-list"
+              <div class="col-md-2 d-flex flex-column align-items-center justify-content-center">
+                <label class="exec-label mb-2">Estado Activo</label>
+                <label class="exec-switch" @click="mapActiveChild(ver)">
+                  <input type="checkbox" v-model="ver.active" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="version-footer p-3 bg-slate-50 border-top">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="exec-label mb-0" style="color: var(--teal-600);">Programas / Versiones Hijas</div>
+                <button
+                  type="button"
+                  class="btn-exec btn-exec-ghost text-teal-600 btn-sm p-1"
+                  @click="onAddChildClick(ver)"
+                  v-if="form.cat_type_program != 'we_program_type_course'"
+                  :disabled="!ver.program_version_id"
                 >
-                  <SearchSelect
-                    v-for="(child, idy)  in ver.childs"
-                    v-model="child.program_version_id"
-                    :hint="'orden: '+ (idy+1)"
-                    mode="remote"
-                    showSubValue
-                    sublabel-field="version_code"
-                    :fetcher="q => programService.programVersionCaller({ q })"
-                    label-field="abbreviation"
-                    :disabled="child.program_version_id"
-                    value-field="program_version_id"
-                    placeholder="HIJO…"
-                    :minChars="0"
-                    :cache="false"
-                    :model-label="child.label"
-                    required
-                  />
+                  <i class="fa-solid fa-plus-circle me-1"></i> Agregar curso hijo
+                </button>
+              </div>
 
+              <div v-if="childrenByParent(ver).length" class="row g-2">
+                <div class="col-md-4" v-for="(child, idy) in ver.childs" :key="idy">
+                  <div class="child-select-wrapper">
+                    <span class="child-order">{{ idy + 1 }}</span>
+                    <SearchSelect
+                      v-model="child.program_version_id"
+                      mode="remote"
+                      showSubValue
+                      sublabel-field="version_code"
+                      :fetcher="q => programService.programVersionCaller({ q })"
+                      label-field="abbreviation"
+                      :disabled="child.program_version_id"
+                      value-field="program_version_id"
+                      placeholder="Buscar hijo..."
+                      :minChars="0"
+                      :cache="false"
+                      :model-label="child.label"
+                      class="exec-select-light w-100"
+                      required
+                    />
+                  </div>
                 </div>
-
+              </div>
+              <div v-else class="text-muted small fst-italic">
+                No hay cursos hijos vinculados a esta versión.
               </div>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
 
-      <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
-        <button type="button" class="btn btn-outline-secondary" @click="cancelar">Cancelar</button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          @click="guardar"
-          :disabled="saving || !isValid"
-        >
-          {{ saving ? 'Guardando…' : (isEdit ? 'Actualizar' : 'Crear') }}
-        </button>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
+<style scoped>
+/* ═══════════════════════════════════════════════
+   TOKENS & BASE (Mismos que el listado)
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #0d9488; --teal-500:  #14b8a6;
+  --blue-600:  #2563eb;
+  --amber-500: #f59e0b;
+  --red-600:   #dc2626;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+}
+
+/* Masthead */
+.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); position: sticky; top: 0; z-index: 100;}
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
+
+.masthead-actions { display: flex; gap: 10px; align-items: center; }
+.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.btn-exec-ghost { background: transparent; color: var(--slate-300); border: 1px solid transparent; }
+.btn-exec-ghost:hover { background: rgba(255,255,255,0.07); color: var(--white); }
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
+.btn-exec-primary:disabled { background: var(--slate-400); cursor: not-allowed; opacity: 0.8;}
+.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* Wrapper Central */
+.exec-body { padding: 32px 28px; }
+.exec-form-wrapper { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+/* Fieldsets y Labels */
+.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
+.fieldset-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--slate-100); padding-bottom: 10px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+.c-red { color: var(--red-600); }
+
+/* Inputs estándar */
+.exec-input-light, .exec-select-light { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); transition: all 0.15s; height: 38px; }
+.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); }
+.exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50); color: var(--slate-400); cursor: not-allowed; }
+.input-group-custom { position: relative; display: flex; align-items: center; }
+.input-icon { position: absolute; left: 12px; color: var(--slate-400); font-size: 12px; }
+.icon-padded { padding-left: 32px; }
+
+/* Switch Toggle Custom */
+.exec-switch { position: relative; width: 44px; height: 24px; display: inline-block; cursor: pointer; }
+.exec-switch input { display: none; }
+.exec-switch span { position: absolute; inset: 0; background: var(--slate-300); border-radius: 9999px; transition: .2s; }
+.exec-switch span::after { content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+.exec-switch input:checked + span { background: var(--teal-500); }
+.exec-switch input:checked + span::after { left: 23px; }
+
+/* Text Utils */
+.text-mono { font-family: 'IBM Plex Mono', monospace; }
+.fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
+.small { font-size: 11.5px; } .x-small { font-size: 10px; }
+
+/* Pills */
+.pill { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
+.pill-slate { background: var(--slate-50); color: var(--text-secondary); }
+.pill-teal  { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important;}
+.pill-red   { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important;}
+
+/* Bloques de Versión */
+.exec-version-card { border: 1px solid var(--border); border-radius: 6px; background: var(--white); overflow: hidden;}
+.version-header { background: var(--slate-50); border-bottom: 1px solid var(--border); padding: 10px 16px; }
+.version-badge { background: var(--navy-900); color: var(--white); font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+.empty-state { text-align: center; color: var(--slate-400); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50); border-radius: 6px; border: 1px dashed var(--slate-300);}
+
+/* Selector de hijos */
+.child-select-wrapper { display: flex; align-items: center; gap: 8px; }
+.child-order { background: var(--teal-600); color: var(--white); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 700; flex-shrink: 0;}
+</style>
 <script setup>
   import { ref, reactive, computed, onMounted, inject } from 'vue'
   import { useRouter, useRoute } from 'vue-router'
@@ -514,7 +599,7 @@ import FileUploader from '@/components/FileUploader.vue'
    */
   function buildChildrenIdsFromRow(v) {
     console.log("data: \n")
-    
+
     if (!Array.isArray(v.childs)) return null
     const ids = v.childs
       .map(c => Number(c.program_version_id))
@@ -651,347 +736,3 @@ import FileUploader from '@/components/FileUploader.vue'
 
   }
 </script>
-
-
-<style scoped>
-.lead-form {
-  font-size: 0.95rem;
-  color: #111827;
-}
-
-.card-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb !important;
-}
-
-.card-title-main {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.2;
-}
-
-.card-subtitle {
-  font-size: 0.8rem;
-  color: #6b7280;
-  line-height: 1.2;
-  margin-top: .25rem;
-}
-
-.timestamp-chip {
-  display: inline-block;
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1.2;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: .4rem;
-  padding: .4rem .5rem;
-  color: #374151;
-  min-width: max-content;
-}
-
-.label-chip {
-  font-size: .7rem;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-}
-
-.form-section {
-  background-color: #ffffff;
-}
-
-.form-section__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 1rem;
-  position: relative;
-  padding-left: .75rem;
-  min-height: 1.25rem;
-  row-gap: .35rem;
-  column-gap: .75rem;
-}
-
-.form-section__header::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: .15rem;
-  bottom: .15rem;
-  width: 3px;
-  border-radius: 2px;
-  background-color: #3b82f6;
-}
-
-.form-section__title {
-  font-size: .8rem;
-  font-weight: 600;
-  color: #111827;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  line-height: 1.2;
-}
-
-.form-section__note {
-  font-size: .7rem;
-  font-weight: 400;
-  line-height: 1.2;
-  color: #6b7280 !important;
-}
-
-.form-section__body {
-  margin-left: .1rem;
-  margin-right: .1rem;
-}
-
-.form-label {
-  color: #1f2937;
-  font-weight: 500;
-  font-size: .8rem;
-  line-height: 1.2;
-  margin-bottom: .25rem;
-}
-
-.text-label-aux {
-  font-size: .7rem;
-  line-height: 1.3;
-  color: #6b7280;
-  margin-top: .35rem;
-}
-
-.form-control,
-.form-select,
-textarea.form-control {
-  font-size: .85rem;
-  line-height: 1.4;
-  border-color: #d1d5db;
-  color: #111827;
-}
-
-.form-control:focus,
-.form-select:focus,
-textarea.form-control:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 .2rem rgba(59, 130, 246, .15);
-  outline: 0;
-}
-
-.required-star {
-  color: #dc2626;
-  font-weight: 600;
-  margin-left: .15rem;
-}
-
-.card-footer {
-  border-top: 1px solid #e5e7eb !important;
-  background-color: #fff;
-}
-
-.btn-outline-secondary {
-  border-color: #d1d5db;
-  background-color: #fff;
-  color: #374151;
-  font-size: .85rem;
-  font-weight: 500;
-}
-
-.btn-outline-secondary:hover {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
-  color: #1f2937;
-}
-
-.btn-primary {
-  font-size: .85rem;
-  font-weight: 500;
-  line-height: 1.4;
-  padding: .45rem .9rem;
-  border-radius: .5rem;
-}
-
-.gap-2 {
-  gap: .5rem;
-}
-
-.card-body {
-  background-color: #fff;
-}
-
-section + section {
-  border-top: 1px solid #f3f4f6;
-  padding-top: 1.5rem;
-}
-
-.form-switch {
-  position: relative;
-  width: 42px;
-  height: 24px;
-  display: inline-block;
-}
-
-.form-switch input {
-  display: none;
-}
-
-.form-switch span {
-  position: absolute;
-  inset: 0;
-  background: #e5e7eb;
-  border-radius: 9999px;
-  transition: .2s;
-}
-
-.form-switch span::after {
-  content: '';
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  transition: .2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
-}
-
-.form-switch input:checked + span {
-  background: #3b82f6;
-}
-
-.form-switch input:checked + span::after {
-  left: 21px;
-}
-
-.version-block {
-  border-radius: .6rem;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: .75rem .7rem .8rem;
-  margin-bottom: .75rem;
-}
-
-.version-block__header {
-  display: flex;
-  justify-content: space-between;
-  gap: .5rem;
-  align-items: center;
-  margin-bottom: .5rem;
-}
-
-.version-block__title {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-.version-index {
-  font-size: .8rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.version-code-pill {
-  font-size: .75rem;
-  font-weight: 600;
-  color: #1d4ed8;
-  background: #e0edff;
-  border-radius: 999px;
-  padding: .15rem .55rem;
-}
-
-.version-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  justify-content: flex-end;
-}
-
-.version-meta-pill {
-  font-size: .7rem;
-  color: #4b5563;
-  background: #e5e7eb;
-  border-radius: 999px;
-  padding: .15rem .5rem;
-}
-
-.version-block__children {
-  margin-top: .5rem;
-  padding-top: .6rem;
-  border-top: 1px dashed #e5e7eb;
-}
-
-.version-block__children-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: .5rem;
-  margin-bottom: .35rem;
-}
-
-.vs-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  margin-bottom: .25rem;
-}
-
-.vs-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .25rem;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  padding: .15rem .55rem .15rem .6rem;
-  font-size: .75rem;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-
-.vs-chip:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
-}
-
-.vs-chip-main {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.vs-chip-code {
-  font-weight: 600;
-  color: #111827;
-}
-
-.vs-chip-label {
-  font-size: .7rem;
-  color: #6b7280;
-}
-
-.vs-chip-x {
-  font-size: .8rem;
-  color: #9ca3af;
-  margin-left: .15rem;
-}
-
-@media (max-width: 768px) {
-  .version-block__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .version-meta {
-    justify-content: flex-start;
-  }
-
-  .version-block__children-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-</style>

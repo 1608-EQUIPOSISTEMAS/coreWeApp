@@ -1,183 +1,215 @@
 <template>
-  <div class="card programs-card">
-    <div class="card-header">
-      <div class="title">
-        <span>Gestión Académica</span>
-        <div class="type-selector-wrapper">
-          <span class="sub me-2">Listado de</span>
-          <SearchSelect
-            v-model="selectedType"
-            :items="typeList"
-            label-field="label"
-            value-field="alias"
-            placeholder="TIPO…"
-            @update:modelValue="applyFilters"
-          />
+  <div class="exec-shell list-shell">
+
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">Gestión Académica</span>
+            <h1 class="brand-title">Listado de {{ selectedType === 'programs' ? 'Programas' : 'Versiones' }}</h1>
+          </div>
         </div>
       </div>
+    </header>
 
-      <div class="actions-bar">
-        <button class="btn btn-primary" @click="goNew">
-          <i class="fa-solid fa-plus me-1"></i> Nuevo
-        </button>
-      </div>
-    </div>
+    <main class="exec-body">
 
-    <div class="card-body">
-      <BaseFilterChips
-        :items="activeFilterChips"
-        @remove="clearFilter($event)"
-        @clear-all="clearFilters"
-      />
-
-      <div class="pagination-bar">
-        <BasePagination
-          v-model="pagin"
-          @open-filters="openFilterModal"
-          @change="handlePaginationChange"
+      <div class="toolbar-chips">
+        <BaseFilterChips
+          :items="activeFilterChips"
+          @remove="clearFilter($event)"
+          @clear-all="clearFilters"
         />
       </div>
 
-      <div v-if="selectedType === 'programs'" class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th class="ta-center">Acciones</th>
-              <th>Estado</th>
-              <th>Tipo / Categoría</th>
-              <th>Nombre del Programa</th>
-              <th>Modalidad</th>
-              <th>Registro</th>
-              <th>Última modif.</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in programs" :key="p.program_id">
-              <td class="ta-center nowrap">
-                <button class="btn btn-outline btn-sm" @click="editProgram(p)">
-                  <i class="fa-solid fa-pen-to-square text-warning"></i>
-                </button>
-              </td>
-              <td>
-                <span class="badge" :class="p.active === 'Y' ? 'badge-success' : 'badge-danger'">
-                  {{ p.active === 'Y' ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
-              <td>
-                <div class="badge badge-neutral mb-1">{{ p.cat_type_program_label || '—' }}</div>
-                <div class="muted small">{{ p.cat_category_label || '—' }}</div>
-              </td>
-              <td>
-                <div class="name">{{ p.program_name || '—' }}</div>
-              </td>
-              <td>
-                <div class="small fw-600">{{ p.cat_model_modality_label || '—' }}</div>
-              </td>
-              <td><div class="small muted">{{ formatDate(p.registration_date) }}</div></td>
-              <td><div class="small muted">{{ formatDate(p.modification_date) }}</div></td>
-            </tr>
-            <tr v-if="!programs.length">
-              <td colspan="7" class="empty-state">No se encontraron programas.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="exec-toolbar">
+        <div class="toolbar-pagination">
+          <BasePagination
+            v-model="pagin"
+            @open-filters="openFilterModal"
+            @change="handlePaginationChange"
+          />
+        </div>
+
+        <div class="masthead-actions">
+          <div class="d-flex align-items-center gap-2 me-2">
+            <span class="exec-label mb-0 text-secondary" style="font-size: 10px;">VISTA:</span>
+            <SearchSelect
+              v-model="selectedType"
+              :items="typeList"
+              label-field="label"
+              value-field="alias"
+              placeholder="TIPO…"
+              @update:modelValue="applyFilters"
+              class="exec-select-light"
+              style="width: 160px; min-height: 32px;"
+            />
+          </div>
+
+          <button class="btn-exec btn-exec-primary" @click="goNew">
+            <i class="fa-solid fa-plus"></i> Nuevo
+          </button>
+        </div>
       </div>
 
-      <div v-if="selectedType === 'versions'" class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th class="ta-center">Acciones</th>
-              <th>Versión / Código</th>
-              <th>Categoría / Tipo</th>
-              <th class="ta-center">Sesiones</th>
-              <th>Esquema</th>
-              <th>Cat. Curso</th>
-              <th>Estado</th>
-              <th>Modificación</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="v in programs" :key="v.id">
-              <td class="ta-center nowrap">
-                <button class="btn btn-outline btn-sm" @click="editProgram({ program_id: v.program_id })">
-                  <i class="fa-solid fa-pen-to-square text-warning"></i>
-                </button>
-              </td>
-              <td>
-                <div class="small">{{ v.abbreviation }}</div>
-                <div class="font-mono x-small text-primary mt-1">{{ v.version_code }}</div>
-              </td>
-              <td>
-                <div class="small fw-600">{{ v.cat_category_label || '—' }}</div>
-                <div class="muted x-small">{{ v.cat_type_program_label || '—' }}</div>
-              </td>
-              <td class="ta-center">
-                <span class="badge badge-neutral">{{ v.sessions || '0' }}</span>
-              </td>
-              <td><div class="small">{{ v.skem_clasification || '—' }}</div></td>
-              <td><div class="small">{{ v.cat_course_category_label || '—' }}</div></td>
-              <td>
-                <span class="badge" :class="v.active === 'Y' ? 'badge-success' : 'badge-danger'">
-                  {{ v.active === 'Y' ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
-              <td>
-                <div class="small muted">{{ formatDate(v.modification_date) }}</div>
-              </td>
-            </tr>
-            <tr v-if="!programs.length">
-              <td colspan="8" class="empty-state">No se encontraron versiones.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="table-shell">
+        <div class="table-responsive-custom">
+
+          <table v-if="selectedType === 'programs'" class="exec-table">
+            <thead>
+              <tr class="thead-sub">
+                <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
+                <th class="ts ts-c text-center">Estado</th>
+                <th class="ts ts-c">Tipo / Categoría</th>
+                <th class="ts ts-c">Nombre del Programa</th>
+                <th class="ts ts-c">Modalidad</th>
+                <th class="ts ts-c">Registro</th>
+                <th class="ts ts-c">Última modif.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in programs" :key="p.program_id" class="tbody-row">
+                <td class="td-a text-center nowrap">
+                  <button class="btn-icon" @click="editProgram(p)" title="Editar Programa">
+                    <i class="fa-solid fa-pen-to-square text-warning"></i>
+                  </button>
+                </td>
+                <td class="td-a text-center">
+                  <span class="pill border" :class="p.active === 'Y' ? 'pill-teal' : 'pill-red'">
+                    {{ p.active === 'Y' ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="td-a">
+                  <div class="pill pill-slate border mb-1">{{ p.cat_type_program_label || '—' }}</div>
+                  <div class="text-muted small">{{ p.cat_category_label || '—' }}</div>
+                </td>
+                <td class="td-a">
+                  <div class="fw-600 text-dark">{{ p.program_name || '—' }}</div>
+                </td>
+                <td class="td-a">
+                  <div class="small fw-600">{{ p.cat_model_modality_label || '—' }}</div>
+                </td>
+                <td class="td-a"><div class="small text-muted">{{ formatDate(p.registration_date) }}</div></td>
+                <td class="td-a"><div class="small text-muted">{{ formatDate(p.modification_date) }}</div></td>
+              </tr>
+              <tr v-if="!programs.length">
+                <td colspan="7" class="empty-state">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <p>No se encontraron programas con los filtros actuales.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table v-if="selectedType === 'versions'" class="exec-table">
+            <thead>
+              <tr class="thead-sub">
+                <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
+                <th class="ts ts-c">Versión / Código</th>
+                <th class="ts ts-c">Categoría / Tipo</th>
+                <th class="ts ts-c text-center">Sesiones</th>
+                <th class="ts ts-c">Esquema</th>
+                <th class="ts ts-c">Cat. Curso</th>
+                <th class="ts ts-c text-center">Estado</th>
+                <th class="ts ts-c">Modificación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="v in programs" :key="v.id" class="tbody-row">
+                <td class="td-a text-center nowrap">
+                  <button class="btn-icon" @click="editProgram({ program_id: v.program_id })" title="Editar Versión">
+                    <i class="fa-solid fa-pen-to-square text-warning"></i>
+                  </button>
+                </td>
+                <td class="td-a">
+                  <div class="small fw-600 text-dark">{{ v.abbreviation }}</div>
+                  <div class="text-mono x-small accent-text mt-1">{{ v.version_code }}</div>
+                </td>
+                <td class="td-a">
+                  <div class="small fw-600">{{ v.cat_category_label || '—' }}</div>
+                  <div class="text-muted x-small">{{ v.cat_type_program_label || '—' }}</div>
+                </td>
+                <td class="td-a text-center">
+                  <span class="pill pill-slate border">{{ v.sessions || '0' }}</span>
+                </td>
+                <td class="td-a"><div class="small">{{ v.skem_clasification || '—' }}</div></td>
+                <td class="td-a"><div class="small">{{ v.cat_course_category_label || '—' }}</div></td>
+                <td class="td-a text-center">
+                  <span class="pill border" :class="v.active === 'Y' ? 'pill-teal' : 'pill-red'">
+                    {{ v.active === 'Y' ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="td-a">
+                  <div class="small text-muted">{{ formatDate(v.modification_date) }}</div>
+                </td>
+              </tr>
+              <tr v-if="!programs.length">
+                <td colspan="8" class="empty-state">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <p>No se encontraron versiones con los filtros actuales.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <BaseModal v-model="showFilterModal" title="Filtros de Búsqueda" size="lg">
-    <div class="px-3 py-2">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Estado</label>
-          <SearchSelect v-model="filters.estado" :items="filtroEstado" label-field="description" value-field="value" placeholder="Todos..." />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Tipo de Programa</label>
-          <SearchSelect v-model="filters.cat_type_program" :items="filtroTipos" label-field="description" value-field="id" placeholder="Seleccionar..." />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Categoría</label>
-          <SearchSelect v-model="filters.cat_category" :items="filtroCategorias" label-field="description" value-field="id" placeholder="Seleccionar..." />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Modalidad</label>
+    <div class="px-4 py-3">
 
-            <MultiSelect
-                v-model="filters.modality_ids"
-                :items="filtroModalidades"
-                label-key="description"
-                value-key="id"
-                placeholder="Modalidades..."
-            />
-        </div>
+      <div class="row g-3 mb-4">
         <div class="col-12">
-          <label class="form-label">Búsqueda (q)</label>
-          <input v-model.trim="filters.q" type="text" class="form-control" placeholder="Buscar por nombre o descripción..." @keyup.enter="applyFilters" />
+          <label class="exec-label">Búsqueda General</label>
+          <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Buscar por nombre o descripción..." @keyup.enter="applyFilters" />
         </div>
       </div>
+
+      <div class="exec-fieldset">
+        <h6 class="fieldset-title">Criterios de Clasificación</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="exec-label">Estado</label>
+            <SearchSelect v-model="filters.estado" :items="filtroEstado" label-field="description" value-field="value" placeholder="Todos..." class="exec-select-light w-100" />
+          </div>
+          <div class="col-md-6">
+            <label class="exec-label">Tipo de Programa</label>
+            <SearchSelect v-model="filters.cat_type_program" :items="filtroTipos" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" />
+          </div>
+          <div class="col-md-6">
+            <label class="exec-label">Categoría</label>
+            <SearchSelect v-model="filters.cat_category" :items="filtroCategorias" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" />
+          </div>
+          <div class="col-md-6">
+            <label class="exec-label">Modalidad</label>
+            <MultiSelect
+              v-model="filters.modality_ids"
+              :items="filtroModalidades"
+              label-key="description"
+              value-key="id"
+              placeholder="Modalidades..."
+            />
+          </div>
+        </div>
+      </div>
+
     </div>
     <template #footer>
-      <div class="d-flex justify-content-between w-100">
-        <button class="btn btn-outline btn-sm" @click="clearFilters">Limpiar</button>
+      <div class="d-flex justify-content-between w-100 align-items-center">
+        <button class="btn-exec btn-exec-outline" @click="clearFilters"><i class="fa-solid fa-eraser me-1"></i> Limpiar todo</button>
         <div class="d-flex gap-2">
-          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">Cerrar</button>
-          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
+          <button class="btn-exec btn-exec-outline" @click="showFilterModal = false">Cerrar</button>
+          <button class="btn-exec btn-exec-primary" @click="applyFilters"><i class="fa-solid fa-filter me-1"></i> Aplicar Filtros</button>
         </div>
       </div>
     </template>
   </BaseModal>
+
 </template>
+
 <script setup>
 import { ref, reactive, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
@@ -185,7 +217,6 @@ import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
-// === NUEVOS COMPONENTES ===
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
@@ -202,7 +233,6 @@ const typeList = [
 
 // === Estado UI ===
 const showFilterModal = ref(false)
-const dense = ref(false)
 function openFilterModal () { showFilterModal.value = true }
 
 // === Datos ===
@@ -213,13 +243,9 @@ const selectedType = ref('versions') // Valor por defecto
 // === Filtros ===
 const filters = reactive({
   estado: null,
-  // filtroModalidades: null, // <-- BORRAR ESTO (es un catálogo, no un valor de filtro)
   cat_type_program: null,
   cat_category: null,
-
-  // cat_model_modality: null, // <-- BORRAR ESTO (ya no usas select simple)
-  modality_ids: [], // <-- AGREGAR ESTO (para el MultiSelect)
-
+  modality_ids: [],
   q: ''
 })
 
@@ -237,7 +263,6 @@ const activeFilterChips = ref([])
 // =================================================================
 // 1. LÓGICA DE PERSISTENCIA
 // =================================================================
-// Pasamos 'selectedType' como 4to argumento para que recuerde si estabas viendo programas o versiones
 const { saveState } = useTablePersistence('crm_programs_filter_state_v1', filters, pagin, selectedType)
 
 // =================================================================
@@ -259,11 +284,9 @@ function applyFilters() {
 }
 
 function clearFilter(key) {
-  // Caso especial para Arrays (MultiSelect)
   if (key === 'modality_ids') {
     filters.modality_ids = []
   }
-  // Casos simples
   else if (key === 'estado') filters.estado = null
   else if (key === 'cat_type_program') filters.cat_type_program = null
   else if (key === 'cat_category') filters.cat_category = null
@@ -273,20 +296,15 @@ function clearFilter(key) {
 }
 
 function clearFilters() {
-  // 1. Limpiar estado reactivo
   Object.assign(filters, {
     estado: null,
     cat_type_program: null,
     cat_category: null,
-    modality_ids: [], // Limpiar el array de IDs de modalidad
+    modality_ids: [],
     q: ''
   })
   pagin.value.page = 1
-
-  // 2. Limpiar Storage
   localStorage.removeItem('crm_programs_filter_state_v1')
-
-  // 3. Recargar
   rebuildChips()
   fetchPrograms()
 }
@@ -306,13 +324,13 @@ function rebuildChips() {
   }
   if (filters.modality_ids && filters.modality_ids.length > 0) {
     chips.push({
-        key: 'modality_ids', // La key debe coincidir con la variable en filters
+        key: 'modality_ids',
         text: `Modalidad: ${filters.modality_ids.length}`,
         details: filters.modality_ids
     })
   }
   if (filters.q) {
-    chips.push({ key: 'q', text: `q: ${filters.q}` })
+    chips.push({ key: 'q', text: `q: "${filters.q}"` })
   }
   activeFilterChips.value = chips
 }
@@ -340,7 +358,6 @@ async function fetchPrograms() {
     const { items, total, page, size } = result
     programs.value = items || []
     pagin.value.total = Number(total || 0)
-    // Actualizamos page/size por seguridad si el back los devuelve corregidos
     if(page) pagin.value.page = Number(page)
     if(size) pagin.value.size = Number(size)
 
@@ -373,93 +390,128 @@ function editProgram(p) {
 
 // === Lifecycle ===
 onMounted(() => {
-  // useTablePersistence carga el estado automáticamente al inicio
   rebuildChips()
   fetchPrograms()
 })
 </script>
+
 <style scoped>
-/* Contenedor Principal (Estilo FICO) */
-.programs-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.6rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-top: 4px solid #6366f1; /* Color Indigo para Académico */
-  margin-bottom: 2rem;
+/* ═══════════════════════════════════════════════
+   TOKENS & BASE
+═══════════════════════════════════════════════ */
+:root {
+  --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
+  --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
+  --teal-600:  #0d9488; --teal-500:  #14b8a6;
+  --blue-600:  #2563eb;
+  --amber-500: #f59e0b;
+  --red-600:   #dc2626;
+  --gold-400:  #fbbf24;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
 }
 
-.card-header {
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--slate-50);
+  min-height: 100vh;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem;
-  border-bottom: 1px solid #f3f4f6;
+  flex-direction: column;
+  color: var(--text-primary);
 }
 
-.title { display: flex; flex-direction: column; gap: 4px; }
-.title span { font-weight: 700; font-size: 1.1rem; color: #111827; }
-.title .sub { font-weight: 600; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+/* ═══════════════════════════════════════════════
+   MASTHEAD
+═══════════════════════════════════════════════ */
+.exec-masthead { background: var(--navy-900); color: var(--white); border-bottom: 1px solid var(--navy-700); }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 2px 28px; }
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.brand-rule { width: 4px; height: 42px; background: var(--teal-500); border-radius: 4px; }
+.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
+.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
 
-.type-selector-wrapper { display: flex; align-items: center; margin-top: 5px; }
+.masthead-actions { display: flex; gap: 10px; align-items: center; }
+.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.btn-exec-ghost { background: rgba(255,255,255,0.07); color: var(--slate-300); border: 1px solid rgba(255,255,255,0.12); }
+.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: var(--white); }
+.btn-exec-active { background: var(--white); color: var(--navy-900); border: 1px solid var(--white); }
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
+.btn-exec-danger { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
+.btn-exec-warning { background: var(--amber-500); color: var(--navy-900); border: 1px solid var(--amber-500); }
+.btn-exec-success { background: #15803d; color: var(--white); }
+.btn-exec-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-exec-outline:hover { background: var(--slate-50); color: var(--text-primary); }
 
-.card-body { padding: 1.25rem; }
+/* ═══════════════════════════════════════════════
+   BODY & TOOLBAR
+═══════════════════════════════════════════════ */
+.exec-body { flex: 1; padding: 24px 28px; }
+.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; }
+.toolbar-chips { flex: 1; min-width: 0; }
+.toolbar-pagination { flex-shrink: 0; }
 
-/* Tabla Unificada */
-.table-responsive { width: 100%; overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151; }
-.table thead th {
-  background: #f9fafb;
-  padding: 0.85rem 0.75rem;
-  text-align: left;
-  font-weight: 600;
-  color: #4b5563;
-  border-bottom: 2px solid #e5e7eb;
-  white-space: nowrap;
+/* ═══════════════════════════════════════════════
+   DATA GRID (TABLA)
+═══════════════════════════════════════════════ */
+.table-shell { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.table-responsive-custom { width: 100%; overflow-x: auto; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+.brand-rule {
+  width: 3px; height: 42px;
+  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
 }
-.table td { padding: 0.85rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-.table-hover tbody tr:hover { background-color: #f8fafc; }
+/* Cabeceras (Sub) */
+.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border); text-align: left; background: #fafbfc; color: var(--text-secondary); }
+.thead-sub .ts.text-center { text-align: center; }
 
-/* Tipografía */
-.font-mono { font-weight: 600; }
-.ta-right { text-align: right; }
-.ta-center { text-align: center; }
+/* Filas Body */
+.tbody-row { transition: background 0.15s; position: relative; }
+.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50); vertical-align: middle; color: var(--text-primary); }
+.tbody-row:last-child td { border-bottom: none; }
+.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
+
+/* Celdas específicas */
+.td-a { border-left: 1px solid transparent; }
+
+/* Utilidades Texto */
+.text-center { text-align: center; } .text-right { text-align: right; }
+.text-mono { font-family: 'IBM Plex Mono', monospace; }
+.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-muted { color: var(--text-muted); } .accent-text { color: var(--teal-600); }
+.c-green { color: #15803d; } .c-red { color: #dc2626; }
+.small { font-size: 11.5px; } .x-small { font-size: 10px; }
 .nowrap { white-space: nowrap; }
-.fw-600 { font-weight: 600; }
 
-.name { font-weight: 600; color: #1e293b; line-height: 1.2; font-size: 0.9rem; }
-.muted { color: #6b7280; }
-.small { font-size: 0.75rem; }
-.x-small { font-size: 0.68rem; }
-.text-primary { color: #4f46e5; }
-.text-warning { color: #d97706; }
+/* Badges / Pills */
+.pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+.pill-slate { background: var(--slate-100); color: var(--text-secondary); }
+.pill-teal  { background: #ccfbf1; color: #0f766e; }
+.pill-blue  { background: #dbeafe; color: #1d4ed8; }
+.pill-amber { background: #fef3c7; color: #92400e; }
+.pill-red   { background: #fee2e2; color: #b91c1c; }
 
-/* Badges (Estilo FICO) */
-.badge { padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 600; display: inline-block; border: 1px solid transparent; }
-.badge-neutral { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-.badge-success { background: #ecfdf5; color: #065f46; border-color: #d1fae5; }
-.badge-danger { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
+/* Botones Icono Tabla */
+.btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; }
+.btn-icon:hover { background: var(--slate-100); color: var(--text-primary); border-color: var(--slate-300); }
 
-/* Botones */
-.btn {
-  border: 1px solid #d1d5db;
-  padding: 0.45rem 0.75rem;
-  border-radius: 0.4rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-.btn-primary:hover { background: #4338ca; }
-.btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
+/* Empty state / Loaders */
+.empty-state { padding: 40px; text-align: center; color: var(--slate-400); font-size: 13px; font-weight: 500; }
+.empty-state svg { display: block; margin: 0 auto 10px auto; }
 
-/* Filtros y Inputs */
-.form-label { font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; display: block; }
-.form-control { width: 100%; border: 1px solid #d1d5db; border-radius: 0.4rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
-.form-control:focus { outline: none; border-color: #6366f1; ring: 2px rgba(99, 102, 241, 0.2); }
+/* ═══════════════════════════════════════════════
+   MODALES (Estilos internos)
+═══════════════════════════════════════════════ */
+.exec-fieldset { background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
+.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100); padding-bottom: 6px; }
+.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+.exec-input-light, .exec-select-light { background: var(--white); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary); transition: border-color 0.15s; }
+.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500); }
 
-.empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
 </style>

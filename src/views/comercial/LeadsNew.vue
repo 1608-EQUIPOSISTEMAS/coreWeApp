@@ -1535,13 +1535,17 @@ textarea.form-control:focus {
 .editions-scroll-container::-webkit-scrollbar { width: 5px; }
 .editions-scroll-container::-webkit-scrollbar-thumb { background: var(--lf-gray-200); border-radius: 4px; }
 
+.brand-rule {
+  width: 3px; height: 42px;
+  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
+}
 </style>
 
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
-  
+
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
@@ -1644,7 +1648,7 @@ const formatDate = (dateString) => {
     })
   )
 
-  
+
 
   const momentCatalog           = ref(catalog.options('we_moment'))
   const clientCatalog           = ref(catalog.options('we_client'))
@@ -2008,8 +2012,8 @@ const docConfig = computed(() => {
   // Obtenemos variable_1 (longitud). Si no existe, default a 15.
   const maxLength = selected?.variable_1 ? Number(selected.variable_1) : 15;
 
-  // Detectamos si debe ser solo números. 
-  // Usualmente DNI (2.300) y RUC (2.301) son numéricos. 
+  // Detectamos si debe ser solo números.
+  // Usualmente DNI (2.300) y RUC (2.301) son numéricos.
   // Pasaporte y Carnet de Extranjería suelen permitir letras.
   const isNumeric = ['we_type_document_dni', 'we_type_document_ruc'].includes(insc.cat_type_document);
 
@@ -2023,15 +2027,15 @@ const docConfig = computed(() => {
 // 2. Watcher para limpiar/ajustar si cambia el tipo
 watch(() => insc.cat_type_document, (newVal) => {
   if (!insc.document) return;
-  
+
   // Opción A: Limpiar el campo al cambiar de tipo (Más seguro para evitar errores)
-  // insc.document = ''; 
+  // insc.document = '';
 
   // Opción B: Recortar si el nuevo tipo es más corto que el valor actual
   if (docConfig.value.maxLength && insc.document.length > docConfig.value.maxLength) {
      insc.document = insc.document.slice(0, docConfig.value.maxLength);
   }
-  
+
   // Si cambiamos a numérico y hay letras, limpiar
   if (docConfig.value.isNumeric && isNaN(Number(insc.document))) {
      insc.document = insc.document.replace(/\D/g, '');
@@ -2041,7 +2045,7 @@ watch(() => insc.cat_type_document, (newVal) => {
       try {
       console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
-          
+
 
           Object.assign(form, {
               fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
@@ -2281,19 +2285,19 @@ function onStrategyChange(option){
 // Función centralizada para limpiar todo el estado de la inscripción
 function resetInscriptionData() {
   console.log('Reseteando formulario de inscripción...');
-  
+
   // 1. Limpiar objeto de inscripción (insc)
   Object.assign(insc, {
     dni: '',
-    // No limpiamos nombres/apellidos aquí si queremos que se mantengan los del lead, 
+    // No limpiamos nombres/apellidos aquí si queremos que se mantengan los del lead,
     // pero si quieres limpieza total, déjalos vacíos:
-    document: '', 
+    document: '',
     cat_type_document: null,
     nombres: '',
     apellidos: '',
     mother_last_name: '',
     email: '',
-    
+
     // Financiero
     saved_money: 0,
     selectedCurrencyAlias: 'we_currency_soles', // Valor por defecto
@@ -2301,13 +2305,13 @@ function resetInscriptionData() {
     cat_type_payment: 'we_payment_way_single',    // Valor por defecto
     cat_method_payment: null,
     modalidadPago: 'CONTADO',
-    
+
     // Montos y Descuentos
     montoOriginal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
     dsct_benefit_id: null,
-    
+
     // Valores numéricos auxiliares para la reactividad
     val_porcentaje: 0,
     val_fijo: 0,
@@ -2316,7 +2320,7 @@ function resetInscriptionData() {
     montoDescuentoFijo: 0,
     montoBeneficio: 0,
     montoFinal: 0,
-    
+
     // Observaciones y Adjuntos
     observacions: '',
     attachments: [], // IMPORTANTE: Limpiar el array de adjuntos múltiples
@@ -2366,7 +2370,7 @@ function formatDateTime(isoString) {
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
       const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-      
+
       const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
       return {
         id: c.id,
@@ -2493,11 +2497,11 @@ function buildEnrollmentPayload() {
       list_price: insc.montoOriginal,
       // --- AQUÍ ESTÁ LA CORRECCIÓN DEL MAPEO ---
       // Asignamos la variable del form al nombre que espera el SP
-      payment_attachment_url: form.ticket_payment_url || null, 
+      payment_attachment_url: form.ticket_payment_url || null,
       student_attachment_url: form.carnet_url || null,
-      
+
       // Adjuntos múltiples (Array)
-      attachments: formattedAttachments 
+      attachments: formattedAttachments
     }
   }
 }
@@ -2592,16 +2596,16 @@ function openInscription() {
     // 2. Pre-llenamos datos desde el Lead (form)
     insc.full_name = form.full_name || '';
     insc.email     = ''; // O form.email si tuvieras ese dato
-    
+
     // 3. Configuraciones por defecto iniciales
     insc.cat_insc_modality = 'we_insc_modality_normal';
     insc.selectedCurrencyAlias = 'we_currency_soles';
     insc.cat_type_payment  = 'we_payment_way_single';
-    
+
     // 4. Recalcular precio base según el Lead actual (Importante para que aparezca el precio)
     // Forzamos la actualización del precio base basado en la moneda por defecto
-    const basePrice = calculatedBasePrice.value; 
-    insc.montoOriginal = basePrice; 
+    const basePrice = calculatedBasePrice.value;
+    insc.montoOriginal = basePrice;
 
     // 5. Mostrar modal
     showViewModal.value = true;

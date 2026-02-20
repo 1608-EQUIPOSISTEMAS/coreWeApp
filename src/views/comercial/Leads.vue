@@ -10,12 +10,12 @@
             <h1 class="brand-title">Listado de Leads</h1>
           </div>
         </div>
-        
+
       </div>
     </header>
 
     <main class="exec-body">
-      
+
         <div class="toolbar-chips">
           <BaseFilterChips
             :items="activeFilterChips"
@@ -24,7 +24,7 @@
           />
         </div>
       <div class="exec-toolbar">
-        
+
         <div class="toolbar-pagination">
           <BasePagination
             v-model="pagin"
@@ -33,13 +33,13 @@
           />
         </div>
         <div class="masthead-actions">
-          <button 
-            class="btn-exec" 
-            :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'" 
+          <button
+            class="btn-exec"
+            :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'"
             @click="openControlModal"
             :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
           >
-            <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i> 
+            <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i>
             <span>{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
           </button>
 
@@ -52,7 +52,7 @@
             <i class="fa-solid" :class="isCompact ? 'fa-list' : 'fa-table-columns'"></i>
             <span>Compactado</span>
           </button>
-          
+
           <button class="btn-exec btn-exec-primary" @click="goNew" v-if="!hasActiveRestrictions">
             <i class="fa-solid fa-plus"></i> Nuevo Lead
           </button>
@@ -99,17 +99,17 @@
             </thead>
 
             <tbody v-if="!isCompact">
-              <tr v-for="l in leadsRaw" :key="l.id" 
+              <tr v-for="l in leadsRaw" :key="l.id"
                   class="tbody-row"
                   :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                  @mousedown.left="startPress(l)" 
-                  @mouseup="cancelPress" 
+                  @mousedown.left="startPress(l)"
+                  @mouseup="cancelPress"
                   @mouseleave="cancelPress">
-                
+
                 <td class="td-a text-center nowrap">
-                  <button 
-                    class="btn-icon" 
-                    @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" 
+                  <button
+                    class="btn-icon"
+                    @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)"
                     :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
                   >
                     <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
@@ -165,11 +165,11 @@
             </tbody>
 
             <tbody v-else>
-              <tr v-for="l in leadsRaw" :key="l.id" 
+              <tr v-for="l in leadsRaw" :key="l.id"
                   class="tbody-row"
                   :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                  @mousedown.left="startPress(l)" 
-                  @mouseup="cancelPress" 
+                  @mousedown.left="startPress(l)"
+                  @mouseup="cancelPress"
                   @mouseleave="cancelPress">
 
                 <td class="td-a text-center nowrap">
@@ -202,7 +202,7 @@
                 </td>
                 <td class="td-a small">{{ l.user_registration_label }}</td>
                 <td class="td-a text-center">
-                  <i v-if="l.cat_last_follow_alias" class="fa-solid fa-circle cursor-pointer" 
+                  <i v-if="l.cat_last_follow_alias" class="fa-solid fa-circle cursor-pointer"
                      :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'c-green' : 'text-slate-400'"
                      :title="l.cat_last_follow_alias"></i>
                   <span v-else class="text-muted">—</span>
@@ -247,7 +247,7 @@
                 <th class="ts ts-c" style="min-width: 160px;">T. Seguimiento</th>
                 <th class="ts ts-c" style="min-width: 160px;">Resultado</th>
                 <th class="ts ts-c" style="min-width: 230px;">Fecha/Hora</th>
-                <th class="ts ts-c text-center" style="min-width: 140px;">Duración</th> 
+                <th class="ts ts-c text-center" style="min-width: 140px;">Duración</th>
                 <th class="ts ts-c" style="min-width: 200px;">Observación</th>
               </tr>
             </thead>
@@ -265,7 +265,7 @@
                 </td>
                 <td class="td-a align-top text-center pt-2">
                   <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt=='we_attempt_call'">
-                    <button 
+                    <button
                         class="btn-icon"
                         :class="attempt.timerActive ? 'c-red' : 'c-green'"
                         @click="toggleTimer(attempt)"
@@ -304,7 +304,7 @@
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="xl">
     <div class="px-4 py-3">
-      
+
       <div class="row g-3 mb-4">
         <div class="col-md-6">
           <label class="exec-label">BÚSQUEDA GENERAL</label>
@@ -388,12 +388,12 @@
   </BaseModal>
 
   <BaseModal v-model="showControlModal" :title="isComercial ? 'Mis Permisos de Visualización' : 'Panel de Control: Restricciones de Asesores'" size="xl">
-    
+
     <div v-if="!isComercial" class="px-4 py-3">
       <div class="exec-alert alert-info mb-4">
         <i class="fa-solid fa-circle-info me-2"></i> Configura los filtros obligatorios para cada asesor. Si un campo queda vacío, el asesor no tendrá restricciones en esa categoría.
       </div>
-      
+
       <div class="table-shell control-table-wrapper">
         <table class="exec-table">
           <thead>
@@ -466,7 +466,7 @@
         <div class="col-md-4"><label class="exec-label">Nivel de Interés</label><MultiSelect disabled v-model="asesoresControl[0].interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
       </div>
     </div>
-    
+
     <template #footer>
       <div class="d-flex justify-content-end w-100 gap-2">
         <button class="btn-exec btn-exec-outline px-4" @click="showControlModal = false">
@@ -491,7 +491,7 @@
           <h6 class="enrollment-title">{{ enrollmentData.abbreviation }}</h6>
           <div v-if="enrollmentData.version_name || enrollmentData.edition_label" class="enrollment-sub">
             <span v-if="enrollmentData.version_name"><i class="fa-solid fa-layer-group me-1"></i> {{ enrollmentData.version_name }}</span>
-            <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2 text-slate-300">|</span> 
+            <span v-if="enrollmentData.version_name && enrollmentData.edition_label" class="mx-2 text-slate-300">|</span>
             <span v-if="enrollmentData.edition_label"><i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}</span>
           </div>
         </div>
@@ -505,7 +505,7 @@
             <label class="exec-label">Nombre Completo</label>
             <span class="info-value">{{ enrollmentData.student_name }}</span>
           </div>
-          
+
           <div class="d-flex justify-content-between mb-3">
             <div class="info-block">
               <label class="exec-label">Documento</label>
@@ -562,14 +562,14 @@
               <span class="fw-700 text-dark" style="font-size: 12.5px;">Total a Pagar:</span>
               <span class="fw-700 accent-text" style="font-size: 16px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}</span>
             </div>
-            
+
             <div class="d-flex justify-content-between mb-2 c-green">
               <span class="fw-600" style="font-size: 12px;">Pagado:</span>
               <span class="fw-700" style="font-size: 13px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}</span>
             </div>
-            
+
             <hr class="my-2" style="border-color: #dcfce7;">
-            
+
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-700 text-dark" style="font-size: 12.5px;">Saldo Pendiente:</span>
               <span class="fw-700" style="font-size: 18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">
@@ -603,7 +603,7 @@
                    <div class="d-flex flex-column text-truncate">
                        <span class="fw-600 text-dark text-truncate" style="font-size: 12.5px;" :title="file.name">{{ file.name || 'Documento Adjunto' }}</span>
                        <span class="text-muted" style="font-size: 10.5px;">
-                           {{ file.date || 'Archivo histórico' }} 
+                           {{ file.date || 'Archivo histórico' }}
                            <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
                        </span>
                    </div>
@@ -735,10 +735,10 @@ const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
 const filtroCalling = ref(catalog.options('we_calling') || [])
 const filtroMedios = ref(catalog.options('we_social_media') || []) // Ojo: we_medium_contact
 const filtroPaises = ref(catalog.options('we_country') || [])   // Ojo: we_code_country
-const filtroFicoStatus = ref(catalog.options('we_fico_status') || catalog.options('we_enrollment_status') || []) 
+const filtroFicoStatus = ref(catalog.options('we_fico_status') || catalog.options('we_enrollment_status') || [])
 const filtroProfile = ref(catalog.options('we_profile') || [])
 const filtroCurrency = ref(catalog.options('we_currency') || [])
-const filtroInscriptionModality = ref(catalog.options('we_inscription_modality') || []) 
+const filtroInscriptionModality = ref(catalog.options('we_inscription_modality') || [])
 const filtroPaymentStatus = ref(catalog.options('we_payment_status') || [])
 const filtroPaymentMethod = ref(catalog.options('we_payment_method') || [])
 // Reutilizamos we_payment_status para settlement si comparten estados (pagado, pendiente, anulado)
@@ -791,7 +791,7 @@ const formatMoney = (symbolOrAlias, amount) => {
   let symbol = symbolOrAlias;
   if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
   if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
-  
+
   const val = Number(amount) || 0;
   return `${symbol} ${val.toFixed(2)}`;
 }
@@ -886,7 +886,7 @@ onBeforeUnmount(() => {
 })
 function openFollowModal(lead) {
   selectedFollowLead.value = lead
-  
+
   try {
     let rawDetails = lead.follow_details;
     if (typeof rawDetails === 'string') {
@@ -904,7 +904,7 @@ function openFollowModal(lead) {
             response: d?.response || '',
             cat_type_attempt: d?.cat_type_attempt,
             cat_type_attempt_label: d?.cat_type_attempt_label,
-            contact_duration: d?.contact_duration || 0, 
+            contact_duration: d?.contact_duration || 0,
             timerActive: false,
             timerId: null
           };
@@ -924,33 +924,33 @@ function openFollowModal(lead) {
 const getFileIcon = (type) => {
   if (!type) return 'fa-file text-secondary'
   const t = type.toLowerCase()
-  
+
   if (t.includes('pdf')) return 'fa-file-pdf text-danger'
   if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg')) return 'fa-file-image text-success'
   if (t.includes('legacy')) return 'fa-file-contract text-warning' // Para los antiguos del SP
   if (t.includes('xml')) return 'fa-file-code text-info'
   if (t.includes('zip') || t.includes('rar')) return 'fa-file-zipper text-dark'
-  
+
   return 'fa-file-lines text-primary'
 }
 // === COMPROBACIÓN INICIAL PARA EL BOTÓN ===
 async function checkMyRestrictions() {
   if (!isComercial) return; // Si es líder/admin, no necesita alerta
   try {
-    const myRest = await comercialService.restrictionsList({ 
-      user_id: currentUserId, 
-      is_comercial: true 
+    const myRest = await comercialService.restrictionsList({
+      user_id: currentUserId,
+      is_comercial: true
     });
-    
+
     if (myRest && myRest.length > 0) {
       const r = myRest[0];
       // Verificamos si al menos UNO de los arrays tiene datos (length > 0)
       const isRestricted = [
-        r.type_program_ids, r.model_modality_ids, r.program_ids, 
-        r.status_lead_ids, r.last_follow_ids, r.interest_level_ids, 
+        r.type_program_ids, r.model_modality_ids, r.program_ids,
+        r.status_lead_ids, r.last_follow_ids, r.interest_level_ids,
         r.channel_ids, r.strategy_ids, r.moment_ids
       ].some(arr => Array.isArray(arr) && arr.length > 0);
-      
+
       hasActiveRestrictions.value = isRestricted;
     }
   } catch (e) {
@@ -965,8 +965,8 @@ const hydrateCatalog = (ids, catalogArray) => {
 // === 1. ABRIR Y CARGAR DATA (VERSIÓN CORREGIDA Y ROBUSTA) ===
 async function openControlModal() {
   showControlModal.value = true;
-  asesoresControl.value = []; 
-  
+  asesoresControl.value = [];
+
   try {
     // 1. Asegurar carga de asesores (esto sí se mantiene para la lista de usuarios)
     if (filtroOwners.value.length === 0) {
@@ -1001,12 +1001,12 @@ async function openControlModal() {
     // 4. Asignación según rol (Lógica idéntica, pero más datos limpios)
     if (isComercial) {
       const bdRest = savedRestrictions[0] || {};
-      const myName = storedUser?.first_name 
-        ? `${storedUser.first_name} ${storedUser.last_name || ''}` 
+      const myName = storedUser?.first_name
+        ? `${storedUser.first_name} ${storedUser.last_name || ''}`
         : `Mi Usuario (${currentUserId})`;
-        
+
       asesoresControl.value = [buildAsesorRecord(currentUserId, myName, bdRest)];
-      
+
     } else {
       asesoresControl.value = filtroOwners.value.map(owner => {
         const bdRest = savedRestrictions.find(r => r.user_id === owner.id) || {};
@@ -1025,7 +1025,7 @@ async function openControlModal() {
 // === 2. GUARDAR DATA ===
 async function saveControlRestrictions() {
   isSavingRestrictions.value = true;
-  
+
   try {
     const payloadMasivo = asesoresControl.value.map(asesor => ({
       user_id: asesor.user_id,
@@ -1045,7 +1045,7 @@ async function saveControlRestrictions() {
     await comercialService.restrictionsUpdate(payloadMasivo);
     toast.success('Filtros restrictivos aplicados correctamente');
     showControlModal.value = false;
-    
+
   } catch (error) {
     console.error("Error guardando restricciones:", error);
     toast.error('Error al guardar las restricciones');
@@ -1055,14 +1055,14 @@ async function saveControlRestrictions() {
 }
 async function saveFastFollow() {
   if (!selectedFollowLead.value) return
-  
+
   // --> AGREGAR: Detener timers activos antes de guardar
   editableHistory.value.forEach(item => {
       if(item.timerActive) toggleTimer(item);
   });
 
   isSavingFollow.value = true
-  
+
   try {
     const attemptsPayload = editableHistory.value.map(item => ({
        id: item.id,
@@ -1070,20 +1070,20 @@ async function saveFastFollow() {
        cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
        contact_datetime: item.contact_datetime,
        response: item.response,
-       
+
        // --> AGREGAR: Enviar duración al backend
-       contact_duration: item.contact_duration 
+       contact_duration: item.contact_duration
     }))
 
     await comercialService.leadUpdate({
         id: selectedFollowLead.value.id,
-        lead: {}, 
-        contact_attempts: attemptsPayload 
+        lead: {},
+        contact_attempts: attemptsPayload
     })
 
     toast.success('Seguimiento actualizado correctamente')
     showFollowModal.value = false
-    fetchLeads() 
+    fetchLeads()
   } catch (error) {
     console.error(error)
     toast.error('Error al guardar el seguimiento')
@@ -1206,25 +1206,25 @@ const isLoadingEnrollment = ref(false)
 
 async function openEnrollmentModal(enrollmentId) {
   if (!enrollmentId) return;
-  
+
   isLoadingEnrollment.value = true;
-  enrollmentData.value = null; 
+  enrollmentData.value = null;
   showEnrollmentModal.value = true;
 
   try {
-    const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId }); 
-    
+    const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
+
     // 1. Extraemos la data (si viene envuelta en 'data', la sacamos)
     const data = response.data || response;
-    
+
     // 2. Aseguramos que files_list sea un array
     let files = data.files_list || [];
-    
+
     // 3. --- FIX CRÍTICO ---
     // Filtramos los nulos para que el template no explote al hacer "file.type"
     data.files_list = files.filter(f => f !== null);
-    
-    enrollmentData.value = data; 
+
+    enrollmentData.value = data;
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar la información de la matrícula");
@@ -1277,20 +1277,20 @@ async function loadOwners() {
       // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
       const fName = (u.first_name || '').trim()
       const lName = (u.last_name || '').trim()
-      
+
       let fullName = fName
       if (lName) fullName += ` ${lName.charAt(0)}.`
-      
+
       // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
       const desc = fullName.trim() || `Usuario ${u.user_id}`
 
-      return { 
-        id: u.user_id, 
-        description: desc 
+      return {
+        id: u.user_id,
+        description: desc
       }
     })
-  } catch (e) { 
-    console.error(e) 
+  } catch (e) {
+    console.error(e)
   }
 }
 function openFilterModal() { showFilterModal.value = true }
@@ -1328,54 +1328,54 @@ function handleDateFilterChange(dateStr, type) {
 }
 // Helpers visuales
 // Helpers visuales actualizados
-function rowClassForStatus(s) { 
-  const map = { 
-    'we_lead_status_insc': 'row-inscrito', 
-    'we_lead_status_interesado': 'row-blue', 
-    'we_lead_status_bought': 'row-emerald', 
-    'we_lead_status_will_pay': 'row-emerald', 
-    'we_lead_status_proximo': 'row-yellow', 
-    'we_lead_status_indiferente': 'row-gray', 
-    'we_lead_status_closed': 'row-red', 
-    'we_lead_status_desestimado': 'row-red' 
-  }; 
-  return map[s] || '' 
+function rowClassForStatus(s) {
+  const map = {
+    'we_lead_status_insc': 'row-inscrito',
+    'we_lead_status_interesado': 'row-blue',
+    'we_lead_status_bought': 'row-emerald',
+    'we_lead_status_will_pay': 'row-emerald',
+    'we_lead_status_proximo': 'row-yellow',
+    'we_lead_status_indiferente': 'row-gray',
+    'we_lead_status_closed': 'row-red',
+    'we_lead_status_desestimado': 'row-red'
+  };
+  return map[s] || ''
 }
 
-function badgeForInterest(s) { 
-  const map = { 
-    'we_lead_interest_high': 'pill-red', 
-    'we_lead_interest_medium': 'pill-amber', 
-    'we_lead_interest_low': 'pill-slate' 
-  }; 
-  return map[s] || 'pill-slate' 
+function badgeForInterest(s) {
+  const map = {
+    'we_lead_interest_high': 'pill-red',
+    'we_lead_interest_medium': 'pill-amber',
+    'we_lead_interest_low': 'pill-slate'
+  };
+  return map[s] || 'pill-slate'
 }
 
-function badgeForFollow(s) { 
-  const map = { 
-    'we_follow_lead_pending': 'pill-slate', 
-    'we_follow_lead_answered': 'pill-teal', 
-    'we_follow_lead_no_answer': 'pill-red' 
-  }; 
-  return map[s] || 'pill-slate' 
+function badgeForFollow(s) {
+  const map = {
+    'we_follow_lead_pending': 'pill-slate',
+    'we_follow_lead_answered': 'pill-teal',
+    'we_follow_lead_no_answer': 'pill-red'
+  };
+  return map[s] || 'pill-slate'
 }
-function addLocalAttempt() { 
-    const now = new Date(); 
-    const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); 
-    
-    editableHistory.value.unshift({ 
-        id: null, 
-        status_alias: 'we_follow_lead_pending', 
-        calling_alias: null, 
-        contact_datetime: isoString, 
+function addLocalAttempt() {
+    const now = new Date();
+    const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+    editableHistory.value.unshift({
+        id: null,
+        status_alias: 'we_follow_lead_pending',
+        calling_alias: null,
+        contact_datetime: isoString,
         cat_type_attempt: 'we_attempt_call',
         response: '',
-        
+
         // --> AGREGAR ESTOS CAMPOS:
         contact_duration: 0,
         timerActive: false,
         timerId: null
-    }) 
+    })
 }
 
 function getIdFromAlias(alias, catalogArray) { if (!alias || !catalogArray) return null; const item = catalogArray.find(i => i.alias === alias); return item ? item.id : null }
@@ -1594,7 +1594,7 @@ onMounted(async () => {
   left: 0;
   z-index: 2;
   /* Sombra sutil para separar la columna fija del resto de la tabla al scrollear */
-  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15); 
+  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
 }
 
 /* Color de fondo para las celdas del cuerpo para que el texto de atrás no se transparente */
@@ -1605,24 +1605,29 @@ onMounted(async () => {
 /* La cabecera de la columna fija necesita un Z-index mayor para estar por encima de todo */
 .control-table-wrapper thead .sticky-col {
   z-index: 3;
-  background-color: var(--navy-900, #0f172a); 
+  background-color: var(--navy-900, #0f172a);
 }
 
 /* Anchos mínimos para que el scroll horizontal se active correctamente */
 .minW-200 { min-width: 220px; }
 .minW-300 { min-width: 320px; }
-.empty-state { 
-  padding: 40px; 
-  text-align: center; 
-  color: var(--slate-400); 
-  font-size: 13px; 
-  font-weight: 500; 
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--slate-400);
+  font-size: 13px;
+  font-weight: 500;
   /* Eliminamos el display: flex, flex-direction, align-items y gap */
 }
 
 /* Agregamos esta regla para centrar el ícono SVG y darle la separación (gap) hacia abajo */
 .empty-state svg {
   display: block;
-  margin: 0 auto 10px auto; 
+  margin: 0 auto 10px auto;
+}
+
+.brand-rule {
+  width: 3px; height: 42px;
+  background: #2e3e91; border-radius: 2px; flex-shrink: 0;
 }
 </style>

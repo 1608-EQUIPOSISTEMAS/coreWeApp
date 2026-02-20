@@ -73,6 +73,12 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Marketing - Gestión',
+        to: '/comercial/RptMktProduct',
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
+      },
+      {
+        component: 'CNavItem',
         name: 'Llamada - Gestión',
         to: '/comercial/RptCalling',
         roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈

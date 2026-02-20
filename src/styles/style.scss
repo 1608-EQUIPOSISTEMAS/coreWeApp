@@ -5,7 +5,7 @@
 @use "vendors/simplebar";
 
 html, body {
-  font-family: 'Inter', 'Roboto', Arial, sans-serif !important;
+  font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif !important;
 }
 
 body {
@@ -91,193 +91,78 @@ body {
 .dp__input {
     height: 30px; /* O la altura exacta que tengan tus otros inputs */
 }
-/* INPUTS CON ALTURA FIJA (sin textarea) */
-.form-control:not(textarea):not(.flatpickr-input):not(.flatpickr-monthDropdown-months):not(.searchselect-control),
+/* =========================================================
+   ESTILOS GLOBALES ARMONIZADOS AL ESTÁNDAR "EXEC"
+   Para componentes legacy que sigan usando .form-control
+   ========================================================= */
+
+/* Limpiar y unificar inputs genéricos */
+.form-control:not(textarea):not(.flatpickr-input):not(.searchselect-control),
 input[type="text"]:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
 input[type="email"]:not(.flatpickr-input),
 input[type="password"]:not(.flatpickr-input),
-input[type="number"]:not(.flatpickr-input):not(.numInput):not(.cur-year),
+input[type="number"]:not(.flatpickr-input):not(.numInput),
 input[type="tel"]:not(.flatpickr-input),
-input[type="url"]:not(.flatpickr-input),
-input[type="search"]:not(.flatpickr-input),
-input[type="date"]:not(.flatpickr-input),
-select.form-control:not(.flatpickr-monthDropdown-months),
-select:not(.flatpickr-monthDropdown-months) {
+select.form-control {
   height: 38px;
   min-height: 38px;
-  max-height: 38px;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #d1d5db; /* Un poco más suave que ced4da */
-  font-size: 1rem;
-  line-height: 1.5;
-  font-family: inherit;
-  color: #212529;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0; /* Color var(--border) del estandar exec */
+  font-size: 13px; /* Igual que exec-input-light */
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: #0f172a; /* var(--text-primary) */
   background-color: #ffffff;
-  border-radius: 0.25rem;
-  box-sizing: border-box;
-  display: block;
+  border-radius: 4px;
   width: 100%;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  transition: all 0.15s ease-in-out;
   outline: none;
 }
-/* ✅ AÑADIR - TEXTAREA CON ALTURA VARIABLE */
+
+/* Textareas (Altura variable) */
 textarea.form-control {
-  min-height: 30px;      /* Quita el !important, ya no hace falta */
-  max-height: none;      /* Pon 'none' para que se pueda estirar infinito */
+  min-height: 38px;
   height: auto;
-  
-  padding: 0.375rem 0.75rem;
-  font-size: 1rem;
-  line-height: 1.5;
-  font-family: inherit;
-  color: #212529;
-  background-color: #ffffff;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  resize: vertical;     /* Esto permite al usuario estirar */
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  resize: vertical;
+  transition: all 0.15s ease-in-out;
   outline: none;
 }
 
-/* HOVER - textarea se mantiene */
-.form-control:hover:not(:disabled):not([readonly]):not(.flatpickr-input):not(.searchselect-control),
-input:hover:not(:disabled):not([readonly]):not(.flatpickr-input):not(.numInput):not(.searchselect-input),
-select:hover:not(:disabled):not([readonly]):not(.flatpickr-monthDropdown-months),
-textarea:hover:not(:disabled):not([readonly]) {
-  border-color: #86b7fe;
-}
-
-/* FOCUS - textarea se mantiene */
+/* Estados Focus usando el Teal del estándar */
 .form-control:focus:not(.flatpickr-input):not(.searchselect-control),
 input:focus:not(.flatpickr-input):not(.numInput):not(.searchselect-input),
-select:focus:not(.flatpickr-monthDropdown-months),
-textarea:focus {
-  border-color: #86b7fe;
-  outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+select:focus, textarea:focus {
+  background-color: #ffffff;
+  border-color: #14b8a6; /* var(--teal-500) */
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); /* Sombra Teal suave */
 }
 
-/* PLACEHOLDER - textarea se mantiene */
-.form-control::placeholder:not(.searchselect-input),
-input::placeholder:not(.searchselect-input),
-textarea::placeholder {
-  color: #6c757d;
-  opacity: 1;
+/* Estados Hover */
+.form-control:hover:not(:disabled):not([readonly]),
+input:hover:not(:disabled):not([readonly]),
+select:hover:not(:disabled):not([readonly]),
+textarea:hover:not(:disabled):not([readonly]) {
+  border-color: #94a3b8; /* var(--slate-400) */
 }
 
-/* DISABLED - textarea se mantiene */
-.form-control:disabled:not(.searchselect-control),
-input:disabled:not(.searchselect-input),
-select:disabled,
-textarea:disabled {
-  background-color: #e9ecef;
-  opacity: 1;
+/* Estados Disabled */
+.form-control:disabled, input:disabled, select:disabled, textarea:disabled {
+  background-color: #f8fafc; /* var(--slate-50) */
+  color: #94a3b8; /* var(--slate-400) */
+  border-color: #e2e8f0;
   cursor: not-allowed;
 }
 
-/* VALIDACIÓN - textarea se mantiene (las barras laterales funcionan bien) */
-.form-control:required:invalid:not(:disabled):not([readonly]),
-.form-select:required:invalid:not(:disabled):not([readonly]),
-textarea.form-control:required:invalid:not(:disabled):not([readonly]) {
-  border-color: #e5e7eb;
-  border-left: 3px solid #ef4444;
-  padding-left: 0.85rem;
-  transition: all 0.2s ease;
+/* Validaciones sutiles (Reemplaza el borde grueso verde/rojo de Bootstrap) */
+.form-control:required:invalid:not(:disabled):not([readonly]):focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-.form-control:required:valid:not(:disabled):not([readonly]),
-.form-select:required:valid:not(:disabled):not([readonly]),
-textarea.form-control:required:valid:not(:disabled):not([readonly]) {
-  border-color: #e5e7eb;
-  border-left: 3px solid #10b981;
-  padding-left: 0.85rem;
-  transition: all 0.2s ease;
-}
-
-.form-control:required:invalid:not(:disabled):not([readonly]):focus,
-.form-select:required:invalid:not(:disabled):not([readonly]):focus,
-textarea.form-control:required:invalid:not(:disabled):not([readonly]):focus {
-  border-color: #fecaca;
-  border-left-color: #ef4444;
-  box-shadow: 0 0 0 .2rem rgba(239, 68, 68, .08);
-}
-
-.form-control:required:valid:not(:disabled):not([readonly]):focus,
-.form-select:required:valid:not(:disabled):not([readonly]):focus,
-textarea.form-control:required:valid:not(:disabled):not([readonly]):focus {
-  border-color: #d1fae5;
-  border-left-color: #10b981;
-  box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .08);
-}
-/* Estado Normal: Fondo gris muy sutil */
-.form-control, .form-select, textarea.form-control {
-    background-color: #f9fafb; /* Slate-50 / Gray-50 */
-    border-color: #e2e8f0;     /* Slate-200 / Gray-200 */
-}
-
-/* Estado Focus: Fondo blanco puro y borde azul */
-.form-control:focus, .form-select:focus, textarea.form-control:focus {
-    background-color: #ffffff;
-    border-color: #3b82f6; /* Azul moderno */
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* Sombra suave azul */
-}
-
-/* --- ESTADO DISABLED (BLOQUEADO) --- */
-.form-control:disabled,
-.form-select:disabled,
-textarea.form-control:disabled,
-input:disabled {
-    background-color: #e2e8f0; /* Un gris más oscuro y frío (Slate-200) */
-    color: #94a3b8;            /* Texto gris claro (Slate-400) para que parezca inactivo */
-    border-color: #cbd5e1;     /* Borde gris que se fusiona un poco */
-    cursor: not-allowed;       /* Icono de prohibido al pasar el mouse */
-    opacity: 1;                /* Asegura que el color de fondo se vea sólido */
-    box-shadow: none;          /* Elimina sombras si las hubiera */
-}
-
-/* Opcional: Si usas placeholder en disabled, que apenas se vea */
-.form-control:disabled::placeholder {
-    color: #cbd5e1;
-}
-
-/* --- ESTADO NORMAL (EDITABLE) --- */
-/* Mantenemos el estilo "Premium" sugerido antes para contraste */
-.form-control:not(:disabled):not([readonly]),
-.form-select:not(:disabled),
-textarea.form-control:not(:disabled):not([readonly]) {
-    background-color: #f9fafb; /* Fondo casi blanco */
-    border-color: #d1d5db;     /* Borde suave */
-    color: #111827;            /* Texto oscuro y legible */
-}
-
-/* --- ESTADO FOCUS (CUANDO ESCRIBES) --- */
-.form-control:focus,
-.form-select:focus,
-textarea.form-control:focus {
-    background-color: #ffffff; /* Blanco puro para resaltar atención */
-    border-color: #3b82f6;     /* Azul */
-    color: #000000;
-}
-/* Solo añade una pequeña barra lateral gris a los requeridos vacíos */
-.form-control:required:not(:disabled):placeholder-shown {
-    border-left: 2px solid #9ca3af; /* Una pista visual sutil a la izquierda */
-}
-
-/* ══════════════════════════════════════════
-   W|E SIDEBAR GLOBAL OVERRIDES
-   Agregar al FINAL de style.scss
-   ══════════════════════════════════════════ */
-.sidebar.sidebar-we {
-  --cui-sidebar-bg: #06101f !important;
-  --cui-sidebar-border-color: rgba(255,255,255,0.06) !important;
-  --cui-sidebar-nav-link-color: rgba(255,255,255,0.58) !important;
-  --cui-sidebar-nav-link-active-color: #fff !important;
-  --cui-sidebar-nav-link-hover-color: rgba(255,255,255,0.82) !important;
-  --cui-sidebar-nav-group-bg: transparent !important;
-  --cui-sidebar-nav-group-toggle-show-color: #fff !important;
-  --cui-sidebar-nav-link-active-bg: rgba(217,4,41,0.1) !important;
-  --cui-sidebar-nav-link-hover-bg: rgba(255,255,255,0.055) !important;
+.form-control:required:valid:not(:disabled):not([readonly]):focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }

@@ -1,2280 +1,1851 @@
 <template>
-  <div class="card leads-card">
-    <div class="card-header">
-      <div class="title">
-        <div class="title-icon" style="cursor: pointer;" @click="reloadSchedule()">
-          <i class="fa-solid fa-calendar-days"></i>
+  <div class="exec-shell">
+
+    <!-- ══════════════ MASTHEAD ══════════════ -->
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">Gestión Académica &amp; Operaciones</span>
+            <h1 class="brand-title" @click="reloadSchedule()" style="cursor:pointer;" title="Recargar">
+              {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
+            </h1>
+          </div>
         </div>
-        <div class="title-main">
-          {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
+        <div class="masthead-actions">
+          <button v-if="!hasActiveFilters" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Objetivos
+          </button>
+          <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
+            Historial
+          </button>
+          <button type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtros
+            <span v-if="hasActiveFilters" class="btn-exec-dot"></span>
+          </button>
+          <button type="button" class="btn-exec" :class="hasColumnFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showMetaModal = true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+            Resumen
+            <span v-if="hasColumnFilters" class="btn-exec-dot"></span>
+          </button>
+          <button type="button" class="btn-exec btn-exec-primary" :class="{ 'btn-exec-ghost': !isCompact }" @click="isCompact = !isCompact">
+            <svg v-if="isCompact" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>
+            {{ isCompact ? 'Normal' : 'Compacto' }}
+          </button>
         </div>
       </div>
-      <div class="actions-bar">
-        <div class="period-picker" v-if="!hasActiveFilters">
-          <button type="button" class="btn btn-icon" @click="changeMonth(-1)">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
 
-          <select
-            v-model.number="selectedMonth"
-            @change="fetchSchedule"
-            style="width: 100px;"
-            class="form-select form-select-sm period-select"
-          >
-            <option
-              v-for="(month, index) in months"
-              :key="index"
-              :value="index + 1"
-            >
-              {{ month }}
-            </option>
-          </select>
+      <!-- Filtros / Periodo / KPIs en línea -->
+      <div class="masthead-filters">
+        <template v-if="!hasActiveFilters">
+          <div class="filter-group">
+            <label class="filter-label">PERÍODO</label>
+            <div class="filter-period-nav">
+              <button type="button" class="filter-nav-btn" @click="changeMonth(-1)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <select v-model.number="selectedMonth" @change="fetchSchedule" class="exec-select" style="min-width:110px;">
+                <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+              </select>
+              <select v-model.number="selectedYear" @change="fetchSchedule" class="exec-select" style="min-width:68px;">
+                <option :value="2024">2024</option>
+                <option :value="2025">2025</option>
+                <option :value="2026">2026</option>
+              </select>
+              <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-spacer"></div>
+          <!-- KPIs inline -->
+          <div class="masthead-kpis">
+            <div class="inline-kpi">
+              <span class="inline-kpi-label">SEMANAS</span>
+              <span class="inline-kpi-value">{{ schedules.length }}</span>
+            </div>
+            <div class="inline-kpi">
+              <span class="inline-kpi-label">EDICIONES</span>
+              <span class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
+            </div>
+            <div class="inline-kpi" v-if="hasColumnFilters" style="margin-right:20px;">
+              <span class="inline-kpi-label">FILTRADAS</span>
+              <span class="inline-kpi-value" style="color:var(--gold-400)">{{ filteredSchedules.flatMap(w => w.items || []).length }}</span>
+            </div>
+          </div>
+        </template>
 
-          <select
-            v-model.number="selectedYear"
-            @change="fetchSchedule"
-            class="form-select form-select-sm year-select ms-1"
-            style="width: 100px;"
-          >
-            <option :value="2024">2024</option>
-            <option :value="2025">2025</option>
-            <option :value="2026">2026</option>
-          </select>
-
-          <button type="button" class="btn btn-icon" @click="changeMonth(1)">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
-
-        <div class="header-actions">
-          
-        <button
-      v-if="!hasActiveFilters"
-      type="button"
-      class="btn btn-outline btn-sm me-1 text-success border-success-subtle"
-      @click="openMonthlyGoalsModal"
-    >
-      <i class="fa-solid fa-bullseye me-1"></i>
-      Objetivos
-    </button>
-          <button
-          type="button"
-          class="btn btn-outline btn-sm ms-1"
-          @click="openGlobalHistory"
-        >
-          <i class="fa-solid fa-clock-rotate-left me-1"></i>
-          Historial
-        </button>
-
-    <button
-      type="button"
-      class="btn btn-outline btn-sm mx-1"
-      :class="hasActiveFilters ? 'btn-primary' : 'btn-outline-secondary'"
-      @click="showFilterModal = true"
-    >
-      <i class="fa-solid fa-filter me-1"></i>
-      Filtros
-    </button>
-
-  <button
-  type="button"
-  class="btn btn-outline btn-sm"
-  :class="{ 'btn-primary': hasColumnFilters }"
-  @click="showMetaModal = true"
->
-  <i class="fa-solid fa-layer-group me-1"></i>
-  Resumen
-  <span v-if="hasColumnFilters" class="badge bg-white text-primary ms-1">
-    Filtrado
-  </span>
-</button>
-
-    <button
-      type="button"
-      class="btn btn-outline btn-sm ms-1"
-      :class="isCompact ? 'btn-info' : 'btn-outline-secondary'"
-      @click="isCompact = !isCompact"
-      :title="isCompact ? 'Cambiar a vista normal' : 'Cambiar a vista compactada'"
-    >
-      <i class="fa-solid" :class="isCompact ? 'fa-compress' : 'fa-expand'"></i>
-      {{ isCompact ? 'Normal' : 'Compacto' }}
-    </button>
-  </div>
+        <!-- Modo histórico: chips de filtros activos -->
+        <template v-else>
+          <div class="filter-chips-bar">
+            <BaseFilterChips :items="formattedActiveFilters" @remove="removeFilter($event)" @clear-all="clearAllFilters" />
+          </div>
+          <div class="filter-spacer"></div>
+          <div class="masthead-kpis" style="margin-right:20px;">
+            <div class="inline-kpi">
+              <span class="inline-kpi-label">RESULTADOS</span>
+              <span class="inline-kpi-value accent">{{ historyList.length }}</span>
+            </div>
+          </div>
+        </template>
       </div>
-    </div>
+    </header>
 
-    <div class="card-body border-bottom bg-light p-2" v-if="hasActiveFilters">
-      <BaseFilterChips
-        :items="formattedActiveFilters"
-        @remove="removeFilter($event)"
-        @clear-all="clearAllFilters"
-      />
-  </div>
-
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table" :class="{ dense, 'table-bordered compact-borders': isCompact }">
-
-  <thead>
-    <tr>
-      <!-- Columna Acciones -->
-      <th class="bg-warning text-dark text-center" style="width: 100px;">
-        <div class="d-flex justify-content-center">
-          <button type="button" class="btn btn-sm btn-primary" v-if="!hasActiveFilters" @click="openEditModal(null)">
-            Nueva
-          </button>
-        </div>
-      </th>
-
-      <!-- Columna Programa -->
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Programa</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Programa"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.program_abreviature"
-            v-model="columnFilters.program"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <!-- Columna Detalle (Vista Normal) -->
-      <th class="bg-warning text-dark p-1" v-if="!isCompact">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Detalle</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Detalle"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`"
-            v-model="columnFilters.detail"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <!-- Columna Línea (Vista Compacta) -->
-      <th class="bg-warning text-dark p-1" v-if="isCompact">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Linea</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Línea"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.program_line_business"
-            v-model="columnFilters.line"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <!-- Columna Tipado (Vista Compacta) -->
-      <th class="bg-warning text-dark p-1" v-if="isCompact">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Tipado</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Tipado"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.cat_course_category_label"
-            v-model="columnFilters.type"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <!-- Columna Segmento (Vista Compacta) -->
-      <th class="bg-warning text-dark p-1" v-if="isCompact">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Seg</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Seg"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.cat_segment"
-            v-model="columnFilters.segment"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <th class="bg-warning text-dark p-1" v-if="isCompact">
-        <div class="d-flex flex-column">
-          <span>D.A.</span>
-        </div>
-      </th>
-
-      
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex flex-column">
-          <span>F. INICIO</span>
-        </div>
-      </th>
-      <th class="bg-warning text-dark p-1" v-if="isCompact">
-        <div class="d-flex flex-column">
-          <span>D.P.</span>
-        </div>
-      </th>
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex flex-column">
-          <span>F. FIN</span>
-        </div>
-      </th>
-
-            <th class="bg-warning text-dark p-1" v-if="isCompact">
-              <div class="d-flex flex-column">
-                <span>Dias Clase</span>
-              </div>
-            </th>
-
-            <th class="bg-warning text-dark p-1">
-              <div class="d-flex flex-column">
-                <span>Horario</span>
-              </div>
-            </th>
-
-
-      <!-- Columna Docente -->
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Docente</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Docente"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.instructor"
-            v-model="columnFilters.instructor"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <!-- Resto de columnas sin filtros rápidos -->
-      <th class="bg-warning text-dark text-center">Ficha/Mejora</th>
-      <th class="bg-warning text-dark text-center">Confirm.</th>
-      
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Observación</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Observación"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => item.notes"
-            v-model="columnFilters.notes"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-
-      <th class="bg-warning text-dark p-1">
-        <div class="d-flex align-items-center justify-content-between">
-          <span>Edición</span>
-          <ColumnFilterDropdown
-            v-if="!hasActiveFilters"
-            column-label="Código Edición"
-            :all-items="allScheduleItems"
-            :value-extractor="(item) => `${item.global_code} ${item.specific_code}`"
-            v-model="columnFilters.edition_code"
-            @apply="applyColumnFilters"
-          />
-        </div>
-      </th>
-    </tr>
-  </thead>
-          <tbody v-if="!hasActiveFilters">
-            <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
-              <tr v-if="week.items.length>0"
-                class="week-header text-white"
-                :class="{ 'is-collapsed': !week.isOpen }"
-                @click="week.isOpen = !week.isOpen"
-              >
-                <td class="py-2 px-3 fw-bold bg-dark" :colspan="isCompact?'17':'11'">
-                  <i
-                    class="fa-solid me-2 text-light"
-                    :class="week.isOpen ? 'fa-chevron-down' : 'fa-chevron-right'"
-                  ></i>
-                  <span class="text-light">Semana {{ week.schedule }}</span>
-                  <span class="ms-auto badge bg-primary d-flex float-end">
-                    {{ week.items.length }} Ediciones
-                  </span>
-                </td>
+    <!-- ══════════════ CUERPO ══════════════ -->
+    <main class="exec-body">
+      <div class="view-table">
+        <div class="table-shell">
+          <table class="exec-table" :class="{ 'exec-table-dense': isCompact }">
+            <thead>
+              <!-- FILA 1: Grupos principales -->
+              <tr class="thead-group">
+                <th class="th-act" rowspan="2">
+                  <div class="d-flex justify-content-center" v-if="!hasActiveFilters">
+                    <button type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
+                      + Nueva
+                    </button>
+                  </div>
+                </th>
+                <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
+                <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
+                <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
+                <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
               </tr>
 
-              <tr
+              <!-- FILA 2: Columnas individuales -->
+              <tr class="thead-sub">
+                <!-- Identificación -->
+                <th class="ts ts-a">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>PROGRAMA</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-a" v-if="!isCompact">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>DETALLE</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-a" v-if="isCompact">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>LÍNEA</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-a" v-if="isCompact">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>TIPADO</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-a text-center" v-if="isCompact">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>SEG.</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
+
+                <!-- Cronograma -->
+                <th class="ts ts-b text-center">F. INICIO</th>
+                <th class="ts ts-b text-center" v-if="isCompact">D.P.</th>
+                <th class="ts ts-b text-center">F. FIN</th>
+                <th class="ts ts-b" v-if="isCompact">DÍAS CLASE</th>
+                <th class="ts ts-b">HORARIO</th>
+                <th class="ts ts-b">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>DOCENTE</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+
+                <!-- Seguimiento -->
+                <th class="ts ts-c text-center">FICHA / MEJORA</th>
+                <th class="ts ts-c text-center">CONFIRM.</th>
+
+                <!-- Referencia -->
+                <th class="ts ts-d">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>OBSERVACIÓN</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+                <th class="ts ts-d">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <span>EDICIÓN</span>
+                    <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
+                  </div>
+                </th>
+              </tr>
+            </thead>
+
+            <!-- ── TBODY: Vista Mensual ── -->
+            <tbody v-if="!hasActiveFilters">
+              <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
+                <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
+                  <td :colspan="isCompact ? 16 : 11" class="week-header-cell">
+                    <div class="week-header-inner">
+                      <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                      <span class="week-label">Semana {{ week.schedule }}</span>
+                      <span class="week-badge">{{ week.items.length }} Ediciones</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr
                   v-for="(e, eIndex) in week.items"
                   :key="e.edition_num_id"
                   v-show="week.isOpen"
+                  class="tbody-row"
                   :class="[
-                      e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
-                      { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id } /* Opcional: clase visual */
+                    e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
+                    { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
                   ]"
                   @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-                  
-                  @mousemove="cancelLongPress" 
-                  @touchstart="startLongPress(e); currentPressId = e.edition_num_id" 
+                  @mousemove="cancelLongPress"
+                  @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
                   @mouseup="clearLongPress(); currentPressId = null"
                   @mouseleave="clearLongPress(); currentPressId = null"
                   @touchend="clearLongPress(); currentPressId = null"
                 >
-                <td class="ta-right nowrap p-0 m-0">
-                  <div class="d-flex justify-content-center gap-1">
-                     <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                       <i class="fa-solid fa-eye"></i>
-                     </button>
-                     <button :class="[
-                            'btn btn-icon-sm btn-light',
-                            (e.tree_detail.length == 0  && program_type != 'Curso')? 'text-secondary' : 'text-danger'
-                          ]" @click.stop="openTreeModal(e)" title="Árbol">
-                       <i class="fa-solid fa-book-bookmark"></i>
-                     </button>
-                     <button class="btn btn-icon-sm btn-light" @click.stop="openEditModal(e)" title="Editar">
-                       <i v-if="e.program_type === 'Curso'" class="fa-solid fa-pen-to-square text-warning"></i>
-                       <i v-else class="fa-solid fa-sitemap text-info"></i>
-                     </button>
-                  </div>
-                </td>
-
-                <td style="min-width: 40px;max-width: 230px;" >
-                  <div class="name fw-bold">
-                    <span style="cursor:pointer" class="text-primary text-decoration-hover" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
-                      <span v-if="!isCompact">
-                        {{ e.program_abreviature || '—' }}
-                        <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
-                      </span>
-                      <div v-if="isCompact" class="small text-truncate" style="min-width: 40px;max-width: 160px;" :title="e.program_abreviature">
-                        {{ e.program_abreviature || '—' }}
-                      </div>
-                    </span>
-                  </div>
-                  <div class="muted small" v-if="!isCompact">
-                    {{ e.version_code }}&nbsp <b> {{'('+e.program_sessions+')' }}</b>
-                    <div class="muted small float-end">
-                      {{ 'Seg: ' + e.cat_segment }}  {{ e.cat_course_category_alias?('| S: ' + e.cat_course_category_label):'' }}
+                  <!-- Acciones -->
+                  <td class="td-act">
+                    <div class="action-btns">
+                      <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </button>
+                      <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="11"/><line x1="12" y1="11" x2="5" y2="14"/><line x1="12" y1="11" x2="19" y2="14"/></svg>
+                      </button>
+                      <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                        <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                      </button>
                     </div>
-                  </div>
-                </td>
-                <td style="min-width: 40px;max-width: 120px;"  v-if="!isCompact">
-                  <div class="muted small" v-if="!isCompact">
-                    {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
-                  </div>
-                  <div class="muted small">
-                    {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
-                  </div>
-                </td>
-                <td style="min-width: 120px;max-width: 300px;" v-if="isCompact">
-                    {{e.program_line_business}}&nbsp <b> {{'('+e.program_sessions+')' }}</b>
-                </td>
-
-                <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
-                    {{e.cat_course_category_label}}
-                </td>
-                <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
-                    {{e.cat_segment}}
-                </td>
-
-                <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                    {{e.calc_da}}
-                </td>
-
-                <td style="min-width: 40px;max-width: 120px;" class="position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) || activeGapPreviewId === ('hist_' + e.edition_num_id) ? 1060 : 'inherit' }">
-                    <div
-                        class="name small fw-bold text-primary cursor-pointer text-decoration-hover"
-                        title="Click derecho para ver proyección"
-                        @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
-                        @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
-                    >
-                        {{ formatDate(e.start_date) }} 
-                        <i v-if="!isCompact" class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
-                    </div>
-                    
-                    <div class="muted small" v-if="!isCompact">
-                        {{ 'CA: '+e.calc_da || 0 }}
-                        <div class="muted small float-end">{{ 'CP: '+e.calc_dp || 0 }}</div>
-                    </div>
-
-                    <div 
-                        v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" 
-                        class="schedule-preview-popover shadow-lg"
-                        :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                        style="width: 360px; left: 0;" 
-                    >
-                        <div class="popover-header">
-                            <span>Proyección: {{ e.program_abreviature }}</span>
-                            <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
-                        </div>
-                        <div class="popover-content">
-    <div v-if="isLoadingGap" class="text-center p-4 text-muted">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-    </div>
-    <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">
-        Sin datos.
-    </div>
-    
-    <div v-else class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-        <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-            <thead class="sticky-top">
-                <tr>
-                    <th class="text-center" style="width: 40px;">#</th>
-                    <th>FECHA</th>
-                    <th class="text-end pe-3">ESTADO</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
-                    :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                    
-                    <td class="text-center fw-bold text-muted small">
-                        <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-                        <div v-else>{{ idx + 1 }}</div>
-                    </td>
-
-                    <td>
-                      <div class="d-flex flex-column lh-sm py-1">
-                          <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                              {{ formatDate(item.start_date_eff) + ' ['+item.global_code+']' }}
-                          </span>
-
-                          <div class="d-flex justify-content-between">
-                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                  {{ item.hoursLabel }}
-                              </span>
-                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                  {{ item.daysLabel }}
-                              </span>
-                          </div>
-                      </div>
                   </td>
 
-                    <td class="text-end pe-3">
-                        <div v-if="item.type === 'current'">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">
-                                SELECCIÓN
-                            </span>
-                        </div>
-
-                        <div v-else-if="item.gapInfo">
-                            <span class="badge rounded-pill px-3"
-                                :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 
-                                        (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 
-                                        'bg-info-subtle text-info-emphasis border border-info-subtle')">
-                                {{ item.gapInfo.label }}
-                            </span>
-                        </div>
-
-                        <div v-else>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">
-                                OK
-                            </span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-                    </div>
-
-                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
-                </td>
-                <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                    {{e.calc_dp}}
-                </td>
-
-                <td style="min-width: 40px;max-width: 120px;">
-                  <div class="small">{{ formatDate(e.end_date) }}</div>
-                </td>
-
-                <td style="min-width: 130px;max-width: 300px;" v-if="isCompact">
-                  {{!e.schedules?'':e.schedules[0].day_combination_label}}
-                </td>
-                <td
-                  style="min-width: 100px;max-width: 300px;"
-                  class="position-relative overflow-visible"
-                  :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
-                >
-                  <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-
-                  <div v-else-if="e.schedules.length === 1">
-                    <div class="name small fw-bold text-dark" v-if="!isCompact">
-                      {{ e.schedules[0]?.day_combination_label || '—' }}
-                    </div>
-                    <div class="small text-muted">
-                      {{ e.schedules[0]?.hour_combination_label }}
-                    </div>
-                  </div>
-
-                  <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
-                    <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                      <div>
-                        <div class="name small fw-bold text-dark">
-                          {{ e.schedules[0].day_combination_label }}
-                        </div>
-                        <div class="small text-muted text-truncate" style="max-width: 90px;">
-                          {{ e.schedules[0].hour_combination_label }}
-                        </div>
-                      </div>
-                      <span class="badge bg-light text-primary border border-primary-subtle rounded-pill">
-                        +{{ e.schedules.length - 1 }}
+                  <!-- IDENTIFICACIÓN -->
+                  <td class="td-a td-prog">
+                    <div class="prog-name">
+                      <span class="prog-link" style="cursor:pointer;" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
+                        <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                        <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
                       </span>
                     </div>
+                    <div class="prog-sub text-muted small" v-if="!isCompact">
+                      <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                      <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                    </div>
+                  </td>
 
-                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                      <div class="popover-header-sm">
-                          Horarios ({{ e.schedules.length }})
-                          <button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button>
+                  <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
+                    <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
+                    <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                  </td>
+
+                  <td class="td-a" v-if="isCompact" style="min-width:120px;max-width:300px;">
+                    {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                  </td>
+                  <td class="td-a text-center" v-if="isCompact">
+                    <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
+                  </td>
+                  <td class="td-a text-center" v-if="isCompact">
+                    <span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span>
+                  </td>
+                  <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
+
+                  <!-- CRONOGRAMA -->
+                  <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) ? 1060 : 'inherit' }">
+                    <div class="date-link" title="Click derecho: proyección"
+                      @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
+                      @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
+                    >{{ formatDate(e.start_date) }}</div>
+                    <div class="small text-muted" v-if="!isCompact">
+                      {{ 'CA: ' + e.calc_da || 0 }}
+                      <span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span>
+                    </div>
+                    <!-- GAP POPOVER -->
+                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:360px;left:0;">
+                      <div class="popover-header-exec">
+                        <span>Proyección: {{ e.program_abreviature }}</span>
+                        <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
                       </div>
-                      <div class="popover-body-sm">
+                      <div class="popover-content">
+                        <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                        <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
+                        <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
+                          <table class="table table-borderless mb-0 align-middle w-100 clean-table">
+                            <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
+                            <tbody>
+                              <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
+                                <td class="text-center fw-bold text-muted small">
+                                  <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
+                                  <div v-else>{{ idx + 1 }}</div>
+                                </td>
+                                <td>
+                                  <div class="d-flex flex-column lh-sm py-1">
+                                    <span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
+                                    <div class="d-flex justify-content-between">
+                                      <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span>
+                                      <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td class="text-end pe-3">
+                                  <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
+                                  <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
+                                  <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                  </td>
+
+                  <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
+
+                  <td class="td-b text-center">
+                    <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
+                  </td>
+
+                  <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
+
+                  <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
+                    <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
+                    <div v-else-if="e.schedules.length === 1">
+                      <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0]?.day_combination_label || '—' }}</div>
+                      <div class="small text-muted">{{ e.schedules[0]?.hour_combination_label }}</div>
+                    </div>
+                    <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
+                      <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                        <div>
+                          <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
+                          <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
+                        </div>
+                        <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
+                      </div>
+                      <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
+                        <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
+                        <div class="popover-body-sm">
                           <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
                             <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
                             <div class="text-muted small">{{ sch.hour_combination_label }}</div>
                           </div>
+                        </div>
+                      </div>
+                      <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                    </div>
+                  </td>
+
+                  <td class="td-b" style="min-width:100px;max-width:130px;">
+                    <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
+                  </td>
+
+                  <!-- SEGUIMIENTO -->
+                  <td class="td-c text-center">
+                    <label class="exec-switch scale-75" title="Ficha / Expediente">
+                      <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span>
+                    </label>
+                    <label class="exec-switch scale-75" title="Mejora / Upgrade">
+                      <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
+                    </label>
+                  </td>
+                  <td class="td-c text-center">
+                    <label class="exec-switch scale-75" title="Pre-Confirmación">
+                      <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
+                    </label>
+                    <label class="exec-switch scale-75" title="Confirmación">
+                      <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
+                    </label>
+                  </td>
+
+                  <!-- REFERENCIA -->
+                  <td class="td-d">
+                    <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
+                    <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
+                  </td>
+                  <td class="td-d">
+                    <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
+                    <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                      <span v-if="!isCompact && e.specific_code">A: </span><b v-if="e.specific_code">{{ e.specific_code }}</b>
+                    </div>
+                    <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
+                      <b v-if="e.clasification">{{ e.clasification }}</b>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+
+            <!-- ── TBODY: Vista Histórica ── -->
+            <tbody v-if="hasActiveFilters">
+              <tr
+                v-for="(e, eIndex) in historyList"
+                :key="e.edition_num_id"
+                class="tbody-row"
+                :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
+                @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
+                @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
+                @mousemove="cancelLongPress"
+                @mouseup="clearLongPress(); currentPressId = null"
+                @mouseleave="clearLongPress(); currentPressId = null"
+                @touchend="clearLongPress(); currentPressId = null"
+              >
+                <td class="td-act">
+                  <div class="action-btns">
+                    <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="11"/><line x1="12" y1="11" x2="5" y2="14"/><line x1="12" y1="11" x2="19" y2="14"/></svg>
+                    </button>
+                    <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                      <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </button>
+                  </div>
+                </td>
+
+                <td class="td-a td-prog">
+                  <div class="prog-name">
+                    <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                    <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
+                  </div>
+                  <div class="prog-sub text-muted small" v-if="!isCompact">
+                    <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                    <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                  </div>
+                </td>
+
+                <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
+                  <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
+                  <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                </td>
+                <td class="td-a" v-if="isCompact" style="min-width:10px;max-width:300px;">{{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b></td>
+                <td class="td-a text-center" v-if="isCompact"><span class="tipo-tag">{{ e.cat_course_category_label }}</span></td>
+                <td class="td-a text-center" v-if="isCompact"><span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span></td>
+                <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
+
+                <td class="td-b">
+                  <div class="date-link small">{{ formatDate(e.start_date) }}</div>
+                  <div class="small text-muted" v-if="!isCompact">{{ 'CA: ' + e.calc_da || 0 }}<span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span></div>
+                </td>
+                <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
+                <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
+                <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
+
+                <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
+                  <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
+                  <div v-else-if="e.schedules.length === 1">
+                    <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0].day_combination_label || '—' }}</div>
+                    <div class="small text-muted">{{ e.schedules[0].hour_combination_label }}</div>
+                  </div>
+                  <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
+                    <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                      <div>
+                        <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
+                        <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
+                      </div>
+                      <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
+                    </div>
+                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
+                      <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
+                      <div class="popover-body-sm">
+                        <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
+                          <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
+                          <div class="text-muted small">{{ sch.hour_combination_label }}</div>
+                        </div>
                       </div>
                     </div>
-
                     <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
                   </div>
                 </td>
 
-                <td style="min-width: 100px;max-width: 120px;">
-                  <div class="small text-truncate" style="max-width: 160px;" :title="e.instructor">
-                    {{ e.instructor || '—' }}
-                  </div>
+                <td class="td-b" style="min-width:100px;max-width:130px;">
+                  <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
                 </td>
 
-                <td class="text-center" style="min-width: 100px;max-width: 120px;">
-                  <label class="form-switch scale-75" title="Ficha / Expediente">
-                    <input
-                      type="checkbox"
-                      v-model="e.expedient"
-                      @change="updateQuickStatus(e, 'expedient')"
-                    />
-                    <span></span>
-                  </label>
-
-                  <label class="form-switch scale-75" title="Mejora / Upgrade">
-                    <input
-                      type="checkbox"
-                      v-model="e.upgrade"
-                      @change="updateQuickStatus(e, 'upgrade')"
-                    />
-                    <span></span>
-                  </label>
+                <td class="td-c text-center">
+                  <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span></label>
+                  <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
+                </td>
+                <td class="td-c text-center">
+                  <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
+                  <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
                 </td>
 
-                <td class="text-center" style="min-width: 100px;max-width: 120px;">
-                  <label class="form-switch scale-75" title="Pre-Confirmación">
-                    <input
-                      type="checkbox"
-                      v-model="e.preconfirmation"
-                      @change="updateQuickStatus(e, 'preconfirmation')"
-                    />
-                    <span></span>
-                  </label>
-
-                  <label class="form-switch scale-75" title="Confirmación">
-                    <input
-                      type="checkbox"
-                      v-model="e.confirmation"
-                      @change="updateQuickStatus(e, 'confirmation')"
-                    />
-                    <span></span>
-                  </label>
+                <td class="td-d">
+                  <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
+                  <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
                 </td>
-
-                <td style="min-width: 40px;max-width: 120px;">
-                  <textarea  v-if="!isCompact"
-                    class="form-control form-control-xs table-textarea"
-                    rows="2"
-                    v-model="e.notes"
-                    @blur="updateQuickNotes(e)"
-                    placeholder="..."
-                  ></textarea>
-                  <div class="small text-truncate" v-if="isCompact" style="max-width: 160px;" :title="e.notes">
-                    {{ e.notes || '—' }}
+                <td class="td-d">
+                  <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
+                  <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                    <b v-if="e.specific_code">{{ e.specific_code }}</b>
                   </div>
-                </td>
-
-                <td style="min-width: 40px;max-width: 120px;">
-                  <div class="name fw-bold small" v-if="!isCompact">
-                    <b v-if="e.global_code">{{e.global_code}}</b>
-                  </div>
-                  <div class="muted small" v-if="!isCompact || (isCompact && e.program_type=='Curso') ">
-                    <span v-if="!isCompact && e.specific_code">A: </span>
-                    <b v-if="e.specific_code">{{e.specific_code}}</b>
-                  </div>
-                  <div v-if="e.program_type_alias!='we_program_type_course'" class="muted small" style="font-size: 0.7rem;">
-                    <span v-if="!isCompact && e.clasification">UNQ: </span>
-                    <b v-if="e.clasification">{{e.clasification}}</b>
+                  <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
+                    <b v-if="e.clasification">{{ e.clasification }}</b>
                   </div>
                 </td>
               </tr>
-            </template>
-
-          </tbody>
-
-          <tbody v-if="hasActiveFilters">
-            <tr
-              v-for="(e, eIndex) in historyList"
-              :key="e.edition_num_id"
-              :class="[
-                  e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
-                  { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id } /* Opcional: clase visual */
-              ]"
-              @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-              @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
-              @mousemove="cancelLongPress" 
-              @mouseup="clearLongPress(); currentPressId = null"
-              @mouseleave="clearLongPress(); currentPressId = null"
-              @touchend="clearLongPress(); currentPressId = null"
-            >
-              <td class="ta-right nowrap">
-                <div class="d-flex justify-content-center gap-1">
-                  <button class="btn btn-icon-sm btn-light text-primary" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                    <i class="fa-solid fa-eye"></i>
-                  </button>
-                  <button :class="[
-                    'btn btn-icon-sm btn-light',
-                    (e.tree_detail.length == 0 && program_type != 'Curso') ? 'text-secondary' : 'text-danger'
-                  ]" @click.stop="openTreeModal(e)" title="Árbol">
-                    <i class="fa-solid fa-book-bookmark"></i>
-                  </button>
-                  <button class="btn btn-icon-sm btn-light" @click.stop="openEditModal(e)" title="Editar">
-                    <i v-if="e.program_type === 'Curso'" class="fa-solid fa-pen-to-square text-warning"></i>
-                    <i v-else class="fa-solid fa-sitemap text-info"></i>
-                  </button>
-                </div>
-              </td>
-
-              <td style="min-width: 40px;max-width: 230px;">
-                <div class="name fw-bold">
-                  <span v-if="!isCompact">
-                    {{ e.program_abreviature || '—' }}
-                  </span>
-                  <div v-if="isCompact" class="small text-truncate" style="min-width: 40px;max-width: 160px;" :title="e.program_abreviature">
-                    {{ e.program_abreviature || '—' }}
-                  </div>
-                </div>
-                <div class="muted small" v-if="!isCompact">
-                  {{ e.version_code }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                  <div class="muted small float-end">
-                    {{ 'Seg: ' + e.cat_segment }} {{ e.cat_course_category_alias ? ('| S: ' + e.cat_course_category_label) : '' }}
-                  </div>
-                </div>
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;" v-if="!isCompact">
-                <div class="muted small">
-                  {{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}
-                </div>
-                <div class="muted small">
-                  {{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}
-                </div>
-              </td>
-              <td style="min-width: 10px;max-width: 300px;" v-if="isCompact">
-                {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-              </td>
-
-              <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
-                {{ e.cat_course_category_label }}
-              </td>
-              <td style="min-width: 10px;max-width: 120px;" v-if="isCompact">
-                {{ e.cat_segment }}
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                {{ e.calc_da }}
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;">
-                <div class="name small fw-bold">{{ formatDate(e.start_date) }}</div>
-                <div class="muted small" v-if="!isCompact">
-                  {{ 'CA: ' + e.calc_da || 0 }}
-                  <div class="muted small float-end">
-                    {{ 'CP: ' + e.calc_dp || 0 }}
-                  </div>
-                </div>
-              </td>
-              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                {{ e.calc_dp }}
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;">
-                <div class="small">{{ formatDate(e.end_date) }}</div>
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;" v-if="isCompact">
-                {{ !e.schedules?'':e.schedules[0].day_combination_label }}
-              </td>
-              <td
-                style="min-width: 40px;max-width: 120px;"
-                class="position-relative overflow-visible"
-                :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }"
-              >
-                <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-
-                <div v-else-if="e.schedules.length === 1">
-                  <div class="name small fw-bold text-dark" v-if="!isCompact">
-                    {{ e.schedules[0].day_combination_label || '—' }}
-                  </div>
-                  <div class="small text-muted">
-                    {{ e.schedules[0].hour_combination_label }}
-                  </div>
-                </div>
-
-                <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
-                  <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                    <div>
-                      <div class="name small fw-bold text-dark">
-                        {{ e.schedules[0].day_combination_label }}
-                      </div>
-                      <div class="small text-muted text-truncate" style="max-width: 90px;">
-                        {{ e.schedules[0].hour_combination_label }}
-                      </div>
-                    </div>
-                    <span class="badge bg-light text-primary border border-primary-subtle rounded-pill">
-                      +{{ e.schedules.length - 1 }}
-                    </span>
-                  </div>
-
-                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                    <div class="popover-header-sm">
-                      Horarios ({{ e.schedules.length }})
-                      <button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button>
-                    </div>
-                    <div class="popover-body-sm">
-                      <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
-                        <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
-                        <div class="text-muted small">{{ sch.hour_combination_label }}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
-                </div>
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;">
-                <div class="small text-truncate" style="max-width: 160px;" :title="e.instructor">
-                  {{ e.instructor || '—' }}
-                </div>
-              </td>
-
-              <td class="text-center" style="min-width: 100px;max-width: 120px;">
-                <label class="form-switch scale-75" title="Ficha / Expediente">
-                  <input
-                    type="checkbox"
-                    v-model="e.expedient"
-                    @change="updateQuickStatus(e, 'expedient')"
-                  />
-                  <span></span>
-                </label>
-
-                <label class="form-switch scale-75" title="Mejora / Upgrade">
-                  <input
-                    type="checkbox"
-                    v-model="e.upgrade"
-                    @change="updateQuickStatus(e, 'upgrade')"
-                  />
-                  <span></span>
-                </label>
-              </td>
-
-              <td class="text-center" style="min-width: 100px;max-width: 120px;">
-                <label class="form-switch scale-75" title="Pre-Confirmación">
-                  <input
-                    type="checkbox"
-                    v-model="e.preconfirmation"
-                    @change="updateQuickStatus(e, 'preconfirmation')"
-                  />
-                  <span></span>
-                </label>
-
-                <label class="form-switch scale-75" title="Confirmación">
-                  <input
-                    type="checkbox"
-                    v-model="e.confirmation"
-                    @change="updateQuickStatus(e, 'confirmation')"
-                  />
-                  <span></span>
-                </label>
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;">
-                <textarea v-if="!isCompact"
-                  class="form-control form-control-xs table-textarea"
-                  rows="2"
-                  v-model="e.notes"
-                  @blur="updateQuickNotes(e)"
-                  placeholder="..."
-                ></textarea>
-                <div class="small text-truncate" v-if="isCompact" style="max-width: 160px;" :title="e.notes">
-                  {{ e.notes || '—' }}
-                </div>
-              </td>
-
-              <td style="min-width: 40px;max-width: 120px;">
-                <div class="name fw-bold small" v-if="!isCompact">
-                  <b v-if="e.global_code">{{ e.global_code }}</b>
-                </div>
-                <div class="muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
-                  <span v-if="!isCompact && e.specific_code">A: </span>
-                  <b v-if="e.specific_code">{{ e.specific_code }}</b>
-                </div>
-                <div v-if="e.program_type_alias != 'we_program_type_course'" class="muted small" style="font-size: 0.7rem;">
-                  <span v-if="!isCompact && e.clasification">UNQ: </span>
-                  <b v-if="e.clasification">{{ e.clasification }}</b>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <BaseModal v-model="showHistoryModal" title="Historial Global de Cambios" size="xl">
-  <div class="p-3 bg-light" style="min-height: 400px; max-height: 80vh; overflow-y: auto;">
-    
-    <div v-if="isLoadingHistory" class="text-center p-5 text-muted">
-      <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
-      <p>Cargando historial...</p>
-    </div>
-
-    <div v-else-if="!globalHistoryList || globalHistoryList.length === 0" class="text-center p-5 text-muted">
-      <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 opacity-25"></i>
-      <p>No se encontraron registros recientes.</p>
-    </div>
-
-    <div v-else class="d-flex flex-column gap-3">
-      <div v-for="tx in globalHistoryList" :key="tx.transaction_id" class="card border shadow-sm">
-        
-        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
-          <div>
-            <span class="fw-bold text-primary"><i class="fa-solid fa-user-circle me-1"></i> {{ tx.user_name || 'Sistema' }}</span>
-            <span class="text-muted small ms-2">{{ formatDate(tx.created_at) }} <span class="text-xs">({{ new Date(tx.created_at).toLocaleTimeString() }})</span></span>
-          </div>
-          <span class="badge bg-light text-dark border">ID Transacción: {{ tx.transaction_id }}</span>
-        </div>
-
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered mb-0 small">
-              <thead class="table-light text-muted">
-                <tr>
-                  <th style="width: 50px;" class="text-center">Tipo</th>
-                  <th style="width: 80px;">Acción</th>
-                  <th style="width: 250px;">Edición</th>
-                  <th>Detalle de Cambios</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(change, idx) in tx.changes" :key="idx">
-                  <td class="text-center align-middle">
-                    <span class="badge" :class="change.is_child ? 'bg-info-subtle text-info-emphasis' : 'bg-primary-subtle text-primary-emphasis'">
-                      {{ change.is_child ? 'Hijo' : 'Padre' }}
-                    </span>
-                  </td>
-                  <td class="align-middle">
-                    <span class="fw-bold" :class="change.action === 'UPDATE' ? 'text-warning' : 'text-success'">
-                      {{ change.action }}
-                    </span>
-                  </td>
-                  <td class="align-middle text-muted">{{ change.abbreviation + ' ('+ change.global_code+')'}}</td>
-                  <td class="align-middle">
-                    <div v-if="change.action === 'INSERT'" class="text-muted fst-italic">Registro creado</div>
-                    
-                    <div v-else class="d-flex flex-column gap-1">
-                      <div v-for="(diff, field) in change.changed_fields" :key="field" class="d-flex align-items-center gap-2 border-bottom border-light pb-1">
-                        <span class="fw-bold text-dark" style="min-width: 100px;">{{ field }}:</span>
-                        <span class="text-danger text-decoration-line-through bg-danger-subtle px-1 rounded">{{ diff.old === null ? 'null' : diff.old }}</span>
-                        <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.7rem;"></i>
-                        <span class="text-success bg-success-subtle px-1 rounded fw-bold">{{ diff.new === null ? 'null' : diff.new }}</span>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-  <template #footer>
-    <button class="btn btn-secondary btn-sm" @click="showHistoryModal = false">Cerrar</button>
-  </template>
-</BaseModal>
-<BaseModal v-model="showMetaModal" title="Resumen de Programación" size="xl">
-  <div class="meta-dashboard p-3">
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" v-if="!hasActiveFilters">
-      <div class="card-body p-0">
-        <div class="row g-0">
-
-          <div class="col-md-4 bg-primary text-white p-4 d-flex flex-column justify-content-center align-items-center text-center position-relative">
-            <i class="fa-solid fa-chart-line position-absolute start-0 bottom-0 opacity-25" style="font-size: 8rem; transform: translate(-20%, 20%);"></i>
-
-            <h6 class="text-uppercase opacity-75 mb-2 letter-spacing-1">Avance Global</h6>
-            <div class="display-3 fw-bold mb-0">
-              {{ metaSummary.general.percentage }}<small class="fs-4">%</small>
-            </div>
-            <div class="progress w-100 bg-white bg-opacity-25 mt-3" style="height: 8px;">
-              <div
-                class="progress-bar bg-white"
-                role="progressbar"
-                :style="{ width: metaSummary.general.percentage + '%' }"
-              ></div>
-            </div>
-          </div>
-
-          <div class="col-md-8 p-4 d-flex align-items-center bg-white">
-            <div class="row w-100 text-center g-3">
-
-              <div class="col-4 border-end">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Ventas (B2C)</div>
-                <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.sales }}</div>
-                <div class="small text-success">
-                  <i class="fa-solid fa-user-check me-1"></i> Inscritos
-                </div>
-              </div>
-
-              <div class="col-4 border-end">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Corporativo (B2B)</div>
-                <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.b2b }}</div>
-                <div class="small text-info">
-                  <i class="fa-solid fa-building me-1"></i> Empresas
-                </div>
-              </div>
-
-              <div class="col-4">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Objetivo Total</div>
-                <div class="fs-2 fw-bold text-secondary">{{ metaSummary.general.target }}</div>
-                <div class="small text-muted">
-                  <i class="fa-solid fa-bullseye me-1"></i> Vacantes
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-    <div class="row g-4 mb-4">
-
-      <div class="col-lg-8">
-        <div class="meta-card h-100">
-          <div class="meta-card__header">
-            <i class="fa-solid fa-layer-group text-primary me-2"></i> Líneas de Negocio
-          </div>
-          <div class="meta-card__body">
-            <div class="lines-grid">
-              <div
-                v-for="(line, idx) in metaSummary.lines"
-                :key="idx"
-                class="line-item"
-                :class="{ 'is-zero': line.count === 0 }"
-              >
-                <div class="line-item__name">{{ line.name }}</div>
-                <div class="line-item__count">{{ line.count }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <div class="meta-card h-100">
-          <div class="meta-card__header">
-            <i class="fa-solid fa-chart-pie text-success me-2"></i> Categorías
-          </div>
-          <div class="meta-card__body">
-            <div class="d-flex flex-column gap-3">
-              <div v-for="(cat, idx) in metaSummary.categories.filter(c => c.name !== 'Total' && c.name !='Minicurso')" :key="idx">
-                <div class="d-flex justify-content-between mb-1 small fw-bold">
-                  <span>{{ cat.name }}</span>
-                  <span>{{ cat.count }}</span>
-                </div>
-                <div class="progress" style="height: 6px;">
-                  <div
-                    class="progress-bar bg-info"
-                    role="progressbar"
-                    :style="{ width: (cat.count / (metaSummary.categories.find(c=>c.name==='Total')?.count || 1) * 100) + '%' }"
-                  ></div>
-                </div>
-              </div>
-
-              <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
-                 <span class="text-muted small text-uppercase fw-bold">Total Programado</span>
-                 <span class="badge bg-dark fs-6">{{ metaSummary.categories.find(c=>c.name==='Total')?.count || 0 }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row g-4">
-
-      <div class="col-md-6">
-        <div class="meta-card h-100">
-          <div class="meta-card__header">
-            <i class="fa-solid fa-tags text-warning me-2"></i> Clasificación por Tipo
-          </div>
-          <div class="meta-card__body p-0">
-            <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0 align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th class="px-3">Código</th>
-                    <th>Descripción</th>
-                    <th class="text-center px-3">Cant.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(type, idx) in metaSummary.types" :key="idx">
-                    <td class="px-3">
-                      <span class="badge rounded-pill bg-light text-dark border border-secondary fw-bold">
-                        {{ type.code }}
-                      </span>
-                    </td>
-                    <td><small class="text-muted lh-1 d-block">{{ type.description }}</small></td>
-                    <td class="text-center fw-bold text-primary px-3">{{ type.count }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="meta-card h-100">
-          <div class="meta-card__header">
-            <i class="fa-solid fa-list-ol text-danger me-2"></i> Segmentación Operativa
-          </div>
-          <div class="meta-card__body p-0">
-             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0 align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th class="px-3">Seg.</th>
-                    <th>Acción Requerida</th>
-                    <th class="text-center px-3">Cant.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :class="'row-segment-' + seg.code.toLowerCase()"   v-for="(seg, idx) in metaSummary.segments" :key="idx">
-                    <td class="px-3">
-                      <div class="segment-circle">{{ seg.code }}</div>
-                    </td>
-                    <td><small class="text-muted lh-1 d-block">{{ seg.description.replace('*', '') }}</small></td>
-                    <td class="text-center fw-bold text-dark px-3">{{ seg.count }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</BaseModal>
-<BaseModal v-model="showFilterModal" title="Filtrar Cronograma" size="lg">
-    <div class="p-3 row">
-
-        <div class="row g-2 mb-3">
-            <label class="form-label small fw-bold">Rango Fecha inicio</label>
-              <BaseDatePicker
-                v-model="filterForm.range_string"
-                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-                placeholder="Seleccione rango (Desde a Hasta)"
-                @on-change="handleRangeFilterChange"
-            />
-        </div>
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Buscar Programa</label>
-            <SearchSelect
-                v-model="filterForm.program_version_id"
-                mode="remote"
-                :fetcher="q => programService.programVersionCaller({ q })"
-                label-field="program_type_for_iu"
-                value-field="program_version_id"
-                sublabel-field="version_code"
-                placeholder="Buscar programa..."
-                :cache="false"
-                view-open="6"
-                :model-label="filterForm.program_version_label"
-                @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''"
-            />
-          </div>
-
-        <div class="mb-3 col-6">
-             <label class="form-label small fw-bold">Docente</label>
-           <MultiSelect
-              v-model="filterForm.instructores_seleccionados"
-
-              mode="remote"
-              :fetcher="(q) => instructorService.instructorCaller({ q })"
-              :debounce-ms="400"
-
-              labelKey="full_name"
-              valueKey="instructor_id"
-
-              placeholder="Buscar docentes..."
-              modalTitle="Seleccionar Docentes"
-            />
-        </div>
-<!--
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Texto a buscar</label>
-            <input type="text" class="form-control form-control-sm" v-model="filterForm.q" placeholder="Buscar por código, programa, docente..." />
-        </div> -->
-
-        <!--cat_segment cat_course_category cat_day_combination cat_hour_combination cat_model_modality-->
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Línea de Negocio</label>
-            <MultiSelect
-                v-model="filterForm.category_ids"
-                :items="catalogs.catLines"
-                label-key="description"
-                value-key="id"
-                placeholder="LINEAS..."
-            />
-        </div>
-
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Categoría</label>
-            <MultiSelect
-                v-model="filterForm.type_program_ids"
-                :items="catalogs.catCategories"
-                label-key="description"
-                value-key="id"
-                placeholder="CATEGORIAS..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Seguimiento Ediciòn</label>
-            <MultiSelect
-                v-model="filterForm.course_category_ids"
-                :items="catalogs.catTypes"
-                label-key="description"
-                value-key="id"
-                placeholder="S. EDICIONES..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Segmento</label>
-            <MultiSelect
-                v-model="filterForm.segment_ids"
-                :items="catalogs.catSegments"
-                label-key="description"
-                value-key="id"
-                placeholder="SEGMENTOS..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Días</label>
-            <MultiSelect
-                v-model="filterForm.combination_days_ids"
-                :items="catalogs.dayCombinationList"
-                label-key="description"
-                value-key="id"
-                placeholder="DIAS..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Horas</label>
-            <MultiSelect
-                v-model="filterForm.hour_combination_ids"
-                :items="catalogs.hourCombinationList"
-                label-key="description"
-                value-key="id"
-                placeholder="HORARIOS..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Modalidad</label>
-            <MultiSelect
-                v-model="filterForm.model_modality_ids"
-                :items="catalogs.modalityList"
-                label-key="description"
-                value-key="id"
-                placeholder="MODALIDADES..."
-            />
-        </div>
-
-        <div class="mb-3 col-6">
-            <label class="form-label small fw-bold">Clasificaciòn</label>
-
-            <!--input text -->
-            <input type="text" class="form-control form-control-sm" v-model="filterForm.clasification" placeholder="UNQ" />
-        </div>
-
-    </div>
-    <template #footer>
-        <div class="d-flex justify-content-end w-100 gap-2">
-            <button class="btn btn-outline-secondary btn-sm" @click="showFilterModal = false">Cancelar</button>
-            <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
-        </div>
-    </template>
-</BaseModal>
-  <BaseModal
-    v-model="showFormModal"
-    :title="currentEdition ? 'Administrar Edición' : 'Nueva Edición'"
-    size="xl"
-  >
-    <div class="modern-modal-layout">
-
-        <div class="main-column">
-
-            <div class="internal-header mb-3" v-if="currentEdition">
-                 <div class="d-flex align-items-center gap-2">
-                    <div class="badge-type" :class="isCourse ? 'bg-warning-subtle text-warning-emphasis' : 'bg-info-subtle text-info-emphasis'">
-                        {{ isCourse ? 'CURSO' : 'PROGRAMA' }}
-                    </div>
-                    <h5 class="m-0 fw-bold text-dark">{{ currentEdition.program_abreviature }}</h5>
-                    <div class="badge-type bg-primary-subtle text-primary-emphasis">
-                        {{ 'Sesiones: '+modalForm.sessions }}
-                    </div>
-                 </div>
-                 <div class="text-muted small mt-1 ms-1">
-                    {{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Codigo Anual' }} &bull; {{ currentEdition.clasification || '' }}
-                 </div>
-            </div>
-
-            <section class="form-section">
-                <div class="section-label">Definición General</div>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label-sm">Versión de Programa</label>
-                        <SearchSelect
-                            v-model="modalForm.program_version_id"
-                            mode="remote"
-                            :disabled="currentEdition && currentEdition.edition_num_id"
-                            :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e=> e.alias == 'we_modality_online').id })"
-                            label-field="program_type_for_iu"
-                            value-field="program_version_id"
-                            placeholder="Buscar programa..."
-                            :minChars="0"
-                            :cache="false"
-                            required
-                            view-open="6"
-                            :model-label="modalForm.abbreviation"
-                            @change="onProgramVersionChange"
-                        />
-                    </div>
-                    <div class="col-6" v-if="modalForm.cat_type_program_alias === 'we_program_type_course'">
-                         <label class="form-label-sm">Docente Asignado</label>
-                         <SearchSelect
-                            v-model="modalForm.instructor_id"
-                            mode="remote"
-                            :fetcher="q => instructorService.instructorCaller({ q })"
-                            showSubValue
-                            label-field="full_name"
-                            sublabel-field="document_number"
-
-                            value-field="instructor_id"
-                            placeholder="Buscar docente..."
-                            :model-label="modalForm.instructor_label"
-                            :minChars="0"
-                            :cache="false"
-                         />
-
-                    </div>
-
-                      <div class="col-3">
-                          <label class="form-label-sm">Segmentación</label>
-                          <SearchSelect
-                              v-model="modalForm.cat_segment_id"
-                              :items="catalogs.catSegments"
-                              label-field="description"
-                              value-field="id"
-                              placeholder="OPCIONAL"
-                          />
-
-                      </div>
-
-                      <div class="col-3 " v-if="modalForm.program_version_id">
-                          <label class="form-label-sm">Vacantes</label>
-                          <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant"   placeholder="VACANTES"/>
-                      </div>
-                </div>
-            </section>
-
-            <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias === 'we_program_type_course'">
-                <div class="section-label">Logística y Horarios</div>
-                <div class="row g-3">
-                  <div class="col-md-6 position-relative">
-                    <label class="form-label-sm">Fecha Inicio</label>
-                    
-                    <div class="input-group input-group-sm">
-                        <BaseDatePicker
-                            v-model="modalForm.start_date"
-                            :config="getChildDateConfig()"
-                            :disabled="!modalForm.cat_day_combination_id"
-                            :required="isCourse"
-                            placeholder="dd/mm/aaaa"
-                            @on-change="validateAndCalculate(modalForm, 'start_date')"
-                        />
-                        
-                        <button
-                            class="btn btn-outline-secondary"
-                            type="button"
-                            @click.stop="toggleGapPreview($event, 'main_gap', modalForm.program_version_id, modalForm)"
-                            title="Ver análisis de tiempos"
-                            :disabled="!modalForm.start_date || !modalForm.program_version_id"
-                        >
-                            <i class="fa-solid fa-timeline text-primary"></i>
-                        </button>
-                    </div>
-
-                    <div 
-                      v-if="activeGapPreviewId === 'main_gap'" 
-                      class="schedule-preview-popover shadow-lg"
-                      :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                      style="width: 350px;"
-                    >
-                        <div class="popover-header">
-                            <span>Análisis de Tiempos</span>
-                            <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
-                        </div>
-                        <div class="popover-content">
-    <div v-if="isLoadingGap" class="text-center p-4 text-muted">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-    </div>
-    <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">
-        Sin datos.
-    </div>
-    
-    <div v-else class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-        <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-            <thead class="sticky-top">
-                <tr>
-                    <th class="text-center" style="width: 40px;">#</th>
-                    <th>FECHA</th>
-                    <th class="text-end pe-3">ESTADO</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
-                    :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                    
-                    <td class="text-center fw-bold text-muted small">
-                        <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-                        <div v-else>{{ idx + 1 }}</div>
-                    </td>
-
-                    <td>
-                      <div class="d-flex flex-column lh-sm py-1">
-                          <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                              {{ formatDate(item.start_date_eff) + ' ['+item.global_code+']' }}
-                          </span>
-
-                          <div class="d-flex justify-content-between">
-                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                  {{ item.hoursLabel }}
-                              </span>
-                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                  {{ item.daysLabel }}
-                              </span>
-                          </div>
-                      </div>
-                  </td>
-
-                    <td class="text-end pe-3">
-                        <div v-if="item.type === 'current'">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">
-                                SELECCIÓN
-                            </span>
-                        </div>
-
-                        <div v-else-if="item.gapInfo">
-                            <span class="badge rounded-pill px-3"
-                                :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 
-                                        (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 
-                                        'bg-info-subtle text-info-emphasis border border-info-subtle')">
-                                {{ item.gapInfo.label }}
-                            </span>
-                        </div>
-
-                        <div v-else>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">
-                                OK
-                            </span>
-                        </div>
-                    </td>
-                </tr>
             </tbody>
-        </table>
-    </div>
-</div>
-                    </div>
-                    
-                    <div v-if="activeGapPreviewId === 'gap_popover'" class="click-overlay" @click="activeGapPreviewId = null"></div>
-                </div>
-                  <div class="col-md-6 position-relative">
-                    <label class="form-label-sm">Fecha Fin</label>
-                    <div class="input-group input-group-sm">
-                      <BaseDatePicker
-                        v-model="modalForm.end_date"
-                        :disabled="!modalForm.cat_day_combination_id"
-                        :config="getChildDateConfig(null,modalForm)"
-                        :required="isCourse"
-                        placeholder="Calculado autom."
-                      />
-
-                      <button
-                        class="btn btn-outline-secondary"
-                        type="button"
-                        @click.stop="toggleSchedulePreview('main_parent', modalForm, $event)"
-                        title="Ver desglose de sesiones"
-                      >
-                        <i class="fa-solid fa-circle-info text-info"></i>
-                      </button>
-                    </div>
-
-                    <div 
-                      v-if="activePreviewId === 'main_parent'" 
-                      class="schedule-preview-popover shadow-lg"
-                      :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                    >
-                      <div class="popover-header">
-                        <span>Proyección de Sesiones</span>
-                        <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
-                      </div>
-                      <div class="popover-content">
-                        <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">
-                          Faltan datos para calcular (Inicio, Días o Sesiones).
-                        </div>
-                        <table v-else class="table table-sm table-striped mb-0 small-table">
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>Fecha</th>
-                              <th>Estado</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                              <td class="fw-bold text-center">{{ item.sessionNum }}</td>
-                              <td>
-                                <div class="d-flex flex-column lh-1">
-                                  <span>{{ formatDate(item.date) }}</span>
-                                  <small class="text-muted" style="font-size: 0.65rem">{{ getDayName(item.date) }}</small>
-                                </div>
-                              </td>
-                              <td>
-                                <span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span>
-                                <div v-else class="text-danger fw-bold" style="font-size: 0.7rem;">
-                                  <i class="fa-solid fa-ban me-1"></i> {{ item.desc }}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    
-                    <div v-if="activePreviewId === 'main_parent'" class="click-overlay" @click="activePreviewId = null"></div>
-                  </div>
-                      <div class="col-md-6">
-                          <label class="form-label-sm">Días</label>
-                          <SearchSelect
-                              v-model="modalForm.cat_day_combination_id"
-                              :items="catalogs.dayCombinationList"
-                              label-field="description"
-                              value-field="id"
-                              placeholder="Seleccione días"
-                              :required="isCourse"
-                              @change="calculateEndDate(modalForm)"
-                          />
-                      </div>
-                     <div class="col-md-6">
-                        <label class="form-label-sm">Horas</label>
-                        <SearchSelect
-                            v-model="modalForm.cat_hour_combination_id"
-                            :items="catalogs.hourCombinationList"
-                            label-field="description"
-                            value-field="id"
-                            placeholder="Seleccione horario"
-                            :required="isCourse"
-                        />
-                     </div>
-                </div>
-            </section>
-
-            <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course'">
-                <div class="section-label">Estructura del Programa</div>
-                <div class="hierarchy-container">
-                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 20%">Sub-Programa</th>
-                                <th style="width: 20%">Edición</th>
-                                <th style="width: 25%">Fechas</th>
-                                <th style="width: 20%">Horario / Docente</th>
-                                <th style="width: 15%">Config.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                             <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id" :class="{ 'opacity-50': isBlockedByPrevious(index) }">
-                                 <td class="fw-bold text-dark">
-                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
-                                   <span class="text-primary text-decoration-hover" style="cursor:pointer"  @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })" >{{ child.abbreviation }}</span>
-                                  <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: '+ child.sessions }}</div>
-                                 </td>
-
-                                 <td>
-                                     <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
-                                         <small class="text-muted">¿Nueva?</small>
-                                         <label class="form-switch scale-75">
-                                            <input
-                                        :disabled="isBlockedByPrevious(index) " type="checkbox" v-model="child.new" />
-                                            <span></span>
-                                         </label>
-                                     </div>
-
-                                     <SearchSelect
-                                        v-if="!child.new && !child.edition_id"
-                                        v-model="child.edition_id"
-                                        mode="remote"
-                                        :fetcher="(q) => searchEditionsFiltered(q, child,index)"
-                                        label-field="label_for_iu"
-                                        sublabel-field="specific_code"
-                                        value-field="edition_num_id"
-                                        placeholder="Vincular edición..."
-                                        :minChars="0"
-                                        :cache="false"
-                                        required
-                                        @change="onChildEditionChange($event, child, index)"
-                                        :disabled="child.new"
-                                     />
-
-                                     <!--botòn x borrar-->
-                                     <button :disabled="isBlockedByPrevious(index) " v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)">
-                                         <i class="fa-solid fa-times"></i> Desvincular
-                                     </button>
-                                     <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
-                                         <div class="fw-bold">{{ child.global_code }}</div>
-                                         <div class="text-xs text-muted">{{ child.specific_code }}</div>
-                                         <div class="text-xs text-muted">{{ 'Sesiones: '+ child.sessions }}</div>
-                                     </div>
-                                 </td>
-                                  <td class="overflow-visible position-relative" style="min-width:180px!important" 
-                                      :style="{ zIndex: activeGapPreviewId === ('child_gap_' + index) ? 1060 : 'inherit' }">
-                                      
-                                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-
-                                          <div class="input-group input-group-xs mb-1">
-                                              <BaseDatePicker
-                                                  v-model="child.start_date"
-                                                  :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
-                                                  :required="true"
-                                                  placeholder="Inicio"
-                                                  :config="getChildDateConfig(index)"
-                                                  @on-change="validateAndCalculate(child, 'start_date', index)"
-                                              />
-                                              <button
-                                                  class="btn btn-outline-secondary px-1"
-                                                  type="button"
-                                                  :disabled="!child.start_date || isBlockedByPrevious(index)"
-                                                  @click.stop="toggleGapPreview($event, 'child_gap_' + index, child.child_program_version_id, child)"
-                                                  title="Ver análisis de tiempos"
-                                              >
-                                                  <i class="fa-solid fa-timeline text-primary" style="font-size: 0.8rem;"></i>
-                                              </button>
-                                          </div>
-
-                                          <div 
-                                              v-if="activeGapPreviewId === ('child_gap_' + index)" 
-                                              class="schedule-preview-popover shadow-lg"
-                                              :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                                              style="width: 350px; left: 0; z-index: 1060;" 
-                                          >
-                                              <div class="popover-header">
-                                                  <span>Análisis: {{ child.abbreviation }}</span>
-                                                  <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
-                                              </div>
-                                              
-                                              <div class="popover-content">
-                                                  <div v-if="isLoadingGap" class="text-center p-4 text-muted">
-                                                      <i class="fa-solid fa-spinner fa-spin"></i>
-                                                  </div>
-                                                  <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">
-                                                      Sin datos.
-                                                  </div>
-                                                  
-                                                  <div v-else class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                                                      <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-                                                          <thead class="sticky-top">
-                                                              <tr>
-                                                                  <th class="text-center" style="width: 40px;">#</th>
-                                                                  <th>FECHA</th>
-                                                                  <th class="text-end pe-3">ESTADO</th>
-                                                              </tr>
-                                                          </thead>
-                                                          <tbody>
-                                                              <tr v-for="(item, idx) in gapPreviewData" :key="idx" 
-                                                                  :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                                                                  
-                                                                  <td class="text-center fw-bold text-muted small">
-                                                                      <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-                                                                      <div v-else>{{ idx + 1 }}</div>
-                                                                  </td>
-
-                                                                  <td>
-                                                                      <div class="d-flex flex-column lh-sm py-1">
-                                                                          <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                                                                              {{ formatDate(item.start_date_eff) + ' ['+item.global_code+']' }}
-                                                                          </span>
-                                                                          <div class="d-flex justify-content-between">
-                                                                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                                                                  {{ item.hoursLabel }}
-                                                                              </span>
-                                                                              <span class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                                                                                  {{ item.daysLabel }}
-                                                                              </span>
-                                                                          </div>
-                                                                      </div>
-                                                                  </td>
-
-                                                                  <td class="text-end pe-3">
-                                                                      <div v-if="item.type === 'current'">
-                                                                          <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span>
-                                                                      </div>
-                                                                      <div v-else-if="item.gapInfo">
-                                                                          <span class="badge rounded-pill px-3"
-                                                                              :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 
-                                                                                      (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 
-                                                                                      'bg-info-subtle text-info-emphasis border border-info-subtle')">
-                                                                              {{ item.gapInfo.label }}
-                                                                          </span>
-                                                                      </div>
-                                                                      <div v-else>
-                                                                          <span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span>
-                                                                      </div>
-                                                                  </td>
-                                                              </tr>
-                                                          </tbody>
-                                                      </table>
-                                                  </div>
-                                              </div>
-                                          </div>
-
-                                          <div class="position-relative">
-                                              <div class="input-group input-group-xs">
-                                                  <BaseDatePicker
-                                                      v-model="child.end_date"
-                                                      :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id"
-                                                      :required="true"
-                                                      :config="getChildDateConfig(null, child)"
-                                                      placeholder="Fin (Calc)"
-                                                  />
-                                                  <button
-                                                      class="btn btn-outline-secondary px-1"
-                                                      type="button"
-                                                      :disabled="isBlockedByPrevious(index)"
-                                                      @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"
-                                                  >
-                                                      <i class="fa-solid fa-circle-info text-info" style="font-size: 0.8rem;"></i>
-                                                  </button>
-                                              </div>
-
-                                              <div 
-                                                  v-if="activePreviewId === ('child_' + child.child_program_version_id)" 
-                                                  class="schedule-preview-popover shadow-lg" 
-                                                  style="right: 0; left: auto; min-width: 250px; z-index: 1070 !important;"
-                                                  :class="{ 'popover-opens-top': popoverPosition === 'top' }"
-                                              >
-                                                  <div class="popover-header">
-                                                      <span>Cronograma Estimado</span>
-                                                      <button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button>
-                                                  </div>
-                                                  <div class="popover-content">
-                                                      <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">Datos insuficientes.</div>
-                                                      <table v-else class="table table-sm table-striped mb-0 small-table">
-                                                          <thead><tr><th>#</th><th>Fecha</th><th>Obs.</th></tr></thead>
-                                                          <tbody>
-                                                              <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                                                                  <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
-                                                                  <td>{{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span></td>
-                                                                  <td>
-                                                                      <i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i>
-                                                                      <span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span>
-                                                                  </td>
-                                                              </tr>
-                                                          </tbody>
-                                                      </table>
-                                                  </div>
-                                              </div>
-                                              
-                                              <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
-                                          </div>
-
-                                      </div>
-                                      
-                                      <div v-else class="text-muted text-center">-</div>
-                                      
-                                      <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="click-overlay" @click="activeGapPreviewId = null"></div>
-
-                                  </td>
-
-                                 <td>
-                                     <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                                      <SearchSelect
-                                          v-model="child.cat_day_combination_id"
-                                          :items="catalogs.dayCombinationList"
-                                          label-field="description"
-                                          value-field="id"
-                                          placeholder="Días"
-                                          required
-                                          :disabled="isBlockedByPrevious(index)"
-                                          class="mb-1"
-                                          @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id',child.cat_day_combination_id)"
-                                      />
-                                      <SearchSelect
-                                        v-model="child.cat_hour_combination_id" required :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1"
-                                        :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id',child.cat_hour_combination_id)"
-                                      />
-                                      <SearchSelect
-                                      :disabled="isBlockedByPrevious(index) "
-                                        v-if="child.new || child.edition_id" v-model="child.instructor_id"
-                            :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label"
-                                      />
-                                     </div>
-                                      <div v-else class="text-muted text-center">-</div>
-                                 </td>
-
-                                 <td>
-                                     <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                                         <div class="d-flex align-items-center gap-2">
-                                            <label class="form-switch scale-75">
-                                                <input type="checkbox" v-model="child.active"  />
-                                                <span></span>
-                                            </label>
-                                            <small class="text-muted">Activo</small>
-                                         </div>
-                                         <div class="d-flex align-items-center gap-2">
-                                            <label class="form-switch scale-75">
-                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
-                                                  if(child.preconfirmation && child.expedient){
-                                                    child.confirmation=true
-                                                  }else{
-                                                    child.confirmation=false
-                                                  }
-                                                }" type="checkbox" v-model="child.preconfirmation"  />
-                                                <span></span>
-                                            </label>
-                                            <small class="text-muted">PRE-cfm</small>
-                                         </div>
-                                         <div class="d-flex align-items-center gap-2">
-                                            <label class="form-switch scale-75">
-                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
-                                                  if(child.preconfirmation && child.expedient){
-                                                    child.confirmation=true
-                                                  }else{
-                                                    child.confirmation=false
-                                                  }
-                                                }" type="checkbox" v-model="child.expedient"  />
-                                                <span></span>
-                                            </label>
-                                            <small class="text-muted">Ficha</small>
-                                         </div>
-
-                                         <div class="d-flex align-items-center gap-2">
-                                            <label class="form-switch scale-75">
-                                                <input :disabled="isBlockedByPrevious(index) " @change="()=>{
-                                                  if(child.confirmation){
-                                                    child.preconfirmation=true
-                                                    child.expedient=true
-                                                  }else{
-                                                    child.preconfirmation=false
-                                                    child.expedient=false
-                                                  }
-                                                }" type="checkbox" v-model="child.confirmation"  />
-                                                <span></span>
-                                            </label>
-                                            <small class="text-muted">Cfm</small>
-                                         </div>
-
-
-                                     </div>
-                                     <div v-else class="text-muted text-center">-</div>
-                                 </td>
-                             </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-
-        <div class="sidebar-column">
-
-            <div class="status-card mb-3">
-                <div class="status-card__header">
-                    <i class="fa-solid fa-sliders me-2"></i> Configuración
-                </div>
-
-                <div class="status-card__body">
-                    <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
-                        <div class="switch-label">
-                            <span class="fw-bold">Ficha</span>
-                            <small class="d-block text-muted">Generar expediente</small>
-                        </div>
-                        <label class="form-switch">
-                            <input type="checkbox" v-model="modalForm.expedient" />
-                            <span></span>
-                        </label>
-                    </div>
-                    <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
-                        <div class="switch-label">
-                            <span class="fw-bold">Pre-Confirmación</span>
-                        </div>
-                        <label class="form-switch">
-                            <input type="checkbox" v-model="modalForm.preconfirmation" />
-                            <span></span>
-                        </label>
-                    </div>
-                    <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-                    <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
-                        <div class="switch-label">
-                            <span class="fw-bold text-primary">Confirmación</span>
-                        </div>
-                        <label class="form-switch">
-                            <input type="checkbox" v-model="modalForm.confirmation" />
-                            <span></span>
-                        </label>
-                    </div>
-                    <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-                    <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
-                        <div class="switch-label">
-                            <span class="fw-bold">Mejora</span>
-                        </div>
-                        <label class="form-switch">
-                            <input type="checkbox" v-model="modalForm.upgrade" />
-                            <span></span>
-                        </label>
-                    </div>
-                    <div class="switch-row">
-                        <div class="switch-label">
-                            <span class="fw-bold">Estado(Activo)</span>
-                        </div>
-                        <label class="form-switch">
-                            <input type="checkbox" v-model="modalForm.active" />
-                            <span></span>
-                        </label>
-                    </div>
-                    <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-
-                    <div class="col-12">
-                         <label class="form-label-sm">Historico</label>
-                         <input type="text"  class="form-control form-control-sm" v-model.number="modalForm.global_code" required />
-                    </div>
-
-                    <div class="col-12">
-                         <label class="form-label-sm">Ed. Año</label>
-                         <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" required />
-                    </div>
-
-                </div>
-            </div>
-            <div class="status-card">
-                 <div class="status-card__header">
-                    <i class="fa-regular fa-comment-dots me-2"></i> Observaciones
-                </div>
-                <div class="status-card__body p-0">
-                    <textarea
-                      class="form-control border-0 bg-transparent"
-                      rows="6"
-                      v-model="modalForm.notes"
-                      placeholder="Escriba aquí notas internas..."
-                      style="resize: vertical; min-height: 150px; max-height: none; font-size: 0.85rem;"
-                  ></textarea>
-                </div>
-            </div>
-
-            <!-- <div class="status-card">
-                 <div class="status-card__header">
-                    <i class="fa-regular fa-solid fa-code-branch me-2"></i> Estructura Adjunta
-                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" style="cursor: pointer" @click="addAttachmentProgram">
-                        <i class="fa-solid fa-plus text-sm"></i>
-                    </button>
-                </div>
-                <div class="status-card__body p-0">
-
-                    <div v-for="(child, index) in modalForm.attachments" :key="index" class="d-flex align-items-center gap-2 p-2 border-bottom">
-                        <SearchSelect
-                            v-model="child.program_version_attachment_id"
-                            mode="remote"
-                            :fetcher="q => programService.programVersionCaller({ q })"
-                            label-field="abbreviation"
-                            value-field="program_version_id"
-                            placeholder="Buscar programa..."
-                            :minChars="0"
-                            :cache="false"
-                            view-open="6"
-                        />
-                    </div>
-                </div>
-            </div> -->
-        </div>
-    </div>
-
-    <template #footer>
-      <div class="d-flex justify-content-between w-100 align-items-center">
-        <div class="text-muted small fst-italic">
-            <span v-if="currentEdition">Editando ID: {{ currentEdition.edition_num_id }}</span>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline btn-sm px-3" @click="cleanFormModal();showFormModal = false">
-            Cancelar
-            </button>
-            <button
-            class="btn btn-primary btn-sm px-4 fw-bold"
-            :disabled="!isModalValid"
-            @click="applyModalForm"
-            >
-            <i class="fa-solid fa-save me-1"></i> Guardar Cambios
-            </button>
+          </table>
         </div>
       </div>
-    </template>
-  </BaseModal>
+    </main>
 
-<BaseModal v-model="showTreeModal" :title="treeModalTitle" size="lg">
-  <div class="accordion-container p-3 bg-light rounded-3">
+    <!-- ══════════════ FOOTER ══════════════ -->
+    <footer class="exec-footer">
+      <span>Período: <strong>{{ months[selectedMonth - 1] }} {{ selectedYear }}</strong></span>
+      <span class="footer-sep">·</span>
+      <span>Vista: <strong>{{ isCompact ? 'Compacta' : 'Normal' }}</strong></span>
+      <span v-if="hasActiveFilters">
+        <span class="footer-sep">·</span>
+        <span style="color:var(--gold-400); font-weight:600;">Modo Histórico activo</span>
+      </span>
+      <span class="footer-spacer"></span>
+      <span class="footer-status">
+        <span class="status-dot dot-ok"></span>
+        Datos sincronizados
+      </span>
+    </footer>
 
-    <div v-if="!treeGroups.length" class="empty-state p-5 text-center">
-      <div class="mb-3">
-        <i class="fa-solid fa-sitemap fs-1 text-muted opacity-25"></i>
-      </div>
-      <h6 class="text-secondary">Sin estructura jerárquica</h6>
-      <p class="text-muted small">Esta edición no tiene programas padres ni cursos hijos asociados.</p>
-    </div>
+    <!-- ══════════════ MODALES ══════════════ -->
 
-    <div v-else class="d-flex flex-column gap-3">
-
-      <div
-        v-for="(group, idx) in treeGroups"
-        :key="idx"
-        class="accordion-card bg-white border rounded shadow-sm overflow-hidden"
-      >
-        <div
-          class="accordion-header p-3 d-flex align-items-center justify-content-between cursor-pointer"
-          :class="{ 'bg-primary-subtle': group.isOpen }"
-          @click="toggleGroup(idx)"
-        >
-          <div class="d-flex align-items-center gap-3" :class="{ 'opacity-75': group.active === 'N' }">
-            <div class="icon-box border rounded p-2 position-relative" 
-                :class="group.active === 'N' ? 'bg-danger-subtle text-danger border-danger-subtle' : 'bg-white text-primary border-primary-subtle'">
-              
-              <i class="fa-solid" :class="group.active === 'N' ? 'fa-ban' : 'fa-layer-group'"></i>
-              
-              <i v-if="group.active === 'N'" 
-                class="fa-solid fa-times position-absolute top-50 start-50 translate-middle opacity-50" 
-                style="font-size: 1.5rem;"></i>
-            </div>
-
-            <div>
-              <div class="badge mb-1" 
-                  :class="group.active === 'N' ? 'bg-danger text-white' : 'bg-primary text-white'"
-                  style="font-size: 0.65rem;">
-                {{ group.active === 'N' ? 'PROGRAMA INACTIVO' : 'PROGRAMA PADRE' }}
+    <!-- Modal: Historial Global -->
+    <BaseModal v-model="showHistoryModal" title="Historial Global de Cambios" size="xl">
+      <div class="p-3 bg-light" style="min-height:400px;max-height:80vh;overflow-y:auto;">
+        <div v-if="isLoadingHistory" class="text-center p-5 text-muted">
+          <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
+          <p>Cargando historial…</p>
+        </div>
+        <div v-else-if="!globalHistoryList || globalHistoryList.length === 0" class="text-center p-5 text-muted">
+          <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 opacity-25"></i>
+          <p>No se encontraron registros recientes.</p>
+        </div>
+        <div v-else class="d-flex flex-column gap-3">
+          <div v-for="tx in globalHistoryList" :key="tx.transaction_id" class="card border shadow-sm">
+            <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+              <div>
+                <span class="fw-bold text-primary"><i class="fa-solid fa-user-circle me-1"></i>{{ tx.user_name || 'Sistema' }}</span>
+                <span class="text-muted small ms-2">{{ formatDate(tx.created_at) }} <span class="text-xs">({{ new Date(tx.created_at).toLocaleTimeString() }})</span></span>
               </div>
-
-              <h6 class="m-0 fw-bold" :class="group.active === 'N' ? 'text-danger text-decoration-line-through' : 'text-dark'">
-                {{ group.abbreviation }}
-              </h6>
-
-              <div class="small text-muted">
-                {{ group.global_code }} &bull;
-                <span v-if="group.clasification" class="badge-btn" style="cursor: pointer;" @click="filterDirectly({ clasification: group.clasification })"> 
-                  {{ group.clasification }}
-                  <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>
-                </span>
+              <span class="badge bg-light text-dark border">ID: {{ tx.transaction_id }}</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0 small">
+                  <thead class="table-light text-muted">
+                    <tr><th style="width:50px;" class="text-center">Tipo</th><th style="width:80px;">Acción</th><th style="width:250px;">Edición</th><th>Detalle de Cambios</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(change, idx) in tx.changes" :key="idx">
+                      <td class="text-center align-middle"><span class="badge" :class="change.is_child ? 'bg-info-subtle text-info-emphasis' : 'bg-primary-subtle text-primary-emphasis'">{{ change.is_child ? 'Hijo' : 'Padre' }}</span></td>
+                      <td class="align-middle"><span class="fw-bold" :class="change.action === 'UPDATE' ? 'text-warning' : 'text-success'">{{ change.action }}</span></td>
+                      <td class="align-middle text-muted">{{ change.abbreviation + ' (' + change.global_code + ')' }}</td>
+                      <td class="align-middle">
+                        <div v-if="change.action === 'INSERT'" class="text-muted fst-italic">Registro creado</div>
+                        <div v-else class="d-flex flex-column gap-1">
+                          <div v-for="(diff, field) in change.changed_fields" :key="field" class="d-flex align-items-center gap-2 border-bottom border-light pb-1">
+                            <span class="fw-bold text-dark" style="min-width:100px;">{{ field }}:</span>
+                            <span class="text-danger text-decoration-line-through bg-danger-subtle px-1 rounded">{{ diff.old === null ? 'null' : diff.old }}</span>
+                            <i class="fa-solid fa-arrow-right text-muted" style="font-size:0.7rem;"></i>
+                            <span class="text-success bg-success-subtle px-1 rounded fw-bold">{{ diff.new === null ? 'null' : diff.new }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-
-          <button class="btn btn-sm btn-icon text-muted">
-             <i class="fa-solid fa-chevron-down transition-transform" :class="{ 'rotate-180': group.isOpen }"></i>
-          </button>
         </div>
-
-        <div v-show="group.isOpen" class="accordion-body border-top p-0">
-           <div class="table-responsive">
-              <table class="table table-hover mb-0" style="font-size: 0.85rem;">
-                 <thead class="table-light text-muted text-uppercase" style="font-size: 0.7rem;">
-                    <tr>
-                       <th class="ps-4 py-2">Curso / Módulo</th>
-                       <th class="py-2">Fechas</th>
-                       <th class="py-2">Horario</th>
-                       <th class="py-2 text-end pe-4">Estado</th>
-                    </tr>
-                 </thead>
-                 <tbody>
-                    <tr
-                      v-for="child in group.children"
-                      :key="child.edition_num_id || child.global_code"
-                      :class="{ 'table-active': child.is_current }"
-                    >
-                       <td class="ps-4">
-                          <div class="d-flex align-items-center gap-2">
-                             <i class="fa-solid fa-book-open text-muted small"></i>
-                             <div>
-                                <div class="fw-bold text-dark">
-                                  <span class="text-decoration-hover text-primary cursor-pointer"  @click.stop="filterDirectly({ program_version_id: child.program_version_id, program_version_label: child.abbreviation })">
-                                   {{ child.program_abreviature || child.abbreviation }}
-                                  </span>
-                                   <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
-                                   <span v-if="child.is_current" class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem">ACTUAL</span>
-                                </div>
-                                <div class="text-muted small" style="font-size: 0.7rem;">
-                                   {{ child.global_code }} &bull; {{ child.specific_code }}
-                                </div>
-                             </div>
-                          </div>
-                       </td>
-                       <td>
-                          <div v-if="child.start_date">
-                              <span class="text-decoration-hover text-primary cursor-pointer"
-                              @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })"
-                              >
-                                {{ formatDate(child.start_date) }}
-                              </span>
-                              <i class="fa-solid fa-filter text-muted ms-1" style="font-size: 0.65rem;"></i>&nbsp;
-                             <br>
-                             <span class="text-muted text-xs">al {{ formatDate(child.end_date) }}</span>
-                          </div>
-                          <span v-else class="text-muted">-</span>
-                       </td>
-                       <td>
-                          <div v-if="child.schedules && child.schedules.length">
-                             <div class="fw-medium">{{ child.schedules[0].day_combination_label }}</div>
-                             <div class="text-muted text-xs">{{ child.schedules[0].hour_combination_label }}</div>
-                             <div v-if="child.schedules.length > 1" class="badge bg-light text-secondary border mt-1">
-                                +{{ child.schedules.length - 1 }} más
-                             </div>
-                          </div>
-                          <div v-else-if="child.day_combination_label">
-                             <div class="fw-medium">{{ child.day_combination_label }}</div>
-                             <div class="text-muted text-xs">{{ child.hour_combination_label }}</div>
-                          </div>
-                          <span v-else class="text-muted">-</span>
-                       </td>
-                       <td class="text-end pe-4">
-                          <span
-                            class="badge border"
-                            :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'"
-                          >
-                             {{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}
-                          </span>
-                       </td>
-                    </tr>
-                 </tbody>
-              </table>
-           </div>
-        </div>
-
       </div>
-    </div>
-  </div>
-</BaseModal>
+      <template #footer>
+        <button class="btn btn-secondary btn-sm" @click="showHistoryModal = false">Cerrar</button>
+      </template>
+    </BaseModal>
 
-  <BaseModal v-model="showGoalsModal" title="Tablero de Control" size="xl">
-      <div class="dashboard-layout p-3">
-
-        <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
-            <div>
-              <h5 class="text-primary fw-bold mb-1">
-                  {{ currentEdition?.program_abreviature }}
-              </h5>
-              <p class="text-muted small m-0">
-                {{ currentEdition?.global_code }} | Periodo: <span class="fw-bold text-dark">{{ goalsSummary.label_periodo }}</span>
-              </p>
+    <!-- Modal: Resumen / Meta -->
+    <BaseModal v-model="showMetaModal" title="Resumen de Programación" size="xl">
+      <div class="meta-dashboard p-3">
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden" v-if="!hasActiveFilters">
+          <div class="card-body p-0">
+            <div class="row g-0">
+              <div class="col-md-4 bg-primary text-white p-4 d-flex flex-column justify-content-center align-items-center text-center position-relative">
+                <i class="fa-solid fa-chart-line position-absolute start-0 bottom-0 opacity-25" style="font-size:8rem;transform:translate(-20%,20%);"></i>
+                <h6 class="text-uppercase opacity-75 mb-2 letter-spacing-1">Avance Global</h6>
+                <div class="display-3 fw-bold mb-0">{{ metaSummary.general.percentage }}<small class="fs-4">%</small></div>
+                <div class="progress w-100 bg-white bg-opacity-25 mt-3" style="height:8px;"><div class="progress-bar bg-white" role="progressbar" :style="{ width: metaSummary.general.percentage + '%' }"></div></div>
+              </div>
+              <div class="col-md-8 p-4 d-flex align-items-center bg-white">
+                <div class="row w-100 text-center g-3">
+                  <div class="col-4 border-end">
+                    <div class="text-muted small text-uppercase fw-bold mb-1">Ventas (B2C)</div>
+                    <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.sales }}</div>
+                    <div class="small text-success"><i class="fa-solid fa-user-check me-1"></i>Inscritos</div>
+                  </div>
+                  <div class="col-4 border-end">
+                    <div class="text-muted small text-uppercase fw-bold mb-1">Corporativo (B2B)</div>
+                    <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.b2b }}</div>
+                    <div class="small text-info"><i class="fa-solid fa-building me-1"></i>Empresas</div>
+                  </div>
+                  <div class="col-4">
+                    <div class="text-muted small text-uppercase fw-bold mb-1">Objetivo Total</div>
+                    <div class="fs-2 fw-bold text-secondary">{{ metaSummary.general.target }}</div>
+                    <div class="small text-muted"><i class="fa-solid fa-bullseye me-1"></i>Vacantes</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="text-end">
-              <div class="display-6 fw-bold text-dark mb-0 lh-1">{{ goalsSummary.insc.total_aula }}</div>
-              <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Total Inscritos</small>
-            </div>
+          </div>
         </div>
-
+        <div class="row g-4 mb-4">
+          <div class="col-lg-8">
+            <div class="meta-card h-100">
+              <div class="meta-card__header"><i class="fa-solid fa-layer-group text-primary me-2"></i>Líneas de Negocio</div>
+              <div class="meta-card__body">
+                <div class="lines-grid">
+                  <div v-for="(line, idx) in metaSummary.lines" :key="idx" class="line-item" :class="{ 'is-zero': line.count === 0 }">
+                    <div class="line-item__name">{{ line.name }}</div>
+                    <div class="line-item__count">{{ line.count }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="meta-card h-100">
+              <div class="meta-card__header"><i class="fa-solid fa-chart-pie text-success me-2"></i>Categorías</div>
+              <div class="meta-card__body">
+                <div class="d-flex flex-column gap-3">
+                  <div v-for="(cat, idx) in metaSummary.categories.filter(c => c.name !== 'Total' && c.name != 'Minicurso')" :key="idx">
+                    <div class="d-flex justify-content-between mb-1 small fw-bold"><span>{{ cat.name }}</span><span>{{ cat.count }}</span></div>
+                    <div class="progress" style="height:6px;"><div class="progress-bar bg-info" role="progressbar" :style="{ width: (cat.count / (metaSummary.categories.find(c => c.name === 'Total')?.count || 1) * 100) + '%' }"></div></div>
+                  </div>
+                  <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                    <span class="text-muted small text-uppercase fw-bold">Total Programado</span>
+                    <span class="badge bg-dark fs-6">{{ metaSummary.categories.find(c => c.name === 'Total')?.count || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row g-4">
-            <div class="col-md-4">
-              <div class="kpi-card h-100">
-                  <div class="kpi-header">
-                    <i class="fa-solid fa-users-viewfinder text-info"></i> Origen Inscritos
-                  </div>
-                  <ul class="list-group list-group-flush mt-3">
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span><i class="fa-solid fa-bullhorn text-muted me-2"></i>Venta Directa</span>
-                        <span class="badge bg-primary rounded-pill">{{ goalsSummary.insc.ventas_prg }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span><i class="fa-solid fa-headset text-muted me-2"></i>Seguimiento</span>
-                        <span class="badge bg-info rounded-pill">{{ goalsSummary.insc.seguimiento }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span><i class="fa-solid fa-briefcase text-muted me-2"></i>Corporativo (B2B)</span>
-                        <span class="badge bg-secondary rounded-pill">{{ goalsSummary.insc.b2b }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span><i class="fa-solid fa-handshake text-muted me-2"></i>Membresía</span>
-                        <span class="badge bg-warning rounded-pill">{{ goalsSummary.insc.b2b }}</span>
-                    </li>
-                  </ul>
+          <div class="col-md-6">
+            <div class="meta-card h-100">
+              <div class="meta-card__header"><i class="fa-solid fa-tags text-warning me-2"></i>Clasificación por Tipo</div>
+              <div class="meta-card__body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-light"><tr><th class="px-3">Código</th><th>Descripción</th><th class="text-center px-3">Cant.</th></tr></thead>
+                    <tbody>
+                      <tr v-for="(type, idx) in metaSummary.types" :key="idx">
+                        <td class="px-3"><span class="badge rounded-pill bg-light text-dark border border-secondary fw-bold">{{ type.code }}</span></td>
+                        <td><small class="text-muted lh-1 d-block">{{ type.description }}</small></td>
+                        <td class="text-center fw-bold text-primary px-3">{{ type.count }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-
-            <div class="col-md-4">
-              <div class="kpi-card h-100">
-                  <div class="kpi-header">
-                    <i class="fa-solid fa-crosshairs text-danger"></i> Cumplimiento
-                  </div>
-
-                  <div class="text-center py-3">
-                    <div class="progress" style="height: 25px;">
-                        <div
-                          class="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                          role="progressbar"
-                          :style="{ width: Math.min(goalsSummary.vacantes.porcentaje, 100) + '%' }"
-                        >
-                          {{ goalsSummary.vacantes.porcentaje }}%
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2 small text-muted fw-bold">
-                        <span>0%</span>
-                        <span>Meta: {{ goalsSummary.vacantes.objetivo }} vacantes</span>
-                        <span>100%</span>
-                    </div>
-                  </div>
-
-                  <div class="alert alert-light border mt-2 mb-0 text-center">
-                    <div v-if="goalsSummary.vacantes.faltantes < 0" class="text-success fw-bold">
-                        <i class="fa-solid fa-check-circle"></i> ¡Meta superada por {{ Math.abs(goalsSummary.vacantes.faltantes) }}!
-                    </div>
-                    <div v-else class="text-warning fw-bold">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Faltan {{ goalsSummary.vacantes.faltantes }} para meta
-                    </div>
-                  </div>
+          </div>
+          <div class="col-md-6">
+            <div class="meta-card h-100">
+              <div class="meta-card__header"><i class="fa-solid fa-list-ol text-danger me-2"></i>Segmentación Operativa</div>
+              <div class="meta-card__body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-light"><tr><th class="px-3">Seg.</th><th>Acción Requerida</th><th class="text-center px-3">Cant.</th></tr></thead>
+                    <tbody>
+                      <tr :class="'row-segment-' + seg.code.toLowerCase()" v-for="(seg, idx) in metaSummary.segments" :key="idx">
+                        <td class="px-3"><div class="segment-circle">{{ seg.code }}</div></td>
+                        <td><small class="text-muted lh-1 d-block">{{ seg.description.replace('*', '') }}</small></td>
+                        <td class="text-center fw-bold text-dark px-3">{{ seg.count }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-
-            <div class="col-md-4">
-              <div class="kpi-card h-100">
-                  <div class="kpi-header">
-                    <i class="fa-solid fa-filter-circle-dollar text-success"></i> Embudo
-                  </div>
-
-                  <div class="d-flex align-items-center justify-content-around mt-4">
-                    <div class="text-center">
-                        <h3 class="fw-bold text-muted mb-0">{{ goalsSummary.consultas.total }}</h3>
-                        <small class="text-muted">Leads Totales</small>
-                    </div>
-                    <div class="text-muted"><i class="fa-solid fa-arrow-right"></i></div>
-                    <div class="text-center">
-                        <h3 class="fw-bold text-success mb-0">{{ goalsSummary.insc.total_aula }}</h3>
-                        <small class="text-success">Ventas</small>
-                    </div>
-                  </div>
-
-                  <div class="text-center mt-4">
-                    <span class="display-6 fw-bold text-dark">{{ goalsSummary.consultas.conversion }}%</span>
-                    <small class="d-block text-muted text-uppercase fw-bold ls-1">Tasa de Conversión</small>
-                  </div>
-              </div>
-            </div>
+          </div>
         </div>
       </div>
     </BaseModal>
-<BaseModal v-model="showMonthlyGoalsModal" title="Definición de Objetivos Mensuales" size="xl">
-  <div class="p-3 bg-light rounded" style="min-height: 400px; max-height: 70vh; overflow-y: auto;">
-    
-    <div class="table-responsive bg-white border rounded shadow-sm">
-      <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.8rem;">
-        <thead class="table-light sticky-top">
-          <tr>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Línea</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Categ</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Segmento</th>
-            <th rowspan="2" class="align-middle border-bottom-0 text-start pb-2">Programa abr</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Tipo</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Día</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2">Hora</th>
-            <th rowspan="2" class="align-middle border-bottom-0 pb-2 border-end">Fecha</th>
-            <th colspan="2" class="bg-primary-subtle text-primary border-bottom border-primary-subtle py-2">
-              <i class="fa-solid fa-crosshairs me-1"></i> OBJETIVO DE VACANTES
-            </th>
-          </tr>
-          <tr class="bg-light">
-            <th class="border-end text-muted" style="width: 120px;">OBJETIVO (#)</th>
-            <th class="text-muted" style="width: 150px;">OBJETIVO (S/)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="activeGoalsList.length === 0">
-            <td colspan="10" class="text-center text-muted py-5">
-              <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
-              <br>No hay ediciones activas para este periodo.
-            </td>
-          </tr>
-          <tr v-for="item in activeGoalsList" :key="item.edition_num_id">
-            <td class="text-muted">{{ item.program_line_business || '—' }}</td>
-            <td><span class="badge bg-light text-dark border">{{ item.cat_course_category_label || '—' }}</span></td>
-            <td><div class="segment-circle mx-auto" style="width:20px; height:20px; font-size:0.6rem;">{{ item.cat_segment || '—' }}</div></td>
-            <td class="text-start fw-bold text-primary">{{ item.program_abreviature }}</td>
-            <td class="text-muted">{{ item.program_type || '—' }}</td>
-            <td class="text-muted">{{ item.schedules?.[0]?.day_combination_label || item.day_combination_label || '—' }}</td>
-            <td class="text-muted">{{ item.schedules?.[0]?.hour_combination_label || item.hour_combination_label || '—' }}</td>
-            <td class="fw-bold border-end">{{ formatDate(item.start_date) }}</td>
-            
-            <td class="bg-primary-subtle bg-opacity-10 border-end p-2">
-              <input 
-                type="number" 
-                class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" 
-                v-model.number="item.target_vacants" 
-                placeholder="0" 
-              />
-            </td>
-            <td class="bg-primary-subtle bg-opacity-10 p-2">
-              <CurrencyInput
-                v-model="item.target_revenue"
-                currency="PEN"
-                :storeAsMinor="false"
-                class="form-control form-control-sm fw-bold text-end text-success border-primary-subtle"
-                placeholder="0.00"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  
-  <template #footer>
-    <div class="d-flex justify-content-between w-100 align-items-center">
-      <span class="text-muted small">Mostrando {{ activeGoalsList.length }} programas activos</span>
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary btn-sm" @click="showMonthlyGoalsModal = false">Cancelar</button>
-        <button class="btn btn-primary btn-sm fw-bold px-3" @click="saveMonthlyGoals">
-          <i class="fa-solid fa-save me-1"></i> Guardar Objetivos
-        </button>
+
+    <!-- Modal: Filtros -->
+    <BaseModal v-model="showFilterModal" title="Filtrar Cronograma" size="lg">
+      <div class="p-3 row">
+        <div class="row g-2 mb-3">
+          <label class="form-label small fw-bold">Rango Fecha inicio</label>
+          <BaseDatePicker v-model="filterForm.range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango (Desde a Hasta)" @on-change="handleRangeFilterChange" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Buscar Programa</label>
+          <SearchSelect v-model="filterForm.program_version_id" mode="remote" :fetcher="q => programService.programVersionCaller({ q })" label-field="program_type_for_iu" value-field="program_version_id" sublabel-field="version_code" placeholder="Buscar programa…" :cache="false" view-open="6" :model-label="filterForm.program_version_label" @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Docente</label>
+          <MultiSelect v-model="filterForm.instructores_seleccionados" mode="remote" :fetcher="(q) => instructorService.instructorCaller({ q })" :debounce-ms="400" labelKey="full_name" valueKey="instructor_id" placeholder="Buscar docentes…" modalTitle="Seleccionar Docentes" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Línea de Negocio</label>
+          <MultiSelect v-model="filterForm.category_ids" :items="catalogs.catLines" label-key="description" value-key="id" placeholder="LINEAS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Categoría</label>
+          <MultiSelect v-model="filterForm.type_program_ids" :items="catalogs.catCategories" label-key="description" value-key="id" placeholder="CATEGORIAS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Seguimiento Edición</label>
+          <MultiSelect v-model="filterForm.course_category_ids" :items="catalogs.catTypes" label-key="description" value-key="id" placeholder="S. EDICIONES…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Segmento</label>
+          <MultiSelect v-model="filterForm.segment_ids" :items="catalogs.catSegments" label-key="description" value-key="id" placeholder="SEGMENTOS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Días</label>
+          <MultiSelect v-model="filterForm.combination_days_ids" :items="catalogs.dayCombinationList" label-key="description" value-key="id" placeholder="DIAS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Horas</label>
+          <MultiSelect v-model="filterForm.hour_combination_ids" :items="catalogs.hourCombinationList" label-key="description" value-key="id" placeholder="HORARIOS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Modalidad</label>
+          <MultiSelect v-model="filterForm.model_modality_ids" :items="catalogs.modalityList" label-key="description" value-key="id" placeholder="MODALIDADES…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Clasificación</label>
+          <input type="text" class="form-control form-control-sm" v-model="filterForm.clasification" placeholder="UNQ" />
+        </div>
       </div>
-    </div>
-  </template>
-</BaseModal>
+      <template #footer>
+        <div class="d-flex justify-content-end w-100 gap-2">
+          <button class="btn btn-outline-secondary btn-sm" @click="showFilterModal = false">Cancelar</button>
+          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <!-- Modal: Formulario Edición -->
+    <BaseModal v-model="showFormModal" :title="currentEdition ? 'Administrar Edición' : 'Nueva Edición'" size="xl">
+      <div class="modern-modal-layout">
+        <div class="main-column">
+          <div class="internal-header mb-3" v-if="currentEdition">
+            <div class="d-flex align-items-center gap-2">
+              <div class="badge-type" :class="isCourse ? 'bg-warning-subtle text-warning-emphasis' : 'bg-info-subtle text-info-emphasis'">{{ isCourse ? 'CURSO' : 'PROGRAMA' }}</div>
+              <h5 class="m-0 fw-bold text-dark">{{ currentEdition.program_abreviature }}</h5>
+              <div class="badge-type bg-primary-subtle text-primary-emphasis">{{ 'Sesiones: ' + modalForm.sessions }}</div>
+            </div>
+            <div class="text-muted small mt-1 ms-1">{{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Código Anual' }} &bull; {{ currentEdition.clasification || '' }}</div>
+          </div>
+
+          <section class="form-section">
+            <div class="section-label">Definición General</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label-sm">Versión de Programa</label>
+                <SearchSelect v-model="modalForm.program_version_id" mode="remote" :disabled="currentEdition && currentEdition.edition_num_id" :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e => e.alias == 'we_modality_online').id })" label-field="program_type_for_iu" value-field="program_version_id" placeholder="Buscar programa…" :minChars="0" :cache="false" required view-open="6" :model-label="modalForm.abbreviation" @change="onProgramVersionChange" />
+              </div>
+              <div class="col-6" v-if="modalForm.cat_type_program_alias === 'we_program_type_course'">
+                <label class="form-label-sm">Docente Asignado</label>
+                <SearchSelect v-model="modalForm.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" showSubValue label-field="full_name" sublabel-field="document_number" value-field="instructor_id" placeholder="Buscar docente…" :model-label="modalForm.instructor_label" :minChars="0" :cache="false" />
+              </div>
+              <div class="col-3">
+                <label class="form-label-sm">Segmentación</label>
+                <SearchSelect v-model="modalForm.cat_segment_id" :items="catalogs.catSegments" label-field="description" value-field="id" placeholder="OPCIONAL" />
+              </div>
+              <div class="col-3" v-if="modalForm.program_version_id">
+                <label class="form-label-sm">Vacantes</label>
+                <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" placeholder="VACANTES" />
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias === 'we_program_type_course'">
+            <div class="section-label">Logística y Horarios</div>
+            <div class="row g-3">
+              <div class="col-md-6 position-relative">
+                <label class="form-label-sm">Fecha Inicio</label>
+                <div class="input-group input-group-sm">
+                  <BaseDatePicker v-model="modalForm.start_date" :config="getChildDateConfig()" :disabled="!modalForm.cat_day_combination_id" :required="isCourse" placeholder="dd/mm/aaaa" @on-change="validateAndCalculate(modalForm, 'start_date')" />
+                  <button class="btn btn-outline-secondary" type="button" @click.stop="toggleGapPreview($event, 'main_gap', modalForm.program_version_id, modalForm)" :disabled="!modalForm.start_date || !modalForm.program_version_id">
+                    <i class="fa-solid fa-timeline text-primary"></i>
+                  </button>
+                </div>
+                <div v-if="activeGapPreviewId === 'main_gap'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;">
+                  <div class="popover-header-exec"><span>Análisis de Tiempos</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+                  <div class="popover-content">
+                    <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
+                    <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
+                      <table class="table table-borderless mb-0 align-middle w-100 clean-table">
+                        <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
+                        <tbody>
+                          <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
+                            <td class="text-center fw-bold text-muted small"><div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div><div v-else>{{ idx + 1 }}</div></td>
+                            <td><div class="d-flex flex-column lh-sm py-1"><span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span><div class="d-flex justify-content-between"><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span></div></div></td>
+                            <td class="text-end pe-3">
+                              <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
+                              <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
+                              <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="activeGapPreviewId === 'gap_popover'" class="click-overlay" @click="activeGapPreviewId = null"></div>
+              </div>
+              <div class="col-md-6 position-relative">
+                <label class="form-label-sm">Fecha Fin</label>
+                <div class="input-group input-group-sm">
+                  <BaseDatePicker v-model="modalForm.end_date" :disabled="!modalForm.cat_day_combination_id" :config="getChildDateConfig(null, modalForm)" :required="isCourse" placeholder="Calculado autom." />
+                  <button class="btn btn-outline-secondary" type="button" @click.stop="toggleSchedulePreview('main_parent', modalForm, $event)">
+                    <i class="fa-solid fa-circle-info text-info"></i>
+                  </button>
+                </div>
+                <div v-if="activePreviewId === 'main_parent'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                  <div class="popover-header-exec"><span>Proyección de Sesiones</span><button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button></div>
+                  <div class="popover-content">
+                    <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">Faltan datos para calcular.</div>
+                    <table v-else class="table table-sm table-striped mb-0 small-table">
+                      <thead><tr><th>#</th><th>Fecha</th><th>Estado</th></tr></thead>
+                      <tbody>
+                        <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                          <td class="fw-bold text-center">{{ item.sessionNum }}</td>
+                          <td><div class="d-flex flex-column lh-1"><span>{{ formatDate(item.date) }}</span><small class="text-muted" style="font-size:0.65rem">{{ getDayName(item.date) }}</small></div></td>
+                          <td><span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span><div v-else class="text-danger fw-bold" style="font-size:0.7rem;"><i class="fa-solid fa-ban me-1"></i>{{ item.desc }}</div></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div v-if="activePreviewId === 'main_parent'" class="click-overlay" @click="activePreviewId = null"></div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-sm">Días</label>
+                <SearchSelect v-model="modalForm.cat_day_combination_id" :items="catalogs.dayCombinationList" label-field="description" value-field="id" placeholder="Seleccione días" :required="isCourse" @change="calculateEndDate(modalForm)" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-sm">Horas</label>
+                <SearchSelect v-model="modalForm.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Seleccione horario" :required="isCourse" />
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course'">
+            <div class="section-label">Estructura del Programa</div>
+            <div class="hierarchy-container">
+              <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.8rem;">
+                <thead class="table-light">
+                  <tr><th style="width:20%">Sub-Programa</th><th style="width:20%">Edición</th><th style="width:25%">Fechas</th><th style="width:20%">Horario / Docente</th><th style="width:15%">Config.</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id" :class="{ 'opacity-50': isBlockedByPrevious(index) }">
+                    <td class="fw-bold text-dark">
+                      <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>&nbsp;
+                      <span class="text-primary text-decoration-hover" style="cursor:pointer" @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })">{{ child.abbreviation }}</span>
+                      <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: ' + child.sessions }}</div>
+                    </td>
+                    <td>
+                      <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
+                        <small class="text-muted">¿Nueva?</small>
+                        <label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" type="checkbox" v-model="child.new" /><span></span></label>
+                      </div>
+                      <SearchSelect v-if="!child.new && !child.edition_id" v-model="child.edition_id" mode="remote" :fetcher="(q) => searchEditionsFiltered(q, child, index)" label-field="label_for_iu" sublabel-field="specific_code" value-field="edition_num_id" placeholder="Vincular edición…" :minChars="0" :cache="false" required @change="onChildEditionChange($event, child, index)" :disabled="child.new" />
+                      <button :disabled="isBlockedByPrevious(index)" v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)"><i class="fa-solid fa-times"></i> Desvincular</button>
+                      <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
+                        <div class="fw-bold">{{ child.global_code }}</div>
+                        <div class="text-xs text-muted">{{ child.specific_code }}</div>
+                        <div class="text-xs text-muted">{{ 'Sesiones: ' + child.sessions }}</div>
+                      </div>
+                    </td>
+                    <td class="overflow-visible position-relative" style="min-width:180px!important" :style="{ zIndex: activeGapPreviewId === ('child_gap_' + index) ? 1060 : 'inherit' }">
+                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                        <div class="input-group input-group-xs mb-1">
+                          <BaseDatePicker v-model="child.start_date" :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id" :required="true" placeholder="Inicio" :config="getChildDateConfig(index)" @on-change="validateAndCalculate(child, 'start_date', index)" />
+                          <button class="btn btn-outline-secondary px-1" type="button" :disabled="!child.start_date || isBlockedByPrevious(index)" @click.stop="toggleGapPreview($event, 'child_gap_' + index, child.child_program_version_id, child)"><i class="fa-solid fa-timeline text-primary" style="font-size:0.8rem;"></i></button>
+                        </div>
+                        <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;left:0;z-index:1060;">
+                          <div class="popover-header-exec"><span>Análisis: {{ child.abbreviation }}</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+                          <div class="popover-content">
+                            <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                            <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
+                            <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
+                              <table class="table table-borderless mb-0 align-middle w-100 clean-table">
+                                <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
+                                <tbody>
+                                  <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
+                                    <td class="text-center fw-bold text-muted small"><div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div><div v-else>{{ idx + 1 }}</div></td>
+                                    <td><div class="d-flex flex-column lh-sm py-1"><span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span><div class="d-flex justify-content-between"><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span></div></div></td>
+                                    <td class="text-end pe-3">
+                                      <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
+                                      <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
+                                      <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="position-relative">
+                          <div class="input-group input-group-xs">
+                            <BaseDatePicker v-model="child.end_date" :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id" :required="true" :config="getChildDateConfig(null, child)" placeholder="Fin (Calc)" />
+                            <button class="btn btn-outline-secondary px-1" type="button" :disabled="isBlockedByPrevious(index)" @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"><i class="fa-solid fa-circle-info text-info" style="font-size:0.8rem;"></i></button>
+                          </div>
+                          <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="schedule-preview-popover shadow-lg" style="right:0;left:auto;min-width:250px;z-index:1070!important;" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                            <div class="popover-header-exec"><span>Cronograma Estimado</span><button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button></div>
+                            <div class="popover-content">
+                              <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">Datos insuficientes.</div>
+                              <table v-else class="table table-sm table-striped mb-0 small-table">
+                                <thead><tr><th>#</th><th>Fecha</th><th>Obs.</th></tr></thead>
+                                <tbody>
+                                  <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
+                                    <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
+                                    <td>{{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span></td>
+                                    <td><i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i><span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
+                        </div>
+                      </div>
+                      <div v-else class="text-muted text-center">-</div>
+                      <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                    </td>
+                    <td>
+                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                        <SearchSelect v-model="child.cat_day_combination_id" :items="catalogs.dayCombinationList" label-field="description" value-field="id" placeholder="Días" required :disabled="isBlockedByPrevious(index)" class="mb-1" @change="calculateEndDate(child); setChildren(modalForm.program_version_children, 'cat_day_combination_id', child.cat_day_combination_id)" />
+                        <SearchSelect v-model="child.cat_hour_combination_id" required :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id', child.cat_hour_combination_id)" />
+                        <SearchSelect :disabled="isBlockedByPrevious(index)" v-if="child.new || child.edition_id" v-model="child.instructor_id" :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
+                      </div>
+                      <div v-else class="text-muted text-center">-</div>
+                    </td>
+                    <td>
+                      <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input type="checkbox" v-model="child.active" /><span></span></label><small class="text-muted">Activo</small></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.preconfirmation" /><span></span></label><small class="text-muted">PRE-cfm</small></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.expedient" /><span></span></label><small class="text-muted">Ficha</small></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.confirmation){child.preconfirmation=true;child.expedient=true}else{child.preconfirmation=false;child.expedient=false} }" type="checkbox" v-model="child.confirmation" /><span></span></label><small class="text-muted">Cfm</small></div>
+                      </div>
+                      <div v-else class="text-muted text-center">-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="sidebar-column">
+          <div class="status-card mb-3">
+            <div class="status-card__header"><i class="fa-solid fa-sliders me-2"></i>Configuración</div>
+            <div class="status-card__body">
+              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+                <div class="switch-label"><span class="fw-bold">Ficha</span><small class="d-block text-muted">Generar expediente</small></div>
+                <label class="exec-switch"><input type="checkbox" v-model="modalForm.expedient" /><span></span></label>
+              </div>
+              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+                <div class="switch-label"><span class="fw-bold">Pre-Confirmación</span></div>
+                <label class="exec-switch"><input type="checkbox" v-model="modalForm.preconfirmation" /><span></span></label>
+              </div>
+              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
+              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+                <div class="switch-label"><span class="fw-bold text-primary">Confirmación</span></div>
+                <label class="exec-switch"><input type="checkbox" v-model="modalForm.confirmation" /><span></span></label>
+              </div>
+              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
+              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+                <div class="switch-label"><span class="fw-bold">Mejora</span></div>
+                <label class="exec-switch"><input type="checkbox" v-model="modalForm.upgrade" /><span></span></label>
+              </div>
+              <div class="switch-row">
+                <div class="switch-label"><span class="fw-bold">Estado (Activo)</span></div>
+                <label class="exec-switch"><input type="checkbox" v-model="modalForm.active" /><span></span></label>
+              </div>
+              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
+              <div class="col-12 mb-2">
+                <label class="form-label-sm">Histórico</label>
+                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.global_code" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label-sm">Ed. Año</label>
+                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" required />
+              </div>
+            </div>
+          </div>
+          <div class="status-card">
+            <div class="status-card__header"><i class="fa-regular fa-comment-dots me-2"></i>Observaciones</div>
+            <div class="status-card__body p-0">
+              <textarea class="form-control border-0 bg-transparent" rows="6" v-model="modalForm.notes" placeholder="Notas internas…" style="resize:vertical;min-height:150px;max-height:none;font-size:0.85rem;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="d-flex justify-content-between w-100 align-items-center">
+          <div class="text-muted small fst-italic"><span v-if="currentEdition">Editando ID: {{ currentEdition.edition_num_id }}</span></div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm px-3" @click="cleanFormModal(); showFormModal = false">Cancelar</button>
+            <button class="btn btn-primary btn-sm px-4 fw-bold" :disabled="!isModalValid" @click="applyModalForm"><i class="fa-solid fa-save me-1"></i>Guardar Cambios</button>
+          </div>
+        </div>
+      </template>
+    </BaseModal>
+
+    <!-- Modal: Árbol Académico -->
+    <BaseModal v-model="showTreeModal" :title="treeModalTitle" size="lg">
+      <div class="accordion-container p-3 bg-light rounded-3">
+        <div v-if="!treeGroups.length" class="empty-state p-5 text-center">
+          <div class="mb-3"><i class="fa-solid fa-sitemap fs-1 text-muted opacity-25"></i></div>
+          <h6 class="text-secondary">Sin estructura jerárquica</h6>
+          <p class="text-muted small">Esta edición no tiene programas padres ni cursos hijos asociados.</p>
+        </div>
+        <div v-else class="d-flex flex-column gap-3">
+          <div v-for="(group, idx) in treeGroups" :key="idx" class="accordion-card bg-white border rounded shadow-sm overflow-hidden">
+            <div class="accordion-header p-3 d-flex align-items-center justify-content-between cursor-pointer" :class="{ 'bg-primary-subtle': group.isOpen }" @click="toggleGroup(idx)">
+              <div class="d-flex align-items-center gap-3" :class="{ 'opacity-75': group.active === 'N' }">
+                <div class="icon-box border rounded p-2 position-relative" :class="group.active === 'N' ? 'bg-danger-subtle text-danger border-danger-subtle' : 'bg-white text-primary border-primary-subtle'">
+                  <i class="fa-solid" :class="group.active === 'N' ? 'fa-ban' : 'fa-layer-group'"></i>
+                </div>
+                <div>
+                  <div class="badge mb-1" :class="group.active === 'N' ? 'bg-danger text-white' : 'bg-primary text-white'" style="font-size:0.65rem;">{{ group.active === 'N' ? 'PROGRAMA INACTIVO' : 'PROGRAMA PADRE' }}</div>
+                  <h6 class="m-0 fw-bold" :class="group.active === 'N' ? 'text-danger text-decoration-line-through' : 'text-dark'">{{ group.abbreviation }}</h6>
+                  <div class="small text-muted">{{ group.global_code }} &bull; <span v-if="group.clasification" class="badge-btn" style="cursor:pointer;" @click="filterDirectly({ clasification: group.clasification })">{{ group.clasification }}<i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i></span></div>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-icon text-muted"><i class="fa-solid fa-chevron-down transition-transform" :class="{ 'rotate-180': group.isOpen }"></i></button>
+            </div>
+            <div v-show="group.isOpen" class="accordion-body border-top p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" style="font-size:0.85rem;">
+                  <thead class="table-light text-muted text-uppercase" style="font-size:0.7rem;">
+                    <tr><th class="ps-4 py-2">Curso / Módulo</th><th class="py-2">Fechas</th><th class="py-2">Horario</th><th class="py-2 text-end pe-4">Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="child in group.children" :key="child.edition_num_id || child.global_code" :class="{ 'table-active': child.is_current }">
+                      <td class="ps-4">
+                        <div class="d-flex align-items-center gap-2">
+                          <i class="fa-solid fa-book-open text-muted small"></i>
+                          <div>
+                            <div class="fw-bold text-dark">
+                              <span class="text-decoration-hover text-primary cursor-pointer" @click.stop="filterDirectly({ program_version_id: child.program_version_id, program_version_label: child.abbreviation })">{{ child.program_abreviature || child.abbreviation }}</span>
+                              <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>
+                              <span v-if="child.is_current" class="badge bg-warning text-dark ms-1" style="font-size:0.6rem">ACTUAL</span>
+                            </div>
+                            <div class="text-muted small" style="font-size:0.7rem;">{{ child.global_code }} &bull; {{ child.specific_code }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div v-if="child.start_date">
+                          <span class="text-decoration-hover text-primary cursor-pointer" @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })">{{ formatDate(child.start_date) }}</span>
+                          <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>
+                          <br><span class="text-muted text-xs">al {{ formatDate(child.end_date) }}</span>
+                        </div>
+                        <span v-else class="text-muted">-</span>
+                      </td>
+                      <td>
+                        <div v-if="child.schedules && child.schedules.length"><div class="fw-medium">{{ child.schedules[0].day_combination_label }}</div><div class="text-muted text-xs">{{ child.schedules[0].hour_combination_label }}</div><div v-if="child.schedules.length > 1" class="badge bg-light text-secondary border mt-1">+{{ child.schedules.length - 1 }} más</div></div>
+                        <div v-else-if="child.day_combination_label"><div class="fw-medium">{{ child.day_combination_label }}</div><div class="text-muted text-xs">{{ child.hour_combination_label }}</div></div>
+                        <span v-else class="text-muted">-</span>
+                      </td>
+                      <td class="text-end pe-4"><span class="badge border" :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'">{{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
+
+    <!-- Modal: Tablero de Objetivos -->
+    <BaseModal v-model="showGoalsModal" title="Tablero de Control" size="xl">
+      <div class="dashboard-layout p-3">
+        <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
+          <div>
+            <h5 class="text-primary fw-bold mb-1">{{ currentEdition?.program_abreviature }}</h5>
+            <p class="text-muted small m-0">{{ currentEdition?.global_code }} | Periodo: <span class="fw-bold text-dark">{{ goalsSummary.label_periodo }}</span></p>
+          </div>
+          <div class="text-end">
+            <div class="display-6 fw-bold text-dark mb-0 lh-1">{{ goalsSummary.insc.total_aula }}</div>
+            <small class="text-uppercase text-muted fw-bold" style="font-size:0.7rem;letter-spacing:1px;">Total Inscritos</small>
+          </div>
+        </div>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="kpi-card h-100">
+              <div class="kpi-header"><i class="fa-solid fa-users-viewfinder text-info"></i>Origen Inscritos</div>
+              <ul class="list-group list-group-flush mt-3">
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-bullhorn text-muted me-2"></i>Venta Directa</span><span class="badge bg-primary rounded-pill">{{ goalsSummary.insc.ventas_prg }}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-headset text-muted me-2"></i>Seguimiento</span><span class="badge bg-info rounded-pill">{{ goalsSummary.insc.seguimiento }}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-briefcase text-muted me-2"></i>Corporativo (B2B)</span><span class="badge bg-secondary rounded-pill">{{ goalsSummary.insc.b2b }}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-handshake text-muted me-2"></i>Membresía</span><span class="badge bg-warning rounded-pill">{{ goalsSummary.insc.b2b }}</span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card h-100">
+              <div class="kpi-header"><i class="fa-solid fa-crosshairs text-danger"></i>Cumplimiento</div>
+              <div class="text-center py-3">
+                <div class="progress" style="height:25px;"><div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: Math.min(goalsSummary.vacantes.porcentaje, 100) + '%' }">{{ goalsSummary.vacantes.porcentaje }}%</div></div>
+                <div class="d-flex justify-content-between mt-2 small text-muted fw-bold"><span>0%</span><span>Meta: {{ goalsSummary.vacantes.objetivo }} vacantes</span><span>100%</span></div>
+              </div>
+              <div class="alert alert-light border mt-2 mb-0 text-center">
+                <div v-if="goalsSummary.vacantes.faltantes < 0" class="text-success fw-bold"><i class="fa-solid fa-check-circle"></i> ¡Meta superada por {{ Math.abs(goalsSummary.vacantes.faltantes) }}!</div>
+                <div v-else class="text-warning fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Faltan {{ goalsSummary.vacantes.faltantes }} para meta</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card h-100">
+              <div class="kpi-header"><i class="fa-solid fa-filter-circle-dollar text-success"></i>Embudo</div>
+              <div class="d-flex align-items-center justify-content-around mt-4">
+                <div class="text-center"><h3 class="fw-bold text-muted mb-0">{{ goalsSummary.consultas.total }}</h3><small class="text-muted">Leads Totales</small></div>
+                <div class="text-muted"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="text-center"><h3 class="fw-bold text-success mb-0">{{ goalsSummary.insc.total_aula }}</h3><small class="text-success">Ventas</small></div>
+              </div>
+              <div class="text-center mt-4">
+                <span class="display-6 fw-bold text-dark">{{ goalsSummary.consultas.conversion }}%</span>
+                <small class="d-block text-muted text-uppercase fw-bold ls-1">Tasa de Conversión</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
+
+    <!-- Modal: Objetivos Mensuales -->
+    <BaseModal v-model="showMonthlyGoalsModal" title="Definición de Objetivos Mensuales" size="xl">
+      <div class="p-3 bg-light rounded" style="min-height:400px;max-height:70vh;overflow-y:auto;">
+        <div class="table-responsive bg-white border rounded shadow-sm">
+          <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size:0.8rem;">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Línea</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Categ</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Segmento</th>
+                <th rowspan="2" class="align-middle border-bottom-0 text-start pb-2">Programa abr</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Tipo</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Día</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Hora</th>
+                <th rowspan="2" class="align-middle border-bottom-0 pb-2 border-end">Fecha</th>
+                <th colspan="2" class="bg-primary-subtle text-primary border-bottom border-primary-subtle py-2"><i class="fa-solid fa-crosshairs me-1"></i>OBJETIVO DE VACANTES</th>
+              </tr>
+              <tr class="bg-light">
+                <th class="border-end text-muted" style="width:120px;">OBJETIVO (#)</th>
+                <th class="text-muted" style="width:150px;">OBJETIVO (S/)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="activeGoalsList.length === 0">
+                <td colspan="10" class="text-center text-muted py-5"><i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i><br>No hay ediciones activas para este periodo.</td>
+              </tr>
+              <tr v-for="item in activeGoalsList" :key="item.edition_num_id">
+                <td class="text-muted">{{ item.program_line_business || '—' }}</td>
+                <td><span class="badge bg-light text-dark border">{{ item.cat_course_category_label || '—' }}</span></td>
+                <td><div class="segment-circle mx-auto" style="width:20px;height:20px;font-size:0.6rem;">{{ item.cat_segment || '—' }}</div></td>
+                <td class="text-start fw-bold text-primary">{{ item.program_abreviature }}</td>
+                <td class="text-muted">{{ item.program_type || '—' }}</td>
+                <td class="text-muted">{{ item.schedules?.[0]?.day_combination_label || item.day_combination_label || '—' }}</td>
+                <td class="text-muted">{{ item.schedules?.[0]?.hour_combination_label || item.hour_combination_label || '—' }}</td>
+                <td class="fw-bold border-end">{{ formatDate(item.start_date) }}</td>
+                <td class="bg-primary-subtle bg-opacity-10 border-end p-2"><input type="number" class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" v-model.number="item.target_vacants" placeholder="0" /></td>
+                <td class="bg-primary-subtle bg-opacity-10 p-2"><CurrencyInput v-model="item.target_revenue" currency="PEN" :storeAsMinor="false" class="form-control form-control-sm fw-bold text-end text-success border-primary-subtle" placeholder="0.00" /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <template #footer>
+        <div class="d-flex justify-content-between w-100 align-items-center">
+          <span class="text-muted small">Mostrando {{ activeGoalsList.length }} programas activos</span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" @click="showMonthlyGoalsModal = false">Cancelar</button>
+            <button class="btn btn-primary btn-sm fw-bold px-3" @click="saveMonthlyGoals"><i class="fa-solid fa-save me-1"></i>Guardar Objetivos</button>
+          </div>
+        </div>
+      </template>
+    </BaseModal>
+
+  </div>
 </template>
+
+<style scoped>
+/* ═══════════════════════════════════════════════
+   TOKENS DE DISEÑO
+═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+.exec-shell {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #0f172a;
+
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-100: #f1f5f9;
+  --teal-600:  #0d9488;
+  --teal-500:  #14b8a6;
+  --blue-600:  #2563eb;
+  --gold-400:  #fbbf24;
+  --white:     #ffffff;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+
+  /* Color de grupos de columna */
+  --col-a-bg:     #eff6ff;
+  --col-a-head:   #1e40af;
+  --col-a-border: #bfdbfe;
+  --col-a-td:     #f8fbff;
+  --col-a-tdbdr:  #e0eeff;
+
+  --col-b-bg:     #f0fdf4;
+  --col-b-head:   #166534;
+  --col-b-border: #bbf7d0;
+  --col-b-td:     #f7fdf9;
+  --col-b-tdbdr:  #d5f5e0;
+
+  --col-c-bg:     #fff7ed;
+  --col-c-head:   #92400e;
+  --col-c-border: #fed7aa;
+  --col-c-td:     #fffbf5;
+  --col-c-tdbdr:  #fde8c8;
+
+  --col-d-bg:     #fafafa;
+  --col-d-head:   #374151;
+  --col-d-border: #e5e7eb;
+  --col-d-td:     #fdfdfd;
+  --col-d-tdbdr:  #ebebeb;
+}
+
+/* ═══════════════════════════════════════════════
+   MASTHEAD
+═══════════════════════════════════════════════ */
+.exec-masthead {
+  background: var(--navy-900);
+  color: var(--white);
+  border-bottom: 1px solid var(--navy-700);
+  flex-shrink: 0;
+}
+
+.masthead-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 28px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.masthead-brand { display: flex; align-items: center; gap: 16px; }
+
+.brand-rule {
+  width: 3px; height: 42px;
+  background: var(--teal-500);
+  border-radius: 2px; flex-shrink: 0;
+}
+
+.brand-eyebrow {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px;
+}
+
+.brand-title {
+  font-size: 18px; font-weight: 700; margin: 0;
+  letter-spacing: -0.01em; color: var(--white);
+  transition: opacity 0.15s;
+}
+.brand-title:hover { opacity: 0.85; }
+
+.masthead-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Filtros */
+.masthead-filters {
+  display: flex; align-items: center; gap: 0;
+  padding: 0 28px; min-height: 50px;
+}
+
+.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 8px 20px 8px 0; }
+
+.filter-label {
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--slate-400); font-weight: 600; cursor: default;
+}
+
+.filter-period-nav { display: flex; align-items: center; gap: 4px; }
+
+.filter-nav-btn {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+  color: var(--slate-300); width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; cursor: pointer; transition: all 0.15s;
+}
+.filter-nav-btn:hover { background: rgba(255,255,255,0.16); color: var(--white); }
+
+.exec-select {
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  color: var(--white); font-family: 'IBM Plex Sans', inherit;
+  font-size: 12.5px; font-weight: 500; padding: 3px 0;
+  outline: none; cursor: pointer; min-width: 110px; appearance: auto;
+}
+.exec-select option { color: var(--text-primary); background: var(--white); }
+
+.filter-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
+.filter-spacer { flex: 1; }
+
+/* KPIs inline */
+.masthead-kpis { display: flex; gap: 28px; align-items: center; }
+.inline-kpi { text-align: right; }
+.inline-kpi-label {
+  display: block; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--slate-400); font-weight: 600; margin-bottom: 2px;
+}
+.inline-kpi-value {
+  font-size: 15px; font-weight: 700; color: var(--white);
+  font-variant-numeric: tabular-nums; font-family: 'IBM Plex Mono', monospace;
+}
+.inline-kpi-value.accent { color: var(--teal-500); }
+
+/* Filtros activos en masthead */
+.filter-chips-bar { flex: 1; padding: 8px 0; }
+
+/* ═══════════════════════════════════════════════
+   BOTONES EJECUTIVOS
+═══════════════════════════════════════════════ */
+.btn-exec {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 4px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  cursor: pointer; border: none; font-family: inherit;
+  transition: background 0.15s, opacity 0.15s; position: relative;
+}
+
+.btn-exec-ghost {
+  background: rgba(255,255,255,0.07); color: var(--slate-300);
+  border: 1px solid rgba(255,255,255,0.13);
+}
+.btn-exec-ghost:hover { background: rgba(255,255,255,0.13); color: var(--white); }
+
+.btn-exec-primary { background: var(--teal-600); color: var(--white); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
+.btn-exec-primary:disabled { opacity: 0.55; cursor: default; }
+
+.btn-exec-teal { background: rgba(13,148,136,0.28); color: #5eead4; border: 1px solid rgba(13,148,136,0.4); }
+.btn-exec-teal:hover { background: rgba(13,148,136,0.4); }
+
+.btn-exec-xs { padding: 4px 10px; font-size: 11px; }
+
+.btn-exec-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold-400); display: inline-block;
+  margin-left: 2px;
+}
+
+/* ═══════════════════════════════════════════════
+   CUERPO
+═══════════════════════════════════════════════ */
+.exec-body { flex: 1; padding: 20px 24px; }
+
+.view-table { width: 100%; }
+
+.table-shell {
+  background: var(--white); border: 1px solid var(--border); border-radius: 6px;
+  overflow-x: auto; overflow-y: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ═══════════════════════════════════════════════
+   TABLA EJECUTIVA
+═══════════════════════════════════════════════ */
+.exec-table {
+  width: 100%; border-collapse: collapse;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12.5px; min-width: 1200px;
+}
+
+.exec-table-dense td { padding: 5px 8px !important; }
+
+/* ── Fila 1: Grupos principales ── */
+.thead-group th {
+  padding: 8px 10px; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 700; border-bottom: 1px solid var(--border);
+}
+
+.th-act {
+  background: var(--navy-900); color: var(--slate-400);
+  width: 86px; padding: 8px 10px;
+  border-right: 2px solid var(--navy-700);
+}
+
+.th-group { text-align: center; }
+
+.th-group-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 2px solid var(--col-a-border); }
+.th-group-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 2px solid var(--col-b-border); }
+.th-group-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 2px solid var(--col-c-border); }
+.th-group-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 2px solid var(--col-d-border); }
+
+/* ── Fila 2: Columnas individuales ── */
+.thead-sub .ts {
+  padding: 6px 10px; font-size: 10px;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  font-weight: 600; border-bottom: 2px solid var(--border);
+}
+
+.ts-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 1px solid var(--col-a-border); }
+.ts-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 1px solid var(--col-b-border); }
+.ts-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 1px solid var(--col-c-border); }
+.ts-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 1px solid var(--col-d-border); }
+
+/* ── Encabezado de Semana ── */
+.week-header-row { cursor: pointer; }
+.week-header-row:hover .week-header-cell { filter: brightness(0.97); }
+
+.week-header-cell {
+  padding: 0 !important;
+  background: var(--navy-800) !important;
+  border-bottom: 1px solid var(--navy-700) !important;
+}
+
+.week-header-inner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+}
+
+.week-chevron {
+  color: var(--slate-400); transition: transform 0.2s ease; flex-shrink: 0;
+}
+.week-chevron-open { transform: rotate(180deg); }
+
+.week-label {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--slate-300);
+}
+
+.week-badge {
+  margin-left: auto; background: var(--teal-600); color: var(--white);
+  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Filas de datos ── */
+.tbody-row td {
+  padding: 8px 10px; border-bottom: 1px solid #f8fafc;
+  vertical-align: middle;
+}
+.tbody-row:last-child td { border-bottom: none; }
+.tbody-row:hover td { background-color: #f0f9ff !important; transition: background 0.1s; }
+
+.td-act {
+  background: var(--navy-900) !important;
+  border-right: 2px solid var(--navy-800) !important;
+  padding: 6px 8px !important;
+}
+.tbody-row:hover .td-act { background: var(--navy-800) !important; }
+
+.td-a { background: var(--col-a-td); border-left: 1px solid var(--col-a-tdbdr); }
+.td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
+.td-c { background: var(--col-c-td); border-left: 1px solid var(--col-c-tdbdr); }
+.td-d { background: var(--col-d-td); border-left: 1px solid var(--col-d-tdbdr); }
+
+.td-prog { max-width: 200px; }
+
+/* ── Botones de Acción en tabla ── */
+.action-btns { display: flex; justify-content: center; gap: 4px; }
+
+.action-btn {
+  width: 26px; height: 26px; border-radius: 4px; border: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+
+.action-btn-view   { background: rgba(14,165,233,0.12); color: #0284c7; }
+.action-btn-view:hover { background: rgba(14,165,233,0.25); }
+
+.action-btn-tree   { background: rgba(239,68,68,0.1); color: #dc2626; }
+.action-btn-tree:hover { background: rgba(239,68,68,0.2); }
+
+.action-btn-neutral { background: rgba(148,163,184,0.12); color: #64748b; }
+.action-btn-neutral:hover { background: rgba(148,163,184,0.25); }
+
+.action-btn-edit  { background: rgba(245,158,11,0.12); color: #d97706; }
+.action-btn-edit:hover { background: rgba(245,158,11,0.25); }
+
+.action-btn-hier  { background: rgba(99,102,241,0.12); color: #6366f1; }
+.action-btn-hier:hover { background: rgba(99,102,241,0.25); }
+
+/* ── Programa ── */
+.prog-name { font-weight: 600; }
+.prog-link { color: #1d4ed8; }
+.prog-link:hover { text-decoration: underline; }
+.prog-sub { font-size: 11px; line-height: 1.3; }
+
+/* ── Fecha / Date link ── */
+.date-link {
+  color: #0369a1; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; cursor: pointer;
+}
+.date-link:hover { text-decoration: underline; }
+
+/* ── Badges y Pills ── */
+.pill {
+  display: inline-block; padding: 2px 8px; border-radius: 3px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+.pill-blue   { background: #dbeafe; color: #1d4ed8; }
+.pill-violet { background: #ede9fe; color: #6d28d9; }
+.pill-amber  { background: #fef3c7; color: #92400e; }
+.pill-teal   { background: #ccfbf1; color: #0f766e; }
+.pill-slate  { background: #f1f5f9; color: #475569; }
+
+/* Segmento pill */
+.seg-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 10px; font-weight: 800; letter-spacing: 0;
+}
+.seg-a1 { background: #dbeafe; color: #1e40af; }
+.seg-a2 { background: #fed7aa; color: #92400e; }
+.seg-a3 { background: #fef9c3; color: #854d0e; }
+.seg-a4 { background: #fde8c8; color: #9a3412; }
+.seg-a5 { background: #fecdd3; color: #9f1239; }
+.seg-a6 { background: #e9d5ff; color: #6b21a8; }
+
+/* Tipo tag */
+.tipo-tag {
+  display: inline-block; padding: 2px 7px;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-size: 10px; font-weight: 500; color: var(--text-secondary);
+  background: var(--white);
+}
+
+/* ── Switch ejecutivo ── */
+.exec-switch {
+  position: relative; width: 36px; height: 22px; display: inline-block;
+  vertical-align: middle; cursor: pointer;
+}
+.exec-switch input { display: none; }
+.exec-switch span {
+  position: absolute; inset: 0; background: #cbd5e1;
+  border-radius: 9999px; transition: 0.2s;
+}
+.exec-switch span::after {
+  content: ''; width: 16px; height: 16px; background: var(--white);
+  border-radius: 50%; position: absolute; top: 3px; left: 3px;
+  transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.exec-switch input:checked + span { background: var(--teal-600); }
+.exec-switch input:checked + span::after { left: 17px; }
+.scale-75 { transform: scale(0.75); transform-origin: center; }
+
+/* ── Textarea ── */
+.exec-textarea {
+  width: 100%; resize: none; background-color: transparent;
+  border: 1px solid transparent; border-radius: 3px;
+  font-size: 11.5px; font-family: inherit;
+  line-height: 1.4; transition: all 0.2s;
+  padding: 3px 5px; color: var(--text-primary);
+}
+.exec-textarea:hover { background-color: #f8fafc; border-color: var(--border); }
+.exec-textarea:focus { background-color: var(--white); border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+.exec-textarea::placeholder { color: var(--text-muted); }
+
+/* ── Segmento colores de fila ── */
+tr.row-segment-a1 { --seg-bg: #eff6ff; --seg-border: #93c5fd; }
+tr.row-segment-a2 { --seg-bg: #fbebd8; --seg-border: #fbb56a; }
+tr.row-segment-a3 { --seg-bg: #f9f6d8; --seg-border: #fde047; }
+tr.row-segment-a4 { --seg-bg: #f8f4c9; --seg-border: #edce33; }
+tr.row-segment-a5 { --seg-bg: #f9d5d8; --seg-border: #fb7185; }
+tr.row-segment-a6 { --seg-bg: #ebddfa; --seg-border: #d1a9fb; }
+
+tr[class*="row-segment-"] .td-a,
+tr[class*="row-segment-"] .td-b,
+tr[class*="row-segment-"] .td-c,
+tr[class*="row-segment-"] .td-d {
+  background-color: var(--seg-bg) !important;
+}
+tr[class*="row-segment-"] .td-a {
+  border-left: 3px solid var(--seg-border) !important;
+}
+tr[class*="row-segment-"]:hover .td-a,
+tr[class*="row-segment-"]:hover .td-b,
+tr[class*="row-segment-"]:hover .td-c,
+tr[class*="row-segment-"]:hover .td-d {
+  filter: brightness(0.97);
+}
+
+/* ── Long press ── */
+.row-pressing .td-a,
+.row-pressing .td-b,
+.row-pressing .td-c,
+.row-pressing .td-d {
+  background-color: #dbeafe !important;
+  cursor: progress !important;
+  transition: background-color 0.3s;
+}
+
+/* ═══════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════ */
+.exec-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 28px; background: var(--white);
+  border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--text-muted); font-weight: 500;
+  flex-shrink: 0;
+}
+.exec-footer strong { color: var(--text-secondary); }
+.footer-sep { color: var(--border); }
+.footer-spacer { flex: 1; }
+.footer-status { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot-ok      { background: #22c55e; }
+.dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════
+   POPOVERS / DROPDOWNS DE HORARIO
+═══════════════════════════════════════════════ */
+.overflow-visible { overflow: visible !important; }
+.cursor-pointer   { cursor: pointer; }
+
+.schedule-preview-popover {
+  position: absolute; top: 100%; left: 0;
+  z-index: 10000 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04) !important;
+  width: 320px; max-width: 90vw; margin-top: 6px; overflow: hidden;
+  animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-opens-top {
+  top: auto !important; bottom: 100% !important;
+  margin-top: 0 !important; margin-bottom: 6px;
+}
+
+.popover-header-exec {
+  background: var(--navy-800);
+  padding: 10px 14px; border-bottom: 1px solid var(--navy-700);
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; font-size: 11px; color: var(--slate-300);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+
+.popover-content { max-height: 300px; overflow-y: auto; }
+
+.schedule-dropdown-wrapper { position: relative; }
+
+.schedule-popover {
+  position: absolute; top: 100%; left: 0; z-index: 1050;
+  min-width: 220px; background: white; border: 1px solid #e5e7eb;
+  border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  margin-top: 5px; overflow: hidden;
+}
+
+.popover-header-sm {
+  background: #f9fafb; padding: 0.5rem 0.75rem; font-size: 0.75rem;
+  font-weight: 700; text-transform: uppercase; color: #6b7280;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+.popover-body-sm { padding: 0.75rem; max-height: 200px; overflow-y: auto; }
+
+.btn-close-xs {
+  border: none; background: transparent; font-size: 1.1rem; line-height: 1;
+  padding: 0; color: var(--slate-400); cursor: pointer;
+}
+.btn-close-xs:hover { color: #ef4444; }
+
+.click-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 9999; cursor: default;
+}
+
+/* ── Clean table (inside popover) ── */
+.clean-table thead th {
+  background-color: #f8fafc; color: #64748b; font-weight: 700;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 10px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 2;
+}
+.clean-table tbody td { padding: 10px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+.clean-table tbody tr:last-child td { border-bottom: none; }
+
+.row-highlight { background-color: #eff6ff !important; }
+.row-highlight td:first-child { border-left: 3px solid #3b82f6; }
+
+/* ═══════════════════════════════════════════════
+   ESTILOS DE MODALES (internos)
+═══════════════════════════════════════════════ */
+.modern-modal-layout {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 1.5rem;
+  min-height: 400px;
+}
+@media (max-width: 992px) { .modern-modal-layout { grid-template-columns: 1fr; } }
+
+.main-column { display: flex; flex-direction: column; }
+.sidebar-column { display: flex; flex-direction: column; gap: 1rem; }
+
+.badge-type {
+  padding: 0.25rem 0.5rem; border-radius: 6px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+}
+
+.form-section {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem;
+  padding: 1.25rem; position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.section-label {
+  position: absolute; top: -10px; left: 12px;
+  background: #fff; padding: 0 0.5rem;
+  font-size: 0.75rem; font-weight: 700; color: #2563eb;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.form-label-sm {
+  font-size: 0.78rem; font-weight: 600; color: #4b5563;
+  margin-bottom: 0.25rem; display: block;
+}
+
+.hierarchy-container {
+  border: 1px solid #e5e7eb; border-radius: 0.375rem;
+  overflow: visible; min-width: 500px !important;
+}
+
+.status-card {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;
+}
+.status-card__header {
+  background: var(--navy-800); color: var(--slate-300);
+  padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 600;
+  border-bottom: 1px solid var(--navy-700);
+  display: flex; align-items: center;
+}
+.status-card__body { padding: 1rem; }
+
+.switch-row {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+}
+.switch-row:last-child { margin-bottom: 0; }
+.switch-label { font-size: 0.85rem; color: #334155; line-height: 1.2; }
+
+/* Acordeón árbol */
+.accordion-container { min-height: 200px; }
+.accordion-card { transition: all 0.2s ease-in-out; }
+.accordion-header { transition: background-color 0.2s; }
+.accordion-header:hover { background-color: #f8fafc; }
+.transition-transform { transition: transform 0.3s ease; }
+.rotate-180 { transform: rotate(180deg); }
+.icon-box { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+
+/* Resumen meta */
+.meta-dashboard { background-color: #f8fafc; border-radius: 8px; }
+.meta-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column;
+}
+.meta-card__header {
+  background: #fff; padding: 1rem 1.25rem; font-size: 0.9rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+}
+.meta-card__body { padding: 1.25rem; flex: 1; }
+
+.lines-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 5px;
+}
+.line-item {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem;
+  padding: 0.75rem; text-align: center; transition: all 0.2s;
+}
+.line-item:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.line-item.is-zero { opacity: 0.6; background: #fff; border-style: dashed; }
+.line-item__name { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem; }
+.line-item__count { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
+.line-item.is-zero .line-item__count { color: #cbd5e1; }
+
+.segment-circle {
+  width: 24px; height: 24px; background: #e0e7ff; color: #4338ca;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.8rem;
+}
+
+/* Colores segmento en tablas de modal */
+.row-segment-a1 td { background-color: #eff6ff !important; }
+.row-segment-a2 td { background-color: #fbebd8 !important; }
+.row-segment-a3 td { background-color: #f9f6d8 !important; }
+.row-segment-a4 td { background-color: #f8f4c9 !important; }
+.row-segment-a5 td { background-color: #f9d5d8 !important; }
+.row-segment-a6 td { background-color: #ebddfa !important; }
+
+/* Modal goals */
+.kpi-card {
+  background: #fff; border: 1px solid #f3f4f6; border-radius: 0.75rem;
+  padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.kpi-header {
+  font-size: 0.9rem; font-weight: 700; color: #374151; text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 1rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem;
+}
+
+/* Small table */
+.small-table { font-size: 0.8rem; }
+.text-xs { font-size: 0.7rem; }
+.ls-1 { letter-spacing: 1px; }
+.letter-spacing-1 { letter-spacing: 1px; }
+
+/* ═══════════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════════ */
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+.text-mono   { font-family: 'IBM Plex Mono', monospace; }
+.text-muted  { color: var(--text-muted); }
+.small       { font-size: 11.5px; }
+.fw-600      { font-weight: 600; }
+.fw-700      { font-weight: 700; }
+
+/* ═══════════════════════════════════════════════
+   ANIMACIONES
+═══════════════════════════════════════════════ */
+@keyframes popIn  { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
 <script setup>
 
 import { ref, reactive, computed, onMounted, inject, watch, nextTick } from 'vue' // <--- Agrega nextTick
@@ -2383,7 +1954,7 @@ const effectiveItems = computed(() => {
   // (en modo histórico no aplican los filtros de columna, solo los del modal)
   if (!hasActiveFilters.value) {
     const hasColumnFilter = Object.values(columnFilters).some(arr => arr.length > 0)
-    
+
     if (hasColumnFilter) {
       items = items.filter(item => {
         // Reutilizar la misma lógica de filteredSchedules
@@ -2592,7 +2163,7 @@ async function openMonthlyGoalsModal() {
     // Si la BD no trae target_vacants, usamos las vacantes regulares como sugerencia inicial
     if (item.target_vacants === undefined) item.target_vacants = item.vacant || 0
     // Campo de meta de dinero (revenue)
-    if (item.target_revenue === undefined) item.target_revenue = 0 
+    if (item.target_revenue === undefined) item.target_revenue = 0
   })
 
   // 4. Abrimos el modal
@@ -2621,7 +2192,7 @@ async function saveMonthlyGoals() {
     console.log("Objetivos a guardar:", payload)
     toast.success("Objetivos actualizados correctamente")
     showMonthlyGoalsModal.value = false
-    
+
     // Opcional: recargar calendario
     // fetchSchedule()
   } catch (error) {
@@ -2861,12 +2432,12 @@ const hasActiveFilters = computed(() => {
     return Object.entries(activeFilters).some(([key, value]) => {
         // Ignorar si es null, undefined o string vacío
         if (value === null || value === undefined || value === '') return false;
-        
+
         // Si es array, solo contar como "activo" si tiene elementos
         if (Array.isArray(value)) {
             return value.length > 0;
         }
-        
+
         // Para cualquier otro tipo, si existe es activo
         return true;
     });
@@ -2882,10 +2453,10 @@ function applyFilters() {
     // 2. Copiar valores del formulario SOLO si tienen contenido real
     for (const key in filterForm) {
         const value = filterForm[key];
-        
+
         // Ignorar valores nulos, undefined o strings vacíos
         if (value === null || value === '' || value === undefined) continue;
-        
+
         // Para arrays, solo copiar si tiene elementos
         if (Array.isArray(value)) {
             if (value.length > 0) {
@@ -2893,7 +2464,7 @@ function applyFilters() {
             }
             continue;
         }
-        
+
         // Para otros tipos, copiar directamente
         activeFilters[key] = value;
     }
@@ -2959,7 +2530,7 @@ function removeFilter(key) {
 function clearAllFilters(reload = true) {
     // Limpiar activeFilters completamente
     Object.keys(activeFilters).forEach(key => delete activeFilters[key]);
-    
+
     // Reset form (diferenciando arrays de otros tipos)
     for (const key in filterForm) {
         if (Array.isArray(filterForm[key])) {
@@ -2968,9 +2539,9 @@ function clearAllFilters(reload = true) {
             filterForm[key] = null;
         }
     }
-    
+
     saveState();
-    
+
     if (reload) fetchSchedule();
 }
 
@@ -2983,7 +2554,7 @@ async function fetchSchedule() {
         selectedMonth: selectedMonth.value,
         selectedYear: selectedYear.value,
         page: 1,
-        size: 100 
+        size: 100
       }
       const { items } = await editionService.editionByWeekList(payload)
 
@@ -2993,7 +2564,7 @@ async function fetchSchedule() {
 
       // Cálculo para vista mensual
       calculateMetaSummary()
-      
+
     } else {
       const payload = {
         page: 1,
@@ -3043,7 +2614,7 @@ const catalogs = ref({
 )
 // 2. Función para procesar el cambio del DatePicker
 function handleRangeFilterChange(selectedDates, dateStr) {
-  
+
     // dateStr llega como "2025-01-01 to 2025-01-31"
     if (dateStr.includes(' a ')) {
         const parts = dateStr.split(' a ');
@@ -3629,7 +3200,7 @@ function validateDateInput(targetObj, fieldKey) {
 
 function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
-  
+
   // LOGICA MIN/MAX
   if (bodyField) {
     config.minDate = bodyField.start_date;
@@ -3671,9 +3242,9 @@ function getChildDateConfig(index = null, bodyField = null) {
           (date) => {
             const dayOfWeek = date.getDay();
             // const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            
+
             // CAMBIO AQUÍ: Solo validamos que sea el día de la semana correcto.
-            return allowedDays.includes(dayOfWeek); 
+            return allowedDays.includes(dayOfWeek);
           }
         ];
       } catch (e) {
@@ -3900,14 +3471,14 @@ function onChildEditionChange(edition, child, index) {
     child.edition_id = edition.edition_num_id;
     child.start_date = edition.start_date ? edition.start_date.slice(0, 10) : null;
     child.end_date = edition.end_date ? edition.end_date.slice(0, 10) : null;
-    
+
     child.cat_day_combination_id = edition.cat_day_combination_id;
     child.cat_hour_combination_id = edition.cat_hour_combination_id;
     child.instructor_id = edition.instructor_id;
     child.instructor_label = edition.instructor_label || '';
     child.global_code = edition.global_code;
     child.specific_code = edition.specific_code;
-    
+
     child.active = edition.active === 'Y';
     child.confirmation = edition.confirmation === 'Y';
     child.preconfirmation = edition.preconfirmation === 'Y';
@@ -4376,12 +3947,12 @@ async function openGlobalHistory() {
   try {
     // Llamada al servicio que creamos anteriormente
     // Enviamos editionId: null para traer todo, y un límite razonable
-    const data = await editionService.auditLogsGet({ 
-      editionId: null, 
-      limit: 50, 
-      offset: 0 
+    const data = await editionService.auditLogsGet({
+      editionId: null,
+      limit: 50,
+      offset: 0
     })
-    
+
     globalHistoryList.value = data || []
   } catch (err) {
     console.error('Error al cargar historial:', err)
@@ -4424,12 +3995,12 @@ function toggleSchedulePreview(uniqueId, targetObj, event) {
 const isLoadingExtraInfo = ref(false)
 
 // --- LÓGICA DE GAP ANALYSIS (Timeline Genérico) ---
-const activeGapPreviewId = ref(null) 
+const activeGapPreviewId = ref(null)
 const gapPreviewData = ref([])
 const isLoadingGap = ref(false)
 
 /**
- * Abre el popover de GAPS. 
+ * Abre el popover de GAPS.
  * Funciona para: Formulario (Padre/Hijo) y Listado (Click Derecho).
  */
 async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, isReadOnly = false) {
@@ -4458,10 +4029,10 @@ async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, i
 
   try {
     // 2. Llamada al SP (que ahora trae horarios)
-    const responseItems = await editionService.editionExtraInfoCaller({ 
-      program_version_id: programVersionId 
+    const responseItems = await editionService.editionExtraInfoCaller({
+      program_version_id: programVersionId
     })
-    
+
     // 3. Preparar el objeto "Actual" según de dónde venga el click
     let currentItem = contextObj;
 
@@ -4474,9 +4045,9 @@ async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, i
             start_date: contextObj.start_date,
             global_code: contextObj.global_code,
             // Intentamos sacar los labels de horarios de la fila
-            day_combination_label: contextObj.day_combination_label || 
+            day_combination_label: contextObj.day_combination_label ||
                                    (contextObj.schedules?.[0]?.day_combination_label) || '—',
-            hour_combination_label: contextObj.hour_combination_label || 
+            hour_combination_label: contextObj.hour_combination_label ||
                                     (contextObj.schedules?.[0]?.hour_combination_label) || '—'
         }
     }
@@ -4500,7 +4071,7 @@ function calculateGapData(historicalList, currentObj) {
 
   const msPerDay = 1000 * 60 * 60 * 24
   const targetDate = new Date(currentObj.start_date + 'T12:00:00')
-  
+
   // ID para excluir (si estamos editando)
   const currentId = currentObj.edition_id || (currentEdition.value?.edition_num_id)
 
@@ -4512,7 +4083,7 @@ function calculateGapData(historicalList, currentObj) {
       dateObj: new Date(e.start_date_eff),
       type: 'history',
       // Mapeamos los campos nuevos de tu SP
-      daysLabel: e.cat_day_combination || '—', 
+      daysLabel: e.cat_day_combination || '—',
       hoursLabel: e.cat_hour_combination || '—'
     }))
 
@@ -4539,16 +4110,16 @@ function calculateGapData(historicalList, currentObj) {
     daysLabel: myDays || '—',
     hoursLabel: myHours || '—'
   }
-  
+
   timeline.push(newItem)
 
   // C. Ordenar y Calcular Gaps
   timeline.sort((a, b) => a.dateObj - b.dateObj)
   const currentIndex = timeline.findIndex(t => t.type === 'current')
-  
+
   return timeline.map((item, index) => {
     let gapInfo = null
-    
+
     if (index === currentIndex - 1) {
        const diff = Math.floor((newItem.dateObj - item.dateObj) / msPerDay)
        gapInfo = { label: `${diff} días después`, color: diff < 30 ? 'text-warning' : 'text-success' }
@@ -4563,612 +4134,3 @@ function calculateGapData(historicalList, currentObj) {
 }
 </script>
 
-
-<style scoped>
-/* ESTILOS GENERALES (Mantenidos y pulidos) */
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05);
-  margin-bottom: 1.5rem;
-}
-.card-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-.card-body { padding: 0; } /* Padding 0 para que la tabla toque los bordes */
-
-.title { display: flex; align-items: center; gap: .75rem; color: #111827; font-weight: 600; }
-.title-icon { width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; }
-
-.actions-bar { display: flex; gap: 0.5rem; align-items: center; }
-.period-picker { display: flex; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.15rem; }
-.btn-icon { border: none; background: transparent; color: #6b7280; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
-.btn-icon:hover { background: #e5e7eb; color: #111827; }
-
-.form-select-sm { font-size: 0.85rem; border: none; background-color: transparent; box-shadow: none; font-weight: 500; cursor: pointer; }
-.form-select-sm:focus { box-shadow: none; }
-
-/* TABLA PRINCIPAL */
-.table th { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem; vertical-align: middle; }
-.table td { font-size: 0.85rem; padding: 0.6rem 0.75rem; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
-.week-header { cursor: pointer; transition: all 0.2s; }
-.week-header:hover td { filter: brightness(0.98); }
-.minW { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* BOTONES PEQUEÑOS EN TABLA */
-.btn-icon-sm { width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid transparent; transition: all 0.2s; }
-.btn-icon-sm:hover { border-color: #d1d5db; background: #fff; transform: translateY(-1px); }
-
-/* ---- NUEVO DISEÑO DE MODAL (MODERN LAYOUT) ---- */
-
-.modern-modal-layout {
-    display: grid;
-    grid-template-columns: 1fr 200px; /* Columna principal flexible, Sidebar fija */
-    gap: 1.5rem;
-    min-height: 400px;
-}
-
-@media (max-width: 992px) {
-    .modern-modal-layout { grid-template-columns: 1fr; } /* Stack en tablet/movil */
-}
-
-/* Columna Principal */
-.main-column {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Badge de tipo de programa */
-.badge-type {
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-
-/* Secciones del formulario */
-.form-section {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    padding: 1.25rem;
-    position: relative;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-}
-
-.section-label {
-    position: absolute;
-    top: -10px;
-    left: 12px;
-    background: #fff;
-    padding: 0 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #2563eb;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.form-label-sm {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #4b5563;
-    margin-bottom: 0.25rem;
-    display: block;
-}
-
-.form-control-sm, .form-select-sm {
-    font-size: 0.85rem;
-    border-radius: 0.375rem;
-}
-.form-control-xs {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-}
-
-/* Tabla Jerarquía dentro del modal */
-.hierarchy-container {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    overflow: visible; /* <--- PERMITE QUE EL POPUP SALGA */
-    min-width: 500px!important
-}
-.text-xs { font-size: 0.7rem; }
-
-/* SIDEBAR Y TARJETAS DE ESTADO */
-.sidebar-column {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.status-card {
-    background: #f8fafc; /* Fondo gris azulado muy suave */
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    overflow: hidden;
-}
-
-.status-card__header {
-    background: #f1f5f9;
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #475569;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-}
-
-.status-card__body {
-    padding: 1rem;
-}
-
-/* Filas de Switches */
-.switch-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
-}
-.switch-row:last-child { margin-bottom: 0; }
-
-.switch-label {
-    font-size: 0.85rem;
-    color: #334155;
-    line-height: 1.2;
-}
-
-/* Form Switch */
-  .form-switch { position: relative; width: 25px; height: 24px; display: inline-block; }
-  .form-switch input { display: none; }
-  .form-switch span {
-    position: absolute; inset: 0; background: #d4def3; border-radius: 9999px; transition: .2s;
-  }
-  .form-switch span::after {
-    content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%;
-    position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15);
-  }
-  .form-switch input:checked + span { background: #255095; }
-  .form-switch input:checked + span::after { left: 21px; }
-
-.scale-75 { transform: scale(0.75); transform-origin: center; }
-
-/* Empty state styling */
-.empty-state {
-    text-align: center;
-    color: #9ca3af;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-/* --- ESTILOS DROPDOWN HORARIO --- */
-.schedule-dropdown-wrapper {
-  position: relative;
-}
-.cursor-pointer { cursor: pointer; }
-
-/* El popover flotante */
-.schedule-popover {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 1050; /* Debe ser mayor que la tabla */
-  min-width: 220px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  margin-top: 5px;
-  overflow: hidden;
-}
-
-.popover-header-sm {
-  background: #f9fafb;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #6b7280;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.popover-body-sm {
-  padding: 0.75rem;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.btn-close-xs {
-  border: none;
-  background: transparent;
-  font-size: 1.2rem;
-  line-height: 1;
-  padding: 0;
-  color: #9ca3af;
-  cursor: pointer;
-}
-.btn-close-xs:hover { color: #ef4444; }
-
-/* Overlay invisible para cerrar clicando fuera */
-.click-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  z-index: 1040;
-  cursor: default;
-}
-
-/* --- ESTILOS TREE MODAL --- */
-.tree-card {
-  transition: transform 0.2s;
-}
-.tree-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) !important;
-}
-.node-icon {
-  width: 40px; height: 40px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem;
-}
-
-/* --- ESTILOS DASHBOARD/GOALS MODAL --- */
-.kpi-card {
-  background: #fff;
-  border: 1px solid #f3f4f6;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-.kpi-header {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #f3f4f6;
-  padding-bottom: 0.5rem;
-}
-.ls-1 { letter-spacing: 1px; }
-
-/* --- ESTILOS META DASHBOARD (RESUMEN) --- */
-
-.meta-dashboard {
-  background-color: #f8fafc;
-  border-radius: 8px;
-}
-
-.meta-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  overflow: hidden; /* Para las tablas */
-  display: flex;
-  flex-direction: column;
-}
-
-.meta-card__header {
-  background: #fff;
-  padding: 1rem 1.25rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #475569;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.meta-card__body {
-  padding: 1.25rem;
-  flex: 1;
-}
-
-/* Grid de Líneas */
-.lines-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
-}
-
-.line-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  text-align: center;
-  transition: all 0.2s;
-}
-
-.line-item:hover {
-  border-color: #cbd5e1;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.line-item.is-zero {
-  opacity: 0.6;
-  background: #fff;
-  border-style: dashed;
-}
-
-.line-item__name {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  margin-bottom: 0.25rem;
-}
-
-.line-item__count {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.line-item.is-zero .line-item__count {
-  color: #cbd5e1;
-}
-
-/* Círculo de Segmento */
-.segment-circle {
-  width: 24px; height: 24px;
-  background: #e0e7ff;
-  color: #4338ca;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.8rem;
-}
-
-/* --- ESTILOS ACORDEÓN ÁRBOL --- */
-.accordion-container {
-  min-height: 200px;
-}
-
-.accordion-card {
-  transition: all 0.2s ease-in-out;
-}
-
-.accordion-header {
-  transition: background-color 0.2s;
-}
-.accordion-header:hover {
-  background-color: #f8fafc; /* Gris muy claro al hover */
-}
-
-/* Rotación de la flecha */
-.transition-transform {
-  transition: transform 0.3s ease;
-}
-.rotate-180 {
-  transform: rotate(180deg);
-}
-
-.icon-box {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem;
-}
-
-/* Estilos de tabla interna */
-.text-xs {
-  font-size: 0.7rem;
-}
-
-/* Highlight para la fila actual (si estoy viendo SQL y sale en la lista) */
-.table-active {
-  background-color: #fffbeb !important; /* Amarillo muy suave */
-}
-.table-active td:first-child {
-  border-left: 3px solid #f59e0b; /* Borde naranja a la izquierda */
-}
-
-.lines-grid {
-  /* ... tus estilos actuales de grid (display: grid, etc.) ... */
-
-  /* LÍMITE DE ALTURA Y SCROLL */
-  max-height: 350px; /* Ajusta este valor según el espacio que desees */
-  overflow-y: auto;  /* Activa el scroll vertical solo si se pasa la altura */
-
-  /* Opcional: un poco de padding para que el texto no choque con la barra */
-  padding-right: 5px;
-}
-
-/* Opcional: Estilizar la barra de scroll para que se vea moderna y delgada */
-.lines-grid::-webkit-scrollbar {
-  width: 6px;
-}
-.lines-grid::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-.lines-grid::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-.lines-grid::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-.letter-spacing-1 {
-  letter-spacing: 1px;
-}
-/* Asegura que el borde redondeado no se corte mal con la columna de color */
-.card {
-  border-radius: 12px;
-}
-.display-3 {
-  font-size: 3.5rem;
-}
-/* Estilo para el textarea dentro de la tabla */
-.table-textarea {
-  resize: none; /* Evita que el usuario cambie el tamaño y rompa la tabla */
-  background-color: transparent;
-  border: 1px solid transparent; /* Invisible por defecto */
-  transition: all 0.2s;
-  font-size: 0.8rem;
-  line-height: 1.2;
-  box-shadow: none;
-}
-
-.table-textarea:hover {
-  background-color: #f8fafc;
-  border-color: #e2e8f0;
-}
-
-.table-textarea:focus {
-  background-color: #fff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-/* --- COLORES POR SEGMENTO (A1 - A6) --- */
-
-/* Definición de variables de color por clase */
-.row-segment-a1 { --seg-bg: #eff6ff; --seg-border: #93c5fd; } /* Rojo suave */
-.row-segment-a2 { --seg-bg: #fbebd8; --seg-border: #fbb56a; } /* Naranja suave */
-.row-segment-a3 { --seg-bg: #f9f6d8; --seg-border: #fde047; } /* Amarillo suave */
-.row-segment-a4 { --seg-bg: #f8f4c9; --seg-border: #edce33; } /* Verde suave */
-.row-segment-a5 { --seg-bg: #f9d5d8; --seg-border: #fb7185; } /* Azul suave */
-.row-segment-a6 { --seg-bg: #ebddfa; --seg-border: #d1a9fb; } /* Violeta suave */
-
-/* Aplicación a las celdas de la fila */
-tr[class*="row-segment-"] td {
-  background-color: var(--seg-bg) !important;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-/* Indicador visual fuerte a la izquierda de la primera celda */
-tr[class*="row-segment-"] td:first-child {
-  border-left: 4px solid var(--seg-border) !important;
-}
-
-/* Efecto Hover para filas coloreadas (oscurece un poco) */
-tr[class*="row-segment-"]:hover td {
-  filter: brightness(0.97);
-}
-
-/* Clase de utilidad para permitir que el popover salga de la celda */
-.overflow-visible {
-  overflow: visible !important;
-}
-
-/* Ajuste para asegurar que el popover siempre esté encima */
-.schedule-popover {
-  /* ... tus estilos actuales ... */
-  z-index: 1000;
-  background: white; /* Importante para que no sea transparente */
-}
-
-/* El wrapper debe mantenerse relativo */
-.schedule-dropdown-wrapper {
-  position: relative;
-  z-index: inherit; /* Hereda el z-index alto del TD cuando está activo */
-}
-/* --- POPOVER ELEVADO (Fix Z-Index & Diseño) --- */
-.schedule-preview-popover {
-  position: absolute;
-  top: 100%; 
-  left: 0;
-  
-  /* Z-INDEX EXTREMO y Fondo Sólido para evitar transparencias */
-  z-index: 10000 !important; 
-  background-color: #ffffff !important; 
-  
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  
-  /* Sombra de elevación fuerte ("Floating effect") */
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-  
-  width: 320px; 
-  max-width: 90vw;
-  margin-top: 6px;
-  overflow: hidden;
-  animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.popover-header {
-  background: #f8fafc; /* Gris muy claro */
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #334155; /* Color texto oscuro suave */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* --- ESTILOS TABLA LIMPIA (Clean Table) --- */
-.clean-table thead th {
-    background-color: #f8fafc;
-    color: #64748b;
-    font-weight: 700;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 10px;
-    border-bottom: 1px solid #e2e8f0;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
-.clean-table tbody td {
-    padding: 10px;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.clean-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Highlight para la fila actual */
-.row-highlight {
-    background-color: #eff6ff !important; /* Azul muy suave */
-}
-.row-highlight td:first-child {
-    border-left: 3px solid #3b82f6;
-}
-
-/* Scrollbar fina y elegante */
-.table-responsive::-webkit-scrollbar { width: 6px; }
-.table-responsive::-webkit-scrollbar-track { background: transparent; }
-.table-responsive::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.table-responsive::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* Animación de entrada */
-@keyframes popIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Invertir dirección si no hay espacio abajo */
-.popover-opens-top {
-  top: auto !important;
-  bottom: 100% !important;
-  margin-top: 0 !important;
-  margin-bottom: 6px;
-  transform-origin: bottom center;
-}
-.table.compact-borders td {
-  padding: 0.05rem 0.75rem;
-}
-.row-pressing td {
-  background-color: #dbeafe !important;
-  cursor: progress !important;
-  transition: background-color 0.3s;
-}
-</style>
