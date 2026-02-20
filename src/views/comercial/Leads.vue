@@ -67,7 +67,7 @@
                 <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
                 <th class="ts ts-c">Status</th>
                 <th class="ts ts-c">Contacto</th>
-                <th class="ts ts-c">T. Consulta</th>
+                <th class="ts ts-c" style="min-width: 160px!important;">T. Consulta</th>
                 <th class="ts ts-c">Programa / Interés</th>
                 <th class="ts ts-c">Ini. Edición</th>
                 <th class="ts ts-c">F. Pago</th>
@@ -82,7 +82,7 @@
                 <th class="ts ts-c">Teléfono</th>
                 <th class="ts ts-c">E. Cliente</th>
                 <th class="ts ts-c">Nombre</th>
-                <th class="ts ts-c">T. Consulta</th>
+                <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
                 <th class="ts ts-c">Programa</th>
                 <th class="ts ts-c">Tipo</th>
                 <th class="ts ts-c">Modalidad</th>
@@ -1405,7 +1405,7 @@ onMounted(async () => {
 :root {
   --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
   --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #0d9488; --teal-500:  #14b8a6;
+  --teal-600:  #12274e; --teal-500:  #12274e;
   --blue-600:  #2563eb;
   --amber-500: #f59e0b;
   --red-600:   #dc2626;
@@ -1487,7 +1487,7 @@ onMounted(async () => {
 /* Colores de estado (Pipeline) */
 .row-inscrito { border-left: 3px solid #10b981; } .row-inscrito > td { background: #f0fdf4; }
 .row-blue { border-left: 3px solid #3b82f6; }    .row-blue > td { background: #f0f9ff; }
-.row-emerald { border-left: 3px solid #14b8a6; } .row-emerald > td { background: #f0fdfa; }
+.row-emerald { border-left: 3px solid #12274e; } .row-emerald > td { background: #f0fdfa; }
 .row-yellow { border-left: 3px solid #f59e0b; }  .row-yellow > td { background: #fffbeb; }
 .row-gray { border-left: 3px solid var(--slate-400); } .row-gray > td { background: var(--slate-50); color: var(--text-secondary); }
 .row-red { border-left: 3px solid #ef4444; }     .row-red > td { background: #fef2f2; }

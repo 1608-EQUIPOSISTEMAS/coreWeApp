@@ -401,7 +401,7 @@ const metricGroupDefinitions = {
   comercial: { title: 'ESTADO COMERCIAL', field: 'breakdown_estados' }
 }
 
-const CHART_COLORS = ['#0f766e','#0369a1','#b45309','#7c3aed','#be123c','#0284c7','#0d9488','#a16207','#6d28d9','#475569']
+const CHART_COLORS = ['#0f766e','#0369a1','#b45309','#7c3aed','#be123c','#0284c7','#12274e','#a16207','#6d28d9','#475569']
 
 onMounted(() => loadData())
 
@@ -728,8 +728,8 @@ const bcgChartOptions = computed(() => {
   --slate-300: #cbd5e1;
   --slate-100: #f1f5f9;
   --slate-50:  #f8fafc;
-  --teal-600:  #0d9488;
-  --teal-500:  #14b8a6;
+  --teal-600:  #12274e;
+  --teal-500:  #12274e;
   --blue-600:  #2563eb;
   --red-600:   #dc2626;
   --gold-400:  #fbbf24;
@@ -749,7 +749,7 @@ const bcgChartOptions = computed(() => {
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
-  --teal-500: #14b8a6;
+  --teal-500: #12274e;
   --gold-400: #fbbf24;
 }
 

@@ -319,7 +319,7 @@ const barChartData = computed(() => ({
   labels: channelLabels,
   datasets: [
     { label: 'Consultas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].c), backgroundColor: '#cbd5e1', borderRadius: 4 },
-    { label: 'Ventas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v), backgroundColor: '#0d9488', borderRadius: 4 }
+    { label: 'Ventas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v), backgroundColor: '#12274e', borderRadius: 4 }
   ]
 }))
 
@@ -364,7 +364,7 @@ const doughnutChartData = computed(() => {
     labels: Object.keys(salesByType),
     datasets: [{
       data: Object.values(salesByType),
-      backgroundColor: ['#0d9488', '#3b82f6', '#f59e0b', '#dc2626'],
+      backgroundColor: ['#12274e', '#3b82f6', '#f59e0b', '#dc2626'],
       borderWidth: 2, borderColor: '#fff'
     }]
   }
@@ -386,7 +386,7 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: 
 :root {
   --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
   --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #0d9488; --teal-500:  #14b8a6; --teal-100:  #ccfbf1;
+  --teal-600:  #12274e; --teal-500:  #12274e; --teal-100:  #ccfbf1;
   --blue-600:  #2563eb;
   --amber-500: #f59e0b; --amber-100: #fef3c7;
   --red-600:   #dc2626;
@@ -456,7 +456,7 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: 
 
 /* Thead Colors (Adaptados a tus grupos) */
 .thead-group th { padding: 8px 10px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border); border-right: 1px solid rgba(0,0,0,0.05); }
-.th-teal { background: #f0fdfa; color: #0f766e; border-top: 3px solid #14b8a6; }
+.th-teal { background: #f0fdfa; color: #0f766e; border-top: 3px solid #12274e; }
 .th-slate{ background: #f8fafc; color: #475569; border-top: 3px solid #94a3b8; }
 .th-amber{ background: #fffbeb; color: #b45309; border-top: 3px solid #f59e0b; }
 .th-purple{ background: #faf5ff; color: #6d28d9; border-top: 3px solid #8b5cf6; }

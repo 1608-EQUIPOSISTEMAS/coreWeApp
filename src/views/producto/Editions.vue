@@ -1213,8 +1213,8 @@
   --slate-400: #94a3b8;
   --slate-300: #cbd5e1;
   --slate-100: #f1f5f9;
-  --teal-600:  #0d9488;
-  --teal-500:  #14b8a6;
+  --teal-600:  #12274e;
+  --teal-500:  #12274e;
   --blue-600:  #2563eb;
   --gold-400:  #fbbf24;
   --white:     #ffffff;
@@ -1346,6 +1346,7 @@
 .btn-exec {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 4px;
+  border: solid 1px white;
   font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
   cursor: pointer; border: none; font-family: inherit;
   transition: background 0.15s, opacity 0.15s; position: relative;
@@ -1353,7 +1354,7 @@
 
 .btn-exec-ghost {
   background: rgba(255,255,255,0.07); color: var(--slate-300);
-  border: 1px solid rgba(255,255,255,0.13);
+  border: 1px solid rgba(206, 206, 206, 0.784);
 }
 .btn-exec-ghost:hover { background: rgba(255,255,255,0.13); color: var(--white); }
 
@@ -1457,7 +1458,7 @@
 .week-badge {
   margin-left: auto; background: var(--teal-600); color: var(--white);
   font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.04em; border: solid 1px white;
 }
 
 /* ── Filas de datos ── */
@@ -1492,19 +1493,19 @@
 }
 
 .action-btn-view   { background: rgba(14,165,233,0.12); color: #0284c7; }
-.action-btn-view:hover { background: rgba(14,165,233,0.25); }
+.action-btn-view:hover { background: rgba(244, 243, 243, 0.767); }
 
 .action-btn-tree   { background: rgba(239,68,68,0.1); color: #dc2626; }
-.action-btn-tree:hover { background: rgba(239,68,68,0.2); }
+.action-btn-tree:hover { background: rgba(244, 243, 243, 0.767); }
 
 .action-btn-neutral { background: rgba(148,163,184,0.12); color: #64748b; }
-.action-btn-neutral:hover { background: rgba(148,163,184,0.25); }
+.action-btn-neutral:hover { background: rgba(244, 243, 243, 0.767); }
 
 .action-btn-edit  { background: rgba(245,158,11,0.12); color: #d97706; }
-.action-btn-edit:hover { background: rgba(245,158,11,0.25); }
+.action-btn-edit:hover { background: rgba(244, 243, 243, 0.767); }
 
 .action-btn-hier  { background: rgba(99,102,241,0.12); color: #6366f1; }
-.action-btn-hier:hover { background: rgba(99,102,241,0.25); }
+.action-btn-hier:hover {  background: rgba(244, 243, 243, 0.767); }
 
 /* ── Programa ── */
 .prog-name { font-weight: 600; }

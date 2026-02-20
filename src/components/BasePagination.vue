@@ -223,7 +223,7 @@ function changePage(newPage) {
   transition: border-color 0.15s;
 }
 .exec-select-light:focus {
-  border-color: var(--teal-500, #14b8a6);
+  border-color: var(--teal-500, #12274e);
 }
 
 /* Botones Auxiliares */
@@ -307,10 +307,10 @@ function changePage(newPage) {
 }
 
 .page-btn.active {
-  background: var(--teal-600, #0d9488);
+  background: var(--teal-600, #12274e);
   color: var(--white, #ffffff);
   font-weight: 600;
-  border-color: var(--teal-600, #0d9488);
+  border-color: var(--teal-600, #12274e);
 }
 
 .page-btn:disabled {

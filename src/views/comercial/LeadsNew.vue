@@ -1200,11 +1200,9 @@ textarea.form-control:focus {
 .lf-btn--sm  { padding: .3rem .65rem; font-size: .78rem; }
 .lf-btn--lg  { padding: .55rem 1.2rem; font-size: .9rem; }
 
-.lf-btn--primary {
-  background: var(--lf-blue);
-  color: #fff;
-}
-.lf-btn--primary:hover:not(:disabled) { background: #1d4ed8; }
+
+
+.lf-btn--primary:hover:not(:disabled) { background: #0d1a3e; color: white; }
 .lf-btn--primary:disabled { opacity: .55; cursor: default; }
 
 .lf-btn--warning {
