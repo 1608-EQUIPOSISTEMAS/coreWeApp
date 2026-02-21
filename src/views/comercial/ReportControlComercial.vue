@@ -775,25 +775,34 @@ function drillDown(type, valueName) {
     if (r) query.query_ids = r
   }
    else if (type === 'interest') {
-   const opts = catalog.options('we_lead_interest')
-   const found = opts.find(x => x.description === valueName)
-      ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
+      const opts = catalog.options('we_lead_interest')
+      const found = opts.find(x => x.description === valueName)
+         ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
 
-   const today = new Date()
-   const twoWeeksLater = new Date()
-   twoWeeksLater.setDate(today.getDate() + 14)
+      const today = new Date()
+      const twoWeeksLater = new Date()
+      twoWeeksLater.setDate(today.getDate() + 14)
 
-   // Formato YYYY-MM-DD
-   const formatDate = d => d.toISOString().split('T')[0]
+      // Formato YYYY-MM-DD
+      const formatDate = d => d.toISOString().split('T')[0]
 
-   query.edition_start_from = formatDate(today)
-   query.edition_start_to   = formatDate(twoWeeksLater)
+      query.edition_start_from = formatDate(today)
+      query.edition_start_to   = formatDate(twoWeeksLater)
 
-   if (found) {
-      query.interest_level_ids = encodeFilter([
-         { value: found.id, label: found.description }
-      ])
-   }
+      if (found) {
+         query.interest_level_ids = encodeFilter([
+            { value: found.id, label: found.description }
+         ])
+      }
+      
+      const optsx = catalog.options('we_lead_status')
+      const salesItems = optsx
+      .filter(x => ['we_lead_status_atendido', 'we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
+      .map(x => ({ value: x.id, label: x.description }))
+
+      
+       if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+      
    }
 else if (type === 'medium') {
     // Busca en el catálogo de medios y lo codifica como [{value, label}]
