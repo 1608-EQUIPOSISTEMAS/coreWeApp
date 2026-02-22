@@ -9,7 +9,7 @@
         placeholder="Selecciona fecha..."
       />
     </div>
-    
+
     <select
       class="dt12__input dt12__input--hour"
       v-model.number="hour12"
@@ -276,7 +276,6 @@ const emit = defineEmits(['update:modelValue', 'change'])
 const hours12 = Array.from({ length: 12 }, (_, i) => i + 1)
 const minutes = [0,10,20,30,40,50,59]
 
-// Configuración de FlatPickr
 const flatpickrConfig = computed(() => {
   return {
     altInput: true,
@@ -285,14 +284,34 @@ const flatpickrConfig = computed(() => {
     locale: Spanish,
     allowInput: true,
     disableMobile: true,
-    ...props.config, // Aquí fusionamos lo que venga de afuera (como el minDate)
-    // Mantenemos el onChange crítico para que funcione el componente
+    ...props.config,
     onChange: (selectedDates, dateStr) => {
       emitChange()
+    },
+
+    // ← AÑADIR ESTO:
+    onReady: (selectedDates, dateStr, instance) => {
+      const input = instance.altInput || instance.input
+      if (!input) return
+
+      input.addEventListener('keydown', (e) => {
+        const allowed = [
+          'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+          'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'
+        ]
+        if (allowed.includes(e.key)) return
+        if (!/^\d$/.test(e.key)) e.preventDefault()
+      })
+
+      input.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, '')
+        if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2)
+        if (val.length > 5) val = val.slice(0, 5) + '/' + val.slice(5)
+        e.target.value = val.slice(0, 10)
+      })
     }
   }
 })
-
 function normalize(v) {
   return (v || '').trim().replace('T', ' ')
 }

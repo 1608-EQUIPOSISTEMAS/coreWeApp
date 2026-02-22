@@ -280,7 +280,9 @@
                 class="tbody-row"
                 :class="{ 'row-highlight': !attempt.id }"
               >
-                <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ idx + 1 }}</td>
+              <td class="td-a text-center fw-700 text-muted align-top pt-3">
+                {{ attempt.attempt_number ?? '—' }}
+              </td>
                 <td class="td-a align-top pt-2">
                   <SearchSelect
                     :items="lAttempts"
@@ -309,6 +311,9 @@
                     v-model="attempt.contact_datetime"
                     :onlyHours="true"
                     :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    :config="!attempt.id && minDateForNewAttempt
+                      ? { minDate: minDateForNewAttempt }
+                      : {}"
                   />
                 </td>
                 <td class="td-a align-top text-center pt-2">
@@ -446,7 +451,7 @@
       <div class="exec-fieldset">
         <h6 class="fieldset-title" style="color: var(--blue-600);">Filtros Financieros y Matrícula</h6>
         <div class="row g-3">
-          
+
           <div class="col-md-3 col-6"><label class="exec-label">Estado FICO (Deuda)</label><MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Perfil de Precio</label><MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Moneda</label><MultiSelect v-model="filters.currency_ids" :items="filtroCurrency" label-key="description" value-key="id" placeholder="Todas..." /></div>
@@ -1506,22 +1511,23 @@ function openFollowModal(lead) {
     }
 
     if (Array.isArray(rawDetails)) {
-      editableHistory.value = rawDetails
-        .map(d => {
-          if (!d) return null;
-          return {
-            id: d?.id || d?.lead_contact_attempt_id,
-            calling_alias: d?.cat_result_alias || d?.cat_result_label,
-            contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
-            response: d?.response || '',
-            cat_type_attempt: d?.cat_type_attempt,
-            cat_type_attempt_label: d?.cat_type_attempt_label,
-            contact_duration: d?.contact_duration || 0,
-            timerActive: false,
-            timerId: null
-          };
-        })
-        .filter(item => item !== null);
+     editableHistory.value = rawDetails
+    .map(d => {
+      if (!d) return null;
+      return {
+        id: d?.id || d?.lead_contact_attempt_id,
+        attempt_number: d?.attempt_number ?? null,  // ← AÑADIR
+        calling_alias: d?.cat_result_alias || d?.cat_result_label,
+        contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
+        response: d?.response || '',
+        cat_type_attempt: d?.cat_type_attempt,
+        cat_type_attempt_label: d?.cat_type_attempt_label,
+        contact_duration: d?.contact_duration || 0,
+        timerActive: false,
+        timerId: null
+      };
+    })
+    .filter(item => item !== null);
     } else {
       editableHistory.value = [];
     }
@@ -1668,34 +1674,40 @@ async function saveControlRestrictions() {
 async function saveFastFollow() {
   if (!selectedFollowLead.value) return
 
-  // --> AGREGAR: Detener timers activos antes de guardar
   editableHistory.value.forEach(item => {
-      if(item.timerActive) toggleTimer(item);
-  });
+    if (item.timerActive) toggleTimer(item)
+  })
 
   isSavingFollow.value = true
 
   try {
     const attemptsPayload = editableHistory.value.map(item => ({
-       id: item.id,
-       cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
-       cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
-       contact_datetime: item.contact_datetime,
-       response: item.response,
-
-       // --> AGREGAR: Enviar duración al backend
-       contact_duration: item.contact_duration
+      id: item.id,
+      cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
+      cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
+      contact_datetime: item.contact_datetime,
+      response: item.response,
+      contact_duration: item.contact_duration
     }))
 
-    await comercialService.leadUpdate({
-        id: selectedFollowLead.value.id,
-        lead: {},
-        contact_attempts: attemptsPayload
+    const resp = await comercialService.leadUpdate({
+      id: selectedFollowLead.value.id,
+      lead: {},
+      contact_attempts: attemptsPayload
     })
 
-    toast.success('Seguimiento actualizado correctamente')
-    showFollowModal.value = false
-    fetchLeads()
+    // ← REEMPLAZAR el toast.success simple por esto:
+    if (resp.result === 1) {
+      toast.success(resp.message || 'Seguimiento actualizado correctamente')
+      showFollowModal.value = false
+      fetchLeads()
+    } else if (resp.result === 0) {
+      toast.error(resp.message || 'Error inesperado al guardar')
+    } else {
+      // result 2 u otros → advertencia amarilla
+      toast.warning(resp.message || 'No se pudo guardar el seguimiento')
+    }
+
   } catch (error) {
     console.error(error)
     toast.error('Error al guardar el seguimiento')
@@ -1703,6 +1715,16 @@ async function saveFastFollow() {
     isSavingFollow.value = false
   }
 }
+
+const minDateForNewAttempt = computed(() => {
+  const existing = editableHistory.value.filter(a => a.id) // solo los ya guardados
+  if (!existing.length) return null
+  // Tomar la fecha más reciente entre los existentes
+  const dates = existing.map(a => new Date(a.contact_datetime)).filter(d => !isNaN(d))
+  if (!dates.length) return null
+  return new Date(Math.max(...dates))
+})
+
 function rebuildChips() {
   const chips = []
 
@@ -1872,8 +1894,8 @@ function clearFilters(reload = true) {
   })
 
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
-  
-if (reload === true || typeof reload !== 'boolean') { 
+
+if (reload === true || typeof reload !== 'boolean') {
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_filter_state_v1')
     rebuildChips()
@@ -1975,24 +1997,22 @@ function badgeForFollow(s) {
   return map[s] || 'pill-slate'
 }
 function addLocalAttempt() {
-    const now = new Date();
-    const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+  const now = new Date();
+  const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
-    editableHistory.value.unshift({
-        id: null,
-        status_alias: 'we_follow_lead_pending',
-        calling_alias: null,
-        contact_datetime: isoString,
-        cat_type_attempt: 'we_attempt_call',
-        response: '',
-
-        // --> AGREGAR ESTOS CAMPOS:
-        contact_duration: 0,
-        timerActive: false,
-        timerId: null
-    })
+  editableHistory.value.unshift({
+    id: null,
+    attempt_number: null,          // ← sin número hasta guardar
+    status_alias: 'we_follow_lead_pending',
+    calling_alias: 'we_calling_pending',  // ← Pendiente por defecto
+    contact_datetime: isoString,
+    cat_type_attempt: 'we_attempt_call',
+    response: '',
+    contact_duration: 0,
+    timerActive: false,
+    timerId: null
+  })
 }
-
 function getIdFromAlias(alias, catalogArray) { if (!alias || !catalogArray) return null; const item = catalogArray.find(i => i.alias === alias); return item ? item.id : null }
 function goNew() { router.push({ name: 'ComercialLeadsNew' }) }
 function viewLead(lead) { router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } }) }

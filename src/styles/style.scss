@@ -146,7 +146,7 @@ textarea.form-control {
 }
 
 /* Estados Disabled */
-.form-control:disabled, 
+.form-control:disabled,
 .form-control[readonly], /* Añadido readonly para consistencia */
 .form-select:disabled {
   background-color: #f8fafc;
@@ -216,20 +216,20 @@ textarea.form-control {
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 
 /* 3. BOTONES DE ICONO (Para tablas y acciones pequeñas) */
-.btn-icon { 
-  background: transparent; 
-  border: 1px solid var(--border, #e2e8f0); 
-  border-radius: 4px; 
-  padding: 4px 8px; 
-  cursor: pointer; 
-  color: var(--text-secondary, #475569); 
-  transition: all 0.15s; 
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-secondary, #475569);
+  transition: all 0.15s;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.btn-icon:hover:not(:disabled) { 
-  background: var(--slate-50, #f8fafc); 
-  color: var(--text-primary, #0f172a); 
-  border-color: var(--slate-300, #cbd5e1); 
+.btn-icon:hover:not(:disabled) {
+  background: var(--slate-50, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  border-color: var(--slate-300, #cbd5e1);
 }
 .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -261,7 +261,7 @@ textarea.form-control {
 .table-responsive-custom {
   /* Necesario para que el sticky funcione dentro de un contenedor con scroll */
   max-height: calc(100vh - 220px); /* Ajusta este valor si tienes un header o toolbar más grande */
-  overflow-y: auto; 
+  overflow-y: auto;
 }
 
 .exec-table thead {
@@ -279,5 +279,30 @@ textarea.form-control {
   /* Asegurar que las celdas hereden el fondo si el tr falla en algunos navegadores */
   /* Para tapar el borde que se "escapa" al scrollear, forzamos un box-shadow en lugar de un border-bottom */
   border-bottom: none !important;
-  box-shadow: inset 0 -2px 0 var(--border, #e2e8f0); 
+  box-shadow: inset 0 -2px 0 var(--border, #e2e8f0);
+}
+/* ── Fix: BaseDatePicker inline dentro de input-group ── */
+.input-group {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* Hace que el wrapper del DatePicker ocupe el espacio disponible */
+.input-group > *:not(.btn):not(.input-group-text):not(.btn-outline-secondary) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Asegura que el input interno del picker herede el ancho */
+.input-group :deep(input),
+.input-group :deep(.flatpickr-input) {
+  width: 100%;
+  min-width: 0;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* El botón no debe achicarse */
+.input-group > .btn {
+  flex-shrink: 0;
 }

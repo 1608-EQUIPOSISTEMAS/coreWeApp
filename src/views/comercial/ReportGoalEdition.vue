@@ -97,11 +97,11 @@
                   <th class="th-cat" rowspan="3">
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 gap-2">
                       <span>CAT.</span>
-                      <ColumnFilterDropdown 
-                        column-label="Categoría" 
-                        :all-items="processedData" 
-                        :value-extractor="item => item.catg" 
-                        v-model="columnFilters.catg" 
+                      <ColumnFilterDropdown
+                        column-label="Categoría"
+                        :all-items="processedData"
+                        :value-extractor="item => item.catg"
+                        v-model="columnFilters.catg"
                       />
                     </div>
                   </th>
@@ -441,7 +441,7 @@ onMounted(() => loadData())
 
 async function loadData() {
   isLoading.value = true
-  
+
   // Limpiar filtros rápidos de columna al cambiar de mes/año
   Object.keys(columnFilters).forEach(k => columnFilters[k] = [])
 
@@ -902,7 +902,7 @@ const bcgChartOptions = computed(() => {
   min-width: 1400px;
 }
 
-/* El thead hereda el position: sticky del CSS global, 
+/* El thead hereda el position: sticky del CSS global,
    solo definimos los estilos específicos de esta tabla */
 
 .thead-group th {

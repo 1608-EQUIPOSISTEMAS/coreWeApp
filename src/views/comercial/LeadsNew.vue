@@ -14,27 +14,43 @@
         </div>
         <div class="masthead-actions">
           <button
-            type="button"
-            v-if="!form.enrollment_id && form.status_alias=='we_lead_status_bought' && isEdit && form.pay_date && form.client_status == 'we_client_person'"
-            class="btn-exec btn-exec-warning"
-            :disabled="form.enrollment_id"
-            @click="openInscription()"
-          >
-            <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
-          </button>
+  :title="
+    form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id
+      ? 'Debe seleccionar una edición para programas EN VIVO'
+      : 'Inscribir alumno'
+  "
+  type="button"
+  v-if="
+    !form.enrollment_id &&
+    form.ocupacion_alias &&
+    form.status_alias == 'we_lead_status_bought' &&
+    form.pay_date &&
+    form.client_status == 'we_client_person' &&
+    form.program_version_id
+  "
+  class="btn-exec btn-exec-warning"
+  :disabled="
+    !!form.enrollment_id ||
+    (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)
+  "
+  @click="openInscription()"
+>
+  <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
+</button>
           <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
             <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
           </button>
-          <button
-            v-if="!form.enrollment_id && (isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo()))"
-            type="button"
-            class="btn-exec btn-exec-primary px-4"
-            @click="guardar"
-            :disabled="saving || form.enrollment_id"
-          >
-            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-            {{ saving ? 'Guardando...' : 'Guardar lead' }}
-          </button>
+<button
+  v-if="!form.enrollment_id"
+  type="button"
+  class="btn-exec btn-exec-primary px-4"
+  @click="guardar"
+  :disabled="saving || form.enrollment_id || (!isEdit && !!saveBlockReason)"
+  :title="!isEdit && saveBlockReason ? saveBlockReason : 'Guardar lead'"
+>
+  <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+  {{ saving ? 'Guardando...' : 'Guardar lead' }}
+</button>
         </div>
       </div>
     </header>
@@ -110,7 +126,7 @@
                 (['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.program_modality_alias))"
             >
               <label class="exec-label">Producto / Programa <span class="c-red">*</span></label>
-              
+
               <div class="d-flex gap-2">
                 <SearchSelect
                   v-model="form.program_version_id"
@@ -130,7 +146,7 @@
                   class="w-100"
                   @change="onProgramaChange"
                 />
-                
+
                 <button
                   v-if="form.program_version_id"
                   type="button"
@@ -275,7 +291,7 @@
             </div>
 
             <div class="col-6 col-md-3">
-              <label class="exec-label">Ocupación / Situación <span class="c-red">*</span></label>
+              <label class="exec-label">Ocupación / Situación </label>
               <SearchSelect
                 v-model="form.ocupacion_alias"
                 :items="prospectSituationCatalog"
@@ -365,7 +381,7 @@
               <label class="exec-label">Medio de llegada <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.medium_alias"
-                :items="socialMediaCatalog.filter(e=> ['we_social_media_whatsapp','we_social_media_wechat','we_social_media_msg','we_social_media_comment'].includes(e.alias))"
+                :items="filteredMediumCatalog"
                 required
                 label-field="description"
                 viewOpen="6"
@@ -373,6 +389,7 @@
                 value-field="alias"
                 placeholder="MEDIO..."
                 class="exec-select-light w-100"
+                :disabled="isMedioDisabled"
               />
             </div>
 
@@ -474,14 +491,16 @@
 
             <div class="attempt-row__date">
               <label class="exec-label d-lg-none">Fecha y Hora <span class="c-red">*</span></label>
-              <DateTime12
-                v-model="c.fechaContactoProximo"
-                required
-                clearable
-                :onlyHours="true"
-                :disabled="c.calling_alias != 'we_calling_pending'"
-                :config="dateLimitConfig"
-              />
+                <DateTime12
+                  v-model="c.fechaContactoProximo"
+                  required
+                  clearable
+                  :onlyHours="true"
+                  :disabled="c.calling_alias != 'we_calling_pending'"
+                  :config="!c.id && minDateForNewAttempt
+                    ? { minDate: minDateForNewAttempt }
+                    : dateLimitConfig"
+                />
             </div>
 
             <div class="attempt-row__result">
@@ -866,7 +885,7 @@
         <div class="row g-3">
           <div class="col-md-4">
             <label class="exec-label">T. documento <span class="c-red">*</span></label>
-            <SearchSelect 
+            <SearchSelect
                 viewOpen="6" required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4">
@@ -1803,19 +1822,16 @@ const getBadgeClass = (status) => {
   }
 }
 
-// --- DATA HARDCORE (MOCKUP) ---
 
-const hcHistoryData = ref([
-  { fecha: '12 Ene 2025', programa: 'Gestión de Proyectos', tipo: 'Curso', nombre: 'Eliuth Diaz' },
-  { fecha: '15 Nov 2024', programa: 'Excel Empresarial', tipo: 'Taller', nombre: 'Eliuth J. Diaz' },
-  { fecha: '20 Ago 2024', programa: 'Power BI Avanzado', tipo: 'Especialización', nombre: 'Eliuth Diaz' },
-])
-
-const hcAdvisoryData = ref([
-  { fecha: '14 Ene 2026', interes: 'PMP Certification', asesor: 'Ana Lopez', status: 'En Seguimiento', intentos: 3 },
-  { fecha: '10 Ene 2026', interes: 'Scrum Master', asesor: 'Carlos Ruiz', status: 'No Interesado', intentos: 5 },
-  { fecha: '05 Dic 2025', interes: 'Power BI', asesor: 'Maria Paz', status: 'Matriculado', intentos: 2 },
-])
+const minDateForNewAttempt = computed(() => {
+  const existing = form.contactos.filter(c => c.id)
+  if (!existing.length) return null
+  const dates = existing
+    .map(c => new Date(c.fechaContactoProximo))
+    .filter(d => !isNaN(d))
+  if (!dates.length) return null
+  return new Date(Math.max(...dates))
+})
 
 const hcEnrollmentData = ref([
   { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso', nota: null },
@@ -2263,7 +2279,12 @@ async function searchSunat() {
 }
 
 const dataSetted = ref(null)
-
+const saveBlockReason = computed(() => {
+  if (!validateLeadInfo())      return 'Falta completar la información del Lead (fecha de contacto, programa, etc.)'
+  if (!validateContactInfo())   return 'Falta completar los Datos del Contacto (teléfono, status, país, nombre, estado del cliente)'
+  if (!validateCommercialInfo()) return 'Falta completar el Estado Comercial (nivel de interés, mensaje, canal, medio)'
+  return null
+})
 async function searchLeadByPhone() {
 
   const phone = form.telefono?.trim()
@@ -2419,10 +2440,43 @@ function resetInscriptionData() {
   form.ticket_payment_url = null;
   form.carnet_url = null;
 }
+const isMedioDisabled = computed(() =>
+  ['we_social_media_coti', 'we_social_media_chatbot'].includes(form.canal_alias)
+)
 
-function onChannelChange(option){
-  if(!option){
-    form.strategy_alias   = null
+const filteredMediumCatalog = computed(() => {
+  const socialList = socialMediaCatalog.value.filter(e =>
+    ['we_social_media_whatsapp', 'we_social_media_wechat', 'we_social_media_msg', 'we_social_media_comment'].includes(e.alias)
+  )
+
+  const excludeWebFor = ['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook']
+  if (excludeWebFor.includes(form.canal_alias)) {
+    return socialList.filter(e => e.alias !== 'we_social_media_wechat')
+  }
+
+  return socialList
+})
+function onChannelChange(option) {
+  if (!option) {
+    // Regla 3: Canal vacío → limpiar Medio
+    form.strategy_alias = null
+    form.medium_alias = null
+    return
+  }
+
+  const alias = option.alias
+
+  // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
+  if (['we_social_media_coti', 'we_social_media_chatbot'].includes(alias)) {
+    form.medium_alias = 'we_social_media_wechat'
+    return
+  }
+
+  // Regla 2: Instagram, LinkedIn, Facebook → limpiar Medio si es WEB
+  if (['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook'].includes(alias)) {
+    if (form.medium_alias === 'we_social_media_wechat') {
+      form.medium_alias = null
+    }
   }
 }
 
@@ -2728,7 +2782,7 @@ function openInscription() {
     return true
   }
   function validateContactInfo() {
-    const required = ['telefono','status_alias','country_alias']
+    const required = ['telefono','status_alias','country_alias','full_name','cat_client_moment_alias']
     return required.every(f => !!form[f])
   }
   function validateCommercialInfo() {

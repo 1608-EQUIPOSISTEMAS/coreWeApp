@@ -14,7 +14,7 @@
           </div>
         </div>
         <div class="masthead-actions">
-          <button v-if="!hasActiveFilters" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
+<button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Objetivos
           </button>
@@ -108,7 +108,7 @@
                 <tr class="thead-group">
                   <th class="th-act" rowspan="2">
                     <div class="d-flex justify-content-center" v-if="!hasActiveFilters">
-                      <button type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
+<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
                         + Nueva
                       </button>
                     </div>
@@ -209,30 +209,26 @@
                       e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
                       { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
                     ]"
-                    @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-                    @mousemove="cancelLongPress"
-                    @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
-                    @mouseup="clearLongPress(); currentPressId = null"
-                    @mouseleave="clearLongPress(); currentPressId = null"
-                    @touchend="clearLongPress(); currentPressId = null"
+                    @contextmenu.prevent="handleFamilyFilter(e)"
                   >
-                    <!-- Acciones -->
-                    <td class="td-act">
-                      <div class="action-btns">
-                        <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                          <i class="fa-solid fa-hamsa"></i>
-                        </button>
-                        <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
-                          <i class="fa-solid fa-book-bookmark"></i>
-                        </button>
-                        <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
-                          <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          
-                          
-                          <i v-else class="fa-solid fa-sitemap"></i>
-                        </button>
-                      </div>
-                    </td>
+
+                  <td class="td-act">
+                    <div class="action-btns">
+                      <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
+                        <i class="fa-solid fa-hamsa"></i>
+                      </button>
+                      <button class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                      </button>
+                      <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
+                       <i class="fa-solid fa-book-bookmark"></i>
+                      </button>
+<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                        <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
+                        <i v-else class="fa-solid fa-sitemap"></i>
+                      </button>
+                    </div>
+                  </td>
 
                     <!-- IDENTIFICACIÓN -->
                     <td class="td-a td-prog">
@@ -357,7 +353,7 @@
                     <!-- SEGUIMIENTO -->
                     <td class="td-c text-center">
                       <label class="exec-switch scale-75" title="Ficha / Expediente">
-                        <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span>
+                        <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span>
                       </label>
                       <label class="exec-switch scale-75" title="Mejora / Upgrade">
                         <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
@@ -374,8 +370,17 @@
 
                     <!-- REFERENCIA -->
                     <td class="td-d">
-                      <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
-                      <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
+<textarea
+  v-if="!isCompact"
+  class="exec-textarea"
+  rows="2"
+  v-model="e.notes"
+  @focus="captureOriginalNote(e)"
+  @blur="$hasRole(['ADMIN', 'PRODUCTO']) ? updateQuickNotes(e) : null"
+  :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
+  placeholder="…"
+></textarea>
+                      <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes  }}</div>
                     </td>
                     <td class="td-d">
                       <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
@@ -397,26 +402,25 @@
                   :key="e.edition_num_id"
                   class="tbody-row"
                   :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
-                  @mousedown="startLongPress(e); currentPressId = e.edition_num_id"
-                  @touchstart="startLongPress(e); currentPressId = e.edition_num_id"
-                  @mousemove="cancelLongPress"
-                  @mouseup="clearLongPress(); currentPressId = null"
-                  @mouseleave="clearLongPress(); currentPressId = null"
-                  @touchend="clearLongPress(); currentPressId = null"
+                  @contextmenu.prevent="handleFamilyFilter(e)"
                 >
                   <td class="td-act">
                     <div class="action-btns">
                       <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <i class="fa-solid fa-hamsa"></i>
+                      </button>
+                      <button class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
                       </button>
                       <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="11"/><line x1="12" y1="11" x2="5" y2="14"/><line x1="12" y1="11" x2="19" y2="14"/></svg>
+                       <i class="fa-solid fa-book-bookmark"></i>
                       </button>
-                      <button class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
-                        <svg v-if="e.program_type === 'Curso'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                        <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
+                        <i v-else class="fa-solid fa-sitemap"></i>
                       </button>
                     </div>
+
                   </td>
 
                   <td class="td-a td-prog">
@@ -479,7 +483,7 @@
                   </td>
 
                   <td class="td-c text-center">
-                    <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" /><span></span></label>
+                    <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span></label>
                     <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
                   </td>
                   <td class="td-c text-center">
@@ -488,8 +492,17 @@
                   </td>
 
                   <td class="td-d">
-                    <textarea v-if="!isCompact" class="exec-textarea" rows="2" v-model="e.notes" @blur="updateQuickNotes(e)" placeholder="…"></textarea>
-                    <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes || '—' }}</div>
+<textarea
+  v-if="!isCompact"
+  class="exec-textarea"
+  rows="2"
+  v-model="e.notes"
+  @focus="captureOriginalNote(e)"
+  @blur="$hasRole(['ADMIN', 'PRODUCTO']) ? updateQuickNotes(e) : null"
+  :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
+  placeholder="…"
+></textarea>
+                    <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes }}</div>
                   </td>
                   <td class="td-d">
                     <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
@@ -699,7 +712,7 @@
         </div>
         <div class="mb-3 col-6">
           <label class="form-label small fw-bold">Buscar Programa</label>
-          <SearchSelect v-model="filterForm.program_version_id" mode="remote" :fetcher="q => programService.programVersionCaller({ q })" label-field="program_type_for_iu" value-field="program_version_id" sublabel-field="version_code" placeholder="Buscar programa…" :cache="false" view-open="6" :model-label="filterForm.program_version_label" @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''" />
+          <SearchSelect v-model="filterForm.program_version_id" mode="remote" :fetcher="q => programService.programVersionCaller({ q })" label-field="program_type_for_iu" value-field="program_version_id" sublabel-field="version_code" placeholder="Buscar programa…" :cache="false" :view-open="6" :model-label="filterForm.program_version_label" @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''" />
         </div>
         <div class="mb-3 col-6">
           <label class="form-label small fw-bold">Docente</label>
@@ -764,7 +777,7 @@
             <div class="row g-3">
               <div class="col-12">
                 <label class="form-label-sm">Versión de Programa</label>
-                <SearchSelect v-model="modalForm.program_version_id" mode="remote" :disabled="currentEdition && currentEdition.edition_num_id" :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e => e.alias == 'we_modality_online').id })" label-field="program_type_for_iu" value-field="program_version_id" placeholder="Buscar programa…" :minChars="0" :cache="false" required view-open="6" :model-label="modalForm.abbreviation" @change="onProgramVersionChange" />
+                <SearchSelect v-model="modalForm.program_version_id" mode="remote" :disabled="!!(currentEdition && currentEdition.edition_num_id)" :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e => e.alias == 'we_modality_online').id })" label-field="program_type_for_iu" value-field="program_version_id" placeholder="Buscar programa…" :minChars="0" :cache="false" required :view-open="6" :model-label="modalForm.abbreviation" @change="onProgramVersionChange" />
               </div>
               <div class="col-6" v-if="modalForm.cat_type_program_alias === 'we_program_type_course'">
                 <label class="form-label-sm">Docente Asignado</label>
@@ -990,11 +1003,11 @@
               <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
               <div class="col-12 mb-2">
                 <label class="form-label-sm">Histórico</label>
-                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.global_code" required />
+                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.global_code" />
               </div>
               <div class="col-12">
                 <label class="form-label-sm">Ed. Año</label>
-                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" required />
+                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" />
               </div>
             </div>
           </div>
@@ -1194,6 +1207,70 @@
       </template>
     </BaseModal>
 
+<BaseModal v-model="showAuditModal"
+  :title="currentEditionId ? 'Historial de Cambios — Edición' : 'Historial Global de Cambios'"
+  size="xl">  <div v-if="loadingAudit && !auditLogs.length" class="text-center py-5">
+    <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
+    <p class="text-muted fw-600">Cargando historial...</p>
+  </div>
+
+  <div v-else-if="!auditLogs.length" class="empty-state">
+    No hay historial de cambios registrado.
+  </div>
+
+  <div v-else>
+    <div v-for="log in auditLogs" :key="log.transaction_id" class="audit-entry mb-3">
+      <!-- Cabecera de transacción -->
+      <div class="audit-entry__header">
+        <div class="d-flex align-items-center gap-2">
+          <div class="user-avatar">{{ log.user_name?.charAt(0) || '?' }}</div>
+          <div>
+            <div class="fw-bold" style="font-size:.85rem">{{ log.user_name }}</div>
+            <small class="text-muted">{{ formatDateTime(log.created_at) }}</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cambios agrupados por tabla/registro -->
+      <div v-for="(change, i) in log.changes" :key="i" class="audit-change">
+        <div class="audit-change__meta">
+          <span class="pill border" :class="actionClass(change.action)">
+            {{ actionLabel(change.action) }}
+          </span>
+          <span class="fw-semibold" style="font-size:.82rem">
+            {{ change.program_abbreviation || '' }}
+            <span class="text-muted" v-if="change.global_code">· {{ change.global_code }}</span>
+          </span>
+          <span v-if="change.is_child" class="pill pill-slate border" style="font-size:.68rem">
+            <i class="fa-solid fa-sitemap me-1"></i> Módulo
+          </span>
+          <span v-if="change.table_name === 'edition_structure'" class="pill pill-slate border" style="font-size:.68rem">
+            <i class="fa-solid fa-link me-1"></i> Vínculo
+          </span>
+        </div>
+
+        <!-- Campos modificados -->
+        <div v-if="change.changed_fields && Object.keys(change.changed_fields).length"
+             class="audit-fields mt-2">
+          <div v-for="(val, key) in change.changed_fields" :key="key" class="audit-field-row">
+            <span class="field-name">{{ resolveFieldLabel(key) }}</span>
+            <span class="field-old">{{ formatFieldValue(key, val).old }}</span>
+            <i class="fa-solid fa-arrow-right text-muted" style="font-size:.7rem"></i>
+            <span class="field-new">{{ formatFieldValue(key, val).new }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cargar más -->
+    <div class="text-center mt-3" v-if="auditHasMore">
+      <button class="btn-exec btn-exec-outline btn-exec-sm" @click="loadAuditLogs(currentEditionId)" :disabled="loadingAudit">
+        <i class="fa-solid fa-spinner fa-spin me-1" v-if="loadingAudit"></i>
+        Cargar más
+      </button>
+    </div>
+  </div>
+</BaseModal>
   </div>
 </template>
 
@@ -1385,8 +1462,8 @@
 .view-table { width: 100%; }
 
 .table-shell {
-  background: var(--white); 
-  border: 1px solid var(--border); 
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 6px;
   /* overflow-x: auto;  <-- ELIMINAR */
   /* overflow-y: hidden; <-- ELIMINAR */
@@ -1834,6 +1911,43 @@ tr[class*="row-segment-"]:hover .td-d {
 @keyframes popIn  { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes spin   { to { transform: rotate(360deg); } }
 @keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.audit-entry {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.audit-entry__header {
+  background: var(--slate-50, #f8fafc);
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.audit-change {
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+}
+.audit-change:last-child { border-bottom: none; }
+.audit-change__meta {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.audit-fields { display: flex; flex-direction: column; gap: .25rem; }
+.audit-field-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 16px 1fr;
+  align-items: center;
+  gap: .5rem;
+  font-size: .8rem;
+  padding: .2rem .4rem;
+  border-radius: 4px;
+  background: var(--slate-50, #f8fafc);
+}
+.field-name { font-weight: 600; color: var(--slate-500, #64748b); }
+.field-old  { color: var(--red-600, #dc2626); text-decoration: line-through; }
+.field-new  { color: #15803d; font-weight: 600; }
+.action-btn-audit { background: rgba(99,102,241,0.1); color: #6366f1; }
+.action-btn-audit:hover { background: rgba(244,243,243,0.767); }
 </style>
 <script setup>
 
@@ -1847,6 +1961,7 @@ import CurrencyInput from '@/components/CurrencyInput.vue' // Ajusta la ruta si 
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 const showMonthlyGoalsModal = ref(false)
 const activeGoalsList = ref([])
+const currentEditionId = ref(null)
 
 // Estado para los filtros de columna (reemplaza localFilters)
 const columnFilters = reactive({
@@ -1867,6 +1982,14 @@ const columnFilters = reactive({
 
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
+
+
+const showAuditModal = ref(false)
+const auditLogs = ref([])
+const loadingAudit = ref(false)
+const auditPage = ref(0)
+const auditHasMore = ref(true)
+const AUDIT_PAGE_SIZE = 20
 
 // --- INYECCIONES ---
 const programService = inject(ServiceKeys.Program)
@@ -1911,6 +2034,98 @@ const metaSummary = ref({
   segments: []    // Segmentación Operativa
 })
 
+function resolveFieldLabel(key) {
+  const labels = {
+    instructor_id:           'Docente',
+    program_version_id:      'Programa',
+    cat_type_approved:       'Tipo Aprobación',
+    cat_status_edition:      'Estado Edición',
+    cat_day_combination_id:  'Días',
+    cat_hour_combination_id: 'Horario',
+    cat_segment:             'Segmento',
+    start_date:              'Fecha Inicio',
+    end_date:                'Fecha Fin',
+    vacant:                  'Vacantes',
+    active:                  'Activo',
+    notes:                   'Notas',
+    expedient:               'Expediente',
+    confirmation:            'Confirmación',
+    sort_order:              'Orden'
+  }
+  return labels[key] || key
+}
+
+function formatFieldValue(key, entry) {
+  // Si tiene label resuelto (FK), mostrar el label
+  if (entry.new_label !== undefined) {
+    return {
+      old: entry.old_label || entry.old || '—',
+      new: entry.new_label || entry.new || '—'
+    }
+  }
+  // Campos booleanos char
+  if (['active', 'expedient', 'confirmation', 'preconfirmation'].includes(key)) {
+    return {
+      old: entry.old === 'Y' ? 'Sí' : entry.old === 'N' ? 'No' : '—',
+      new: entry.new === 'Y' ? 'Sí' : entry.new === 'N' ? 'No' : '—'
+    }
+  }
+  return {
+    old: entry.old ?? '—',
+    new: entry.new ?? '—'
+  }
+}
+
+function actionLabel(action) {
+  return { INSERT: 'Creación', UPDATE: 'Modificación', DELETE: 'Eliminación' }[action] || action
+}
+
+function actionClass(action) {
+  return { INSERT: 'pill-teal', UPDATE: 'pill-amber', DELETE: 'pill-red' }[action] || 'pill-slate'
+}
+async function openAuditHistory(editionId) {
+
+  currentEditionId.value = editionId  // ← guardar aquí
+  auditLogs.value = []
+  auditPage.value = 0
+  auditHasMore.value = true
+  showAuditModal.value = true
+  await loadAuditLogs(editionId)
+}
+function formatDateTime(isoString) {
+  if (!isoString) return '—'
+  const date = new Date(isoString)
+  return date.toLocaleDateString('es-PE', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  }) + ' ' + date.toLocaleTimeString('es-PE', {
+    hour: '2-digit', minute: '2-digit'
+  })
+}
+async function loadAuditLogs(editionId) {
+  if (loadingAudit.value || !auditHasMore.value) return
+  loadingAudit.value = true
+  try {
+    const response = await editionService.auditLogsGet({
+      edition_id: editionId,
+      limit: AUDIT_PAGE_SIZE,
+      offset: auditPage.value * AUDIT_PAGE_SIZE
+    })
+
+    // Normalizar respuesta: puede ser array directo o { items: [] }
+    const data = Array.isArray(response)
+      ? response
+      : (response?.items ?? response?.data ?? [])
+
+    if (data.length < AUDIT_PAGE_SIZE) auditHasMore.value = false
+    auditLogs.value = [...auditLogs.value, ...data]
+    auditPage.value++
+  } catch (e) {
+    console.error('Error auditLogs:', e)
+    toast.error('Error al cargar el historial')
+  } finally {
+    loadingAudit.value = false  // ← siempre se ejecuta
+  }
+}
 /**
  * Helper para obtener descripción desde el Catálogo
  * @param {String} catalogName - Nombre del catálogo (ej: 'we_program_type')
@@ -2005,27 +2220,6 @@ watch(
     calculateMetaSummary()
   }
 )
-
-
-const longPressTimer = ref(null)
-const currentPressId = ref(null)
-
-function startLongPress(item) {
-  clearLongPress()
-  currentPressId.value = item.edition_num_id
-  longPressTimer.value = setTimeout(() => {
-    handleFamilyFilter(item)
-  }, 2000)
-}
-
-function clearLongPress() {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  currentPressId.value = null
-}
-
 function handleFamilyFilter(item) {
   if (!item.family_filter_value) {
     toast.info('Sin clasificaciones de familia relacionadas.')
@@ -2158,13 +2352,7 @@ async function openMonthlyGoalsModal() {
   // 4. Abrimos el modal
   showMonthlyGoalsModal.value = true
 }
-function cancelLongPress() {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  currentPressId.value = null
-}
+
 async function saveMonthlyGoals() {
   try {
     // Aquí mapeas los datos que necesitas enviar a tu backend
@@ -3100,17 +3288,21 @@ async function updateQuickStatus(edition, fieldChanged) {
   // 3. Guardar cambios
   await saveQuickChange(edition)
 }
-
-/**
- * Maneja el blur del textarea de notas
- * Permitido para CUALQUIER tipo de edición
- */
 async function updateQuickNotes(edition) {
-  // Solo guardamos si realmente hay algo distinto (opcional, pero ahorra llamadas)
-  // Como no tenemos el valor "original" fácil a mano, guardamos siempre al blur.
-  await saveQuickChange(edition)
-}
+  const currentNotes = edition.notes || '';
 
+  // 1. Comparamos el valor actual con el que capturamos en el focus
+  if (currentNotes === originalNoteValue.value) {
+    // Si son exactamente iguales, detenemos la ejecución. ¡No hacemos la llamada a la API!
+    return;
+  }
+
+  // 2. Si hay cambios, procedemos a guardar
+  await saveQuickChange(edition);
+
+  // 3. Actualizamos nuestra variable de control por si el usuario vuelve a hacer focus sin recargar
+  originalNoteValue.value = currentNotes;
+}
 /**
  * Función CORE que realiza la actualización
  * 1. Obtiene la data completa de la BD (para no perder datos ocultos)
@@ -3149,12 +3341,13 @@ async function saveQuickChange(edition) {
     })
 
     //if (response && response.result === 1) {
-    if (response.ok) {
-      toast.success('Edición actualizada correctamente', { timeout: 1500 })
+    if (response && response.result === 1) {
+      // Usamos el mensaje del backend si viene, o uno por defecto
+      toast.success(response.message || 'Edición actualizada correctamente', { timeout: 1500 })
     } else {
+      // Si result es 0 u otro, es un error
       toast.error(response?.message || 'Error al actualizar')
       // Opcional: Recargar el listado si falló para revertir visualmente
-
     }
 
     fetchSchedule();
@@ -3293,7 +3486,25 @@ function getAllowedDaysFromCombo(comboOption) {
 
 function validateAndCalculate(targetObj, fieldKey, index=null) {
    const dateVal = targetObj[fieldKey];
-   if (!dateVal) return;
+
+   // Identificadores para el popover de Análisis de Tiempos
+   const gapId = index !== null ? ('child_gap_' + index) : 'main_gap';
+   const versionId = index !== null ? targetObj.child_program_version_id : modalForm.program_version_id;
+
+   // 1. CASO: EL USUARIO BORRÓ LA FECHA
+   if (!dateVal) {
+       // Si se borró la fecha de inicio, calculamos el fin (esto lo dejará en null también)
+       if (fieldKey === 'start_date') {
+           calculateEndDate(targetObj);
+       }
+       // SI EL POPOVER ESTÁ ABIERTO, LO CERRAMOS (no hay fecha base para analizar)
+       if (activeGapPreviewId.value === gapId) {
+           activeGapPreviewId.value = null;
+       }
+       return; // Detenemos la ejecución aquí
+   }
+
+   // 2. CASO: EL USUARIO INGRESÓ UNA NUEVA FECHA
    const [y, m, d] = dateVal.split('-').map(Number);
 
    // Validar Mes/Año (Solo si no hay filtros y es nueva edición)
@@ -3305,7 +3516,11 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
      toast.info(`La fecha debe pertenecer al periodo seleccionado (${months.value[selectedMonth.value - 1]} ${selectedYear.value}).`);
        nextTick(() => {
            targetObj[fieldKey] = null;
-           if (fieldKey === 'start_date') targetObj.end_date = null;
+           if (fieldKey === 'start_date') {
+               calculateEndDate(targetObj);
+               // Al limpiar por error, también cerramos el popover si estaba abierto
+               if (activeGapPreviewId.value === gapId) activeGapPreviewId.value = null;
+           }
        });
        return;
    }
@@ -3315,36 +3530,35 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
       const firstChild = modalForm.program_version_children[0];
       if (firstChild.start_date && dateVal < firstChild.start_date) {
         toast.warning(`No puede iniciar antes que el primer módulo.`);
-        nextTick(() => {
-            targetObj[fieldKey] = null;
-            targetObj.end_date = null;
-        });
+        nextTick(() => { targetObj[fieldKey] = null; targetObj.end_date = null; });
         return;
       }
       const previousChild = modalForm.program_version_children[index - 1];
       if (previousChild.start_date && dateVal < previousChild.start_date) {
         toast.warning(`Orden cronológico inválido.`);
-        nextTick(() => {
-            targetObj[fieldKey] = null;
-            targetObj.end_date = null;
-        });
+        nextTick(() => { targetObj[fieldKey] = null; targetObj.end_date = null; });
         return;
       }
    }
 
-   // --- CAMBIO PRINCIPAL AQUÍ (FERIADOS) ---
+   // Advertencia de Feriados
    if (holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
        const hName = hObj ? hObj.description : 'Feriado';
-
-       // Solo mostramos advertencia, NO limpiamos el campo ni hacemos return
        toast.warning(`Nota: La fecha seleccionada coincide con un feriado (${hName}).`);
    }
-   // ----------------------------------------
 
-   // Si es Fecha de Inicio, calcular Fecha Fin automáticamente
+   // 3. SI LA FECHA ES VÁLIDA, RECALCULAR Y ACTUALIZAR
    if (fieldKey === 'start_date') {
        calculateEndDate(targetObj);
+
+       // >>> ACTUALIZAR POPOVER EN TIEMPO REAL SI ESTÁ ABIERTO <<<
+       if (activeGapPreviewId.value === gapId) {
+           nextTick(() => {
+               // Pasamos event en null y forceUpdate en true para forzar el refresh
+               toggleGapPreview(null, gapId, versionId, targetObj, false, true);
+           });
+       }
 
        // Validación en cascada (aviso si rompe al siguiente)
        if (index !== null && modalForm.program_version_children.length > index + 1) {
@@ -3380,6 +3594,10 @@ const holidayDates = computed(() => {
   // Asegúrate de que 'catalogs.value.catHolidays' exista (array vacío por defecto)
   return (catalogs.value.catHolidays || []).map(h => h.variable_3) // Aquí vienen las fechas 'YYYY-MM-DD'
 })
+const originalNoteValue = ref('');
+function captureOriginalNote(edition) {
+  originalNoteValue.value = edition.notes || '';
+}
 
 
 // --- LÓGICA DE PREVISUALIZACIÓN DE CALENDARIO ---
@@ -3929,26 +4147,7 @@ const globalHistoryList = ref([])
 const isLoadingHistory = ref(false)
 
 async function openGlobalHistory() {
-  showHistoryModal.value = true
-  isLoadingHistory.value = true
-  globalHistoryList.value = []
-
-  try {
-    // Llamada al servicio que creamos anteriormente
-    // Enviamos editionId: null para traer todo, y un límite razonable
-    const data = await editionService.auditLogsGet({
-      editionId: null,
-      limit: 50,
-      offset: 0
-    })
-
-    globalHistoryList.value = data || []
-  } catch (err) {
-    console.error('Error al cargar historial:', err)
-    toast.error('No se pudo cargar el historial de cambios')
-  } finally {
-    isLoadingHistory.value = false
-  }
+  await openAuditHistory(null)
 }
 // Variable reactiva para controlar la dirección ('bottom' = normal, 'top' = hacia arriba)
 const popoverPosition = ref('bottom');
@@ -3992,19 +4191,19 @@ const isLoadingGap = ref(false)
  * Abre el popover de GAPS.
  * Funciona para: Formulario (Padre/Hijo) y Listado (Click Derecho).
  */
-async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, isReadOnly = false) {
+async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, isReadOnly = false, forceUpdate = false) {
   // Prevenir menú nativo si es click derecho
   if (event && event.type === 'contextmenu') {
     event.preventDefault();
   }
 
-  // Si ya está abierto, cerrar
-  if (activeGapPreviewId.value === uniqueId) {
+  // Si ya está abierto y NO es una actualización forzada, lo cerramos
+  if (activeGapPreviewId.value === uniqueId && !forceUpdate) {
     activeGapPreviewId.value = null
     return
   }
 
-  // 1. Posicionamiento inteligente
+  // 1. Posicionamiento inteligente (solo re-calculamos si viene de un click directo)
   if (event && event.currentTarget) {
     const buttonRect = event.currentTarget.getBoundingClientRect();
     const spaceBelow = window.innerHeight - buttonRect.bottom;

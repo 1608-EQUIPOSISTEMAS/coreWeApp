@@ -51,7 +51,7 @@
               <label class="exec-label">Apellido materno</label>
               <input v-restrict="{ transform: 'upper' }" v-model.trim="form.mother_last_name" type="text" class="exec-input-light w-100" placeholder="APELLIDO MATERNO" />
             </div>
-            
+
             <div class="col-md-4">
               <label class="exec-label">Tipo de documento <span class="c-red">*</span></label>
               <SearchSelect v-model="form.cat_type_document" :items="catalogs.documentTypeList" label-field="description" value-field="id" placeholder="Seleccionar..." class="exec-select-light w-100" required />
@@ -64,7 +64,7 @@
               <label class="exec-label">Fecha de nacimiento</label>
               <input v-model="form.birthday" type="date" class="exec-input-light w-100" />
             </div>
-            
+
             <div class="col-md-4">
               <label class="exec-label">País</label>
               <SearchSelect v-model="form.cat_country" :items="catalogs.countryList" label-field="description" value-field="id" placeholder="Seleccionar país..." class="exec-select-light w-100" />
@@ -107,17 +107,17 @@
                 <input v-model="form.linkedin" type="url" class="exec-input-light w-100 icon-padded" placeholder="https://linkedin.com/in/..." />
               </div>
             </div>
-            
+
             <div class="col-md-12">
               <label class="exec-label">Resumen de Perfil</label>
               <textarea v-model="form.profile_resume" class="exec-textarea w-100" rows="3" placeholder="Breve resumen profesional..."></textarea>
             </div>
           </div>
-          
+
           <div class="row g-4 mt-1 border-top pt-3">
             <div class="col-md-6">
               <label class="exec-label mb-2">Curriculum Simplificado (CV)</label>
-              <FileUploader 
+              <FileUploader
                 label="Clic para subir CV Simplificado"
                 v-model="form.cv_url"
                 accept=".pdf,.doc,.docx"
@@ -125,7 +125,7 @@
             </div>
             <div class="col-md-6">
               <label class="exec-label mb-2">Curriculum Documentado</label>
-              <FileUploader 
+              <FileUploader
                 label="Clic para subir CV Documentado"
                 v-model="form.cv_documents_url"
                 accept=".pdf,.doc,.docx"
@@ -161,8 +161,8 @@
                       sublabel-field="label_ui"
                       placeholder="Buscar programa..."
                       :cache="false"
-                      view-open="6"
-                      :model-label="prog.program_name" 
+                      :view-open="6"
+                      :model-label="prog.program_name"
                       class="exec-select-light w-100"
                     />
                   </div>
@@ -212,7 +212,7 @@
                   </div>
                   <div class="col-md-12 mt-2 pt-2 border-top">
                     <label class="exec-label mb-2">Constancias / Adjuntos</label>
-                    <MultiFileUploader 
+                    <MultiFileUploader
                       v-model="item.attachments"
                       label="Agregar Constancia"
                     />
@@ -300,7 +300,7 @@
 
 /* Textareas custom */
 .exec-textarea {
-  background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 10px 12px; 
+  background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 10px 12px;
   font-size: 13px; font-family: inherit; color: var(--text-primary, #0f172a); resize: vertical; transition: all 0.15s;
 }
 .exec-textarea:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
@@ -347,15 +347,15 @@ const uploading = reactive({
     financials: {}
 })
 
-const isUploadingAny = computed(() => 
-    uploading.cv || 
-    uploading.cv_doc || 
+const isUploadingAny = computed(() =>
+    uploading.cv ||
+    uploading.cv_doc ||
     Object.values(uploading.financials).some(v => v)
 )
 
 // Formulario Principal
 const form = reactive({
-  person_id: null,        
+  person_id: null,
   first_name: null,
   profile_resume: null,
   last_name: null,
@@ -366,18 +366,18 @@ const form = reactive({
   cat_person_status: null,
   cat_country: null,
   birthday: null,
-  person_active: true,    
+  person_active: true,
   instructor_active: true,
-  
+
   // Nuevos campos de texto
-  resume: null,            
-  relevant_company: null,  
-  relevant_work: null,     
+  resume: null,
+  relevant_company: null,
+  relevant_work: null,
   profile_summary: null,
   linkedin: null,
 
   // Archivos CV
-  cv_url: null, 
+  cv_url: null,
   cv_documents_url: null,
 
   // Listas
@@ -390,27 +390,27 @@ const catalogs = ref({
   documentTypeList: catalog.options('we_type_document') || [],
   countryList: catalog.options('we_country') || [],
   paymentTypeList: catalog.options('we_way_billing') || [],
-  
+
   // Asume que tienes este catálogo o ajusta el key
-  programList: catalog.options('we_educational_program') || [], 
+  programList: catalog.options('we_educational_program') || [],
   // Asume que tienes este catálogo para tarifas
-  ratePayList: catalog.options('we_rate') || [], 
-  
+  ratePayList: catalog.options('we_rate') || [],
+
   currencyList: ref(
   catalog.options('we_currency', {
     mapItem: x => ({
       id: x.id,
       description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
-      raw: { ...x } 
+      raw: { ...x }
     })
   })
-) || [] 
+) || []
 })
 
-const isValid = computed(() => 
-    !!form.first_name && 
-    !!form.last_name && 
-    !!form.document_number && 
+const isValid = computed(() =>
+    !!form.first_name &&
+    !!form.last_name &&
+    !!form.document_number &&
     !!form.cat_type_document
 )
 
@@ -421,7 +421,7 @@ const isValid = computed(() =>
 function addFinancialItem() {
     form.financials.push({
         instructor_financial_id: null,
-        attachments: [], 
+        attachments: [],
         bank_name: '', // <--- Ahora es texto string vacío
         cat_payment_type: null,
         cat_rate_pay_id: null, // <--- Nuevo campo
@@ -464,14 +464,14 @@ async function loadData(id) {
         person_active: data.person_active !== 'N',
         instructor_active: data.instructor_active !== 'N',
         profile_resume: data.profile_resume,
-        
+
         // Mapeo de nuevos campos de texto
         resume: data.resume ?? null,
         relevant_company: data.relevant_company ?? null,
         relevant_work: data.relevant_work ?? null,
         profile_summary: data.profile_summary ?? null,
         linkedin: data.linkedin ?? null,
-        
+
         cv_url: data.cv_url || null,
         cv_documents_url: data.cv_documents_url || null
     })
@@ -480,8 +480,8 @@ async function loadData(id) {
     if (Array.isArray(data.financials)) {
         form.financials = data.financials.map(f => ({
             instructor_financial_id: f.instructor_financial_id,
-            attachments: Array.isArray(f.attachments) ? f.attachments : [], 
-            bank_name: f.bank_name || '', 
+            attachments: Array.isArray(f.attachments) ? f.attachments : [],
+            bank_name: f.bank_name || '',
             cat_payment_type: f.cat_payment_type,
             cat_rate_pay_id: f.cat_rate_pay_id, // <---
             observations: f.observations,
@@ -495,12 +495,12 @@ async function loadData(id) {
             instructor_program_id: p.instructor_program_id,
             program_id: p.program_id,
             program_name: p.program_name, // Para mostrar en el SearchSelect
-            
+
             profile_summary: p.profile_summary,
             active: p.active === 'Y'
         }))
     }
-    
+
   } catch (error) {
     console.error(error)
     toast.error('Error cargando instructor')
@@ -523,21 +523,21 @@ function buildPayload() {
         person_active: form.person_active ? 'Y' : 'N',
         email: form.email ?? null,
         phone: form.phone ?? null,
-        
-        
+
+
         // Datos Instructor
-        instructor_active: form.instructor_active ? 'Y' : 'N',       
-        relevant_company: form.relevant_company, 
-        relevant_work: form.relevant_work,       
+        instructor_active: form.instructor_active ? 'Y' : 'N',
+        relevant_company: form.relevant_company,
+        relevant_work: form.relevant_work,
         linkedin: form.linkedin,
-        cv_url: form.cv_url, 
+        cv_url: form.cv_url,
         cv_documents_url: form.cv_documents_url,
         profile_resume: form.profile_summary,
         // Array Financieros
         financials: form.financials.map(f => ({
             instructor_financial_id: f.instructor_financial_id || null,
             attachments: f.attachments || [],
-            bank_name: f.bank_name, 
+            bank_name: f.bank_name,
             cat_payment_type: f.cat_payment_type,
             cat_rate_pay_id: f.cat_rate_pay_id, // <--- Enviamos ID de tarifa, NO hourly_rate
             observations: f.observations,
@@ -563,12 +563,12 @@ async function guardar() {
     toast.warning('Complete los campos obligatorios (*)')
     return
   }
-  
+
   saving.value = true
   try {
     const payload = buildPayload()
     let response
-    
+
     if (isEdit.value) response = await instructorService.instructorUpdate(payload)
     else response = await instructorService.instructorRegister(payload)
 

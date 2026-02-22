@@ -7,7 +7,7 @@
       :disabled="disabled"
       v-bind="$attrs"
     />
-    
+
     <button
       v-if="model && !disabled"
       type="button"
@@ -56,17 +56,44 @@ const defaultConfig = {
   disableMobile: true,
   showMonths: 1,
   // Le asignamos una clase específica al input visible (altInput)
-  altInputClass: 'exec-flatpickr-input', 
+  altInputClass: 'exec-flatpickr-input',
 };
 
 const finalConfig = computed(() => {
-  return { 
-    ...defaultConfig, 
+  return {
+    ...defaultConfig,
     ...props.config,
-    // Si es modo rango, NO permitimos escribir. Si es normal, usamos lo que venga en config o true.
-    allowInput: isRange.value ? false : (props.config.allowInput ?? true)
-  };
-});
+    allowInput: isRange.value ? false : (props.config.allowInput ?? true),
+
+    // ← AÑADIR ESTO:
+    onReady: (selectedDates, dateStr, instance) => {
+      // Solo aplica cuando se puede escribir (no rango)
+      if (isRange.value) return
+
+      const input = instance.altInput || instance.input
+      if (!input) return
+
+      // Bloquea teclas no numéricas
+      input.addEventListener('keydown', (e) => {
+        const allowed = [
+          'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+          'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'
+        ]
+        if (allowed.includes(e.key)) return
+        if (!/^\d$/.test(e.key)) e.preventDefault()
+      })
+
+      // Auto-inserta las barras al escribir
+      input.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, '') // solo dígitos
+        if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2)
+        if (val.length > 5) val = val.slice(0, 5) + '/' + val.slice(5)
+        val = val.slice(0, 10)
+        e.target.value = val
+      })
+    }
+  }
+})
 
 function clearDate() {
   model.value = null;
@@ -116,7 +143,7 @@ function clearDate() {
   border-color: var(--slate-300, #cbd5e1);
 }
 
-/* Flatpickr añade "readonly" cuando allowInput es false. 
+/* Flatpickr añade "readonly" cuando allowInput es false.
    Evitamos que se pinte gris si solo es de lectura por ser modo Rango */
 :deep(.exec-flatpickr-input[readonly]:not(:disabled)) {
   background-color: var(--white, #ffffff);
@@ -158,7 +185,7 @@ function clearDate() {
 }
 
 .btn-clear:hover {
-  background-color: #fee2e2; 
+  background-color: #fee2e2;
   color: var(--red-600, #dc2626);
 }
 </style>

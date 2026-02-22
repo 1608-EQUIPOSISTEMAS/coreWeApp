@@ -20,28 +20,18 @@ async getDetailLeads(payload) {
     return response.data;
   }
 
-  //programGoalsList
-/**
 
-  fastify.post('/program-goals', {
-    schema: {
-      body: {
-        type: 'object',
-        properties: {
-          year: { type: 'integer', default: 2026 },
-          month_num: { type: 'integer', default: 1 } // Envía 1 para Enero, 2 Febrero...
-        }
-      }
-    } */
   async programGoalsList(payload) {
     const response = (await api.post('/dashboard/program-goals', payload)).data;
     return response.data;
   }
 
+  async ventasCanalList(payload) {
+    const response = (await api.post('/dashboard/ventas-canal', payload)).data;
+    return response.data;
+  }
 
 
-
-  
   async contactabilityList(payload) {
     const response = (await api.post('/dashboard/contactability', payload)).data;
     return response.data;
