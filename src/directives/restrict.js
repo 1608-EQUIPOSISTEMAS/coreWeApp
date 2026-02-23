@@ -1,111 +1,75 @@
-// src/directives/restrict.js
-
-function sanitize(value, cfg) {
-  let out = String(value ?? '')
-
-  // 1. REGLA INMEDIATA: Evitar espacios al inicio siempre si trim está activo
-  if (cfg.trim) {
-    out = out.replace(/^\s+/, '') // Elimina espacios a la izquierda inmediatamente
-  }
-
-  // "only" tiene prioridad
-  if (cfg.only === 'numbers') out = out.replace(/[^0-9]/g, '')
-  else if (cfg.only === 'letters')
-    out = out.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, '')
-
-  // Filtros finos
-  if (cfg.numbers === false) out = out.replace(/[0-9]/g, '')
-  if (cfg.letters === false) out = out.replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '')
-  if (cfg.spaces === false)  out = out.replace(/\s+/g, '')
-
-  // Extra permitidos
-  if (cfg.allowExtra && cfg.allowExtra.length) {
-    // Lógica para re-permitir caracteres (si fuera necesaria)
-  }
-
-  if (typeof cfg.max === 'number') out = out.slice(0, cfg.max)
-
-  if (cfg.transform === 'upper') out = out.toUpperCase()
-  if (cfg.transform === 'lower') out = out.toLowerCase()
-
-  return out
-}
-
-function attach(el, cfg) {
-  // Handler para el evento INPUT (mientras escribes)
-  const inputHandler = () => {
-    const prev = el.value
-    const next = sanitize(prev, cfg)
-    if (next !== prev) {
-      el.value = next
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-    }
-  }
-
-  // Handler para el evento BLUR (cuando sales del campo)
-  // Aquí es seguro quitar los espacios del final
-  const blurHandler = () => {
-    if (cfg.trim) {
-      const prev = el.value
-      const next = prev.trim() // Quita espacios al inicio y final
-      if (next !== prev) {
-        el.value = next
-        el.dispatchEvent(new Event('input', { bubbles: true }))
-        el.dispatchEvent(new Event('change', { bubbles: true }))
-      }
-    }
-  }
-
-  el.__restrict_cfg__ = cfg
-  el.__restrict_handler__ = inputHandler
-  el.__restrict_blur_handler__ = blurHandler // Guardamos referencia para limpiar después
-
-  el.addEventListener('input', inputHandler)
-  // Agregamos el listener de BLUR
-  el.addEventListener('blur', blurHandler)
-  
-  el.addEventListener('paste', () => setTimeout(inputHandler, 0))
-  el.addEventListener('drop',  () => setTimeout(inputHandler, 0))
-}
-
-function detach(el) {
-  if (el.__restrict_handler__) {
-    el.removeEventListener('input', el.__restrict_handler__)
-    el.removeEventListener('paste', el.__restrict_handler__)
-    el.removeEventListener('drop',  el.__restrict_handler__)
-  }
-  // Limpiamos el evento blur
-  if (el.__restrict_blur_handler__) {
-    el.removeEventListener('blur', el.__restrict_blur_handler__)
-  }
-  
-  delete el.__restrict_cfg__
-  delete el.__restrict_handler__
-  delete el.__restrict_blur_handler__
-}
-
 export default {
   mounted(el, binding) {
-    // Por defecto trim: true para que siempre limpie, salvo que lo desactives
-    const cfg = Object.assign(
-      { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '', trim: true },
-      binding.value || {}
-    )
-    attach(el, cfg)
+    // 🔍 DEPURACIÓN: Esto debe aparecer en la consola de tu navegador al cargar la página
+    console.log('✅ v-restrict montado en:', el.placeholder || el.tagName, binding.value);
+
+    // Guardamos la configuración en el elemento para poder actualizarla luego
+    el._restrictCfg = binding.value || {};
+
+    el._restrictHandler = function(e) {
+      // Evitar bucles infinitos si nosotros mismos forzamos el evento
+      if (e && e.detail === 'v-restrict-event') return;
+
+      const cfg = el._restrictCfg;
+      let out = String(el.value || '');
+
+      // 1. Reglas de caracteres (only)
+      if (cfg.only === 'numbers') {
+        out = out.replace(/\D/g, ''); // Borra todo lo que no sea dígito
+      } else if (cfg.only === 'letters') {
+        out = out.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, ''); // Solo letras y espacios
+      }
+
+      // 2. Mayúsculas / Minúsculas
+      if (cfg.transform === 'upper') out = out.toUpperCase();
+      if (cfg.transform === 'lower') out = out.toLowerCase();
+
+      // 3. Reglas de Espacios
+      if (cfg.spaces === false) {
+        out = out.replace(/\s+/g, ''); // Sin espacios en ningún lado
+      } else if (cfg.trim) {
+        out = out.replace(/^\s+/, ''); // No permite espacios al inicio mientras escribe
+      }
+
+      // 4. Máximo de caracteres
+      if (cfg.max && out.length > cfg.max) {
+        out = out.slice(0, cfg.max);
+      }
+
+      // 5. Aplicar cambios y forzar al v-model a enterarse
+      if (out !== el.value) {
+        el.value = out;
+        // En Vue 3, despachar un CustomEvent es la forma más segura de actualizar el v-model
+        el.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: 'v-restrict-event' }));
+      }
+    };
+
+    el._restrictBlurHandler = function() {
+      const cfg = el._restrictCfg;
+      if (cfg.trim) {
+        let out = String(el.value || '').trim(); // Quita espacios al inicio y al final
+        if (out !== el.value) {
+          el.value = out;
+          el.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: 'v-restrict-event' }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    };
+
+    // Escuchamos los eventos clave
+    el.addEventListener('input', el._restrictHandler);
+    el.addEventListener('blur', el._restrictBlurHandler);
   },
+
   updated(el, binding) {
-    if (JSON.stringify(binding.value) !== JSON.stringify(el.__restrict_cfg__)) {
-      detach(el)
-      const cfg = Object.assign(
-        { numbers: true, letters: true, spaces: true, max: null, transform: null, only: null, allowExtra: '', trim: true },
-        binding.value || {}
-      )
-      attach(el, cfg)
-      // Opcional: Ejecutar handler una vez al actualizar
-      // el.__restrict_handler__?.() 
-    }
+    // Si la configuración cambia dinámicamente, la actualizamos aquí
+    el._restrictCfg = binding.value || {};
   },
+
   unmounted(el) {
-    detach(el)
+    // Limpieza de memoria (muy importante en Vue)
+    if (el._restrictHandler) el.removeEventListener('input', el._restrictHandler);
+    if (el._restrictBlurHandler) el.removeEventListener('blur', el._restrictBlurHandler);
+    delete el._restrictCfg;
   }
-}
+};

@@ -1967,9 +1967,8 @@ function handleDateFilterChange(dateStr, type) {
 // Helpers visuales actualizados
 function rowClassForStatus(s) {
   const map = {
-    'we_lead_status_insc': 'row-inscrito',
     'we_lead_status_interesado': 'row-blue',
-    'we_lead_status_bought': 'row-emerald',
+    'we_lead_status_bought': 'row-inscrito',
     'we_lead_status_will_pay': 'row-emerald',
     'we_lead_status_proximo': 'row-yellow',
     'we_lead_status_indiferente': 'row-gray',

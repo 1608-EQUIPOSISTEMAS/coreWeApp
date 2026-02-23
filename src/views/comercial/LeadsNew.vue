@@ -216,7 +216,7 @@
                 type="text"
                 class="exec-input-light w-100"
                 placeholder="NOMBRE COMPLETO"
-                v-restrict="{ transform: 'upper', trim: true }"
+                v-restrict="{ transform: 'upper', trim: true, max: 150 }"
               />
             </div>
 <div class="col-6 col-md-3 col-lg-3">
@@ -226,13 +226,13 @@
                   autocomplete="off"
                   v-model="form.telefono"
                   type="text"
-                  v-restrict="{ only: 'numbers', max: 15 }"
+v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   required
                   class="exec-input-light w-100"
                   :class="{ 'input-valid': leadDataHistory && !searchingPhone }"
                   placeholder="TELÉFONO + ENTER"
                   @keyup.enter="searchLeadByPhone"
-                  :disabled="searchingPhone"
+                  :disabled="searchingPhone || !form.country_alias"
                 />
                 <button
                   type="button"
@@ -355,6 +355,7 @@
                 v-model="form.mensajeChat"
                 class="exec-textarea w-100"
                 placeholder="MENSAJE CHAT"
+                v-restrict="{ trim: true, max: 500 }"
                 required
                 rows="2"
                 @input="handleMensajeChatInput"
@@ -428,6 +429,7 @@
                 v-model="form.observacion"
                 class="exec-textarea w-100"
                 rows="2"
+                v-restrict="{ trim: true, max: 500 }"
               ></textarea>
             </div>
 
@@ -527,6 +529,7 @@
                 rows="2"
                 placeholder="Observación..."
                 :disabled="c.calling_alias != 'we_calling_pending'"
+                v-restrict="{ trim: true, max: 250 }"
               ></textarea>
             </div>
 
@@ -894,7 +897,8 @@
               autocomplete="off" required v-model="insc.document" type="text"
               :placeholder="docConfig.placeholder" class="exec-input-light w-100"
               :maxlength="docConfig.maxLength" @keyup.enter="searchSunat"
-              v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:docConfig.isNumeric?'numbers':undefined, transform:'upper' }"
+              v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:'numbers', transform:'upper' }"
+              :disabled="!insc.cat_type_document"
             />
             <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric" class="text-warning d-block mt-1" style="font-size:.7rem">
               <i class="fa-solid fa-circle-exclamation me-1"></i> Se esperan {{ docConfig.maxLength }} dígitos
@@ -902,19 +906,39 @@
           </div>
           <div class="col-md-4">
             <label class="exec-label">Correo <span class="c-red">*</span></label>
-            <input autocomplete="off" required v-model="insc.email" type="email" placeholder="CORREO" class="exec-input-light w-100" v-restrict="{ trim:true, spaces:false, transform:'lower' }" />
+            <input
+              autocomplete="off" required v-model="insc.email" type="email"
+              placeholder="CORREO" class="exec-input-light w-100"
+              v-restrict="{ trim:true, spaces:false, transform:'lower', max: 100 }"
+              :disabled="!insc.cat_type_document"
+            />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Nombres <span class="c-red">*</span></label>
-            <input autocomplete="off" required v-model="insc.full_name" type="text" placeholder="NOMBRES" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <input
+              autocomplete="off" required v-model="insc.full_name" type="text"
+              placeholder="NOMBRES" class="exec-input-light w-100"
+              v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
+              :disabled="!insc.cat_type_document"
+            />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Apellido Paterno <span class="c-red">*</span></label>
-            <input autocomplete="off" required v-model="insc.last_name" type="text" placeholder="A. PATERNO" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <input
+              autocomplete="off" required v-model="insc.last_name" type="text"
+              placeholder="A. PATERNO" class="exec-input-light w-100"
+              v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
+              :disabled="!insc.cat_type_document"
+            />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Apellido Materno <span class="c-red">*</span></label>
-            <input autocomplete="off" required v-model="insc.mother_last_name" type="text" placeholder="A. MATERNO" class="exec-input-light w-100" v-restrict="{ transform:'upper', trim:true, only:'letters' }" />
+            <input
+              autocomplete="off" required v-model="insc.mother_last_name" type="text"
+              placeholder="A. MATERNO" class="exec-input-light w-100"
+              v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
+              :disabled="!insc.cat_type_document"
+            />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Modalidad del programa <span class="c-red">*</span></label>
@@ -1017,7 +1041,12 @@
         <h6 class="fieldset-title">Observaciones</h6>
         <div class="row g-3">
           <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6':'col-md-12'">
-            <textarea v-model="insc.observacions" class="exec-textarea w-100" required rows="2"></textarea>
+            <textarea
+              v-model="insc.observacions"
+              class="exec-textarea w-100"
+              required rows="2"
+              v-restrict="{ trim: true, max: 500 }"
+            ></textarea>
           </div>
           <div class="col-md-6" v-if="insc.cat_method_payment=='we_payment_method_web'">
             <label class="exec-label mb-1">Adjuntos</label>
@@ -1745,9 +1774,11 @@ const formatDate = (dateString) => {
     catalog.options('we_country', {
       mapItem: x => ({
         id: x.id,
-        description: `(${String(x?.codigo)}) - ${x.description}`,
+        description: `(${String(x?.variable_2)}) - ${x.description}`,
         alias: x.alias,
         variable_3: x.variable_3,
+        variable_2: x.variable_2,
+        variable_1: x.variable_1,
         raw: x
       })
     })
@@ -2126,23 +2157,32 @@ const docConfig = computed(() => {
   };
 });
 
-// 2. Watcher para limpiar/ajustar si cambia el tipo
+// Watcher para limpiar/ajustar si cambia el tipo
 watch(() => insc.cat_type_document, (newVal) => {
+  // 1. Si el tipo de documento es nulo (se limpió), borramos los datos que dependen de él
+  if (!newVal) {
+    insc.document = '';
+    insc.email = '';
+    insc.full_name = '';
+    insc.last_name = '';
+    insc.mother_last_name = '';
+    return;
+  }
+
   if (!insc.document) return;
 
-  // Opción A: Limpiar el campo al cambiar de tipo (Más seguro para evitar errores)
-  // insc.document = '';
-
-  // Opción B: Recortar si el nuevo tipo es más corto que el valor actual
+  // 2. Recortar si el nuevo tipo es más corto que el valor actual
   if (docConfig.value.maxLength && insc.document.length > docConfig.value.maxLength) {
      insc.document = insc.document.slice(0, docConfig.value.maxLength);
   }
 
-  // Si cambiamos a numérico y hay letras, limpiar
+  // 3. Si cambiamos a numérico y hay letras, limpiar letras
   if (docConfig.value.isNumeric && isNaN(Number(insc.document))) {
      insc.document = insc.document.replace(/\D/g, '');
   }
 });
+
+
   async function loadDataForCloning(sourceId) {
       try {
       console.log(sourceId)
@@ -2565,7 +2605,22 @@ const loadingDetail = ref(false)
 const hasEditions = computed(() => {
   return modelProgramVersion.value?.editions_json && modelProgramVersion.value.editions_json.length > 0;
 });
+const maxPhoneLength = computed(() => {
+  if (!form.country_alias) return 20; // Por defecto
+  const country = countryCatalog.value.find(c => c.alias === form.country_alias);
+  return country?.raw?.variable_1 ? Number(country.raw.variable_1) : 20;
+});
 
+// NUEVO: Watcher para recortar el teléfono si el país cambia y el límite es menor
+watch(maxPhoneLength, (newMaxLength) => {
+  if (form.telefono && form.telefono.length > newMaxLength) {
+    // Si el teléfono tiene más dígitos que el nuevo límite, lo recortamos
+    form.telefono = form.telefono.slice(0, newMaxLength);
+
+    // Opcional: Avisarle al usuario que se ajustó el número
+    toast.info(`El número se ajustó a ${newMaxLength} dígitos para este país.`, { timeout: 3000 });
+  }
+});
 // 3. ACTUALIZAR LA FUNCIÓN DE APERTURA
 async function openProgramVersionDetail() {
   // Validamos que haya una ID seleccionada

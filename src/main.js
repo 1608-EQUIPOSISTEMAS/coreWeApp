@@ -48,9 +48,9 @@ async function bootstrap () {
   // 3) catálogo: crear servicio, precargar e inyectar
   const catalog = createCatalogService()
   try {
-    
+
     await catalog.ensureLoaded()
-    
+
     await catalog.membershipList({active:true})
   } catch (e) {
     console.warn('No se pudieron precargar catálogos desde API, uso cache local si existe.', e)
@@ -70,7 +70,7 @@ async function bootstrap () {
   app.provide(ServiceKeys.Integration, services[ServiceKeys.Integration])
   app.provide(ServiceKeys.Fico, services[ServiceKeys.Fico])
   app.provide(ServiceKeys.Dashboard, services[ServiceKeys.Dashboard])
-  
+
 
 
   app.config.globalProperties.$hasRole = (roles) => {
