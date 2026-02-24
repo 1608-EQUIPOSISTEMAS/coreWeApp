@@ -96,7 +96,7 @@
                 :items="programTypeCatalog"
                 label-field="description"
                 value-field="alias"
-                :viewOpen="6"
+                
                 placeholder="CATEGORÍA..."
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
@@ -370,7 +370,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 required
                 label-field="description"
                 value-field="alias"
-                viewOpen="6"
+                :viewOpen="6"
                 :model-label="form.canal_label"
                 class="exec-select-light w-100"
                 @change="onChannelChange"
@@ -385,7 +385,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :items="filteredMediumCatalog"
                 required
                 label-field="description"
-                viewOpen="6"
+                :viewOpen="6"
                 :model-label="form.medium_label"
                 value-field="alias"
                 placeholder="MEDIO..."
@@ -399,7 +399,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <SearchSelect
                 v-model="form.key_word_alias"
                 :items="mktWordsCatalog"
-                viewOpen="6"
+                :viewOpen="6"
                 :model-label="form.key_word_label"
                 label-field="description"
                 value-field="alias"
@@ -411,7 +411,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <div class="col-md-3">
               <label class="exec-label">Estrategia</label>
               <SearchSelect
-                viewOpen="6"
+                :viewOpen="6"
                 v-model="form.strategy_alias"
                 :disabled="!form.canal_alias || form.canal_alias!='we_social_media_other'"
                 :items="strategyCatalog"
@@ -509,7 +509,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <label class="exec-label d-lg-none">T. Resultado</label>
               <SearchSelect
                 v-model="c.calling_alias"
-                viewOpen="6"
+                :viewOpen="6"
                 :items="callingCatalog"
                 label-field="description"
                 required
@@ -866,6 +866,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <i class="fa-solid" :class="clientProfileType === 'estudiante' ? 'fa-graduation-cap' : 'fa-briefcase'"></i>
               <span>{{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}</span>
             </div>
+
+            <div v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'" class="profile-badge is-b2b">
+              <i class="fa-solid fa-handshake"></i>
+              <span>B2B · Convenio</span>
+            </div>
           </div>
         </div>
         <div class="insc-price-box">
@@ -889,18 +894,32 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <div class="col-md-4">
             <label class="exec-label">T. documento <span class="c-red">*</span></label>
             <SearchSelect
-                viewOpen="6" required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
+                :viewOpen="6" required v-model="insc.cat_type_document" :items="docTypeCatalog" label-field="description" placeholder="T. DOCUMENTO" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4">
             <label class="exec-label">Documento <span class="c-red">*</span></label>
-            <input
-              autocomplete="off" required v-model="insc.document" type="text"
-              :placeholder="docConfig.placeholder" class="exec-input-light w-100"
-              :maxlength="docConfig.maxLength" @keyup.enter="searchSunat"
-              v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:'numbers', transform:'upper' }"
-              :disabled="!insc.cat_type_document"
-            />
-            <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric" class="text-warning d-block mt-1" style="font-size:.7rem">
+            <div class="d-flex gap-2">
+              <input
+                autocomplete="off" required v-model="insc.document" type="text"
+                :placeholder="docConfig.placeholder" class="exec-input-light w-100"
+                :maxlength="docConfig.maxLength" @keyup.enter="searchCustomerByDocument"
+                v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:'numbers', transform:'upper' }"
+                :disabled="!insc.cat_type_document"
+              />
+              <button
+                type="button"
+                class="btn-exec btn-exec-outline px-0"
+                style="height:38px;width:38px;flex-shrink:0;"
+                :disabled="!insc.cat_type_document || !insc.document || searchingCustomer"
+                @click="searchCustomerByDocument"
+                title="Buscar cliente en base de datos"
+              >
+                <i class="fa-solid" :class="searchingCustomer ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"
+                  style="color:var(--teal-600,#12274e);"></i>
+              </button>
+            </div>
+            <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric"
+                  class="text-warning d-block mt-1" style="font-size:.7rem">
               <i class="fa-solid fa-circle-exclamation me-1"></i> Se esperan {{ docConfig.maxLength }} dígitos
             </small>
           </div>
@@ -942,7 +961,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </div>
           <div class="col-md-4">
             <label class="exec-label">Modalidad del programa <span class="c-red">*</span></label>
-            <SearchSelect viewOpen="6" required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
+            <SearchSelect :viewOpen="6" required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
           </div>
         </div>
       </div>
@@ -950,7 +969,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 <div class="exec-fieldset mb-3" v-if="isEdit || validateInscriptionClientInfo()">
         <h6 class="fieldset-title">Condiciones de Pago</h6>
         <div class="row g-3">
-          
+
           <div class="col-md-2">
             <label class="exec-label">Canal de Pago <span class="c-red">*</span></label>
             <SearchSelect
@@ -967,23 +986,23 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <template v-if="isChannelGeneral">
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
-              <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+              <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
             <div class="col-md-2">
               <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
-              <SearchSelect viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
+              <SearchSelect :viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
             </div>
             <div class="col-md-3">
               <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
-              <SearchSelect 
-                viewOpen="6" 
-                v-model="insc.cat_method_payment" 
-                :items="paymentMethodCatalog.filter(e => ['we_payment_method_transfer','we_payment_method_cash','we_payment_method_yape_plin','we_payment_method_deposit'].includes(e.alias))" 
-                required 
-                label-field="description" 
-                value-field="alias" 
-                placeholder="MEDIO..." 
-                class="exec-select-light w-100" 
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_method_payment"
+                :items="paymentMethodCatalog.filter(e => ['we_payment_method_transfer','we_payment_method_cash','we_payment_method_yape_plin','we_payment_method_deposit'].includes(e.alias))"
+                required
+                label-field="description"
+                value-field="alias"
+                placeholder="MEDIO..."
+                class="exec-select-light w-100"
               />
             </div>
             <div class="col-md-3" v-if="insc.cat_type_payment=='we_payment_way_installments'">
@@ -995,7 +1014,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <template v-if="isChannelToken">
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
-              <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+              <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
             <div class="col-md-2">
               <label class="exec-label">Proveedor del Link <span class="c-red">*</span></label>
@@ -1025,106 +1044,143 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </template>
 
           <template v-if="isEdit || validateInscriptionPaymentInfo()">
-            <div class="col-md-4 mt-3">
-              <label class="exec-label">Descuento</label>
-              <SearchSelect viewOpen="6" v-model="insc.dsct_porcent_id" mode="remote"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
-                label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoPorcentual" />
-            </div>
-            <div class="col-md-4 mt-3">
-              <label class="exec-label">Promoción</label>
-              <SearchSelect viewOpen="6" v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
-                label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoFijo" />
-            </div>
-            <div class="col-md-4 mt-3">
-              <label class="exec-label">Beneficio</label>
-              <SearchSelect viewOpen="6"  v-model="insc.dsct_benefit_id" mode="remote"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
-                label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeBeneficio" />
-            </div>
+          <div class="col-md-4 mt-3">
+            <label class="exec-label">
+              Descuento
+              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+            </label>
+            <SearchSelect
+              :key="`porcent-${discountResetKey}`"
+
+              v-model="insc.dsct_porcent_id"
+              mode="remote"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
+              label-field="full_label" value-field="id" :viewOpen="6"
+              placeholder="DESCUENTO (%)" :minChars="0" :cache="false"
+              class="exec-select-light w-100"
+              :disabled="!insc.montoOriginal"
+              @change="onChangeDescuentoPorcentual"
+            />
+          </div>
+          <div class="col-md-4 mt-3">
+            <label class="exec-label">
+              Promoción
+              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+            </label>
+            <SearchSelect
+              :key="`stick-${discountResetKey}`"
+              v-model="insc.dsct_stick_id"
+              mode="remote" :viewOpen="6"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
+              label-field="full_label" value-field="id"
+              placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
+              class="exec-select-light w-100"
+              :disabled="!insc.montoOriginal"
+              @change="onChangeDescuentoFijo"
+            />
+          </div>
+          <div class="col-md-4 mt-3">
+            <label class="exec-label">
+              Beneficio
+              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+            </label>
+            <SearchSelect
+              :key="`benefit-${discountResetKey}`"
+
+              v-model="insc.dsct_benefit_id"
+              mode="remote"
+              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
+              label-field="full_label" value-field="id" :viewOpen="6"
+              placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
+              class="exec-select-light w-100"
+              :disabled="!insc.montoOriginal"
+              @change="onChangeBeneficio"
+            />
+          </div>
           </template>
         </div>
       </div>
 
-<!-- UNA SOLA SECCIÓN DE DOCUMENTACIÓN -->
-<div class="exec-fieldset mb-3" 
+<!-- LAYOUT: side-by-side cuando NO es General, stacked cuando sí -->
+<div :class="!isChannelGeneral ? 'd-flex gap-3' : ''"
      v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
-  <h6 class="fieldset-title">Documentación Adjunta</h6>
-  <div class="row g-3">
 
-    <!-- GENERAL: Comprobantes de pago → enrollment_attachments -->
-    <div class="col-md-6" v-if="isChannelGeneral">
-      <label class="exec-label mb-1">
-        Comprobante(s) de Pago
-        <span v-if="!isVoucherOptional" class="c-red">*</span>
-        <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
-          Opcional · Descuento 100%
-        </span>
-      </label>
-      <MultiFileUploader
-        v-model="insc.ticket_payment_urls"
-        ref="voucherUploaderRef"
-        label="Clic para subir Comprobante(s)"
-        accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-        :required="!isVoucherOptional"
-        :minFiles="1"
-        :touched="voucherTouched"
-      />
-    </div>
+  <!-- Documentación Adjunta -->
+  <div class="exec-fieldset mb-3" :style="!isChannelGeneral ? 'flex:1;min-width:0' : ''">
+    <h6 class="fieldset-title">Documentación Adjunta</h6>
+    <div class="row g-3">
 
-    <!-- WEB: Constancias → lead_attachments (múltiples) -->
-    <div class="col-md-6" v-if="isChannelWeb">
-      <label class="exec-label mb-1">Constancias / Adjuntos</label>
-      <MultiFileUploader
-        v-model="insc.attachments"
-        label="Adjuntar constancias de pago web"
-        accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-      />
-    </div>
-
-    <!-- TOKEN: sin adjunto de pago (el link es el comprobante) -->
-    <div class="col-md-6" v-if="isChannelToken">
-      <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:#fafafa;">
-        <i class="fa-solid fa-circle-info me-2 text-info"></i>
-        Para pagos por link/token no se requiere adjuntar comprobante.
-        El proveedor enviará la confirmación directamente.
+      <!-- GENERAL: Comprobantes de pago → enrollment_attachments -->
+      <div class="col-12" v-if="isChannelGeneral">
+        <label class="exec-label mb-1">
+          Comprobante(s) de Pago
+          <span v-if="!isVoucherOptional" class="c-red">*</span>
+          <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
+            Opcional · Descuento 100%
+          </span>
+        </label>
+        <MultiFileUploader
+          v-model="insc.ticket_payment_urls"
+          ref="voucherUploaderRef"
+          label="Clic para subir Comprobante(s)"
+          accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+          :required="!isVoucherOptional"
+          :minFiles="1"
+          :touched="voucherTouched"
+        />
       </div>
-    </div>
 
-    <!-- Carnet: SIEMPRE visible independientemente del canal -->
-    <div class="col-md-6">
-      <label class="exec-label mb-2">Carnet / Documento ID</label>
-      <FileUploader 
-        label="Subir carnet estudiantil" 
-        v-model="form.carnet_url" 
-        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" 
-      />
-    </div>
+      <!-- WEB: Constancias → lead_attachments -->
+      <div class="col-12" v-if="isChannelWeb">
+        <label class="exec-label mb-1">Constancias / Adjuntos</label>
+        <MultiFileUploader
+          v-model="insc.attachments"
+          label="Adjuntar constancias de pago web"
+          accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+        />
+      </div>
 
-  </div>
-</div>
-
-
-      <div class="exec-fieldset">
-        <h6 class="fieldset-title">Observaciones</h6>
-        <div class="row g-3">
-          <div class="col-md-12">
-            <textarea
-              v-model="insc.observacions"
-              class="exec-textarea w-100"
-              required rows="2"
-              placeholder="Escribe aquí notas adicionales..."
-              v-restrict="{ trim: true, max: 500 }"
-            ></textarea>
-          </div>
+      <!-- TOKEN: sin adjunto -->
+      <div class="col-12" v-if="isChannelToken">
+        <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:#fafafa;">
+          <i class="fa-solid fa-circle-info me-2 text-info"></i>
+          Para pagos por link/token no se requiere adjuntar comprobante.
+          El proveedor enviará la confirmación directamente.
         </div>
       </div>
 
-      
+      <!-- Carnet: solo en canal General -->
+      <div class="col-12" v-if="isChannelGeneral">
+        <label class="exec-label mb-2">Carnet / Documento ID</label>
+        <FileUploader
+          label="Subir carnet estudiantil"
+          v-model="form.carnet_url"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+        />
+      </div>
 
-<div 
-  class="exec-fieldset mb-3" 
+    </div>
+  </div>
+
+  <!-- Observaciones -->
+  <div class="exec-fieldset mb-3" :style="!isChannelGeneral ? 'flex:1;min-width:0' : ''">
+    <h6 class="fieldset-title">Observaciones</h6>
+    <textarea
+      v-model="insc.observacions"
+      class="exec-textarea w-100"
+      required
+      :rows="!isChannelGeneral ? 8 : 2"
+      placeholder="Escribe aquí notas adicionales..."
+      v-restrict="{ trim: true, max: 500 }"
+    ></textarea>
+  </div>
+
+</div>
+
+
+
+<div
+  class="exec-fieldset mb-3"
   v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())"
 >
   <div class="d-flex gap-3 flex-column flex-lg-row align-items-start">
@@ -1293,9 +1349,9 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <template #footer>
       <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
-      <button 
-  class="btn-exec btn-exec-primary btn-exec-sm" 
-  @click="confirmarInscripcion" 
+      <button
+  class="btn-exec btn-exec-primary btn-exec-sm"
+  @click="confirmarInscripcion"
   :disabled="savingInsc || form.enrollment_id || (isInstallmentMode && !installmentPlanValid)"
 >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
@@ -1811,7 +1867,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 }
 .profile-badge.is-student { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
 .profile-badge.is-pro     { background: var(--slate-100, #f1f5f9); color: var(--navy-900, #0f172a); border: 1px solid var(--border, #e2e8f0); }
-
+.profile-badge.is-b2b     { background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; }
 .insc-price-box {
   text-align: right;
   background: #f0fdf4;
@@ -2113,7 +2169,7 @@ import FileUploader from '@/components/FileUploader.vue'
   const router = useRouter()
   const route  = useRoute()
 
-  
+
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 const dateLimitConfig = {
@@ -2125,7 +2181,7 @@ const dateLimitConfig = {
   const discountService = inject(ServiceKeys.Discount)
   const editionService = inject(ServiceKeys.Edition)
   const catalog          = inject('catalog')
-  
+
   const todayIso = new Date().toISOString().slice(0, 16)
 const paymentChannelCatalog = ref(catalog.options('we_payment_channel'))
 const tokenProviderCatalog  = ref(catalog.options('we_token_provider'))
@@ -2138,6 +2194,7 @@ const lAttempts = ref(catalog.options('we_attempt'))
   const isEdit = computed(() => !!leadIdParam.value)
 const voucherUploaderRef = ref(null)
 const voucherTouched     = ref(false)
+const discountResetKey = ref(0)
   const loaded          = ref(false)
   const saving          = ref(false)
   const savingInsc      = ref(false)
@@ -2425,6 +2482,7 @@ watchEffect(() => {
     // Reiniciar Beneficio
     insc.val_beneficio = 0
     insc.dsct_benefit_id = null
+    discountResetKey.value++
 
     // C. Forzar recálculo visual a 0
     insc.montoDescuentoPorcentaje = 0
@@ -2748,7 +2806,39 @@ function createEmptyAttempt() {
       if (alto) form.nivel_alias = alto.alias
     }
   }
+const searchingCustomer = ref(false)
 
+async function searchCustomerByDocument() {
+  const doc = insc.document?.trim()
+  if (!doc || doc.length < 3) {
+    toast.warning('Ingrese el número de documento antes de buscar.')
+    return
+  }
+
+  searchingCustomer.value = true
+  try {
+    const response = await customerService.customerInfoGet({ document: doc })
+
+    console.log(response)
+
+    if (response && response.result === 1) {
+      insc.full_name        = response.first_name       || ''
+      insc.last_name        = response.last_name        || ''
+      insc.mother_last_name = response.mother_last_name || ''
+      insc.email            = response.email            || ''
+      toast.success('Cliente encontrado en base de datos.', { timeout: 3000 })
+      return
+    }
+
+    // No existe en BD → consultar SUNAT
+    await searchSunat()
+
+  } catch {
+    await searchSunat()
+  } finally {
+    searchingCustomer.value = false
+  }
+}
 const searchingPhone = ref(false)
 
 async function searchSunat() {
@@ -3281,10 +3371,12 @@ function openInscription() {
     insc.email     = ''; // O form.email si tuvieras ese dato
 
     // 3. Configuraciones por defecto iniciales
-    insc.cat_insc_modality = 'we_insc_modality_normal';
+    insc.cat_insc_modality     = 'we_insc_modality_normal';
     insc.selectedCurrencyAlias = 'we_currency_soles';
-    insc.cat_type_payment  = 'we_payment_way_single';
-
+    insc.cat_type_payment      = 'we_payment_way_single';
+    // Canal de pago: General por defecto
+    const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
+    if (generalChannel) insc.cat_payment_channel = generalChannel.id
     // 4. Recalcular precio base según el Lead actual (Importante para que aparezca el precio)
     // Forzamos la actualización del precio base basado en la moneda por defecto
     const basePrice = calculatedBasePrice.value;
@@ -3512,63 +3604,16 @@ const isInstallmentMode = computed(() =>
   insc.cat_type_payment === 'we_payment_way_installments' &&
   Number(insc.montoOriginal) > 0
 )
-// Nro total de cuotas seleccionado por el asesor (2 a 6)
-const installmentCount = ref(2)
+
 
 // Monto que queda después del adelanto → se reparte en cuotas 2..N
 const installmentRemainder = computed(() => {
   const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
   return rem > 0 ? rem : 0
 })
-// Plan editable: array de { amount, date }
-const installmentPlan = ref([])
 
-// Construir/reconstruir el plan cuando cambien las variables clave
-watch(
-  [isInstallmentMode, installmentCount, () => insc.saved_money, () => insc.total_amount],
-  ([active]) => {
-    if (!active) { installmentPlan.value = []; return }
-    rebuildPlan()
-  },
-  { immediate: true }
-)
 
-function rebuildPlan() {
-  const adelanto   = Number(insc.saved_money)  || 0
-  const remainder  = installmentRemainder.value
-  const n          = installmentCount.value      // total cuotas
-  const perCuota   = n > 1 ? round2(remainder / (n - 1)) : remainder
 
-  const today = new Date()
-  const toISO = (d) => d.toISOString().slice(0, 10)
-
-  const plan = []
-
-  // Cuota 1 — adelanto (fija, hoy)
-  plan.push({ amount: adelanto, date: toISO(today), fixed: true })
-
-  // Cuotas 2..N — distribuidas mensualmente
-  for (let i = 1; i < n; i++) {
-    const d = new Date(today)
-    d.setMonth(d.getMonth() + i)
-    // Ajuste: si el mes siguiente no tiene ese día (ej: 31 → 30)
-    plan.push({ amount: perCuota, date: toISO(d), fixed: false })
-  }
-
-  installmentPlan.value = plan
-}
-
-// Reconstruir cuando el asesor cambia el número de cuotas
-function resetInstallmentAmounts() {
-  rebuildPlan()
-}
-
-// Suma de cuotas 2..N (las editables)
-const installmentSumFromTwo = computed(() =>
-  installmentPlan.value
-    .slice(1)
-    .reduce((acc, c) => round2(acc + (Number(c.amount) || 0)), 0)
-)
 
 const installmentPlanValid = computed(() => {
   if (!isInstallmentMode.value || installmentPlan.value.length === 0) return true
@@ -3590,50 +3635,10 @@ const autoNumCuotas = computed(() => {
 })
 
 
-// Callback cuando el asesor edita manualmente un monto
-function onInstallmentAmountInput() {
-  // No hace nada especial, la validación es reactiva vía computed
-}
-/**
- * Config de flatpickr para cada cuota del plan.
- * - Bloquea fechas anteriores a HOY
- * - Bloquea fechas anteriores a la cuota previa (si ya tiene fecha)
- * - Deshabilita escritura manual (el usuario solo puede hacer clic)
- */
-function getInstallmentDateConfig(idx) {
-  // La cuota 1 (idx=0) es fija (hoy), esta función solo se llama para idx >= 1
-
-  // Cuota anterior: puede ser hoy (idx=1) o la fecha de la cuota idx-1
-  let minDate = new Date() // mínimo siempre es hoy
-  minDate.setHours(0, 0, 0, 0)
-
-  if (idx > 1) {
-    // Si la cuota anterior ya tiene fecha seleccionada, esa es el mínimo
-    const prevDate = installmentPlan.value[idx - 1]?.date
-    if (prevDate) {
-      const d = new Date(prevDate)
-      // El mínimo es el día siguiente a la cuota anterior
-      d.setDate(d.getDate() + 1)
-      if (d > minDate) minDate = d
-    }
-  }
-
-  return {
-    dateFormat:    'Y-m-d',
-    altInput:      true,
-    altFormat:     'd/m/Y',
-    allowInput:    false,          // ← Solo clic, sin escritura manual
-    disableMobile: true,
-    minDate:       minDate,
-  }
-}
-
-
 // Plan completo (reserva separada, cuotas desde #1)
 const installmentPlan = computed(() => {
   if (!isInstallmentMode.value) return []
-
-  const saldo    = installmentRemainder.valueinstallmentPlan
+const saldo    = installmentRemainder.value
   const n        = autoNumCuotas.value
   const startRaw = form.edition_start_date
 

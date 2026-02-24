@@ -20,9 +20,17 @@
 
       <div v-else class="text-muted small user-select-none fw-600">
         <i class="fas fa-paperclip me-1"></i> {{ label }}
-        <!-- Badge de mínimo requerido -->
-        <span v-if="required && minFiles > 0" class="req-badge ms-1">
+
+        <span v-if="required && minFiles > 0"
+              class="req-badge ms-1"
+              :class="{ 'is-success': isMinMet }">
           mín. {{ minFiles }}
+        </span>
+
+        <span v-if="maxFiles > 0"
+              class="req-badge ms-1"
+              :class="{ 'is-success': isMaxMet, 'is-error': !isMaxMet }">
+          máx. {{ maxFiles }}
         </span>
       </div>
     </div>
@@ -148,6 +156,32 @@
 .text-muted    { color: var(--text-muted, #94a3b8); }
 .fw-600        { font-weight: 600; }
 .small         { font-size: 12.5px; }
+/* Modifica tu clase .req-badge y agrega las nuevas */
+.req-badge {
+  display: inline-flex;
+  align-items: center;
+  /* Colores por defecto (rojo/alerta) indicando que aún no se cumple */
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 0px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  transition: all 0.3s ease; /* Transición suave de color */
+}
+
+/* Cuando ya se cumplió el requisito (Verde) */
+.req-badge.is-success {
+  background: #dcfce7; /* Fondo verde claro */
+  color: #16a34a; /* Texto verde oscuro */
+}
+
+/* Por si el máximo se sobrepasa accidentalmente (Rojo) */
+.req-badge.is-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 </style>
 
 <script setup>
@@ -160,12 +194,11 @@ const props = defineProps({
   label:      { type: String,  default: 'Adjuntar' },
   accept:     { type: String,  default: '.pdf,.png,.jpg,.jpeg' },
   maxSize:    { type: Number,  default: 20 },
-  // ← NUEVOS
   required:   { type: Boolean, default: false },
-  minFiles:   { type: Number,  default: 1 },   // cuántos archivos mínimo se necesitan
-  touched:    { type: Boolean, default: false } // el padre puede activar la validación visual
+  minFiles:   { type: Number,  default: 1 },
+  maxFiles:   { type: Number,  default: 0 }, // 0 = sin límite (NUEVO)
+  touched:    { type: Boolean, default: false }
 })
-
 const emit = defineEmits(['update:modelValue'])
 
 const integrationService = inject(ServiceKeys.Integration)
@@ -176,7 +209,8 @@ const loading     = ref(false)
 const wasTouched  = ref(false)  // se activa al intentar subir o al hacer clic
 
 const safeModelValue = computed(() => props.modelValue || [])
-
+const isMinMet = computed(() => safeModelValue.value.length >= props.minFiles)
+const isMaxMet = computed(() => props.maxFiles === 0 || safeModelValue.value.length <= props.maxFiles)
 // Muestra el error si: es required, faltan archivos, y ya interactuó o el padre forzó validación
 const showRequiredError = computed(() =>
   props.required &&
@@ -199,7 +233,17 @@ function triggerInput() {
 async function handleFileChange(event) {
   const file = event.target.files[0]
   if (!file) return
+  if (props.maxFiles > 0 && safeModelValue.value.length >= props.maxFiles) {
+    toast.warning(`Solo se permiten hasta ${props.maxFiles} archivo(s)`)
+    event.target.value = ''
+    return
+  }
 
+  if (file.size > props.maxSize * 1024 * 1024) {
+    toast.warning(`El archivo pesa más de ${props.maxSize}MB`)
+    event.target.value = ''
+    return
+  }
   if (file.size > props.maxSize * 1024 * 1024) {
     toast.warning(`El archivo pesa más de ${props.maxSize}MB`)
     event.target.value = ''
