@@ -574,7 +574,7 @@
   </BaseModal>
 
 
-  <BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="lg">
+  <BaseModal v-model="showEnrollmentModal" title="Detalle de Matrícula" size="xl">
     <div v-if="isLoadingEnrollment" class="exec-loader py-5">
       <div class="loader-ring"></div>
       <p class="text-muted small mt-2 fw-600">Cargando información financiera...</p>
@@ -610,6 +610,24 @@
               <label class="exec-label">Fecha Inscripción</label>
               <span class="info-value text-muted" style="font-weight:500;">{{ enrollmentData.registration_date }}</span>
             </div>
+            <!-- Después del bloque de Fecha Inscripción -->
+            <div class="info-block mb-3">
+              <label class="exec-label">Canal de Pago</label>
+              <span class="pill pill-slate border">
+                <i class="fa-solid fa-credit-card me-1"></i>
+                {{ enrollmentData.payment_channel_label || '—' }}
+              </span>
+            </div>
+
+            <!-- Método o proveedor (condicional por canal) -->
+            <div class="info-block mb-3" v-if="enrollmentData.payment_method_label || enrollmentData.token_provider_label">
+              <label class="exec-label">
+                {{ enrollmentData.payment_channel_alias === 'we_channel_token' ? 'Proveedor Link/Token' : 'Método de Pago' }}
+              </label>
+              <span class="info-value">
+                {{ enrollmentData.payment_method_label || enrollmentData.token_provider_label || '—' }}
+              </span>
+            </div>
           </div>
           <div class="info-block mb-3">
             <label class="exec-label mb-1">Estado de Matrícula</label>
@@ -638,7 +656,7 @@
             <div class="d-flex justify-content-between mb-2 pb-2">
               <span class="text-secondary fw-600" style="font-size:12px;">
                 Precio de Lista:
-                <span class="pill pill-slate ms-1" style="font-size:9px;">{{ enrollmentData.profile_label || 'General' }}</span>
+<span class="pill pill-slate ms-1">{{ enrollmentData.profile_label || 'General' }}</span>
               </span>
               <span class="fw-700 text-dark" style="font-size:14px;">
                 {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}
@@ -720,6 +738,15 @@
                 <span class="text-muted" style="font-size:10.5px;">
                   {{ file.date || 'Archivo histórico' }}
                   <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
+                  <!-- En el v-for de files_list, junto al badge LEGACY: -->
+                  <span v-if="file.source === 'payment_receipt'" 
+                        class="pill pill-slate ms-1" style="font-size:8px; background:#eff6ff; color:#1d4ed8;">
+                    VOUCHER
+                  </span>
+                  <span v-if="file.source === 'enrollment'" 
+                        class="pill pill-slate ms-1" style="font-size:8px;">
+                    LEGACY
+                  </span>
                 </span>
               </div>
             </div>
@@ -1543,10 +1570,16 @@ const getFileIcon = (type) => {
   if (!type) return 'fa-file text-secondary'
   const t = type.toLowerCase()
 
-  if (t.includes('pdf')) return 'fa-file-pdf text-danger'
-  if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg')) return 'fa-file-image text-success'
-  if (t.includes('legacy')) return 'fa-file-contract text-warning' // Para los antiguos del SP
-  if (t.includes('xml')) return 'fa-file-code text-info'
+  // ❌ ANTES: source no existe aquí, lanza ReferenceError
+  // if (t.includes('payment_receipt') || source === 'payment_receipt')
+
+  // ✅ CORRECTO: solo chequear el type
+  if (t.includes('payment_receipt')) return 'fa-file-invoice-dollar text-primary'
+  if (t.includes('pdf'))             return 'fa-file-pdf text-danger'
+  if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg'))
+                                     return 'fa-file-image text-success'
+  if (t.includes('legacy'))          return 'fa-file-contract text-warning'
+  if (t.includes('xml'))             return 'fa-file-code text-info'
   if (t.includes('zip') || t.includes('rar')) return 'fa-file-zipper text-dark'
 
   return 'fa-file-lines text-primary'
@@ -1848,18 +1881,20 @@ async function openEnrollmentModal(enrollmentId) {
 
   try {
     const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
+    console.log("daaa")
+    console.log(response)
+    // ✅ El service ya devuelve el objeto plano directamente
+    const data = response;
 
-    // 1. Extraemos la data (si viene envuelta en 'data', la sacamos)
-    const data = response.data || response;
+    if (!data || !data.enrollment_id) {
+      toast.error("No se encontraron datos para esta matrícula");
+      showEnrollmentModal.value = false;
+      return;
+    }
 
-    // 2. Aseguramos que files_list sea un array
-    let files = data.files_list || [];
-
-    // 3. --- FIX CRÍTICO ---
-    // Filtramos los nulos para que el template no explote al hacer "file.type"
-    data.files_list = files.filter(f => f !== null);
-
+    data.files_list = (data.files_list || []).filter(f => f !== null);
     enrollmentData.value = data;
+
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar la información de la matrícula");

@@ -947,119 +947,357 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         </div>
       </div>
 
-      <div class="exec-fieldset mb-3" v-if="isEdit || validateInscriptionClientInfo()">
+<div class="exec-fieldset mb-3" v-if="isEdit || validateInscriptionClientInfo()">
         <h6 class="fieldset-title">Condiciones de Pago</h6>
         <div class="row g-3">
+          
           <div class="col-md-2">
-            <label class="exec-label">T. moneda <span class="c-red">*</span></label>
-            <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+            <label class="exec-label">Canal de Pago <span class="c-red">*</span></label>
+            <SearchSelect
+              v-model="insc.cat_payment_channel"
+              :items="paymentChannelCatalog"
+              label-field="description"
+              value-field="id"
+              placeholder="CANAL..."
+              required
+              class="exec-select-light w-100"
+            />
           </div>
-          <div class="col-md-2" v-if="insc.selectedCurrencyAlias">
-            <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
-            <SearchSelect viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
-          </div>
-          <div class="col-md-4" v-if="insc.selectedCurrencyAlias">
-            <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
-            <SearchSelect viewOpen="6" v-model="insc.cat_method_payment" :items="paymentMethodCatalog" required label-field="description" value-field="alias" placeholder="MEDIO..." class="exec-select-light w-100" />
-          </div>
-          <div class="col-md-4" v-if="insc.selectedCurrencyAlias && insc.cat_type_payment=='we_payment_way_installments'">
-            <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
-            <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
-          </div>
-          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="exec-label">Descuento</label>
-            <SearchSelect viewOpen="6" v-model="insc.dsct_porcent_id" mode="remote"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
-              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoPorcentual" />
-          </div>
-          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="exec-label">Promoción</label>
-            <SearchSelect viewOpen="6" v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoFijo" />
-          </div>
-          <div class="col-md-4" v-if="isEdit || validateInscriptionPaymentInfo()">
-            <label class="exec-label">Beneficio</label>
-            <SearchSelect viewOpen="6"  v-model="insc.dsct_benefit_id" mode="remote"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeBeneficio" />
-          </div>
-        </div>
-      </div>
 
-      <div class="exec-fieldset mb-3"
-        v-if="(isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())) && insc.cat_method_payment!='we_payment_method_token' && insc.cat_method_payment!='we_payment_method_web'"
-      >
-        <h6 class="fieldset-title">Documentación Adjunta</h6>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="exec-label mb-2">Comprobante de Pago</label>
-            <FileUploader label="Clic para subir Voucher" :required="true" v-model="form.ticket_payment_url" accept=".png,.jpg,.jpeg,.pdf,.doc,.docx" />
-          </div>
-          <div class="col-md-6">
-            <label class="exec-label mb-2">Carnet / Documento ID</label>
-            <FileUploader label="Subir carnet estudiantil" v-model="form.carnet_url" accept=".pdf,.doc,.docx" />
-          </div>
-        </div>
-      </div>
+          <template v-if="isChannelGeneral">
+            <div class="col-md-2">
+              <label class="exec-label">Moneda <span class="c-red">*</span></label>
+              <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+            </div>
+            <div class="col-md-2">
+              <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
+              <SearchSelect viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
+            </div>
+            <div class="col-md-3">
+              <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
+              <SearchSelect 
+                viewOpen="6" 
+                v-model="insc.cat_method_payment" 
+                :items="paymentMethodCatalog.filter(e => ['we_payment_method_transfer','we_payment_method_cash','we_payment_method_yape_plin','we_payment_method_deposit'].includes(e.alias))" 
+                required 
+                label-field="description" 
+                value-field="alias" 
+                placeholder="MEDIO..." 
+                class="exec-select-light w-100" 
+              />
+            </div>
+            <div class="col-md-3" v-if="insc.cat_type_payment=='we_payment_way_installments'">
+              <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
+              <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
+            </div>
+          </template>
 
-      <div class="exec-fieldset mb-3" v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
-        <div class="summary-card">
-          <div class="summary-header"><i class="fa-solid fa-receipt me-2"></i> Resumen de Transacción</div>
-          <div class="summary-body">
-            <div class="summary-row">
-              <span class="label">Precio del programa</span>
-              <span class="value text-muted">{{ selectedCurrency.symbol }} {{ insc.montoOriginal?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
+          <template v-if="isChannelToken">
+            <div class="col-md-2">
+              <label class="exec-label">Moneda <span class="c-red">*</span></label>
+              <SearchSelect viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
-            <div class="summary-row" v-if="insc.dsct_porcent_id">
-              <span class="label">Descuento</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoPorcentaje?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
+            <div class="col-md-2">
+              <label class="exec-label">Proveedor del Link <span class="c-red">*</span></label>
+              <SearchSelect
+                v-model="insc.cat_token_provider"
+                :items="tokenProviderCatalog"
+                label-field="description"
+                value-field="id"
+                placeholder="Qulqi, MercadoPago..."
+                required
+                class="exec-select-light w-100"
+              />
             </div>
-            <div class="summary-row" v-if="insc.dsct_stick_id">
-              <span class="label">Promoción</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoDescuentoFijo?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
-            </div>
-            <div class="summary-row" v-if="insc.dsct_benefit_id">
-              <span class="label">Beneficio</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ insc.montoBeneficio?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
-            </div>
-            <div class="summary-divider"></div>
-            <div class="summary-row total">
-              <div class="d-flex flex-column">
-                <span class="label-total">MONTO FINAL A PAGAR</span>
-                <small class="text-muted fw-normal" v-if="insc.cat_type_payment!='we_payment_way_single'">
-                  (Adelanto requerido: {{ selectedCurrency.symbol }}{{ insc.saved_money }})
-                </small>
+            <div class="col-md-12 mt-1">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+                <i class="fa-solid fa-link me-2"></i> Este pago se registrará en la hoja <strong>"TOKEN DIGITAL 2026"</strong>
               </div>
-              <span class="value-total">{{ selectedCurrency.symbol }} {{ insc.total_amount?.toLocaleString('es-PE',{minimumFractionDigits:2}) || '0.00' }}</span>
             </div>
-          </div>
+          </template>
+
+          <template v-if="isChannelWeb">
+            <div class="col-md-12 mt-1">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+                <i class="fa-solid fa-globe me-2"></i> El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
+              </div>
+            </div>
+          </template>
+
+          <template v-if="isEdit || validateInscriptionPaymentInfo()">
+            <div class="col-md-4 mt-3">
+              <label class="exec-label">Descuento</label>
+              <SearchSelect viewOpen="6" v-model="insc.dsct_porcent_id" mode="remote"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
+                label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (%)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoPorcentual" />
+            </div>
+            <div class="col-md-4 mt-3">
+              <label class="exec-label">Promoción</label>
+              <SearchSelect viewOpen="6" v-model="insc.dsct_stick_id" mode="remote" :viewOpen="6"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
+                label-field="full_label" value-field="id" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeDescuentoFijo" />
+            </div>
+            <div class="col-md-4 mt-3">
+              <label class="exec-label">Beneficio</label>
+              <SearchSelect viewOpen="6"  v-model="insc.dsct_benefit_id" mode="remote"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
+                label-field="full_label" value-field="id" :viewOpen="6" placeholder="DESCUENTO (S/)" :minChars="0" :cache="false" class="exec-select-light w-100" @change="onChangeBeneficio" />
+            </div>
+          </template>
         </div>
       </div>
+
+<!-- UNA SOLA SECCIÓN DE DOCUMENTACIÓN -->
+<div class="exec-fieldset mb-3" 
+     v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
+  <h6 class="fieldset-title">Documentación Adjunta</h6>
+  <div class="row g-3">
+
+    <!-- GENERAL: Comprobantes de pago → enrollment_attachments -->
+    <div class="col-md-6" v-if="isChannelGeneral">
+      <label class="exec-label mb-1">
+        Comprobante(s) de Pago
+        <span v-if="!isVoucherOptional" class="c-red">*</span>
+        <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
+          Opcional · Descuento 100%
+        </span>
+      </label>
+      <MultiFileUploader
+        v-model="insc.ticket_payment_urls"
+        ref="voucherUploaderRef"
+        label="Clic para subir Comprobante(s)"
+        accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+        :required="!isVoucherOptional"
+        :minFiles="1"
+        :touched="voucherTouched"
+      />
+    </div>
+
+    <!-- WEB: Constancias → lead_attachments (múltiples) -->
+    <div class="col-md-6" v-if="isChannelWeb">
+      <label class="exec-label mb-1">Constancias / Adjuntos</label>
+      <MultiFileUploader
+        v-model="insc.attachments"
+        label="Adjuntar constancias de pago web"
+        accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+      />
+    </div>
+
+    <!-- TOKEN: sin adjunto de pago (el link es el comprobante) -->
+    <div class="col-md-6" v-if="isChannelToken">
+      <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:#fafafa;">
+        <i class="fa-solid fa-circle-info me-2 text-info"></i>
+        Para pagos por link/token no se requiere adjuntar comprobante.
+        El proveedor enviará la confirmación directamente.
+      </div>
+    </div>
+
+    <!-- Carnet: SIEMPRE visible independientemente del canal -->
+    <div class="col-md-6">
+      <label class="exec-label mb-2">Carnet / Documento ID</label>
+      <FileUploader 
+        label="Subir carnet estudiantil" 
+        v-model="form.carnet_url" 
+        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" 
+      />
+    </div>
+
+  </div>
+</div>
+
 
       <div class="exec-fieldset">
         <h6 class="fieldset-title">Observaciones</h6>
         <div class="row g-3">
-          <div :class="insc.cat_method_payment=='we_payment_method_web'?'col-md-6':'col-md-12'">
+          <div class="col-md-12">
             <textarea
               v-model="insc.observacions"
               class="exec-textarea w-100"
               required rows="2"
+              placeholder="Escribe aquí notas adicionales..."
               v-restrict="{ trim: true, max: 500 }"
             ></textarea>
           </div>
-          <div class="col-md-6" v-if="insc.cat_method_payment=='we_payment_method_web'">
-            <label class="exec-label mb-1">Adjuntos</label>
-            <MultiFileUploader v-model="insc.attachments" label="Agregar Constancia" />
+        </div>
+      </div>
+
+      
+
+<div 
+  class="exec-fieldset mb-3" 
+  v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())"
+>
+  <div class="d-flex gap-3 flex-column flex-lg-row align-items-start">
+
+    <!-- ══ RESUMEN DE TRANSACCIÓN (existente) ══ -->
+    <div :style="isInstallmentMode ? 'flex:0 0 340px;min-width:280px' : 'flex:1'">
+      <div class="summary-card">
+        <div class="summary-header"><i class="fa-solid fa-receipt me-2"></i> Resumen de Transacción</div>
+        <div class="summary-body">
+          <div class="summary-row">
+            <span class="label">Precio del programa</span>
+            <span class="value text-muted">{{ selectedCurrency.symbol }} {{ fmt2(insc.montoOriginal) }}</span>
+          </div>
+          <div class="summary-row" v-if="insc.dsct_porcent_id">
+            <span class="label">Descuento</span>
+            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoPorcentaje) }}</span>
+          </div>
+          <div class="summary-row" v-if="insc.dsct_stick_id">
+            <span class="label">Promoción</span>
+            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoFijo) }}</span>
+          </div>
+          <div class="summary-row" v-if="insc.dsct_benefit_id">
+            <span class="label">Beneficio</span>
+            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficio) }}</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-row total">
+            <div class="d-flex flex-column">
+              <span class="label-total">MONTO FINAL A PAGAR</span>
+              <small class="text-muted fw-normal" v-if="isInstallmentMode">
+                Adelanto: {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
+              </small>
+            </div>
+            <span class="value-total">{{ selectedCurrency.symbol }} {{ fmt2(insc.total_amount) }}</span>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ══ PLAN DE CUOTAS (nuevo, solo en modo cuotas) ══ -->
+<!-- ══ PLAN DE CUOTAS (referencia visual, todo disabled) ══ -->
+<div v-if="isInstallmentMode" style="flex:1;min-width:0">
+  <div class="installment-card">
+
+    <!-- Cabecera con info del cálculo -->
+    <div class="installment-header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-table-list text-primary"></i>
+        <span class="fw-700" style="font-size:13px;">Plan de Cuotas</span>
+        <span class="pill pill-slate border ms-1" style="font-size:9px;">REFERENCIAL</span>
+      </div>
+      <!-- Info del cálculo: sesiones y duración -->
+      <div class="d-flex align-items-center gap-3" style="font-size:11px;color:var(--slate-400);">
+        <span v-if="form.program_sessions">
+          <i class="fa-solid fa-chalkboard me-1"></i>
+          {{ form.program_sessions }} sesiones
+        </span>
+        <span>
+          <i class="fa-solid fa-calendar-days me-1"></i>
+          {{ autoNumCuotas }} cuota{{ autoNumCuotas !== 1 ? 's' : '' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Separador: Reserva (fuera del plan) -->
+    <div class="installment-reserva-row">
+      <div class="d-flex align-items-center gap-2">
+        <span class="cuota-num" style="background:#dbeafe;color:#1e40af;">R</span>
+        <div>
+          <div class="fw-700" style="font-size:12px;">Reserva / Pago Inicial</div>
+          <div style="font-size:10px;color:var(--slate-400);">Hoy · No forma parte del plan</div>
+        </div>
+      </div>
+      <span class="cuota-amount-fixed" style="color:#1d4ed8;">
+        {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
+      </span>
+      <span class="pill" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">Inicial</span>
+    </div>
+
+    <div class="installment-divider">
+      <span>Cuotas del plan</span>
+    </div>
+
+    <!-- Tabla de cuotas -->
+    <div class="installment-body">
+      <div class="installment-row installment-row--head">
+        <span>#</span>
+        <span>Vencimiento</span>
+        <span class="text-end">Monto</span>
+        <span class="text-center">Estado</span>
+      </div>
+
+      <div
+        v-for="cuota in installmentPlan"
+        :key="cuota.installment_number"
+        class="installment-row"
+      >
+        <!-- Número -->
+        <span class="cuota-num">{{ cuota.installment_number }}</span>
+
+        <!-- Fecha (disabled, solo visual) -->
+        <BaseDatePicker
+          :model-value="cuota.due_date"
+          :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: false, disableMobile: true }"
+          :disabled="true"
+          class="w-100"
+        />
+
+        <!-- Monto (disabled) -->
+        <div class="d-flex justify-content-end">
+          <CurrencyInput
+            :model-value="cuota.amount"
+            :currency="selectedCurrency"
+            :storeAsMinor="false"
+            disabled
+            class="cuota-currency-input"
+            placeholder="0.00"
+          />
+        </div>
+
+        <!-- Estado -->
+        <div class="text-center">
+          <span class="pill pill-draft">Borrador</span>
+        </div>
+      </div>
+
+      <!-- Fila saldo total del plan -->
+      <div class="installment-row installment-row--total">
+        <span></span>
+        <span class="fw-700 text-muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
+          Saldo financiado
+        </span>
+        <span class="text-end fw-700 c-green">
+          {{ selectedCurrency.symbol }} {{ fmt2(installmentTotalSum) }}
+        </span>
+        <span></span>
+      </div>
+
+      <!-- Fila gran total (reserva + plan) -->
+      <div class="installment-row installment-row--grand">
+        <span></span>
+        <span class="fw-700" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
+          Total (Reserva + Cuotas)
+        </span>
+        <span class="text-end fw-700" style="font-size:14px;color:var(--navy-900);">
+          {{ selectedCurrency.symbol }} {{ fmt2(round2(Number(insc.saved_money || 0) + installmentTotalSum)) }}
+        </span>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- Nota aclaratoria -->
+    <div class="installment-footer-note">
+      <i class="fa-solid fa-circle-info me-1 text-primary"></i>
+      Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.
+    </div>
+
+  </div>
+</div>
+
+  </div>
+</div>
+
 
     </div>
 
     <template #footer>
       <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
-      <button class="btn-exec btn-exec-primary btn-exec-sm" @click="confirmarInscripcion" :disabled="savingInsc || form.enrollment_id">
+      <button 
+  class="btn-exec btn-exec-primary btn-exec-sm" 
+  @click="confirmarInscripcion" 
+  :disabled="savingInsc || form.enrollment_id || (isInstallmentMode && !installmentPlanValid)"
+>
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
         {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
       </button>
@@ -1674,6 +1912,185 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   .insc-header { flex-direction: column; }
   .insc-price-box { text-align: left; width: 100%; }
 }
+
+/* ══ PLAN DE CUOTAS ══════════════════════════════════════════ */
+.installment-card {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.installment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .65rem 1rem;
+  background: var(--slate-50, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  gap: 1rem;
+}
+
+.installment-alert {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+  padding: .5rem 1rem;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.installment-body { padding: .5rem 0; }
+
+.installment-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 130px 80px;
+  gap: .5rem;
+  align-items: center;
+  padding: .45rem 1rem;
+  border-bottom: 1px solid var(--slate-50, #f8fafc);
+  font-size: 12.5px;
+}
+.installment-row:last-child { border-bottom: none; }
+.installment-row--head {
+  background: var(--slate-50, #f8fafc);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 700;
+  color: var(--slate-400, #94a3b8);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.installment-row--invalid td,
+.installment-row--invalid { background: #fff5f5; }
+.installment-row--total {
+  background: var(--slate-50, #f8fafc);
+  border-top: 2px solid var(--border, #e2e8f0);
+  font-size: 12.5px;
+}
+
+.cuota-num {
+  font-weight: 700;
+  color: var(--slate-400, #94a3b8);
+  text-align: center;
+  font-size: 11px;
+}
+.cuota-date-fixed {
+  font-size: 12px;
+  color: #15803d;
+  font-weight: 600;
+}
+.cuota-date-input {
+  height: 30px;
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  width: 100%;
+}
+.cuota-amount-fixed {
+  font-weight: 700;
+  color: #15803d;
+  font-size: 12.5px;
+}
+.cuota-amount-editable {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+  height: 30px;
+  justify-content: flex-end;
+}
+.cuota-amount-editable.is-invalid { border-color: #f87171; background: #fff5f5; }
+.currency-prefix {
+  padding: 0 5px;
+  font-size: 11px;
+  color: var(--slate-400, #94a3b8);
+  border-right: 1px solid var(--border, #e2e8f0);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  background: var(--slate-50, #f8fafc);
+  flex-shrink: 0;
+}
+.cuota-amount-input {
+  border: none;
+  outline: none;
+  width: 90px;
+  padding: 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: right;
+  background: transparent;
+}
+.cuota-amount-input::-webkit-inner-spin-button { opacity: .5; }
+
+.pill-pending { background: #dbeafe; color: #1e40af; font-size: 9.5px; }
+.pill-draft   { background: #f1f5f9; color: #475569; font-size: 9.5px; }
+/* CurrencyInput dentro del plan de cuotas */
+.cuota-currency-input {
+  max-width: 130px;
+  height: 30px !important;
+  padding: 3px 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 600;
+  text-align: right;
+  border-radius: 4px;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  transition: border-color .15s;
+}
+.cuota-currency-input:focus {
+  border-color: var(--teal-500, #14b8a6) !important;
+  box-shadow: 0 0 0 2px rgba(20,184,166,.12) !important;
+  outline: none;
+}
+.cuota-currency-input.is-invalid {
+  border-color: #f87171 !important;
+  background: #fff5f5 !important;
+}
+.installment-reserva-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: .75rem;
+  padding: .65rem 1rem;
+  background: #eff6ff;
+  border-bottom: 1px solid #bfdbfe;
+}
+
+.installment-divider {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem 1rem;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--slate-400);
+  font-weight: 700;
+}
+
+.installment-row--grand {
+  background: #f0fdf4;
+  border-top: 2px solid #bbf7d0;
+  font-size: 12.5px;
+  padding: .55rem 1rem;
+  display: grid;
+  grid-template-columns: 28px 1fr 130px 80px;
+  gap: .5rem;
+  align-items: center;
+}
+
+.installment-footer-note {
+  padding: .5rem 1rem;
+  font-size: 10.5px;
+  color: var(--slate-400);
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--slate-50);
+}
 </style>
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
@@ -1695,6 +2112,8 @@ import FileUploader from '@/components/FileUploader.vue'
 
   const router = useRouter()
   const route  = useRoute()
+
+  
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 const dateLimitConfig = {
@@ -1706,7 +2125,10 @@ const dateLimitConfig = {
   const discountService = inject(ServiceKeys.Discount)
   const editionService = inject(ServiceKeys.Edition)
   const catalog          = inject('catalog')
-
+  
+  const todayIso = new Date().toISOString().slice(0, 16)
+const paymentChannelCatalog = ref(catalog.options('we_payment_channel'))
+const tokenProviderCatalog  = ref(catalog.options('we_token_provider'))
 const lAttempts = ref(catalog.options('we_attempt'))
   const leadIdParam = computed(() => {
     const raw = route.params?.id
@@ -1714,7 +2136,8 @@ const lAttempts = ref(catalog.options('we_attempt'))
     return Number.isFinite(n) ? n : null
   })
   const isEdit = computed(() => !!leadIdParam.value)
-
+const voucherUploaderRef = ref(null)
+const voucherTouched     = ref(false)
   const loaded          = ref(false)
   const saving          = ref(false)
   const savingInsc      = ref(false)
@@ -1733,6 +2156,90 @@ const formatDuration = (seconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+  const form = reactive({
+    fechaContactoInicial: todayIso,
+    query_alias: null,
+    category_alias: null,
+    program_modality_alias: null,
+    web: false,
+    b2b: false,
+    program_modality_selected_alias: null,
+    program_version_id: null,
+    cat_client_moment_alias:null,
+    membership_moment_id: null,
+    membership_tier_label:null,
+    edition_id: null,
+    link: null,
+    client_status: null,
+    client_status_label: null,
+    enrollment_id: null,
+    full_name: '',
+    nombre: '',
+    telefono: '',
+    status_alias: null,
+    country_alias: null,
+    ocupacion_alias: null,
+    bot: false,
+    pay_date: null,
+    nivel_alias: null,
+    prox_medium_alias: null,
+    mensajeChat: '',
+    canal_alias: null,
+    medium_alias: null,
+    key_word_alias: null,
+    strategy_alias: null,
+    observacion: '',
+    categoriaCliente: 'NEW',
+    categoriaMember: '',
+    contactos: [],
+    program_sessions:           0,
+    program_sessions_per_week:  1,
+    edition_start_date:         null,
+
+  })
+
+  const insc = reactive({
+    dni: '',
+    nombres: '',
+    apellidos: '',
+    correo: '',
+    saved_money: 0,
+    selectedCurrencyAlias: '',
+    modalidadPrograma: 'NORMAL',
+    promocion_id: null,
+    descuento_id: null,
+    cat_method_payment: null,
+    modalidadPago: 'CONTADO',
+    montoOriginal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    val_porcentaje: 0,
+    val_fijo: 0,
+    val_beneficio: 0,
+    montoDescuentoPorcentaje: 0,
+    montoDescuentoFijo: 0,
+    montoBeneficio: 0,
+    montoFinal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    ticket_payment_urls: [],
+    attachments: [],
+  cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
+  cat_token_provider: null,
+  })
+// Comprobante opcional cuando el descuento porcentual es exactamente 100
+const isVoucherOptional = computed(() =>
+  !isChannelGeneral.value || Number(insc.val_porcentaje) === 100
+)
+watch(() => insc.cat_payment_channel, () => {
+  insc.cat_token_provider    = null
+  insc.cat_method_payment    = null
+  insc.ticket_payment_urls   = []
+  insc.attachments           = []
+  voucherTouched.value       = false
+})
 const toggleTimer = (attempt) => {
   if (attempt.timerActive) {
     clearInterval(attempt.timerId)
@@ -1754,6 +2261,15 @@ onBeforeUnmount(() => {
     })
   }
 })
+const channelAlias = computed(() => {
+  if (!insc.cat_payment_channel) return null
+  return paymentChannelCatalog.value
+    .find(c => c.id === insc.cat_payment_channel)?.alias ?? null
+})
+
+const isChannelGeneral = computed(() => channelAlias.value === 'we_channel_general')
+const isChannelToken   = computed(() => channelAlias.value === 'we_channel_token')
+const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
 
 // Resetear tab al abrir modal
 watch(showProgramDetail, (val) => {
@@ -1766,7 +2282,6 @@ const formatDate = (dateString) => {
   const options = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
   return new Date(dateString).toLocaleDateString('es-PE', options);
 };
-  const todayIso = new Date().toISOString().slice(0, 16)
 
   const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
   const leadInterestCatalog      = ref(catalog.options('we_lead_interest'))
@@ -1869,73 +2384,6 @@ const hcEnrollmentData = ref([
   { fecha: '10 Jun 2024', programa: 'SQL Server Database', edicion: '2024-II', estado: 'Finalizado', nota: 18 },
   { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
 ])
-  const form = reactive({
-    fechaContactoInicial: todayIso,
-    query_alias: null,
-    category_alias: null,
-    program_modality_alias: null,
-    web: false,
-    b2b: false,
-    program_modality_selected_alias: null,
-    program_version_id: null,
-    cat_client_moment_alias:null,
-    membership_moment_id: null,
-    membership_tier_label:null,
-    edition_id: null,
-    link: null,
-    client_status: null,
-    client_status_label: null,
-    enrollment_id: null,
-    full_name: '',
-    nombre: '',
-    telefono: '',
-    status_alias: null,
-    country_alias: null,
-    ocupacion_alias: null,
-    bot: false,
-    pay_date: null,
-    nivel_alias: null,
-    prox_medium_alias: null,
-    mensajeChat: '',
-    canal_alias: null,
-    medium_alias: null,
-    key_word_alias: null,
-    strategy_alias: null,
-    observacion: '',
-    categoriaCliente: 'NEW',
-    categoriaMember: '',
-    contactos: [],
-
-  })
-
-  const insc = reactive({
-    dni: '',
-    nombres: '',
-    apellidos: '',
-    correo: '',
-    saved_money: 0,
-    selectedCurrencyAlias: '',
-    modalidadPrograma: 'NORMAL',
-    promocion_id: null,
-    descuento_id: null,
-    cat_method_payment: null,
-    modalidadPago: 'CONTADO',
-    montoOriginal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-    dsct_benefit_id: null,
-    val_porcentaje: 0,
-    val_fijo: 0,
-    val_beneficio: 0,
-    montoDescuentoPorcentaje: 0,
-    montoDescuentoFijo: 0,
-    montoBeneficio: 0,
-    montoFinal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-    dsct_benefit_id: null,
-    attachments: []
-  })
 
   function onChangeDescuentoPorcentual(opt) {
     if (!opt) {
@@ -2431,35 +2879,26 @@ function onStrategyChange(option){
 
 // Función centralizada para limpiar todo el estado de la inscripción
 function resetInscriptionData() {
-  console.log('Reseteando formulario de inscripción...');
-
-  // 1. Limpiar objeto de inscripción (insc)
   Object.assign(insc, {
     dni: '',
-    // No limpiamos nombres/apellidos aquí si queremos que se mantengan los del lead,
-    // pero si quieres limpieza total, déjalos vacíos:
     document: '',
     cat_type_document: null,
     nombres: '',
     apellidos: '',
     mother_last_name: '',
     email: '',
-
-    // Financiero
+    full_name: '',
+    last_name: '',
     saved_money: 0,
-    selectedCurrencyAlias: 'we_currency_soles', // Valor por defecto
-    cat_insc_modality: 'we_insc_modality_normal', // Valor por defecto
-    cat_type_payment: 'we_payment_way_single',    // Valor por defecto
+    selectedCurrencyAlias: 'we_currency_soles',
+    cat_insc_modality: 'we_insc_modality_normal',
+    cat_type_payment: 'we_payment_way_single',
     cat_method_payment: null,
     modalidadPago: 'CONTADO',
-
-    // Montos y Descuentos
     montoOriginal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
     dsct_benefit_id: null,
-
-    // Valores numéricos auxiliares para la reactividad
     val_porcentaje: 0,
     val_fijo: 0,
     val_beneficio: 0,
@@ -2467,18 +2906,20 @@ function resetInscriptionData() {
     montoDescuentoFijo: 0,
     montoBeneficio: 0,
     montoFinal: 0,
-
-    // Observaciones y Adjuntos
+    total_amount: 0,
     observacions: '',
-    attachments: [], // IMPORTANTE: Limpiar el array de adjuntos múltiples
+    ticket_payment_urls: [],
+    attachments: [],
     flag_agreement: false,
-    b2b_contract_id: null
-  });
+    b2b_contract_id: null,
 
-  // 2. Limpiar campos del 'form' que se usan dentro de la modal (Archivos únicos)
-  // Como usas v-model="form.ticket_payment_url" dentro de la modal, hay que limpiarlo también
-  form.ticket_payment_url = null;
-  form.carnet_url = null;
+    // ← FALTABAN ESTOS DOS
+    cat_payment_channel: null,
+    cat_token_provider: null,
+  })
+
+  voucherTouched.value = false
+  form.carnet_url = null
 }
 const isMedioDisabled = computed(() =>
   ['we_social_media_coti', 'we_social_media_chatbot'].includes(form.canal_alias)
@@ -2651,68 +3092,97 @@ async function openProgramVersionDetail() {
 }
 
 function buildEnrollmentPayload() {
-  // ... obtengo las ID's (código existente) ...
-  const cat_type_document = idByAlias(insc.cat_type_document, docTypeCatalog.value)
-  const cat_insc_modality = idByAlias(insc.cat_insc_modality, inscModalidades.value)
-  const cat_type_payment  = idByAlias(insc.cat_type_payment, inscPaymentModes.value)
-  const cat_currency      = idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
-  const cat_country       = idByAlias(form.country_alias, countryCatalog.value)
-  const cat_method_payment = idByAlias(insc.cat_method_payment, paymentMethodCatalog.value)
+  const cat_type_document  = idByAlias(insc.cat_type_document, docTypeCatalog.value)
+  const cat_insc_modality  = idByAlias(insc.cat_insc_modality, inscModalidades.value)
+  const cat_type_payment   = idByAlias(insc.cat_type_payment,  inscPaymentModes.value)
+  const cat_currency       = idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
+  const cat_country        = idByAlias(form.country_alias, countryCatalog.value)
+  const cat_method_payment = isChannelGeneral.value
+    ? idByAlias(insc.cat_method_payment, paymentMethodCatalog.value)
+    : null
 
-  // Transformación de los adjuntos múltiples (lo que vimos antes)
-  const formattedAttachments = (insc.attachments || []).map(file => {
-      if (typeof file === 'object' && file.url) return file;
-      return { url: file, name: file.split('/').pop() || 'Adjunto', type: null };
-  });
+  const paymentFiles = (insc.ticket_payment_urls || []).map(f => ({
+    url:  f.url  || f,
+    name: f.name || (f.url || f).split('/').pop() || 'Comprobante',
+    type: f.type || null
+  }))
+
+  const generalAttachments = (insc.attachments || []).map(f => ({
+    url:  f.url  || f,
+    name: f.name || (f.url || f).split('/').pop() || 'Adjunto',
+    type: f.type || null
+  }))
 
   return {
     inscription: {
-      lead_id: createdLeadId.value,
-      program_version_id: form.edition_id ? null : form.program_version_id,
-      program_edition_id: form.edition_id,
-      document: insc.document,
-      cat_type_document: cat_type_document,
-      full_name: insc.full_name,
-      last_name: insc.last_name,
-      mother_last_name: insc.mother_last_name,
-      email: insc.email,
-      cat_country: cat_country,
-      cat_insc_modality: cat_insc_modality,
-      cat_type_payment: cat_type_payment,
-      cat_currency:  cat_currency,
-      total_amount: Number(insc.total_amount),
-      cat_method_payment: cat_method_payment,
-      saved_money: Number(insc.saved_money),
-      dsct_porcent_id: insc.dsct_porcent_id,
-      dsct_stick_id: insc.dsct_stick_id,
-      dsct_benefit_id: insc.dsct_benefit_id,
-      observations: insc.observacions,
-      flag_agreement: insc.flag_agreement,
-      b2b_contract_id: null,
-      list_price: insc.montoOriginal,
-      // --- AQUÍ ESTÁ LA CORRECCIÓN DEL MAPEO ---
-      // Asignamos la variable del form al nombre que espera el SP
-      payment_attachment_url: form.ticket_payment_url || null,
-      student_attachment_url: form.carnet_url || null,
+      lead_id:              createdLeadId.value,
+      program_version_id:   form.edition_id ? null : form.program_version_id,
+      program_edition_id:   form.edition_id,
 
-      // Adjuntos múltiples (Array)
-      attachments: formattedAttachments
+      // Datos del alumno
+      document:             insc.document,
+      cat_type_document,
+      full_name:            insc.full_name,
+      last_name:            insc.last_name,
+      mother_last_name:     insc.mother_last_name,
+      email:                insc.email,
+      cat_country,
+      cat_insc_modality,
+
+      // Canal y pago
+      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id)
+      cat_type_payment:     isChannelGeneral.value ? cat_type_payment : null,
+      cat_currency,
+      cat_method_payment,                                // null si TOKEN o WEB
+      cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
+      saved_money:          Number(insc.saved_money),
+
+      // Precios y descuentos
+      list_price:           insc.montoOriginal,
+      total_amount:         Number(insc.total_amount),
+      dsct_porcent_id:      insc.dsct_porcent_id,
+      dsct_stick_id:        insc.dsct_stick_id,
+      dsct_benefit_id:      insc.dsct_benefit_id,
+
+      // Observaciones y archivos
+      observations:         insc.observacions,
+      student_attachment_url: form.carnet_url || null,
+      ticket_payment_urls:  paymentFiles,     // → enrollment_attachments
+      attachments:          generalAttachments // → lead_attachments
     }
   }
 }
 
 async function confirmarInscripcion() {
-  if (!comercialService) return console.error('comercialService no inyectado')
+   if (!comercialService) return console.error('comercialService no inyectado')
 
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
     toast.warning("Por favor complete los campos obligatorios de la inscripción")
     return
   }
   if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
-    toast.warning("Faltan datos obligatorios en el formulario del Lead. Revise la información principal.")
+    toast.warning("Faltan datos obligatorios en el formulario del Lead.")
     return
   }
 
+  // Comprobante GENERAL
+  if (isChannelGeneral.value && !isVoucherOptional.value &&
+      (!insc.ticket_payment_urls || insc.ticket_payment_urls.length === 0)) {
+    voucherTouched.value = true
+    toast.warning('El canal General requiere al menos un Comprobante de Pago.')
+    return
+  }
+
+  // Token provider
+  if (isChannelToken.value && !insc.cat_token_provider) {
+    toast.warning('Debe seleccionar el proveedor del Link / Token.')
+    return
+  }
+  // Validar plan de cuotas
+if (isInstallmentMode.value && !installmentPlanValid.value) {
+  toast.warning('El plan de cuotas no cuadra con el monto final. Ajusta los montos antes de guardar.')
+  return
+}
   savingInsc.value = true
 
   try {
@@ -2848,10 +3318,30 @@ function openInscription() {
     const required = ['cat_type_document','document','email','full_name','last_name','mother_last_name','cat_insc_modality']
     return required.every(f => !!insc[f])
   }
-  function validateInscriptionPaymentInfo() {
-    const required = ['selectedCurrencyAlias','cat_type_payment','saved_money','cat_method_payment']
-    return required.every(f => insc[f] || insc[f] === 0)
+function validateInscriptionPaymentInfo() {
+  // Moneda siempre obligatoria
+  if (!insc.selectedCurrencyAlias) return false
+
+  // Canal General: requiere modalidad y método de pago
+  if (isChannelGeneral.value) {
+    if (!insc.cat_type_payment) return false
+    if (!insc.cat_method_payment) return false
+    // Cuotas: requiere adelanto > 0
+    if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
+    return true
   }
+
+  // Canal Token: requiere proveedor
+  if (isChannelToken.value) {
+    return !!insc.cat_token_provider
+  }
+
+  // Canal Web: solo necesita el canal seleccionado
+  if (isChannelWeb.value) return true
+
+  // Sin canal: no pasa
+  return false
+}
 
 
   const montoOriginal = computed(() => 1000)
@@ -2897,6 +3387,9 @@ function openInscription() {
         form.link = opcion.link;
     }
 
+    form.program_sessions          = Number(opcion?.sessions || 0)
+    form.program_sessions_per_week = Number(opcion?.sessions_per_week || 1)
+
     // --- AQUÍ ESTÁ EL FIX ---
     // Debes asignar los precios del objeto 'opcion' a las variables del 'form'
     // para que el computed 'calculatedBasePrice' detecte el cambio.
@@ -2926,9 +3419,10 @@ function openInscription() {
     return response;
   }
 
-    function onEditionChange(opcion) {
-        if (!opcion) return
-    }
+function onEditionChange(opcion) {
+  if (!opcion) return
+  form.edition_start_date = opcion.start_date || null  // 'YYYY-MM-DD'
+}
 
     const clientProfileType = computed(() => {
       if (!form.ocupacion_alias) return null
@@ -3006,7 +3500,179 @@ function openInscription() {
       }
     })
 
+// ══════════════════════════════════════════════════
+// PLAN DE CUOTAS
+// ══════════════════════════════════════════════════
+
+// Helper formateador (evita repetir .toLocaleString en template)
+const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const isInstallmentMode = computed(() =>
+  isChannelGeneral.value &&
+  insc.cat_type_payment === 'we_payment_way_installments' &&
+  Number(insc.montoOriginal) > 0
+)
+// Nro total de cuotas seleccionado por el asesor (2 a 6)
+const installmentCount = ref(2)
+
+// Monto que queda después del adelanto → se reparte en cuotas 2..N
+const installmentRemainder = computed(() => {
+  const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
+  return rem > 0 ? rem : 0
+})
+// Plan editable: array de { amount, date }
+const installmentPlan = ref([])
+
+// Construir/reconstruir el plan cuando cambien las variables clave
+watch(
+  [isInstallmentMode, installmentCount, () => insc.saved_money, () => insc.total_amount],
+  ([active]) => {
+    if (!active) { installmentPlan.value = []; return }
+    rebuildPlan()
+  },
+  { immediate: true }
+)
+
+function rebuildPlan() {
+  const adelanto   = Number(insc.saved_money)  || 0
+  const remainder  = installmentRemainder.value
+  const n          = installmentCount.value      // total cuotas
+  const perCuota   = n > 1 ? round2(remainder / (n - 1)) : remainder
+
+  const today = new Date()
+  const toISO = (d) => d.toISOString().slice(0, 10)
+
+  const plan = []
+
+  // Cuota 1 — adelanto (fija, hoy)
+  plan.push({ amount: adelanto, date: toISO(today), fixed: true })
+
+  // Cuotas 2..N — distribuidas mensualmente
+  for (let i = 1; i < n; i++) {
+    const d = new Date(today)
+    d.setMonth(d.getMonth() + i)
+    // Ajuste: si el mes siguiente no tiene ese día (ej: 31 → 30)
+    plan.push({ amount: perCuota, date: toISO(d), fixed: false })
+  }
+
+  installmentPlan.value = plan
+}
+
+// Reconstruir cuando el asesor cambia el número de cuotas
+function resetInstallmentAmounts() {
+  rebuildPlan()
+}
+
+// Suma de cuotas 2..N (las editables)
+const installmentSumFromTwo = computed(() =>
+  installmentPlan.value
+    .slice(1)
+    .reduce((acc, c) => round2(acc + (Number(c.amount) || 0)), 0)
+)
+
+const installmentPlanValid = computed(() => {
+  if (!isInstallmentMode.value || installmentPlan.value.length === 0) return true
+  return Math.abs(installmentTotalSum.value - installmentRemainder.value) < 0.01
+})
+
+// Suma total incluyendo adelanto
+const installmentTotalSum = computed(() =>
+  round2(installmentPlan.value.reduce((acc, c) => acc + c.amount, 0))
+)
+
+// Número de cuotas calculado automáticamente según duración del curso
+const autoNumCuotas = computed(() => {
+  const sessions        = form.program_sessions         || 18
+  const sessionsPerWeek = form.program_sessions_per_week || 1
+  const weeks  = sessions / sessionsPerWeek
+  const months = Math.round(weeks / 4)
+  return Math.min(Math.max(months, 1), 5) // entre 1 y 5
+})
 
 
+// Callback cuando el asesor edita manualmente un monto
+function onInstallmentAmountInput() {
+  // No hace nada especial, la validación es reactiva vía computed
+}
+/**
+ * Config de flatpickr para cada cuota del plan.
+ * - Bloquea fechas anteriores a HOY
+ * - Bloquea fechas anteriores a la cuota previa (si ya tiene fecha)
+ * - Deshabilita escritura manual (el usuario solo puede hacer clic)
+ */
+function getInstallmentDateConfig(idx) {
+  // La cuota 1 (idx=0) es fija (hoy), esta función solo se llama para idx >= 1
+
+  // Cuota anterior: puede ser hoy (idx=1) o la fecha de la cuota idx-1
+  let minDate = new Date() // mínimo siempre es hoy
+  minDate.setHours(0, 0, 0, 0)
+
+  if (idx > 1) {
+    // Si la cuota anterior ya tiene fecha seleccionada, esa es el mínimo
+    const prevDate = installmentPlan.value[idx - 1]?.date
+    if (prevDate) {
+      const d = new Date(prevDate)
+      // El mínimo es el día siguiente a la cuota anterior
+      d.setDate(d.getDate() + 1)
+      if (d > minDate) minDate = d
+    }
+  }
+
+  return {
+    dateFormat:    'Y-m-d',
+    altInput:      true,
+    altFormat:     'd/m/Y',
+    allowInput:    false,          // ← Solo clic, sin escritura manual
+    disableMobile: true,
+    minDate:       minDate,
+  }
+}
+
+
+// Plan completo (reserva separada, cuotas desde #1)
+const installmentPlan = computed(() => {
+  if (!isInstallmentMode.value) return []
+
+  const saldo    = installmentRemainder.valueinstallmentPlan
+  const n        = autoNumCuotas.value
+  const startRaw = form.edition_start_date
+
+  if (saldo <= 0 || n < 1) return []
+
+  // Distribución: floor en todas, el residuo va a la última
+  const cuotaBase  = Math.floor((saldo / n) * 100) / 100
+  const remainder  = round2(saldo - cuotaBase * n)
+
+  // Fecha base para calcular vencimientos
+  const base = startRaw ? new Date(startRaw + 'T00:00:00') : new Date()
+
+  // Cuota 1: fecha_inicio + 15 días
+  const fecha1 = new Date(base)
+  fecha1.setDate(fecha1.getDate() + 15)
+
+  const plan = []
+  for (let i = 0; i < n; i++) {
+    let dueDate
+
+    if (i === 0) {
+      dueDate = fecha1
+    } else {
+      // Día 1 del mes siguiente al mes de cuota 1, avanzando i meses
+      dueDate = new Date(fecha1.getFullYear(), fecha1.getMonth() + i, 1)
+    }
+
+    const amount = i === n - 1
+      ? round2(cuotaBase + remainder)   // última cuota absorbe el residuo
+      : cuotaBase
+
+    plan.push({
+      installment_number: i + 1,
+      amount,
+      due_date: dueDate.toISOString().slice(0, 10)
+    })
+  }
+
+  return plan
+})
 </script>
 
