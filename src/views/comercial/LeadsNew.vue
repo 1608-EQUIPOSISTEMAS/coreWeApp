@@ -2045,7 +2045,16 @@ watch(() => insc.cat_type_document, (newVal) => {
               strategy_alias: originalData.strategy_alias,
               observacion: originalData.observations ?? '',
               categoriaCliente: originalData.t_lead ?? 'NEW',
-              categoriaMember: originalData.membresia ?? ''
+              categoriaMember: originalData.membresia ?? '',
+
+      // ✅ AGREGAR ESTOS — son los que faltaban
+      price_student_soles:       Number(originalData.price_student_soles    || 0),
+      price_student_dollars:     Number(originalData.price_student_dollars  || 0),
+      price_profesional_soles:   Number(originalData.price_profesional_soles   || 0),
+      price_profesional_dollars: Number(originalData.price_profesional_dollars || 0),
+      program_sessions:          Number(originalData.sessions || originalData.program_sessions || 0),
+      program_sessions_per_week: Number(originalData.sessions_per_week || originalData.program_sessions_per_week || 1),
+      program_link:              originalData.program_link ?? null,
           })
           createdLeadId.value = null
           createdPersonId.value = null
@@ -2058,15 +2067,13 @@ watch(() => insc.cat_type_document, (newVal) => {
   }
 
   onMounted(async () => {
+    const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
+    membershipList.value = data;
     if (route.query.clone_from) {
         await loadDataForCloning(route.query.clone_from)
         loaded.value = true
         return
     }
-    const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
-    membershipList.value = data;
-    // 3. Asignamos el valor real a la variable reactiva
-    membershipList.value = data;
 
     if (isEdit.value) {
       await loadLead(leadIdParam.value)
@@ -2915,6 +2922,7 @@ function onEditionChange(opcion) {
     })
 
 const calculatedBasePrice = computed(() => {
+  debugger
   if (!insc.selectedCurrencyAlias) return 0
   const isUSD  = insc.selectedCurrencyAlias === 'we_currency_usd'
   const type   = clientProfileType.value
