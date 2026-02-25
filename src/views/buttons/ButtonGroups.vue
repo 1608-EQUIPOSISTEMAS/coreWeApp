@@ -86,19 +86,19 @@
               <CFormCheck
                 id="btncheck1"
                 :button="{ color: 'primary', variant: 'outline' }"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Checkbox 1"
               />
               <CFormCheck
                 id="btncheck2"
                 :button="{ color: 'primary', variant: 'outline' }"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Checkbox 2"
               />
               <CFormCheck
                 id="btncheck3"
                 :button="{ color: 'primary', variant: 'outline' }"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Checkbox 3"
               />
             </CButtonGroup>
@@ -115,7 +115,7 @@
                 type="radio"
                 :button="{ color: 'primary', variant: 'outline' }"
                 name="btnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio 1"
               />
               <CFormCheck
@@ -123,7 +123,7 @@
                 type="radio"
                 :button="{ color: 'primary', variant: 'outline' }"
                 name="btnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio 2"
               />
               <CFormCheck
@@ -131,7 +131,7 @@
                 type="radio"
                 :button="{ color: 'primary', variant: 'outline' }"
                 name="btnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio 3"
               />
             </CButtonGroup>
@@ -386,7 +386,7 @@
                 type="radio"
                 :button="{ color: 'danger', variant: 'outline' }"
                 name="vbtnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio
               1"
                 checked
@@ -396,7 +396,7 @@
                 type="radio"
                 :button="{ color: 'danger', variant: 'outline' }"
                 name="vbtnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio
               2"
               />
@@ -405,7 +405,7 @@
                 type="radio"
                 :button="{ color: 'danger', variant: 'outline' }"
                 name="vbtnradio"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio
               3"
               />

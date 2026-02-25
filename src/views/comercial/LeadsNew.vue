@@ -91,6 +91,7 @@
 
             <div class="col-6 col-md-4 col-lg-3">
               <label class="exec-label">Categoría <span class="c-red">*</span></label>
+              
               <SearchSelect
                 v-model="form.category_alias"
                 :items="programTypeCatalog"
@@ -127,62 +128,63 @@
             >
               <label class="exec-label">Producto / Programa <span class="c-red">*</span></label>
 
-              <div class="d-flex gap-2">
-                <SearchSelect
-                  v-model="form.program_version_id"
-                  mode="remote"
-                  :fetcher="q => programService.programVersionCaller({ q,
-                    cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
-                    cat_model_modality: !form.program_modality_alias ? null : programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id
-                  })"
-                  label-field="abbreviation"
-                  sublabel-field="version_code"
-                  value-field="program_version_id"
-                  :viewOpen="6"
-                  :model-label="form.program_label"
-                  placeholder="Buscar programa…"
-                  :minChars="0"
-                  :cache="false"
-                  class="w-100"
-                  @change="onProgramaChange"
-                />
+<div class="d-flex gap-2">
 
-                <button
-                  v-if="form.program_version_id"
-                  type="button"
-                  class="btn-exec btn-exec-outline px-0"
-                  style="height: 38px; width: 38px; flex-shrink: 0;"
-                  @click="openProgramVersionDetail()"
-                  title="Ver detalles del programa"
-                >
-                  <i class="fa-solid fa-circle-info" style="color: var(--teal-600, #12274e);"></i>
-                </button>
-              </div>
+  <div style="flex: 1; min-width: 0;">   <!-- ← agrega este wrapper -->
+    <SearchSelect
+      v-model="form.program_version_id"
+      mode="remote"
+      :fetcher="q => programService.programVersionCaller({ q,
+        cat_type_program: programTypeCatalog.find(e=>e.alias==form.category_alias).id,
+        cat_model_modality: !form.program_modality_alias ? null : programModalityCatalog.find(e=>e.alias==form.program_modality_alias).id,
+        active:'Y'
+      })"
+      label-field="abbreviation"
+      sublabel-field="version_code"
+      value-field="program_version_id"
+      :viewOpen="6"
+      :model-label="form.program_label"
+      placeholder="Buscar programa…"
+      :minChars="0"
+      :cache="false"
+      class="w-100"
+      @change="onProgramaChange"
+    />
+  </div>   <!-- ← cierra wrapper -->
+
+  <button
+    v-if="form.program_version_id"
+    type="button"
+    class="btn-exec btn-exec-outline px-0"
+    style="height: 38px; width: 38px; flex-shrink: 0;"
+    @click="openProgramVersionDetail()"
+    title="Ver detalles del programa"
+  >
+    <i class="fa-solid fa-circle-info" style="color: var(--teal-600, #12274e);"></i>
+  </button>
+  
+</div>
             </div>
+            
             <div
               class="col-12 col-lg-3"
               v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))"
             >
               <label class="exec-label">Edición / Fecha prevista <span class="c-red">*</span></label>
-              <SearchSelect
-                v-model="form.edition_id"
-                mode="remote"
-                :fetcher="searchEditionsFiltered"
-                label-field="start_date_label"
-                value-field="edition_num_id"
-                :viewOpen="6"
-                placeholder="Buscar Edición…"
-                :model-label="form.edition_label"
-                :minChars="0"
-                :cache="false"
-                class="exec-select-light w-100"
-              />
-              <div v-if="currentEdition" class="edition-meta mt-2">
-                <div><b>Inicio:</b> {{ currentEdition.inicio }}</div>
-                <div><b>Fin:</b> {{ currentEdition.fin }}</div>
-                <div><b>Docente:</b> {{ currentEdition.docente }}</div>
-                <div><b>Horario:</b> {{ currentEdition.horario }}</div>
-              </div>
+<SearchSelect
+  v-model="form.edition_id"
+  mode="remote"
+  :fetcher="searchEditionsFiltered"
+  label-field="start_date_label"
+  value-field="edition_num_id"
+  :viewOpen="6"
+  placeholder="Buscar Edición…"
+  :model-label="form.edition_label"
+  :minChars="0"
+  :cache="false"
+  class="exec-select-light w-100"
+  @change="onEditionChange"
+/>
             </div>
 
           </div>
@@ -211,19 +213,19 @@
               <label class="exec-label">Nombre / Razón Social <span class="c-red">*</span></label>
               <input
                 required
-                autocomplete="off"
+                autocomplete="nope"
                 v-model="form.full_name"
                 type="text"
                 class="exec-input-light w-100"
                 placeholder="NOMBRE COMPLETO"
-                v-restrict="{ transform: 'upper', trim: true, max: 150 }"
+                v-restrict="{ transform: 'upper', trim: true, max: 150}"
               />
             </div>
 <div class="col-6 col-md-3 col-lg-3">
               <label class="exec-label">Teléfono <span class="c-red">*</span></label>
               <div class="d-flex gap-2">
                 <input
-                  autocomplete="off"
+                  autocomplete="nope"
                   v-model="form.telefono"
                   type="text"
 v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
@@ -395,7 +397,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </div>
 
             <div class="col-md-3">
-              <label class="exec-label">Palabra MKT</label>
+              <label class="exec-label">Palabra MKT <span class="c-red">*</span></label>
+
               <SearchSelect
                 v-model="form.key_word_alias"
                 :items="mktWordsCatalog"
@@ -850,29 +853,78 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <div class="insc-header mb-3">
         <div class="insc-info">
-          <h5 class="program-title">
-            {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
-          </h5>
-          <div class="program-edition" v-if="form.edition_label">
-            <i class="fa-solid fa-calendar-days me-1"></i>
-            <span>Edición: {{ form.edition_label }}</span>
-          </div>
-          <div class="user-meta mt-2">
-            <div class="user-badge">
-              <div class="user-icon"><i class="fa-solid fa-user"></i></div>
-              <span class="user-name text-truncate">{{ form.telefono }}</span>
-            </div>
-            <div v-if="clientProfileType" class="profile-badge" :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'">
-              <i class="fa-solid" :class="clientProfileType === 'estudiante' ? 'fa-graduation-cap' : 'fa-briefcase'"></i>
-              <span>{{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}</span>
-            </div>
+  <h5 class="program-title d-flex align-items-center gap-2">
+    {{ form.program_label || currentProgram?.description || '— Programa no seleccionado —' }}
 
-            <div v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'" class="profile-badge is-b2b">
-              <i class="fa-solid fa-handshake"></i>
-              <span>B2B · Convenio</span>
-            </div>
-          </div>
-        </div>
+    <!-- Botón con link -->
+    <a
+      v-if="form.program_link"
+      :href="form.program_link"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Ver página del programa"
+      class="program-link-btn"
+    >
+      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+
+    <!-- Botón deshabilitado -->
+    <span
+      v-else
+      class="program-link-btn program-link-btn--disabled"
+      title="Sin página web registrada"
+    >
+      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </span>
+  </h5>
+
+  <!-- Edición -->
+  <div class="program-edition" v-if="form.edition_label">
+    <i class="fa-solid fa-calendar-days me-1"></i>
+    <span>Edición: {{ form.edition_label }}</span>
+  </div>
+
+  <!-- Meta usuario -->
+  <div class="user-meta mt-2">
+    
+    <div class="user-badge">
+      <div class="user-icon">
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <span class="user-name text-truncate">
+        {{ form.telefono }}
+      </span>
+    </div>
+
+    <!-- Tipo perfil -->
+    <div
+      v-if="clientProfileType"
+      class="profile-badge"
+      :class="clientProfileType === 'estudiante' ? 'is-student' : 'is-pro'"
+    >
+      <i
+        class="fa-solid"
+        :class="clientProfileType === 'estudiante'
+          ? 'fa-graduation-cap'
+          : 'fa-briefcase'"
+      ></i>
+
+      <span>
+        {{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}
+      </span>
+    </div>
+
+    <!-- B2B -->
+    <div
+      v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'"
+      class="profile-badge is-b2b"
+    >
+      <i class="fa-solid fa-handshake"></i>
+      <span>B2B · Convenio</span>
+    </div>
+
+  </div>
+</div>
         <div class="insc-price-box">
           <span class="price-label">Precio Base</span>
           <div class="price-amount d-flex align-items-center">
@@ -900,7 +952,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <label class="exec-label">Documento <span class="c-red">*</span></label>
             <div class="d-flex gap-2">
               <input
-                autocomplete="off" required v-model="insc.document" type="text"
+                autocomplete="nope" required v-model="insc.document" type="text"
                 :placeholder="docConfig.placeholder" class="exec-input-light w-100"
                 :maxlength="docConfig.maxLength" @keyup.enter="searchCustomerByDocument"
                 v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:'numbers', transform:'upper' }"
@@ -926,16 +978,28 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <div class="col-md-4">
             <label class="exec-label">Correo <span class="c-red">*</span></label>
             <input
-              autocomplete="off" required v-model="insc.email" type="email"
+              autocomplete="nope" required v-model="insc.email" type="email"
               placeholder="CORREO" class="exec-input-light w-100"
               v-restrict="{ trim:true, spaces:false, transform:'lower', max: 100 }"
               :disabled="!insc.cat_type_document"
+              :class="{
+    'input-valid':   insc.email && isValidEmail(insc.email),
+    'input-invalid': insc.email && !isValidEmail(insc.email)
+  }"
             />
+            <small
+  v-if="insc.email && !isValidEmail(insc.email)"
+  class="text-danger d-block mt-1"
+  style="font-size:.7rem;font-weight:600"
+>
+  <i class="fa-solid fa-circle-exclamation me-1"></i>
+  Formato inválido · ej: nombre@dominio.com
+</small>
           </div>
           <div class="col-md-4">
             <label class="exec-label">Nombres <span class="c-red">*</span></label>
             <input
-              autocomplete="off" required v-model="insc.full_name" type="text"
+              autocomplete="nope" required v-model="insc.full_name" type="text"
               placeholder="NOMBRES" class="exec-input-light w-100"
               v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
               :disabled="!insc.cat_type_document"
@@ -944,7 +1008,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <div class="col-md-4">
             <label class="exec-label">Apellido Paterno <span class="c-red">*</span></label>
             <input
-              autocomplete="off" required v-model="insc.last_name" type="text"
+              autocomplete="nope" required v-model="insc.last_name" type="text"
               placeholder="A. PATERNO" class="exec-input-light w-100"
               v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
               :disabled="!insc.cat_type_document"
@@ -953,7 +1017,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <div class="col-md-4">
             <label class="exec-label">Apellido Materno <span class="c-red">*</span></label>
             <input
-              autocomplete="off" required v-model="insc.mother_last_name" type="text"
+              autocomplete="nope" required v-model="insc.mother_last_name" type="text"
               placeholder="A. MATERNO" class="exec-input-light w-100"
               v-restrict="{ transform:'upper', trim:true, only:'letters', max: 100 }"
               :disabled="!insc.cat_type_document"
@@ -963,6 +1027,20 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <label class="exec-label">Modalidad del programa <span class="c-red">*</span></label>
             <SearchSelect :viewOpen="6" required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
           </div>
+          <div class="col-md-4">
+            
+  <label class="exec-label">Estado del Certificado <span class="c-red">*</span></label>
+  <SearchSelect 
+    :viewOpen="6" 
+    required 
+    v-model="insc.cat_certificate_status" 
+    :items="certificateStatusCatalog.filter(e=>e.alias !='we_certificate_status_generated')" 
+    label-field="description" 
+    placeholder="ESTADO CERTIFICADO" 
+    value-field="alias" 
+    class="exec-select-light w-100" 
+  />
+</div>
         </div>
       </div>
 
@@ -970,7 +1048,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <h6 class="fieldset-title">Condiciones de Pago</h6>
         <div class="row g-3">
 
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label class="exec-label">Canal de Pago <span class="c-red">*</span></label>
             <SearchSelect
               v-model="insc.cat_payment_channel"
@@ -988,9 +1066,23 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
-            <div class="col-md-2">
-              <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
-              <SearchSelect :viewOpen="6" v-model="insc.cat_type_payment" required :items="inscPaymentModes" placeholder="M. PAGO" label-field="description" value-field="alias" class="exec-select-light w-100" />
+            <div class="col-md-3">
+              <label class="exec-label">
+                Modalidad de pago <span class="c-red">*</span>
+              </label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_type_payment"
+                required
+                :items="isOnlineProgram
+                  ? inscPaymentModes.filter(e => e.alias === 'we_payment_way_single')
+                  : inscPaymentModes"
+                placeholder="M. PAGO"
+                label-field="description"
+                value-field="alias"
+                class="exec-select-light w-100"
+                :disabled="isOnlineProgram"
+              />
             </div>
             <div class="col-md-3">
               <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
@@ -1102,11 +1194,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
 
 <!-- LAYOUT: side-by-side cuando NO es General, stacked cuando sí -->
-<div :class="!isChannelGeneral ? 'd-flex gap-3' : ''"
+<div class="d-flex gap-3"
      v-if="isEdit || (validateInscriptionClientInfo() && validateInscriptionPaymentInfo())">
 
   <!-- Documentación Adjunta -->
-  <div class="exec-fieldset mb-3" :style="!isChannelGeneral ? 'flex:1;min-width:0' : ''">
+  <div class="exec-fieldset mb-3" style="flex:1;min-width:0">
     <h6 class="fieldset-title">Documentación Adjunta</h6>
     <div class="row g-3">
 
@@ -1163,7 +1255,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   </div>
 
   <!-- Observaciones -->
-  <div class="exec-fieldset mb-3" :style="!isChannelGeneral ? 'flex:1;min-width:0' : ''">
+  <div class="exec-fieldset mb-3" style="flex:1;min-width:0">
     <h6 class="fieldset-title">Observaciones</h6>
     <textarea
       v-model="insc.observacions"
@@ -1222,7 +1314,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <!-- ══ PLAN DE CUOTAS (nuevo, solo en modo cuotas) ══ -->
 <!-- ══ PLAN DE CUOTAS (referencia visual, todo disabled) ══ -->
-<div v-if="isInstallmentMode" style="flex:1;min-width:0">
+<div v-show="false" v-if="isInstallmentMode" style="flex:1;min-width:0">
   <div class="installment-card">
 
     <!-- Cabecera con info del cálculo -->
@@ -1363,6 +1455,1680 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 </template>
 
 
+<script setup>
+  import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
+  import { useRouter, useRoute } from 'vue-router'
+  import { useToast } from 'vue-toastification'
+
+import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue';
+
+import FileUploader from '@/components/FileUploader.vue'
+  const toast = useToast()
+
+  import CurrencyInput from '@/components/CurrencyInput.vue'
+  import BaseModal from '@/components/BaseModal.vue'
+  import SearchSelect from '@/components/SearchSelect.vue'
+  import DateTime12 from '@/components/DateTime12.vue'
+
+  import { ServiceKeys } from '@/services'
+
+  const router = useRouter()
+  const route  = useRoute()
+
+
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const dateLimitConfig = {
+    minDate: sevenDaysAgo
+};
+  const programService   = inject(ServiceKeys.Program)
+  const comercialService = inject(ServiceKeys.Comercial)
+  const customerService = inject(ServiceKeys.Customer)
+  const discountService = inject(ServiceKeys.Discount)
+  const editionService = inject(ServiceKeys.Edition)
+  const catalog          = inject('catalog')
+
+  const todayIso = new Date().toISOString().slice(0, 16)
+const paymentChannelCatalog = ref(catalog.options('we_payment_channel'))
+const certificateStatusCatalog = ref(catalog.options('we_certificate_status'))
+const tokenProviderCatalog  = ref(catalog.options('we_token_provider'))
+const lAttempts = ref(catalog.options('we_attempt'))
+  const leadIdParam = computed(() => {
+    const raw = route.params?.id
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
+  })
+  const isEdit = computed(() => !!leadIdParam.value)
+const voucherUploaderRef = ref(null)
+const voucherTouched     = ref(false)
+const discountResetKey = ref(0)
+  const loaded          = ref(false)
+  const saving          = ref(false)
+  const savingInsc      = ref(false)
+  const showViewModal   = ref(false)
+  const leadDataHistory = ref(false)
+  const createdLeadId   = ref(null)
+  const createdPersonId = ref(null)
+// Variables reactivas para el modal
+const showProgramDetail = ref(false);
+const selectedProgram = ref(null);
+const activeTab = ref('info'); // 'info' | 'editions'
+const formatDuration = (seconds) => {
+  if (!seconds) return '00:00'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+  const form = reactive({
+    fechaContactoInicial: todayIso,
+    query_alias: null,
+    category_alias: null,
+    program_modality_alias: null,
+    web: false,
+    program_link: null,
+    price_student_soles:       0,
+price_student_dollars:     0,
+price_profesional_soles:   0,
+price_profesional_dollars: 0,
+    b2b: false,
+    program_modality_selected_alias: null,
+    program_version_id: null,
+    cat_client_moment_alias:null,
+    membership_moment_id: null,
+    membership_tier_label:null,
+    edition_id: null,
+    link: null,
+    client_status: null,
+    client_status_label: null,
+    enrollment_id: null,
+    full_name: '',
+    nombre: '',
+    telefono: '',
+    status_alias: null,
+    country_alias: null,
+    ocupacion_alias: null,
+    bot: false,
+    pay_date: null,
+    nivel_alias: null,
+    prox_medium_alias: null,
+    mensajeChat: '',
+    canal_alias: null,
+    medium_alias: null,
+    key_word_alias: null,
+    strategy_alias: null,
+    observacion: '',
+    categoriaCliente: 'NEW',
+    categoriaMember: '',
+    contactos: [],
+    program_sessions:           0,
+    program_sessions_per_week:  1,
+    edition_start_date:         null,
+
+  })
+
+  const insc = reactive({
+    dni: '',
+    nombres: '',
+    apellidos: '',
+    correo: '',
+    saved_money: 0,
+    selectedCurrencyAlias: '',
+    modalidadPrograma: 'NORMAL',
+    cat_insc_modality: 'we_insc_modality_normal',
+    cat_certificate_status: null,
+    promocion_id: null,
+    descuento_id: null,
+    cat_method_payment: null,
+    modalidadPago: 'CONTADO',
+    montoOriginal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    val_porcentaje: 0,
+    val_fijo: 0,
+    val_beneficio: 0,
+    montoDescuentoPorcentaje: 0,
+    montoDescuentoFijo: 0,
+    montoBeneficio: 0,
+    montoFinal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    ticket_payment_urls: [],
+    attachments: [],
+  cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
+  cat_token_provider: null,
+  })
+// Comprobante opcional cuando el descuento porcentual es exactamente 100
+const isVoucherOptional = computed(() =>
+  !isChannelGeneral.value || Number(insc.val_porcentaje) === 100
+)
+watch(() => insc.cat_payment_channel, () => {
+  insc.cat_token_provider    = null
+  insc.cat_method_payment    = null
+  insc.ticket_payment_urls   = []
+  insc.attachments           = []
+  voucherTouched.value       = false
+})
+const toggleTimer = (attempt) => {
+  if (attempt.timerActive) {
+    clearInterval(attempt.timerId)
+    attempt.timerActive = false
+    attempt.timerId = null
+  } else {
+    attempt.timerActive = true
+    attempt.timerId = setInterval(() => {
+      attempt.contact_duration = (attempt.contact_duration || 0) + 1
+    }, 1000)
+  }
+}
+
+// 3. LIMPIEZA DE TIMERS AL SALIR
+onBeforeUnmount(() => {
+  if (form.contactos) {
+    form.contactos.forEach(item => {
+      if (item.timerId) clearInterval(item.timerId)
+    })
+  }
+})
+const channelAlias = computed(() => {
+  if (!insc.cat_payment_channel) return null
+  return paymentChannelCatalog.value
+    .find(c => c.id === insc.cat_payment_channel)?.alias ?? null
+})
+
+const isChannelGeneral = computed(() => channelAlias.value === 'we_channel_general')
+const isChannelToken   = computed(() => channelAlias.value === 'we_channel_token')
+const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
+
+// Resetear tab al abrir modal
+watch(showProgramDetail, (val) => {
+  if (val) activeTab.value = 'info';
+});
+
+// Formateador de fechas simple (Ej: 20 Ene 2025)
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const options = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
+  return new Date(dateString).toLocaleDateString('es-PE', options);
+};
+
+  const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
+  const leadInterestCatalog      = ref(catalog.options('we_lead_interest'))
+  const countryCatalog = ref(
+    catalog.options('we_country', {
+      mapItem: x => ({
+        id: x.id,
+        description: `(${String(x?.variable_2)}) - ${x.description}`,
+        alias: x.alias,
+        variable_3: x.variable_3,
+        variable_2: x.variable_2,
+        variable_1: x.variable_1,
+        raw: x
+      })
+    })
+  )
+
+
+
+  const momentCatalog           = ref(catalog.options('we_moment'))
+  const clientCatalog           = ref(catalog.options('we_client'))
+  const prospectSituationCatalog = ref(
+    catalog.options('we_prospect_situation', {
+      mapItem: x => ({
+        id: x.id,
+        description: `(${String(x?.variable_1)}) - ${x.description}`,
+        alias: x.alias,
+        variable_3: x.variable_3,
+        raw: x
+      })
+    })
+  )
+  const strategyCatalog         = ref(catalog.options('we_type_strategy'))
+  const mktWordsCatalog         = ref(catalog.options('we_key_word'))
+  const socialMediaCatalog      = ref(catalog.options('we_social_media'))
+  const contactAttemptStatusCat = ref(catalog.options('we_follow_lead'))
+  const programCategoryCatalog  = ref(catalog.options('we_program_category'))
+  const queryCatalog            = ref(catalog.options('we_category_query'))
+  const inscModalidades         = ref(catalog.options('we_insc_modality'))
+  const discountCatalog         = ref(catalog.options('we_discount_type'))
+  const paymentMethodCatalog    = ref(catalog.options('we_payment_method'))
+  const docTypeCatalog          = ref(catalog.options('we_type_document'))
+  const programTypeCatalog      = ref(catalog.options('we_program_type'))
+  const programModalityCatalog  = ref(catalog.options('we_modality'))
+  const inscPaymentModes        = ref(catalog.options('we_payment_way'))
+  //we_calling
+  const callingCatalog          = ref(catalog.options('we_calling'))
+// 1. Inicializa la lista vacía (un array vacío para evitar errores en el v-for/items)
+const membershipList = ref([]);
+
+  const currencyCatalog         = ref(
+    catalog.options('we_currency', {
+      mapItem: x => ({
+        id: x.id,
+        description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
+        alias: x.alias,
+        raw: {
+          code: x.code ?? x.abbreviation,
+          symbol: x.symbol ?? x.prefix,
+          minorUnit: x.minorUnit ?? Number(x.precision ?? 2),
+          locale: x.locale ?? (x.abbreviation === 'USD' ? 'en-US' : 'es-PE'),
+          decimal: x.decimal ?? '.',
+          thousands: x.thousands ?? ',',
+          position: x.position ?? (x.suffix ? 'suffix' : 'prefix'),
+          allowNegative: x.allowNegative ?? false,
+          allowZero: x.allowZero ?? true,
+        }
+      })
+    })
+  )
+
+
+  // --- VARIABLES PARA EL MODAL DE HISTORIAL CLIENTE ---
+const showClientHistory = ref(false)
+const activeHistoryTab = ref('historico')
+
+// Función auxiliar para estilos de badge (puedes borrarla si no la usas)
+const getBadgeClass = (status) => {
+  switch(status) {
+    case 'Matriculado': return 'bg-success';
+    case 'En Seguimiento': return 'bg-warning text-dark';
+    case 'No Interesado': return 'bg-danger';
+    default: return 'bg-secondary';
+  }
+}
+
+
+const minDateForNewAttempt = computed(() => {
+  const existing = form.contactos.filter(c => c.id)
+  if (!existing.length) return null
+  const dates = existing
+    .map(c => new Date(c.fechaContactoProximo))
+    .filter(d => !isNaN(d))
+  if (!dates.length) return null
+  return new Date(Math.max(...dates))
+})
+
+const hcEnrollmentData = ref([
+  { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso', nota: null },
+  { fecha: '10 Jun 2024', programa: 'SQL Server Database', edicion: '2024-II', estado: 'Finalizado', nota: 18 },
+  { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
+])
+
+  function onChangeDescuentoPorcentual(opt) {
+    if (!opt) {
+      insc.val_porcentaje = 0
+      return
+    }
+    insc.val_porcentaje = Number(opt.value) || 0
+  }
+  import { watchEffect } from 'vue'
+// Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
+const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
+
+watchEffect(() => {
+  const base = parseFloat(insc.montoOriginal) || 0
+
+  // 1. Calcular montos brutos
+  // Nota: Usamos round2 inmediatamente para que el dinero "exista" en 2 decimales desde el cálculo
+  let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
+  let montoFijo = round2(parseFloat(insc.val_fijo) || 0)
+  let montoBeneficio = round2(parseFloat(insc.val_beneficio) || 0)
+
+  // 2. Sumar todos los descuentos
+  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
+
+  // 3. VALIDACIÓN: ¿Los descuentos superan el precio base?
+  if (totalDescuentos > base) {
+    // A. Mostrar Alerta
+    toast.warning('¡Cuidado! Los descuentos superan el Precio Base. Se han reiniciado los valores.')
+
+    // B. Limpiar inputs (Reseteamos los valores y los selectores para evitar negativos)
+    // Reiniciar Porcentaje
+    insc.val_porcentaje = 0
+    insc.dsct_porcent_id = null
+
+    // Reiniciar Monto Fijo
+    insc.val_fijo = 0
+    insc.dsct_stick_id = null
+
+    // Reiniciar Beneficio
+    insc.val_beneficio = 0
+    insc.dsct_benefit_id = null
+    discountResetKey.value++
+
+    // C. Forzar recálculo visual a 0
+    insc.montoDescuentoPorcentaje = 0
+    insc.montoDescuentoFijo = 0
+    insc.montoBeneficio = 0
+    insc.total_amount = base
+
+
+
+    return // Salimos para evitar asignar valores erróneos
+  }
+
+  // 4. Si todo está bien, asignamos los valores redondeados a la vista
+  insc.montoDescuentoPorcentaje = montoPorcentaje
+  insc.montoDescuentoFijo = montoFijo
+  insc.montoBeneficio = montoBeneficio
+
+  // 5. Cálculo Final (Base - Descuentos)
+    
+  const final = base - totalDescuentos
+  insc.total_amount = Math.floor(final > 0 ? final : 0)
+})
+  function onChangeDescuentoFijo(opt) {
+    if (!opt) {
+      insc.val_fijo = 0
+      return
+    }
+    insc.val_fijo = Number(opt.value) || 0
+  }
+
+  function onChangeBeneficio(opt) {
+    if (!opt) {
+      insc.val_beneficio = 0
+      return
+    }
+    insc.val_beneficio = Number(opt.value) || 0
+  }
+
+    const montoFinalCalculado = computed(() => {
+      const base = Number(insc.montoOriginal) || 0
+      const dscto = Number(insc.totalDescuentos) || 0
+      return base - dscto
+  })
+
+  const selectedCurrency = computed(
+    () =>
+      currencyCatalog.value.find(i => i.alias === insc.selectedCurrencyAlias)?.raw ??
+      { alias:'we_currency_soles', code:'PEN', symbol:'S/.', minorUnit:2, locale:'es-PE', decimal:'.', thousands:',', position:'prefix', allowNegative:false, allowZero:false }
+  )
+
+  const programs = ref([])
+  const editions = ref([])
+  const currentProgram = computed(() => {
+    if (!form.program_version_id) return null
+    return programs.value.find(p => p.id === form.program_version_id) || null
+  })
+const currentEdition = ref(null)  // reemplazar el computed por un ref
+
+
+  function idByAlias(alias, list = []) {
+    if (!alias) return null
+    const it = list.find(i => i.alias === alias || i.raw?.alias === alias)
+    return it?.id ?? null
+  }
+  function aliasById(id, list = []) {
+    if (!id) return null
+    const it = list.find(i => i.id === id || i.raw?.id === id)
+    return it?.alias ?? null
+  }
+  watch(() => form.web, (val) => {
+    if (val) form.b2b = false
+  })
+
+  watch(() => form.b2b, (val) => {
+    if (val) form.web = false
+  })
+  function normalizeDateTime(v) {
+    if (!v) return ''
+    const s = String(v).replace('T', ' ')
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 09:00:00`
+    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return `${s}:00`
+    return s
+  }
+
+  async function loadLead(id) {
+    console.log(id)
+    const data = await comercialService.leadGet({ id })
+
+    const l = data?.lead || data || {}
+
+    const modality_selected_alias = l.cat_program_modality_alias ?? l.program_modality_alias ?? null
+    console.log(l)
+    Object.assign(form, {
+      fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
+      query_alias: l.query_alias ?? null,
+      category_alias: l.cat_program_type_alias || l.category_alias || null,
+      program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
+      program_modality_selected_alias: modality_selected_alias,
+      web: l.web === 'Y' || l.web === true,
+      b2b: l.b2b === 'Y' || l.b2b === true,
+      program_version_id: l.program_version_id ?? null,
+      edition_id: l.program_edition_id ?? l.edition_id ?? null,
+      full_name: l.full_name ?? l.full_name_label ?? '',
+      telefono:  l.origin_phone ?? l.phone ?? '',
+      status_alias:   l.status_alias,
+      country_alias:  l.country_alias,
+      ocupacion_alias: l.ocupacion_alias,
+      client_status: l.client_status,
+      client_status_label: l.client_status_label,
+      membership_moment_id: l.membership_moment_id,
+      membership_tier_label: l.membership_tier_label,
+      cat_client_moment_alias:l.cat_client_moment_alias,
+      cat_client_moment_label: l.cat_client_moment_label,
+      bot: l.bot!='N',
+      active: l.active!='N',
+      program_label: l.program_label ?? null,
+      edition_label: l.edition_label ?? null,
+      query_label: l.query_label ?? null,
+      ocupacion_label: l.ocupacion_label ?? null,
+      status_label: l.status_label ?? null,
+  edition_start_date: l.edition_start_date || null,
+      interest_label: l.interest_label ?? null,
+      channel_label: l.channel_label ?? null,
+      medium_label: l.medium_label ?? null,
+      key_word_label: l.key_word_label ?? null,
+      strategy_label: l.strategy_label ?? null,
+      pay_date: l.pay_date ? String(l.pay_date).slice(0, 10) : null,
+      nivel_alias: l.interest_alias,
+      mensajeChat: l.message_init_conversation ?? '',
+      canal_alias:  l.channel_alias,
+      medium_alias: l.medium_alias,
+      key_word_alias: l.key_word_alias ?? aliasById(l.key_word_alias, mktWordsCatalog.value),
+      strategy_alias: l.strategy_alias,
+      price_student_soles:       Number(l.price_student_soles    || 0),
+      price_student_dollars:     Number(l.price_student_dollars  || 0),
+      price_profesional_soles:   Number(l.price_profesional_soles   || 0),
+      price_profesional_dollars: Number(l.price_profesional_dollars || 0),
+       program_sessions:           Number(l.sessions || l.program_sessions || 0),
+  program_sessions_per_week:  Number(l.sessions_per_week || l.program_sessions_per_week || 1),
+
+      enrollment_id: l.enrollment_id,
+      program_link: l.program_link ?? null,
+      observacion: l.observations ?? '',
+      contactos: (l.contact_attempts || []).map(att => ({
+        id: att.lead_contact_attempt_id,
+        status_alias: att.cat_status_alias,
+        cat_type_attempt: att.cat_type_attempt_alias || 'we_attempt_call',
+        calling_alias: att.cat_result_alias,
+        calling_label: att.cat_result_label,
+        status_label: att.cat_status_label,
+        fechaContactoProximo: normalizeDateTime(att.contact_datetime),
+        respuesta: att.response || '',
+        // Mapear Duración y Timer
+  contact_duration: att.contact_duration || 0,
+  timerActive: false,
+  timerId: null
+      })),
+
+      enrollment_id: l.enrollment_id
+
+    })
+
+    createdLeadId.value   = l.id ?? l.lead_id ?? id
+    createdPersonId.value = l.person_id ?? null
+  }
+const docConfig = computed(() => {
+  // Buscamos el objeto completo en el catálogo usando el alias seleccionado
+  const selected = docTypeCatalog.value.find(item => item.alias === insc.cat_type_document);
+    console.log(selected)
+  // Obtenemos variable_1 (longitud). Si no existe, default a 15.
+  const maxLength = selected?.variable_1 ? Number(selected.variable_1) : 15;
+
+  // Detectamos si debe ser solo números.
+  // Usualmente DNI (2.300) y RUC (2.301) son numéricos.
+  // Pasaporte y Carnet de Extranjería suelen permitir letras.
+  const isNumeric = ['we_type_document_dni', 'we_type_document_ruc'].includes(insc.cat_type_document);
+
+  return {
+    maxLength,
+    isNumeric,
+    placeholder: isNumeric ? `MÁX. ${maxLength} DÍGITOS` : `MÁX. ${maxLength} CARACTERES`
+  };
+});
+
+// Watcher para limpiar/ajustar si cambia el tipo
+watch(() => insc.cat_type_document, (newVal) => {
+  // 1. Si el tipo de documento es nulo (se limpió), borramos los datos que dependen de él
+  if (!newVal) {
+    insc.document = '';
+    insc.email = '';
+    insc.full_name = '';
+    insc.last_name = '';
+    insc.mother_last_name = '';
+    return;
+  }
+
+  if (!insc.document) return;
+
+  // 2. Recortar si el nuevo tipo es más corto que el valor actual
+  if (docConfig.value.maxLength && insc.document.length > docConfig.value.maxLength) {
+     insc.document = insc.document.slice(0, docConfig.value.maxLength);
+  }
+
+  // 3. Si cambiamos a numérico y hay letras, limpiar letras
+  if (docConfig.value.isNumeric && isNaN(Number(insc.document))) {
+     insc.document = insc.document.replace(/\D/g, '');
+  }
+});
+
+
+  async function loadDataForCloning(sourceId) {
+      try {
+      console.log(sourceId)
+          const originalData = await comercialService.leadGet({ id: sourceId })
+
+
+          Object.assign(form, {
+              fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
+              query_alias: originalData.query_alias ?? null,
+              category_alias: originalData.cat_type_program_alias || originalData.category_alias || null,
+              program_modality_alias: originalData.program_modality_alias ?? null,
+              program_modality_selected_alias: originalData.program_modality_alias  ?? null,
+              program_version_id: originalData.program_version_id ?? null,
+              edition_id: originalData.program_edition_id ?? originalData.edition_id ?? null,
+              full_name: originalData.full_name ?? originalData.full_name_label ?? '',
+              telefono: originalData.origin_phone ?? originalData.phone ?? '',
+              status_alias: 'we_lead_status_atendido',
+              country_alias: originalData.country_alias,
+              client_status: originalData.client_status,
+              client_status_label: originalData.client_status_label,
+              ocupacion_alias: originalData.ocupacion_alias,
+              bot: false,
+              active: true,
+              program_label: originalData.program_label ?? null,
+              edition_label: originalData.edition_label ?? null,
+              query_label: originalData.query_label ?? null,
+              ocupacion_label: originalData.ocupacion_label ?? null,
+
+              pay_date: null,
+              nivel_alias: 'we_lead_interest_low',
+              mensajeChat: originalData.message_init_conversation ?? '',
+              canal_alias: originalData.channel_alias,
+              medium_alias: originalData.medium_alias,
+              key_word_alias: originalData.key_word_alias ?? aliasById(originalData.key_word_alias, mktWordsCatalog.value),
+              strategy_alias: originalData.strategy_alias,
+              observacion: originalData.observations ?? '',
+              categoriaCliente: originalData.t_lead ?? 'NEW',
+              categoriaMember: originalData.membresia ?? ''
+          })
+          createdLeadId.value = null
+          createdPersonId.value = null
+          toast.info('Formulario precargado con datos del lead original. Por favor, revise y guarde.', { timeout: 5000 })
+
+
+      } catch (e) {
+          console.error("Error cargando plantilla para clonar", e)
+      }
+  }
+
+  onMounted(async () => {
+    if (route.query.clone_from) {
+        await loadDataForCloning(route.query.clone_from)
+        loaded.value = true
+        return
+    }
+    const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
+    membershipList.value = data;
+    // 3. Asignamos el valor real a la variable reactiva
+    membershipList.value = data;
+
+    if (isEdit.value) {
+      await loadLead(leadIdParam.value)
+      loaded.value = true
+      return
+    }
+
+
+    form.canal_alias   = 'we_social_media_other'
+    form.medium_alias  = 'we_social_media_whatsapp'
+    form.nivel_alias   = 'we_lead_interest_low'
+    form.country_alias = 'we_country_peru'
+    form.status_alias  = 'we_lead_status_atendido'
+    form.client_status   = 'we_client_person'
+form.key_word_alias = 'we_key_word_null'
+    form.active = true
+    //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
+    form.category_alias = 'we_program_type_course'
+    onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
+
+    loaded.value = true
+  })
+
+function createEmptyAttempt() {
+  return {
+    cat_type_attempt: 'we_attempt_call', // Valor por defecto
+    calling_alias: 'we_calling_pending',
+    fechaContactoProximo: todayIso,
+    respuesta: '',
+    contact_duration: 0, // Inicia en 0
+    timerActive: false,
+    timerId: null
+  }
+}
+  function addContacto() { form.contactos.push(createEmptyAttempt()) }
+  function removeContacto(idx) { form.contactos.splice(idx, 1) }
+
+  function handleMensajeChatInput() {
+    const msj = (form.mensajeChat || '').toLowerCase()
+
+    const canal = socialMediaCatalog.value?.find(e =>
+      e.description && msj.includes(e.description.toLowerCase())
+    )?.alias
+    form.canal_alias = canal || 'we_social_media_other'
+
+    form.key_word_alias = mktWordsCatalog.value?.find(e =>
+      e.description && msj.includes(e.description.toLowerCase())
+    )?.alias || 'we_key_word_null'
+    
+    form.key_word_alias = mktWordsCatalog.value?.find(e =>
+      e.description && msj.includes(e.description.toLowerCase())
+    )?.alias
+  }
+  function onStatusChange(opt) {
+    if (!opt) return
+    if (opt.description === 'Pagó') {
+      const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
+      if (alto) form.nivel_alias = alto.alias
+    }else if(opt.description === 'Interesado'){
+      const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
+      if (alto) form.nivel_alias = alto.alias
+    }
+  }
+const searchingCustomer = ref(false)
+
+async function searchCustomerByDocument() {
+  const doc = insc.document?.trim()
+  if (!doc || doc.length < 3) {
+    toast.warning('Ingrese el número de documento antes de buscar.')
+    return
+  }
+
+  searchingCustomer.value = true
+  try {
+    const response = await customerService.customerInfoGet({ document: doc })
+
+    console.log(response)
+
+    if (response && response.result === 1) {
+      insc.full_name        = response.first_name       || ''
+      insc.last_name        = response.last_name        || ''
+      insc.mother_last_name = response.mother_last_name || ''
+      insc.email            = response.email            || ''
+      toast.success('Cliente encontrado en base de datos.', { timeout: 3000 })
+      return
+    }
+
+    // No existe en BD → consultar SUNAT
+    await searchSunat()
+
+  } catch {
+    await searchSunat()
+  } finally {
+    searchingCustomer.value = false
+  }
+}
+const searchingPhone = ref(false)
+
+async function searchSunat() {
+  const sunatData = await customerService.sunatGet({ document: insc.document })
+
+    if (sunatData && sunatData.nombre_o_razon_social) {
+      insc.full_name = sunatData.nombre_o_razon_social
+      insc.last_name = ''
+      insc.mother_last_name = ''
+      toast.info('Datos de SUNAT encontrados y precargados.', { timeout: 3000 })
+    } else {
+      toast.info('No se encontraron datos en SUNAT para el documento ingresado.', { timeout: 3000 })
+    }
+
+  console.log('Buscando en SUNAT con documento:', insc.document)
+}
+
+const dataSetted = ref(null)
+const saveBlockReason = computed(() => {
+  if (!validateLeadInfo())      return 'Falta completar la información del Lead (fecha de contacto, programa, etc.)'
+  if (!validateContactInfo())   return 'Falta completar los Datos del Contacto (teléfono, status, país, nombre, estado del cliente)'
+  if (!validateCommercialInfo()) return 'Falta completar el Estado Comercial (nivel de interés, mensaje, canal, medio)'
+  return null
+})
+async function searchLeadByPhone() {
+
+  const phone = form.telefono?.trim()
+
+  if (!phone || phone.length < 5) {
+    toast.warning("Por favor ingrese un número de teléfono válido.");
+    return;
+  }
+
+  if(dataSetted==phone)return
+
+  dataSetted.value = phone
+
+  if (!phone || phone.length < 6) return
+  if (searchingPhone.value) return
+
+  searchingPhone.value = true
+
+  try {
+    const response = await comercialService.searchPhoneGet({ phone });
+    console.log(response)
+
+  form.membership_moment_id  =  response.membership_tier_id
+  form.cat_client_moment_alias = response.cat_client_moment
+
+    if (response.cat_client_moment === 'we_moment_new') {
+      toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
+
+    } else {
+      toast.success(`Encontrado: (${response.cat_client_moment=='we_moment_lead'?'LEAD':'COMUNIDAD'})`, { timeout: 4000 })
+      leadDataHistory.value = true
+
+      if(response.lead_details.length>0){
+        form.full_name = response.lead_details[0].full_name
+        return
+      }
+
+      if(response.legacy_details.length>0){
+        form.full_name = response.legacy_details[0].full_name
+      }
+
+    }
+
+
+  } catch (error) {
+    console.error(error)
+    toast.error('Error al consultar el número de teléfono')
+  } finally {
+    searchingPhone.value = false
+  }
+}
+// 1. VARIABLES REACTIVAS NUEVAS
+const clientHistoryLegacy = ref([]) // Aquí guardaremos 'legacy_details'
+const loadingHistory = ref(false)   // Para el spinner de carga
+const clientHistoryLeads = ref([])
+
+async function openPhoneDetail() {
+
+  const phone = form.telefono?.trim();
+
+  if (!phone || phone.length < 5) {
+    toast.warning("Por favor ingrese un número de teléfono válido.");
+    return;
+  }
+
+
+  if(dataSetted!=phone)dataSetted.value = phone
+
+
+
+  showClientHistory.value = true;
+  loadingHistory.value = true;
+
+  // Reseteamos ambas listas
+  clientHistoryLegacy.value = [];
+  clientHistoryLeads.value = []; // <--- 2. RESETEAR AQUÍ
+
+  activeHistoryTab.value = 'asesoria'; // (Opcional: Si quieres que se abra directo en esta pestaña para probar)
+
+  try {
+    const response = await comercialService.searchPhoneGet({ phone });
+
+    if (response) {
+        // Mapeamos el Histórico legado
+        clientHistoryLegacy.value = response.legacy_details || [];
+
+        // Mapeamos el detalle de Leads (CRM)
+        clientHistoryLeads.value = response.lead_details || []; // <--- 3. ASIGNAR DATA AQUÍ
+    }
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Error al obtener el historial.");
+  } finally {
+    loadingHistory.value = false;
+  }
+}
+
+function onStrategyChange(option){
+  if(!option){
+    form.canal_alias   = 'we_social_media_other'
+  }
+}
+
+// Función centralizada para limpiar todo el estado de la inscripción
+function resetInscriptionData() {
+  Object.assign(insc, {
+    dni: '',
+    document: '',
+    cat_type_document: null,
+    nombres: '',
+    apellidos: '',
+    mother_last_name: '',
+    email: '',
+    full_name: '',
+    last_name: '',
+    saved_money: 0,
+    selectedCurrencyAlias: 'we_currency_soles',
+    cat_insc_modality: 'we_insc_modality_normal',
+    cat_certificate_status: null,
+    cat_type_payment: 'we_payment_way_single',
+    cat_method_payment: null,
+    modalidadPago: 'CONTADO',
+    montoOriginal: 0,
+    dsct_porcent_id: null,
+    dsct_stick_id: null,
+    dsct_benefit_id: null,
+    val_porcentaje: 0,
+    val_fijo: 0,
+    val_beneficio: 0,
+    montoDescuentoPorcentaje: 0,
+    montoDescuentoFijo: 0,
+    montoBeneficio: 0,
+    montoFinal: 0,
+    total_amount: 0,
+    observacions: '',
+    ticket_payment_urls: [],
+    attachments: [],
+    flag_agreement: false,
+    b2b_contract_id: null,
+
+    // ← FALTABAN ESTOS DOS
+    cat_payment_channel: null,
+    cat_token_provider: null,
+  })
+
+  voucherTouched.value = false
+  form.carnet_url = null
+}
+const isMedioDisabled = computed(() =>
+  ['we_social_media_coti', 'we_social_media_chatbot'].includes(form.canal_alias)
+)
+
+const filteredMediumCatalog = computed(() => {
+  const socialList = socialMediaCatalog.value.filter(e =>
+    ['we_social_media_whatsapp', 'we_social_media_wechat', 'we_social_media_msg', 'we_social_media_comment'].includes(e.alias)
+  )
+
+  const excludeWebFor = ['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook']
+  if (excludeWebFor.includes(form.canal_alias)) {
+    return socialList.filter(e => e.alias !== 'we_social_media_wechat')
+  }
+
+  return socialList
+})
+function onChannelChange(option) {
+  if (!option) {
+    // Regla 3: Canal vacío → limpiar Medio
+    form.strategy_alias = null
+    form.medium_alias = null
+    return
+  }
+
+  const alias = option.alias
+
+  // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
+  if (['we_social_media_coti', 'we_social_media_chatbot'].includes(alias)) {
+    form.medium_alias = 'we_social_media_wechat'
+    return
+  }
+
+  // Regla 2: Instagram, LinkedIn, Facebook → limpiar Medio si es WEB
+  if (['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook'].includes(alias)) {
+    if (form.medium_alias === 'we_social_media_wechat') {
+      form.medium_alias = null
+    }
+  }
+}
+
+// Helper para formatear fecha y hora (Agrégalo si no tienes uno global)
+function formatDateTime(isoString) {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  // Retorna formato: 13 Ene 2026 10:58 PM
+  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) +
+         ' ' +
+         date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+}
+
+  function cancelar() { router.back() }
+
+  function buildLeadPayload() {
+    const cat_status_lead        = idByAlias(form.status_alias,          leadStatusCatalog.value)
+    const cat_code_country       = idByAlias(form.country_alias,         countryCatalog.value)
+    const cat_query              = idByAlias(form.query_alias,           queryCatalog.value)
+    const cat_interest_level     = idByAlias(form.nivel_alias,           leadInterestCatalog.value)
+    const cat_channel            = idByAlias(form.canal_alias,           socialMediaCatalog.value)
+    const cat_medium_contact     = idByAlias(form.medium_alias,          socialMediaCatalog.value)
+    const cat_frecuency_word     = idByAlias(form.key_word_alias,        mktWordsCatalog.value)
+    const cat_type_strategy      = idByAlias(form.strategy_alias,        strategyCatalog.value)
+    const cat_prospect_situation = idByAlias(form.ocupacion_alias,       prospectSituationCatalog.value)
+    const cat_client_type        = idByAlias(form.client_status, clientCatalog.value)
+
+    const cat_client_category    = idByAlias(form.cat_client_moment_alias, momentCatalog.value)
+    const cat_program_modality = idByAlias(form.program_modality_alias, programModalityCatalog.value)
+    const cat_program_type = idByAlias(form.category_alias, programTypeCatalog.value)
+
+    const contact_attempts = (form.contactos || []).map((c, idx) => {
+      const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
+
+      const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
+      return {
+        id: c.id,
+        attempt_number: idx + 1,
+        cat_type_attempt: idByAlias(c.cat_type_attempt, lAttempts.value),
+        cat_status,
+        contact_datetime,
+        cat_result: idByAlias(c.calling_alias, callingCatalog.value),
+        response: c.respuesta || '',
+        contact_duration: c.contact_duration || 0
+      }
+    })
+
+    return {
+      lead: {
+        first_contact_date: form.fechaContactoInicial || null,
+        cat_program_modality,
+        cat_program_type,
+        program_version_id: form.program_version_id || null,
+        program_edition_id: form.edition_id || null,
+        cat_status_lead,
+        cat_code_country,
+        cat_interest_level,
+        cat_client_type,
+        cat_channel,
+        cat_medium_contact,
+        bot: form.bot? 'Y' : 'N',
+        active: form.active? 'Y' : 'N',
+        web: form.web ? 'Y' : 'N',
+        b2b: form.b2b ? 'Y' : 'N',
+        cat_query,
+        full_name: form.full_name,
+        pay_date: form.pay_date,
+        cat_frecuency_word,
+        cat_type_strategy,
+        cat_prospect_situation,
+        cat_client_moment: cat_client_category,
+        membership_moment_id: form.membership_moment_id,
+        origin_phone: (form.telefono || '').trim() || null,
+        origin_email: null,
+
+        message_init_conversation: form.mensajeChat?.trim() || null,
+        observations:              form.observacion?.trim() || null,
+      },
+      contact_attempts
+    }
+  }
+
+// 1. NUEVA VARIABLE REACTIVA PARA EL DETALLE
+const modelProgramVersion = ref(null)
+const loadingDetail = ref(false)
+const hasEditions = computed(() => {
+  return modelProgramVersion.value?.editions_json && modelProgramVersion.value.editions_json.length > 0;
+});
+const maxPhoneLength = computed(() => {
+  if (!form.country_alias) return 20; // Por defecto
+  const country = countryCatalog.value.find(c => c.alias === form.country_alias);
+  return country?.raw?.variable_1 ? Number(country.raw.variable_1) : 20;
+});
+
+// NUEVO: Watcher para recortar el teléfono si el país cambia y el límite es menor
+watch(maxPhoneLength, (newMaxLength) => {
+  if (form.telefono && form.telefono.length > newMaxLength) {
+    // Si el teléfono tiene más dígitos que el nuevo límite, lo recortamos
+    form.telefono = form.telefono.slice(0, newMaxLength);
+
+    // Opcional: Avisarle al usuario que se ajustó el número
+    toast.info(`El número se ajustó a ${newMaxLength} dígitos para este país.`, { timeout: 3000 });
+  }
+});
+// 3. ACTUALIZAR LA FUNCIÓN DE APERTURA
+async function openProgramVersionDetail() {
+  // Validamos que haya una ID seleccionada
+  if (!form.program_version_id) return;
+
+  loadingDetail.value = true;
+  modelProgramVersion.value = null; // Limpiamos data anterior
+
+  try {
+    // Llamamos al servicio (Postman: /api/program/programversiondetailget)
+    const response = await programService.programVersionDetailGet({
+      program_version_id: form.program_version_id
+    });
+
+    // Asignamos la respuesta completa a la variable
+    modelProgramVersion.value = response;
+
+    // Reseteamos el tab a 'info' y abrimos modal
+    activeTab.value = 'info';
+    showProgramDetail.value = true;
+
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo cargar el detalle del programa");
+  } finally {
+    loadingDetail.value = false;
+  }
+}
+
+function buildEnrollmentPayload() {
+  const cat_type_document  = idByAlias(insc.cat_type_document, docTypeCatalog.value)
+  const cat_insc_modality  = idByAlias(insc.cat_insc_modality, inscModalidades.value)
+  const cat_type_payment   = idByAlias(insc.cat_type_payment,  inscPaymentModes.value)
+  const cat_currency       = idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
+  const cat_country        = idByAlias(form.country_alias, countryCatalog.value)
+  const cat_certificate_status = idByAlias(insc.cat_certificate_status, certificateStatusCatalog.value)
+  const cat_method_payment = isChannelGeneral.value
+    ? idByAlias(insc.cat_method_payment, paymentMethodCatalog.value)
+    : null
+
+  const paymentFiles = (insc.ticket_payment_urls || []).map(f => ({
+    url:  f.url  || f,
+    name: f.name || (f.url || f).split('/').pop() || 'Comprobante',
+    type: f.type || null
+  }))
+
+  const generalAttachments = (insc.attachments || []).map(f => ({
+    url:  f.url  || f,
+    name: f.name || (f.url || f).split('/').pop() || 'Adjunto',
+    type: f.type || null
+  }))
+
+  return {
+    inscription: {
+      lead_id:              createdLeadId.value,
+      program_version_id:   form.edition_id ? null : form.program_version_id,
+      program_edition_id:   form.edition_id,
+
+      // Datos del alumno
+      document:             insc.document,
+      cat_type_document,
+      full_name:            insc.full_name,
+      last_name:            insc.last_name,
+      mother_last_name:     insc.mother_last_name,
+      email:                insc.email,
+      cat_country,
+      cat_insc_modality,
+cat_certificate_status,
+      // Canal y pago
+      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id)
+      cat_type_payment:     isChannelGeneral.value ? cat_type_payment : null,
+      cat_currency,
+      cat_method_payment,                                // null si TOKEN o WEB
+      cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
+      saved_money:          Number(insc.saved_money),
+
+      // Precios y descuentos
+      list_price:           insc.montoOriginal,
+      total_amount:         Number(insc.total_amount),
+      dsct_porcent_id:      insc.dsct_porcent_id,
+      dsct_stick_id:        insc.dsct_stick_id,
+      dsct_benefit_id:      insc.dsct_benefit_id,
+    installment_plan: isInstallmentMode.value ? installmentPlan.value : null,
+
+      // Observaciones y archivos
+      observations:         insc.observacions,
+      student_attachment_url: form.carnet_url || null,
+      ticket_payment_urls:  paymentFiles,     // → enrollment_attachments
+      attachments:          generalAttachments // → lead_attachments
+    }
+  }
+}
+
+async function confirmarInscripcion() {
+   if (!comercialService) return console.error('comercialService no inyectado')
+
+  if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
+    // ← reemplaza el toast genérico por esto:
+    if (insc.email && !isValidEmail(insc.email)) {
+      toast.warning('El correo no tiene formato válido · ej: nombre@dominio.com')
+    } else {
+      toast.warning("Por favor complete los campos obligatorios de la inscripción")
+    }
+    return
+  }
+  if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
+    toast.warning("Faltan datos obligatorios en el formulario del Lead.")
+    return
+  }
+
+  // Comprobante GENERAL
+  if (isChannelGeneral.value && !isVoucherOptional.value &&
+      (!insc.ticket_payment_urls || insc.ticket_payment_urls.length === 0)) {
+    voucherTouched.value = true
+    toast.warning('El canal General requiere al menos un Comprobante de Pago.')
+    return
+  }
+
+  // Token provider
+  if (isChannelToken.value && !insc.cat_token_provider) {
+    toast.warning('Debe seleccionar el proveedor del Link / Token.')
+    return
+  }
+  // Validar plan de cuotas
+if (isInstallmentMode.value && !installmentPlanValid.value) {
+  toast.warning('El plan de cuotas no cuadra con el monto final. Ajusta los montos antes de guardar.')
+  return
+}
+  savingInsc.value = true
+
+  try {
+    // --- PASO A: GUARDAR EL LEAD ---
+    const leadPayload = buildLeadPayload()
+    const currentLeadId = leadIdParam.value || createdLeadId.value
+
+    if (currentLeadId) {
+      const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
+      if (leadResp.result === 0) {
+        toast.error(leadResp.message)
+        return
+      } else if (leadResp.result === 2) {
+        toast.warning(leadResp.message)
+        return
+      }
+    } else {
+      const leadResp = await comercialService.leadRegister(leadPayload)
+      if (leadResp.result === 0) {
+        toast.error(leadResp.message)
+        return
+      } else if (leadResp.result === 2) {
+        toast.warning(leadResp.message)
+        return
+      }
+      createdLeadId.value   = leadResp.lead_id
+      createdPersonId.value = leadResp.person_id
+    }
+
+    // --- PASO B: GUARDAR LA INSCRIPCIÓN ---
+    const enrollmentPayload = buildEnrollmentPayload()
+    const enrollResp = await comercialService.enrollmentRegister(enrollmentPayload)
+
+    if (enrollResp.result === 1) {
+      toast.success(enrollResp.message)
+      showViewModal.value = false
+      router.push({ name: 'ComercialListado' })
+    } else if (enrollResp.result === 0) {
+      toast.error(enrollResp.message)
+    } else {
+      toast.warning(enrollResp.message)
+    }
+
+  } catch (err) {
+    console.error(err)
+    toast.error('Error inesperado al procesar la inscripción.')
+  } finally {
+    savingInsc.value = false
+  }
+}
+
+async function guardar() {
+  if (!comercialService) return console.error('comercialService no inyectado')
+  saving.value = true
+  try {
+    const payload = buildLeadPayload()
+    let result, message
+
+    if (isEdit.value) {
+      const resp = await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
+      result  = resp.result
+      message = resp.message
+    } else {
+      const resp = await comercialService.leadRegister(payload)
+      result  = resp.result
+      message = resp.message
+      if (result === 1) {
+        createdLeadId.value   = resp.lead_id
+        createdPersonId.value = resp.person_id
+      }
+    }
+
+    if (result === 1) {
+      toast.success(message)
+      router.push({ name: 'ComercialListado' })
+    } else if (result === 0) {
+      toast.error(message)
+    } else {
+      toast.warning(message)
+    }
+
+  } catch (err) {
+    console.error(err)
+    toast.error('Error inesperado al guardar el lead.')
+  } finally {
+    saving.value = false
+  }
+}
+
+function openInscription() {
+  resetInscriptionData()
+  insc.full_name             = form.full_name || ''
+  insc.email                 = ''
+  insc.cat_insc_modality     = 'we_insc_modality_normal'
+  insc.selectedCurrencyAlias = 'we_currency_soles'
+  insc.cat_type_payment      = 'we_payment_way_single'
+  insc.cat_certificate_status = 'we_certificate_status_paid'
+
+  const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
+  if (generalChannel) insc.cat_payment_channel = generalChannel.id
+
+  // ✅ nextTick garantiza que Vue haya procesado todos los reactivos
+  // antes de leer calculatedBasePrice
+  nextTick(() => {
+    const precio = calculatedBasePrice.value
+
+    console.table({
+      ocupacion:   form.ocupacion_alias,
+      clientType:  clientProfileType.value,
+      est_soles:   form.price_student_soles,
+      est_usd:     form.price_student_dollars,
+      pro_soles:   form.price_profesional_soles,
+      pro_usd:     form.price_profesional_dollars,
+      basePrice:   precio,
+    })
+
+    insc.montoOriginal = precio
+
+    if (!precio) {
+      toast.warning(
+        '⚠️ No se pudo cargar el Precio Base. Verifique que el programa tenga precios configurados.',
+        { timeout: 7000 }
+      )
+    }
+
+    showViewModal.value = true  // ✅ abrir DESPUÉS de que los datos estén listos
+  })
+}
+  function validateLeadInfo() {
+    const required = ['fechaContactoInicial']
+    for (const field of required) {
+      if (field === 'edition_id') {
+        if(route.query.clone_from)return true
+        if (form.category_alias && form.program_version_id && form.program_modality_selected_alias !== 'we_modality_online' && !form[field]) {
+          return false
+        }
+      } else if (!form[field]) return false
+    }
+    return true
+  }
+  function validateContactInfo() {
+    const required = ['telefono','status_alias','country_alias','full_name','cat_client_moment_alias']
+    return required.every(f => !!form[f])
+  }
+  function validateCommercialInfo() {
+  const required = ['nivel_alias', 'mensajeChat', 'canal_alias', 'medium_alias', 'key_word_alias'] // ✅ agregar 'key_word_alias'
+    return required.every(f => !!form[f])
+  }
+function validateInscriptionClientInfo() {
+const required = ['cat_type_document','document','email','full_name','last_name','mother_last_name','cat_insc_modality', 'cat_certificate_status'] // <-- ACTUALIZADO
+  if (!required.every(f => !!insc[f])) return false
+  if (!isValidEmail(insc.email)) return false  // ← agrega esto
+  return true
+}
+function validateInscriptionPaymentInfo() {
+  // Moneda siempre obligatoria
+  if (!insc.selectedCurrencyAlias) return false
+
+  // Canal General: requiere modalidad y método de pago
+  if (isChannelGeneral.value) {
+    if (!insc.cat_type_payment) return false
+    if (!insc.cat_method_payment) return false
+    // Cuotas: requiere adelanto > 0
+    if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
+    return true
+  }
+
+  // Canal Token: requiere proveedor
+  if (isChannelToken.value) {
+    return !!insc.cat_token_provider
+  }
+
+  // Canal Web: solo necesita el canal seleccionado
+  if (isChannelWeb.value) return true
+
+  // Sin canal: no pasa
+  return false
+}
+
+
+  const montoOriginal = computed(() => 1000)
+
+
+    function onProgramaTypeChange(opcion) {
+        if (!opcion){
+          form.program_version_id = null
+          form.program_modality_alias = null
+          form.edition_id = null
+    form.edition_label = null  
+          return
+        }
+    }
+
+    function openURL(param){
+      window.open(param, '_blank', 'noopener,noreferrer');
+    }
+
+  // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
+function onProgramaChange(opcion) {
+  if (!opcion) {
+    selectedProgram.value = null
+    form.program_label = null
+    form.program_link = null
+    form.edition_id = null
+    form.edition_label = null                      // ← AGREGAR
+    form.program_modality_selected_alias = null
+    form.price_student_soles = 0
+    form.price_student_dollars = 0
+    form.price_profesional_soles = 0
+    form.price_profesional_dollars = 0
+    return
+  }
+
+  form.edition_id    = null    // ← AGREGAR
+  form.edition_label = null    // ← AGREGAR
+  // A partir de aquí opcion ya está garantizado como no-null
+  selectedProgram.value = opcion
+  form.program_label = opcion.abbreviation || opcion.description || null
+  form.program_link = opcion.link || null
+  form.program_modality_selected_alias = opcion.cat_model_modality_alias
+  form.program_sessions          = Number(opcion?.sessions || 0)
+  form.program_sessions_per_week = Number(opcion?.sessions_per_week || 1)
+  form.price_student_soles       = Number(opcion.price_student_soles    || 0)
+  form.price_student_dollars     = Number(opcion.price_student_dollars  || 0)
+  form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
+  form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+}
+
+const searchEditionsFiltered = async (q, child, index) => {
+  const month = new Date().getMonth() + 1
+  const year  = new Date().getFullYear()
+
+  const response = await editionService.editionCaller({
+    q,
+    program_version_id: form.program_version_id,
+    month,
+    year
+  })
+
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  return (response || [])
+    // 1️⃣ filtrar solo desde hoy en adelante
+    .filter(e => {
+      if (!e.start_date) return true
+      return new Date(e.start_date) >= hoy
+    })
+    // 2️⃣ ordenar por fecha más cercana → más lejana
+    .sort((a, b) => {
+      if (!a.start_date && !b.start_date) return 0
+      if (!a.start_date) return 1   // sin fecha al final
+      if (!b.start_date) return -1
+
+      return new Date(a.start_date) - new Date(b.start_date)
+    })
+}
+function onEditionChange(opcion) {
+  if (!opcion) {
+    currentEdition.value = null
+    form.edition_label = null
+    form.edition_start_date = null
+    return
+  }
+
+  currentEdition.value    = opcion 
+  form.edition_label      = opcion.start_date_label || null  // ← AGREGAR
+  form.edition_start_date = opcion.start_date || null
+  console.log(opcion.start_date)
+  console.log(opcion.end_date)
+  console.log(form.program_sessions)
+  // Calcular sessions_per_week desde las fechas reales de la edición
+  if (opcion.start_date && opcion.end_date && form.program_sessions > 0) {
+    console.log("PROCESANDO FECHAS")
+    const inicio  = new Date(opcion.start_date)
+    const fin     = new Date(opcion.end_date)
+    const semanas = Math.max(1, Math.round((fin - inicio) / (7 * 24 * 60 * 60 * 1000)))
+    form.program_sessions_per_week = Math.max(1, Math.round(form.program_sessions / semanas))
+  } else {
+    form.program_sessions_per_week = 1 // fallback
+  }
+
+  console.info('[Edición seleccionada]', {
+    start:    opcion.start_date,
+    end:      opcion.end_date,
+    sessions: form.program_sessions,
+    semanas:  Math.round((new Date(opcion.end_date) - new Date(opcion.start_date)) / (7 * 24 * 60 * 60 * 1000)),
+    sessions_per_week: form.program_sessions_per_week,
+    cuotas_resultado:  'ver autoNumCuotas'
+  })
+}
+
+    const clientProfileType = computed(() => {
+      if (!form.ocupacion_alias) return null
+
+      const ocupacionInfo = prospectSituationCatalog.value.find(
+        opt => opt.alias === form.ocupacion_alias
+      )
+
+      return ocupacionInfo?.variable_3 || null
+    })
+
+const calculatedBasePrice = computed(() => {
+  if (!insc.selectedCurrencyAlias) return 0
+  const isUSD  = insc.selectedCurrencyAlias === 'we_currency_usd'
+  const type   = clientProfileType.value
+
+  if (type === 'estudiante') {
+    return isUSD
+      ? Number(form.price_student_dollars  || 0)
+      : Number(form.price_student_soles    || 0)
+  }
+
+  // profesional o null → usa profesional, con fallback a estudiante si profesional es 0
+  const proPrecio = isUSD
+    ? Number(form.price_profesional_dollars || 0)
+    : Number(form.price_profesional_soles   || 0)
+
+  if (proPrecio > 0) return proPrecio
+
+  // fallback: si no hay precio profesional, usa el de estudiante
+  return isUSD
+    ? Number(form.price_student_dollars || 0)
+    : Number(form.price_student_soles   || 0)
+})
+
+    import { watch } from 'vue'
+
+    watch(calculatedBasePrice, (newPrice) => {
+      insc.montoOriginal = newPrice
+    }, { immediate: true })
+
+    watch(() => insc.selectedCurrencyAlias, () => {
+    })
+
+    const alCerrarModal = () => {
+      console.log('La modal se ha cerrado. Limpiando formulario...')
+      Object.assign(insc, {
+        dni: '',
+        nombres: '',
+        apellidos: '',
+        correo: '',
+        saved_money: 0,
+        selectedCurrencyAlias: '',
+        modalidadPrograma: 'NORMAL',
+        promocion_id: null,
+        descuento_id: null,
+        modalidadPago: 'CONTADO',
+        cat_method_payment: null,
+        montoOriginal: 0,
+        adelanto: 0,
+        observacion: '',
+        montoDescuentoPorcentaje: 0,
+        montoDescuentoFijo: 0,
+        montoFinal: 0,
+        dsct_porcent_id: null,
+        dsct_stick_id: null,
+        dsct_benefit_id: null,
+        val_porcentaje: 0,
+        val_fijo: 0,
+        val_beneficio: 0,
+        montoDescuentoPorcentaje: 0,
+        montoDescuentoFijo: 0,
+        montoBeneficio: 0,
+        montoFinal: 0,
+      })
+
+    }
+
+    watch(showViewModal, (estaAbierto) => {
+      if (!estaAbierto) {
+        resetInscriptionData();
+      }
+    })
+
+// ══════════════════════════════════════════════════
+// PLAN DE CUOTAS
+// ══════════════════════════════════════════════════
+
+// Helper formateador (evita repetir .toLocaleString en template)
+const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const isInstallmentMode = computed(() =>
+  isChannelGeneral.value &&
+  insc.cat_type_payment === 'we_payment_way_installments' &&
+  Number(insc.montoOriginal) > 0
+)
+
+
+// Monto que queda después del adelanto → se reparte en cuotas 2..N
+const installmentRemainder = computed(() => {
+  const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
+  return rem > 0 ? rem : 0
+})
+
+
+
+
+const installmentPlanValid = computed(() => {
+  if (!isInstallmentMode.value || installmentPlan.value.length === 0) return true
+  return Math.abs(installmentTotalSum.value - installmentRemainder.value) < 0.01
+})
+
+// Suma total incluyendo adelanto
+const installmentTotalSum = computed(() =>
+  round2((installmentPlan.value || []).reduce((acc, c) => acc + c.amount, 0))
+)
+
+// Número de cuotas calculado automáticamente según duración del curso
+const autoNumCuotas = computed(() => {
+  const sessions        = form.program_sessions        || 18
+  const sessionsPerWeek = form.program_sessions_per_week || 1
+  const isEspecializacion = form.category_alias === 'we_program_type_specialization'
+
+  if (isEspecializacion) {
+    // 1 cuota por cada bloque de 8 sesiones (ej: 24 → 3)
+    return Math.min(Math.max(Math.ceil(sessions / 8), 1), 5)
+  }
+
+  // Lógica actual para cursos
+  const weeks  = sessions / sessionsPerWeek
+  const months = Math.round(weeks / 4)
+  return Math.min(Math.max(months, 1), 5)
+})
+
+const installmentPlan = computed(() => {
+  if (!isInstallmentMode.value) return []
+
+  const saldo    = installmentRemainder.value
+  const n        = autoNumCuotas.value
+  const startRaw = form.edition_start_date
+  const sessionsPerWeek = form.program_sessions_per_week || 1
+  const isEspecializacion = form.category_alias === 'we_program_type_specialization'
+
+  if (saldo <= 0 || n < 1) return []
+
+  const cuotaBase = Math.floor(saldo / n)           // entero hacia abajo
+  const remainder = round2(saldo - cuotaBase * n) 
+
+  const base = startRaw
+    ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00')
+    : new Date()
+
+  const plan = []
+
+  if (isEspecializacion) {
+    // ── ESPECIALIZACIÓN: biweekly desde el inicio ──
+    // Cuota 1: +6 días si intensivo (≥2/sem), +16 días si semanal
+    // Cuota 2: +16 días desde cuota anterior
+    // Cuota 3+: +30 días desde cuota anterior
+
+    let fechaAnterior = new Date(base)
+
+    for (let i = 0; i < n; i++) {
+      const dueDate = new Date(fechaAnterior)
+
+      if (i === 0) {
+        // Primera cuota: depende de la intensidad
+        dueDate.setDate(dueDate.getDate() + (sessionsPerWeek >= 2 ? 6 : 16))
+      } else if (i === 1) {
+        // Segunda cuota: +16 días desde la anterior
+        dueDate.setDate(dueDate.getDate() + 16)
+      } else {
+        // Resto: +30 días desde la anterior
+        dueDate.setDate(dueDate.getDate() + 30)
+      }
+
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: dueDate.toISOString().slice(0, 10)
+      })
+
+      fechaAnterior = dueDate // ← la próxima parte desde esta fecha
+    }
+
+  } else if (sessionsPerWeek >= 2) {
+    // ── CURSOS INTENSIVOS (lógica actual) ──
+    const fecha1 = new Date(base)
+    fecha1.setDate(fecha1.getDate() + 15)
+
+    for (let i = 0; i < n; i++) {
+      const dueDate = new Date(fecha1)
+      dueDate.setDate(dueDate.getDate() + i * 20)
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: dueDate.toISOString().slice(0, 10)
+      })
+    }
+
+  } else {
+    // ── CURSOS SEMANALES (lógica actual) ──
+    const primerMes = new Date(base)
+    primerMes.setMonth(primerMes.getMonth() + 1)
+    primerMes.setDate(15)
+
+    for (let i = 0; i < n; i++) {
+      let dueDate
+      if (i === 0) {
+        dueDate = new Date(primerMes)
+      } else {
+        dueDate = new Date(primerMes)
+        dueDate.setMonth(dueDate.getMonth() + i)
+        dueDate.setDate(1)
+      }
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: dueDate.toISOString().slice(0, 10)
+      })
+    }
+  }
+
+  return plan
+})
+function isValidEmail(email) {
+  if (!email) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email).toLowerCase())
+}
+const isOnlineProgram = computed(() =>
+  form.program_modality_selected_alias === 'we_modality_online'
+)
+</script>
 <style scoped>
 .exec-shell {
   background: var(--slate-50, #f8fafc);
@@ -2147,1537 +3913,34 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   border-top: 1px solid var(--border, #e2e8f0);
   background: var(--slate-50);
 }
+.exec-input-light.input-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+}
+.program-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  font-size: .75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.program-link-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+.program-link-btn--disabled {
+  background: var(--slate-100, #f1f5f9);
+  border: 1px solid var(--slate-200, #e2e8f0);
+  color: var(--slate-300, #cbd5e1);
+  cursor: not-allowed;
+}
 </style>
-<script setup>
-  import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
-  import { useToast } from 'vue-toastification'
-
-import MultiFileUploader from '@/components/MultiFileUploader.vue'
-import BaseDatePicker from '@/components/BaseDatePicker.vue';
-
-import FileUploader from '@/components/FileUploader.vue'
-  const toast = useToast()
-
-  import CurrencyInput from '@/components/CurrencyInput.vue'
-  import BaseModal from '@/components/BaseModal.vue'
-  import SearchSelect from '@/components/SearchSelect.vue'
-  import DateTime12 from '@/components/DateTime12.vue'
-
-  import { ServiceKeys } from '@/services'
-
-  const router = useRouter()
-  const route  = useRoute()
-
-
-const sevenDaysAgo = new Date();
-sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-const dateLimitConfig = {
-    minDate: sevenDaysAgo
-};
-  const programService   = inject(ServiceKeys.Program)
-  const comercialService = inject(ServiceKeys.Comercial)
-  const customerService = inject(ServiceKeys.Customer)
-  const discountService = inject(ServiceKeys.Discount)
-  const editionService = inject(ServiceKeys.Edition)
-  const catalog          = inject('catalog')
-
-  const todayIso = new Date().toISOString().slice(0, 16)
-const paymentChannelCatalog = ref(catalog.options('we_payment_channel'))
-const tokenProviderCatalog  = ref(catalog.options('we_token_provider'))
-const lAttempts = ref(catalog.options('we_attempt'))
-  const leadIdParam = computed(() => {
-    const raw = route.params?.id
-    const n = Number(raw)
-    return Number.isFinite(n) ? n : null
-  })
-  const isEdit = computed(() => !!leadIdParam.value)
-const voucherUploaderRef = ref(null)
-const voucherTouched     = ref(false)
-const discountResetKey = ref(0)
-  const loaded          = ref(false)
-  const saving          = ref(false)
-  const savingInsc      = ref(false)
-  const showViewModal   = ref(false)
-  const leadDataHistory = ref(false)
-  const createdLeadId   = ref(null)
-  const createdPersonId = ref(null)
-// Variables reactivas para el modal
-const showProgramDetail = ref(false);
-const selectedProgram = ref(null);
-const activeTab = ref('info'); // 'info' | 'editions'
-const formatDuration = (seconds) => {
-  if (!seconds) return '00:00'
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-  const form = reactive({
-    fechaContactoInicial: todayIso,
-    query_alias: null,
-    category_alias: null,
-    program_modality_alias: null,
-    web: false,
-    b2b: false,
-    program_modality_selected_alias: null,
-    program_version_id: null,
-    cat_client_moment_alias:null,
-    membership_moment_id: null,
-    membership_tier_label:null,
-    edition_id: null,
-    link: null,
-    client_status: null,
-    client_status_label: null,
-    enrollment_id: null,
-    full_name: '',
-    nombre: '',
-    telefono: '',
-    status_alias: null,
-    country_alias: null,
-    ocupacion_alias: null,
-    bot: false,
-    pay_date: null,
-    nivel_alias: null,
-    prox_medium_alias: null,
-    mensajeChat: '',
-    canal_alias: null,
-    medium_alias: null,
-    key_word_alias: null,
-    strategy_alias: null,
-    observacion: '',
-    categoriaCliente: 'NEW',
-    categoriaMember: '',
-    contactos: [],
-    program_sessions:           0,
-    program_sessions_per_week:  1,
-    edition_start_date:         null,
-
-  })
-
-  const insc = reactive({
-    dni: '',
-    nombres: '',
-    apellidos: '',
-    correo: '',
-    saved_money: 0,
-    selectedCurrencyAlias: '',
-    modalidadPrograma: 'NORMAL',
-    promocion_id: null,
-    descuento_id: null,
-    cat_method_payment: null,
-    modalidadPago: 'CONTADO',
-    montoOriginal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-    dsct_benefit_id: null,
-    val_porcentaje: 0,
-    val_fijo: 0,
-    val_beneficio: 0,
-    montoDescuentoPorcentaje: 0,
-    montoDescuentoFijo: 0,
-    montoBeneficio: 0,
-    montoFinal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-    dsct_benefit_id: null,
-    ticket_payment_urls: [],
-    attachments: [],
-  cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
-  cat_token_provider: null,
-  })
-// Comprobante opcional cuando el descuento porcentual es exactamente 100
-const isVoucherOptional = computed(() =>
-  !isChannelGeneral.value || Number(insc.val_porcentaje) === 100
-)
-watch(() => insc.cat_payment_channel, () => {
-  insc.cat_token_provider    = null
-  insc.cat_method_payment    = null
-  insc.ticket_payment_urls   = []
-  insc.attachments           = []
-  voucherTouched.value       = false
-})
-const toggleTimer = (attempt) => {
-  if (attempt.timerActive) {
-    clearInterval(attempt.timerId)
-    attempt.timerActive = false
-    attempt.timerId = null
-  } else {
-    attempt.timerActive = true
-    attempt.timerId = setInterval(() => {
-      attempt.contact_duration = (attempt.contact_duration || 0) + 1
-    }, 1000)
-  }
-}
-
-// 3. LIMPIEZA DE TIMERS AL SALIR
-onBeforeUnmount(() => {
-  if (form.contactos) {
-    form.contactos.forEach(item => {
-      if (item.timerId) clearInterval(item.timerId)
-    })
-  }
-})
-const channelAlias = computed(() => {
-  if (!insc.cat_payment_channel) return null
-  return paymentChannelCatalog.value
-    .find(c => c.id === insc.cat_payment_channel)?.alias ?? null
-})
-
-const isChannelGeneral = computed(() => channelAlias.value === 'we_channel_general')
-const isChannelToken   = computed(() => channelAlias.value === 'we_channel_token')
-const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
-
-// Resetear tab al abrir modal
-watch(showProgramDetail, (val) => {
-  if (val) activeTab.value = 'info';
-});
-
-// Formateador de fechas simple (Ej: 20 Ene 2025)
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  const options = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
-  return new Date(dateString).toLocaleDateString('es-PE', options);
-};
-
-  const leadStatusCatalog        = ref(catalog.options('we_lead_status'))
-  const leadInterestCatalog      = ref(catalog.options('we_lead_interest'))
-  const countryCatalog = ref(
-    catalog.options('we_country', {
-      mapItem: x => ({
-        id: x.id,
-        description: `(${String(x?.variable_2)}) - ${x.description}`,
-        alias: x.alias,
-        variable_3: x.variable_3,
-        variable_2: x.variable_2,
-        variable_1: x.variable_1,
-        raw: x
-      })
-    })
-  )
-
-
-
-  const momentCatalog           = ref(catalog.options('we_moment'))
-  const clientCatalog           = ref(catalog.options('we_client'))
-  const prospectSituationCatalog = ref(
-    catalog.options('we_prospect_situation', {
-      mapItem: x => ({
-        id: x.id,
-        description: `(${String(x?.variable_1)}) - ${x.description}`,
-        alias: x.alias,
-        variable_3: x.variable_3,
-        raw: x
-      })
-    })
-  )
-  const strategyCatalog         = ref(catalog.options('we_type_strategy'))
-  const mktWordsCatalog         = ref(catalog.options('we_key_word'))
-  const socialMediaCatalog      = ref(catalog.options('we_social_media'))
-  const contactAttemptStatusCat = ref(catalog.options('we_follow_lead'))
-  const programCategoryCatalog  = ref(catalog.options('we_program_category'))
-  const queryCatalog            = ref(catalog.options('we_category_query'))
-  const inscModalidades         = ref(catalog.options('we_insc_modality'))
-  const discountCatalog         = ref(catalog.options('we_discount_type'))
-  const paymentMethodCatalog    = ref(catalog.options('we_payment_method'))
-  const docTypeCatalog          = ref(catalog.options('we_type_document'))
-  const programTypeCatalog      = ref(catalog.options('we_program_type'))
-  const programModalityCatalog  = ref(catalog.options('we_modality'))
-  const inscPaymentModes        = ref(catalog.options('we_payment_way'))
-  //we_calling
-  const callingCatalog          = ref(catalog.options('we_calling'))
-// 1. Inicializa la lista vacía (un array vacío para evitar errores en el v-for/items)
-const membershipList = ref([]);
-
-  const currencyCatalog         = ref(
-    catalog.options('we_currency', {
-      mapItem: x => ({
-        id: x.id,
-        description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
-        alias: x.alias,
-        raw: {
-          code: x.code ?? x.abbreviation,
-          symbol: x.symbol ?? x.prefix,
-          minorUnit: x.minorUnit ?? Number(x.precision ?? 2),
-          locale: x.locale ?? (x.abbreviation === 'USD' ? 'en-US' : 'es-PE'),
-          decimal: x.decimal ?? '.',
-          thousands: x.thousands ?? ',',
-          position: x.position ?? (x.suffix ? 'suffix' : 'prefix'),
-          allowNegative: x.allowNegative ?? false,
-          allowZero: x.allowZero ?? true,
-        }
-      })
-    })
-  )
-
-
-  // --- VARIABLES PARA EL MODAL DE HISTORIAL CLIENTE ---
-const showClientHistory = ref(false)
-const activeHistoryTab = ref('historico')
-
-// Función auxiliar para estilos de badge (puedes borrarla si no la usas)
-const getBadgeClass = (status) => {
-  switch(status) {
-    case 'Matriculado': return 'bg-success';
-    case 'En Seguimiento': return 'bg-warning text-dark';
-    case 'No Interesado': return 'bg-danger';
-    default: return 'bg-secondary';
-  }
-}
-
-
-const minDateForNewAttempt = computed(() => {
-  const existing = form.contactos.filter(c => c.id)
-  if (!existing.length) return null
-  const dates = existing
-    .map(c => new Date(c.fechaContactoProximo))
-    .filter(d => !isNaN(d))
-  if (!dates.length) return null
-  return new Date(Math.max(...dates))
-})
-
-const hcEnrollmentData = ref([
-  { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso', nota: null },
-  { fecha: '10 Jun 2024', programa: 'SQL Server Database', edicion: '2024-II', estado: 'Finalizado', nota: 18 },
-  { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
-])
-
-  function onChangeDescuentoPorcentual(opt) {
-    if (!opt) {
-      insc.val_porcentaje = 0
-      return
-    }
-    insc.val_porcentaje = Number(opt.value) || 0
-  }
-  import { watchEffect } from 'vue'
-// Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
-const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
-
-watchEffect(() => {
-  const base = parseFloat(insc.montoOriginal) || 0
-
-  // 1. Calcular montos brutos
-  // Nota: Usamos round2 inmediatamente para que el dinero "exista" en 2 decimales desde el cálculo
-  let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
-  let montoFijo = round2(parseFloat(insc.val_fijo) || 0)
-  let montoBeneficio = round2(parseFloat(insc.val_beneficio) || 0)
-
-  // 2. Sumar todos los descuentos
-  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
-
-  // 3. VALIDACIÓN: ¿Los descuentos superan el precio base?
-  if (totalDescuentos > base) {
-    // A. Mostrar Alerta
-    toast.warning('¡Cuidado! Los descuentos superan el Precio Base. Se han reiniciado los valores.')
-
-    // B. Limpiar inputs (Reseteamos los valores y los selectores para evitar negativos)
-    // Reiniciar Porcentaje
-    insc.val_porcentaje = 0
-    insc.dsct_porcent_id = null
-
-    // Reiniciar Monto Fijo
-    insc.val_fijo = 0
-    insc.dsct_stick_id = null
-
-    // Reiniciar Beneficio
-    insc.val_beneficio = 0
-    insc.dsct_benefit_id = null
-    discountResetKey.value++
-
-    // C. Forzar recálculo visual a 0
-    insc.montoDescuentoPorcentaje = 0
-    insc.montoDescuentoFijo = 0
-    insc.montoBeneficio = 0
-    insc.total_amount = base
-
-
-
-    return // Salimos para evitar asignar valores erróneos
-  }
-
-  // 4. Si todo está bien, asignamos los valores redondeados a la vista
-  insc.montoDescuentoPorcentaje = montoPorcentaje
-  insc.montoDescuentoFijo = montoFijo
-  insc.montoBeneficio = montoBeneficio
-
-  // 5. Cálculo Final (Base - Descuentos)
-  const final = base - totalDescuentos
-  insc.total_amount = round2(final > 0 ? final : 0)
-})
-  function onChangeDescuentoFijo(opt) {
-    if (!opt) {
-      insc.val_fijo = 0
-      return
-    }
-    insc.val_fijo = Number(opt.value) || 0
-  }
-
-  function onChangeBeneficio(opt) {
-    if (!opt) {
-      insc.val_beneficio = 0
-      return
-    }
-    insc.val_beneficio = Number(opt.value) || 0
-  }
-
-    const montoFinalCalculado = computed(() => {
-      const base = Number(insc.montoOriginal) || 0
-      const dscto = Number(insc.totalDescuentos) || 0
-      return base - dscto
-  })
-
-  const selectedCurrency = computed(
-    () =>
-      currencyCatalog.value.find(i => i.alias === insc.selectedCurrencyAlias)?.raw ??
-      { alias:'we_currency_soles', code:'PEN', symbol:'S/.', minorUnit:2, locale:'es-PE', decimal:'.', thousands:',', position:'prefix', allowNegative:false, allowZero:false }
-  )
-
-  const programs = ref([])
-  const editions = ref([])
-  const currentProgram = computed(() => {
-    if (!form.program_version_id) return null
-    return programs.value.find(p => p.id === form.program_version_id) || null
-  })
-  const currentEdition = computed(() => {
-    if (!form.edition_id) return null
-    return editions.value.find(e => e.id === form.edition_id) || null
-  })
-
-  function idByAlias(alias, list = []) {
-    if (!alias) return null
-    const it = list.find(i => i.alias === alias || i.raw?.alias === alias)
-    return it?.id ?? null
-  }
-  function aliasById(id, list = []) {
-    if (!id) return null
-    const it = list.find(i => i.id === id || i.raw?.id === id)
-    return it?.alias ?? null
-  }
-  watch(() => form.web, (val) => {
-    if (val) form.b2b = false
-  })
-
-  watch(() => form.b2b, (val) => {
-    if (val) form.web = false
-  })
-  function normalizeDateTime(v) {
-    if (!v) return ''
-    const s = String(v).replace('T', ' ')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 09:00:00`
-    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return `${s}:00`
-    return s
-  }
-
-  async function loadLead(id) {
-    console.log(id)
-    const data = await comercialService.leadGet({ id })
-
-    const l = data?.lead || data || {}
-
-    const modality_selected_alias = l.cat_program_modality_alias ?? l.program_modality_alias ?? null
-    console.log(l)
-    Object.assign(form, {
-      fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
-      query_alias: l.query_alias ?? null,
-      category_alias: l.cat_program_type_alias || l.category_alias || null,
-      program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
-      program_modality_selected_alias: modality_selected_alias,
-      web: l.web === 'Y' || l.web === true,
-      b2b: l.b2b === 'Y' || l.b2b === true,
-      program_version_id: l.program_version_id ?? null,
-      edition_id: l.program_edition_id ?? l.edition_id ?? null,
-      full_name: l.full_name ?? l.full_name_label ?? '',
-      telefono:  l.origin_phone ?? l.phone ?? '',
-      status_alias:   l.status_alias,
-      country_alias:  l.country_alias,
-      ocupacion_alias: l.ocupacion_alias,
-      client_status: l.client_status,
-      client_status_label: l.client_status_label,
-      membership_moment_id: l.membership_moment_id,
-      membership_tier_label: l.membership_tier_label,
-      cat_client_moment_alias:l.cat_client_moment_alias,
-      cat_client_moment_label: l.cat_client_moment_label,
-      bot: l.bot!='N',
-      active: l.active!='N',
-      program_label: l.program_label ?? null,
-      edition_label: l.edition_label ?? null,
-      query_label: l.query_label ?? null,
-      ocupacion_label: l.ocupacion_label ?? null,
-      status_label: l.status_label ?? null,
-      interest_label: l.interest_label ?? null,
-      channel_label: l.channel_label ?? null,
-      medium_label: l.medium_label ?? null,
-      key_word_label: l.key_word_label ?? null,
-      strategy_label: l.strategy_label ?? null,
-      pay_date: l.pay_date ? String(l.pay_date).slice(0, 10) : null,
-      nivel_alias: l.interest_alias,
-      mensajeChat: l.message_init_conversation ?? '',
-      canal_alias:  l.channel_alias,
-      medium_alias: l.medium_alias,
-      key_word_alias: l.key_word_alias ?? aliasById(l.key_word_alias, mktWordsCatalog.value),
-      strategy_alias: l.strategy_alias,
-      price_student_dollars: l.price_student_dollars ?? null,
-      price_student_soles: l.price_student_soles ?? null,
-      price_profesional_soles: l.price_profesional_soles ?? null,
-      price_profesional_dollars: l.price_profesional_dollars ?? null,
-      enrollment_id: l.enrollment_id,
-      observacion: l.observations ?? '',
-      contactos: (l.contact_attempts || []).map(att => ({
-        id: att.lead_contact_attempt_id,
-        status_alias: att.cat_status_alias,
-        cat_type_attempt: att.cat_type_attempt_alias || 'we_attempt_call',
-        calling_alias: att.cat_result_alias,
-        calling_label: att.cat_result_label,
-        status_label: att.cat_status_label,
-        fechaContactoProximo: normalizeDateTime(att.contact_datetime),
-        respuesta: att.response || '',
-        // Mapear Duración y Timer
-  contact_duration: att.contact_duration || 0,
-  timerActive: false,
-  timerId: null
-      })),
-
-      enrollment_id: l.enrollment_id
-
-    })
-
-    createdLeadId.value   = l.id ?? l.lead_id ?? id
-    createdPersonId.value = l.person_id ?? null
-  }
-const docConfig = computed(() => {
-  // Buscamos el objeto completo en el catálogo usando el alias seleccionado
-  const selected = docTypeCatalog.value.find(item => item.alias === insc.cat_type_document);
-    console.log(selected)
-  // Obtenemos variable_1 (longitud). Si no existe, default a 15.
-  const maxLength = selected?.variable_1 ? Number(selected.variable_1) : 15;
-
-  // Detectamos si debe ser solo números.
-  // Usualmente DNI (2.300) y RUC (2.301) son numéricos.
-  // Pasaporte y Carnet de Extranjería suelen permitir letras.
-  const isNumeric = ['we_type_document_dni', 'we_type_document_ruc'].includes(insc.cat_type_document);
-
-  return {
-    maxLength,
-    isNumeric,
-    placeholder: isNumeric ? `MÁX. ${maxLength} DÍGITOS` : `MÁX. ${maxLength} CARACTERES`
-  };
-});
-
-// Watcher para limpiar/ajustar si cambia el tipo
-watch(() => insc.cat_type_document, (newVal) => {
-  // 1. Si el tipo de documento es nulo (se limpió), borramos los datos que dependen de él
-  if (!newVal) {
-    insc.document = '';
-    insc.email = '';
-    insc.full_name = '';
-    insc.last_name = '';
-    insc.mother_last_name = '';
-    return;
-  }
-
-  if (!insc.document) return;
-
-  // 2. Recortar si el nuevo tipo es más corto que el valor actual
-  if (docConfig.value.maxLength && insc.document.length > docConfig.value.maxLength) {
-     insc.document = insc.document.slice(0, docConfig.value.maxLength);
-  }
-
-  // 3. Si cambiamos a numérico y hay letras, limpiar letras
-  if (docConfig.value.isNumeric && isNaN(Number(insc.document))) {
-     insc.document = insc.document.replace(/\D/g, '');
-  }
-});
-
-
-  async function loadDataForCloning(sourceId) {
-      try {
-      console.log(sourceId)
-          const originalData = await comercialService.leadGet({ id: sourceId })
-
-
-          Object.assign(form, {
-              fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
-              query_alias: originalData.query_alias ?? null,
-              category_alias: originalData.cat_type_program_alias || originalData.category_alias || null,
-              program_modality_alias: originalData.program_modality_alias ?? null,
-              program_modality_selected_alias: originalData.program_modality_alias  ?? null,
-              program_version_id: originalData.program_version_id ?? null,
-              edition_id: originalData.program_edition_id ?? originalData.edition_id ?? null,
-              full_name: originalData.full_name ?? originalData.full_name_label ?? '',
-              telefono: originalData.origin_phone ?? originalData.phone ?? '',
-              status_alias: 'we_lead_status_atendido',
-              country_alias: originalData.country_alias,
-              client_status: originalData.client_status,
-              client_status_label: originalData.client_status_label,
-              ocupacion_alias: originalData.ocupacion_alias,
-              bot: false,
-              active: true,
-              program_label: originalData.program_label ?? null,
-              edition_label: originalData.edition_label ?? null,
-              query_label: originalData.query_label ?? null,
-              ocupacion_label: originalData.ocupacion_label ?? null,
-
-              pay_date: null,
-              nivel_alias: 'we_lead_interest_low',
-              mensajeChat: originalData.message_init_conversation ?? '',
-              canal_alias: originalData.channel_alias,
-              medium_alias: originalData.medium_alias,
-              key_word_alias: originalData.key_word_alias ?? aliasById(originalData.key_word_alias, mktWordsCatalog.value),
-              strategy_alias: originalData.strategy_alias,
-              observacion: originalData.observations ?? '',
-              categoriaCliente: originalData.t_lead ?? 'NEW',
-              categoriaMember: originalData.membresia ?? ''
-          })
-          createdLeadId.value = null
-          createdPersonId.value = null
-          toast.info('Formulario precargado con datos del lead original. Por favor, revise y guarde.', { timeout: 5000 })
-
-
-      } catch (e) {
-          console.error("Error cargando plantilla para clonar", e)
-      }
-  }
-
-  onMounted(async () => {
-    if (route.query.clone_from) {
-        await loadDataForCloning(route.query.clone_from)
-        loaded.value = true
-        return
-    }
-    const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
-    membershipList.value = data;
-    // 3. Asignamos el valor real a la variable reactiva
-    membershipList.value = data;
-
-    if (isEdit.value) {
-      await loadLead(leadIdParam.value)
-      loaded.value = true
-      return
-    }
-
-
-    form.canal_alias   = 'we_social_media_other'
-    form.medium_alias  = 'we_social_media_whatsapp'
-    form.nivel_alias   = 'we_lead_interest_low'
-    form.country_alias = 'we_country_peru'
-    form.status_alias  = 'we_lead_status_atendido'
-    form.client_status   = 'we_client_person'
-    form.active = true
-    //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
-    form.category_alias = 'we_program_type_course'
-    onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
-
-    loaded.value = true
-  })
-
-function createEmptyAttempt() {
-  return {
-    cat_type_attempt: 'we_attempt_call', // Valor por defecto
-    calling_alias: 'we_calling_pending',
-    fechaContactoProximo: todayIso,
-    respuesta: '',
-    contact_duration: 0, // Inicia en 0
-    timerActive: false,
-    timerId: null
-  }
-}
-  function addContacto() { form.contactos.push(createEmptyAttempt()) }
-  function removeContacto(idx) { form.contactos.splice(idx, 1) }
-
-  function handleMensajeChatInput() {
-    const msj = (form.mensajeChat || '').toLowerCase()
-
-    const canal = socialMediaCatalog.value?.find(e =>
-      e.description && msj.includes(e.description.toLowerCase())
-    )?.alias
-    form.canal_alias = canal || 'we_social_media_other'
-
-    form.key_word_alias = mktWordsCatalog.value?.find(e =>
-      e.description && msj.includes(e.description.toLowerCase())
-    )?.alias
-  }
-  function onStatusChange(opt) {
-    if (!opt) return
-    if (opt.description === 'Pagó') {
-      const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
-      if (alto) form.nivel_alias = alto.alias
-    }else if(opt.description === 'Interesado'){
-      const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
-      if (alto) form.nivel_alias = alto.alias
-    }
-  }
-const searchingCustomer = ref(false)
-
-async function searchCustomerByDocument() {
-  const doc = insc.document?.trim()
-  if (!doc || doc.length < 3) {
-    toast.warning('Ingrese el número de documento antes de buscar.')
-    return
-  }
-
-  searchingCustomer.value = true
-  try {
-    const response = await customerService.customerInfoGet({ document: doc })
-
-    console.log(response)
-
-    if (response && response.result === 1) {
-      insc.full_name        = response.first_name       || ''
-      insc.last_name        = response.last_name        || ''
-      insc.mother_last_name = response.mother_last_name || ''
-      insc.email            = response.email            || ''
-      toast.success('Cliente encontrado en base de datos.', { timeout: 3000 })
-      return
-    }
-
-    // No existe en BD → consultar SUNAT
-    await searchSunat()
-
-  } catch {
-    await searchSunat()
-  } finally {
-    searchingCustomer.value = false
-  }
-}
-const searchingPhone = ref(false)
-
-async function searchSunat() {
-  const sunatData = await customerService.sunatGet({ document: insc.document })
-
-    if (sunatData && sunatData.nombre_o_razon_social) {
-      insc.full_name = sunatData.nombre_o_razon_social
-      insc.last_name = ''
-      insc.mother_last_name = ''
-      toast.info('Datos de SUNAT encontrados y precargados.', { timeout: 3000 })
-    } else {
-      toast.info('No se encontraron datos en SUNAT para el documento ingresado.', { timeout: 3000 })
-    }
-
-  console.log('Buscando en SUNAT con documento:', insc.document)
-}
-
-const dataSetted = ref(null)
-const saveBlockReason = computed(() => {
-  if (!validateLeadInfo())      return 'Falta completar la información del Lead (fecha de contacto, programa, etc.)'
-  if (!validateContactInfo())   return 'Falta completar los Datos del Contacto (teléfono, status, país, nombre, estado del cliente)'
-  if (!validateCommercialInfo()) return 'Falta completar el Estado Comercial (nivel de interés, mensaje, canal, medio)'
-  return null
-})
-async function searchLeadByPhone() {
-
-  const phone = form.telefono?.trim()
-
-  if (!phone || phone.length < 5) {
-    toast.warning("Por favor ingrese un número de teléfono válido.");
-    return;
-  }
-
-  if(dataSetted==phone)return
-
-  dataSetted.value = phone
-
-  if (!phone || phone.length < 6) return
-  if (searchingPhone.value) return
-
-  searchingPhone.value = true
-
-  try {
-    const response = await comercialService.searchPhoneGet({ phone });
-    console.log(response)
-
-  form.membership_moment_id  =  response.membership_tier_id
-  form.cat_client_moment_alias = response.cat_client_moment
-
-    if (response.cat_client_moment === 'we_moment_new') {
-      toast.info('Número no registrado. Se registrará como NUEVO.', { timeout: 3000 })
-
-    } else {
-      toast.success(`Encontrado: (${response.cat_client_moment=='we_moment_lead'?'LEAD':'COMUNIDAD'})`, { timeout: 4000 })
-      leadDataHistory.value = true
-
-      if(response.lead_details.length>0){
-        form.full_name = response.lead_details[0].full_name
-        return
-      }
-
-      if(response.legacy_details.length>0){
-        form.full_name = response.legacy_details[0].full_name
-      }
-
-    }
-
-
-  } catch (error) {
-    console.error(error)
-    toast.error('Error al consultar el número de teléfono')
-  } finally {
-    searchingPhone.value = false
-  }
-}
-// 1. VARIABLES REACTIVAS NUEVAS
-const clientHistoryLegacy = ref([]) // Aquí guardaremos 'legacy_details'
-const loadingHistory = ref(false)   // Para el spinner de carga
-const clientHistoryLeads = ref([])
-
-async function openPhoneDetail() {
-
-  const phone = form.telefono?.trim();
-
-  if (!phone || phone.length < 5) {
-    toast.warning("Por favor ingrese un número de teléfono válido.");
-    return;
-  }
-
-
-  if(dataSetted!=phone)dataSetted.value = phone
-
-
-
-  showClientHistory.value = true;
-  loadingHistory.value = true;
-
-  // Reseteamos ambas listas
-  clientHistoryLegacy.value = [];
-  clientHistoryLeads.value = []; // <--- 2. RESETEAR AQUÍ
-
-  activeHistoryTab.value = 'asesoria'; // (Opcional: Si quieres que se abra directo en esta pestaña para probar)
-
-  try {
-    const response = await comercialService.searchPhoneGet({ phone });
-
-    if (response) {
-        // Mapeamos el Histórico legado
-        clientHistoryLegacy.value = response.legacy_details || [];
-
-        // Mapeamos el detalle de Leads (CRM)
-        clientHistoryLeads.value = response.lead_details || []; // <--- 3. ASIGNAR DATA AQUÍ
-    }
-
-  } catch (error) {
-    console.error(error);
-    toast.error("Error al obtener el historial.");
-  } finally {
-    loadingHistory.value = false;
-  }
-}
-
-function onStrategyChange(option){
-  if(!option){
-    form.canal_alias   = 'we_social_media_other'
-  }
-}
-
-// Función centralizada para limpiar todo el estado de la inscripción
-function resetInscriptionData() {
-  Object.assign(insc, {
-    dni: '',
-    document: '',
-    cat_type_document: null,
-    nombres: '',
-    apellidos: '',
-    mother_last_name: '',
-    email: '',
-    full_name: '',
-    last_name: '',
-    saved_money: 0,
-    selectedCurrencyAlias: 'we_currency_soles',
-    cat_insc_modality: 'we_insc_modality_normal',
-    cat_type_payment: 'we_payment_way_single',
-    cat_method_payment: null,
-    modalidadPago: 'CONTADO',
-    montoOriginal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-    dsct_benefit_id: null,
-    val_porcentaje: 0,
-    val_fijo: 0,
-    val_beneficio: 0,
-    montoDescuentoPorcentaje: 0,
-    montoDescuentoFijo: 0,
-    montoBeneficio: 0,
-    montoFinal: 0,
-    total_amount: 0,
-    observacions: '',
-    ticket_payment_urls: [],
-    attachments: [],
-    flag_agreement: false,
-    b2b_contract_id: null,
-
-    // ← FALTABAN ESTOS DOS
-    cat_payment_channel: null,
-    cat_token_provider: null,
-  })
-
-  voucherTouched.value = false
-  form.carnet_url = null
-}
-const isMedioDisabled = computed(() =>
-  ['we_social_media_coti', 'we_social_media_chatbot'].includes(form.canal_alias)
-)
-
-const filteredMediumCatalog = computed(() => {
-  const socialList = socialMediaCatalog.value.filter(e =>
-    ['we_social_media_whatsapp', 'we_social_media_wechat', 'we_social_media_msg', 'we_social_media_comment'].includes(e.alias)
-  )
-
-  const excludeWebFor = ['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook']
-  if (excludeWebFor.includes(form.canal_alias)) {
-    return socialList.filter(e => e.alias !== 'we_social_media_wechat')
-  }
-
-  return socialList
-})
-function onChannelChange(option) {
-  if (!option) {
-    // Regla 3: Canal vacío → limpiar Medio
-    form.strategy_alias = null
-    form.medium_alias = null
-    return
-  }
-
-  const alias = option.alias
-
-  // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
-  if (['we_social_media_coti', 'we_social_media_chatbot'].includes(alias)) {
-    form.medium_alias = 'we_social_media_wechat'
-    return
-  }
-
-  // Regla 2: Instagram, LinkedIn, Facebook → limpiar Medio si es WEB
-  if (['we_social_media_instagram', 'we_social_media_linkedin', 'we_social_media_facebook'].includes(alias)) {
-    if (form.medium_alias === 'we_social_media_wechat') {
-      form.medium_alias = null
-    }
-  }
-}
-
-// Helper para formatear fecha y hora (Agrégalo si no tienes uno global)
-function formatDateTime(isoString) {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  // Retorna formato: 13 Ene 2026 10:58 PM
-  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) +
-         ' ' +
-         date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-}
-
-  function cancelar() { router.back() }
-
-  function buildLeadPayload() {
-    const cat_status_lead        = idByAlias(form.status_alias,          leadStatusCatalog.value)
-    const cat_code_country       = idByAlias(form.country_alias,         countryCatalog.value)
-    const cat_query              = idByAlias(form.query_alias,           queryCatalog.value)
-    const cat_interest_level     = idByAlias(form.nivel_alias,           leadInterestCatalog.value)
-    const cat_channel            = idByAlias(form.canal_alias,           socialMediaCatalog.value)
-    const cat_medium_contact     = idByAlias(form.medium_alias,          socialMediaCatalog.value)
-    const cat_frecuency_word     = idByAlias(form.key_word_alias,        mktWordsCatalog.value)
-    const cat_type_strategy      = idByAlias(form.strategy_alias,        strategyCatalog.value)
-    const cat_prospect_situation = idByAlias(form.ocupacion_alias,       prospectSituationCatalog.value)
-    const cat_client_type        = idByAlias(form.client_status, clientCatalog.value)
-
-    const cat_client_category    = idByAlias(form.cat_client_moment_alias, momentCatalog.value)
-    const cat_program_modality = idByAlias(form.program_modality_alias, programModalityCatalog.value)
-    const cat_program_type = idByAlias(form.category_alias, programTypeCatalog.value)
-
-    const contact_attempts = (form.contactos || []).map((c, idx) => {
-      const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-
-      const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
-      return {
-        id: c.id,
-        attempt_number: idx + 1,
-        cat_type_attempt: idByAlias(c.cat_type_attempt, lAttempts.value),
-        cat_status,
-        contact_datetime,
-        cat_result: idByAlias(c.calling_alias, callingCatalog.value),
-        response: c.respuesta || '',
-        contact_duration: c.contact_duration || 0
-      }
-    })
-
-    return {
-      lead: {
-        first_contact_date: form.fechaContactoInicial || null,
-        cat_program_modality,
-        cat_program_type,
-        program_version_id: form.program_version_id || null,
-        program_edition_id: form.edition_id || null,
-        cat_status_lead,
-        cat_code_country,
-        cat_interest_level,
-        cat_client_type,
-        cat_channel,
-        cat_medium_contact,
-        bot: form.bot? 'Y' : 'N',
-        active: form.active? 'Y' : 'N',
-        web: form.web ? 'Y' : 'N',
-        b2b: form.b2b ? 'Y' : 'N',
-        cat_query,
-        full_name: form.full_name,
-        pay_date: form.pay_date,
-        cat_frecuency_word,
-        cat_type_strategy,
-        cat_prospect_situation,
-        cat_client_moment: cat_client_category,
-        membership_moment_id: form.membership_moment_id,
-        origin_phone: (form.telefono || '').trim() || null,
-        origin_email: null,
-
-        message_init_conversation: form.mensajeChat?.trim() || null,
-        observations:              form.observacion?.trim() || null,
-      },
-      contact_attempts
-    }
-  }
-
-// 1. NUEVA VARIABLE REACTIVA PARA EL DETALLE
-const modelProgramVersion = ref(null)
-const loadingDetail = ref(false)
-const hasEditions = computed(() => {
-  return modelProgramVersion.value?.editions_json && modelProgramVersion.value.editions_json.length > 0;
-});
-const maxPhoneLength = computed(() => {
-  if (!form.country_alias) return 20; // Por defecto
-  const country = countryCatalog.value.find(c => c.alias === form.country_alias);
-  return country?.raw?.variable_1 ? Number(country.raw.variable_1) : 20;
-});
-
-// NUEVO: Watcher para recortar el teléfono si el país cambia y el límite es menor
-watch(maxPhoneLength, (newMaxLength) => {
-  if (form.telefono && form.telefono.length > newMaxLength) {
-    // Si el teléfono tiene más dígitos que el nuevo límite, lo recortamos
-    form.telefono = form.telefono.slice(0, newMaxLength);
-
-    // Opcional: Avisarle al usuario que se ajustó el número
-    toast.info(`El número se ajustó a ${newMaxLength} dígitos para este país.`, { timeout: 3000 });
-  }
-});
-// 3. ACTUALIZAR LA FUNCIÓN DE APERTURA
-async function openProgramVersionDetail() {
-  // Validamos que haya una ID seleccionada
-  if (!form.program_version_id) return;
-
-  loadingDetail.value = true;
-  modelProgramVersion.value = null; // Limpiamos data anterior
-
-  try {
-    // Llamamos al servicio (Postman: /api/program/programversiondetailget)
-    const response = await programService.programVersionDetailGet({
-      program_version_id: form.program_version_id
-    });
-
-    // Asignamos la respuesta completa a la variable
-    modelProgramVersion.value = response;
-
-    // Reseteamos el tab a 'info' y abrimos modal
-    activeTab.value = 'info';
-    showProgramDetail.value = true;
-
-  } catch (error) {
-    console.error(error);
-    toast.error("No se pudo cargar el detalle del programa");
-  } finally {
-    loadingDetail.value = false;
-  }
-}
-
-function buildEnrollmentPayload() {
-  const cat_type_document  = idByAlias(insc.cat_type_document, docTypeCatalog.value)
-  const cat_insc_modality  = idByAlias(insc.cat_insc_modality, inscModalidades.value)
-  const cat_type_payment   = idByAlias(insc.cat_type_payment,  inscPaymentModes.value)
-  const cat_currency       = idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
-  const cat_country        = idByAlias(form.country_alias, countryCatalog.value)
-  const cat_method_payment = isChannelGeneral.value
-    ? idByAlias(insc.cat_method_payment, paymentMethodCatalog.value)
-    : null
-
-  const paymentFiles = (insc.ticket_payment_urls || []).map(f => ({
-    url:  f.url  || f,
-    name: f.name || (f.url || f).split('/').pop() || 'Comprobante',
-    type: f.type || null
-  }))
-
-  const generalAttachments = (insc.attachments || []).map(f => ({
-    url:  f.url  || f,
-    name: f.name || (f.url || f).split('/').pop() || 'Adjunto',
-    type: f.type || null
-  }))
-
-  return {
-    inscription: {
-      lead_id:              createdLeadId.value,
-      program_version_id:   form.edition_id ? null : form.program_version_id,
-      program_edition_id:   form.edition_id,
-
-      // Datos del alumno
-      document:             insc.document,
-      cat_type_document,
-      full_name:            insc.full_name,
-      last_name:            insc.last_name,
-      mother_last_name:     insc.mother_last_name,
-      email:                insc.email,
-      cat_country,
-      cat_insc_modality,
-
-      // Canal y pago
-      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id)
-      cat_type_payment:     isChannelGeneral.value ? cat_type_payment : null,
-      cat_currency,
-      cat_method_payment,                                // null si TOKEN o WEB
-      cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
-      saved_money:          Number(insc.saved_money),
-
-      // Precios y descuentos
-      list_price:           insc.montoOriginal,
-      total_amount:         Number(insc.total_amount),
-      dsct_porcent_id:      insc.dsct_porcent_id,
-      dsct_stick_id:        insc.dsct_stick_id,
-      dsct_benefit_id:      insc.dsct_benefit_id,
-
-      // Observaciones y archivos
-      observations:         insc.observacions,
-      student_attachment_url: form.carnet_url || null,
-      ticket_payment_urls:  paymentFiles,     // → enrollment_attachments
-      attachments:          generalAttachments // → lead_attachments
-    }
-  }
-}
-
-async function confirmarInscripcion() {
-   if (!comercialService) return console.error('comercialService no inyectado')
-
-  if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
-    toast.warning("Por favor complete los campos obligatorios de la inscripción")
-    return
-  }
-  if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
-    toast.warning("Faltan datos obligatorios en el formulario del Lead.")
-    return
-  }
-
-  // Comprobante GENERAL
-  if (isChannelGeneral.value && !isVoucherOptional.value &&
-      (!insc.ticket_payment_urls || insc.ticket_payment_urls.length === 0)) {
-    voucherTouched.value = true
-    toast.warning('El canal General requiere al menos un Comprobante de Pago.')
-    return
-  }
-
-  // Token provider
-  if (isChannelToken.value && !insc.cat_token_provider) {
-    toast.warning('Debe seleccionar el proveedor del Link / Token.')
-    return
-  }
-  // Validar plan de cuotas
-if (isInstallmentMode.value && !installmentPlanValid.value) {
-  toast.warning('El plan de cuotas no cuadra con el monto final. Ajusta los montos antes de guardar.')
-  return
-}
-  savingInsc.value = true
-
-  try {
-    // --- PASO A: GUARDAR EL LEAD ---
-    const leadPayload = buildLeadPayload()
-    const currentLeadId = leadIdParam.value || createdLeadId.value
-
-    if (currentLeadId) {
-      const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
-      if (leadResp.result === 0) {
-        toast.error(leadResp.message)
-        return
-      } else if (leadResp.result === 2) {
-        toast.warning(leadResp.message)
-        return
-      }
-    } else {
-      const leadResp = await comercialService.leadRegister(leadPayload)
-      if (leadResp.result === 0) {
-        toast.error(leadResp.message)
-        return
-      } else if (leadResp.result === 2) {
-        toast.warning(leadResp.message)
-        return
-      }
-      createdLeadId.value   = leadResp.lead_id
-      createdPersonId.value = leadResp.person_id
-    }
-
-    // --- PASO B: GUARDAR LA INSCRIPCIÓN ---
-    const enrollmentPayload = buildEnrollmentPayload()
-    const enrollResp = await comercialService.enrollmentRegister(enrollmentPayload)
-
-    if (enrollResp.result === 1) {
-      toast.success(enrollResp.message)
-      showViewModal.value = false
-      router.push({ name: 'ComercialListado' })
-    } else if (enrollResp.result === 0) {
-      toast.error(enrollResp.message)
-    } else {
-      toast.warning(enrollResp.message)
-    }
-
-  } catch (err) {
-    console.error(err)
-    toast.error('Error inesperado al procesar la inscripción.')
-  } finally {
-    savingInsc.value = false
-  }
-}
-
-async function guardar() {
-  if (!comercialService) return console.error('comercialService no inyectado')
-  saving.value = true
-  try {
-    const payload = buildLeadPayload()
-    let result, message
-
-    if (isEdit.value) {
-      const resp = await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
-      result  = resp.result
-      message = resp.message
-    } else {
-      const resp = await comercialService.leadRegister(payload)
-      result  = resp.result
-      message = resp.message
-      if (result === 1) {
-        createdLeadId.value   = resp.lead_id
-        createdPersonId.value = resp.person_id
-      }
-    }
-
-    if (result === 1) {
-      toast.success(message)
-      router.push({ name: 'ComercialListado' })
-    } else if (result === 0) {
-      toast.error(message)
-    } else {
-      toast.warning(message)
-    }
-
-  } catch (err) {
-    console.error(err)
-    toast.error('Error inesperado al guardar el lead.')
-  } finally {
-    saving.value = false
-  }
-}
-
-function openInscription() {
-    // 1. Primero limpiamos todo rastro anterior
-    resetInscriptionData();
-
-    // 2. Pre-llenamos datos desde el Lead (form)
-    insc.full_name = form.full_name || '';
-    insc.email     = ''; // O form.email si tuvieras ese dato
-
-    // 3. Configuraciones por defecto iniciales
-    insc.cat_insc_modality     = 'we_insc_modality_normal';
-    insc.selectedCurrencyAlias = 'we_currency_soles';
-    insc.cat_type_payment      = 'we_payment_way_single';
-    // Canal de pago: General por defecto
-    const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
-    if (generalChannel) insc.cat_payment_channel = generalChannel.id
-    // 4. Recalcular precio base según el Lead actual (Importante para que aparezca el precio)
-    // Forzamos la actualización del precio base basado en la moneda por defecto
-    const basePrice = calculatedBasePrice.value;
-    insc.montoOriginal = basePrice;
-
-    // 5. Mostrar modal
-    showViewModal.value = true;
-}
-
-  function validateLeadInfo() {
-    const required = ['fechaContactoInicial']
-    for (const field of required) {
-      if (field === 'edition_id') {
-        if(route.query.clone_from)return true
-        if (form.category_alias && form.program_version_id && form.program_modality_selected_alias !== 'we_modality_online' && !form[field]) {
-          return false
-        }
-      } else if (!form[field]) return false
-    }
-    return true
-  }
-  function validateContactInfo() {
-    const required = ['telefono','status_alias','country_alias','full_name','cat_client_moment_alias']
-    return required.every(f => !!form[f])
-  }
-  function validateCommercialInfo() {
-    const required = ['nivel_alias','mensajeChat','canal_alias','medium_alias']
-    return required.every(f => !!form[f])
-  }
-  function validateInscriptionClientInfo() {
-    const required = ['cat_type_document','document','email','full_name','last_name','mother_last_name','cat_insc_modality']
-    return required.every(f => !!insc[f])
-  }
-function validateInscriptionPaymentInfo() {
-  // Moneda siempre obligatoria
-  if (!insc.selectedCurrencyAlias) return false
-
-  // Canal General: requiere modalidad y método de pago
-  if (isChannelGeneral.value) {
-    if (!insc.cat_type_payment) return false
-    if (!insc.cat_method_payment) return false
-    // Cuotas: requiere adelanto > 0
-    if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
-    return true
-  }
-
-  // Canal Token: requiere proveedor
-  if (isChannelToken.value) {
-    return !!insc.cat_token_provider
-  }
-
-  // Canal Web: solo necesita el canal seleccionado
-  if (isChannelWeb.value) return true
-
-  // Sin canal: no pasa
-  return false
-}
-
-
-  const montoOriginal = computed(() => 1000)
-
-
-    function onProgramaTypeChange(opcion) {
-        if (!opcion){
-          form.program_version_id = null
-          form.program_modality_alias = null
-          form.edition_id = null
-          return
-        }
-    }
-
-    function openURL(param){
-      window.open(param, '_blank', 'noopener,noreferrer');
-    }
-
-  // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
-  function onProgramaChange(opcion) {
-    // 1. Lógica para la Modal de Info
-    selectedProgram.value = opcion;
-
-    // 2. Lógica del Formulario
-    if (!opcion){
-        form.edition_id = null;
-        form.link = null;
-        form.program_modality_selected_alias = null;
-
-        // IMPORTANTE: Resetear precios si se limpia el programa
-        form.price_student_soles = 0;
-        form.price_student_dollars = 0;
-        form.price_profesional_soles = 0;
-        form.price_profesional_dollars = 0;
-
-        return;
-    }
-
-    form.program_modality_selected_alias = opcion.cat_model_modality_alias;
-
-    // Guardamos el link en el form por si acaso
-    if(opcion.link){
-        form.link = opcion.link;
-    }
-
-    form.program_sessions          = Number(opcion?.sessions || 0)
-    form.program_sessions_per_week = Number(opcion?.sessions_per_week || 1)
-
-    // --- AQUÍ ESTÁ EL FIX ---
-    // Debes asignar los precios del objeto 'opcion' a las variables del 'form'
-    // para que el computed 'calculatedBasePrice' detecte el cambio.
-    form.price_student_soles = Number(opcion.price_student_soles || 0);
-    form.price_student_dollars = Number(opcion.price_student_dollars || 0);
-    form.price_profesional_soles = Number(opcion.price_profesional_soles || 0);
-    form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0);
-}
-
-
-  const searchEditionsFiltered = async (q, child, index) => {
-
-    //crear const month y year
-    const month = new Date().getMonth() + 1; // Mes actual
-    const year = new Date().getFullYear();    // Año actual
-
-
-    // 1. Llamar al servicio original
-    const response = await editionService.editionCaller({
-      q,
-      program_version_id: form.program_version_id,
-      month,
-      year
-    });
-
-
-    return response;
-  }
-
-function onEditionChange(opcion) {
-  if (!opcion) return
-  form.edition_start_date = opcion.start_date || null  // 'YYYY-MM-DD'
-}
-
-    const clientProfileType = computed(() => {
-      if (!form.ocupacion_alias) return null
-
-      const ocupacionInfo = prospectSituationCatalog.value.find(
-        opt => opt.alias === form.ocupacion_alias
-      )
-
-      return ocupacionInfo?.variable_3 || null
-    })
-
-    const calculatedBasePrice = computed(() => {
-      if (!insc.selectedCurrencyAlias) return 0
-
-      const isUSD = insc.selectedCurrencyAlias === 'we_currency_usd'
-      const type = clientProfileType.value
-
-      if (type === 'estudiante') {
-        return isUSD
-          ? Number(form.price_student_dollars || 0)
-          : Number(form.price_student_soles || 0)
-      } else {
-        return isUSD
-          ? Number(form.price_profesional_dollars || 0)
-          : Number(form.price_profesional_soles || 0)
-      }
-    })
-
-    import { watch } from 'vue'
-
-    watch(calculatedBasePrice, (newPrice) => {
-      insc.montoOriginal = newPrice
-    }, { immediate: true })
-
-    watch(() => insc.selectedCurrencyAlias, () => {
-    })
-
-    const alCerrarModal = () => {
-      console.log('La modal se ha cerrado. Limpiando formulario...')
-      Object.assign(insc, {
-        dni: '',
-        nombres: '',
-        apellidos: '',
-        correo: '',
-        saved_money: 0,
-        selectedCurrencyAlias: '',
-        modalidadPrograma: 'NORMAL',
-        promocion_id: null,
-        descuento_id: null,
-        modalidadPago: 'CONTADO',
-        cat_method_payment: null,
-        montoOriginal: 0,
-        adelanto: 0,
-        observacion: '',
-        montoDescuentoPorcentaje: 0,
-        montoDescuentoFijo: 0,
-        montoFinal: 0,
-        dsct_porcent_id: null,
-        dsct_stick_id: null,
-        dsct_benefit_id: null,
-        val_porcentaje: 0,
-        val_fijo: 0,
-        val_beneficio: 0,
-        montoDescuentoPorcentaje: 0,
-        montoDescuentoFijo: 0,
-        montoBeneficio: 0,
-        montoFinal: 0,
-      })
-
-    }
-
-    watch(showViewModal, (estaAbierto) => {
-      if (!estaAbierto) {
-        resetInscriptionData();
-      }
-    })
-
-// ══════════════════════════════════════════════════
-// PLAN DE CUOTAS
-// ══════════════════════════════════════════════════
-
-// Helper formateador (evita repetir .toLocaleString en template)
-const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
-const isInstallmentMode = computed(() =>
-  isChannelGeneral.value &&
-  insc.cat_type_payment === 'we_payment_way_installments' &&
-  Number(insc.montoOriginal) > 0
-)
-
-
-// Monto que queda después del adelanto → se reparte en cuotas 2..N
-const installmentRemainder = computed(() => {
-  const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
-  return rem > 0 ? rem : 0
-})
-
-
-
-
-const installmentPlanValid = computed(() => {
-  if (!isInstallmentMode.value || installmentPlan.value.length === 0) return true
-  return Math.abs(installmentTotalSum.value - installmentRemainder.value) < 0.01
-})
-
-// Suma total incluyendo adelanto
-const installmentTotalSum = computed(() =>
-  round2(installmentPlan.value.reduce((acc, c) => acc + c.amount, 0))
-)
-
-// Número de cuotas calculado automáticamente según duración del curso
-const autoNumCuotas = computed(() => {
-  const sessions        = form.program_sessions         || 18
-  const sessionsPerWeek = form.program_sessions_per_week || 1
-  const weeks  = sessions / sessionsPerWeek
-  const months = Math.round(weeks / 4)
-  return Math.min(Math.max(months, 1), 5) // entre 1 y 5
-})
-
-
-// Plan completo (reserva separada, cuotas desde #1)
-const installmentPlan = computed(() => {
-  if (!isInstallmentMode.value) return []
-const saldo    = installmentRemainder.value
-  const n        = autoNumCuotas.value
-  const startRaw = form.edition_start_date
-
-  if (saldo <= 0 || n < 1) return []
-
-  // Distribución: floor en todas, el residuo va a la última
-  const cuotaBase  = Math.floor((saldo / n) * 100) / 100
-  const remainder  = round2(saldo - cuotaBase * n)
-
-  // Fecha base para calcular vencimientos
-  const base = startRaw ? new Date(startRaw + 'T00:00:00') : new Date()
-
-  // Cuota 1: fecha_inicio + 15 días
-  const fecha1 = new Date(base)
-  fecha1.setDate(fecha1.getDate() + 15)
-
-  const plan = []
-  for (let i = 0; i < n; i++) {
-    let dueDate
-
-    if (i === 0) {
-      dueDate = fecha1
-    } else {
-      // Día 1 del mes siguiente al mes de cuota 1, avanzando i meses
-      dueDate = new Date(fecha1.getFullYear(), fecha1.getMonth() + i, 1)
-    }
-
-    const amount = i === n - 1
-      ? round2(cuotaBase + remainder)   // última cuota absorbe el residuo
-      : cuotaBase
-
-    plan.push({
-      installment_number: i + 1,
-      amount,
-      due_date: dueDate.toISOString().slice(0, 10)
-    })
-  }
-
-  return plan
-})
-</script>
 

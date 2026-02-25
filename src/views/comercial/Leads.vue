@@ -759,7 +759,33 @@
           <p>No hay archivos adjuntos en esta matrícula.</p>
         </div>
       </div>
+<!-- Observaciones del Asesor (del Lead) -->
+<div class="mt-4 pt-2" v-if="enrollmentData.lead_observations">
+  <h6 class="fieldset-title">
+    <i class="fa-solid fa-comment-dots me-1 text-secondary"></i> 
+    Observaciones del Asesor
+  </h6>
+  <div class="exec-alert alert-info" style="border-left-color: #94a3b8;">
+    <i class="fa-solid fa-quote-left opacity-40 mt-1"></i>
+    <p class="mb-0" style="font-size:.85rem; white-space: pre-line; color: var(--text-primary);">
+      {{ enrollmentData.lead_observations }}
+    </p>
+  </div>
+</div>
 
+<!-- Notas de Matrícula -->
+<div class="mt-3" v-if="enrollmentData.notes">
+  <h6 class="fieldset-title">
+    <i class="fa-solid fa-note-sticky me-1 text-warning"></i> 
+    Notas de Matrícula
+  </h6>
+  <div class="exec-alert alert-warning">
+    <i class="fa-solid fa-triangle-exclamation opacity-60 mt-1"></i>
+    <p class="mb-0" style="font-size:.85rem; white-space: pre-line;">
+      {{ enrollmentData.notes }}
+    </p>
+  </div>
+</div>
     </div>
     <template #footer>
       <div v-if="enrollmentData" class="d-flex justify-content-end w-100">
@@ -1825,6 +1851,7 @@ async function fetchLeads() {
       program_text:        filters.program_text  || null,
       web:                 filters.web           || null,
       b2b:                 filters.b2b           || null,
+  order_by: filters.order_by ?? 0, 
 
       from_date:           filters.rangoFechas?.start        || null,
       to_date:             filters.rangoFechas?.end          || null,

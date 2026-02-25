@@ -290,7 +290,7 @@
             <CFormCheck
               id="btn-check"
               :button="{ color: 'primary' }"
-              autocomplete="off"
+              autocomplete="nope"
               label="Single toggle"
             />
           </DocsExample>
@@ -298,7 +298,7 @@
             <CFormCheck
               id="btn-check-2"
               :button="{ color: 'primary' }"
-              autocomplete="off"
+              autocomplete="nope"
               label="Checked"
               checked
             />
@@ -307,7 +307,7 @@
             <CFormCheck
               id="btn-check-3"
               :button="{ color: 'primary' }"
-              autocomplete="off"
+              autocomplete="nope"
               label="Disabled"
               disabled
             />
@@ -319,7 +319,7 @@
               :button="{ color: 'secondary' }"
               type="radio"
               name="options"
-              autocomplete="off"
+              autocomplete="nope"
               label="Checked"
               checked
             />
@@ -328,7 +328,7 @@
               :button="{ color: 'secondary' }"
               type="radio"
               name="options"
-              autocomplete="off"
+              autocomplete="nope"
               label="Radio"
             />
             <CFormCheck
@@ -336,7 +336,7 @@
               :button="{ color: 'secondary' }"
               type="radio"
               name="options"
-              autocomplete="off"
+              autocomplete="nope"
               label="Radio"
               disabled
             />
@@ -345,7 +345,7 @@
               :button="{ color: 'secondary' }"
               type="radio"
               name="options"
-              autocomplete="off"
+              autocomplete="nope"
               label="Radio"
             />
           </DocsExample>
@@ -359,7 +359,7 @@
               <CFormCheck
                 id="btn-check-outlined"
                 :button="{ color: 'primary', variant: 'outline' }"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Single toggle"
               />
             </div>
@@ -367,7 +367,7 @@
               <CFormCheck
                 id="btn-check-2-outlined"
                 :button="{ color: 'secondary', variant: 'outline' }"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Checked"
                 checked
               />
@@ -378,7 +378,7 @@
                 :button="{ color: 'success', variant: 'outline' }"
                 type="radio"
                 name="options-outlined"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio"
                 checked
               />
@@ -387,7 +387,7 @@
                 :button="{ color: 'danger', variant: 'outline' }"
                 type="radio"
                 name="options-outlined"
-                autocomplete="off"
+                autocomplete="nope"
                 label="Radio"
               />
             </div>

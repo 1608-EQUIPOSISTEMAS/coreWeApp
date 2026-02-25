@@ -4,10 +4,31 @@
   const itemsCount = 0
 
   //updateBase()
-  import { inject } from 'vue'
   import { ServiceKeys } from '@/services'
   import { useToast } from 'vue-toastification'
+import { inject } from 'vue'
 
+const catalog = inject('catalog')
+
+
+async function syncCatalog() {
+  try {
+    toast.info('Sincronizando catálogo...')
+
+    await catalog.refresh()
+
+    // limpiar cache dependiente
+    localStorage.removeItem('membershipList')
+
+    // precargar nuevamente si deseas
+    await catalog.membershipList({ active: true })
+
+    toast.success('Catálogo sincronizado correctamente')
+  } catch (error) {
+    console.error('Error al sincronizar catálogo:', error)
+    toast.error('Error al sincronizar el catálogo')
+  }
+}
   const toast = useToast()
   const integrationService = inject(ServiceKeys.Integration)
 
@@ -105,8 +126,13 @@
       >
         Configuración
       </CDropdownHeader>
-      <CDropdownItem> <CIcon icon="cil-user" /> Perfil </CDropdownItem>
-      <CDropdownItem> <CIcon icon="cil-settings" /> Ajustes </CDropdownItem>
+      <!-- <CDropdownItem> <CIcon icon="cil-user" /> Perfil </CDropdownItem>
+      <CDropdownItem> <CIcon icon="cil-settings" /> Ajustes </CDropdownItem> -->
+      <CDropdownItem
+        @click="syncCatalog"
+      >
+        <CIcon icon="cil-sync" /> Sincronizar Catálogo
+      </CDropdownItem>
       <CDropdownDivider />
       <CDropdownItem @click="logout()"> <CIcon icon="cil-lock-locked"/> Cerrar Sesión </CDropdownItem>
     </CDropdownMenu>

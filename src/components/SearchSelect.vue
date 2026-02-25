@@ -16,7 +16,7 @@
 
       <input
         v-else
-        autocomplete="off"
+        autocomplete="nope"
         type="text"
         class="searchselect-input"
         :placeholder="placeholder"

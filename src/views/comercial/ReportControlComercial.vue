@@ -113,7 +113,7 @@
              <div class="kpi-card-sub">De <strong class="text-dark">{{ stats.general.attemptUpCount }}</strong> gestionados</div>
            </div>
 
-           <div class="kpi-card kpi-interactive" @click="drillDown('interest', 'Bajo')">
+           <div class="kpi-card kpi-interactive" @click="drillDown('interestPriority', 'Bajo')">
              <div class="kpi-card-header">
                <span class="kpi-card-label">ALTA PRIORIDAD</span>
                <div class="kpi-indicator" style="background: var(--red-600)"></div>
@@ -774,7 +774,7 @@ function drillDown(type, valueName) {
     const r = findInCatalog('we_category_query', 'description', valueName)
     if (r) query.query_ids = r
   }
-   else if (type === 'interest') {
+   else if (type === 'interestPriority') {
       const opts = catalog.options('we_lead_interest')
       const found = opts.find(x => x.description === valueName)
          ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
@@ -804,6 +804,18 @@ function drillDown(type, valueName) {
        if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
       
    }
+  else if (type === 'interest') {
+    const opts = catalog.options('we_lead_interest')
+    const found = opts.find(x => x.description === valueName)
+        ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
+
+    if (found) {
+        query.interest_level_ids = encodeFilter([
+          { value: found.id, label: found.description }
+        ])
+    }
+    
+  }
 else if (type === 'medium') {
     // Busca en el catálogo de medios y lo codifica como [{value, label}]
     const r = findInCatalog('we_medium_contact', 'description', valueName)

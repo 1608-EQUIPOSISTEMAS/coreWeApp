@@ -26,7 +26,7 @@
             <div class="btn-group w-100" role="group">
                 <input 
                     type="radio" class="btn-check" name="customerType" id="typePerson" 
-                    autocomplete="off" :checked="!isCompany" @change="setCompany(false)"
+                    autocomplete="nope" :checked="!isCompany" @change="setCompany(false)"
                     :disabled="isEdit"
                 >
                 <label class="btn btn-outline-primary" for="typePerson">
@@ -35,7 +35,7 @@
 
                 <input 
                     type="radio" class="btn-check" name="customerType" id="typeCompany" 
-                    autocomplete="off" :checked="isCompany" @change="setCompany(true)"
+                    autocomplete="nope" :checked="isCompany" @change="setCompany(true)"
                     :disabled="isEdit"
                 >
                 <label class="btn btn-outline-primary" for="typeCompany">
@@ -56,15 +56,15 @@
             <template v-if="!isCompany">
                 <div class="col-md-4">
                     <label class="form-label mb-1">Nombres <span class="required-star">*</span></label>
-                    <input autocomplete="off" v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="form-control" placeholder="NOMBRES"/>
+                    <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="form-control" placeholder="NOMBRES"/>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label mb-1">Apellido Paterno <span class="required-star">*</span></label>
-                    <input autocomplete="off" v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="form-control" placeholder="A. PATERNO" />
+                    <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="form-control" placeholder="A. PATERNO" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label mb-1">Apellido Materno</label>
-                    <input autocomplete="off" v-restrict="{ transform: 'upper' }" v-model.trim="form.mother_last_name" type="text" class="form-control" placeholder="A. MATERNO" />
+                    <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.mother_last_name" type="text" class="form-control" placeholder="A. MATERNO" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label mb-1">Tipo Documento <span class="required-star">*</span></label>
@@ -75,11 +75,11 @@
             <template v-else>
                 <div class="col-md-6">
                     <label class="form-label mb-1">Razón Social <span class="required-star">*</span></label>
-                    <input autocomplete="off" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_social" type="text" class="form-control" placeholder="RAZÓN SOCIAL" />
+                    <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_social" type="text" class="form-control" placeholder="RAZÓN SOCIAL" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label mb-1">Razón Comercial</label>
-                    <input autocomplete="off" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_comercial" type="text" class="form-control" placeholder="NOMBRE COMERCIAL" />
+                    <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_comercial" type="text" class="form-control" placeholder="NOMBRE COMERCIAL" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label mb-1">Tipo Documento</label>
@@ -91,7 +91,7 @@
               <label class="form-label mb-1">
                 N° Documento <span class="required-star">*</span>
               </label>
-              <input autocomplete="off"
+              <input autocomplete="nope"
                 v-model.trim="form.document_number"
                 type="text"
                 class="form-control mono"
@@ -126,7 +126,7 @@
                 <div class="col-md-3">
                     <label class="form-label mb-1 d-block">Estado (Sistema)</label>
                     <label class="form-switch">
-                      <input autocomplete="off" type="checkbox" v-model="form.active" />
+                      <input autocomplete="nope" type="checkbox" v-model="form.active" />
                       <span></span>
                     </label>
                 </div>
