@@ -332,11 +332,11 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 const dashboardService = inject(ServiceKeys.Dashboard)
 // ── Estado UI ──
-const isCharts    = ref(false)
-const isRefreshing = ref(false)
-const filters     = ref({ period: '2026-01', asesor: 'all' })
+const isCharts     = ref(false)
+const isRefreshing = ref(true) // Inicia en true para que muestre el loader de entrada
+const filters      = ref({ period: '2026-01', asesor: 'all' })
+const weeklyData   = ref([]) // Inicia vacío
 
-// ── Lista de Asesores ──
 const asesores = ref([
   { id: 'a01', nombre: 'Ana Torres' },
   { id: 'a02', nombre: 'Carlos Mendoza' },
@@ -344,39 +344,49 @@ const asesores = ref([
   { id: 'a04', nombre: 'Marco Ríos' },
   { id: 'a05', nombre: 'Sofía Huanca' },
 ])
-
 const asesorLabel = computed(() => {
   if (filters.value.asesor === 'all') return 'Todos'
   return asesores.value.find(a => a.id === filters.value.asesor)?.nombre || 'Todos'
 })
-
 const refreshData = () => {
-  isRefreshing.value = true
-  setTimeout(() => { isRefreshing.value = false }, 900)
+  loadData()
 }
-
 // ── Orden de canales ──
 const channelsOrder = ['lk', 'ig', 'fb', 'other', 'web', 'bot', 'cot', 'com']
 const channelLabels = ['LinkedIn', 'Instagram', 'Facebook', 'Otros', 'Web', 'Chatbot', 'Cotización', 'Comercial']
 
-// 👇 ESTO ES LO QUE FALTA
-const weeklyData = ref([])
+
 // Agrega en el setup:
 const isLoading = ref(true)
-
 async function loadData() {
-  isLoading.value = true
+  isRefreshing.value = true
   try {
+    const response = await dashboardService.ventasCanalList({
+      year:      Number(filters.value.period.split('-')[0]),
+      month_num: Number(filters.value.period.split('-')[1]),
+      advisor:   filters.value.asesor
+    })
 
-    const json = await dashboardService.ventasCanalList({
-        year:      Number(filters.value.period.split('-')[0]),
-        month_num: Number(filters.value.period.split('-')[1]),
-        advisor:   filters.value.asesor
-      })
-    weeklyData.value = json.data.weeklyData
-  } catch(e) { console.error(e) }
-  finally { isLoading.value = false }
+    console.log("Respuesta de Axios:", response)
+
+    // ✅ CORREGIDO: el interceptor ya desempaquetó response.data
+    // Soporta: response directo, response.data, o response.data.data
+    const payload = response?.weeklyData
+      ? response
+      : response?.data?.weeklyData
+        ? response.data
+        : response?.data?.data ?? response.data ?? response
+
+    weeklyData.value = payload?.weeklyData ?? []
+
+  } catch(e) {
+    console.error("Error al cargar los datos del dashboard:", e)
+    weeklyData.value = []
+  } finally {
+    isRefreshing.value = false
+  }
 }
+
 
 onMounted(() => loadData())
 watch(() => [filters.value.period, filters.value.asesor], loadData)
