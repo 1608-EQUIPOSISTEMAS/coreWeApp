@@ -23,5 +23,11 @@ export default class IntegrationService {
       headers: { 'Content-Type': 'multipart/form-data' }
     })).data;
   }
-   
+
+  
+  async syncRprospectos(payload) {
+    const response = (await api.post('/integration/syncrprospectos', payload)).data;
+    return response;
+  }
+     
 }

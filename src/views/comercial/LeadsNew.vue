@@ -368,7 +368,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <label class="exec-label">Canal prospección <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.canal_alias"
-                :items="socialMediaCatalog.filter(e=> !['we_social_media_whatsapp','we_social_media_wechat','we_social_media_msg','we_social_media_comment'].includes(e.alias))"
+                :items="socialMediaCatalog.filter(e=> !['we_social_media_whatsapp','we_social_media_msg','we_social_media_comment'].includes(e.alias))"
                 required
                 label-field="description"
                 value-field="alias"
@@ -2337,7 +2337,7 @@ function resetInscriptionData() {
   form.carnet_url = null
 }
 const isMedioDisabled = computed(() =>
-  ['we_social_media_coti', 'we_social_media_chatbot'].includes(form.canal_alias)
+  ['we_social_media_coti', 'we_social_media_chatbot','we_social_media_wechat'].includes(form.canal_alias)
 )
 
 const filteredMediumCatalog = computed(() => {
@@ -2365,6 +2365,13 @@ function onChannelChange(option) {
   // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
   if (['we_social_media_coti', 'we_social_media_chatbot'].includes(alias)) {
     form.medium_alias = 'we_social_media_wechat'
+    return
+  }
+
+  
+  // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
+  if (['we_social_media_wechat'].includes(alias)) {
+    form.medium_alias = 'we_social_media_whatsapp'
     return
   }
 

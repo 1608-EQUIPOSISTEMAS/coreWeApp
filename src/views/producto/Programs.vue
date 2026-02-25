@@ -184,14 +184,9 @@
           </div>
           <div class="col-md-6">
             <label class="exec-label">Modalidad</label>
-            <MultiSelect
-              v-model="filters.modality_ids"
-              :items="filtroModalidades"
-              label-key="description"
-              value-key="id"
-              placeholder="Modalidades..."
-              class="w-100"
-            />
+            
+            <SearchSelect v-model="filters.cat_model_modality" :items="filtroModalidades" label-field="description" value-field="id" placeholder="Seleccionar..." class="w-100" />
+
           </div>
         </div>
       </div>
@@ -374,6 +369,7 @@ const filters = reactive({
   estado: null,
   cat_type_program: null,
   cat_category: null,
+  cat_model_modality:null,
   modality_ids: [],
   q: ''
 })
@@ -471,7 +467,8 @@ async function fetchPrograms() {
       active: filters.estado,
       cat_type_program: filters.cat_type_program || null,
       cat_category: filters.cat_category || null,
-      modality_ids: filters.modality_ids.length ? filters.modality_ids : null,
+      // modality_ids: filters.modality_ids.length ? filters.modality_ids : null,
+      cat_model_modality: filters.cat_model_modality,
       q: filters.q || null,
       page: pagin.value.page,
       size: pagin.value.size

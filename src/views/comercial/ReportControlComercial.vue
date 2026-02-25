@@ -1,887 +1,293 @@
 <template>
   <div class="exec-shell">
 
-    <!-- ════════════════════════════════════════
-         MASTHEAD
-    ════════════════════════════════════════ -->
     <header class="exec-masthead">
       <div class="masthead-inner">
         <div class="masthead-brand">
           <div class="brand-rule"></div>
           <div class="brand-text">
-            <span class="brand-eyebrow">Análisis Semanal de Conversión</span>
-            <h1 class="brand-title">Reporte de Ventas por Canal</h1>
+            <span class="brand-eyebrow">Tablero de conversión y rendimiento</span>
+            <h1 class="brand-title">Control Comercial</h1>
           </div>
         </div>
-
         <div class="masthead-actions">
-          <!-- Toggle único: Tabla / Gráfico -->
-          <button @click="isCharts = !isCharts" class="btn-exec btn-exec-ghost toggle-btn">
-            <svg v-if="!isCharts" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/>
-            </svg>
-            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
-            </svg>
-            <span>{{ isCharts ? 'Vista Tabular' : 'Vista Gráfica' }}</span>
-          </button>
-
-          <button class="btn-exec btn-exec-primary" @click="refreshData" :disabled="isRefreshing">
-            <svg :class="{ 'spin': isRefreshing }" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-            </svg>
-            {{ isRefreshing ? 'Actualizando…' : 'Actualizar Datos' }}
+          <button class="btn-exec btn-exec-primary" @click="fetchStats" :disabled="isLoading">
+            <i class="fa-solid fa-rotate me-1" :class="{ 'fa-spin': isLoading }"></i>
+            {{ isLoading ? 'Actualizando...' : 'Actualizar Datos' }}
           </button>
         </div>
       </div>
 
-      <!-- Filtros inline + KPIs rápidos -->
-      <div class="masthead-filters">
+      <div class="masthead-filters filter-scrollable">
         <div class="filter-group">
-          <label class="filter-label">AÑO Y MES</label>
-          <select class="exec-select" v-model="filters.period">
-            <option value="2026-01">Enero 2026</option>
-            <option value="2026-02">Febrero 2026</option>
-            <option value="2026-03">Marzo 2026</option>
-            <option value="2026-04">Abril 2026</option>
-            <option value="2026-05">Mayo 2026</option>
-            <option value="2026-06">Junio 2026</option>
-            <option value="2026-07">Julio 2026</option>
-            <option value="2026-08">Agosto 2026</option>
-            <option value="2026-09">Septiembre 2026</option>
-            <option value="2026-10">Octubre 2026</option>
-            <option value="2026-11">Noviembre 2026</option>
-            <option value="2026-12">Diciembre 2026</option>
-            <option value="2025-12">Diciembre 2025</option>
-            <option value="2025-11">Noviembre 2025</option>
-            <option value="2025-10">Octubre 2025</option>
-            <option value="2025-09">Septiembre 2025</option>
-            <option value="2025-08">Agosto 2025</option>
-            <option value="2025-07">Julio 2025</option>
-            <option value="2025-06">Junio 2025</option>
-          </select>
+          <label class="filter-label">REGISTRO</label>
+          <BaseDatePicker
+             v-model="dateRangeString"
+             :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+             class="exec-input-dark"
+             placeholder="Seleccionar..."
+             @on-change="(d, s) => handleDateFilterChange(d, 'created')"
+          />
         </div>
         <div class="filter-sep"></div>
+        
         <div class="filter-group">
-          <label class="filter-label">ASESOR</label>
-          <select class="exec-select" v-model="filters.asesor">
-            <option value="all">Todos los Asesores</option>
-            <option v-for="a in asesores" :key="a.id" :value="a.id">{{ a.nombre }}</option>
-          </select>
+          <label class="filter-label">F. PAGO</label>
+          <BaseDatePicker
+             v-model="payRangeString"
+             :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+             class="exec-input-dark exec-input-success"
+             placeholder="Seleccionar..."
+             @on-change="(d, s) => handleDateFilterChange(d, 'payment')"
+          />
         </div>
-
-        <div class="filter-spacer"></div>
-
-        <transition name="slide-fade">
-          <div class="masthead-kpis" v-if="!isRefreshing">
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">TOTAL CONSULTAS</span>
-              <span class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
-            </div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">TOTAL VENTAS</span>
-              <span class="inline-kpi-value accent">{{ totalGlobal.ventas }}</span>
-            </div>
-            <div class="inline-kpi" style="margin-right: 4px;">
-              <span class="inline-kpi-label">CONVERSIÓN GLOBAL</span>
-              <span class="inline-kpi-value" :class="pctColorClass(calcPct(totalGlobal.consultas, totalGlobal.ventas))">
-                {{ calcPct(totalGlobal.consultas, totalGlobal.ventas) }}%
-              </span>
-            </div>
-          </div>
-        </transition>
+        <div class="filter-sep" v-if="!isStrictlyComercial"></div>
+        
+        <div class="filter-group" v-if="!isStrictlyComercial">
+          <label class="filter-label">ASESOR ASIGNADO</label>
+          <MultiSelect
+             v-model="filters.owner_user_ids"
+             :items="filtroOwners"
+             label-key="description"
+             value-key="id"
+             placeholder="Todos..."
+             class="exec-input-dark-component"
+          />
+        </div>
+        <div class="filter-sep"></div>
+        
+        <div class="filter-group">
+          <label class="filter-label">MODALIDAD</label>
+          <SearchSelect
+             v-model="filters.model_modality_id"
+             :items="catalog.options('we_modality')"
+             label-field="description"
+             value-field="id"
+             placeholder="Todas..."
+             class="exec-input-dark-component w-md"
+          />
+        </div>
+        <div class="filter-sep"></div>
+        
+        <div class="filter-group">
+          <label class="filter-label">PROGRAMA / INTERÉS</label>
+          <input 
+             type="text" 
+             class="exec-input-dark" 
+             v-model="filters.program_text" 
+             placeholder="Buscar texto..." 
+             @keyup.enter="fetchStats"
+          >
+        </div>
       </div>
     </header>
 
-    <!-- ════════════════════════════════════════
-         BODY
-    ════════════════════════════════════════ -->
     <main class="exec-body">
 
-      <!-- ── LOADER ── -->
-      <div v-if="isRefreshing" class="exec-loader">
+      <div v-if="isLoading" class="exec-loader">
         <div class="loader-ring"></div>
-        <p class="loader-text">Procesando datos del período…</p>
+        <p class="loader-text">Calculando conversiones y rendimiento...</p>
       </div>
 
-      <!-- ══════════════════════════════════════
-           VISTA TABULAR
-      ══════════════════════════════════════ -->
-      <div v-else-if="!isCharts" class="view-tables fade-in">
-        <div
-          v-for="(week, index) in weeklyData"
-          :key="index"
-          class="table-shell mb-4"
-        >
-          <div class="table-panel-header">
-            <div class="table-panel-brand">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="panel-icon">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <h6 class="table-panel-title">{{ week.title }}</h6>
-            </div>
-            <div class="panel-totals">
-              <!-- Click en el total de consultas → drillDown toda la semana -->
-              <span
-                class="panel-total-item cell-clickable"
-                @click="drillDown(week, null, null, 'consultas')"
-                title="Ver leads de esta semana"
-              >
-                <span class="ptl">Consultas</span>
-                <strong class="ptv">{{ getWeekGrandTotal(week, 'c') }}</strong>
-              </span>
-              <span class="panel-total-sep">·</span>
-              <!-- Click en el total de ventas → drillDown por pay_date -->
-              <span
-                class="panel-total-item cell-clickable"
-                @click="drillDown(week, null, null, 'ventas')"
-                title="Ver ventas (por fecha de pago) de esta semana"
-              >
-                <span class="ptl">Ventas</span>
-                <strong class="ptv" style="color: #0f766e;">{{ getWeekGrandTotal(week, 'v') }}</strong>
-              </span>
-              <span class="panel-total-sep">·</span>
-              <span class="panel-total-item">
-                <span class="ptl">Conversión</span>
-                <strong class="ptv" :class="pctColorClass(calcPct(getWeekGrandTotal(week, 'c'), getWeekGrandTotal(week, 'v')))">
-                  {{ calcPct(getWeekGrandTotal(week, 'c'), getWeekGrandTotal(week, 'v')) }}%
-                </strong>
-              </span>
-            </div>
-          </div>
-
-          <div class="table-responsive-custom">
-            <table class="exec-table">
-              <thead>
-                <!-- Fila 1: Grupos de canal -->
-                <tr class="thead-group text-center">
-                  <th rowspan="2" class="th-cat">T. CLIENTE</th>
-                  <th colspan="3" class="th-group th-teal">LinkedIn</th>
-                  <th colspan="3" class="th-group th-teal">Instagram</th>
-                  <th colspan="3" class="th-group th-teal">Facebook</th>
-                  <th colspan="3" class="th-group th-slate">Otros</th>
-                  <th colspan="3" class="th-group th-amber">Sitio Web</th>
-                  <th colspan="3" class="th-group th-amber">Chatbot</th>
-                  <th colspan="3" class="th-group th-amber">Cotización</th>
-                  <th colspan="3" class="th-group th-violet">Comercial</th>
-                </tr>
-                <!-- Fila 2: C / V / % por canal -->
-                <tr class="thead-sub text-center">
-                  <template v-for="i in 8" :key="i">
-                    <th class="ts ts-c" title="Consultas (leads registrados)">C.</th>
-                    <th class="ts ts-v" title="Ventas (leads con pago en el período)">V.</th>
-                    <th class="ts ts-p">%</th>
-                  </template>
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr
-                  v-for="(row, ri) in week.rows"
-                  :key="row.type"
-                  class="tbody-row"
-                  :class="{ 'row-alt': ri % 2 === 0 }"
-                >
-                  <!-- Pill tipo cliente: click = drillDown toda la fila -->
-                  <td class="td-cat">
-                    <span
-                      class="tipo-pill cursor-pointer"
-                      :class="pilledType(row.type)"
-                      @click="drillDown(week, row.type, null, 'consultas')"
-                      title="Ver todos los leads de este tipo en esta semana"
-                    >{{ row.type }}</span>
-                  </td>
-
-                  <template v-for="ch in channelsOrder" :key="ch">
-                    <!-- Consultas → drillDown por fecha registro -->
-                    <td
-                      class="td-data text-center"
-                      :class="getSafeChannel(row, ch).c > 0 ? 'cell-clickable' : ''"
-                      @click="getSafeChannel(row, ch).c > 0 && drillDown(week, row.type, ch, 'consultas')"
-                      :title="getSafeChannel(row, ch).c > 0 ? `Ver ${getSafeChannel(row, ch).c} leads de ${row.type} / ${channelLabels[channelsOrder.indexOf(ch)]}` : ''"
-                    >
-                      {{ getSafeChannel(row, ch).c > 0 ? getSafeChannel(row, ch).c : '—' }}
-                    </td>
-
-                    <!-- Ventas → drillDown por pay_date -->
-                    <td
-                      class="td-data text-center fw-700"
-                      :class="[
-                        getSafeChannel(row, ch).v > 0 ? 'c-teal cell-clickable' : 'text-muted-cell'
-                      ]"
-                      @click="getSafeChannel(row, ch).v > 0 && drillDown(week, row.type, ch, 'ventas')"
-                      :title="getSafeChannel(row, ch).v > 0 ? `Ver ${getSafeChannel(row, ch).v} ventas (por pago) de ${row.type} / ${channelLabels[channelsOrder.indexOf(ch)]}` : ''"
-                    >
-                      {{ getSafeChannel(row, ch).v > 0 ? getSafeChannel(row, ch).v : '—' }}
-                    </td>
-
-                    <td
-                      class="td-data text-center td-pct"
-                      :class="getPctBgClass(getSafeChannel(row, ch).c, getSafeChannel(row, ch).v)"
-                    >
-                      <template v-if="getSafeChannel(row, ch).c > 0">
-                        {{ calcPct(getSafeChannel(row, ch).c, getSafeChannel(row, ch).v) }}%
-                      </template>
-                      <span v-else class="text-muted-cell">—</span>
-                    </td>
-                  </template>
-                </tr>
-              </tbody>
-
-              <tfoot>
-                <tr class="tfoot-row">
-                  <td class="tfoot-label">TOTAL SEMANA</td>
-                  <template v-for="(col, ch) in getWeekTotals(week)" :key="ch">
-                    <!-- Total consultas del canal en la semana -->
-                    <td
-                      class="text-center fw-600"
-                      :class="col.c > 0 ? 'cell-clickable-foot' : ''"
-                      @click="col.c > 0 && drillDown(week, null, ch, 'consultas')"
-                      :title="col.c > 0 ? `Ver ${col.c} leads del canal en esta semana` : ''"
-                    >{{ col.c || '—' }}</td>
-
-                    <!-- Total ventas del canal en la semana -->
-                    <td
-                      class="text-center fw-700"
-                      style="color:#5eead4;"
-                      :class="col.v > 0 ? 'cell-clickable-foot' : ''"
-                      @click="col.v > 0 && drillDown(week, null, ch, 'ventas')"
-                      :title="col.v > 0 ? `Ver ${col.v} ventas (por pago) del canal en esta semana` : ''"
-                    >{{ col.v || '—' }}</td>
-
-                    <td class="text-center fw-700" :class="pctColorClass(calcPct(col.c, col.v))">
-                      {{ calcPct(col.c, col.v) }}%
-                    </td>
-                  </template>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-
-        <!-- Estado vacío -->
-        <div v-if="weeklyData.length === 0" class="empty-state">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <p>No hay datos para el período seleccionado.</p>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════
-           VISTA GRÁFICOS
-      ══════════════════════════════════════ -->
-      <div v-else class="view-dashboard fade-in">
-
-        <!-- KPI Strip -->
+      <div v-else-if="stats" class="view-dashboard slide-fade-enter-active">
+        
         <div class="kpi-strip">
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">CONVERSIÓN GLOBAL</span>
-              <div class="kpi-indicator" :class="globalPct >= 30 ? 'ind-green' : globalPct >= 15 ? 'ind-amber' : 'ind-red'"></div>
-            </div>
-            <div class="kpi-card-value" :class="pctColorClass(globalPct)">{{ globalPct }}%</div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill" :class="globalPct >= 30 ? 'fill-green' : 'fill-amber'"
-                :style="`width: ${Math.min(globalPct * 2, 100)}%`"></div>
-            </div>
-            <div class="kpi-card-sub">Leads → Cierres (por fecha de pago)</div>
-          </div>
+           <div class="kpi-card kpi-interactive" @click="drillDown('all')">
+             <div class="kpi-card-header">
+               <span class="kpi-card-label">TOTAL LEADS</span>
+               <div class="kpi-indicator" style="background: var(--blue-600)"></div>
+             </div>
+             <div class="kpi-card-value accent-text">{{ stats.general.total }}</div>
+             <div class="kpi-card-actions">
+                <span class="pill pill-blue interactive-pill" @click.stop="drillDown('web')">Web: {{ stats.general.countWeb }}</span>
+                <span class="pill pill-slate interactive-pill border" @click.stop="drillDown('b2b')">B2B: {{ stats.general.countB2B }}</span>
+             </div>
+           </div>
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">TOTAL CONSULTAS</span>
-              <div class="kpi-indicator ind-blue"></div>
-            </div>
-            <div class="kpi-card-value">{{ totalGlobal.consultas }}</div>
-            <div class="kpi-card-sub">Leads captados en el período</div>
-          </div>
+           <div class="kpi-card kpi-interactive" @click="drillDown('follow', 'we_calling_pending')">
+             <div class="kpi-card-header">
+               <span class="kpi-card-label">SEG. PENDIENTES</span>
+               <div class="kpi-indicator" style="background: var(--amber-500)"></div>
+             </div>
+             <div class="kpi-card-value" style="color: var(--amber-500)">{{ stats.general.followUpPending }}</div>
+             <div class="kpi-card-sub">De <strong class="text-dark">{{ stats.general.attemptUpCount }}</strong> gestionados</div>
+           </div>
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">TOTAL VENTAS</span>
-              <div class="kpi-indicator ind-teal"></div>
-            </div>
-            <div class="kpi-card-value" style="color: #0f766e;">{{ totalGlobal.ventas }}</div>
-            <div class="kpi-card-sub">Cierres con pago en el período</div>
-          </div>
+           <div class="kpi-card kpi-interactive" @click="drillDown('interestPriority', 'Bajo')">
+             <div class="kpi-card-header">
+               <span class="kpi-card-label">ALTA PRIORIDAD</span>
+               <div class="kpi-indicator" style="background: var(--red-600)"></div>
+             </div>
+             <div class="kpi-card-value" style="color: var(--red-600)">{{ stats.general.highInterestCount }}</div>
+             <div class="kpi-card-sub">Leads de ediciones por comenzar</div>
+           </div>
 
-          <div class="kpi-card kpi-card-highlight">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label" style="color: var(--gold-400, #fbbf24);">CANAL ESTRELLA</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-400, #fbbf24)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <div class="kpi-card-value kpi-top-name">{{ topChannel.name }}</div>
-            <div class="kpi-card-sub" style="color: #fbbf24; font-weight: 600;">{{ topChannel.ventas }} ventas · {{ topChannel.pct }}% conv.</div>
-          </div>
+           <div class="kpi-card kpi-interactive kpi-card-highlight" @click="drillDown('sales')">
+             <div class="kpi-card-header">
+               <span class="kpi-card-label" style="color: #22c55e">VENTAS (CIERRES)</span>
+               <div class="kpi-indicator" style="background: #22c55e"></div>
+             </div>
+             <div class="kpi-card-value text-white">{{ stats.general.sales }}</div>
+             <div class="kpi-card-sub" style="color: #22c55e; font-weight: 600;">
+                {{ stats.general.conversionRate }}% Conv. Global
+             </div>
+           </div>
         </div>
 
-        <!-- Charts Grid -->
         <div class="chart-grid-2">
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Consultas vs Ventas por Canal</div>
-                <div class="chart-panel-sub">Acumulado del período seleccionado</div>
-              </div>
-              <div class="chart-legend-inline">
-                <span class="legend-dot" style="background:#e2e8f0"></span><span>Consultas</span>
-                <span class="legend-dot" style="background:#0f766e"></span><span>Ventas</span>
-              </div>
-            </div>
-            <div class="chart-area">
-              <Bar :data="barChartData" :options="groupedBarOptions" />
-            </div>
-          </div>
+           <div class="chart-panel">
+             <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Pipeline (Estados)</div>
+                 <div class="chart-panel-sub">Distribución y conversión por estado comercial</div>
+               </div>
+             </div>
+             <div class="chart-area panel-scroll-area p-0">
+                <div v-for="(cat, idx) in stats.byStatus" :key="idx" 
+                     class="list-row-item interactive-row"
+                     @click="drillDown('status', cat.name)">
+                   <div class="row-info">
+                      <span class="row-title">{{ cat.name }}</span>
+                      <span class="row-meta" v-if="cat.sales > 0">
+                         <span class="text-success fw-600">{{ cat.sales }} ventas</span> ({{ cat.conversion_rate }}%)
+                      </span>
+                   </div>
+                   <div class="row-stats">
+                      <span class="row-count">{{ cat.count }}</span>
+                      <div class="row-bar-track">
+                         <div class="row-bar-fill" :style="{ width: (cat.count / stats.general.total * 100) + '%' }"></div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+           </div>
 
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ranking — % Conversión por Canal</div>
-                <div class="chart-panel-sub">Eficiencia de cierre sobre leads generados</div>
-              </div>
-            </div>
-            <div class="chart-area">
-              <Bar :data="pctChartData" :options="rankingBarOptions" />
-            </div>
-          </div>
+           <div class="chart-panel" >
+             <div class="chart-panel-header">
+               <div>
+                 <div class="chart-panel-title">Rendimiento por Asesor</div>
+                 <div class="chart-panel-sub">Leads asignados y tasas de conversión</div>
+               </div>
+             </div>
+             <div class="chart-area panel-scroll-area p-0">
+                <StatsTable 
+                   :data="stats.byOwner" 
+                   @click-row="(item) => drillDown('owner', item.name)" 
+                />
+             </div>
+           </div>
+        </div>
+
+        <div class="chart-grid-2">
+           <div class="chart-panel">
+             <div class="chart-panel-header">
+               <div><div class="chart-panel-title">Momento del Cliente (Lifecycle)</div></div>
+             </div>
+             <div class="chart-area panel-scroll-area p-0">
+                <StatsTable 
+                   :data="stats.byMoment" 
+                   @click-row="(item) => drillDown('moment', item.name)" 
+                />
+             </div>
+           </div>
+
+           <div class="chart-panel">
+             <div class="chart-panel-header">
+               <div><div class="chart-panel-title">Resultado Último Contacto</div></div>
+             </div>
+             <div class="chart-area panel-scroll-area p-0">
+                <StatsTable 
+                   :data="stats.byFollowStatus" 
+                   @click-row="(item) => drillDown('follow', item.name)" 
+                />
+             </div>
+           </div>
         </div>
 
         <div class="chart-grid-3">
-          <div class="chart-panel chart-panel-wide">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Tendencia de Ventas — Evolución Semanal</div>
-                <div class="chart-panel-sub">Cierres acumulados por semana del mes</div>
-              </div>
-            </div>
-            <div class="chart-area">
-              <Line :data="lineChartData" :options="lineOptions" />
-            </div>
-          </div>
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Estrategia</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byStrategy" @click-row="(item) => drillDown('strategy', item.name)" /></div>
+           </div>
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Canales</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byChannel" @click-row="(item) => drillDown('channel', item.name)" /></div>
+           </div>
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Medios</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byMedium" /></div>
+           </div>
+        </div>
 
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ventas por Tipo de Cliente</div>
-                <div class="chart-panel-sub">Composición global del período</div>
-              </div>
-            </div>
-            <div class="chart-area chart-area-donut">
-              <Doughnut :data="doughnutChartData" :options="doughnutOptions" />
-            </div>
-          </div>
+        <div class="chart-grid-2">
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Promoción (T. Consulta)</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byPromotion" @click-row="(item) => drillDown('promotion', item.name)" /></div>
+           </div>
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Palabras Clave</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byWord" @click-row="(item) => drillDown('word', item.name)" /></div>
+           </div>
+        </div>
+
+        <div class="chart-grid-3">
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Tipo Programa</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable :data="stats.byProgramType" @click-row="(item) => drillDown('program_type', item.name)" /></div>
+           </div>
+           
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Nivel Interés</div></div>
+             <div class="chart-area panel-scroll-area p-0">
+                <table class="exec-table">
+                   <thead>
+                      <tr class="thead-sub">
+                         <th class="ts ts-c" style="background: var(--slate-100); color: var(--text-secondary); border: none;">Nivel</th>
+                         <th class="ts ts-c text-right" style="background: var(--slate-100); color: var(--text-secondary); border: none;">Leads</th>
+                         <th class="ts ts-c text-right" style="background: var(--slate-100); color: var(--teal-600); border: none;">Ventas</th>
+                         <th class="ts ts-c text-right" style="background: var(--slate-100); color: var(--text-secondary); border: none;">%</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      <tr v-for="(seg, idx) in stats.byInterest" :key="idx" class="tbody-row interactive-row" @click="drillDown('interest', seg.name)">
+                         <td class="td-a" style="border: none;">
+                            <span class="pill" :class="getBadgeClassInterestExec(seg.code)">{{ seg.name }}</span>
+                         </td>
+                         <td class="td-a text-right fw-600" style="border: none;">{{ seg.count }}</td>
+                         <td class="td-a text-right fw-600 text-success" style="border: none;">{{ seg.sales }}</td>
+                         <td class="td-a text-right text-muted" style="border: none;">{{ seg.conversion_rate }}%</td>
+                      </tr>
+                   </tbody>
+                </table>
+             </div>
+           </div>
+
+           <div class="chart-panel">
+             <div class="chart-panel-header"><div class="chart-panel-title">Geografía</div></div>
+             <div class="chart-area panel-scroll-area p-0"><StatsTable @click-row="(item) => drillDown('country', item.name)" :data="stats.byCountry" /></div>
+           </div>
         </div>
 
       </div>
+
     </main>
-
-    <!-- ════════════════════════════════════════
-         FOOTER
-    ════════════════════════════════════════ -->
-    <footer class="exec-footer">
-      <span>Período: <strong>{{ periodLabel }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span>Asesor: <strong>{{ asesorLabel }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span>Vista activa: <strong>{{ isCharts ? 'Gráficos' : 'Tablas' }}</strong></span>
-      <span class="footer-spacer"></span>
-      <span class="footer-status">
-        <span class="status-dot" :class="isRefreshing ? 'dot-loading' : 'dot-ok'"></span>
-        {{ isRefreshing ? 'Actualizando…' : 'Datos sincronizados' }}
-      </span>
-    </footer>
-
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-  LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
-} from 'chart.js'
-import { Bar, Doughnut, Line } from 'vue-chartjs'
-import { ServiceKeys } from '@/services'
-
-ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, Title, Tooltip, Legend, ArcElement, Filler
-)
-
-// ── Servicios e inyecciones ──
-const dashboardService = inject(ServiceKeys.Dashboard)
-const catalog          = inject('catalog')         // mismo patrón que Control Comercial
-const router           = useRouter()
-
-// ── Estado UI ──
-const isCharts     = ref(false)
-const isRefreshing = ref(true)
-const filters      = ref({ period: '2026-01', asesor: 'all' })
-const weeklyData   = ref([])
-
-// ── Catálogo de asesores (se carga desde la API si está disponible) ──
-const asesores = ref([])
-
-// ── Orden y etiquetas de canales ──
-const channelsOrder = ['lk', 'ig', 'fb', 'other', 'web', 'bot', 'cot', 'com']
-const channelLabels = ['LinkedIn', 'Instagram', 'Facebook', 'Otros', 'Web', 'Chatbot', 'Cotización', 'Comercial']
-
-// ══════════════════════════════════════════════════════════
-//  CARGA DE DATOS
-// ══════════════════════════════════════════════════════════
-
-async function loadData() {
-  isRefreshing.value = true
-  try {
-    const response = await dashboardService.ventasCanalList({
-      year:      Number(filters.value.period.split('-')[0]),
-      month_num: Number(filters.value.period.split('-')[1]),
-      advisor:   filters.value.asesor
-    })
-
-    // El interceptor de Axios ya desempaqueta response.data,
-    // por lo que 'response' llega directo como { weeklyData, asesores?, ... }
-    // Soportamos cualquier nivel de anidamiento por robustez.
-    const payload =
-      response?.weeklyData                      ? response          :
-      response?.data?.weeklyData                ? response.data     :
-      response?.data?.data?.weeklyData          ? response.data.data :
-      response?.data                            ? response.data     :
-      response
-
-    weeklyData.value = payload?.weeklyData ?? []
-
-    // Si el backend devuelve la lista de asesores, la usamos
-    if (payload?.asesores?.length) {
-      asesores.value = payload.asesores.map(a => ({
-        id:     a.cod_asesor ?? a.id,
-        nombre: a.asesor_nombre ?? a.nombre
-      }))
-    }
-
-  } catch (e) {
-    console.error('Error al cargar los datos del dashboard:', e)
-    weeklyData.value = []
-  } finally {
-    isRefreshing.value = false
-  }
-}
-
-const refreshData = () => loadData()
-onMounted(() => loadData())
-watch(() => [filters.value.period, filters.value.asesor], loadData)
-
-// ══════════════════════════════════════════════════════════
-//  HELPERS MATEMÁTICOS
-// ══════════════════════════════════════════════════════════
-
-const calcPct = (c, v) =>
-  (!c || c === 0) ? 0 : Math.round((v / c) * 100)
-
-/** Devuelve {c, v} con fallback a 0 si el canal no existe en la fila */
-const getSafeChannel = (row, ch) =>
-  row?.channels?.[ch] ?? { c: 0, v: 0 }
-
-const getWeekTotals = (week) => {
-  const totals = {}
-  channelsOrder.forEach(ch => { totals[ch] = { c: 0, v: 0 } })
-  week.rows.forEach(row => {
-    channelsOrder.forEach(ch => {
-      totals[ch].c += getSafeChannel(row, ch).c
-      totals[ch].v += getSafeChannel(row, ch).v
-    })
-  })
-  return totals
-}
-
-const getWeekGrandTotal = (week, key) => {
-  let sum = 0
-  week.rows.forEach(row => {
-    channelsOrder.forEach(ch => { sum += getSafeChannel(row, ch)[key] })
-  })
-  return sum
-}
-
-// ── Totales globales ──
-const totalGlobal = computed(() => {
-  let c = 0; let v = 0
-  weeklyData.value.forEach(week => {
-    const t = getWeekTotals(week)
-    Object.values(t).forEach(ch => { c += ch.c; v += ch.v })
-  })
-  return { consultas: c, ventas: v }
-})
-
-const globalPct = computed(() =>
-  calcPct(totalGlobal.value.consultas, totalGlobal.value.ventas)
-)
-
-// ── Canal estrella ──
-const topChannel = computed(() => {
-  let best = { name: '—', ventas: 0, pct: 0 }
-  const agg = {}
-  channelsOrder.forEach(ch => { agg[ch] = { c: 0, v: 0 } })
-  weeklyData.value.forEach(week => {
-    const t = getWeekTotals(week)
-    channelsOrder.forEach(ch => { agg[ch].c += t[ch].c; agg[ch].v += t[ch].v })
-  })
-  channelsOrder.forEach((ch, i) => {
-    if (agg[ch].v > best.ventas) {
-      best = {
-        name:   channelLabels[i],
-        ventas: agg[ch].v,
-        pct:    calcPct(agg[ch].c, agg[ch].v)
-      }
-    }
-  })
-  return best
-})
-
-// ── Labels computados ──
-const MONTH_NAMES = [
-  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-]
-
-const periodLabel = computed(() => {
-  const [y, m] = filters.value.period.split('-')
-  return `${MONTH_NAMES[Number(m)]} ${y}`
-})
-
-const asesorLabel = computed(() => {
-  if (filters.value.asesor === 'all') return 'Todos'
-  return asesores.value.find(a => a.id === filters.value.asesor)?.nombre || 'Todos'
-})
-
-// ══════════════════════════════════════════════════════════
-//  DRILL DOWN → ComercialListado
-// ══════════════════════════════════════════════════════════
-
-/** Codifica un array [{value, label}] como JSON string para la URL */
-const encodeFilter = (arr) => {
-  if (!Array.isArray(arr) || arr.length === 0) return undefined
-  return JSON.stringify(
-    arr.map(i => ({ value: i.value ?? i.id, label: i.label ?? i.description }))
-  )
-}
-
-/** Busca en el catálogo inyectado y devuelve el JSON codificado para la URL */
-const findInCatalog = (catalogKey, field, val) => {
-  if (!catalog) return null
-  const found = catalog.options(catalogKey).find(x => x[field] === val)
-  return found
-    ? encodeFilter([{ value: found.id, label: found.description }])
-    : null
-}
-
-/**
- * Mapa canal_key → alias en el catálogo we_social_media
- * null significa que se maneja por otra vía (strategy, web flag, etc.)
- */
-const CANAL_CATALOG_ALIAS = {
-  lk:    'we_social_media_linkedin',
-  ig:    'we_social_media_instagram',
-  fb:    'we_social_media_facebook',
-  other: null,
-  web:   null,   // se identifica con flag web='Y'
-  bot:   null,   // bot='Y'
-  cot:   null,   // sin flag directo en el listado
-  com:   null,   // estrategia comercial
-}
-
-/**
- * Mapa tipo_cliente → alias del catálogo we_moment
- */
-const TIPO_MOMENT_ALIAS = {
-  NEW:     'we_moment_new',
-  LDS:     'we_moment_lead',
-  CWE:     'we_moment_cwd',
-  MEMBERS: null,   // tiene membership_moment_id → sin alias directo
-}
-
-/**
- * Abre ComercialListado con los filtros correspondientes.
- *
- * @param {Object}      week   – objeto de semana con fecha_desde / fecha_hasta
- * @param {String|null} tipo   – 'NEW' | 'LDS' | 'CWE' | 'MEMBERS' | null
- * @param {String|null} canal  – clave del canal ('lk', 'ig', 'web', etc.) | null
- * @param {String}      field  – 'consultas' → fecha registro | 'ventas' → pay_date
- */
-function drillDown(week, tipo = null, canal = null, field = 'consultas') {
-  const query = {}
-
-  // 1. Fechas según si son consultas (registration_date) o ventas (pay_date)
-  if (field === 'ventas') {
-    if (week.fecha_desde) query.pay_date_from = week.fecha_desde
-    if (week.fecha_hasta) query.pay_date_to   = week.fecha_hasta
-  } else {
-    if (week.fecha_desde) query.from_date = week.fecha_desde
-    if (week.fecha_hasta) query.to_date   = week.fecha_hasta
-  }
-
-  // 2. Asesor activo en el filtro
-  if (filters.value.asesor !== 'all') {
-    const asesor = asesores.value.find(a => a.id === filters.value.asesor)
-    if (asesor) {
-      query.owner_user_ids = encodeFilter([{ value: asesor.id, label: asesor.nombre }])
-    }
-  }
-
-  // 3. Tipo de cliente → moment_ids
-  if (tipo) {
-    const alias = TIPO_MOMENT_ALIAS[tipo]
-    if (alias) {
-      const r = findInCatalog('we_moment', 'alias', alias)
-      if (r) query.moment_ids = r
-    }
-    // MEMBERS: leads con membership, sin filtro de momento específico
-  }
-
-  // 4. Canal → channel_ids, strategy_ids o flag web/bot
-  if (canal) {
-    if (canal === 'com') {
-      // Comercial: tiene cat_type_strategy definido → pasamos todos los de estrategia
-      if (catalog) {
-        const allStrategies = catalog.options('we_type_strategy')
-        if (allStrategies.length) {
-          query.strategy_ids = encodeFilter(
-            allStrategies.map(s => ({ value: s.id, label: s.description }))
-          )
-        }
-      }
-    } else if (canal === 'web') {
-      query.web = 'Y'
-    } else if (canal === 'bot') {
-      // bot='Y' si el listado lo soporta; si no, se filtra por canal
-      const r = findInCatalog('we_social_media', 'alias', 'we_social_media_chatbot')
-             ?? findInCatalog('we_social_media', 'alias', 'we_social_media_bot')
-      if (r) query.channel_ids = r
-      else   query.bot = 'Y'
-    } else {
-      const alias = CANAL_CATALOG_ALIAS[canal]
-      if (alias) {
-        // Facebook: agrupa también Estados
-        if (canal === 'fb') {
-          const opts = catalog?.options('we_social_media') ?? []
-          const fbItems = opts.filter(x =>
-            ['we_social_media_facebook', 'we_social_media_estados'].includes(x.alias)
-          )
-          if (fbItems.length) {
-            query.channel_ids = encodeFilter(
-              fbItems.map(x => ({ value: x.id, label: x.description }))
-            )
-          }
-        } else {
-          const r = findInCatalog('we_social_media', 'alias', alias)
-          if (r) query.channel_ids = r
-        }
-      }
-      // 'other': sin canal concreto → no se añade filtro de canal
-    }
-  }
-
-  const routeData = router.resolve({ name: 'ComercialListado', query })
-  window.open(routeData.href, '_blank')
-}
-
-// ══════════════════════════════════════════════════════════
-//  HELPERS VISUALES
-// ══════════════════════════════════════════════════════════
-
-const getPctBgClass = (c, v) => {
-  const p = calcPct(c, v)
-  if (c === 0 || p === 0) return ''
-  if (p >= 15) {
-    if (p >= 60) return 'bg-g4'
-    if (p >= 40) return 'bg-g3'
-    if (p >= 25) return 'bg-g2'
-    return 'bg-g1'
-  } else {
-    if (p <= 3)  return 'bg-r4'
-    if (p <= 7)  return 'bg-r3'
-    if (p <= 11) return 'bg-r2'
-    return 'bg-r1'
-  }
-}
-
-const pctColorClass = (p) =>
-  p >= 30 ? 'c-green' : p >= 15 ? 'c-blue' : 'c-red'
-
-const pilledType = (type) => {
-  const m = { NEW: 'pill-blue', LDS: 'pill-violet', CWE: 'pill-amber', MEMBERS: 'pill-teal' }
-  return m[type] || 'pill-slate'
-}
-
-// ══════════════════════════════════════════════════════════
-//  DATOS DE GRÁFICOS
-// ══════════════════════════════════════════════════════════
-
-const aggregatedByChannel = computed(() => {
-  const agg = {}
-  channelsOrder.forEach(ch => { agg[ch] = { c: 0, v: 0 } })
-  weeklyData.value.forEach(week => {
-    const t = getWeekTotals(week)
-    channelsOrder.forEach(ch => { agg[ch].c += t[ch].c; agg[ch].v += t[ch].v })
-  })
-  return agg
-})
-
-const barChartData = computed(() => ({
-  labels: channelLabels,
-  datasets: [
-    {
-      label: 'Consultas',
-      data: channelsOrder.map(ch => aggregatedByChannel.value[ch].c),
-      backgroundColor: '#e2e8f0', borderRadius: 3, borderSkipped: false
-    },
-    {
-      label: 'Ventas',
-      data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v),
-      backgroundColor: '#0f766e', borderRadius: 3, borderSkipped: false
-    }
-  ]
-}))
-
-const pctChartData = computed(() => {
-  const pcts = channelsOrder.map(ch =>
-    calcPct(aggregatedByChannel.value[ch].c, aggregatedByChannel.value[ch].v)
-  )
-  return {
-    labels: channelLabels,
-    datasets: [
-      {
-        label: '% Conversión',
-        data: pcts,
-        borderRadius: 4,
-        backgroundColor: pcts.map(p =>
-          p >= 30 ? '#0f766e' : p >= 15 ? '#0369a1' : '#be123c'
-        )
-      },
-      {
-        type: 'line', label: 'Ref. 20%',
-        data: channelLabels.map(() => 20),
-        borderColor: 'rgba(0,0,0,0.2)', borderDash: [4, 3], borderWidth: 1.5,
-        pointRadius: 0, fill: false
-      }
-    ]
-  }
-})
-
-const lineChartData = computed(() => {
-  const salesPerWeek = weeklyData.value.map(week => getWeekGrandTotal(week, 'v'))
-  return {
-    labels: weeklyData.value.map((_, i) => `SEM ${i + 1}`),
-    datasets: [{
-      label: 'Ventas Totales',
-      data: salesPerWeek,
-      borderColor: '#0f766e',
-      backgroundColor: 'rgba(15,118,110,0.08)',
-      borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#0f766e',
-      fill: true, tension: 0.35
-    }]
-  }
-})
-
-const doughnutChartData = computed(() => {
-  const salesByType = { NEW: 0, LDS: 0, CWE: 0, MEMBERS: 0 }
-  weeklyData.value.forEach(w => {
-    w.rows.forEach(r => {
-      if (salesByType[r.type] !== undefined) {
-        salesByType[r.type] += Object.values(r.channels).reduce((s, ch) => s + (ch.v || 0), 0)
-      }
-    })
-  })
-  return {
-    labels: Object.keys(salesByType),
-    datasets: [{
-      data: Object.values(salesByType),
-      backgroundColor: ['#0f766e', '#0369a1', '#b45309', '#7c3aed'],
-      borderWidth: 3, borderColor: '#ffffff'
-    }]
-  }
-})
-
-// ── Opciones de Chart.js ──
-const baseFont = { family: 'inherit', size: 11 }
-
-const groupedBarOptions = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: baseFont } },
-    y: { grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
-  }
-}
-
-const rankingBarOptions = {
-  responsive: true, maintainAspectRatio: false,
-  indexAxis: 'y',
-  plugins: {
-    legend: { display: false },
-    tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } }
-  },
-  scales: {
-    x: { grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } },
-    y: { grid: { display: false }, ticks: { font: baseFont } }
-  }
-}
-
-const lineOptions = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: baseFont } },
-    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
-  }
-}
-
-const doughnutOptions = {
-  responsive: true, maintainAspectRatio: false, cutout: '68%',
-  plugins: {
-    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14, font: baseFont } }
-  }
-}
-</script>
-
 <style scoped>
-/* ═══════════════════════════════════════════════════════════
-   TOKENS CSS
-═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   ESTRUCTURA GENERAL Y MASTHEAD
+═══════════════════════════════════════════════ */
 .exec-shell {
-  --navy-900: #0f172a;
-  --navy-800: #1e293b;
-  --navy-700: #334155;
-  --slate-400: #94a3b8;
-  --slate-100: #f1f5f9;
-  --slate-50:  #f8fafc;
-  --teal-700:  #0f766e;
-  --teal-600:  #0d9488;
-  --teal-500:  #14b8a6;
-  --amber-500: #f59e0b;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-  --gold-400:       #fbbf24;
-
-  font-family: 'IBM Plex Sans', 'DM Sans', system-ui, sans-serif;
-  background: var(--slate-50);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: var(--text-primary);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MASTHEAD
-═══════════════════════════════════════════════════════════ */
 .exec-masthead {
-  background: var(--navy-900);
-  color: var(--white);
-  border-bottom: 1px solid var(--navy-700);
+  background: var(--navy-900, #0f172a);
+  color: var(--white, #ffffff);
+  border-bottom: 1px solid var(--navy-700, #334155);
 }
 
 .masthead-inner {
@@ -889,384 +295,559 @@ const doughnutOptions = {
   justify-content: space-between;
   align-items: center;
   padding: 20px 28px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
+.masthead-brand { display: flex; align-items: center; gap: 14px; }
+.brand-rule { width: 3px; height: 42px; background: var(--teal-600, #12274e); border-radius: 2px; flex-shrink: 0; }
+.brand-eyebrow { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary, #475569); font-weight: 600; display: block; margin-bottom: 2px; }
+.brand-title { font-size: 22px; font-weight: 700; margin: 0; color: var(--text-primary, #0f172a); letter-spacing: -0.02em; }
 
-.brand-rule {
-  width: 3px; height: 42px;
-  background: var(--teal-700);
-  border-radius: 2px; flex-shrink: 0;
-}
-
-.brand-eyebrow {
-  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px;
-}
-
-.brand-title {
-  font-size: 18px; font-weight: 700; margin: 0;
-  letter-spacing: -0.01em; color: var(--white);
-}
+.masthead-brand .brand-title { color: var(--white, #ffffff); }
+.masthead-brand .brand-eyebrow { color: var(--slate-400, #94a3b8); }
 
 .masthead-actions { display: flex; gap: 10px; align-items: center; }
 
-.btn-exec {
-  display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px;
-  border-radius: 4px; font-size: 12.5px; font-weight: 600;
-  cursor: pointer; border: none; font-family: inherit;
-  transition: background 0.15s, color 0.15s, opacity 0.15s;
-}
-.btn-exec:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.btn-exec-ghost {
-  background: rgba(255,255,255,0.07);
-  color: var(--slate-400);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.13); color: var(--white); }
-
-.btn-exec-primary { background: var(--teal-700); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-600); }
-
-/* ── Filtros ── */
+/* ═══════════════════════════════════════════════
+   FILTROS MASTHEAD (TEMA OSCURO)
+═══════════════════════════════════════════════ */
 .masthead-filters {
-  display: flex; align-items: center;
-  padding: 0 28px; min-height: 52px; gap: 0;
+  display: flex; align-items: center; gap: 0; padding: 0 28px; min-height: 52px;
   overflow-x: auto; scrollbar-width: none;
 }
 .masthead-filters::-webkit-scrollbar { display: none; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; padding: 10px 20px 10px 0; min-width: max-content; }
+.filter-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 600; cursor: default; }
+.filter-sep { width: 1px; height: 32px; background: rgba(255, 255, 255, 0.1); margin: 0 20px 0 0; }
 
-.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
+/* Inputs Text/Datepicker oscuros puros */
+.exec-input-dark {
+  background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--white, #ffffff); font-family: inherit; font-size: 12.5px; font-weight: 500; padding: 3px 0; outline: none; min-width: 130px;
+  transition: border-color 0.2s;
+}
+.exec-input-dark::placeholder { color: rgba(255, 255, 255, 0.3); font-weight: 400; }
+.exec-input-dark:focus { border-bottom-color: var(--teal-500, #12274e); }
+.exec-input-success:focus { border-bottom-color: #22c55e; }
 
-.filter-label {
-  font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 600; cursor: default;
+/* Wrapper para MultiSelect / SearchSelect oscuros */
+.exec-input-dark-component { min-width: 180px; }
+.w-md { min-width: 150px; }
+
+:deep(.exec-input-dark-component .multiselect__tags),
+:deep(.exec-input-dark-component .searchselect-control),
+:deep(.exec-input-dark .exec-flatpickr-input) { 
+  background: transparent !important; 
+  border: none !important; 
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important; 
+  color: var(--white, #ffffff) !important; 
+  padding-left: 0 !important; 
+  border-radius: 0 !important; 
+  box-shadow: none !important;
+  min-height: 28px !important;
+  height: 28px !important;
 }
 
-.exec-select {
-  background: transparent; border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.18);
-  color: var(--white); font-family: inherit; font-size: 12.5px;
-  font-weight: 500; padding: 3px 0; outline: none;
-  cursor: pointer; min-width: 130px; appearance: auto;
+:deep(.exec-input-dark-component .searchselect-control:focus-within),
+:deep(.exec-input-dark .exec-flatpickr-input:focus) {
+  border-bottom-color: var(--teal-500, #12274e) !important;
 }
-.exec-select option { color: var(--text-primary); background: var(--white); }
 
-.filter-sep { width: 1px; height: 32px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
-.filter-spacer { flex: 1; }
-
-/* KPIs inline */
-.masthead-kpis { display: flex; gap: 32px; align-items: center; }
-.inline-kpi { text-align: right; }
-.inline-kpi-label {
-  display: block; font-size: 9.5px; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--slate-400); font-weight: 600; margin-bottom: 2px;
+:deep(.exec-input-dark .btn-clear) {
+  color: var(--slate-300, #cbd5e1);
 }
-.inline-kpi-value { font-size: 15px; font-weight: 700; color: var(--white); font-variant-numeric: tabular-nums; }
-.inline-kpi-value.accent { color: #5eead4; }
 
-/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    BODY & LOADER
-═══════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════ */
 .exec-body { flex: 1; padding: 24px 28px; }
-.mb-4 { margin-bottom: 1.25rem; }
 
-.exec-loader {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 400px; gap: 16px;
-}
-.loader-ring {
-  width: 40px; height: 40px;
-  border: 3px solid var(--border); border-top-color: var(--teal-700);
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-}
-.loader-text { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 16px; }
+.loader-ring { width: 40px; height: 40px; border: 3px solid var(--border, #e2e8f0); border-top-color: var(--teal-600, #12274e); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loader-text { font-size: 13px; color: var(--text-secondary, #475569); font-weight: 500; }
 
-/* Estado vacío */
-.empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 300px; gap: 12px;
-  color: var(--text-muted); font-size: 13px;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PANEL DE TABLA
-═══════════════════════════════════════════════════════════ */
-.table-shell {
-  background: var(--white); border: 1px solid var(--border);
-  border-radius: 6px; overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-
-.table-panel-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 13px 18px; background: #fafbfc; border-bottom: 1px solid var(--border);
-}
-
-.table-panel-brand { display: flex; align-items: center; gap: 8px; }
-.panel-icon { color: var(--slate-400); flex-shrink: 0; }
-
-.table-panel-title {
-  font-size: 12px; font-weight: 700; color: var(--text-primary);
-  text-transform: uppercase; letter-spacing: 0.06em; margin: 0;
-}
-
-.panel-totals { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
-.panel-total-item { display: flex; align-items: center; gap: 5px; }
-.ptl { color: var(--text-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
-.ptv { font-weight: 700; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.panel-total-sep { color: var(--border); }
-
-/* ═══════════════════════════════════════════════════════════
-   TABLA EJECUTIVA
-═══════════════════════════════════════════════════════════ */
-.table-responsive-custom { width: 100%; overflow-x: auto; }
-
-.exec-table {
-  width: 100%; border-collapse: collapse;
-  font-size: 12px; font-variant-numeric: tabular-nums;
-  min-width: 1100px;
-}
-
-/* — Thead grupo principal — */
-.thead-group th {
-  padding: 7px 8px; font-size: 10.5px; letter-spacing: 0.07em;
-  text-transform: uppercase; font-weight: 700;
-  border-bottom: 1px solid var(--border);
-}
-
-.th-cat {
-  background: var(--navy-900); color: var(--slate-400);
-  width: 86px; padding-left: 14px; border-right: 2px solid var(--navy-700);
-  position: sticky; left: 0; z-index: 3;
-}
-
-.th-group { text-align: center; }
-.th-teal   { background: #f0fdfa; color: #0f766e; border-left: 2px solid #99f6e4; border-top: 3px solid #0f766e; }
-.th-slate  { background: #f8fafc; color: #475569; border-left: 2px solid #cbd5e1; border-top: 3px solid #94a3b8; }
-.th-amber  { background: #fffbeb; color: #b45309; border-left: 2px solid #fde68a; border-top: 3px solid #f59e0b; }
-.th-violet { background: #faf5ff; color: #6d28d9; border-left: 2px solid #ddd6fe; border-top: 3px solid #8b5cf6; }
-
-/* — Fila sub-headers C / V / % — */
-.thead-sub .ts {
-  padding: 5px 4px; font-size: 10px; font-weight: 700;
-  border-bottom: 2px solid var(--border);
-  border-right: 1px solid rgba(0,0,0,0.04);
-  color: var(--text-secondary); letter-spacing: 0.05em;
-}
-.ts-c { background: #f8fafc; }
-.ts-v { background: #f0fdf4; color: #166534; }
-.ts-p { background: #eff6ff; color: #1e40af; }
-
-/* — Filas body — */
-.tbody-row td {
-  padding: 8px 6px;
-  border-bottom: 1px solid #f8fafc;
-  vertical-align: middle;
-}
-.tbody-row:last-child td { border-bottom: none; }
-.row-alt { background: #fafbfc; }
-.tbody-row:hover td { background: #f0f9ff !important; transition: background 0.1s; }
-
-.td-cat {
-  padding: 8px 14px;
-  border-right: 2px solid var(--navy-800);
-  background: var(--navy-900) !important;
-  position: sticky; left: 0; z-index: 1;
-}
-
-.td-data {
-  padding: 7px 5px;
-  border-right: 1px solid #f1f5f9;
-  min-width: 36px;
-}
-
-.td-pct { font-size: 11px; font-weight: 600; }
-
-/* — Pills tipo — */
-.tipo-pill {
-  display: inline-block; padding: 2px 8px;
-  border-radius: 3px; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.05em; text-transform: uppercase;
-  transition: filter 0.15s, transform 0.1s;
-}
-.tipo-pill.cursor-pointer:hover {
-  filter: brightness(0.9);
-  transform: scale(1.05);
-}
-
-.pill-blue   { background: #dbeafe; color: #1e40af; }
-.pill-violet { background: #ede9fe; color: #5b21b6; }
-.pill-amber  { background: #fef3c7; color: #92400e; }
-.pill-teal   { background: #ccfbf1; color: #0f766e; }
-.pill-slate  { background: #f1f5f9; color: #475569; }
-
-/* — Tfoot — */
-.tfoot-row td {
-  padding: 10px 6px;
-  background: var(--navy-900);
-  color: var(--white);
-  font-size: 12px;
-  border-top: 2px solid var(--navy-700);
-  position: sticky; bottom: 0; z-index: 2;
-}
-.tfoot-label {
-  padding-left: 14px; font-size: 10px; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--slate-400);
-  position: sticky; left: 0; background: var(--navy-900);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   DRILL DOWN — INTERACTIVIDAD
-═══════════════════════════════════════════════════════════ */
-.cell-clickable {
-  cursor: pointer;
-  transition: background 0.12s, opacity 0.12s;
-  position: relative;
-}
-.cell-clickable:hover {
-  background: #e0f2fe !important;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-}
-
-/* Variante para el tfoot (fondo oscuro) */
-.cell-clickable-foot {
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-.cell-clickable-foot:hover {
-  opacity: 0.75;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-}
-
-.cursor-pointer { cursor: pointer; }
-
-/* ═══════════════════════════════════════════════════════════
-   DASHBOARD / GRÁFICOS
-═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   DASHBOARD & CARDS
+═══════════════════════════════════════════════ */
 .view-dashboard { display: flex; flex-direction: column; gap: 20px; }
 
 .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
-.kpi-card {
-  background: var(--white); border: 1px solid var(--border); border-radius: 6px;
-  padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.15s, transform 0.15s;
-}
-.kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-.kpi-card-highlight { background: var(--navy-900); border-color: var(--navy-700); }
-
-.kpi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.kpi-card-label {
-  font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase;
-  font-weight: 700; color: var(--text-muted);
+/* Cajas estándar con sombras fuertes definidas en el requerimiento */
+.kpi-card, .chart-panel { 
+  background: var(--white, #ffffff); 
+  border: 1px solid rgba(15, 23, 42, 0.08); 
+  border-radius: 8px; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04); 
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; 
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
+.kpi-interactive:hover { 
+  transform: translateY(-3px); 
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05); 
+  cursor: pointer; 
+  border-color: var(--slate-300, #cbd5e1); 
+}
+
+.kpi-card-highlight { background: var(--navy-900, #0f172a); border-color: var(--navy-700, #334155); }
+
+/* Partes del KPI */
+.kpi-card-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 8px; }
+.kpi-card-label { font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; font-weight: 700; color: var(--text-muted, #94a3b8); }
 .kpi-indicator { width: 7px; height: 7px; border-radius: 50%; }
-.ind-green { background: #22c55e; }
-.ind-amber { background: #f59e0b; }
-.ind-red   { background: #ef4444; }
-.ind-blue  { background: #3b82f6; }
-.ind-teal  { background: #0f766e; }
 
-.kpi-card-value {
-  font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--text-primary); font-variant-numeric: tabular-nums; margin-bottom: 8px;
-}
-.kpi-top-name {
-  font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--white);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-}
+.kpi-card-value { font-size: 24px; font-weight: 700; color: var(--text-primary, #0f172a); margin-bottom: 6px; font-variant-numeric: tabular-nums; padding: 0 20px; }
+.kpi-card-sub { font-size: 11px; color: var(--text-muted, #94a3b8); font-weight: 500; padding: 0 20px 18px; }
+.kpi-card-actions { display: flex; gap: 8px; padding: 0 20px 18px;}
 
-.kpi-progress {
-  height: 3px; background: var(--slate-100); border-radius: 2px;
-  margin-bottom: 8px; overflow: hidden;
-}
-.kpi-progress-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
-.fill-green { background: #22c55e; }
-.fill-amber { background: #f59e0b; }
+.interactive-pill { transition: filter 0.15s; }
+.interactive-pill:hover { filter: brightness(0.95); cursor: pointer; }
 
-.kpi-card-sub { font-size: 11px; color: var(--text-muted); }
+/* ═══════════════════════════════════════════════
+   GRIDS & PANELS
+═══════════════════════════════════════════════ */
+.chart-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;}
+.chart-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;}
 
-/* ── Panels de gráficos ── */
-.chart-panel {
-  background: var(--white); border: 1px solid var(--border); border-radius: 6px;
-  overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.chart-panel-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  padding: 16px 20px; border-bottom: 1px solid var(--slate-100);
-}
-.chart-panel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
-.chart-panel-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.chart-panel-header { padding: 14px 20px; border-bottom: 1px solid var(--slate-100, #f1f5f9); background: #fafbfc; }
+.chart-panel-title { font-size: 12.5px; font-weight: 700; color: var(--text-primary, #0f172a); text-transform: uppercase; letter-spacing: 0.03em; }
+.chart-panel-sub { font-size: 11px; color: var(--text-muted, #94a3b8); margin-top: 3px; }
 
-.chart-area { padding: 16px 20px; height: 300px; }
-.chart-area-donut { height: 300px; }
+.chart-area { flex: 1; position: relative; }
+.panel-scroll-area { max-height: 280px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--slate-300, #cbd5e1) transparent; }
 
-.chart-legend-inline {
-  display: flex; gap: 14px; align-items: center;
-  font-size: 11.5px; color: var(--text-secondary); font-weight: 500;
-}
-.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+/* Listas custom (Pipeline) */
+.list-row-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--slate-50, #f8fafc); transition: background 0.15s; }
+.interactive-row:hover { background: var(--slate-50, #f8fafc); cursor: pointer; }
+.row-info { display: flex; flex-direction: column; gap: 2px; }
+.row-title { font-size: 12px; font-weight: 600; color: var(--text-primary, #0f172a); }
+.row-meta { font-size: 10.5px; color: var(--text-muted, #94a3b8); }
+.row-stats { display: flex; align-items: center; gap: 12px; }
+.row-count { font-size: 13px; font-weight: 700; color: var(--text-secondary, #475569); min-width: 30px; text-align: right; }
+.row-bar-track { width: 80px; height: 5px; background: var(--slate-100, #f1f5f9); border-radius: 3px; overflow: hidden; }
+.row-bar-fill { height: 100%; background: var(--teal-500, #12274e); border-radius: 3px; }
 
-.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.chart-grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-.chart-panel-wide { grid-column: auto; }
+/* ═══════════════════════════════════════════════
+   TABLAS (Nativas e Internas del Componente Stats)
+═══════════════════════════════════════════════ */
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.exec-table th { padding: 10px 16px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; text-align: left; border-bottom: 2px solid var(--border, #e2e8f0); }
+.exec-table td { padding: 10px 16px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; }
+.tbody-row:last-child td { border-bottom: none; }
 
-/* ═══════════════════════════════════════════════════════════
-   FOOTER
-═══════════════════════════════════════════════════════════ */
-.exec-footer {
-  display: flex; align-items: center; gap: 10px; padding: 10px 28px;
-  background: var(--white); border-top: 1px solid var(--border);
-  font-size: 11.5px; color: var(--text-muted); font-weight: 500;
-}
-.exec-footer strong { color: var(--text-secondary); }
-.footer-sep { color: var(--border); }
-.footer-spacer { flex: 1; }
-.footer-status { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-ok      { background: #22c55e; }
-.dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
+/* Hack para sobrescribir las clases de Bootstrap generadas por StatsTable.vue sin tocar su script */
+:deep(.chart-area table) { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'IBM Plex Sans', sans-serif; }
+:deep(.chart-area table thead) { position: sticky; top: 0; background: var(--slate-100, #f1f5f9); z-index: 2; }
+:deep(.chart-area table th) { padding: 10px 16px !important; font-size: 10px !important; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: var(--text-secondary, #475569); border: none !important; }
+:deep(.chart-area table td) { padding: 10px 16px !important; border-bottom: 1px solid var(--slate-50, #f8fafc) !important; color: var(--text-primary, #0f172a); vertical-align: middle; }
+:deep(.chart-area table tbody tr:hover td) { background: #f0f9ff !important; transition: background 0.1s; cursor: pointer; }
+:deep(.chart-area table .text-success) { color: #15803d !important; font-weight: 600; }
+:deep(.chart-area table .text-muted) { color: var(--text-muted, #94a3b8) !important; }
 
-/* ═══════════════════════════════════════════════════════════
-   UTILIDADES
-═══════════════════════════════════════════════════════════ */
-.text-center  { text-align: center; }
-.fw-600 { font-weight: 600; }
-.fw-700 { font-weight: 700; }
-.c-green { color: #15803d; }
-.c-blue  { color: #1d4ed8; }
-.c-red   { color: #b91c1c; }
-.c-teal  { color: #0f766e; }
-.text-muted-cell { color: #cbd5e1; }
+/* Utilidades Locales */
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.p-0 { padding: 0 !important; }
+.accent-text { color: var(--teal-600, #12274e); }
 
 /* Animaciones */
-.fade-in { animation: fadeIn 0.3s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes spin   { to { transform: rotate(360deg); } }
-@keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
-
-/* Transición KPIs inline */
-.slide-fade-enter-active { transition: all 0.2s ease; }
-.slide-fade-leave-active { transition: all 0.15s ease; }
-.slide-fade-enter-from   { opacity: 0; transform: translateX(12px); }
-.slide-fade-leave-to     { opacity: 0; transform: translateX(-8px); }
-
-/* ── Heatmap VERDE (≥ 15%) ── */
-.bg-g1 { background-color: #dcfce7; color: #166534; }   /* 15–24% */
-.bg-g2 { background-color: #86efac; color: #14532d; }   /* 25–39% */
-.bg-g3 { background-color: #22c55e; color: #ffffff; }   /* 40–59% */
-.bg-g4 { background-color: #15803d; color: #ffffff; }   /* 60%+   */
-
-/* ── Heatmap ROJO (1–14%) ── */
-.bg-r1 { background-color: #fee2e2; color: #991b1b; }   /* 12–14% */
-.bg-r2 { background-color: #fca5a5; color: #7f1d1d; }   /* 8–11%  */
-.bg-r3 { background-color: #f87171; color: #ffffff; }   /* 4–7%   */
-.bg-r4 { background-color: #dc2626; color: #ffffff; }   /* 1–3%   */
+.slide-fade-enter-active { transition: all 0.3s ease; }
+.slide-fade-enter-from { opacity: 0; transform: translateY(10px); }
 </style>
+<script setup>
+import { ref, reactive, onMounted, inject, h, defineComponent } from 'vue'
+import { useRouter, useRoute } from 'vue-router'  // <-- añade useRoute
+import { ServiceKeys } from '@/services'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
+import MultiSelect from '@/components/MultiSelect.vue'
+import SearchSelect from '@/components/SearchSelect.vue'
+
+const isStrictlyComercial = ref(false)
+const selectedAdvisorId = ref(null)
+// --- COMPONENTE INTERNO (sin cambios) ---
+const StatsTable = defineComponent({
+  props: ['data'],
+  emits: ['click-row'],
+  render() {
+    return h('table', { class: 'table table-hover table-striped mb-0 small align-middle' }, [
+      h('thead', { class: 'table-light sticky-top' }, [
+        h('tr', [
+          h('th', { class: 'ps-3 py-2 border-0' }, 'Nombre'),
+          h('th', { class: 'text-end py-2 border-0' }, 'Leads'),
+          h('th', { class: 'text-end py-2 border-0 text-success' }, 'Ventas'),
+          h('th', { class: 'text-end pe-3 py-2 border-0 text-muted' }, '%'),
+        ])
+      ]),
+      h('tbody',
+        (this.data || []).map((item, i) =>
+          h('tr', {
+            key: i,
+            class: 'cursor-pointer',
+            onClick: () => this.$emit('click-row', item)
+          }, [
+            h('td', { class: 'ps-3 py-2 border-0' }, item.name),
+            h('td', { class: 'text-end fw-bold py-2 border-0' }, item.count),
+            h('td', { class: 'text-end fw-bold text-success py-2 border-0' }, item.sales),
+            h('td', { class: 'text-end pe-3 text-muted py-2 border-0' }, item.conversion_rate + '%'),
+          ])
+        )
+      )
+    ])
+  }
+})
+
+const router = useRouter()
+const route  = useRoute()   // <-- añadido
+const comercialService = inject(ServiceKeys.Comercial)
+const authService      = inject(ServiceKeys.Auth)
+const catalog          = inject('catalog')
+
+// === ESTADO ===
+const isLoading      = ref(false)
+const stats          = ref(null)
+const filtroOwners   = ref([])
+const dateRangeString = ref(null)
+const payRangeString  = ref(null)
+
+// === HELPERS URL ===
+const decodeFilter = (jsonStr) => {
+  if (!jsonStr) return []
+  try { return JSON.parse(jsonStr) } catch (e) { return [] }
+}
+
+const encodeFilter = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined
+  return JSON.stringify(arr.map(i => ({ value: i.value ?? i.id, label: i.label ?? i.description })))
+}
+
+const getIds = (arr) =>
+  Array.isArray(arr) ? arr.map(i => i.value ?? i.id).filter(x => x != null) : []
+
+// === FILTROS ===
+const filters = reactive({
+  rangoFechas: { start: '', end: '' },
+  rangoPago:   { start: '', end: '' },
+  owner_user_ids: [],   // [{value, label}]
+  program_text: '',
+  model_modality_id: null
+})
+
+// === LIFECYCLE ===
+onMounted(async () => {
+  applyRoleRestrictions() // 1. Validar roles e inyectar ID si aplica
+  
+  await loadOwners()
+  await parseQueryAndApply()
+  
+  // 2. Re-asegurar que el filtro no fue pisado por la URL si es estrictamente comercial
+  if (isStrictlyComercial.value) {
+     applyRoleRestrictions() 
+  }
+  
+  fetchStats()
+})
+
+// === CARGA CATÁLOGOS ===
+async function loadOwners() {
+  try {
+    const arr = await authService.userList({})
+    filtroOwners.value = arr.map(u => {
+      // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
+      const fName = (u.first_name || '').trim()
+      const lName = (u.last_name || '').trim()
+      
+      let fullName = fName
+      if (lName) fullName += ` ${lName.charAt(0)}.`
+      
+      // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
+      const desc = fullName.trim() || `Usuario ${u.user_id}`
+
+      return { 
+        id: u.user_id, 
+        description: desc 
+      }
+    })
+  } catch (e) { 
+    console.error(e) 
+  }
+}
+function getBadgeClassInterestExec(alias) {
+  if (alias === 'we_lead_interest_high')   return 'pill-red'
+  if (alias === 'we_lead_interest_medium') return 'pill-amber'
+  return 'pill-slate'
+}
+// === LEER URL AL MONTAR ===
+async function parseQueryAndApply() {
+  const q = route.query
+  if (Object.keys(q).length === 0) return
+
+  // Fechas de registro
+  if (q.from_date || q.to_date) {
+    filters.rangoFechas = { start: q.from_date || '', end: q.to_date || '' }
+    if (q.from_date) dateRangeString.value = `${q.from_date} a ${q.to_date || q.from_date}`
+  }
+
+  // Fechas de pago
+  if (q.pay_date_from || q.pay_date_to) {
+    filters.rangoPago = { start: q.pay_date_from || '', end: q.pay_date_to || '' }
+    if (q.pay_date_from) payRangeString.value = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
+  }
+if (q.model_modality_id) {
+    filters.model_modality_id = Number(q.model_modality_id)
+  }
+  // Texto programa
+  if (q.program_text) filters.program_text = q.program_text
+
+  // Asesores: acepta el nuevo formato JSON y el antiguo de IDs separados por coma
+  if (q.owner_user_ids && !isStrictlyComercial.value) {
+    // Intenta parsear como JSON primero (nuevo formato)
+    const decoded = decodeFilter(q.owner_user_ids)
+    if (decoded.length > 0) {
+      filters.owner_user_ids = decoded
+    } else {
+      // Fallback: venía como "1,2,3" (drillDown antiguo)
+      const ids = q.owner_user_ids.split(',').map(Number).filter(Boolean)
+      filters.owner_user_ids = filtroOwners.value
+        .filter(u => ids.includes(u.id))
+        .map(u => ({ value: u.id, label: u.description }))
+    }
+  }
+}
+
+// === FECHAS ===
+function handleDateFilterChange(selectedDates, type) {
+  const toSQL = (d) => {
+    if (!d) return ''
+    const offset = d.getTimezoneOffset() * 60000
+    return new Date(d.getTime() - offset).toISOString().split('T')[0]
+  }
+  let start = '', end = ''
+  if (Array.isArray(selectedDates) && selectedDates.length > 0) {
+    start = toSQL(selectedDates[0])
+    end   = selectedDates[1] ? toSQL(selectedDates[1]) : start
+  }
+  if (type === 'created') filters.rangoFechas = { start, end }
+  else if (type === 'payment') filters.rangoPago = { start, end }
+}
+
+// === FETCH STATS (escribe en URL + llama API) ===
+async function fetchStats() {
+  isLoading.value = true
+
+  // 1. Sincronizar URL con estado actual
+  const queryParams = {}
+  if (filters.rangoFechas.start) {
+    queryParams.from_date = filters.rangoFechas.start
+    queryParams.to_date   = filters.rangoFechas.end
+  }
+
+  if (filters.model_modality_id) queryParams.model_modality_id = filters.model_modality_id
+  if (filters.rangoPago.start) {
+    queryParams.pay_date_from = filters.rangoPago.start
+    queryParams.pay_date_to   = filters.rangoPago.end
+  }
+  if (filters.program_text)         queryParams.program_text    = filters.program_text
+  if (filters.owner_user_ids.length) queryParams.owner_user_ids = encodeFilter(filters.owner_user_ids)
+
+  router.replace({ query: queryParams })
+
+  // 2. Llamada a la API
+  try {
+    const data = await comercialService.leadStats({
+      from_date:       filters.rangoFechas.start || null,
+      to_date:         filters.rangoFechas.end   || null,
+      pay_date_from:   filters.rangoPago.start   || null,
+      pay_date_to:     filters.rangoPago.end     || null,
+      program_text:    filters.program_text      || null,
+      model_modality_ids: filters.model_modality_id ? [filters.model_modality_id] : [],
+      owner_user_ids:  getIds(filters.owner_user_ids)
+    })
+    stats.value = data
+  } catch (error) {
+    console.error('Error cargando stats:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+// === VALIDACIÓN DE ROLES ===
+function applyRoleRestrictions() {
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const userData = JSON.parse(userStr)
+      const roles = userData.roles || []
+      
+      const isComercial = roles.includes('COMERCIAL')
+      const isLider = roles.includes('LIDER_COMERCIAL')
+      
+      // Si es Comercial pero NO es Lider Comercial
+      if (isComercial && !isLider) {
+        isStrictlyComercial.value = true
+        selectedAdvisorId.value = userData.user_id
+        
+        // Clavamos el filtro con el usuario logueado
+        filters.owner_user_ids = [{
+          value: userData.user_id,
+          label: userData.full_name || `Usuario ${userData.user_id}`
+        }]
+      }
+    }
+  } catch (error) {
+    console.error('Error procesando el usuario desde localStorage:', error)
+  }
+}
+// === DRILL DOWN (ahora con {value, label} en URL) ===
+function drillDown(type, valueName) {
+
+  // Base: heredamos las fechas y texto del filtro actual
+  const query = {}
+  if (filters.rangoFechas.start) {
+    query.from_date = filters.rangoFechas.start
+    query.to_date   = filters.rangoFechas.end
+  }
+  if (filters.rangoPago.start) {
+    query.pay_date_from = filters.rangoPago.start
+    query.pay_date_to   = filters.rangoPago.end
+  }
+
+  if (filters.program_text)          query.program_text    = filters.program_text
+  if (filters.owner_user_ids.length) query.owner_user_ids  = encodeFilter(filters.owner_user_ids)
+  // Heredar modalidad formateada como [{value, label}] para el Listado
+  if (filters.model_modality_id) {
+    const modObj = catalog.options('we_modality').find(x => x.id === filters.model_modality_id)
+    if (modObj) {
+      query.model_modality_ids = encodeFilter([{ value: modObj.id, label: modObj.description }])
+    }
+  }
+  // Helper: busca en catálogo y devuelve JSON {value, label}
+  const findInCatalog = (catalogKey, field, val) => {
+    const found = catalog.options(catalogKey).find(x => x[field] === val)
+    return found ? encodeFilter([{ value: found.id, label: found.description }]) : null
+  }
+
+  if (type === 'all') {
+    // Sin filtro extra
+  }
+  else if (type === 'web') {
+    query.web = 'Y'
+  }
+  else if (type === 'b2b') {
+    query.b2b = 'Y'
+  }
+  else if (type === 'sales') {
+    const opts = catalog.options('we_lead_status')
+    const salesItems = opts
+      .filter(x => ['we_lead_status_bought', 'we_lead_status_insc'].includes(x.alias))
+      .map(x => ({ value: x.id, label: x.description }))
+    if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+  }
+  else if (type === 'status') {
+    const r = findInCatalog('we_lead_status', 'description', valueName)
+    if (r) query.status_lead_ids = r
+  }
+  else if (type === 'owner') {
+  const found = filtroOwners.value.find(u => u.description === valueName)
+  if (found) query.owner_user_ids = encodeFilter([{ value: found.id, label: found.description }])
+}
+  else if (type === 'strategy') {
+    const r = findInCatalog('we_type_strategy', 'description', valueName)
+    if (r) query.strategy_ids = r
+  }
+  else if (type === 'channel') {
+    const r = findInCatalog('we_social_media', 'description', valueName)
+    if (r) query.channel_ids = r
+  }
+  else if (type === 'program_type') {
+    const r = findInCatalog('we_program_type', 'description', valueName)
+    if (r) query.type_program_ids = r
+  }
+  else if (type === 'word') {
+    const r = findInCatalog('we_key_word', 'description', valueName)
+    if (r) query.word_ids = r
+  }
+  else if (type === 'promotion') {
+    const r = findInCatalog('we_category_query', 'description', valueName)
+    if (r) query.query_ids = r
+  }
+   else if (type === 'interestPriority') {
+      const opts = catalog.options('we_lead_interest')
+      const found = opts.find(x => x.description === valueName)
+         ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
+
+      const today = new Date()
+      const twoWeeksLater = new Date()
+      twoWeeksLater.setDate(today.getDate() + 14)
+
+      // Formato YYYY-MM-DD
+      const formatDate = d => d.toISOString().split('T')[0]
+
+      query.edition_start_from = formatDate(today)
+      query.edition_start_to   = formatDate(twoWeeksLater)
+
+      if (found) {
+         query.interest_level_ids = encodeFilter([
+            { value: found.id, label: found.description }
+         ])
+      }
+      
+      const optsx = catalog.options('we_lead_status')
+      const salesItems = optsx
+      .filter(x => ['we_lead_status_atendido', 'we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
+      .map(x => ({ value: x.id, label: x.description }))
+
+      
+       if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+      
+   }
+  else if (type === 'interest') {
+    const opts = catalog.options('we_lead_interest')
+    const found = opts.find(x => x.description === valueName)
+        ?? opts.find(x => x.alias === 'we_lead_interest_high' && valueName === 'Alta')
+
+    if (found) {
+        query.interest_level_ids = encodeFilter([
+          { value: found.id, label: found.description }
+        ])
+    }
+    
+  }
+else if (type === 'medium') {
+    // Busca en el catálogo de medios y lo codifica como [{value, label}]
+    const r = findInCatalog('we_medium_contact', 'description', valueName)
+    if (r) query.medium_contact_ids = r
+  }
+  else if (type === 'country') {
+    // Busca en el catálogo de países y lo codifica como [{value, label}]
+    const r = findInCatalog('we_country', 'description', valueName)
+    if (r) query.code_country_ids = r
+  }
+  else if (type === 'moment') {
+    const r = findInCatalog('we_moment', 'description', valueName)
+    if (r) query.moment_ids = r
+  }
+  else if (type === 'follow') {
+    const opts  = catalog.options('we_calling')
+    const found = opts.find(x => x.description === valueName)
+      ?? opts.find(x => x.alias === valueName)
+console.log(opts)
+console.log(found)
+    if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
+console.log(valueName)
+  }
+console.log(query)
+  const routeData = router.resolve({ name: 'ComercialListado', query })
+  window.open(routeData.href, '_blank')
+}
+
+// === HELPERS VISUALES ===
+function getBadgeClassInterest(alias) {
+  if (alias === 'we_lead_interest_high')   return 'bg-danger text-white'
+  if (alias === 'we_lead_interest_medium') return 'bg-warning text-dark'
+  return 'bg-secondary text-white'
+}
+</script>

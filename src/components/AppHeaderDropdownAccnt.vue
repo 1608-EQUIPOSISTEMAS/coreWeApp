@@ -52,6 +52,22 @@ async function syncCatalog() {
     }
     
   }
+  
+  async function syncRprospectosToSheet() {
+    try {
+      const response = await integrationService.syncRprospectosToSheet()
+      
+      if (response && response.ok) {
+        toast.success(`GOOGLE SHEET PROSPECTOS SINCRONIZADOS`);
+      } else {
+        throw new Error(response?.message || 'Error desconocido al sincronizar prospectos');
+      }
+    } catch (error) {
+      console.error('Error al sincronizar prospectos:', error)
+      toast.error('Error al sincronizar prospectos')
+    }
+  }
+
 
   //updateEnrollmentBase
   async function updateEnrollmentBase() {
@@ -114,8 +130,12 @@ async function syncCatalog() {
        <CDropdownItem @click="updateBase()" v-if="$hasRole(['COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>
-       <CDropdownItem @click="updateEnrollmentBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
+       <!-- <CDropdownItem @click="updateEnrollmentBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Inscritos
+      </CDropdownItem> -->
+      
+       <CDropdownItem @click="syncRprospectosToSheet()"  v-if="$hasRole(['LIDER_COMERCIAL','ADMIN'])">
+        <CIcon  icon="cil-cloud-download" /> Prospectos
       </CDropdownItem>
        <CDropdownItem @click="syncScheduleToSheet()"  v-if="$hasRole(['ADMIN','PRODUCTO','LIDER GERENCIA'])">
         <CIcon  icon="cil-cloud-download" /> Planeamiento

@@ -105,7 +105,7 @@
                       />
                     </div>
                   </th>
-                  <th colspan="6" class="th-group th-group-a" rowspan="2">DATOS DEL PROGRAMA</th>
+                  <th colspan="6" class="th-group th-group-a sticky-group-a" rowspan="2">DATOS DEL PROGRAMA</th>
                   <th colspan="6" class="th-group th-group-b" rowspan="2">OBJETIVOS &amp; RESULTADOS</th>
                   <th :colspan="currentDynamicColumnsFlat.length || 1" class="th-group th-group-c">
                     {{ currentGroupTitle }}
@@ -128,27 +128,27 @@
                 </tr>
 
                 <tr class="thead-sub">
-                  <th class="ts ts-a text-center" style="width: 40px;">#</th>
-                  <th class="ts ts-a">
+                  <th class="ts ts-a text-center sticky-num" >#</th>
+                  <th class="ts ts-a sticky-linea" >
                     <div class="d-flex align-items-center justify-content-between gap-1">
                       <span>LÍNEA</span>
                       <ColumnFilterDropdown column-label="Línea" :all-items="processedData" :value-extractor="item => item.linea" v-model="columnFilters.linea" />
                     </div>
                   </th>
-                  <th class="ts ts-a">
+                  <th class="ts ts-a td-prog sticky-prog">
                     <div class="d-flex align-items-center justify-content-between gap-1">
                       <span>PROGRAMA</span>
                       <ColumnFilterDropdown column-label="Programa" :all-items="processedData" :value-extractor="item => item.programa" v-model="columnFilters.programa" />
                     </div>
                   </th>
-                  <th class="ts ts-a">
+                  <th class="ts ts-a sticky-tipo">
                     <div class="d-flex align-items-center justify-content-between gap-1">
                       <span>TIPO</span>
                       <ColumnFilterDropdown column-label="Tipo" :all-items="processedData" :value-extractor="item => item.tipo" v-model="columnFilters.tipo" />
                     </div>
                   </th>
-                  <th class="ts ts-a text-center">INICIO</th>
-                  <th class="ts ts-a">
+                  <th class="ts ts-a text-center sticky-ini">INICIO</th>
+                  <th class="ts ts-a sticky-ed">
                     <div class="d-flex align-items-center justify-content-between gap-1">
                       <span>ED.</span>
                       <ColumnFilterDropdown column-label="Edición" :all-items="processedData" :value-extractor="item => item.edicion" v-model="columnFilters.edicion" />
@@ -157,7 +157,7 @@
 
                   <th class="ts ts-b text-right">META S/.</th>
                   <th class="ts ts-b text-right">VENTA S/.</th>
-                  <th class="ts ts-b text-center" style="border-right: 1px solid #d1fae5;">LOGRO M.</th>
+                  <th class="ts ts-b text-center" style="border-right: 1px solid #fde68a;">LOGRO M.</th>
                   <th class="ts ts-b text-center">META VAC.</th>
                   <th class="ts ts-b text-center">INSCRITOS</th>
                   <th class="ts ts-b text-center">LOGRO V.</th>
@@ -184,16 +184,16 @@
                   <td class="td-cat">
                     <span class="pill" :class="pillClass(row.catg)">{{ row.catg }}</span>
                   </td>
-                  <td class="td-a text-center text-muted fw-bold" style="font-size: 11px;">
+                  <td class="td-a text-center text-muted fw-bold sticky-num" style="font-size: 11px;">
                   {{ i + 1 }}
                 </td>
-                  <td class="td-a text-center text-mono text-muted">{{ row.linea }}</td>
-                  <td class="td-a td-prog" :title="row.programa">{{ row.programa }}</td>
-                  <td class="td-a text-center">
+                  <td class="td-a text-center text-mono text-muted sticky-linea">{{ row.linea }}</td>
+                  <td class="td-a td-prog sticky-prog" :title="row.programa">{{ row.programa }}</td>
+                  <td  class="td-a text-center sticky-tipo">
                     <span class="tipo-tag">{{ row.tipo }}</span>
                   </td>
-                  <td class="td-a text-center text-mono text-muted small">{{ formatDate(row.fecha) }}</td>
-                  <td class="td-a text-center text-mono text-muted small">{{ row.edicion }}</td>
+                  <td  class="td-a text-center text-mono text-muted small sticky-ini">{{ formatDate(row.fecha) }}</td>
+                  <td class="td-a text-center text-mono text-muted small sticky-ed">{{ row.edicion }}</td>
 
                   <td class="td-b text-right text-muted small">{{ formatMoney(row.objetivo) }}</td>
                   <td class="td-b text-right fw-600">{{ formatMoney(row.venta) }}</td>
@@ -890,8 +890,7 @@ const bcgChartOptions = computed(() => {
 .table-shell {
   background: var(--white, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
-  border-radius: 6px;
-  overflow: hidden; /* IMPORTANTE: Dejar solo hidden en X si es necesario, pero quitamos el overflow-y oculto */
+  border-radius: 6px; 
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
@@ -923,7 +922,12 @@ const bcgChartOptions = computed(() => {
 }
 
 .th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
-.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; }
+.th-group-b {
+  background: #fffbeb;
+  color: #92400e;
+  border-left: 2px solid #fde68a;
+}
+
 .th-group-c { background: #f0fdf4; color: #0f766e; border-left: 2px solid #bbf7d0; }
 
 /* ── Sub-cabeceras agrupadas ── */
@@ -954,8 +958,11 @@ const bcgChartOptions = computed(() => {
 }
 
 .ts-a { background: #f0f7ff; color: #3b82f6; border-left: 1px solid #dbeafe; }
-.ts-b { background: #f0fdf4; color: #16a34a; border-left: 1px solid #d1fae5; }
-.ts-c { background: #f0fdf4; color: #0f766e; border-left: 1px solid #bbf7d0; }
+.ts-b {
+  background: #fefce8;
+  color: #a16207;
+  border-left: 1px solid #fef08a;
+}.ts-c { background: #f0fdf4; color: #0f766e; border-left: 1px solid #bbf7d0; }
 
 .col-dyn-name { display: block; }
 .col-dyn-sub  { display: block; font-size: 9px; color: #6b7280; font-weight: 400; letter-spacing: 0; margin-top: 1px; }
@@ -973,8 +980,10 @@ const bcgChartOptions = computed(() => {
 
 .td-cat { padding-left: 14px; border-right: 2px solid var(--navy-800, #1e293b); background: var(--navy-900, #0f172a) !important; color: #fff; }
 .td-a { background: #f8fbff; border-left: 1px solid #e0eeff; }
-.td-b { background: #f7fdf9; border-left: 1px solid #d5f5e0; }
-.td-c { background: #f8fafc; color: var(--text-primary, #0f172a); border-left: 1px solid var(--border, #e2e8f0); }
+.td-b {
+  background: #fefce8;
+  border-left: 1px solid #fef08a;
+}.td-c { background: #f8fafc; color: var(--text-primary, #0f172a); border-left: 1px solid var(--border, #e2e8f0); }
 .td-prog { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 
 /* TFoot Fijo (Opcional: Si quieres que el TFoot también flote abajo) */
@@ -1104,4 +1113,137 @@ const bcgChartOptions = computed(() => {
 .slide-fade-leave-active { transition: all 0.15s ease; }
 .slide-fade-enter-from   { opacity: 0; transform: translateX(12px); }
 .slide-fade-leave-to     { opacity: 0; transform: translateX(-8px); }
+/* ═══════════════════════════════════════════════
+   STICKY COLUMNS — Anchos fijos + left acumulado
+   CAT(72) → NUM(40) → LINEA(70) → PROG(210) → TIPO(90) → INI(80) → ED(70)
+═══════════════════════════════════════════════ */
+
+/* CAT: posición 0 */
+.td-cat, .th-cat {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+}
+
+/* NUM: left = 72 */
+.sticky-num {
+  position: sticky;
+  left: 72px;
+  z-index: 2;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+}
+
+/* LÍNEA: left = 72+40 = 112 */
+.sticky-linea {
+  position: sticky;
+  left: 112px;
+  z-index: 2;
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+}
+
+/* PROGRAMA: left = 112+70 = 182 */
+.sticky-prog {
+  position: sticky;
+  left: 182px;
+  z-index: 2;
+  width: 210px;
+  min-width: 210px;
+  max-width: 210px;
+}
+
+/* TIPO: left = 182+210 = 392 */
+.sticky-tipo {
+  position: sticky;
+  left: 392px;
+  z-index: 2;
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+/* INICIO: left = 392+90 = 482 */
+.sticky-ini {
+  position: sticky;
+  left: 482px;
+  z-index: 2;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+/* ED.: left = 482+80 = 562 — sombra de cierre del grupo */
+.sticky-ed {
+  position: sticky;
+  left: 562px;
+  z-index: 2;
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  box-shadow: 4px 0 8px rgba(0,0,0,0.10);
+  border-right: 2px solid #bfdbfe !important;
+}
+
+/* GRUPO "DATOS DEL PROGRAMA": empieza donde CAT termina */
+.sticky-group-a {
+  position: sticky;
+  left: 72px;
+  z-index: 4;
+  background: #eff6ff !important;
+}
+
+/* thead z-index superior para tapar las celdas que pasan por debajo */
+thead .sticky-num,
+thead .sticky-linea,
+thead .sticky-prog,
+thead .sticky-tipo,
+thead .sticky-ini,
+thead .sticky-ed { z-index: 4; }
+
+/* ── Fondos sólidos thead ── */
+thead .sticky-num,
+thead .sticky-linea,
+thead .sticky-prog,
+thead .sticky-tipo,
+thead .sticky-ini,
+thead .sticky-ed   { background: #f0f7ff !important; }
+
+/* ── Fondos sólidos tbody ── */
+.tbody-row .sticky-num,
+.tbody-row .sticky-linea,
+.tbody-row .sticky-prog,
+.tbody-row .sticky-tipo,
+.tbody-row .sticky-ini,
+.tbody-row .sticky-ed    { background: #f8fbff !important; }
+
+.tbody-row.row-alt .sticky-num,
+.tbody-row.row-alt .sticky-linea,
+.tbody-row.row-alt .sticky-prog,
+.tbody-row.row-alt .sticky-tipo,
+.tbody-row.row-alt .sticky-ini,
+.tbody-row.row-alt .sticky-ed  { background: #f0f7ff !important; }
+
+.tbody-row:hover .sticky-num,
+.tbody-row:hover .sticky-linea,
+.tbody-row:hover .sticky-prog,
+.tbody-row:hover .sticky-tipo,
+.tbody-row:hover .sticky-ini,
+.tbody-row:hover .sticky-ed    { background: #e0f0ff !important; }
+
+/* ── tfoot ── */
+.tfoot-row .sticky-num,
+.tfoot-row .sticky-linea,
+.tfoot-row .sticky-prog,
+.tfoot-row .sticky-tipo,
+.tfoot-row .sticky-ini,
+.tfoot-row .sticky-ed  { background: var(--navy-900, #0f172a) !important; }
+.tbody-row td.td-b[style*="border-right"] {
+  border-right-color: #fde68a !important;
+}
 </style>

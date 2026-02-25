@@ -151,10 +151,12 @@
             <div class="chart-area" style="height: 240px; padding-bottom: 0;">
               <Bar :data="persistenceChartData" :options="persistenceChartOptions" />
             </div>
-            <div class="insight-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span><strong>Insight:</strong> Evalúa si el esfuerzo después del 4to intento justifica el costo operativo basándote en la caída de esta curva.</span>
-            </div>
+<div class="insight-box">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0; margin-top:1px;">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  <span><strong>Insight:</strong> {{ persistenceInsight }}</span>
+</div>
           </div>
 
           <div class="chart-panel">
@@ -460,32 +462,136 @@ const hourlyFlowOptions = {
   }
 }
 const persistenceChartData = computed(() => {
-  const pMap = { 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0 };
+  const keys = [1, 2, 3, 4, '5+']
+  const pMap = {}
+  keys.forEach(k => pMap[k] = { intentos: 0, contactados: 0, ventas: 0 })
 
   rawData.value.forEach(row => {
     ;(row.chart_curva_persistencia || []).forEach(item => {
-      if (item.intento_num >= 5)                      pMap['5+'] += item.ventas;
-      else if (item.intento_num >= 1 && item.intento_num <= 4) pMap[item.intento_num] += item.ventas;
-    });
-  });
+      const key = item.intento_num >= 5 ? '5+' : item.intento_num
+      if (pMap[key] !== undefined) {
+        pMap[key].intentos    += item.intentos    || 0
+        pMap[key].contactados += item.contactados || 0
+        pMap[key].ventas      += item.ventas      || 0
+      }
+    })
+  })
+
+  const labels    = ['1er', '2do', '3er', '4to', '5to+']
+  const intentos  = keys.map(k => pMap[k].intentos)
+  const contactados = keys.map(k => pMap[k].contactados)
+  const ventas    = keys.map(k => pMap[k].ventas)
+  
+  // Tasa de contacto por intento
+  const tasaContacto = keys.map(k => {
+    const i = pMap[k].intentos
+    return i > 0 ? +((pMap[k].contactados / i) * 100).toFixed(1) : 0
+  })
+  // Tasa de cierre sobre contactados
+  const tasaCierre = keys.map(k => {
+    const c = pMap[k].contactados
+    return c > 0 ? +((pMap[k].ventas / c) * 100).toFixed(1) : 0
+  })
 
   return {
-    labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+'],
-    datasets: [{
-      label: 'Ventas Cerradas',
-      data: [pMap[1], pMap[2], pMap[3], pMap[4], pMap['5+']],
-      backgroundColor: ['#94a3b8','#0ea5e9','#3b82f6','#1d4ed8','#0f172a'],
-      borderRadius: 3
-    }]
+    labels,
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Intentos totales',
+        data: intentos,
+        backgroundColor: 'rgba(148,163,184,0.5)',
+        borderRadius: 3,
+        yAxisID: 'yVol',
+        order: 3
+      },
+      {
+        type: 'bar',
+        label: 'Contactados',
+        data: contactados,
+        backgroundColor: 'rgba(37,99,235,0.55)',
+        borderRadius: 3,
+        yAxisID: 'yVol',
+        order: 2
+      },
+      {
+        type: 'bar',
+        label: 'Ventas cerradas',
+        data: ventas,
+        backgroundColor: 'rgba(15,118,110,0.85)',
+        borderRadius: 3,
+        yAxisID: 'yVol',
+        order: 1
+      },
+      {
+        type: 'line',
+        label: '% Contacto s/intentos',
+        data: tasaContacto,
+        borderColor: '#2563eb',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#2563eb',
+        tension: 0.3,
+        yAxisID: 'yPct',
+        order: 0
+      },
+      {
+        type: 'line',
+        label: '% Cierre s/contactados',
+        data: tasaCierre,
+        borderColor: '#0f766e',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [4, 3],
+        pointRadius: 4,
+        pointBackgroundColor: '#0f766e',
+        tension: 0.3,
+        yAxisID: 'yPct',
+        order: 0
+      }
+    ]
   }
 })
 
 const persistenceChartOptions = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: {
+      display: true,
+      position: 'bottom',
+      labels: { boxWidth: 10, padding: 14, font: { family: 'inherit', size: 10 } }
+    },
+    tooltip: {
+      callbacks: {
+        label: ctx => {
+          if (ctx.dataset.yAxisID === 'yPct') return ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+          return ` ${ctx.dataset.label}: ${new Intl.NumberFormat('es-PE').format(ctx.parsed.y)}`
+        }
+      }
+    }
+  },
   scales: {
-    y: { display: false },
-    x: { grid: { display: false }, ticks: { font: baseFont } }
+    yVol: {
+      type: 'linear',
+      position: 'left',
+      beginAtZero: true,
+      grid: { color: '#f1f5f9' },
+      ticks: { font: { family: 'inherit', size: 10 } },
+      title: { display: true, text: 'Volumen', font: { size: 9 }, color: '#94a3b8' }
+    },
+    yPct: {
+      type: 'linear',
+      position: 'right',
+      beginAtZero: true,
+      max: 100,
+      grid: { drawOnChartArea: false },
+      ticks: { font: { family: 'inherit', size: 10 }, callback: v => v + '%' },
+      title: { display: true, text: '% Tasa', font: { size: 9 }, color: '#94a3b8' }
+    },
+    x: { grid: { display: false }, ticks: { font: { family: 'inherit', size: 11 } } }
   }
 }
 
@@ -512,7 +618,22 @@ const objectionsData = computed(() => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
 })
+const persistenceInsight = computed(() => {
+  const data = persistenceChartData.value.datasets
+  const intentosDs = data.find(d => d.label === 'Intentos totales')?.data || []
+  if (!intentosDs.length || intentosDs[0] === 0) return 'Sin datos suficientes para el período.'
+  
+  const total = intentosDs.reduce((s, v) => s + v, 0)
+  const primerIntento = intentosDs[0]
+  const pctPrimer = total > 0 ? Math.round((primerIntento / total) * 100) : 0
+  
+  const ventasDs = data.find(d => d.label === 'Ventas cerradas')?.data || []
+  const ventasPrimer = ventasDs[0] || 0
+  const ventasTotal = ventasDs.reduce((s, v) => s + v, 0)
+  const pctVentasPrimer = ventasTotal > 0 ? Math.round((ventasPrimer / ventasTotal) * 100) : 0
 
+  return `El ${pctPrimer}% del esfuerzo se concentra en el 1er intento, donde se cierra el ${pctVentasPrimer}% de las ventas. Evalúa si los intentos tardíos justifican el costo operativo.`
+})
 const aggregatedAdvisors = computed(() => {
   const advMap = {};
 
