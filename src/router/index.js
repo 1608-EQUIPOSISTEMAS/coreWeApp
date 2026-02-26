@@ -306,7 +306,7 @@ const routes = [
           path: 'RptGoalAgent',
           name: 'ReportGoalAgent',
           component: () => import('@/views/comercial/ReportGoalAgent.vue'),
-          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptGoalEdition',

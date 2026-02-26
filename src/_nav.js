@@ -87,7 +87,7 @@ export default [
         component: 'CNavItem',
         name: 'Asesor - Objetivos',
         to: '/comercial/RptGoalAgent',
-        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',

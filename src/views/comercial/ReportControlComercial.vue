@@ -802,7 +802,7 @@ function drillDown(type, valueName) {
 
       
        if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
-      
+ 
    }
   else if (type === 'interest') {
     const opts = catalog.options('we_lead_interest')
