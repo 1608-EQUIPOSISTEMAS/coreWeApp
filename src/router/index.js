@@ -218,30 +218,33 @@ const routes = [
       // CLIENTE
       // =====================
       {
-        path: 'cliente',
-        name: 'Cliente',
+        path: 'general',
+        name: 'General',
         component: RouterViewStub,
-        redirect: { name: 'Cliente' },
+        redirect: { name: 'General' },
         meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         children: [
           {
+            path: 'notificaciones',
+            name: 'NotificationList',
+            component: () => import('@/views/general/notification.vue'),
+            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+          },
+          {
             path: 'cliente',
             name: 'CustomerList',
-            // catálogo maestro de programas
             component: () => import('@/views/customer/customers.vue'),
             meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/new',
             name: 'CustomerNew',
-            // creación de nuevo programa
             component: () => import('@/views/customer/customerForm.vue'),
             meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/:id',
             name: 'CustomerEdit',
-            // creación de nuevo programa
             component: () => import('@/views/customer/customerForm.vue'),
             meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },

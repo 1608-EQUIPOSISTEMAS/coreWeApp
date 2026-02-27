@@ -162,9 +162,9 @@
             </div>
           </div>
         </div>
-<div class="action-cards-row">
+<div class="action-cards-row" v-if="filters.period!='ALL'">
           <div class="action-card hot-leads-card actionable-card" @click="drillDown({ type: 'interestPriority', valueName: 'Caliente' })">
-            <div class="ac-icon">🔥</div>
+            <div class="ac-icon text-danger"><i class="fa-solid fa-fire text-danger"></i></div>
             <div class="ac-info">
               <span class="ac-title">Leads Calientes (Próximos a inicio)</span>
               <span class="ac-desc">Interés registrado sin cerrar (14 días)</span>
@@ -173,7 +173,7 @@
           </div>
 
           <div class="action-card follow-up-card actionable-card" @click="drillDown({ type: 'follow', valueName: 'we_calling_pending' })">
-            <div class="ac-icon">📞</div>
+            <div class="ac-icon text-info"><i class="fa-solid fa-phone-volume"></i></div>
             <div class="ac-info">
               <span class="ac-title">Seguimientos de Contacto</span>
               <span class="ac-desc">Llamadas pendientes de gestionar</span>
@@ -1036,7 +1036,7 @@ function drillDown(params = {}) {
       if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
       
   } else if (type === 'follow') {
-      const opts  = catalog.options('we_follow_lead') // <-- Ojo, asegúrate que este sea el catálogo de tu BD
+      const opts  = catalog.options('we_calling') // <-- Ojo, asegúrate que este sea el catálogo de tu BD
       const valueName = params.valueName
       const found = opts.find(x => x.description === valueName)
         ?? opts.find(x => x.alias === valueName)

@@ -251,6 +251,44 @@
         </div>
 
       </div>
+
+      <div class="pending-shell mb-4" v-if="Object.keys(pendingTasksByOrigin).length > 0">
+          <div class="chart-panel-header" style="border-radius: 6px 6px 0 0; background: var(--white); border: 1px solid var(--border); border-bottom: none;">
+            <div>
+              <div class="chart-panel-title">Agenda Operativa: Intentos Pendientes</div>
+              <div class="chart-panel-sub">Llamadas programadas agrupadas por el origen de la regla o gestión.</div>
+            </div>
+          </div>
+
+          <div class="pending-grid">
+            <div v-for="(group, alias) in pendingTasksByOrigin" :key="alias" class="pending-card">
+              <div class="pending-card-header">
+                <span class="pending-origin-name">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                  {{ group.desc }}
+                </span>
+                <span class="pending-badge">{{ group.leads.length }}</span>
+              </div>
+              
+              <div class="pending-list-scroll">
+                <div v-for="lead in group.leads" :key="lead.lead_id" class="pending-item">
+                  <div class="pending-item-info">
+                    <div class="pending-lead-name">{{ lead.lead_name }}</div>
+                    <div class="pending-lead-meta">
+                      Intento #{{ lead.attempt_number }} • 
+                      <span :class="new Date(lead.contact_datetime) < new Date() ? 'c-red' : 'c-teal'">
+                        {{ new Date(lead.contact_datetime).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) }}
+                      </span>
+                    </div>
+                  </div>
+                  <button class="btn-manage" @click="goToLead(lead.lead_id)">
+                    Gestionar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
     </main>
 
     <footer class="exec-footer">
@@ -671,6 +709,40 @@ const getScoreColor = rate => {
   if (r >= 25) return 'c-amber';
   return 'c-red';
 }
+
+// ══════════════════════════════════════════════════════════════════
+// LÓGICA DE TAREAS PENDIENTES (OPERATIVO)
+// ══════════════════════════════════════════════════════════════════
+const pendingTasksByOrigin = computed(() => {
+  const originMap = {}
+  
+  rawData.value.forEach(row => {
+    ;(row.json_pending_tasks || []).forEach(group => {
+      const alias = group.origin_alias
+      if (!originMap[alias]) {
+        originMap[alias] = {
+          desc: group.origin_desc,
+          leads: []
+        }
+      }
+      originMap[alias].leads.push(...group.leads)
+    })
+  })
+
+  // Ordenar los leads dentro de cada grupo por fecha de contacto (los más urgentes primero)
+  Object.values(originMap).forEach(group => {
+    group.leads.sort((a, b) => new Date(a.contact_datetime) - new Date(b.contact_datetime))
+  })
+
+  return originMap
+})
+
+// Función drill-down
+function goToLead(leadId) {
+  // 🔴 Ajusta el nombre de la ruta a la que usas en tu sistema para editar un lead
+  console.log(`Navegando al lead: ${leadId}`)
+  // router.push({ name: 'LeadEdit', params: { id: leadId } })
+}
 </script>
 
 <style scoped>
@@ -1040,4 +1112,104 @@ const getScoreColor = rate => {
   .kpi-strip   { grid-template-columns: 1fr 1fr; }
   .chart-grid-2 { grid-template-columns: 1fr; }
 }
+/* ═══════════════════════════════════════════════
+   SECCIÓN DE TAREAS PENDIENTES (OPERATIVA)
+═══════════════════════════════════════════════ */
+.pending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  background: var(--slate-50, #f8fafc);
+  padding: 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 0 0 6px 6px;
+}
+
+.pending-card {
+  background: var(--white, #ffffff);
+  border: 1px solid var(--slate-200, #e2e8f0);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.pending-card-header {
+  background: var(--navy-900, #0f172a);
+  color: var(--white, #ffffff);
+  padding: 12px 16px;
+  border-radius: 5px 5px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pending-origin-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--slate-100);
+}
+
+.pending-badge {
+  background: var(--teal-600, #0f766e);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.pending-list-scroll {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  border-radius: 4px;
+}
+.pending-item:hover {
+  background: var(--slate-50, #f8fafc);
+}
+.pending-item:last-child { border-bottom: none; }
+
+.pending-lead-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 2px;
+}
+
+.pending-lead-meta {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.btn-manage {
+  background: transparent;
+  border: 1px solid var(--slate-300, #cbd5e1);
+  color: var(--text-secondary, #475569);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-manage:hover {
+  background: var(--teal-50, #f0fdf4);
+  color: var(--teal-700, #0f766e);
+  border-color: var(--teal-300, #5eead4);
+}
+.c-teal { color: #0f766e; font-weight: 600; }
 </style>
+

@@ -222,7 +222,7 @@
                   <i
                     v-if="l.cat_last_follow_alias"
                     class="fa-solid fa-circle cursor-pointer"
-                    :class="l.cat_last_follow_alias === 'we_follow_lead_answered' ? 'c-green' : 'text-slate-400'"
+                    :class="l.cat_last_follow_alias === 'we_calling_answered' ? 'c-green' : 'text-slate-400'"
                     :title="l.cat_last_follow_alias"
                   ></i>
                   <span v-else class="text-muted">—</span>
@@ -302,7 +302,7 @@
                     label-field="description"
                     value-field="alias"
                     placeholder="Seleccionar..."
-                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias"
                     class="exec-select-light w-100"
                   />
                 </td>
@@ -310,7 +310,7 @@
                   <DateTime12
                     v-model="attempt.contact_datetime"
                     :onlyHours="true"
-                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
                     :config="!attempt.id && minDateForNewAttempt
                       ? { minDate: minDateForNewAttempt }
                       : {}"
@@ -325,7 +325,7 @@
                       class="timer-btn"
                       :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'"
                       @click="toggleTimer(attempt)"
-                      :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                      :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
                       :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'"
                     >
                       <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
@@ -344,7 +344,7 @@
                     class="exec-textarea w-100"
                     rows="2"
                     placeholder="Escribe una observación..."
-                    :disabled="!!attempt.id && attempt.status_alias !== 'we_follow_lead_pending'"
+                    :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
                   ></textarea>
                 </td>
               </tr>
@@ -2051,9 +2051,9 @@ function badgeForInterest(s) {
 
 function badgeForFollow(s) {
   const map = {
-    'we_follow_lead_pending': 'pill-slate',
-    'we_follow_lead_answered': 'pill-teal',
-    'we_follow_lead_no_answer': 'pill-red'
+    'we_calling_pending': 'pill-slate',
+    'we_calling_answered': 'pill-teal',
+    'we_calling_no_answer': 'pill-red'
   };
   return map[s] || 'pill-slate'
 }
@@ -2064,7 +2064,7 @@ function addLocalAttempt() {
   editableHistory.value.unshift({
     id: null,
     attempt_number: null,          // ← sin número hasta guardar
-    status_alias: 'we_follow_lead_pending',
+    status_alias: 'we_calling_pending',
     calling_alias: 'we_calling_pending',  // ← Pendiente por defecto
     contact_datetime: isoString,
     cat_type_attempt: 'we_attempt_call',

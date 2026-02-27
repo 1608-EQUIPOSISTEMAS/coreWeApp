@@ -2733,6 +2733,7 @@ async function fetchSchedule() {
         page: 1,
         size: 100
       }
+      
       const { items } = await editionService.editionByWeekList(payload)
 
       schedules.value = Array.isArray(items)

@@ -2007,12 +2007,10 @@ watch(() => insc.cat_type_document, (newVal) => {
   }
 });
 
-
   async function loadDataForCloning(sourceId) {
       try {
       console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
-
 
           Object.assign(form, {
               fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
