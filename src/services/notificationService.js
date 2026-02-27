@@ -1,6 +1,10 @@
 // src/services/NotificationService.js
 import api from './api'
 
+// 👇 DECLARA LAS VARIABLES AQUÍ (Fuera de la clase)
+let activeListeners = []
+let globalEventSource = null
+
 export default class NotificationService {
 
   // Campanita: no leídas + últimas 5 leídas
@@ -20,20 +24,18 @@ export default class NotificationService {
     await api.patch('/notifications/mark-read', {}, { meta: { skipLoader: true } })
   }
 
-  // -------------------------------------------------------
-  // MÓDULO COMPLETO: listado paginado con filtros
-  // p_filters: { page, size, is_read }
-  // is_read: undefined = todas | 'true' = leídas | 'false' = no leídas
-  // -------------------------------------------------------
   async list(filters = {}) {
     const response = await api.post('/notifications/list', filters, { meta: { skipLoader: true } })
-    return response.data.data  // { rows: [...], total_count }
+    return response.data.data  
   }
-connectStream(onEvent) {
+
+  connectStream(onEvent) {
     // 1. Registramos la función del componente que quiere escuchar
+    // ✅ Ahora el código sabe qué es activeListeners
     activeListeners.push(onEvent)
 
     // 2. Si NO hay una conexión abierta, creamos la ÚNICA conexión
+    // ✅ Ahora el código sabe qué es globalEventSource
     if (!globalEventSource) {
       const token = localStorage.getItem('token')
       const baseURL = api.defaults.baseURL

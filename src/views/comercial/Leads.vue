@@ -259,18 +259,23 @@
           <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
         </button>
       </div>
-
-      <div class="p-3 scroll-area">
-        <div v-if="editableHistory.length > 0" class="table-shell">
-          <table class="exec-table">
+      <div v-if="isLoadingFollow" class="exec-loader py-4">
+  <div class="loader-ring"></div>
+  <p class="text-muted small mt-2 fw-600">Cargando historial...</p>
+</div>
+<div  v-else class="p-3 scroll-area">
+  <div v-if="editableHistory.length > 0" class="table-shell" style="overflow-x: auto;">
+    <table class="exec-table" style="min-width: 1100px;">
             <thead>
               <tr class="thead-sub">
                 <th class="ts ts-c text-center" style="width: 46px;">#</th>
                 <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
                 <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
-                <th class="ts ts-c" style="min-width: 220px;">Fecha / Hora</th>
+                <th class="ts ts-c" style="min-width: 280px;">Fecha / Hora</th>
                 <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
                 <th class="ts ts-c" style="min-width: 190px;">Observación</th>
+                <th class="ts ts-c" style="min-width: 150px;">Registrado por</th>
+<th class="ts ts-c" style="min-width: 150px;">Modificado por</th>
               </tr>
             </thead>
             <tbody>
@@ -282,7 +287,7 @@
               ><td class="td-a text-center fw-700 text-muted align-top pt-3">
                   {{ attempt.attempt_number ?? '—' }}
                 </td>
-
+                {{ attempt.cat_type_attempt }}
                 <td class="td-a align-top pt-2">
                   <SearchSelect
                     :items="lAttempts"
@@ -326,7 +331,7 @@
                   <DateTime12
                     v-model="attempt.contact_datetime"
                     :onlyHours="true"
-                    :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
+                    :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))"
                     :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}"
                   />
                 </td>
@@ -363,6 +368,19 @@
                     :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
                   ></textarea>
                 </td>
+                <td class="td-a align-top pt-2">
+  <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">
+    {{ attempt.user_registration_label }}
+  </div>
+  <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
+</td>
+
+<td class="td-a align-top pt-2">
+  <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">
+    {{ attempt.user_modification_label }}
+  </div>
+  <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
+</td>
               </tr>
             </tbody>
           </table>
@@ -912,7 +930,7 @@ const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
 const filtroFollow = ref(catalog.options('we_calling') || [])
-// 🔴 NUEVO CATÁLOGO
+
 const filtroAttemptOrigin = ref(catalog.options('we_attempt_origin') || [])
 const attemptOriginCatalog = ref(catalog.options('we_attempt_origin') || [])
 
@@ -1102,50 +1120,60 @@ onBeforeUnmount(() => {
   }
 })
 
-function openFollowModal(lead) {
+const isLoadingFollow = ref(false)
+
+async function openFollowModal(lead) {
   selectedFollowLead.value = lead
+  editableHistory.value = []
+  showFollowModal.value = true
+  isLoadingFollow.value = true
 
   try {
-    let rawDetails = lead.follow_details;
-    if (typeof rawDetails === 'string') {
-        try { rawDetails = JSON.parse(rawDetails); } catch (e) { rawDetails = []; }
-    }
+    const fresh = await comercialService.leadGet({ id: lead.id })
+    const rawDetails = fresh?.contact_attempts || []
 
-    if (Array.isArray(rawDetails)) {
-     editableHistory.value = rawDetails
-    .map(d => {
-      if (!d) return null;
+    editableHistory.value = [...rawDetails]
+      .sort((a, b) => b.attempt_number - a.attempt_number)
+      .map(d => {
+        if (!d) return null
 
-      // 🔴 BUSCAMOS EL LABEL DEL ORIGEN
-      const originAlias = d.cat_creation_origin || 'we_origin_manual';
-      const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias);
+        const originAlias = d.cat_creation_origin || 'we_origin_manual'
+        const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias)
 
-      return {
-        id: d?.id || d?.lead_contact_attempt_id,
-        attempt_number: d?.attempt_number ?? null,
-        calling_alias: d?.cat_result_alias || d?.cat_result_label,
-        contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
-        response: d?.response || '',
-        cat_type_attempt: d?.cat_type_attempt,
-        cat_type_attempt_label: d?.cat_type_attempt_label,
-        contact_duration: d?.contact_duration || 0,
-        timerActive: false,
-        timerId: null,
+        return {
+          id: d.lead_contact_attempt_id,
+          attempt_number: d.attempt_number ?? null,
+          calling_alias: d.cat_result_alias,
+          contact_datetime: d.contact_datetime
+            ? String(d.contact_datetime).replace('T', ' ').slice(0, 16)
+            : '',
+          response: d.response || '',
+          cat_type_attempt: d.cat_type_attempt, // alias
+          cat_type_attempt_label: d.cat_type_attempt_label,
+          contact_duration: d.contact_duration || 0,
+          timerActive: false,
+          timerId: null,
+          user_registration_label: d.user_registration_label || '—',
+          registration_date_fmt: d.registration_date
+            ? String(d.registration_date).replace('T', ' ').slice(0, 16)
+            : '—',
+          user_modification_label: d.user_modification_label || null,
+          modification_date_fmt: d.modification_date
+            ? String(d.modification_date).replace('T', ' ').slice(0, 16)
+            : null,
+          cat_creation_origin_alias: originAlias,
+          cat_creation_origin_label: originObj ? originObj.description : 'Gestión Manual'
+        }
+      })
+      .filter(item => item !== null)
 
-        // 🔴 INYECTAMOS LOS DATOS PARA LA VISTA
-        cat_creation_origin_alias: originAlias,
-        cat_creation_origin_label: originObj ? originObj.description : 'Gestión Manual'
-      };
-    })
-    .filter(item => item !== null);
-    } else {
-      editableHistory.value = [];
-    }
   } catch (error) {
     console.error(error)
-    editableHistory.value = [];
+    editableHistory.value = []
+    toast.error('Error al cargar el historial de seguimiento')
+  } finally {
+    isLoadingFollow.value = false
   }
-  showFollowModal.value = true;
 }
 
 // --- 3. MODIFICAR NUEVO INTENTO (addLocalAttempt) ---
