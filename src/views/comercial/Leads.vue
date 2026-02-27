@@ -266,7 +266,7 @@
             <thead>
               <tr class="thead-sub">
                 <th class="ts ts-c text-center" style="width: 46px;">#</th>
-                <th class="ts ts-c" style="min-width: 155px;">T. Seguimiento</th>
+                <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
                 <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
                 <th class="ts ts-c" style="min-width: 220px;">Fecha / Hora</th>
                 <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
@@ -279,10 +279,10 @@
                 :key="idx"
                 class="tbody-row"
                 :class="{ 'row-highlight': !attempt.id }"
-              >
-              <td class="td-a text-center fw-700 text-muted align-top pt-3">
-                {{ attempt.attempt_number ?? '—' }}
-              </td>
+              ><td class="td-a text-center fw-700 text-muted align-top pt-3">
+                  {{ attempt.attempt_number ?? '—' }}
+                </td>
+
                 <td class="td-a align-top pt-2">
                   <SearchSelect
                     :items="lAttempts"
@@ -294,7 +294,22 @@
                     class="exec-select-light w-100"
                     required
                   />
+
+                  <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
+                    <span
+                      class="pill border w-100 justify-content-center"
+                      :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'"
+                      :title="attempt.cat_creation_origin_label || 'Gestión Manual'"
+                    >
+                      <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
+                      {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
+                    </span>
+                  </div>
+                  <div v-else class="mt-2 text-truncate text-center" style="font-size: 10px;">
+                    <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
+                  </div>
                 </td>
+
                 <td class="td-a align-top pt-2">
                   <SearchSelect
                     v-model="attempt.calling_alias"
@@ -306,16 +321,16 @@
                     class="exec-select-light w-100"
                   />
                 </td>
+
                 <td class="td-a align-top pt-2">
                   <DateTime12
                     v-model="attempt.contact_datetime"
                     :onlyHours="true"
                     :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
-                    :config="!attempt.id && minDateForNewAttempt
-                      ? { minDate: minDateForNewAttempt }
-                      : {}"
+                    :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}"
                   />
                 </td>
+
                 <td class="td-a align-top text-center pt-2">
                   <div
                     class="d-flex align-items-center justify-content-center gap-2"
@@ -338,6 +353,7 @@
                     </div>
                   </div>
                 </td>
+
                 <td class="td-a align-top pt-2">
                   <textarea
                     v-model="attempt.response"
@@ -396,6 +412,7 @@
         <div class="row g-3">
           <div class="col-md-3 col-6"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Origen de Intento</label><MultiSelect v-model="filters.attempt_origin_ids" :items="filtroAttemptOrigin" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Nivel de Interés</label><MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">País</label><MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Canal (Red Social)</label><MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -739,11 +756,11 @@
                   {{ file.date || 'Archivo histórico' }}
                   <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
                   <!-- En el v-for de files_list, junto al badge LEGACY: -->
-                  <span v-if="file.source === 'payment_receipt'" 
+                  <span v-if="file.source === 'payment_receipt'"
                         class="pill pill-slate ms-1" style="font-size:8px; background:#eff6ff; color:#1d4ed8;">
                     VOUCHER
                   </span>
-                  <span v-if="file.source === 'enrollment'" 
+                  <span v-if="file.source === 'enrollment'"
                         class="pill pill-slate ms-1" style="font-size:8px;">
                     LEGACY
                   </span>
@@ -762,7 +779,7 @@
 <!-- Observaciones del Asesor (del Lead) -->
 <div class="mt-4 pt-2" v-if="enrollmentData.lead_observations">
   <h6 class="fieldset-title">
-    <i class="fa-solid fa-comment-dots me-1 text-secondary"></i> 
+    <i class="fa-solid fa-comment-dots me-1 text-secondary"></i>
     Observaciones del Asesor
   </h6>
   <div class="exec-alert alert-info" style="border-left-color: #94a3b8;">
@@ -776,7 +793,7 @@
 <!-- Notas de Matrícula -->
 <div class="mt-3" v-if="enrollmentData.notes">
   <h6 class="fieldset-title">
-    <i class="fa-solid fa-note-sticky me-1 text-warning"></i> 
+    <i class="fa-solid fa-note-sticky me-1 text-warning"></i>
     Notas de Matrícula
   </h6>
   <div class="exec-alert alert-warning">
@@ -795,6 +812,847 @@
   </BaseModal>
 </template>
 
+<script setup>
+import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import BaseModal from '@/components/BaseModal.vue'
+import SearchSelect from '@/components/SearchSelect.vue'
+import { ServiceKeys } from '@/services'
+import BasePagination from '@/components/BasePagination.vue'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import MultiSelect from '@/components/MultiSelect.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
+import { useTablePersistence } from '@/composables/useTablePersistence'
+import DateTime12 from '@/components/DateTime12.vue'
+import { useToast } from 'vue-toastification'
+const hasActiveRestrictions = ref(false)
+
+const showControlModal = ref(false)
+const isSavingRestrictions = ref(false)
+const asesoresControl = ref([])
+const toast = useToast()
+const router = useRouter()
+const route = useRoute()
+const comercialService = inject(ServiceKeys.Comercial)
+const authService = inject(ServiceKeys.Auth)
+const catalog = inject('catalog')
+
+const programService = inject(ServiceKeys.Program)
+const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
+
+// === ESTADO ===
+const showFilterModal = ref(false)
+const showFollowModal = ref(false)
+const isCompact = ref(false)
+const dense = ref(false)
+const activeFilterChips = ref([])
+const leadsRaw = ref([])
+const filtroOwners = ref([])
+const pagin = ref({ size: 25, page: 1, total: 0 })
+
+// === LONG PRESS ===
+const pressingRowId = ref(null)
+let pressTimer = null
+
+// === PERMISOS ===
+const storedUserStr = localStorage.getItem('user')
+const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
+const isComercial = storedUser?.roles?.includes('COMERCIAL') &&
+                    !storedUser?.roles?.includes('LIDER_COMERCIAL') &&
+                    !storedUser?.roles?.includes('ADMIN') &&
+                    !storedUser?.roles?.includes('GERENCIA');
+const currentUserId = storedUser?.user_id;
+
+// === FILTROS ===
+const filters = reactive({
+  q: '',
+  program_text: '',
+  estado: null,
+  web: null,
+  b2b: null,
+order_by: 0,
+  // Ahora todos los MultiSelect guardan [{value, label}]
+  owner_user_ids: [],
+  status_lead_ids: [],
+  last_follow_ids: [],
+  interest_level_ids: [],
+  channel_ids: [],
+  query_ids: [],
+  type_program_ids: [],
+  model_modality_ids: [],
+  strategy_ids: [],
+  word_ids: [],
+  medium_contact_ids: [],
+  code_country_ids: [],
+  moment_ids: [],attempt_origin_ids: [],
+fico_status_ids: [],
+  profile_ids: [],
+  currency_ids: [],
+  inscription_modality_ids: [],
+  installment_status_ids: [],
+  payment_method_ids: [],
+  // payment_type_ids: [], // Ignorado como solicitaste
+  settlement_status_ids: [],
+  // Fechas siguen siendo strings
+  rangoFechas: { start: '', end: '' },
+  rangoModificacion: { start: '', end: '' },
+  created_range_string: null,
+  updated_range_string: null,
+  edition_range_string: null,
+  edition_start_from: '',
+  edition_start_to: '',
+  pay_date_from: '',
+  pay_date_to: '',
+  pay_date_range_string: null
+})
+
+// === CATÁLOGOS ===
+const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
+const filtroModalidad = ref(catalog.options('we_modality') || [])
+const filtroPipeline = ref(catalog.options('we_lead_status') || [])
+const filtroCanales = ref(catalog.options('we_social_media') || [])
+const filtroFollow = ref(catalog.options('we_calling') || [])
+// 🔴 NUEVO CATÁLOGO
+const filtroAttemptOrigin = ref(catalog.options('we_attempt_origin') || [])
+const attemptOriginCatalog = ref(catalog.options('we_attempt_origin') || [])
+
+const filtroMoment = ref(catalog.options('we_moment') || [])
+const filtroQuery = ref(catalog.options('we_category_query') || [])
+const filtroInterest = ref(catalog.options('we_lead_interest') || [])
+const lAttempts = ref(catalog.options('we_attempt') || [])
+const strategyCatalog = ref(catalog.options('we_type_strategy') || [])
+const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
+const filtroCalling = ref(catalog.options('we_calling') || [])
+const filtroMedios = ref(catalog.options('we_social_media') || []) // Ojo: we_medium_contact
+const filtroPaises = ref(catalog.options('we_country') || [])   // Ojo: we_code_country
+const filtroFicoStatus = ref(catalog.options('we_enrollment_status'))
+const filtroProfile = ref(catalog.options('we_profile') || [])
+
+const filtroOrden = [
+  { value: 0, description: 'Fecha de Registro (Más recientes)' },
+  { value: 1, description: 'Fecha Inicio Edición (Próximos)' },
+  { value: 2, description: 'Fecha de Pago (Próximos)' }
+]
+
+const filtroCurrency = ref(
+  catalog.options('we_currency', {
+    mapItem: x => ({
+      id: x.id,
+      description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
+      alias: x.alias,
+      raw: {
+        code: x.code ?? x.abbreviation,
+        symbol: x.symbol ?? x.prefix,
+        minorUnit: x.minorUnit ?? Number(x.precision ?? 2),
+        locale: x.locale ?? (x.abbreviation === 'USD' ? 'en-US' : 'es-PE'),
+        decimal: x.decimal ?? '.',
+        thousands: x.thousands ?? ',',
+        position: x.position ?? (x.suffix ? 'suffix' : 'prefix'),
+        allowNegative: x.allowNegative ?? false,
+        allowZero: x.allowZero ?? true,
+      }
+    })
+  })
+)
+const filtroInscriptionModality = ref(catalog.options('we_insc_modality') || [])
+const filtroPaymentStatus = ref(catalog.options('we_payment_status') || [])
+const filtroPaymentMethod = ref(catalog.options('we_payment_method') || [])
+// Reutilizamos we_payment_status para settlement si comparten estados (pagado, pendiente, anulado)
+const filtroSettlementStatus = ref(catalog.options('we_settlement_status') || catalog.options('we_payment_status') || [])
+// === MAPAS COMPUTADOS (OPTIMIZACIÓN) ===
+const createMap = (arr) => {
+  if (!Array.isArray(arr)) return {}
+  return arr.reduce((acc, item) => { acc[item.alias] = item.description; return acc }, {})
+}
+const pipelineMap = computed(() => createMap(filtroPipeline.value))
+const queryMap    = computed(() => createMap(filtroQuery.value))
+const interestMap = computed(() => createMap(filtroInterest.value))
+const followMap   = computed(() => createMap(filtroFollow.value))
+const extractIds = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(item => (typeof item === 'object' && item !== null) ? (item.id || item.value) : item);
+};
+// === PERSISTENCIA ===
+const { saveState } = useTablePersistence('crm_leads_filter_state_v1', filters, pagin)
+
+// === VARIABLES MODAL FOLLOW ===
+const editableHistory = ref([])
+const isSavingFollow = ref(false)
+const selectedFollowLead = ref(null)
+const decodeFilter = (jsonStr) => {
+  if (!jsonStr) return []
+  try {
+    return JSON.parse(jsonStr)
+  } catch (e) {
+    return []
+  }
+}
+
+// Codificar URL (Array de Objetos -> String)
+const encodeFilter = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined // undefined borra el param de la URL
+  return JSON.stringify(arr.map(i => ({ value: i.value, label: i.label }))) // Guardamos solo lo vital
+}
+
+const getCurrencySymbol = (alias) => {
+  if (!alias) return '';
+  if (alias.includes('we_currency_soles') || alias === 'PEN') return 'S/';
+  if (alias.includes('we_currency_dollars') || alias.includes('usd') || alias === 'USD') return '$';
+  return alias; // Si no reconoce, devuelve el texto original
+}
+
+// Formatea el monto: S/ 338.00
+const formatMoney = (symbolOrAlias, amount) => {
+  // Si ya viene como "S/" o "$", úsalo directo. Si es alias, tradúcelo.
+  let symbol = symbolOrAlias;
+  if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
+  if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
+
+  const val = Number(amount) || 0;
+  return `${symbol} ${val.toFixed(2)}`;
+}
+
+async function parseQueryAndApply() {
+  const q = route.query
+  console.log(q)
+  const hasQueryParams = Object.keys(q).length > 0
+  if (!hasQueryParams) return false
+
+  clearFilters(false)
+
+  // A. Filtros de texto y booleanos simples
+  if (q.q)              filters.q            = q.q
+  if (q.program_text)   filters.program_text  = q.program_text
+  if (q.web)            filters.web           = q.web
+  if (q.b2b)            filters.b2b           = q.b2b
+
+  // B. Fechas
+  if (q.from_date || q.to_date) {
+    filters.rangoFechas = { start: q.from_date || '', end: q.to_date || '' }
+    if (q.from_date) filters.created_range_string = `${q.from_date} a ${q.to_date || q.from_date}`
+  }
+  if (q.pay_date_from || q.pay_date_to) {
+    filters.pay_date_from = q.pay_date_from || ''
+    filters.pay_date_to   = q.pay_date_to   || ''
+    if (q.pay_date_from) filters.pay_date_range_string = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
+  }
+  if (q.edition_start_from) {
+    filters.edition_start_from = q.edition_start_from
+    filters.edition_start_to   = q.edition_start_to || q.edition_start_from
+    filters.edition_range_string = `${q.edition_start_from} a ${filters.edition_start_to}`
+  }
+
+  // C. MultiSelects: JSON directo, sin hydrate ni catálogos
+  filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
+  filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
+  filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
+  filters.interest_level_ids = decodeFilter(q.interest_level_ids)
+  filters.channel_ids        = decodeFilter(q.channel_ids)
+  filters.query_ids          = decodeFilter(q.query_ids)
+  filters.type_program_ids   = decodeFilter(q.type_program_ids)
+  filters.model_modality_ids = decodeFilter(q.model_modality_ids)
+  filters.strategy_ids       = decodeFilter(q.strategy_ids)
+  filters.word_ids           = decodeFilter(q.word_ids)
+  filters.medium_contact_ids = decodeFilter(q.medium_contact_ids)
+  filters.code_country_ids   = decodeFilter(q.code_country_ids)
+  filters.moment_ids         = decodeFilter(q.moment_ids)
+  filters.attempt_origin_ids = decodeFilter(q.attempt_origin_ids)
+  filters.fico_status_ids          = decodeFilter(q.fico_status_ids)
+  filters.profile_ids              = decodeFilter(q.profile_ids)
+  filters.currency_ids             = decodeFilter(q.currency_ids)
+  filters.inscription_modality_ids = decodeFilter(q.inscription_modality_ids)
+  filters.installment_status_ids   = decodeFilter(q.installment_status_ids)
+  filters.payment_method_ids       = decodeFilter(q.payment_method_ids)
+  filters.settlement_status_ids    = decodeFilter(q.settlement_status_ids)
+
+  await router.replace({ query: {} })
+  return true
+}
+// === LOGICA MODAL SEGUIMIENTO (Restaurada) ===
+const formatDuration = (seconds) => {
+  if (!seconds) return '00:00'
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+// 2. Lógica de Iniciar/Detener
+const toggleTimer = (attempt) => {
+  if (attempt.timerActive) {
+    // Detener
+    clearInterval(attempt.timerId)
+    attempt.timerActive = false
+    attempt.timerId = null
+  } else {
+    // Iniciar
+    attempt.timerActive = true
+    attempt.timerId = setInterval(() => {
+      // Si es null o undefined, iniciar en 0, luego sumar 1
+      attempt.contact_duration = (attempt.contact_duration || 0) + 1
+    }, 1000)
+  }
+}
+
+// 3. Limpieza de intervalos al salir (para que no se queden corriendo en memoria)
+onBeforeUnmount(() => {
+  if (editableHistory.value) {
+    editableHistory.value.forEach(item => {
+      if (item.timerId) clearInterval(item.timerId)
+    })
+  }
+})
+
+function openFollowModal(lead) {
+  selectedFollowLead.value = lead
+
+  try {
+    let rawDetails = lead.follow_details;
+    if (typeof rawDetails === 'string') {
+        try { rawDetails = JSON.parse(rawDetails); } catch (e) { rawDetails = []; }
+    }
+
+    if (Array.isArray(rawDetails)) {
+     editableHistory.value = rawDetails
+    .map(d => {
+      if (!d) return null;
+
+      // 🔴 BUSCAMOS EL LABEL DEL ORIGEN
+      const originAlias = d.cat_creation_origin || 'we_origin_manual';
+      const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias);
+
+      return {
+        id: d?.id || d?.lead_contact_attempt_id,
+        attempt_number: d?.attempt_number ?? null,
+        calling_alias: d?.cat_result_alias || d?.cat_result_label,
+        contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
+        response: d?.response || '',
+        cat_type_attempt: d?.cat_type_attempt,
+        cat_type_attempt_label: d?.cat_type_attempt_label,
+        contact_duration: d?.contact_duration || 0,
+        timerActive: false,
+        timerId: null,
+
+        // 🔴 INYECTAMOS LOS DATOS PARA LA VISTA
+        cat_creation_origin_alias: originAlias,
+        cat_creation_origin_label: originObj ? originObj.description : 'Gestión Manual'
+      };
+    })
+    .filter(item => item !== null);
+    } else {
+      editableHistory.value = [];
+    }
+  } catch (error) {
+    console.error(error)
+    editableHistory.value = [];
+  }
+  showFollowModal.value = true;
+}
+
+// --- 3. MODIFICAR NUEVO INTENTO (addLocalAttempt) ---
+const getFileIcon = (type) => {
+  if (!type) return 'fa-file text-secondary'
+  const t = type.toLowerCase()
+
+  // ❌ ANTES: source no existe aquí, lanza ReferenceError
+  // if (t.includes('payment_receipt') || source === 'payment_receipt')
+
+  // ✅ CORRECTO: solo chequear el type
+  if (t.includes('payment_receipt')) return 'fa-file-invoice-dollar text-primary'
+  if (t.includes('pdf'))             return 'fa-file-pdf text-danger'
+  if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg'))
+                                     return 'fa-file-image text-success'
+  if (t.includes('legacy'))          return 'fa-file-contract text-warning'
+  if (t.includes('xml'))             return 'fa-file-code text-info'
+  if (t.includes('zip') || t.includes('rar')) return 'fa-file-zipper text-dark'
+
+  return 'fa-file-lines text-primary'
+}
+// === COMPROBACIÓN INICIAL PARA EL BOTÓN ===
+async function checkMyRestrictions() {
+  if (!isComercial) return; // Si es líder/admin, no necesita alerta
+  try {
+    const myRest = await comercialService.restrictionsList({
+      user_id: currentUserId,
+      is_comercial: true
+    });
+
+    if (myRest && myRest.length > 0) {
+      const r = myRest[0];
+      // Verificamos si al menos UNO de los arrays tiene datos (length > 0)
+      const isRestricted = [
+        r.type_program_ids, r.model_modality_ids, r.program_ids,
+        r.status_lead_ids, r.last_follow_ids, r.interest_level_ids,
+        r.channel_ids, r.strategy_ids, r.moment_ids
+      ].some(arr => Array.isArray(arr) && arr.length > 0);
+
+      hasActiveRestrictions.value = isRestricted;
+    }
+  } catch (e) {
+    console.error("Error comprobando mis restricciones:", e);
+  }
+}
+const hydrateCatalog = (ids, catalogArray) => {
+  if (!Array.isArray(ids) || !catalogArray) return [];
+  return catalogArray.filter(item => ids.includes(item.id));
+};
+
+// === 1. ABRIR Y CARGAR DATA (VERSIÓN CORREGIDA Y ROBUSTA) ===
+async function openControlModal() {
+  showControlModal.value = true;
+  asesoresControl.value = [];
+
+  try {
+    // 1. Asegurar carga de asesores (esto sí se mantiene para la lista de usuarios)
+    if (filtroOwners.value.length === 0) {
+      await loadOwners();
+    }
+
+    // 2. Traer restricciones desde BD (Ahora ya vienen con LABEL)
+    const savedRestrictions = await comercialService.restrictionsList({
+      user_id: currentUserId,
+      is_comercial: isComercial
+    });
+
+    // 3. Función local SIMPLIFICADA (sin hidratación)
+    const buildAsesorRecord = (userId, userName, bdRest = {}) => {
+      // Como el BD ya devuelve [{value:1, label:'Web'}], lo pasamos directo.
+      // Si viene null o undefined, pasamos array vacío.
+      return {
+        user_id: userId,
+        name: userName,
+        type_program_ids: bdRest.type_program_ids || [],
+        model_modality_ids: bdRest.model_modality_ids || [],
+        program_ids: bdRest.program_ids || [],
+        status_lead_ids: bdRest.status_lead_ids || [],
+        last_follow_ids: bdRest.last_follow_ids || [],
+        interest_level_ids: bdRest.interest_level_ids || [],
+        channel_ids: bdRest.channel_ids || [],
+        strategy_ids: bdRest.strategy_ids || [],
+        moment_ids: bdRest.moment_ids || []
+      };
+    };
+
+    // 4. Asignación según rol (Lógica idéntica, pero más datos limpios)
+    if (isComercial) {
+      const bdRest = savedRestrictions[0] || {};
+      const myName = storedUser?.first_name
+        ? `${storedUser.first_name} ${storedUser.last_name || ''}`
+        : `Mi Usuario (${currentUserId})`;
+
+      asesoresControl.value = [buildAsesorRecord(currentUserId, myName, bdRest)];
+
+    } else {
+      asesoresControl.value = filtroOwners.value.map(owner => {
+        const bdRest = savedRestrictions.find(r => r.user_id === owner.id) || {};
+        return buildAsesorRecord(owner.id, owner.description, bdRest);
+      });
+    }
+
+    // ¡ADIÓS AL SETTIMEOUT Y REHIDRATACIÓN! :)
+
+  } catch (error) {
+    console.error("Error cargando permisos:", error);
+    toast.error("Hubo un error al cargar el panel de permisos.");
+  }
+}
+
+// === 2. GUARDAR DATA ===
+async function saveControlRestrictions() {
+  isSavingRestrictions.value = true;
+
+  try {
+    const payloadMasivo = asesoresControl.value.map(asesor => ({
+      user_id: asesor.user_id,
+      is_active: true,
+      // La función extractIds ya manejaba {value, label} -> value, así que esto funciona perfecto
+      type_program_ids: extractIds(asesor.type_program_ids),
+      model_modality_ids: extractIds(asesor.model_modality_ids),
+      program_ids: extractIds(asesor.program_ids),
+      status_lead_ids: extractIds(asesor.status_lead_ids),
+      last_follow_ids: extractIds(asesor.last_follow_ids),
+      interest_level_ids: extractIds(asesor.interest_level_ids),
+      channel_ids: extractIds(asesor.channel_ids),
+      strategy_ids: extractIds(asesor.strategy_ids),
+      moment_ids: extractIds(asesor.moment_ids),
+    }));
+
+    await comercialService.restrictionsUpdate(payloadMasivo);
+    toast.success('Filtros restrictivos aplicados correctamente');
+    showControlModal.value = false;
+
+  } catch (error) {
+    console.error("Error guardando restricciones:", error);
+    toast.error('Error al guardar las restricciones');
+  } finally {
+    isSavingRestrictions.value = false;
+  }
+}
+async function saveFastFollow() {
+  if (!selectedFollowLead.value) return
+
+  editableHistory.value.forEach(item => {
+    if (item.timerActive) toggleTimer(item)
+  })
+
+  isSavingFollow.value = true
+
+  try {
+    const attemptsPayload = editableHistory.value.map(item => ({
+      id: item.id,
+      cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
+      cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
+      contact_datetime: item.contact_datetime,
+      response: item.response,
+      contact_duration: item.contact_duration,
+  cat_reschedule_origin: item.cat_reschedule_origin || null
+    }))
+
+    const resp = await comercialService.leadUpdate({
+      id: selectedFollowLead.value.id,
+      lead: {},
+      contact_attempts: attemptsPayload
+    })
+
+    // ← REEMPLAZAR el toast.success simple por esto:
+    if (resp.result === 1) {
+      toast.success(resp.message || 'Seguimiento actualizado correctamente')
+      showFollowModal.value = false
+      fetchLeads()
+    } else if (resp.result === 0) {
+      toast.error(resp.message || 'Error inesperado al guardar')
+    } else {
+      // result 2 u otros → advertencia amarilla
+      toast.warning(resp.message || 'No se pudo guardar el seguimiento')
+    }
+
+  } catch (error) {
+    console.error(error)
+    toast.error('Error al guardar el seguimiento')
+  } finally {
+    isSavingFollow.value = false
+  }
+}
+
+const minDateForNewAttempt = computed(() => {
+  const existing = editableHistory.value.filter(a => a.id) // solo los ya guardados
+  if (!existing.length) return null
+  // Tomar la fecha más reciente entre los existentes
+  const dates = existing.map(a => new Date(a.contact_datetime)).filter(d => !isNaN(d))
+  if (!dates.length) return null
+  return new Date(Math.max(...dates))
+})
+
+function rebuildChips() {
+  const chips = []
+
+  const makeChip = (key, labelPrefix, items) => {
+    if (!items || items.length === 0) return
+    const labels = items.map(i => i.label || i.value)
+    chips.push({
+      key,
+      label:   labels.length === 1 ? `${labelPrefix}: ${labels[0]}` : `${labelPrefix}: ${labels.length} sel.`,
+      text:    `${labelPrefix}: ${labels.join(', ')}`,
+      details: labels
+    })
+  }
+
+  // Simples
+  if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
+  if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
+  if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
+  if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
+if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio Edición' })
+  if (filters.order_by === 2) chips.push({ key: 'order_by', text: 'Orden: Fecha Pago' })
+  if (filters.rangoFechas?.start)
+    chips.push({ key: 'rangoFechas', label: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
+  if (filters.pay_date_from)
+    chips.push({ key: 'pay_date', label: `Pago: ${filters.pay_date_from} → ${filters.pay_date_to}` })
+  if (filters.edition_start_from)
+    chips.push({ key: 'edition_start', label: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
+
+  // MultiSelects (instantáneo, sin buscar en catálogos)
+  makeChip('status_lead_ids',    'Estatus',    filters.status_lead_ids)
+  makeChip('last_follow_ids',    'Seguim.',    filters.last_follow_ids)
+  makeChip('attempt_origin_ids', 'O. Intento', filters.attempt_origin_ids)
+  makeChip('interest_level_ids', 'Interés',    filters.interest_level_ids)
+  makeChip('channel_ids',        'Canal',      filters.channel_ids)
+  makeChip('query_ids',          'Promoción',  filters.query_ids)
+  makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
+  makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
+  makeChip('strategy_ids',       'Estrategia', filters.strategy_ids)
+  makeChip('word_ids',           'Palabra',    filters.word_ids)
+  makeChip('medium_contact_ids', 'Medio',      filters.medium_contact_ids)
+  makeChip('code_country_ids',   'País',       filters.code_country_ids)
+  makeChip('moment_ids',         'Etapa',      filters.moment_ids)
+  makeChip('fico_status_ids',          'FICO',           filters.fico_status_ids)
+  makeChip('profile_ids',              'Perfil',         filters.profile_ids)
+  makeChip('currency_ids',             'Moneda',         filters.currency_ids)
+  makeChip('inscription_modality_ids', 'Mod. Insc.',     filters.inscription_modality_ids)
+  makeChip('installment_status_ids',   'Est. Cuota',     filters.installment_status_ids)
+  makeChip('payment_method_ids',       'Método Pago',    filters.payment_method_ids)
+  makeChip('settlement_status_ids',    'Conciliación',   filters.settlement_status_ids)
+  if (!isComercial) makeChip('owner_user_ids', 'Asesor', filters.owner_user_ids)
+
+  activeFilterChips.value = chips
+}
+// === API ===
+async function fetchLeads() {
+  try {
+    const getIds = (arr) => {
+      if (!Array.isArray(arr)) return []
+      return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
+    }
+
+    const { items, total: t } = await comercialService.leadList({
+      q:                   filters.q             || null,
+      page:                pagin.value.page,
+      size:                pagin.value.size,
+      program_text:        filters.program_text  || null,
+      web:                 filters.web           || null,
+      b2b:                 filters.b2b           || null,
+  order_by: filters.order_by ?? 0,
+
+      from_date:           filters.rangoFechas?.start        || null,
+      to_date:             filters.rangoFechas?.end          || null,
+      updated_from:        filters.rangoModificacion?.start  || null,
+      updated_to:          filters.rangoModificacion?.end    || null,
+      pay_date_from:       filters.pay_date_from             || null,
+      pay_date_to:         filters.pay_date_to               || null,
+      edition_start_from:  filters.edition_start_from        || null,
+      edition_start_to:    filters.edition_start_to          || null,
+fico_status_ids:            getIds(filters.fico_status_ids),
+      profile_ids:                getIds(filters.profile_ids),
+      currency_ids:               getIds(filters.currency_ids),
+      inscription_modality_ids:   getIds(filters.inscription_modality_ids),
+      installment_status_ids:     getIds(filters.installment_status_ids),
+      payment_method_ids:         getIds(filters.payment_method_ids),
+      settlement_status_ids:      getIds(filters.settlement_status_ids),
+      owner_user_ids:      getIds(filters.owner_user_ids),
+      status_lead_ids:     getIds(filters.status_lead_ids),
+      last_follow_ids:     getIds(filters.last_follow_ids),
+      interest_level_ids:  getIds(filters.interest_level_ids),
+      channel_ids:         getIds(filters.channel_ids),
+      query_ids:           getIds(filters.query_ids),
+      type_program_ids:    getIds(filters.type_program_ids),
+      attempt_origin_ids: getIds(filters.attempt_origin_ids),
+      model_modality_ids:  getIds(filters.model_modality_ids),
+      strategy_ids:        getIds(filters.strategy_ids),
+      word_ids:            getIds(filters.word_ids),
+      medium_contact_ids:  getIds(filters.medium_contact_ids),
+      code_country_ids:    getIds(filters.code_country_ids),
+      moment_ids:          getIds(filters.moment_ids),
+    })
+
+    leadsRaw.value = items || []
+    pagin.value.total = Number(t || 0)
+
+    if (filtroOwners.value.length === 0 && items?.length > 0) {
+      await loadOwners()
+    }
+  } catch (e) {
+    console.error('Error cargando leads:', e)
+    leadsRaw.value = []
+    pagin.value.total = 0
+  }
+}
+const showEnrollmentModal = ref(false)
+const enrollmentData = ref(null)
+const isLoadingEnrollment = ref(false)
+
+async function openEnrollmentModal(enrollmentId) {
+  if (!enrollmentId) return;
+
+  isLoadingEnrollment.value = true;
+  enrollmentData.value = null;
+  showEnrollmentModal.value = true;
+
+  try {
+    const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
+    console.log("daaa")
+    console.log(response)
+    // ✅ El service ya devuelve el objeto plano directamente
+    const data = response;
+
+    if (!data || !data.enrollment_id) {
+      toast.error("No se encontraron datos para esta matrícula");
+      showEnrollmentModal.value = false;
+      return;
+    }
+
+    data.files_list = (data.files_list || []).filter(f => f !== null);
+    enrollmentData.value = data;
+
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo cargar la información de la matrícula");
+    showEnrollmentModal.value = false;
+  } finally {
+    isLoadingEnrollment.value = false;
+  }
+}
+// === EVENTOS UI ===
+function startPress(lead) {
+  pressingRowId.value = lead.id
+  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 1000)
+}
+function cancelPress() {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
+  pressingRowId.value = null
+}
+
+function clearFilters(reload = true) {
+  Object.assign(filters, {
+    q: '', program_text: '', estado: null, web: null, b2b: null,
+    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],order_by: 0,
+    interest_level_ids: [], channel_ids: [], query_ids: [],
+    type_program_ids: [], model_modality_ids: [], strategy_ids: [],
+    word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
+    rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
+    created_range_string: null, updated_range_string: null,ttempt_origin_ids: [],
+    edition_range_string: null, edition_start_from: '', edition_start_to: '',
+    pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
+    inscription_modality_ids: [], installment_status_ids: [],
+    payment_method_ids: [], settlement_status_ids: []
+  })
+
+  if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
+
+if (reload === true || typeof reload !== 'boolean') {
+    pagin.value.page = 1
+    localStorage.removeItem('crm_leads_filter_state_v1')
+    rebuildChips()
+    fetchLeads()
+  }
+}
+
+// ... resto de funciones (addLocalAttempt, saveFastFollow, etc.) idénticas ...
+// Asegurate de incluir loadOwners, openFollowModal, etc.
+async function loadOwners() {
+  try {
+    const arr = await authService.userList({})
+    filtroOwners.value = arr.map(u => {
+      // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
+      const fName = (u.first_name || '').trim()
+      const lName = (u.last_name || '').trim()
+
+      let fullName = fName
+      if (lName) fullName += ` ${lName.charAt(0)}.`
+
+      // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
+      const desc = fullName.trim() || `Usuario ${u.user_id}`
+
+      return {
+        id: u.user_id,
+        description: desc
+      }
+    })
+  } catch (e) {
+    console.error(e)
+  }
+}
+function openFilterModal() { showFilterModal.value = true }
+function applyFilters() { showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
+function clearFilter(key) {
+  if (key === 'rangoFechas') {
+    filters.rangoFechas = { start: '', end: '' }
+    filters.created_range_string = null
+  } else if (key === 'pay_date') {
+    filters.pay_date_from = ''
+    filters.pay_date_to = ''
+    filters.pay_date_range_string = null
+  } else if (key === 'order_by') {     // <--- AQUÍ ES DONDE VA ESTE IF
+    filters.order_by = 0
+  }else if (key === 'edition_start') {
+    filters.edition_start_from = ''
+    filters.edition_start_to = ''
+    filters.edition_range_string = null
+  } else if (Array.isArray(filters[key])) {
+    filters[key] = []
+  } else {
+    filters[key] = null
+  }
+  applyFilters()
+}
+function handleDateFilterChange(dateStr, type) {
+  let start = '', end = ''
+  if (dateStr && dateStr.includes(' a ')) { [start, end] = dateStr.split(' a ') } else if (dateStr) { start = end = dateStr }
+  if (type === 'created') { filters.rangoFechas = {start, end}; filters.created_range_string = dateStr }
+  else if (type === 'updated') { filters.rangoModificacion = {start, end}; filters.updated_range_string = dateStr }
+  else if (type === 'pay_date') {
+    filters.pay_date_from = start;
+    filters.pay_date_to = end;
+    filters.pay_date_range_string = dateStr;
+  }
+  else if (type === 'edition_start') { filters.edition_start_from = start; filters.edition_start_to = end; filters.edition_range_string = dateStr }
+}
+// Helpers visuales
+// Helpers visuales actualizados
+function rowClassForStatus(s) {
+  const map = {
+    'we_lead_status_interesado': 'row-blue',
+    'we_lead_status_bought': 'row-inscrito',
+    'we_lead_status_will_pay': 'row-emerald',
+    'we_lead_status_proximo': 'row-yellow',
+    'we_lead_status_indiferente': 'row-gray',
+    'we_lead_status_closed': 'row-red',
+    'we_lead_status_desestimado': 'row-red'
+  };
+  return map[s] || ''
+}
+
+function badgeForInterest(s) {
+  const map = {
+    'we_lead_interest_high': 'pill-red',
+    'we_lead_interest_medium': 'pill-amber',
+    'we_lead_interest_low': 'pill-slate'
+  };
+  return map[s] || 'pill-slate'
+}
+
+function badgeForFollow(s) {
+  const map = {
+    'we_calling_pending': 'pill-slate',
+    'we_calling_answered': 'pill-teal',
+    'we_calling_no_answer': 'pill-red'
+  };
+  return map[s] || 'pill-slate'
+}
+function addLocalAttempt() {
+  const now = new Date();
+  const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+  editableHistory.value.unshift({
+    id: null,
+    attempt_number: null,          // ← sin número hasta guardar
+    status_alias: 'we_calling_pending',
+    calling_alias: 'we_calling_pending',  // ← Pendiente por defecto
+    contact_datetime: isoString,
+    cat_type_attempt: 'we_attempt_call',
+    response: '',
+    contact_duration: 0,
+    timerActive: false,
+    timerId: null
+  })
+}
+function getIdFromAlias(alias, catalogArray) { if (!alias || !catalogArray) return null; const item = catalogArray.find(i => i.alias === alias); return item ? item.id : null }
+function goNew() { router.push({ name: 'ComercialLeadsNew' }) }
+function viewLead(lead) { router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } }) }
+function editLead(lead) { router.push({ name: 'ComercialLeadDetalle', params: { id: lead.id } }) }
+function handlePaginationChange() {
+  fetchLeads()
+}
+
+onMounted(async () => {
+  if (isComercial && currentUserId) {
+    filters.owner_user_ids = [currentUserId]
+    checkMyRestrictions()
+  }
+  loadOwners()
+  await parseQueryAndApply()
+  rebuildChips()
+  fetchLeads()
+})
+</script>
 
 <style scoped>
 .exec-shell {
@@ -1270,826 +2128,3 @@
   .exec-body { padding: 16px 12px; }
 }
 </style>
-<script setup>
-import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import BaseModal from '@/components/BaseModal.vue'
-import SearchSelect from '@/components/SearchSelect.vue'
-import { ServiceKeys } from '@/services'
-import BasePagination from '@/components/BasePagination.vue'
-import BaseFilterChips from '@/components/BaseFilterChips.vue'
-import MultiSelect from '@/components/MultiSelect.vue'
-import BaseDatePicker from '@/components/BaseDatePicker.vue'
-import { useTablePersistence } from '@/composables/useTablePersistence'
-import DateTime12 from '@/components/DateTime12.vue'
-import { useToast } from 'vue-toastification'
-const hasActiveRestrictions = ref(false)
-
-const showControlModal = ref(false)
-const isSavingRestrictions = ref(false)
-const asesoresControl = ref([])
-const toast = useToast()
-const router = useRouter()
-const route = useRoute()
-const comercialService = inject(ServiceKeys.Comercial)
-const authService = inject(ServiceKeys.Auth)
-const catalog = inject('catalog')
-
-const programService = inject(ServiceKeys.Program)
-const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
-
-// === ESTADO ===
-const showFilterModal = ref(false)
-const showFollowModal = ref(false)
-const isCompact = ref(false)
-const dense = ref(false)
-const activeFilterChips = ref([])
-const leadsRaw = ref([])
-const filtroOwners = ref([])
-const pagin = ref({ size: 25, page: 1, total: 0 })
-
-// === LONG PRESS ===
-const pressingRowId = ref(null)
-let pressTimer = null
-
-// === PERMISOS ===
-const storedUserStr = localStorage.getItem('user')
-const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
-const isComercial = storedUser?.roles?.includes('COMERCIAL') &&
-                    !storedUser?.roles?.includes('LIDER_COMERCIAL') &&
-                    !storedUser?.roles?.includes('ADMIN') &&
-                    !storedUser?.roles?.includes('GERENCIA');
-const currentUserId = storedUser?.user_id;
-
-// === FILTROS ===
-const filters = reactive({
-  q: '',
-  program_text: '',
-  estado: null,
-  web: null,
-  b2b: null,
-order_by: 0,
-  // Ahora todos los MultiSelect guardan [{value, label}]
-  owner_user_ids: [],
-  status_lead_ids: [],
-  last_follow_ids: [],
-  interest_level_ids: [],
-  channel_ids: [],
-  query_ids: [],
-  type_program_ids: [],
-  model_modality_ids: [],
-  strategy_ids: [],
-  word_ids: [],
-  medium_contact_ids: [],
-  code_country_ids: [],
-  moment_ids: [],
-fico_status_ids: [],
-  profile_ids: [],
-  currency_ids: [],
-  inscription_modality_ids: [],
-  installment_status_ids: [],
-  payment_method_ids: [],
-  // payment_type_ids: [], // Ignorado como solicitaste
-  settlement_status_ids: [],
-  // Fechas siguen siendo strings
-  rangoFechas: { start: '', end: '' },
-  rangoModificacion: { start: '', end: '' },
-  created_range_string: null,
-  updated_range_string: null,
-  edition_range_string: null,
-  edition_start_from: '',
-  edition_start_to: '',
-  pay_date_from: '',
-  pay_date_to: '',
-  pay_date_range_string: null
-})
-
-// === CATÁLOGOS ===
-const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
-const filtroModalidad = ref(catalog.options('we_modality') || [])
-const filtroPipeline = ref(catalog.options('we_lead_status') || [])
-const filtroCanales = ref(catalog.options('we_social_media') || [])
-const filtroFollow = ref(catalog.options('we_calling') || [])
-const filtroMoment = ref(catalog.options('we_moment') || [])
-const filtroQuery = ref(catalog.options('we_category_query') || [])
-const filtroInterest = ref(catalog.options('we_lead_interest') || [])
-const lAttempts = ref(catalog.options('we_attempt') || [])
-const strategyCatalog = ref(catalog.options('we_type_strategy') || [])
-const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
-const filtroCalling = ref(catalog.options('we_calling') || [])
-const filtroMedios = ref(catalog.options('we_social_media') || []) // Ojo: we_medium_contact
-const filtroPaises = ref(catalog.options('we_country') || [])   // Ojo: we_code_country
-const filtroFicoStatus = ref(catalog.options('we_enrollment_status'))
-const filtroProfile = ref(catalog.options('we_profile') || [])
-
-const filtroOrden = [
-  { value: 0, description: 'Fecha de Registro (Más recientes)' },
-  { value: 1, description: 'Fecha Inicio Edición (Próximos)' },
-  { value: 2, description: 'Fecha de Pago (Próximos)' }
-]
-
-const filtroCurrency = ref(
-  catalog.options('we_currency', {
-    mapItem: x => ({
-      id: x.id,
-      description: `${x.code || x.abbreviation} (${x.symbol || x.prefix})`,
-      alias: x.alias,
-      raw: {
-        code: x.code ?? x.abbreviation,
-        symbol: x.symbol ?? x.prefix,
-        minorUnit: x.minorUnit ?? Number(x.precision ?? 2),
-        locale: x.locale ?? (x.abbreviation === 'USD' ? 'en-US' : 'es-PE'),
-        decimal: x.decimal ?? '.',
-        thousands: x.thousands ?? ',',
-        position: x.position ?? (x.suffix ? 'suffix' : 'prefix'),
-        allowNegative: x.allowNegative ?? false,
-        allowZero: x.allowZero ?? true,
-      }
-    })
-  })
-)
-const filtroInscriptionModality = ref(catalog.options('we_insc_modality') || [])
-const filtroPaymentStatus = ref(catalog.options('we_payment_status') || [])
-const filtroPaymentMethod = ref(catalog.options('we_payment_method') || [])
-// Reutilizamos we_payment_status para settlement si comparten estados (pagado, pendiente, anulado)
-const filtroSettlementStatus = ref(catalog.options('we_settlement_status') || catalog.options('we_payment_status') || [])
-// === MAPAS COMPUTADOS (OPTIMIZACIÓN) ===
-const createMap = (arr) => {
-  if (!Array.isArray(arr)) return {}
-  return arr.reduce((acc, item) => { acc[item.alias] = item.description; return acc }, {})
-}
-const pipelineMap = computed(() => createMap(filtroPipeline.value))
-const queryMap    = computed(() => createMap(filtroQuery.value))
-const interestMap = computed(() => createMap(filtroInterest.value))
-const followMap   = computed(() => createMap(filtroFollow.value))
-const extractIds = (arr) => {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(item => (typeof item === 'object' && item !== null) ? (item.id || item.value) : item);
-};
-// === PERSISTENCIA ===
-const { saveState } = useTablePersistence('crm_leads_filter_state_v1', filters, pagin)
-
-// === VARIABLES MODAL FOLLOW ===
-const editableHistory = ref([])
-const isSavingFollow = ref(false)
-const selectedFollowLead = ref(null)
-const decodeFilter = (jsonStr) => {
-  if (!jsonStr) return []
-  try {
-    return JSON.parse(jsonStr)
-  } catch (e) {
-    return []
-  }
-}
-
-// Codificar URL (Array de Objetos -> String)
-const encodeFilter = (arr) => {
-  if (!Array.isArray(arr) || arr.length === 0) return undefined // undefined borra el param de la URL
-  return JSON.stringify(arr.map(i => ({ value: i.value, label: i.label }))) // Guardamos solo lo vital
-}
-
-const getCurrencySymbol = (alias) => {
-  if (!alias) return '';
-  if (alias.includes('we_currency_soles') || alias === 'PEN') return 'S/';
-  if (alias.includes('we_currency_dollars') || alias.includes('usd') || alias === 'USD') return '$';
-  return alias; // Si no reconoce, devuelve el texto original
-}
-
-// Formatea el monto: S/ 338.00
-const formatMoney = (symbolOrAlias, amount) => {
-  // Si ya viene como "S/" o "$", úsalo directo. Si es alias, tradúcelo.
-  let symbol = symbolOrAlias;
-  if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
-  if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
-
-  const val = Number(amount) || 0;
-  return `${symbol} ${val.toFixed(2)}`;
-}
-
-async function parseQueryAndApply() {
-  const q = route.query
-  console.log(q)
-  const hasQueryParams = Object.keys(q).length > 0
-  if (!hasQueryParams) return false
-
-  clearFilters(false)
-
-  // A. Filtros de texto y booleanos simples
-  if (q.q)              filters.q            = q.q
-  if (q.program_text)   filters.program_text  = q.program_text
-  if (q.web)            filters.web           = q.web
-  if (q.b2b)            filters.b2b           = q.b2b
-
-  // B. Fechas
-  if (q.from_date || q.to_date) {
-    filters.rangoFechas = { start: q.from_date || '', end: q.to_date || '' }
-    if (q.from_date) filters.created_range_string = `${q.from_date} a ${q.to_date || q.from_date}`
-  }
-  if (q.pay_date_from || q.pay_date_to) {
-    filters.pay_date_from = q.pay_date_from || ''
-    filters.pay_date_to   = q.pay_date_to   || ''
-    if (q.pay_date_from) filters.pay_date_range_string = `${q.pay_date_from} a ${q.pay_date_to || q.pay_date_from}`
-  }
-  if (q.edition_start_from) {
-    filters.edition_start_from = q.edition_start_from
-    filters.edition_start_to   = q.edition_start_to || q.edition_start_from
-    filters.edition_range_string = `${q.edition_start_from} a ${filters.edition_start_to}`
-  }
-
-  // C. MultiSelects: JSON directo, sin hydrate ni catálogos
-  filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
-  filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
-  filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
-  filters.interest_level_ids = decodeFilter(q.interest_level_ids)
-  filters.channel_ids        = decodeFilter(q.channel_ids)
-  filters.query_ids          = decodeFilter(q.query_ids)
-  filters.type_program_ids   = decodeFilter(q.type_program_ids)
-  filters.model_modality_ids = decodeFilter(q.model_modality_ids)
-  filters.strategy_ids       = decodeFilter(q.strategy_ids)
-  filters.word_ids           = decodeFilter(q.word_ids)
-  filters.medium_contact_ids = decodeFilter(q.medium_contact_ids)
-  filters.code_country_ids   = decodeFilter(q.code_country_ids)
-  filters.moment_ids         = decodeFilter(q.moment_ids)
-  filters.fico_status_ids          = decodeFilter(q.fico_status_ids)
-  filters.profile_ids              = decodeFilter(q.profile_ids)
-  filters.currency_ids             = decodeFilter(q.currency_ids)
-  filters.inscription_modality_ids = decodeFilter(q.inscription_modality_ids)
-  filters.installment_status_ids   = decodeFilter(q.installment_status_ids)
-  filters.payment_method_ids       = decodeFilter(q.payment_method_ids)
-  filters.settlement_status_ids    = decodeFilter(q.settlement_status_ids)
-
-  await router.replace({ query: {} })
-  return true
-}
-// === LOGICA MODAL SEGUIMIENTO (Restaurada) ===
-const formatDuration = (seconds) => {
-  if (!seconds) return '00:00'
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-// 2. Lógica de Iniciar/Detener
-const toggleTimer = (attempt) => {
-  if (attempt.timerActive) {
-    // Detener
-    clearInterval(attempt.timerId)
-    attempt.timerActive = false
-    attempt.timerId = null
-  } else {
-    // Iniciar
-    attempt.timerActive = true
-    attempt.timerId = setInterval(() => {
-      // Si es null o undefined, iniciar en 0, luego sumar 1
-      attempt.contact_duration = (attempt.contact_duration || 0) + 1
-    }, 1000)
-  }
-}
-
-// 3. Limpieza de intervalos al salir (para que no se queden corriendo en memoria)
-onBeforeUnmount(() => {
-  if (editableHistory.value) {
-    editableHistory.value.forEach(item => {
-      if (item.timerId) clearInterval(item.timerId)
-    })
-  }
-})
-function openFollowModal(lead) {
-  selectedFollowLead.value = lead
-
-  try {
-    let rawDetails = lead.follow_details;
-    if (typeof rawDetails === 'string') {
-        try { rawDetails = JSON.parse(rawDetails); } catch (e) { rawDetails = []; }
-    }
-
-    if (Array.isArray(rawDetails)) {
-     editableHistory.value = rawDetails
-    .map(d => {
-      if (!d) return null;
-      return {
-        id: d?.id || d?.lead_contact_attempt_id,
-        attempt_number: d?.attempt_number ?? null,  // ← AÑADIR
-        calling_alias: d?.cat_result_alias || d?.cat_result_label,
-        contact_datetime: d?.contact_datetime ? String(d.contact_datetime).replace('T', ' ').slice(0, 16) : '',
-        response: d?.response || '',
-        cat_type_attempt: d?.cat_type_attempt,
-        cat_type_attempt_label: d?.cat_type_attempt_label,
-        contact_duration: d?.contact_duration || 0,
-        timerActive: false,
-        timerId: null
-      };
-    })
-    .filter(item => item !== null);
-    } else {
-      editableHistory.value = [];
-    }
-  } catch (error) {
-    console.error(error)
-    editableHistory.value = [];
-  }
-  showFollowModal.value = true;
-}
-
-// --- 3. MODIFICAR NUEVO INTENTO (addLocalAttempt) ---
-const getFileIcon = (type) => {
-  if (!type) return 'fa-file text-secondary'
-  const t = type.toLowerCase()
-
-  // ❌ ANTES: source no existe aquí, lanza ReferenceError
-  // if (t.includes('payment_receipt') || source === 'payment_receipt')
-
-  // ✅ CORRECTO: solo chequear el type
-  if (t.includes('payment_receipt')) return 'fa-file-invoice-dollar text-primary'
-  if (t.includes('pdf'))             return 'fa-file-pdf text-danger'
-  if (t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg'))
-                                     return 'fa-file-image text-success'
-  if (t.includes('legacy'))          return 'fa-file-contract text-warning'
-  if (t.includes('xml'))             return 'fa-file-code text-info'
-  if (t.includes('zip') || t.includes('rar')) return 'fa-file-zipper text-dark'
-
-  return 'fa-file-lines text-primary'
-}
-// === COMPROBACIÓN INICIAL PARA EL BOTÓN ===
-async function checkMyRestrictions() {
-  if (!isComercial) return; // Si es líder/admin, no necesita alerta
-  try {
-    const myRest = await comercialService.restrictionsList({
-      user_id: currentUserId,
-      is_comercial: true
-    });
-
-    if (myRest && myRest.length > 0) {
-      const r = myRest[0];
-      // Verificamos si al menos UNO de los arrays tiene datos (length > 0)
-      const isRestricted = [
-        r.type_program_ids, r.model_modality_ids, r.program_ids,
-        r.status_lead_ids, r.last_follow_ids, r.interest_level_ids,
-        r.channel_ids, r.strategy_ids, r.moment_ids
-      ].some(arr => Array.isArray(arr) && arr.length > 0);
-
-      hasActiveRestrictions.value = isRestricted;
-    }
-  } catch (e) {
-    console.error("Error comprobando mis restricciones:", e);
-  }
-}
-const hydrateCatalog = (ids, catalogArray) => {
-  if (!Array.isArray(ids) || !catalogArray) return [];
-  return catalogArray.filter(item => ids.includes(item.id));
-};
-
-// === 1. ABRIR Y CARGAR DATA (VERSIÓN CORREGIDA Y ROBUSTA) ===
-async function openControlModal() {
-  showControlModal.value = true;
-  asesoresControl.value = [];
-
-  try {
-    // 1. Asegurar carga de asesores (esto sí se mantiene para la lista de usuarios)
-    if (filtroOwners.value.length === 0) {
-      await loadOwners();
-    }
-
-    // 2. Traer restricciones desde BD (Ahora ya vienen con LABEL)
-    const savedRestrictions = await comercialService.restrictionsList({
-      user_id: currentUserId,
-      is_comercial: isComercial
-    });
-
-    // 3. Función local SIMPLIFICADA (sin hidratación)
-    const buildAsesorRecord = (userId, userName, bdRest = {}) => {
-      // Como el BD ya devuelve [{value:1, label:'Web'}], lo pasamos directo.
-      // Si viene null o undefined, pasamos array vacío.
-      return {
-        user_id: userId,
-        name: userName,
-        type_program_ids: bdRest.type_program_ids || [],
-        model_modality_ids: bdRest.model_modality_ids || [],
-        program_ids: bdRest.program_ids || [],
-        status_lead_ids: bdRest.status_lead_ids || [],
-        last_follow_ids: bdRest.last_follow_ids || [],
-        interest_level_ids: bdRest.interest_level_ids || [],
-        channel_ids: bdRest.channel_ids || [],
-        strategy_ids: bdRest.strategy_ids || [],
-        moment_ids: bdRest.moment_ids || []
-      };
-    };
-
-    // 4. Asignación según rol (Lógica idéntica, pero más datos limpios)
-    if (isComercial) {
-      const bdRest = savedRestrictions[0] || {};
-      const myName = storedUser?.first_name
-        ? `${storedUser.first_name} ${storedUser.last_name || ''}`
-        : `Mi Usuario (${currentUserId})`;
-
-      asesoresControl.value = [buildAsesorRecord(currentUserId, myName, bdRest)];
-
-    } else {
-      asesoresControl.value = filtroOwners.value.map(owner => {
-        const bdRest = savedRestrictions.find(r => r.user_id === owner.id) || {};
-        return buildAsesorRecord(owner.id, owner.description, bdRest);
-      });
-    }
-
-    // ¡ADIÓS AL SETTIMEOUT Y REHIDRATACIÓN! :)
-
-  } catch (error) {
-    console.error("Error cargando permisos:", error);
-    toast.error("Hubo un error al cargar el panel de permisos.");
-  }
-}
-
-// === 2. GUARDAR DATA ===
-async function saveControlRestrictions() {
-  isSavingRestrictions.value = true;
-
-  try {
-    const payloadMasivo = asesoresControl.value.map(asesor => ({
-      user_id: asesor.user_id,
-      is_active: true,
-      // La función extractIds ya manejaba {value, label} -> value, así que esto funciona perfecto
-      type_program_ids: extractIds(asesor.type_program_ids),
-      model_modality_ids: extractIds(asesor.model_modality_ids),
-      program_ids: extractIds(asesor.program_ids),
-      status_lead_ids: extractIds(asesor.status_lead_ids),
-      last_follow_ids: extractIds(asesor.last_follow_ids),
-      interest_level_ids: extractIds(asesor.interest_level_ids),
-      channel_ids: extractIds(asesor.channel_ids),
-      strategy_ids: extractIds(asesor.strategy_ids),
-      moment_ids: extractIds(asesor.moment_ids),
-    }));
-
-    await comercialService.restrictionsUpdate(payloadMasivo);
-    toast.success('Filtros restrictivos aplicados correctamente');
-    showControlModal.value = false;
-
-  } catch (error) {
-    console.error("Error guardando restricciones:", error);
-    toast.error('Error al guardar las restricciones');
-  } finally {
-    isSavingRestrictions.value = false;
-  }
-}
-async function saveFastFollow() {
-  if (!selectedFollowLead.value) return
-
-  editableHistory.value.forEach(item => {
-    if (item.timerActive) toggleTimer(item)
-  })
-
-  isSavingFollow.value = true
-
-  try {
-    const attemptsPayload = editableHistory.value.map(item => ({
-      id: item.id,
-      cat_result: getIdFromAlias(item.calling_alias, filtroCalling.value),
-      cat_type_attempt: getIdFromAlias(item.cat_type_attempt, lAttempts.value),
-      contact_datetime: item.contact_datetime,
-      response: item.response,
-      contact_duration: item.contact_duration
-    }))
-
-    const resp = await comercialService.leadUpdate({
-      id: selectedFollowLead.value.id,
-      lead: {},
-      contact_attempts: attemptsPayload
-    })
-
-    // ← REEMPLAZAR el toast.success simple por esto:
-    if (resp.result === 1) {
-      toast.success(resp.message || 'Seguimiento actualizado correctamente')
-      showFollowModal.value = false
-      fetchLeads()
-    } else if (resp.result === 0) {
-      toast.error(resp.message || 'Error inesperado al guardar')
-    } else {
-      // result 2 u otros → advertencia amarilla
-      toast.warning(resp.message || 'No se pudo guardar el seguimiento')
-    }
-
-  } catch (error) {
-    console.error(error)
-    toast.error('Error al guardar el seguimiento')
-  } finally {
-    isSavingFollow.value = false
-  }
-}
-
-const minDateForNewAttempt = computed(() => {
-  const existing = editableHistory.value.filter(a => a.id) // solo los ya guardados
-  if (!existing.length) return null
-  // Tomar la fecha más reciente entre los existentes
-  const dates = existing.map(a => new Date(a.contact_datetime)).filter(d => !isNaN(d))
-  if (!dates.length) return null
-  return new Date(Math.max(...dates))
-})
-
-function rebuildChips() {
-  const chips = []
-
-  const makeChip = (key, labelPrefix, items) => {
-    if (!items || items.length === 0) return
-    const labels = items.map(i => i.label || i.value)
-    chips.push({
-      key,
-      label:   labels.length === 1 ? `${labelPrefix}: ${labels[0]}` : `${labelPrefix}: ${labels.length} sel.`,
-      text:    `${labelPrefix}: ${labels.join(', ')}`,
-      details: labels
-    })
-  }
-
-  // Simples
-  if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
-  if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
-  if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
-  if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
-if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio Edición' })
-  if (filters.order_by === 2) chips.push({ key: 'order_by', text: 'Orden: Fecha Pago' })
-  if (filters.rangoFechas?.start)
-    chips.push({ key: 'rangoFechas', label: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
-  if (filters.pay_date_from)
-    chips.push({ key: 'pay_date', label: `Pago: ${filters.pay_date_from} → ${filters.pay_date_to}` })
-  if (filters.edition_start_from)
-    chips.push({ key: 'edition_start', label: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
-
-  // MultiSelects (instantáneo, sin buscar en catálogos)
-  makeChip('status_lead_ids',    'Estatus',    filters.status_lead_ids)
-  makeChip('last_follow_ids',    'Seguim.',    filters.last_follow_ids)
-  makeChip('interest_level_ids', 'Interés',    filters.interest_level_ids)
-  makeChip('channel_ids',        'Canal',      filters.channel_ids)
-  makeChip('query_ids',          'Promoción',  filters.query_ids)
-  makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
-  makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
-  makeChip('strategy_ids',       'Estrategia', filters.strategy_ids)
-  makeChip('word_ids',           'Palabra',    filters.word_ids)
-  makeChip('medium_contact_ids', 'Medio',      filters.medium_contact_ids)
-  makeChip('code_country_ids',   'País',       filters.code_country_ids)
-  makeChip('moment_ids',         'Etapa',      filters.moment_ids)
-  makeChip('fico_status_ids',          'FICO',           filters.fico_status_ids)
-  makeChip('profile_ids',              'Perfil',         filters.profile_ids)
-  makeChip('currency_ids',             'Moneda',         filters.currency_ids)
-  makeChip('inscription_modality_ids', 'Mod. Insc.',     filters.inscription_modality_ids)
-  makeChip('installment_status_ids',   'Est. Cuota',     filters.installment_status_ids)
-  makeChip('payment_method_ids',       'Método Pago',    filters.payment_method_ids)
-  makeChip('settlement_status_ids',    'Conciliación',   filters.settlement_status_ids)
-  if (!isComercial) makeChip('owner_user_ids', 'Asesor', filters.owner_user_ids)
-
-  activeFilterChips.value = chips
-}
-// === API ===
-async function fetchLeads() {
-  try {
-    const getIds = (arr) => {
-      if (!Array.isArray(arr)) return []
-      return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
-    }
-
-    const { items, total: t } = await comercialService.leadList({
-      q:                   filters.q             || null,
-      page:                pagin.value.page,
-      size:                pagin.value.size,
-      program_text:        filters.program_text  || null,
-      web:                 filters.web           || null,
-      b2b:                 filters.b2b           || null,
-  order_by: filters.order_by ?? 0, 
-
-      from_date:           filters.rangoFechas?.start        || null,
-      to_date:             filters.rangoFechas?.end          || null,
-      updated_from:        filters.rangoModificacion?.start  || null,
-      updated_to:          filters.rangoModificacion?.end    || null,
-      pay_date_from:       filters.pay_date_from             || null,
-      pay_date_to:         filters.pay_date_to               || null,
-      edition_start_from:  filters.edition_start_from        || null,
-      edition_start_to:    filters.edition_start_to          || null,
-fico_status_ids:            getIds(filters.fico_status_ids),
-      profile_ids:                getIds(filters.profile_ids),
-      currency_ids:               getIds(filters.currency_ids),
-      inscription_modality_ids:   getIds(filters.inscription_modality_ids),
-      installment_status_ids:     getIds(filters.installment_status_ids),
-      payment_method_ids:         getIds(filters.payment_method_ids),
-      settlement_status_ids:      getIds(filters.settlement_status_ids),
-      owner_user_ids:      getIds(filters.owner_user_ids),
-      status_lead_ids:     getIds(filters.status_lead_ids),
-      last_follow_ids:     getIds(filters.last_follow_ids),
-      interest_level_ids:  getIds(filters.interest_level_ids),
-      channel_ids:         getIds(filters.channel_ids),
-      query_ids:           getIds(filters.query_ids),
-      type_program_ids:    getIds(filters.type_program_ids),
-      model_modality_ids:  getIds(filters.model_modality_ids),
-      strategy_ids:        getIds(filters.strategy_ids),
-      word_ids:            getIds(filters.word_ids),
-      medium_contact_ids:  getIds(filters.medium_contact_ids),
-      code_country_ids:    getIds(filters.code_country_ids),
-      moment_ids:          getIds(filters.moment_ids),
-    })
-
-    leadsRaw.value = items || []
-    pagin.value.total = Number(t || 0)
-
-    if (filtroOwners.value.length === 0 && items?.length > 0) {
-      await loadOwners()
-    }
-  } catch (e) {
-    console.error('Error cargando leads:', e)
-    leadsRaw.value = []
-    pagin.value.total = 0
-  }
-}
-const showEnrollmentModal = ref(false)
-const enrollmentData = ref(null)
-const isLoadingEnrollment = ref(false)
-
-async function openEnrollmentModal(enrollmentId) {
-  if (!enrollmentId) return;
-
-  isLoadingEnrollment.value = true;
-  enrollmentData.value = null;
-  showEnrollmentModal.value = true;
-
-  try {
-    const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
-    console.log("daaa")
-    console.log(response)
-    // ✅ El service ya devuelve el objeto plano directamente
-    const data = response;
-
-    if (!data || !data.enrollment_id) {
-      toast.error("No se encontraron datos para esta matrícula");
-      showEnrollmentModal.value = false;
-      return;
-    }
-
-    data.files_list = (data.files_list || []).filter(f => f !== null);
-    enrollmentData.value = data;
-
-  } catch (error) {
-    console.error(error);
-    toast.error("No se pudo cargar la información de la matrícula");
-    showEnrollmentModal.value = false;
-  } finally {
-    isLoadingEnrollment.value = false;
-  }
-}
-// === EVENTOS UI ===
-function startPress(lead) {
-  pressingRowId.value = lead.id
-  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 1000)
-}
-function cancelPress() {
-  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
-  pressingRowId.value = null
-}
-
-function clearFilters(reload = true) {
-  Object.assign(filters, {
-    q: '', program_text: '', estado: null, web: null, b2b: null,
-    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],order_by: 0,
-    interest_level_ids: [], channel_ids: [], query_ids: [],
-    type_program_ids: [], model_modality_ids: [], strategy_ids: [],
-    word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
-    rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
-    created_range_string: null, updated_range_string: null,
-    edition_range_string: null, edition_start_from: '', edition_start_to: '',
-    pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
-    inscription_modality_ids: [], installment_status_ids: [],
-    payment_method_ids: [], settlement_status_ids: []
-  })
-
-  if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
-
-if (reload === true || typeof reload !== 'boolean') {
-    pagin.value.page = 1
-    localStorage.removeItem('crm_leads_filter_state_v1')
-    rebuildChips()
-    fetchLeads()
-  }
-}
-
-// ... resto de funciones (addLocalAttempt, saveFastFollow, etc.) idénticas ...
-// Asegurate de incluir loadOwners, openFollowModal, etc.
-async function loadOwners() {
-  try {
-    const arr = await authService.userList({})
-    filtroOwners.value = arr.map(u => {
-      // Replicamos la lógica exacta del SQL: Nombre + Inicial del Apellido.
-      const fName = (u.first_name || '').trim()
-      const lName = (u.last_name || '').trim()
-
-      let fullName = fName
-      if (lName) fullName += ` ${lName.charAt(0)}.`
-
-      // Si no tiene nombre ni apellido, usamos el ID como fallback igual que el backend
-      const desc = fullName.trim() || `Usuario ${u.user_id}`
-
-      return {
-        id: u.user_id,
-        description: desc
-      }
-    })
-  } catch (e) {
-    console.error(e)
-  }
-}
-function openFilterModal() { showFilterModal.value = true }
-function applyFilters() { showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
-function clearFilter(key) {
-  if (key === 'rangoFechas') {
-    filters.rangoFechas = { start: '', end: '' }
-    filters.created_range_string = null
-  } else if (key === 'pay_date') {
-    filters.pay_date_from = ''
-    filters.pay_date_to = ''
-    filters.pay_date_range_string = null
-  } else if (key === 'order_by') {     // <--- AQUÍ ES DONDE VA ESTE IF
-    filters.order_by = 0
-  }else if (key === 'edition_start') {
-    filters.edition_start_from = ''
-    filters.edition_start_to = ''
-    filters.edition_range_string = null
-  } else if (Array.isArray(filters[key])) {
-    filters[key] = []
-  } else {
-    filters[key] = null
-  }
-  applyFilters()
-}
-function handleDateFilterChange(dateStr, type) {
-  let start = '', end = ''
-  if (dateStr && dateStr.includes(' a ')) { [start, end] = dateStr.split(' a ') } else if (dateStr) { start = end = dateStr }
-  if (type === 'created') { filters.rangoFechas = {start, end}; filters.created_range_string = dateStr }
-  else if (type === 'updated') { filters.rangoModificacion = {start, end}; filters.updated_range_string = dateStr }
-  else if (type === 'pay_date') {
-    filters.pay_date_from = start;
-    filters.pay_date_to = end;
-    filters.pay_date_range_string = dateStr;
-  }
-  else if (type === 'edition_start') { filters.edition_start_from = start; filters.edition_start_to = end; filters.edition_range_string = dateStr }
-}
-// Helpers visuales
-// Helpers visuales actualizados
-function rowClassForStatus(s) {
-  const map = {
-    'we_lead_status_interesado': 'row-blue',
-    'we_lead_status_bought': 'row-inscrito',
-    'we_lead_status_will_pay': 'row-emerald',
-    'we_lead_status_proximo': 'row-yellow',
-    'we_lead_status_indiferente': 'row-gray',
-    'we_lead_status_closed': 'row-red',
-    'we_lead_status_desestimado': 'row-red'
-  };
-  return map[s] || ''
-}
-
-function badgeForInterest(s) {
-  const map = {
-    'we_lead_interest_high': 'pill-red',
-    'we_lead_interest_medium': 'pill-amber',
-    'we_lead_interest_low': 'pill-slate'
-  };
-  return map[s] || 'pill-slate'
-}
-
-function badgeForFollow(s) {
-  const map = {
-    'we_calling_pending': 'pill-slate',
-    'we_calling_answered': 'pill-teal',
-    'we_calling_no_answer': 'pill-red'
-  };
-  return map[s] || 'pill-slate'
-}
-function addLocalAttempt() {
-  const now = new Date();
-  const isoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-
-  editableHistory.value.unshift({
-    id: null,
-    attempt_number: null,          // ← sin número hasta guardar
-    status_alias: 'we_calling_pending',
-    calling_alias: 'we_calling_pending',  // ← Pendiente por defecto
-    contact_datetime: isoString,
-    cat_type_attempt: 'we_attempt_call',
-    response: '',
-    contact_duration: 0,
-    timerActive: false,
-    timerId: null
-  })
-}
-function getIdFromAlias(alias, catalogArray) { if (!alias || !catalogArray) return null; const item = catalogArray.find(i => i.alias === alias); return item ? item.id : null }
-function goNew() { router.push({ name: 'ComercialLeadsNew' }) }
-function viewLead(lead) { router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } }) }
-function editLead(lead) { router.push({ name: 'ComercialLeadDetalle', params: { id: lead.id } }) }
-function handlePaginationChange() {
-  fetchLeads()
-}
-
-onMounted(async () => {
-  if (isComercial && currentUserId) {
-    filters.owner_user_ids = [currentUserId]
-    checkMyRestrictions()
-  }
-  loadOwners()
-  await parseQueryAndApply()
-  rebuildChips()
-  fetchLeads()
-})
-</script>

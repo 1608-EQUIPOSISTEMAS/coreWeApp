@@ -3,8 +3,8 @@
   <CModal
     :visible="modelValue"
     size="lg"
-    backdrop="static"    
-    keyboard="false"
+    backdrop="static"
+    :keyboard="false"
     @close="$emit('update:modelValue', false)"
   >
     <CModalHeader class="bg-danger text-white">

@@ -62,7 +62,7 @@
           <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
           <div class="row g-3">
 
-            <div class="col-md-3">
+<div class="col-md-3">
               <label class="exec-label">Fecha contacto inicial <span class="c-red">*</span></label>
               <DateTime12
                 :onlyHours="true"
@@ -70,8 +70,7 @@
                 v-model="form.fechaContactoInicial"
                 required
                 clearable
-                :config="dateLimitConfig"
-              />
+                :config="pastDateConfig"  />
             </div>
 
             <div class="col-md-5"></div>
@@ -91,13 +90,13 @@
 
             <div class="col-6 col-md-4 col-lg-3">
               <label class="exec-label">Categoría <span class="c-red">*</span></label>
-              
+
               <SearchSelect
                 v-model="form.category_alias"
                 :items="programTypeCatalog"
                 label-field="description"
                 value-field="alias"
-                
+
                 placeholder="CATEGORÍA..."
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
@@ -162,10 +161,10 @@
   >
     <i class="fa-solid fa-circle-info" style="color: var(--teal-600, #12274e);"></i>
   </button>
-  
+
 </div>
             </div>
-            
+
             <div
               class="col-12 col-lg-3"
               v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))"
@@ -327,13 +326,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <h6 class="fieldset-title"><i class="fa-solid fa-chart-line me-2 text-info"></i> Estado Comercial y Marketing</h6>
           <div class="row g-3">
 
-            <div class="col-md-3">
+<div class="col-md-3">
               <label class="exec-label">F. Pago (prevista)</label>
               <BaseDatePicker
                 v-model="form.pay_date"
                 :required="form.status_alias=='we_lead_status_bought'"
-                :config="dateLimitConfig"
-                placeholder="dd/mm/aaaa"
+                :config="pastDateConfig" placeholder="dd/mm/aaaa"
               />
             </div>
 
@@ -449,8 +447,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
           <div class="attempt-head d-none d-lg-grid mb-2">
             <div class="text-center">#</div>
-            <div>Tipo / Duración</div>
-            <div>Fecha y Hora <span class="c-red">*</span></div>
+            <div>Tipo / Origen</div> <div>Fecha y Hora <span class="c-red">*</span></div>
             <div>T. Respuesta</div>
             <div>Observación</div>
             <div></div>
@@ -466,8 +463,9 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <strong>{{ idx + 1 }}</strong>
             </div>
 
-            <div class="attempt-row__type">
-              <label class="exec-label d-lg-none">Tipo / Duración</label>
+<div class="attempt-row__type">
+              <label class="exec-label d-lg-none">Tipo / Origen</label>
+
               <SearchSelect
                 v-model="c.cat_type_attempt"
                 :items="lAttempts"
@@ -477,6 +475,50 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="exec-select-light w-100"
                 :disabled="!!c.id"
               />
+
+              <template v-if="c.id">
+
+                <div class="mt-2 text-truncate" style="font-size: 10px;">
+                  <span
+                    class="pill border w-100 justify-content-center"
+                    :class="c.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'"
+                    :title="c.cat_creation_origin_label || 'Gestión Manual'"
+                  >
+                    <i class="fa-solid me-1" :class="c.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
+                    {{ c.cat_creation_origin_label || 'Gestión Manual' }}
+                  </span>
+                </div>
+
+                <div
+                  v-if="c.calling_alias === 'we_calling_pending' && isLiderComercial"
+                  class="mt-2"
+                >
+                  <button
+                    type="button"
+                    class="btn-exec btn-exec-outline btn-exec-sm w-100"
+                    :class="c.cat_reschedule_origin ? 'btn-exec-active' : ''"
+                    @click="toggleReschedule(c)"
+                    title="Reprogramar fecha de esta llamada"
+                  >
+                    <i class="fa-solid fa-calendar-pen me-1"></i>
+                    {{ c.cat_reschedule_origin ? 'Reprogramación activa' : 'Reprogramar' }}
+                  </button>
+                </div>
+
+                <div v-if="c.was_rescheduled && !c.cat_reschedule_origin" class="mt-1" style="font-size:10px;">
+                  <span class="pill pill-amber border w-100 justify-content-center">
+                    <i class="fa-solid fa-calendar-pen me-1"></i> Reprogramado
+                  </span>
+                </div>
+
+              </template>
+
+              <template v-else>
+                <div class="mt-2 text-truncate text-center" style="font-size: 10px;">
+                  <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
+                </div>
+              </template>
+
               <div class="attempt-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
                 <button
                   type="button"
@@ -494,19 +536,18 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               </div>
             </div>
 
-            <div class="attempt-row__date">
-              <label class="exec-label d-lg-none">Fecha y Hora <span class="c-red">*</span></label>
-                <DateTime12
-                  v-model="c.fechaContactoProximo"
-                  required
-                  clearable
-                  :onlyHours="true"
-                  :disabled="c.calling_alias != 'we_calling_pending'"
-                  :config="!c.id && minDateForNewAttempt
-                    ? { minDate: minDateForNewAttempt }
-                    : dateLimitConfig"
-                />
-            </div>
+
+<div class="attempt-row__date">
+                  <DateTime12
+                    v-model="c.fechaContactoProximo"
+                    required
+                    clearable
+                    :onlyHours="true"
+                    :disabled="c.calling_alias != 'we_calling_pending' && !c.cat_reschedule_origin"
+                    :config="!c.id && minDateForNewAttempt
+                      ? { minDate: minDateForNewAttempt }
+                      : futureDateConfig" />
+                </div>
 
             <div class="attempt-row__result">
               <label class="exec-label d-lg-none">T. Resultado</label>
@@ -886,7 +927,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   <!-- Meta usuario -->
   <div class="user-meta mt-2">
-    
+
     <div class="user-badge">
       <div class="user-icon">
         <i class="fa-solid fa-user"></i>
@@ -1028,17 +1069,17 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <SearchSelect :viewOpen="6" required v-model="insc.cat_insc_modality" :model-label="form.program_modality_label" :items="inscModalidades" label-field="description" placeholder="M. PROGRAMA" value-field="alias" class="exec-select-light w-100" />
           </div>
           <div class="col-md-4">
-            
+
   <label class="exec-label">Estado del Certificado <span class="c-red">*</span></label>
-  <SearchSelect 
-    :viewOpen="6" 
-    required 
-    v-model="insc.cat_certificate_status" 
-    :items="certificateStatusCatalog.filter(e=>e.alias !='we_certificate_status_generated')" 
-    label-field="description" 
-    placeholder="ESTADO CERTIFICADO" 
-    value-field="alias" 
-    class="exec-select-light w-100" 
+  <SearchSelect
+    :viewOpen="6"
+    required
+    v-model="insc.cat_certificate_status"
+    :items="certificateStatusCatalog.filter(e=>e.alias !='we_certificate_status_generated')"
+    label-field="description"
+    placeholder="ESTADO CERTIFICADO"
+    value-field="alias"
+    class="exec-select-light w-100"
   />
 </div>
         </div>
@@ -1476,9 +1517,21 @@ import FileUploader from '@/components/FileUploader.vue'
   const router = useRouter()
   const route  = useRoute()
 
-
+const storedUserStr = localStorage.getItem('user')
+const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const pastDateConfig = {
+    minDate: sevenDaysAgo,
+    maxDate: 'today' // Bloquea fechas futuras
+};
+
+// Configuración 2: Fechas futuras o presentes (Para Seguimientos)
+// El usuario puede elegir desde HOY hacia el futuro.
+const futureDateConfig = {
+    minDate: 'today' // Bloquea fechas pasadas
+};
+
 const dateLimitConfig = {
     minDate: sevenDaysAgo
 };
@@ -1701,6 +1754,7 @@ const formatDate = (dateString) => {
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
   //we_calling
   const callingCatalog          = ref(catalog.options('we_calling'))
+  const attemptOriginCatalog    = ref(catalog.options('we_attempt_origin') || [])
 // 1. Inicializa la lista vacía (un array vacío para evitar errores en el v-for/items)
 const membershipList = ref([]);
 
@@ -1747,8 +1801,16 @@ const minDateForNewAttempt = computed(() => {
   const dates = existing
     .map(c => new Date(c.fechaContactoProximo))
     .filter(d => !isNaN(d))
+
   if (!dates.length) return null
-  return new Date(Math.max(...dates))
+
+  // Obtenemos la máxima fecha del historial
+  const maxHistoryDate = new Date(Math.max(...dates))
+  const today = new Date()
+  today.setHours(0,0,0,0) // Normalizamos hoy a la medianoche
+
+  // Si la fecha del historial es menor a hoy, forzamos "hoy" como mínimo
+  return maxHistoryDate < today ? today : maxHistoryDate
 })
 
 const hcEnrollmentData = ref([
@@ -1816,7 +1878,7 @@ watchEffect(() => {
   insc.montoBeneficio = montoBeneficio
 
   // 5. Cálculo Final (Base - Descuentos)
-    
+
   const final = base - totalDescuentos
   insc.total_amount = Math.floor(final > 0 ? final : 0)
 })
@@ -1941,20 +2003,32 @@ const currentEdition = ref(null)  // reemplazar el computed por un ref
       enrollment_id: l.enrollment_id,
       program_link: l.program_link ?? null,
       observacion: l.observations ?? '',
-      contactos: (l.contact_attempts || []).map(att => ({
-        id: att.lead_contact_attempt_id,
-        status_alias: att.cat_status_alias,
-        cat_type_attempt: att.cat_type_attempt_alias || 'we_attempt_call',
-        calling_alias: att.cat_result_alias,
-        calling_label: att.cat_result_label,
-        status_label: att.cat_status_label,
-        fechaContactoProximo: normalizeDateTime(att.contact_datetime),
-        respuesta: att.response || '',
-        // Mapear Duración y Timer
-  contact_duration: att.contact_duration || 0,
-  timerActive: false,
-  timerId: null
-      })),
+     contactos: (l.contact_attempts || []).map(att => {
+        // 🔴 BUSCAMOS EL LABEL DEL ORIGEN BASADOS EN EL ALIAS QUE MANDA EL SP
+        const originAlias = att.cat_creation_origin; // Este es el alias que inyectamos en el SP (ej. 'we_origin_rule_3days')
+        const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias);
+
+        return {
+          id: att.lead_contact_attempt_id,
+          status_alias: att.cat_status_alias,
+          cat_type_attempt: att.cat_type_attempt_alias || 'we_attempt_call',
+          calling_alias: att.cat_result_alias,
+          calling_label: att.cat_result_label,
+          status_label: att.cat_status_label,
+          fechaContactoProximo: normalizeDateTime(att.contact_datetime),
+          respuesta: att.response || '',
+          contact_duration: att.contact_duration || 0,
+          cat_reschedule_origin: att.cat_reschedule_origin || null,  // ← NUEVO
+          was_rescheduled: !!att.cat_reschedule_origin,              // ← flag visual
+          reschedule_label: att.cat_reschedule_origin_label || null,
+          timerActive: false,
+          timerId: null,
+
+          // 🔴 NUEVAS PROPIEDADES PARA RENDERIZAR EN PANTALLA
+          cat_creation_origin_alias: originAlias || 'we_origin_manual',
+          cat_creation_origin_label: originObj ? originObj.description : 'Gestión Manual'
+        }
+      }),
 
       enrollment_id: l.enrollment_id
 
@@ -2120,7 +2194,7 @@ function createEmptyAttempt() {
     form.key_word_alias = mktWordsCatalog.value?.find(e =>
       e.description && msj.includes(e.description.toLowerCase())
     )?.alias || 'we_key_word_null'
-    
+
     form.key_word_alias = mktWordsCatalog.value?.find(e =>
       e.description && msj.includes(e.description.toLowerCase())
     )?.alias
@@ -2373,7 +2447,7 @@ function onChannelChange(option) {
     return
   }
 
-  
+
   // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
   if (['we_social_media_wechat'].includes(alias)) {
     form.medium_alias = 'we_social_media_whatsapp'
@@ -2417,18 +2491,15 @@ function formatDateTime(isoString) {
     const cat_program_type = idByAlias(form.category_alias, programTypeCatalog.value)
 
     const contact_attempts = (form.contactos || []).map((c, idx) => {
-      const cat_status = idByAlias(c.status_alias, contactAttemptStatusCat.value)
-
-      const contact_datetime = c.fechaContactoProximo || form.fechaContactoInicial
       return {
         id: c.id,
         attempt_number: idx + 1,
         cat_type_attempt: idByAlias(c.cat_type_attempt, lAttempts.value),
-        cat_status,
-        contact_datetime,
+        contact_datetime: c.fechaContactoProximo,          // ← corregido
         cat_result: idByAlias(c.calling_alias, callingCatalog.value),
         response: c.respuesta || '',
-        contact_duration: c.contact_duration || 0
+        contact_duration: c.contact_duration || 0,
+        cat_reschedule_origin: c.cat_reschedule_origin || null
       }
     })
 
@@ -2805,7 +2876,7 @@ function validateInscriptionPaymentInfo() {
           form.program_version_id = null
           form.program_modality_alias = null
           form.edition_id = null
-    form.edition_label = null  
+    form.edition_label = null
           return
         }
     }
@@ -2882,7 +2953,7 @@ function onEditionChange(opcion) {
     return
   }
 
-  currentEdition.value    = opcion 
+  currentEdition.value    = opcion
   form.edition_label      = opcion.start_date_label || null  // ← AGREGAR
   form.edition_start_date = opcion.start_date || null
   console.log(opcion.start_date)
@@ -3055,7 +3126,7 @@ const installmentPlan = computed(() => {
   if (saldo <= 0 || n < 1) return []
 
   const cuotaBase = Math.floor(saldo / n)           // entero hacia abajo
-  const remainder = round2(saldo - cuotaBase * n) 
+  const remainder = round2(saldo - cuotaBase * n)
 
   const base = startRaw
     ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00')
@@ -3141,7 +3212,25 @@ function isValidEmail(email) {
 const isOnlineProgram = computed(() =>
   form.program_modality_selected_alias === 'we_modality_online'
 )
+
+// Detectar rol líder (igual que isComercial que ya tienes)
+const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false
+
+// ID del catálogo ya creado
+const CAT_RESCHEDULE_LEADER_ID = 5002
+
+function toggleReschedule(contacto) {
+  if (contacto.cat_reschedule_origin) {
+    // Si ya tiene, lo quita (cancela la reprogramación)
+    contacto.cat_reschedule_origin = null
+  } else {
+    // Activa modo reprogramar
+    contacto.cat_reschedule_origin = CAT_RESCHEDULE_LEADER_ID
+  }
+}
+
 </script>
+
 <style scoped>
 .exec-shell {
   background: var(--slate-50, #f8fafc);

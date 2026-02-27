@@ -42,7 +42,7 @@ export default [
         component: 'CNavItem',
         name: 'Cronograma',
         to: '/producto/cronograma',
-        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
@@ -81,7 +81,7 @@ export default [
         component: 'CNavItem',
         name: 'Llamada - Gestión',
         to: '/comercial/RptCalling',
-        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
       },
       {
         component: 'CNavItem',
