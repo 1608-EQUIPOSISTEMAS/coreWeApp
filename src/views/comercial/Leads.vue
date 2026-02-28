@@ -287,7 +287,6 @@
               ><td class="td-a text-center fw-700 text-muted align-top pt-3">
                   {{ attempt.attempt_number ?? '—' }}
                 </td>
-                {{ attempt.cat_type_attempt }}
                 <td class="td-a align-top pt-2">
                   <SearchSelect
                     :items="lAttempts"
@@ -1131,7 +1130,7 @@ async function openFollowModal(lead) {
   try {
     const fresh = await comercialService.leadGet({ id: lead.id })
     const rawDetails = fresh?.contact_attempts || []
-
+    console.log(rawDetails)
     editableHistory.value = [...rawDetails]
       .sort((a, b) => b.attempt_number - a.attempt_number)
       .map(d => {
@@ -1139,7 +1138,7 @@ async function openFollowModal(lead) {
 
         const originAlias = d.cat_creation_origin || 'we_origin_manual'
         const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias)
-
+        
         return {
           id: d.lead_contact_attempt_id,
           attempt_number: d.attempt_number ?? null,
@@ -1148,7 +1147,7 @@ async function openFollowModal(lead) {
             ? String(d.contact_datetime).replace('T', ' ').slice(0, 16)
             : '',
           response: d.response || '',
-          cat_type_attempt: d.cat_type_attempt, // alias
+          cat_type_attempt: d.cat_type_attempt_alias, // alias
           cat_type_attempt_label: d.cat_type_attempt_label,
           contact_duration: d.contact_duration || 0,
           timerActive: false,
