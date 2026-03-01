@@ -19,7 +19,10 @@ async getDetailLeads(payload) {
     const response = (await api.post('/dashboard/detailsales', payload)).data;
     return response.data;
   }
-
+async liderList(filters = {}) {
+  const response = await api.post('/dashboard/lider', filters, { meta: { skipLoader: true } })
+  return response.data.data
+}
 
   async programGoalsList(payload) {
     const response = (await api.post('/dashboard/program-goals', payload)).data;
