@@ -1,378 +1,610 @@
 <template>
-  <div class="exec-shell">
+  <div class="ps-shell" :class="isLider ? 'ps-mode-lider' : 'ps-mode-asesor'">
 
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">Análisis de Eficiencia Operativa (Outbound & Inbound)</span>
-            <h1 class="brand-title">Rentabilidad de Seguimiento & Contactabilidad</h1>
+    <!-- ══════════════════════════════════════════════════ HEADER -->
+    <header class="ps-head">
+      <div class="ps-head-inner">
+        <div class="ps-brand">
+          <div class="ps-brand-stripe"></div>
+          <div>
+            <span class="ps-eyebrow">
+              {{ isLider ? 'Panel de Supervisión Comercial' : 'Mi Centro Operativo · Outbound' }}
+            </span>
+            <h1 class="ps-title">
+              {{ isLider ? 'Dashboard Líder Comercial' : 'Panel de Llamadas — ' + myName }}
+            </h1>
           </div>
         </div>
-        <div class="masthead-actions">
-          <button class="btn-exec btn-exec-primary" @click="loadData" :disabled="isLoading">
-            <svg :class="{ 'spin': isLoading }" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            {{ isLoading ? 'Procesando...' : 'Actualizar Datos' }}
-          </button>
-        </div>
+        <button class="ps-btn-refresh" :disabled="isLoading" @click="loadAll">
+          <svg :class="{ spin: isLoading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          {{ isLoading ? 'Cargando...' : 'Actualizar' }}
+        </button>
       </div>
 
-      <div class="masthead-filters">
-        <div class="filter-group">
-          <label class="filter-label">ANO</label>
-          <select class="exec-select" v-model="filters.year" @change="loadData">
+      <div class="ps-head-filters">
+        <div class="pf-chip">
+          <span class="pf-label">AÑO</span>
+          <select class="pf-select" v-model="filters.year" @change="loadAll">
             <option :value="2026">2026</option>
             <option :value="2025">2025</option>
             <option :value="2024">2024</option>
           </select>
         </div>
-        <div class="filter-sep"></div>
-        <div class="filter-group">
-          <label class="filter-label">MES</label>
-          <select class="exec-select" v-model="filters.month" @change="loadData">
-            <option :value="0">Todos los meses (Anual)</option>
-            <option :value="1">Enero</option>
-            <option :value="2">Febrero</option>
-            <option :value="3">Marzo</option>
-            <option :value="4">Abril</option>
-            <option :value="5">Mayo</option>
-            <option :value="6">Junio</option>
-            <option :value="7">Julio</option>
-            <option :value="8">Agosto</option>
-            <option :value="9">Septiembre</option>
-            <option :value="10">Octubre</option>
-            <option :value="11">Noviembre</option>
-            <option :value="12">Diciembre</option>
+        <div class="pf-div"></div>
+        <div class="pf-chip">
+          <span class="pf-label">MES</span>
+          <select class="pf-select" v-model="filters.month" @change="loadAll">
+            <option :value="0">Todo el año</option>
+            <option v-for="m in meses" :key="m.v" :value="m.v">{{ m.l }}</option>
           </select>
         </div>
-        <div class="filter-sep" v-if="!isStrictlyComercial"></div>
-        <div class="filter-group" v-if="!isStrictlyComercial">
-          <label class="filter-label">ASESOR</label>
-          <select class="exec-select" v-model="filters.advisor" @change="loadData">
-            <option value="all">Todos los Asesores</option>
-            <option v-for="user in filtroOwners" :key="user.id" :value="user.id">
-              {{ user.description }}
-            </option>
-          </select>
+        <template v-if="isLider">
+          <div class="pf-div"></div>
+          <div class="pf-chip">
+            <span class="pf-label">ASESOR</span>
+            <select class="pf-select" v-model="filters.advisor" @change="loadAll">
+              <option value="all">Todos</option>
+              <option v-for="u in filtroOwners" :key="u.id" :value="u.id">{{ u.description }}</option>
+            </select>
+          </div>
+        </template>
+        <!-- Asesor: indicador de pendientes en header -->
+        <div v-if="!isLider && totalPendingCount > 0" class="pf-pending-badge">
+          <span class="pb-overdue" v-if="overdueCount > 0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ overdueCount }} vencidas
+          </span>
+          <span class="pb-upcoming">{{ upcomingCount }} próximas</span>
         </div>
       </div>
     </header>
 
-    <main class="exec-body">
+    <!-- ══════════════════════════════════════════════════ BODY -->
+    <main class="ps-body">
 
-      <div v-if="isLoading" class="exec-loader">
+      <div v-if="isLoading" class="ps-loader">
         <div class="loader-ring"></div>
-        <p class="loader-text">Analizando registros de contacto...</p>
+        <span>{{ isLider ? 'Consultando registros...' : 'Cargando tu panel...' }}</span>
       </div>
 
       <div v-else class="fade-in">
 
-        <div class="kpi-strip">
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">INTENTOS DE CONTACTO</span>
-              <div class="kpi-indicator ind-slate"></div>
-            </div>
-            <div class="kpi-card-value">{{ formatNum(globalKPIs.intentos) }}</div>
-            <div class="kpi-card-sub">Promedio: <strong>{{ globalKPIs.promIntentos }}</strong> intentos/lead</div>
-          </div>
+        <!-- ══════════════════════════ MODO ASESOR ══════════════════════════ -->
+        <template v-if="!isLider">
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">TASA DE CONTACTABILIDAD</span>
-              <div class="kpi-indicator" :class="globalKPIs.tasaContactabilidad >= 40 ? 'ind-green' : 'ind-amber'"></div>
+          <!-- KPI personal -->
+          <section class="kpi-strip kpi-4 mb">
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">MIS INTENTOS</span><div class="kd dot-slate"></div></div>
+              <div class="kpi-value">{{ fmt(callKPIs.intentos) }}</div>
+              <div class="kpi-sub">{{ fmt(callKPIs.leads) }} leads · prom. {{ callKPIs.promIntentos }}/lead</div>
             </div>
-            <div class="kpi-card-value" :class="globalKPIs.tasaContactabilidad >= 40 ? 'c-green' : 'c-amber'">
-              {{ globalKPIs.tasaContactabilidad }}%
-            </div>
-            <div class="kpi-card-sub"><strong>{{ formatNum(globalKPIs.contactados) }}</strong> leads contactados</div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">EFECTIVIDAD DE CIERRE</span>
-              <div class="kpi-indicator ind-green"></div>
-            </div>
-            <div class="kpi-card-value c-green">{{ globalKPIs.tasaConversion }}%</div>
-            <div class="kpi-card-sub"><strong>{{ formatNum(globalKPIs.ventas) }}</strong> ventas concretadas</div>
-          </div>
-
-          <div class="kpi-card kpi-card-highlight">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label" style="color:#fbbf24">INGRESOS RECUPERADOS</span>
-              <div class="kpi-indicator ind-blue"></div>
-            </div>
-            <div class="kpi-card-value" style="color:#ffffff">{{ formatMoney(globalKPIs.ingresos) }}</div>
-            <div class="kpi-card-sub" style="color:#fbbf24;font-weight:600;">Por gestion activa de asesores</div>
-          </div>
-        </div>
-
-        <!-- Tendencia Horaria -->
-        <div class="chart-panel mb-4">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Tendencia Horaria: Del Intento al Pago</div>
-              <div class="chart-panel-sub">Correlacion entre esfuerzo (llamadas), exito de contacto y cierre final por franja horaria.</div>
-            </div>
-            <div class="chart-legend-inline">
-              <span class="legend-dot" style="background:#f87171;border-radius:2px;"></span>
-              <span>% No Contactados</span>
-              <span class="legend-dot" style="background:#2563eb;border-radius:50%;"></span>
-              <span>% Contactados Efectivos</span>
-              <span class="legend-dot" style="background:#0f766e;border-radius:50%;"></span>
-              <span>% Cierre s/ Intentos</span>
-            </div>
-          </div>
-          <div class="chart-area" style="height:320px;">
-            <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
-          </div>
-        </div>
-
-        <!-- Grid: Persistencia + Resultados -->
-        <div class="chart-grid-2 mb-4">
-
-          <!-- CURVA DE PERSISTENCIA REDISEÑADA -->
-          <div class="pc-panel">
-            <div class="pc-header">
-              <div class="pc-header-left">
-                <span class="pc-eyebrow">Analisis de Seguimiento</span>
-                <h2 class="pc-title">Curva de Persistencia</h2>
-                <p class="pc-sub">En que intento se contacta y se cierra? Numeros reales por vuelta de llamada.</p>
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">CONTACTABILIDAD</span>
+                <div class="kd" :class="callKPIs.tasaContacto >= 40 ? 'dot-green' : callKPIs.tasaContacto >= 25 ? 'dot-amber' : 'dot-red'"></div>
               </div>
-              <div class="pc-header-right">
-                <div class="pc-summary-pill">
-                  <span class="pill-label">Total intentos</span>
-                  <span class="pill-value">{{ formatNum(persistenceData.totalIntentos) }}</span>
-                </div>
-                <div class="pc-summary-pill pill-green">
-                  <span class="pill-label">Ventas totales</span>
-                  <span class="pill-value">{{ formatNum(persistenceData.totalVentas) }}</span>
-                </div>
+              <div class="kpi-value" :class="callKPIs.tasaContacto >= 40 ? 'kv-green' : callKPIs.tasaContacto >= 25 ? 'kv-amber' : 'kv-red'">
+                {{ callKPIs.tasaContacto }}%
+              </div>
+              <div class="kpi-sub"><strong>{{ fmt(callKPIs.contactados) }}</strong> contactados efectivos</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">MIS VENTAS</span><div class="kd dot-green"></div></div>
+              <div class="kpi-value kv-green">{{ fmt(callKPIs.ventas) }}</div>
+              <div class="kpi-sub">{{ callKPIs.conversion }}% tasa de cierre</div>
+            </div>
+            <div class="kpi-card kpi-card-urgent">
+              <div class="kpi-top"><span class="kpi-label" style="color:#fca5a5">PENDIENTES</span><div class="kd dot-red"></div></div>
+              <div class="kpi-value" style="color:#fff;">{{ totalPendingCount }}</div>
+              <div class="kpi-sub" style="color:#fca5a5;">
+                <strong style="color:#f87171;">{{ overdueCount }}</strong> vencidas · {{ upcomingCount }} próximas
+              </div>
+            </div>
+          </section>
+
+          <!-- ═══════ AGENDA HERO ═══════ -->
+          <section class="agenda-section mb">
+            <div class="agenda-topbar">
+              <div class="agenda-topbar-left">
+                <div class="agenda-eyebrow">Gestión activa</div>
+                <h2 class="agenda-title-text">Mi Agenda de Llamadas</h2>
+              </div>
+              <div class="agenda-counters" v-if="totalPendingCount > 0">
+                <div class="ac-item ac-red"><span class="ac-n">{{ overdueCount }}</span><span class="ac-l">Vencidas</span></div>
+                <div class="ac-divider"></div>
+                <div class="ac-item ac-amber"><span class="ac-n">{{ upcomingCount }}</span><span class="ac-l">Próximas</span></div>
+                <div class="ac-divider"></div>
+                <div class="ac-item ac-teal"><span class="ac-n">{{ Object.keys(pendingByOrigin).length }}</span><span class="ac-l">Orígenes</span></div>
               </div>
             </div>
 
-            <div v-if="persistenceData.steps.length === 0" class="pc-empty">
-              <p>Sin datos para el periodo.</p>
+            <!-- Estado vacío -->
+            <div v-if="totalPendingCount === 0" class="agenda-allclear">
+              <div class="allclear-icon">✅</div>
+              <div class="allclear-title">¡Todo al día!</div>
+              <div class="allclear-sub">No tienes llamadas pendientes en este periodo. Buen trabajo.</div>
             </div>
 
-            <div v-else class="pc-steps-wrapper">
-              <div
-                v-for="(step, i) in persistenceData.steps"
-                :key="i"
-                class="pc-step-col"
-                :class="{ 'pc-step-col--peak': i === persistenceData.peakIndex }"
-              >
-                <div class="step-label">
-                  <span class="step-num">{{ step.label }}</span>
-                  <span class="step-tag step-tag--peak" v-if="i === persistenceData.peakIndex">Mas activo</span>
-                  <span class="step-tag step-tag--drop" v-else-if="i > 0 && getDropPct(i) >= 50">-{{ getDropPct(i) }}%</span>
+            <template v-else>
+              <!-- VENCIDAS -->
+              <div v-if="overdueLeads.length" class="ags-block">
+                <div class="ags-hdr ags-hdr--red">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Vencidas — atiende primero
+                  <span class="ags-cnt ags-cnt--red">{{ overdueLeads.length }}</span>
                 </div>
-
-                <div class="step-bar-track">
-                  <div class="step-bar-fill" :style="{ height: getBarHeight(step.intentos) + '%' }">
-                    <div class="step-bar-shine"></div>
-                  </div>
-                </div>
-
-                <div class="step-numbers">
-                  <div class="sn-card sn-card--intentos">
-                    <span class="sn-dot sn-dot--slate"></span>
-                    <div>
-                      <div class="sn-big">{{ formatNum(step.intentos) }}</div>
-                      <div class="sn-lbl">Intentos</div>
-                    </div>
-                  </div>
-
-                  <div class="sn-arrow">
-                    <svg width="8" height="14" viewBox="0 0 8 14"><path d="M4 0v10M1 7l3 5 3-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span class="sn-rate" :class="step.tasaContacto >= 50 ? 'sn-rate--green' : step.tasaContacto >= 25 ? 'sn-rate--amber' : 'sn-rate--red'">
-                      {{ step.tasaContacto }}% contacto
-                    </span>
-                  </div>
-
-                  <div class="sn-card sn-card--contactados">
-                    <span class="sn-dot sn-dot--blue"></span>
-                    <div>
-                      <div class="sn-big sn-big--blue">{{ formatNum(step.contactados) }}</div>
-                      <div class="sn-lbl">Contactados</div>
-                    </div>
-                  </div>
-
-                  <template v-if="step.ventas > 0">
-                    <div class="sn-arrow">
-                      <svg width="8" height="14" viewBox="0 0 8 14"><path d="M4 0v10M1 7l3 5 3-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      <span class="sn-rate sn-rate--green">{{ step.tasaCierre }}% cerro</span>
-                    </div>
-                    <div class="sn-card sn-card--ventas">
-                      <span class="sn-dot sn-dot--green"></span>
-                      <div>
-                        <div class="sn-big sn-big--green">{{ formatNum(step.ventas) }}</div>
-                        <div class="sn-lbl">Ventas</div>
+                <div class="call-grid">
+                  <div v-for="item in overdueLeads" :key="item.lead_id" class="call-card call-card--overdue">
+                    <div class="cc-urgency-bar"></div>
+                    <div class="cc-body">
+                      <div class="cc-name">{{ item.lead_name !== '-' ? item.lead_name : 'Prospecto sin nombre' }}</div>
+                      <div class="cc-meta">
+                        <span class="cc-tag cc-tag--attempt">#{{ item.attempt_number }}</span>
+                        <span class="cc-tag cc-tag--origin">{{ item.origin_desc }}</span>
+                        <span class="cc-time cc-time--overdue">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          {{ fmtDate(item.contact_datetime) }}
+                        </span>
+                        <span class="cc-overdue-pill">VENCIDA</span>
                       </div>
                     </div>
-                  </template>
-                  <div v-else class="sn-empty">Sin cierres</div>
-                </div>
-
-                <div class="step-connector" v-if="i < persistenceData.steps.length - 1">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M14 7l5 5-5 5" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                    <button class="btn-call btn-call--urgent" @click="goToLead(item.lead_id)">
+                      Atender
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="pc-insight" v-if="persistenceInsight">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0;margin-top:1px;">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span><strong>Insight:</strong> {{ persistenceInsight }}</span>
-            </div>
+              <!-- PRÓXIMAS -->
+              <div v-if="upcomingLeads.length" class="ags-block">
+                <div class="ags-hdr ags-hdr--teal">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Próximas llamadas
+                  <span class="ags-cnt ags-cnt--teal">{{ upcomingLeads.length }}</span>
+                </div>
+                <div class="call-grid">
+                  <div v-for="item in upcomingLeads" :key="item.lead_id" class="call-card">
+                    <div class="cc-body">
+                      <div class="cc-name">{{ item.lead_name !== '-' ? item.lead_name : 'Prospecto sin nombre' }}</div>
+                      <div class="cc-meta">
+                        <span class="cc-tag cc-tag--attempt">#{{ item.attempt_number }}</span>
+                        <span class="cc-tag cc-tag--origin">{{ item.origin_desc }}</span>
+                        <span class="cc-time cc-time--ok">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          {{ fmtDate(item.contact_datetime) }}
+                        </span>
+                      </div>
+                    </div>
+                    <button class="btn-call" @click="goToLead(item.lead_id)">
+                      Ver
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </section>
+
+          <!-- Efectividad origen + Resultados -->
+          <div class="two-col mb">
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Efectividad por Origen</div>
+                <div class="panel-sub">Qué tipo de lead te contacta y genera cierre.</div>
+              </div>
+              <div v-if="originRows.length === 0" class="empty-state">Sin datos para el periodo.</div>
+              <div v-else class="origin-grid-list">
+                <div v-for="o in originRows" :key="o.alias" class="og-item">
+                  <div class="og-top">
+                    <span class="og-name">{{ o.desc }}</span>
+                    <span class="og-total">{{ fmt(o.total) }}</span>
+                  </div>
+                  <div class="stacked-bar">
+                    <div class="sb sb-green" :style="`width:${o.pctAtendida}%`" :title="`Atendidas: ${o.pctAtendida}%`"></div>
+                    <div class="sb sb-amber" :style="`width:${o.pctPendiente}%`" :title="`Pendientes: ${o.pctPendiente}%`"></div>
+                    <div class="sb sb-red"   :style="`width:${o.pctSinAtencion}%`" :title="`Sin atención: ${o.pctSinAtencion}%`"></div>
+                  </div>
+                  <div class="og-stats">
+                    <span class="ogs c-green">{{ o.pctAtendida }}% atend.</span>
+                    <span class="ogs c-amber">{{ o.pctPendiente }}% pend.</span>
+                    <span class="ogs c-red">{{ o.pctSinAtencion }}% s/a</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Resultados de Llamada</div>
+                <div class="panel-sub">Razones registradas por efectividad.</div>
+                <div class="toggle-group mt-2">
+                  <button class="tgl-btn" :class="{ 'tgl-teal': isEffFilter === 1 }" @click="isEffFilter = 1">Efectivos</button>
+                  <button class="tgl-btn" :class="{ 'tgl-red': isEffFilter === 0 }"  @click="isEffFilter = 0">No Efectivos</button>
+                </div>
+              </div>
+              <div class="table-scroll-sm">
+                <table class="ps-table">
+                  <thead><tr>
+                    <th>Razón</th>
+                    <th class="ta-r">Frec.</th>
+                    <th class="ta-r">%</th>
+                    <th style="width:28%">Dist.</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr v-for="o in objectionsData" :key="o.reason">
+                      <td class="fw6">{{ o.reason }}</td>
+                      <td class="ta-r">{{ fmt(o.count) }}</td>
+                      <td class="ta-r fw7">{{ o.pct }}%</td>
+                      <td><div class="prog-track"><div class="prog-fill" :class="isEffFilter === 1 ? 'pf-teal' : 'pf-red'" :style="`width:${o.pct}%`"></div></div></td>
+                    </tr>
+                    <tr v-if="objectionsData.length === 0">
+                      <td colspan="4" class="empty-cell">Sin registros en esta categoría.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
 
-          <!-- Resultados de Llamada -->
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Resultados de Llamada</div>
-                <div class="chart-panel-sub">Desglose de motivos categorizados por efectividad.</div>
+          <!-- Persistencia + Tendencia -->
+          <div class="two-col mb">
+            <div class="pc-panel">
+              <div class="pc-head">
+                <div class="pc-head-left">
+                  <span class="pc-eyebrow">Análisis de seguimiento</span>
+                  <h3 class="pc-title">Curva de Persistencia</h3>
+                  <p class="pc-sub">¿En qué intento contactas y cierras más?</p>
+                </div>
+                <div class="pc-pills">
+                  <div class="pc-pill"><span class="pcpl">Intentos</span><span class="pcpv">{{ fmt(persistenceData.totalIntentos) }}</span></div>
+                  <div class="pc-pill pc-pill--green"><span class="pcpl">Ventas</span><span class="pcpv" style="color:#4ade80">{{ fmt(persistenceData.totalVentas) }}</span></div>
+                </div>
               </div>
-              <div class="toggle-group">
-                <button class="toggle-btn" :class="{'toggle-active-teal': isEffectiveFilter === 1}" @click="isEffectiveFilter = 1">Efectivos</button>
-                <button class="toggle-btn" :class="{'toggle-active-red': isEffectiveFilter === 0}" @click="isEffectiveFilter = 0">No Efectivos</button>
+              <div v-if="!persistenceData.steps.length" class="empty-state">Sin datos.</div>
+              <div v-else class="pc-steps">
+                <div
+                  v-for="(step, i) in persistenceData.steps" :key="i"
+                  class="pc-step" :class="{ 'pc-step--peak': i === persistenceData.peakIndex }"
+                >
+                  <div class="step-lbl">
+                    <span class="step-num">{{ step.label }}</span>
+                    <span class="step-tag step-tag--peak" v-if="i === persistenceData.peakIndex">+ activo</span>
+                    <span class="step-tag step-tag--drop" v-else-if="i > 0 && getDropPct(i) >= 50">-{{ getDropPct(i) }}%</span>
+                  </div>
+                  <div class="step-bar-track"><div class="step-bar-fill" :style="{ height: getBarHeight(step.intentos) + '%' }"><div class="bar-shine"></div></div></div>
+                  <div class="step-data">
+                    <div class="sd-row sd-row--slate"><span class="sd-n">{{ fmt(step.intentos) }}</span><span class="sd-l">Intentos</span></div>
+                    <div class="sd-rate" :class="step.tasaContacto >= 50 ? 'rate-green' : step.tasaContacto >= 25 ? 'rate-amber' : 'rate-red'">↓ {{ step.tasaContacto }}% contacto</div>
+                    <div class="sd-row sd-row--blue"><span class="sd-n sd-n--blue">{{ fmt(step.contactados) }}</span><span class="sd-l">Contactados</span></div>
+                    <template v-if="step.ventas > 0">
+                      <div class="sd-rate rate-green">↓ {{ step.tasaCierre }}% cerró</div>
+                      <div class="sd-row sd-row--green"><span class="sd-n sd-n--green">{{ fmt(step.ventas) }}</span><span class="sd-l">Ventas</span></div>
+                    </template>
+                    <div v-else class="sd-empty">Sin cierres</div>
+                  </div>
+                  <div class="step-connector" v-if="i < persistenceData.steps.length - 1">→</div>
+                </div>
+              </div>
+              <div v-if="persistenceInsight" class="pc-insight">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>Insight:</strong> {{ persistenceInsight }}</span>
               </div>
             </div>
-            <div class="panel-scroll-area">
-              <table class="exec-table">
-                <thead>
-                  <tr class="thead-sub">
-                    <th class="ts ts-c">Razon Registrada</th>
-                    <th class="ts ts-c text-right">Frecuencia</th>
-                    <th class="ts ts-c text-right">% Total</th>
-                    <th class="ts ts-c" style="width:30%;">Distribucion</th>
-                  </tr>
-                </thead>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Tendencia Horaria</div>
+                <div class="panel-sub">Correlación entre intentos, contacto y cierre por hora.</div>
+              </div>
+              <div class="chart-legend-row">
+                <span class="cl-dot" style="background:#f87171"></span><span>% No Contactados</span>
+                <span class="cl-dot" style="background:#2563eb"></span><span>% Contactados</span>
+                <span class="cl-dot" style="background:#0f766e"></span><span>% Cierre s/ Intentos</span>
+              </div>
+              <div class="chart-area">
+                <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
+              </div>
+            </section>
+          </div>
+
+        </template>
+
+        <!-- ══════════════════════════ MODO LÍDER ══════════════════════════ -->
+        <template v-else>
+
+          <!-- 5 KPIs -->
+          <section class="kpi-strip kpi-5 mb">
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">INTENTOS TOTALES</span><div class="kd dot-slate"></div></div>
+              <div class="kpi-value">{{ fmt(liderKPIs.intentos) }}</div>
+              <div class="kpi-sub">{{ fmt(liderKPIs.leads) }} leads gestionados</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">ATENDIDAS</span><div class="kd dot-green"></div></div>
+              <div class="kpi-value kv-green">{{ fmt(liderKPIs.atendidas) }}</div>
+              <div class="kpi-sub"><span class="pct-pill" :class="liderKPIs.pctAtendidas >= 60 ? 'pill-green' : liderKPIs.pctAtendidas >= 40 ? 'pill-amber' : 'pill-red'">{{ liderKPIs.pctAtendidas }}%</span> del total</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">SIN ATENCIÓN</span><div class="kd dot-red"></div></div>
+              <div class="kpi-value kv-red">{{ fmt(liderKPIs.sinAtencion) }}</div>
+              <div class="kpi-sub"><span class="pct-pill pill-red">{{ liderKPIs.pctSinAtencion }}%</span> incumplimiento</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><span class="kpi-label">CONTACTABILIDAD</span><div class="kd" :class="callKPIs.tasaContacto >= 40 ? 'dot-green' : 'dot-amber'"></div></div>
+              <div class="kpi-value" :class="callKPIs.tasaContacto >= 40 ? 'kv-green' : 'kv-amber'">{{ callKPIs.tasaContacto }}%</div>
+              <div class="kpi-sub"><strong>{{ fmt(callKPIs.contactados) }}</strong> contactados</div>
+            </div>
+            <div class="kpi-card kpi-card-dark">
+              <div class="kpi-top"><span class="kpi-label" style="color:#a5b4fc">REPROGRAMADAS</span><div class="kd dot-indigo"></div></div>
+              <div class="kpi-value" style="color:#fff">{{ fmt(liderKPIs.reprogramadas) }}</div>
+              <div class="kpi-sub" style="color:#818cf8">{{ liderKPIs.pctRescheduleExito }}% se atendieron después</div>
+            </div>
+          </section>
+
+          <!-- Tendencia horaria (full) -->
+          <section class="panel mb">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Tendencia Horaria: Del Intento al Pago</div>
+                <div class="panel-sub">Correlación entre esfuerzo, contacto y cierre por franja horaria.</div>
+              </div>
+              <div class="chart-legend-row">
+                <span class="cl-dot" style="background:#f87171"></span><span>% No Contactados</span>
+                <span class="cl-dot" style="background:#2563eb"></span><span>% Contactados Efectivos</span>
+                <span class="cl-dot" style="background:#0f766e"></span><span>% Cierre s/ Intentos</span>
+              </div>
+            </div>
+            <div class="chart-area" style="height:300px">
+              <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
+            </div>
+          </section>
+
+          <!-- Matriz Asesores -->
+          <section class="panel mb" v-if="advisorRows.length">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Matriz de Asesores</div>
+                <div class="panel-sub">Rendimiento individual. Clic en fila para filtrar.</div>
+              </div>
+            </div>
+            <div class="table-scroll-lider">
+              <table class="ps-table ps-table--lider">
+                <thead><tr>
+                  <th class="th-sticky ta-l">Asesor</th>
+                  <th class="ta-r">Leads</th>
+                  <th class="ta-r">Intentos</th>
+                  <th class="ta-r th-green">Atendidas</th>
+                  <th class="ta-r th-green">% Atend.</th>
+                  <th class="ta-r th-red">Sin Atenc.</th>
+                  <th class="ta-r th-red">% S/A</th>
+                  <th class="ta-r">Contactados</th>
+                  <th class="ta-r">% Contact.</th>
+                  <th class="ta-r th-green">Ventas</th>
+                  <th class="ta-r th-amber">Pendientes</th>
+                  <th class="ta-r th-indigo">Reprog.</th>
+                </tr></thead>
                 <tbody>
-                  <tr v-for="(obj, i) in objectionsData" :key="i" class="tbody-row">
-                    <td class="td-c fw-600">{{ obj.reason }}</td>
-                    <td class="td-c text-right">{{ formatNum(obj.count) }}</td>
-                    <td class="td-c text-right fw-700">{{ obj.pct }}%</td>
-                    <td class="td-c">
-                      <div class="progress-track">
-                        <div class="progress-fill" :class="isEffectiveFilter === 1 ? 'fill-teal' : 'fill-red'" :style="`width:${obj.pct}%`"></div>
+                  <tr v-for="row in advisorRows" :key="row.cod" class="tr-lider"
+                    :class="{ 'tr-selected': filters.advisor == row.cod }"
+                    @click="selectAdvisor(row.cod)">
+                    <td class="th-sticky td-sticky">
+                      <div class="advisor-cell">
+                        <div class="advisor-av">{{ initials(row.name) }}</div>
+                        {{ row.name }}
                       </div>
                     </td>
-                  </tr>
-                  <tr v-if="objectionsData.length === 0">
-                    <td colspan="4" class="text-center text-muted" style="padding:24px;">No hay registros en esta categoria.</td>
+                    <td class="ta-r">{{ fmt(row.leads) }}</td>
+                    <td class="ta-r fw6">{{ fmt(row.intentos) }}</td>
+                    <td class="ta-r c-green fw7">{{ fmt(row.atendidas) }}</td>
+                    <td class="ta-r">
+                      <div class="ibar-wrap">
+                        <span class="ibar-val" :class="scoreColor(row.pctAtendidas)">{{ row.pctAtendidas }}%</span>
+                        <div class="ibar-track"><div class="ibar-fill ibar-green" :style="`width:${row.pctAtendidas}%`"></div></div>
+                      </div>
+                    </td>
+                    <td class="ta-r c-red fw7">{{ fmt(row.sinAtencion) }}</td>
+                    <td class="ta-r">
+                      <div class="ibar-wrap">
+                        <span class="ibar-val c-red">{{ row.pctSinAtencion }}%</span>
+                        <div class="ibar-track"><div class="ibar-fill ibar-red" :style="`width:${row.pctSinAtencion}%`"></div></div>
+                      </div>
+                    </td>
+                    <td class="ta-r">{{ fmt(row.contactados) }}</td>
+                    <td class="ta-r">
+                      <span :class="scoreColor(row.pctContacto)">{{ row.pctContacto }}%</span>
+                    </td>
+                    <td class="ta-r c-green fw7">{{ fmt(row.ventas) }}</td>
+                    <td class="ta-r c-amber">{{ fmt(row.pendientes) }}</td>
+                    <td class="ta-r c-indigo">{{ fmt(row.reprogramadas) }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+          </section>
 
-        <!-- Matriz Asesores -->
-        <div class="table-shell mb-4" v-if="!isStrictlyComercial">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Matriz de Desempeno Individual - Asesores</div>
-              <div class="chart-panel-sub">Evaluacion de productividad operativa por asesor en el periodo seleccionado.</div>
-            </div>
-          </div>
-          <div class="table-responsive-custom control-table-wrapper">
-            <table class="exec-table">
-              <thead>
-                <tr class="thead-sub">
-                  <th class="ts ts-a sticky-col" style="min-width:180px;">Asesor</th>
-                  <th class="ts ts-b text-right">Leads Gestionados</th>
-                  <th class="ts ts-b text-right">Llamadas Realizadas</th>
-                  <th class="ts ts-b text-right">Contactos Efectivos</th>
-                  <th class="ts ts-b text-right">% Contactabilidad</th>
-                  <th class="ts ts-b text-right">Ventas (Cierres)</th>
-                  <th class="ts ts-b text-right">Tasa Conversion</th>
-                  <th class="ts ts-b text-right">Ingresos</th>
-                  <th class="ts ts-b text-right">Duracion Prom. (min)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(advisor, index) in aggregatedAdvisors" :key="index" class="tbody-row">
-                  <td class="td-a sticky-col fw-700">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;color:#94a3b8;vertical-align:middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    {{ advisor.name }}
-                  </td>
-                  <td class="td-b text-right">{{ formatNum(advisor.leads) }}</td>
-                  <td class="td-b text-right fw-600">{{ formatNum(advisor.calls) }}</td>
-                  <td class="td-b text-right">{{ formatNum(advisor.contacted) }}</td>
-                  <td class="td-b text-right fw-700" :class="getScoreColor(advisor.contactRate)">{{ advisor.contactRate }}%</td>
-                  <td class="td-b text-right fw-700 c-green">{{ formatNum(advisor.sales) }}</td>
-                  <td class="td-b text-right fw-700">{{ advisor.conversion }}%</td>
-                  <td class="td-b text-right fw-600">{{ formatMoney(advisor.revenue) }}</td>
-                  <td class="td-b text-right text-muted text-mono">{{ advisor.avgTime }}</td>
-                </tr>
-                <tr v-if="aggregatedAdvisors.length === 0">
-                  <td colspan="9" class="text-center text-muted" style="padding:24px;">No hay datos para mostrar en este periodo.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Pendientes -->
-      <div class="pending-shell mb-4" v-if="Object.keys(pendingTasksByOrigin).length > 0">
-        <div class="chart-panel-header" style="border-radius:6px 6px 0 0;background:#fff;border:1px solid #e2e8f0;border-bottom:none;">
-          <div>
-            <div class="chart-panel-title">
-              {{ isStrictlyComercial ? 'Mi Agenda Operativa: Llamadas Pendientes' : 'Agenda Operativa Global: Intentos Pendientes' }}
-            </div>
-            <div class="chart-panel-sub">Llamadas programadas agrupadas por el origen de la regla o gestion.</div>
-          </div>
-        </div>
-        <div class="pending-grid">
-          <div v-for="(group, alias) in pendingTasksByOrigin" :key="alias" class="pending-card">
-            <div class="pending-card-header" style="cursor:pointer;" @click="goToGroupFiltered(alias)" title="Ver listado filtrado">
-              <span class="pending-origin-name">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                {{ group.desc }}
-              </span>
-              <div class="d-flex align-items-center gap-2">
-                <span class="pending-badge">{{ group.leads.length }}</span>
-                <i class="fa-solid fa-arrow-right-to-bracket opacity-75" style="font-size:11px;"></i>
+          <!-- Persistencia + Resultados -->
+          <div class="two-col mb">
+            <div class="pc-panel">
+              <div class="pc-head">
+                <div class="pc-head-left">
+                  <span class="pc-eyebrow">Análisis de seguimiento</span>
+                  <h3 class="pc-title">Curva de Persistencia</h3>
+                  <p class="pc-sub">¿En qué intento se contacta y se cierra?</p>
+                </div>
+                <div class="pc-pills">
+                  <div class="pc-pill"><span class="pcpl">Intentos</span><span class="pcpv">{{ fmt(persistenceData.totalIntentos) }}</span></div>
+                  <div class="pc-pill pc-pill--green"><span class="pcpl">Ventas</span><span class="pcpv" style="color:#4ade80">{{ fmt(persistenceData.totalVentas) }}</span></div>
+                </div>
+              </div>
+              <div v-if="!persistenceData.steps.length" class="empty-state">Sin datos.</div>
+              <div v-else class="pc-steps">
+                <div
+                  v-for="(step, i) in persistenceData.steps" :key="i"
+                  class="pc-step" :class="{ 'pc-step--peak': i === persistenceData.peakIndex }"
+                >
+                  <div class="step-lbl">
+                    <span class="step-num">{{ step.label }}</span>
+                    <span class="step-tag step-tag--peak" v-if="i === persistenceData.peakIndex">+ activo</span>
+                    <span class="step-tag step-tag--drop" v-else-if="i > 0 && getDropPct(i) >= 50">-{{ getDropPct(i) }}%</span>
+                  </div>
+                  <div class="step-bar-track"><div class="step-bar-fill" :style="{ height: getBarHeight(step.intentos) + '%' }"><div class="bar-shine"></div></div></div>
+                  <div class="step-data">
+                    <div class="sd-row sd-row--slate"><span class="sd-n">{{ fmt(step.intentos) }}</span><span class="sd-l">Intentos</span></div>
+                    <div class="sd-rate" :class="step.tasaContacto >= 50 ? 'rate-green' : step.tasaContacto >= 25 ? 'rate-amber' : 'rate-red'">↓ {{ step.tasaContacto }}% contacto</div>
+                    <div class="sd-row sd-row--blue"><span class="sd-n sd-n--blue">{{ fmt(step.contactados) }}</span><span class="sd-l">Contactados</span></div>
+                    <template v-if="step.ventas > 0">
+                      <div class="sd-rate rate-green">↓ {{ step.tasaCierre }}% cerró</div>
+                      <div class="sd-row sd-row--green"><span class="sd-n sd-n--green">{{ fmt(step.ventas) }}</span><span class="sd-l">Ventas</span></div>
+                    </template>
+                    <div v-else class="sd-empty">Sin cierres</div>
+                  </div>
+                  <div class="step-connector" v-if="i < persistenceData.steps.length - 1">→</div>
+                </div>
+              </div>
+              <div v-if="persistenceInsight" class="pc-insight">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>Insight:</strong> {{ persistenceInsight }}</span>
               </div>
             </div>
-            <div class="pending-list-scroll">
-              <div v-for="lead in group.leads" :key="lead.lead_id" class="pending-item">
-                <div class="pending-item-info">
-                  <div class="pending-lead-name">{{ lead.lead_name !== '-' ? lead.lead_name : 'Prospecto sin nombre' }}</div>
-                  <div class="pending-lead-meta">
-                    Intento #{{ lead.attempt_number }} &bull;
-                    <span :class="new Date(lead.contact_datetime) < new Date() ? 'c-red' : 'c-teal'">
-                      {{ new Date(lead.contact_datetime).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) }}
-                    </span>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Resultados de Llamada</div>
+                <div class="panel-sub">Desglose de razones por efectividad.</div>
+                <div class="toggle-group mt-2">
+                  <button class="tgl-btn" :class="{ 'tgl-teal': isEffFilter === 1 }" @click="isEffFilter = 1">Efectivos</button>
+                  <button class="tgl-btn" :class="{ 'tgl-red': isEffFilter === 0 }"  @click="isEffFilter = 0">No Efectivos</button>
+                </div>
+              </div>
+              <div class="table-scroll-sm">
+                <table class="ps-table">
+                  <thead><tr>
+                    <th>Razón</th>
+                    <th class="ta-r">Frec.</th>
+                    <th class="ta-r">%</th>
+                    <th style="width:28%">Dist.</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr v-for="o in objectionsData" :key="o.reason">
+                      <td class="fw6">{{ o.reason }}</td>
+                      <td class="ta-r">{{ fmt(o.count) }}</td>
+                      <td class="ta-r fw7">{{ o.pct }}%</td>
+                      <td><div class="prog-track"><div class="prog-fill" :class="isEffFilter === 1 ? 'pf-teal' : 'pf-red'" :style="`width:${o.pct}%`"></div></div></td>
+                    </tr>
+                    <tr v-if="objectionsData.length === 0">
+                      <td colspan="4" class="empty-cell">Sin registros en esta categoría.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <!-- Efectividad Origen + Reprogramaciones -->
+          <div class="two-col mb">
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Efectividad por Origen de Creación</div>
+                <div class="panel-sub">Tasa de atención real por tipo de lead.</div>
+              </div>
+              <div v-if="originRows.length === 0" class="empty-state">Sin datos.</div>
+              <div v-else class="origin-grid-list">
+                <div v-for="o in originRows" :key="o.alias" class="og-item">
+                  <div class="og-top"><span class="og-name">{{ o.desc }}</span><span class="og-total">{{ fmt(o.total) }}</span></div>
+                  <div class="stacked-bar">
+                    <div class="sb sb-green" :style="`width:${o.pctAtendida}%`"></div>
+                    <div class="sb sb-amber" :style="`width:${o.pctPendiente}%`"></div>
+                    <div class="sb sb-red"   :style="`width:${o.pctSinAtencion}%`"></div>
+                  </div>
+                  <div class="og-stats">
+                    <span class="ogs c-green">{{ o.pctAtendida }}% atend.</span>
+                    <span class="ogs c-amber">{{ o.pctPendiente }}% pend.</span>
+                    <span class="ogs c-red">{{ o.pctSinAtencion }}% s/a</span>
                   </div>
                 </div>
-                <button class="btn-manage" @click="goToLead(lead.lead_id)" title="Ir a la ficha del lead">
-                  Atender <i class="fa-solid fa-angle-right ms-1"></i>
-                </button>
+              </div>
+            </section>
+
+            <section class="panel" v-if="rescheduleRows.length">
+              <div class="panel-head">
+                <div class="panel-title">Efectividad de Reprogramaciones</div>
+                <div class="panel-sub">¿Las reprogramadas terminaron atendiéndose?</div>
+              </div>
+              <div class="reschedule-list">
+                <div v-for="r in rescheduleRows" :key="r.quien" class="rc-card">
+                  <div class="rc-top">
+                    <span class="rc-who" :class="r.quien === 'lider' ? 'rc-who--lider' : 'rc-who--sistema'">
+                      {{ r.quien === 'lider' ? '👤 Líder Comercial' : '🤖 Sistema (Regla 5)' }}
+                    </span>
+                    <span class="rc-total-lbl">{{ fmt(r.total) }} reprog.</span>
+                  </div>
+                  <div class="rc-metrics">
+                    <div class="rcm"><div class="rcm-val c-green">{{ fmt(r.atendidas) }}</div><div class="rcm-lbl">Atendidas</div><span class="pct-pill pill-green">{{ r.pctExito }}%</span></div>
+                    <div class="rcm"><div class="rcm-val c-red">{{ fmt(r.volvioFallar) }}</div><div class="rcm-lbl">Volvió fallar</div><span class="pct-pill pill-red">{{ r.pctFallo }}%</span></div>
+                    <div class="rcm"><div class="rcm-val c-amber">{{ fmt(r.pendiente) }}</div><div class="rcm-lbl">Pendiente</div><span class="pct-pill pill-amber">{{ r.pctPendiente }}%</span></div>
+                  </div>
+                  <div class="stacked-bar mt-2">
+                    <div class="sb sb-green" :style="`width:${r.pctExito}%`"></div>
+                    <div class="sb sb-amber" :style="`width:${r.pctPendiente}%`"></div>
+                    <div class="sb sb-red"   :style="`width:${r.pctFallo}%`"></div>
+                  </div>
+                  <div v-if="r.pctExito < 40" class="rc-alert">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Tasa de recuperación baja. Considera revisar la estrategia de seguimiento.
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Agenda Global Pendientes (Líder) -->
+          <div v-if="Object.keys(pendingByOrigin).length > 0" class="mb">
+            <div class="panel-head panel-head-standalone">
+              <div class="panel-title">Agenda Operativa Global: Llamadas Pendientes</div>
+              <div class="panel-sub">Todas las llamadas programadas aún en estado pendiente, agrupadas por origen.</div>
+            </div>
+            <div class="pending-grid-lider">
+              <div v-for="(group, alias) in pendingByOrigin" :key="alias" class="pend-card">
+                <div class="pend-card-hdr">
+                  <span class="pend-origin">{{ group.desc }}</span>
+                  <span class="pend-badge">{{ group.leads.length }}</span>
+                </div>
+                <div class="pend-scroll">
+                  <div v-for="lead in group.leads" :key="lead.lead_id" class="pend-item">
+                    <div class="pend-info">
+                      <div class="pend-name">{{ lead.lead_name !== '-' ? lead.lead_name : 'Prospecto sin nombre' }}</div>
+                      <div class="pend-meta">
+                        Intento #{{ lead.attempt_number }} ·
+                        <span :class="new Date(lead.contact_datetime) < new Date() ? 'c-red' : 'c-teal'">
+                          {{ fmtDate(lead.contact_datetime) }}
+                        </span>
+                      </div>
+                    </div>
+                    <button class="btn-manage" @click="goToLead(lead.lead_id)">Ver <i class="fa-solid fa-angle-right ms-1"></i></button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
+        </template>
+      </div>
     </main>
 
-    <footer class="exec-footer">
-      <span>Periodo: <strong>{{ filters.month === 0 ? 'Todo el anio' : filters.month }}</strong> {{ filters.year }}</span>
-      <span class="footer-sep">·</span>
-      <span>Asesor: <strong>{{ isStrictlyComercial ? 'Mi cuenta' : (filters.advisor === 'all' ? 'Todos' : filters.advisor) }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span class="footer-status">
-        <span class="status-dot" :class="isLoading ? 'dot-loading' : 'dot-ok'"></span>
-        {{ isLoading ? 'Actualizando...' : 'Datos sincronizados' }}
+    <!-- ══════════════════════════════════════════════════ FOOTER -->
+    <footer class="ps-foot">
+      <span>{{ filters.month === 0 ? 'Año ' + filters.year : meses[filters.month - 1]?.l + ' ' + filters.year }}</span>
+      <span class="foot-sep">·</span>
+      <span>{{ isLider ? (filters.advisor === 'all' ? 'Todos los asesores' : filtroOwners.find(u => u.id == filters.advisor)?.description ?? filters.advisor) : 'Mi cuenta' }}</span>
+      <span class="foot-sep">·</span>
+      <span class="foot-status">
+        <span class="status-dot" :class="isLoading ? 'dot-load' : 'dot-ok'"></span>
+        {{ isLoading ? 'Actualizando...' : 'Sincronizado' }}
       </span>
     </footer>
 
@@ -380,88 +612,103 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, computed, onMounted, getCurrentInstance, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-  LineElement, BarElement, Title, Tooltip, Legend, Filler
+  LineElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
-import { Line, Bar } from 'vue-chartjs'
+import { Line } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
-const dashboardService    = inject(ServiceKeys.Dashboard)
-const authService         = inject(ServiceKeys.Auth)
-const catalog             = inject('catalog')
-const router              = useRouter()
+// ── Servicios ──────────────────────────────────────────────
+const dashboardService = inject(ServiceKeys.Dashboard)
+const authService      = inject(ServiceKeys.Auth)
+const router           = useRouter()
 
-const filters             = ref({ year: 2026, month: 1, advisor: 'all' })
-const isLoading           = ref(false)
-const rawData             = ref([])
-const filtroOwners        = ref([])
-const isEffectiveFilter   = ref(0)
-const isStrictlyComercial = ref(false)
-const storedUser          = ref(null)
+// ── Role detection ─────────────────────────────────────────
+const { proxy }  = getCurrentInstance()
+const isLider    = proxy.$hasRole(['LIDER_COMERCIAL'])
 
+// ── State ──────────────────────────────────────────────────
+const filters        = ref({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, advisor: 'all' })
+const isLoading      = ref(false)
+const rawCallData    = ref([])   // contactabilityList
+const rawLiderData   = ref([])   // liderList
+const filtroOwners   = ref([])
+const storedUser     = ref(null)
+const myName         = ref('')
+const isEffFilter    = ref(0)
+
+const meses = [
+  { v:1, l:'Enero'}, { v:2, l:'Febrero'}, { v:3, l:'Marzo'},
+  { v:4, l:'Abril'}, { v:5, l:'Mayo'},    { v:6, l:'Junio'},
+  { v:7, l:'Julio'}, { v:8, l:'Agosto'},  { v:9, l:'Septiembre'},
+  { v:10, l:'Octubre'}, { v:11, l:'Noviembre'}, { v:12, l:'Diciembre'}
+]
+
+// ── Lifecycle ──────────────────────────────────────────────
 onMounted(async () => {
-  applyRoleRestrictions()
+  initUser()
   await loadOwners()
-  await loadData()
+  await loadAll()
 })
 
-function applyRoleRestrictions() {
+function initUser() {
   try {
     const userStr = localStorage.getItem('user')
     if (userStr) {
-      const userData    = JSON.parse(userStr)
-      const roles       = userData.roles || []
-      const isComercial = roles.includes('COMERCIAL')
-      const isLider     = roles.includes('LIDER_COMERCIAL')
-      if (isComercial && !isLider) {
-        isStrictlyComercial.value = true
-        storedUser.value          = userData
-        filters.value.advisor     = userData.user_id
+      const u = JSON.parse(userStr)
+      storedUser.value = u
+      if (!isLider) {
+        filters.value.advisor = u.user_id
+        myName.value = ((u.first_name || '') + ' ' + (u.last_name?.charAt(0) || '') + '.').trim()
       }
     }
-  } catch (e) {
-    console.error('Error procesando usuario desde localStorage:', e)
-  }
+  } catch (e) { console.error('[PanelLlamadas] initUser:', e) }
 }
 
 async function loadOwners() {
+  if (!isLider) return
   try {
     const arr = await authService.userList({})
     filtroOwners.value = arr.map(u => ({
       id: u.user_id,
-      description: (u.first_name || '') + ' ' + ((u.last_name || '').charAt(0)) + '.'
+      description: ((u.first_name || '') + ' ' + (u.last_name?.charAt(0) || '') + '.').trim()
     }))
-  } catch (e) {
-    console.error('Error cargando usuarios:', e)
-  }
+  } catch (e) { console.error('[PanelLlamadas] loadOwners:', e) }
 }
 
-async function loadData() {
+async function loadAll() {
   isLoading.value = true
   try {
-    const finalAdvisor = isStrictlyComercial.value ? storedUser.value?.user_id : filters.value.advisor
-    const res = await dashboardService.contactabilityList({
-      year:    filters.value.year,
-      month:   filters.value.month,
-      advisor: finalAdvisor
-    })
-    rawData.value = res.items || []
+    const advisor = isLider ? filters.value.advisor : storedUser.value?.user_id
+    const params  = { year: filters.value.year, month: filters.value.month, advisor }
+
+    const [callRes, liderRes] = await Promise.all([
+      dashboardService.contactabilityList(params).catch(() => ({ items: [] })),
+      dashboardService.liderList(params).catch(() => ({ items: [] }))
+    ])
+
+    rawCallData.value  = callRes.items  || []
+    rawLiderData.value = liderRes.items || []
   } catch (e) {
-    console.error('Error consultando contactabilidad:', e)
+    console.error('[PanelLlamadas] loadAll:', e)
   } finally {
     isLoading.value = false
   }
 }
 
-// KPIs globales
-const globalKPIs = computed(() => {
+function selectAdvisor(cod) {
+  filters.value.advisor = filters.value.advisor == cod ? 'all' : cod
+}
+
+// ── KPIs de llamadas (callData) ────────────────────────────
+const callKPIs = computed(() => {
   let intentos = 0, contactados = 0, ventas = 0, ingresos = 0, leads = 0
-  rawData.value.forEach(r => {
+  rawCallData.value.forEach(r => {
     intentos    += r.total_intentos          || 0
     contactados += r.total_contactados       || 0
     ventas      += r.total_ventas            || 0
@@ -470,87 +717,220 @@ const globalKPIs = computed(() => {
   })
   return {
     intentos, contactados, ventas, ingresos, leads,
-    tasaContactabilidad: intentos    > 0 ? ((contactados / intentos)  * 100).toFixed(1) : 0,
-    tasaConversion:      contactados > 0 ? ((ventas / contactados)    * 100).toFixed(1) : 0,
-    promIntentos:        leads       > 0 ? (intentos / leads).toFixed(1)                : 0
+    tasaContacto: intentos    > 0 ? +((contactados / intentos)  * 100).toFixed(1) : 0,
+    conversion:   contactados > 0 ? +((ventas / contactados)    * 100).toFixed(1) : 0,
+    promIntentos: leads       > 0 ? (intentos / leads).toFixed(1)                 : 0
   }
 })
 
-// Tendencia Horaria
-const baseFont = { family: 'inherit', size: 11 }
+// ── KPIs supervisión (liderData) ───────────────────────────
+const liderKPIs = computed(() => {
+  let intentos = 0, atendidas = 0, sinAtencion = 0, pendientes = 0, leads = 0
+  let totalRepro = 0, reproExito = 0
+  rawLiderData.value.forEach(r => {
+    intentos    += r.total_intentos     || 0
+    atendidas   += r.total_atendidas    || 0
+    sinAtencion += r.total_sin_atencion || 0
+    pendientes  += r.total_pendientes   || 0
+    leads       += r.total_leads        || 0
+    ;(r.json_reschedule_stats || []).forEach(rs => {
+      totalRepro += rs.total    || 0
+      reproExito += rs.atendidas || 0
+    })
+  })
+  return {
+    intentos, atendidas, sinAtencion, pendientes, leads,
+    reprogramadas:      totalRepro,
+    pctAtendidas:       intentos   > 0 ? +((atendidas   / intentos)   * 100).toFixed(1) : 0,
+    pctSinAtencion:     intentos   > 0 ? +((sinAtencion / intentos)   * 100).toFixed(1) : 0,
+    pctRescheduleExito: totalRepro > 0 ? +((reproExito  / totalRepro) * 100).toFixed(1) : 0
+  }
+})
 
-const hourlyFlowChartData = computed(() => {
-  const hours  = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-  const dataMap = {}
-  hours.forEach(h => { dataMap[h] = { intentos: 0, contactados: 0, noContactados: 0, ventas: 0 } })
+// ── Matriz Asesores (líder) ────────────────────────────────
+const advisorRows = computed(() => {
+  const map = {}
+  rawLiderData.value.forEach(r => {
+    if (!map[r.cod_asesor]) {
+      map[r.cod_asesor] = { cod: r.cod_asesor, name: r.asesor_nombre || r.asesor_alias,
+        leads:0, intentos:0, atendidas:0, sinAtencion:0, pendientes:0, reprogramadas:0 }
+    }
+    const a = map[r.cod_asesor]
+    a.leads       += r.total_leads        || 0
+    a.intentos    += r.total_intentos     || 0
+    a.atendidas   += r.total_atendidas    || 0
+    a.sinAtencion += r.total_sin_atencion || 0
+    a.pendientes  += r.total_pendientes   || 0
+    ;(r.json_reschedule_stats || []).forEach(rs => { a.reprogramadas += rs.total || 0 })
+  })
+  // Enriquecer con datos de contactabilidad
+  const callMap = {}
+  rawCallData.value.forEach(r => {
+    if (!callMap[r.cod_asesor]) callMap[r.cod_asesor] = { contactados: 0, ventas: 0 }
+    callMap[r.cod_asesor].contactados += r.total_contactados || 0
+    callMap[r.cod_asesor].ventas      += r.total_ventas      || 0
+  })
+  return Object.values(map).map(a => {
+    const c = callMap[a.cod] || {}
+    return {
+      ...a,
+      contactados:    c.contactados || 0,
+      ventas:         c.ventas      || 0,
+      pctAtendidas:   a.intentos    > 0 ? +((a.atendidas   / a.intentos) * 100).toFixed(1) : 0,
+      pctSinAtencion: a.intentos    > 0 ? +((a.sinAtencion / a.intentos) * 100).toFixed(1) : 0,
+      pctContacto:    a.intentos    > 0 ? +((c.contactados / a.intentos) * 100).toFixed(1) : 0
+    }
+  }).sort((a, b) => b.sinAtencion - a.sinAtencion)
+})
 
-  rawData.value.forEach(row => {
-    ;(row.chart_tendencia_horaria || []).forEach(item => {
-      if (dataMap[item.hora]) {
-        const int = item.intentos || 0
-        const con = item.contactados || 0
-        dataMap[item.hora].intentos      += int
-        dataMap[item.hora].contactados   += con
-        dataMap[item.hora].noContactados += Math.max(0, int - con)
-        dataMap[item.hora].ventas        += item.ventas || 0
+// ── Pendientes ─────────────────────────────────────────────
+const pendingByOrigin = computed(() => {
+  const map = {}
+  const source = rawLiderData.value.length ? rawLiderData.value : rawCallData.value
+  source.forEach(row => {
+    ;(row.json_pending_tasks || []).forEach(group => {
+      if (!map[group.origin_alias]) map[group.origin_alias] = { desc: group.origin_desc, leads: [] }
+      map[group.origin_alias].leads.push(...group.leads)
+    })
+  })
+  Object.values(map).forEach(g => g.leads.sort((a, b) => new Date(a.contact_datetime) - new Date(b.contact_datetime)))
+  return map
+})
+
+// Asesor: lista plana con origin_desc
+const allFlatPending = computed(() => {
+  const result = []
+  Object.entries(pendingByOrigin.value).forEach(([alias, group]) => {
+    group.leads.forEach(lead => result.push({ ...lead, origin_alias: alias, origin_desc: group.desc }))
+  })
+  return result.sort((a, b) => new Date(a.contact_datetime) - new Date(b.contact_datetime))
+})
+
+const now               = new Date()
+const overdueLeads      = computed(() => allFlatPending.value.filter(l => new Date(l.contact_datetime) < now))
+const upcomingLeads     = computed(() => allFlatPending.value.filter(l => new Date(l.contact_datetime) >= now))
+const totalPendingCount = computed(() => allFlatPending.value.length)
+const overdueCount      = computed(() => overdueLeads.value.length)
+const upcomingCount     = computed(() => upcomingLeads.value.length)
+
+// ── Origen stats ───────────────────────────────────────────
+const originRows = computed(() => {
+  const map = {}
+  rawLiderData.value.forEach(row => {
+    ;(row.json_origin_stats || []).forEach(o => {
+      if (!map[o.origin_alias]) map[o.origin_alias] = { alias: o.origin_alias, desc: o.origin_desc, total:0, atendidas:0, sinAtencion:0, pendientes:0 }
+      const m = map[o.origin_alias]
+      m.total       += o.total        || 0
+      m.atendidas   += o.atendidas    || 0
+      m.sinAtencion += o.sin_atencion || 0
+      m.pendientes  += o.pendientes   || 0
+    })
+  })
+  return Object.values(map).map(o => ({
+    ...o,
+    pctAtendida:    o.total > 0 ? +((o.atendidas   / o.total) * 100).toFixed(1) : 0,
+    pctSinAtencion: o.total > 0 ? +((o.sinAtencion / o.total) * 100).toFixed(1) : 0,
+    pctPendiente:   o.total > 0 ? +((o.pendientes  / o.total) * 100).toFixed(1) : 0
+  })).sort((a, b) => b.total - a.total)
+})
+
+// ── Reprogramaciones ───────────────────────────────────────
+const rescheduleRows = computed(() => {
+  const map = {}
+  rawLiderData.value.forEach(row => {
+    ;(row.json_reschedule_stats || []).forEach(rs => {
+      const k = rs.quien || 'desconocido'
+      if (!map[k]) map[k] = { quien: k, total:0, atendidas:0, volvioFallar:0, pendiente:0 }
+      map[k].total        += rs.total         || 0
+      map[k].atendidas    += rs.atendidas     || 0
+      map[k].volvioFallar += rs.volvio_fallar || 0
+      map[k].pendiente    += rs.pendiente     || 0
+    })
+  })
+  return Object.values(map).map(r => ({
+    ...r,
+    pctExito:     r.total > 0 ? +((r.atendidas    / r.total) * 100).toFixed(1) : 0,
+    pctFallo:     r.total > 0 ? +((r.volvioFallar / r.total) * 100).toFixed(1) : 0,
+    pctPendiente: r.total > 0 ? +((r.pendiente    / r.total) * 100).toFixed(1) : 0
+  }))
+})
+
+// ── Objeciones ─────────────────────────────────────────────
+const objectionsData = computed(() => {
+  const objMap = {}; let totalObj = 0
+  rawCallData.value.forEach(row => {
+    ;(row.chart_objeciones || []).forEach(item => {
+      if (item.es_efectivo === isEffFilter.value) {
+        const nom = item.nombre || 'Desconocido'
+        if (!objMap[nom]) objMap[nom] = 0
+        objMap[nom] += item.frecuencia; totalObj += item.frecuencia
       }
     })
   })
+  return Object.entries(objMap)
+    .map(([reason, count]) => ({ reason, count, pct: totalObj > 0 ? Math.round((count / totalObj) * 100) : 0 }))
+    .sort((a, b) => b.count - a.count).slice(0, 8)
+})
 
+// ── Tendencia horaria ──────────────────────────────────────
+const baseFont = { family: 'inherit', size: 10.5 }
+
+const hourlyFlowChartData = computed(() => {
+  const hours = [8,9,10,11,12,13,14,15,16,17,18,19,20]
+  const dmap  = {}
+  hours.forEach(h => { dmap[h] = { intentos:0, contactados:0, ventas:0 } })
+  rawCallData.value.forEach(row => {
+    ;(row.chart_tendencia_horaria || []).forEach(item => {
+      if (dmap[item.hora]) {
+        dmap[item.hora].intentos    += item.intentos    || 0
+        dmap[item.hora].contactados += item.contactados || 0
+        dmap[item.hora].ventas      += item.ventas      || 0
+      }
+    })
+  })
   return {
     labels: hours.map(h => String(h).padStart(2,'0') + ':00'),
     datasets: [
       {
         label: 'No Contactados', type: 'line',
-        data: hours.map(h => { const d = dataMap[h]; return d.intentos > 0 ? +((d.noContactados / d.intentos) * 100).toFixed(1) : 0 }),
-        borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.08)',
-        fill: true, tension: 0.4, borderWidth: 2, borderDash: [5,4],
-        pointRadius: 3, pointBackgroundColor: '#f87171', order: 3, yAxisID: 'yPct'
+        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((Math.max(0,d.intentos-d.contactados)/d.intentos)*100).toFixed(1):0 }),
+        borderColor:'#f87171', backgroundColor:'rgba(248,113,113,0.08)', fill:true, tension:0.4,
+        borderWidth:1.5, borderDash:[5,4], pointRadius:3, pointBackgroundColor:'#f87171', yAxisID:'yPct'
       },
       {
         label: 'Contactados Efectivos', type: 'line',
-        data: hours.map(h => { const d = dataMap[h]; return d.intentos > 0 ? +((d.contactados / d.intentos) * 100).toFixed(1) : 0 }),
-        borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.06)',
-        fill: true, tension: 0.4, borderWidth: 2.5,
-        pointRadius: 4, pointBackgroundColor: '#2563eb', order: 2, yAxisID: 'yPct'
+        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((d.contactados/d.intentos)*100).toFixed(1):0 }),
+        borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.06)', fill:true, tension:0.4,
+        borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#2563eb', yAxisID:'yPct'
       },
       {
         label: 'Cierre s/ Intentos', type: 'line',
-        data: hours.map(h => { const d = dataMap[h]; return d.intentos > 0 ? +((d.ventas / d.intentos) * 100).toFixed(1) : 0 }),
-        borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,0.15)',
-        fill: true, tension: 0.4, borderWidth: 3,
-        pointRadius: 5, pointBackgroundColor: '#0f766e', order: 1, yAxisID: 'yPct'
+        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((d.ventas/d.intentos)*100).toFixed(1):0 }),
+        borderColor:'#0f766e', backgroundColor:'rgba(15,118,110,0.12)', fill:true, tension:0.4,
+        borderWidth:3, pointRadius:5, pointBackgroundColor:'#0f766e', yAxisID:'yPct'
       }
     ]
   }
 })
 
 const hourlyFlowOptions = {
-  responsive: true, maintainAspectRatio: false,
-  interaction: { mode: 'index', intersect: false },
-  plugins: {
-    legend: { display: false },
-    tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { font: baseFont } },
-    yPct: {
-      type: 'linear', position: 'left', beginAtZero: true, max: 100,
-      grid: { color: '#f1f5f9' },
-      ticks: { font: baseFont, callback: val => val + '%' },
-      title: { display: true, text: '% sobre intentos totales', font: { size: 10 }, color: '#94a3b8' }
-    }
+  responsive:true, maintainAspectRatio:false,
+  interaction:{ mode:'index', intersect:false },
+  plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.dataset.label+': '+ctx.parsed.y+'%' } } },
+  scales:{
+    x: { grid:{ display:false }, ticks:{ font:baseFont } },
+    yPct: { type:'linear', position:'left', beginAtZero:true, max:100, grid:{ color:'#f1f5f9' },
+      ticks:{ font:baseFont, callback: v => v+'%' },
+      title:{ display:true, text:'% sobre intentos', font:{ size:10 }, color:'#94a3b8' } }
   }
 }
 
-// Persistencia - datos para el nuevo diseño
+// ── Curva Persistencia ─────────────────────────────────────
 const persistenceData = computed(() => {
-  const keys   = [1, 2, 3, 4, '5+']
-  const labels = ['1er intento', '2do intento', '3er intento', '4to intento', '5to+']
-  const pMap   = {}
-  keys.forEach(k => { pMap[k] = { intentos: 0, contactados: 0, ventas: 0 } })
-
-  rawData.value.forEach(row => {
+  const keys = [1,2,3,4,'5+']; const labels = ['1er intento','2do intento','3er intento','4to intento','5to+']
+  const pMap = {}
+  keys.forEach(k => { pMap[k] = { intentos:0, contactados:0, ventas:0 } })
+  rawCallData.value.forEach(row => {
     ;(row.chart_curva_persistencia || []).forEach(item => {
       const key = item.intento_num >= 5 ? '5+' : item.intento_num
       if (pMap[key] !== undefined) {
@@ -560,328 +940,322 @@ const persistenceData = computed(() => {
       }
     })
   })
-
-  const steps = keys.map((k, i) => {
+  const steps = keys.map((k,i) => {
     const d = pMap[k]
     return {
-      label:        labels[i],
-      intentos:     d.intentos,
-      contactados:  d.contactados,
-      ventas:       d.ventas,
-      tasaContacto: d.intentos    > 0 ? +((d.contactados / d.intentos)    * 100).toFixed(0) : 0,
-      tasaCierre:   d.contactados > 0 ? +((d.ventas      / d.contactados) * 100).toFixed(0) : 0
+      label: labels[i], intentos:d.intentos, contactados:d.contactados, ventas:d.ventas,
+      tasaContacto: d.intentos    > 0 ? +((d.contactados/d.intentos)    *100).toFixed(0) : 0,
+      tasaCierre:   d.contactados > 0 ? +((d.ventas/d.contactados)      *100).toFixed(0) : 0
     }
   })
-
-  const totalIntentos = steps.reduce((s, r) => s + r.intentos, 0)
-  const totalVentas   = steps.reduce((s, r) => s + r.ventas,   0)
-  const peakIndex     = steps.reduce((best, s, i) => s.intentos > steps[best].intentos ? i : best, 0)
-
+  const totalIntentos = steps.reduce((s,r) => s+r.intentos, 0)
+  const totalVentas   = steps.reduce((s,r) => s+r.ventas,   0)
+  const peakIndex     = steps.reduce((best,s,i) => s.intentos>steps[best].intentos ? i : best, 0)
   return { steps, totalIntentos, totalVentas, peakIndex }
 })
 
-const maxIntentosPersistence = computed(() => Math.max(...persistenceData.value.steps.map(s => s.intentos), 1))
-
-function getBarHeight(intentos) {
-  return Math.max(6, Math.round((intentos / maxIntentosPersistence.value) * 100))
-}
-
-function getDropPct(i) {
+const maxIntentosPers = computed(() => Math.max(...persistenceData.value.steps.map(s => s.intentos), 1))
+const getBarHeight = intentos => Math.max(6, Math.round((intentos / maxIntentosPers.value) * 100))
+const getDropPct   = i => {
   const steps = persistenceData.value.steps
-  const prev  = steps[i - 1]?.intentos || 1
-  const curr  = steps[i]?.intentos     || 0
-  return Math.round(((prev - curr) / prev) * 100)
+  const prev  = steps[i-1]?.intentos || 1
+  const curr  = steps[i]?.intentos   || 0
+  return Math.round(((prev-curr)/prev)*100)
 }
 
 const persistenceInsight = computed(() => {
   const { steps, totalIntentos, totalVentas } = persistenceData.value
   if (!steps.length || steps[0].intentos === 0) return null
-
-  const pctEsfuerzo1 = totalIntentos > 0 ? Math.round((steps[0].intentos / totalIntentos) * 100) : 0
-  const pctVentas1   = totalVentas   > 0 ? Math.round((steps[0].ventas   / totalVentas)   * 100) : 0
-
-  const bestClose = [...steps].filter(x => x.contactados > 0).sort((a, b) => b.tasaCierre - a.tasaCierre)[0]
-  const extra = bestClose && bestClose.label !== '1er intento' && bestClose.tasaCierre > 0
-    ? ' El mejor ratio de cierre se da en el ' + bestClose.label + ' (' + bestClose.tasaCierre + '% de sus contactos compran).'
+  const p1 = totalIntentos > 0 ? Math.round((steps[0].intentos / totalIntentos) * 100) : 0
+  const v1 = totalVentas   > 0 ? Math.round((steps[0].ventas   / totalVentas)   * 100) : 0
+  const best = [...steps].filter(x => x.contactados > 0).sort((a,b) => b.tasaCierre - a.tasaCierre)[0]
+  const extra = best && best.label !== '1er intento' && best.tasaCierre > 0
+    ? ' Mejor ratio de cierre en el ' + best.label + ' (' + best.tasaCierre + '% de contactos cierran).'
     : ''
-
-  return 'El ' + pctEsfuerzo1 + '% del esfuerzo total esta en el 1er intento, generando el ' + pctVentas1 + '% de las ventas.' + extra + ' Evalua si los intentos tardios justifican el costo operativo.'
+  return 'El ' + p1 + '% del esfuerzo está en el 1er intento, generando el ' + v1 + '% de ventas.' + extra
 })
 
-// Objeciones
-const objectionsData = computed(() => {
-  const objMap = {}
-  let totalObj = 0
-  rawData.value.forEach(row => {
-    ;(row.chart_objeciones || []).forEach(item => {
-      if (item.es_efectivo === isEffectiveFilter.value) {
-        const nom = item.nombre || 'Desconocido'
-        if (!objMap[nom]) objMap[nom] = 0
-        objMap[nom] += item.frecuencia
-        totalObj    += item.frecuencia
-      }
-    })
-  })
-  return Object.entries(objMap)
-    .map(([reason, count]) => ({ reason, count, pct: totalObj > 0 ? Math.round((count / totalObj) * 100) : 0 }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
-})
-
-// Asesores
-const aggregatedAdvisors = computed(() => {
-  const advMap = {}
-  rawData.value.forEach(r => {
-    if (!advMap[r.cod_asesor]) {
-      advMap[r.cod_asesor] = { name: r.asesor_nombre || r.asesor_alias, leads: 0, calls: 0, contacted: 0, sales: 0, revenue: 0, sumTime: 0, countTime: 0 }
-    }
-    const a = advMap[r.cod_asesor]
-    a.leads     += r.total_leads_gestionados
-    a.calls     += r.total_intentos
-    a.contacted += r.total_contactados
-    a.sales     += r.total_ventas
-    a.revenue   += r.ingresos_recuperados
-    if (r.tiempo_prom_minutos > 0) { a.sumTime += r.tiempo_prom_minutos; a.countTime++ }
-  })
-  return Object.values(advMap).map(a => ({
-    ...a,
-    contactRate: a.calls     > 0 ? ((a.contacted / a.calls)    * 100).toFixed(1) : 0,
-    conversion:  a.contacted > 0 ? ((a.sales / a.contacted)    * 100).toFixed(1) : 0,
-    avgTime:     a.countTime > 0 ? (a.sumTime / a.countTime).toFixed(1)          : 0
-  })).sort((a, b) => b.sales - a.sales)
-})
-
-// Pendientes
-const pendingTasksByOrigin = computed(() => {
-  const originMap = {}
-  rawData.value.forEach(row => {
-    ;(row.json_pending_tasks || []).forEach(group => {
-      const alias = group.origin_alias
-      if (!originMap[alias]) originMap[alias] = { desc: group.origin_desc, leads: [] }
-      originMap[alias].leads.push(...group.leads)
-    })
-  })
-  Object.values(originMap).forEach(group => {
-    group.leads.sort((a, b) => new Date(a.contact_datetime) - new Date(b.contact_datetime))
-  })
-  return originMap
-})
-
-// Navegacion
-function goToGroupFiltered(originAlias) {
-  if (!originAlias) return
-  const originId        = catalog.options('we_attempt_origin')?.find(o => o.alias === originAlias)?.id
-  const originDesc      = catalog.options('we_attempt_origin')?.find(o => o.alias === originAlias)?.description
-  const pendingFollowId = catalog.options('we_calling')?.find(o => o.alias === 'we_calling_pending')?.id
-  const queryParams     = {}
-  if (originId)        queryParams.attempt_origin_ids = JSON.stringify([{ value: originId, label: originDesc }])
-  if (pendingFollowId) queryParams.last_follow_ids    = JSON.stringify([{ value: pendingFollowId, label: 'Pendiente' }])
-  if (isStrictlyComercial.value && storedUser.value) {
-    queryParams.owner_user_ids = JSON.stringify([{ value: storedUser.value.user_id, label: 'Mi cuenta' }])
-  } else if (filters.value.advisor !== 'all') {
-    const advName = filtroOwners.value.find(u => u.id === filters.value.advisor)?.description || 'Asesor'
-    queryParams.owner_user_ids = JSON.stringify([{ value: filters.value.advisor, label: advName }])
-  }
-  window.open(router.resolve({ name: 'ComercialListado', query: queryParams }).href, '_blank')
-}
-
-function goToLead(leadId) {
-  if (!leadId) return
-  window.open(router.resolve({ name: 'ComercialLeadDetalle', params: { id: leadId } }).href, '_blank')
-}
-
-// Helpers
-const formatNum   = v => new Intl.NumberFormat('es-PE').format(v || 0)
-const formatMoney = v => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(v || 0)
-const getScoreColor = rate => {
-  const r = Number(rate)
-  return r >= 40 ? 'c-green' : r >= 25 ? 'c-amber' : 'c-red'
-}
+// ── Helpers ────────────────────────────────────────────────
+const fmt      = v => new Intl.NumberFormat('es-PE').format(v || 0)
+const fmtDate  = d => new Date(d).toLocaleString('es-PE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+const initials = name => name ? name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase() : '?'
+const scoreColor = pct => { const n=Number(pct); return n>=60?'c-green':n>=40?'c-amber':'c-red' }
+const goToLead = id => { if (!id) return; window.open(router.resolve({ name:'ComercialLeadDetalle', params:{ id } }).href,'_blank') }
 </script>
 
 <style scoped>
-/* SHELL */
-.exec-shell { background: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+/* ══ SHELL ══════════════════════════════════════════════════ */
+.ps-shell { background:#f1f5f9; min-height:100vh; display:flex; flex-direction:column; font-family:'Inter',system-ui,sans-serif; }
+.ps-mode-asesor { --accent:#0f766e; --accent-light:#f0fdfa; --accent-mid:#5eead4; }
+.ps-mode-lider  { --accent:#4f46e5; --accent-light:#eef2ff; --accent-mid:#818cf8; }
 
-/* MASTHEAD */
-.exec-masthead { background: #0f172a; color: #fff; border-bottom: 1px solid #334155; }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px 16px; border-bottom: 1px solid rgba(255,255,255,.07); }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 3px; height: 42px; background: #0f766e; border-radius: 2px; flex-shrink: 0; }
-.brand-eyebrow { display: block; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: #94a3b8; font-weight: 500; margin-bottom: 3px; }
-.brand-title { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -.01em; color: #fff; }
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec-primary { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; background: #0f766e; color: #fff; border: none; border-radius: 5px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
-.btn-exec-primary:hover:not(:disabled) { background: #0d9488; }
-.btn-exec-primary:disabled { opacity: .6; cursor: not-allowed; }
-.masthead-filters { display: flex; align-items: center; padding: 0 28px; min-height: 52px; }
-.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
-.filter-label { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
-.exec-select { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,.18); color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 500; padding: 3px 0; outline: none; cursor: pointer; min-width: 140px; appearance: auto; }
-.exec-select option { color: #0f172a; background: #fff; }
-.filter-sep { width: 1px; height: 32px; background: rgba(255,255,255,.1); margin: 0 20px 0 0; }
+/* ══ HEADER ══════════════════════════════════════════════════ */
+.ps-head { background:#0f172a; color:#fff; border-bottom:1px solid #1e293b; }
+.ps-head-inner { display:flex; justify-content:space-between; align-items:center; padding:16px 28px 12px; border-bottom:1px solid rgba(255,255,255,.05); }
+.ps-brand { display:flex; align-items:center; gap:13px; }
+.ps-brand-stripe { width:3px; height:42px; background:linear-gradient(180deg,var(--accent),var(--accent-mid)); border-radius:2px; flex-shrink:0; }
+.ps-eyebrow { display:block; font-size:9.5px; letter-spacing:.15em; text-transform:uppercase; color:#64748b; margin-bottom:3px; }
+.ps-title { font-size:16px; font-weight:700; margin:0; color:#f1f5f9; letter-spacing:-.01em; }
+.ps-btn-refresh { display:inline-flex; align-items:center; gap:7px; padding:7px 14px; background:var(--accent); color:#fff; border:none; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+.ps-btn-refresh:hover:not(:disabled) { opacity:.85; }
+.ps-btn-refresh:disabled { opacity:.55; cursor:not-allowed; }
+.ps-head-filters { display:flex; align-items:center; padding:0 28px; min-height:48px; gap:0; }
+.pf-chip { display:flex; flex-direction:column; gap:2px; padding:8px 18px 8px 0; }
+.pf-label { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:#64748b; font-weight:700; }
+.pf-select { background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,.15); color:#e2e8f0; font-family:inherit; font-size:12px; font-weight:500; padding:3px 0; outline:none; cursor:pointer; min-width:120px; }
+.pf-select option { color:#0f172a; background:#fff; }
+.pf-div { width:1px; height:26px; background:rgba(255,255,255,.08); margin:0 18px 0 0; }
+.pf-pending-badge { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.pb-overdue { display:inline-flex; align-items:center; gap:5px; background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:#f87171; font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px; }
+.pb-upcoming { display:inline-flex; align-items:center; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); color:#fbbf24; font-size:11px; font-weight:600; padding:3px 10px; border-radius:10px; }
 
-/* BODY */
-.exec-body { flex: 1; padding: 24px 28px; }
-.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 16px; }
-.loader-ring { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #0f766e; border-radius: 50%; animation: spin .8s linear infinite; }
-.loader-text { font-size: 13px; color: #475569; font-weight: 500; letter-spacing: .02em; }
+/* ══ BODY ════════════════════════════════════════════════════ */
+.ps-body { flex:1; padding:22px 28px; }
+.ps-loader { display:flex; align-items:center; justify-content:center; gap:14px; min-height:380px; color:#64748b; font-size:13px; }
+.loader-ring { width:34px; height:34px; border:3px solid #e2e8f0; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+.mb { margin-bottom:18px; }
+.mt-2 { margin-top:8px; }
+.fade-in { animation:fadeIn .3s ease; }
 
-/* KPI STRIP */
-.kpi-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
-.kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.04); transition: box-shadow .15s, transform .15s; }
-.kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); transform: translateY(-1px); }
-.kpi-card-highlight { background: #0f172a; border-color: #334155; }
-.kpi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.kpi-card-label { font-size: 10px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: #94a3b8; }
-.kpi-indicator { width: 7px; height: 7px; border-radius: 50%; }
-.ind-green { background: #22c55e; } .ind-amber { background: #f59e0b; } .ind-blue { background: #3b82f6; } .ind-slate { background: #94a3b8; }
-.kpi-card-value { font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: #0f172a; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
-.kpi-card-sub { font-size: 11px; color: #94a3b8; }
+/* ══ KPI STRIP ═══════════════════════════════════════════════ */
+.kpi-strip { display:grid; gap:13px; }
+.kpi-4 { grid-template-columns:repeat(4,1fr); }
+.kpi-5 { grid-template-columns:repeat(5,1fr); }
+.kpi-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:15px 17px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.kpi-card-urgent { background:#1e293b; border-color:#334155; }
+.kpi-card-dark   { background:#1e1b4b; border-color:#3730a3; }
+.kpi-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+.kpi-label { font-size:9px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:#94a3b8; }
+.kd { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-slate { background:#94a3b8; } .dot-green { background:#22c55e; } .dot-red { background:#ef4444; }
+.dot-amber { background:#f59e0b; } .dot-indigo { background:#818cf8; }
+.kpi-value { font-size:22px; font-weight:800; color:#0f172a; font-variant-numeric:tabular-nums; letter-spacing:-.02em; margin-bottom:5px; }
+.kpi-sub { font-size:11px; color:#94a3b8; }
+.kv-green { color:#15803d; } .kv-amber { color:#b45309; } .kv-red { color:#b91c1c; }
+.pct-pill { font-size:10px; font-weight:700; padding:1px 6px; border-radius:9px; margin-right:4px; }
+.pill-green { background:#dcfce7; color:#15803d; } .pill-amber { background:#fef3c7; color:#b45309; } .pill-red { background:#fee2e2; color:#b91c1c; }
 
-/* CHART PANELS */
-.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.chart-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.04); display: flex; flex-direction: column; }
-.chart-panel-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
-.chart-panel-title { font-size: 13px; font-weight: 700; color: #0f172a; letter-spacing: -.01em; }
-.chart-panel-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-.chart-area { padding: 16px 20px; flex: 1; }
-.chart-legend-inline { display: flex; gap: 14px; align-items: center; font-size: 11.5px; color: #475569; font-weight: 500; }
-.legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; }
+/* ══ AGENDA SECTION ══════════════════════════════════════════ */
+.agenda-section { background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.agenda-topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 20px 14px; background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); border-bottom:1px solid rgba(255,255,255,.06); }
+.agenda-topbar-left {}
+.agenda-eyebrow { font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#64748b; font-weight:600; margin-bottom:3px; }
+.agenda-title-text { font-size:15px; font-weight:700; color:#f1f5f9; margin:0; letter-spacing:-.01em; }
+.agenda-counters { display:flex; align-items:center; gap:0; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:10px; overflow:hidden; }
+.ac-item { display:flex; flex-direction:column; align-items:center; padding:8px 16px; gap:2px; }
+.ac-n { font-size:18px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.ac-l { font-size:9px; text-transform:uppercase; letter-spacing:.08em; font-weight:600; opacity:.7; }
+.ac-red  .ac-n { color:#f87171; } .ac-red  .ac-l { color:#f87171; }
+.ac-amber .ac-n { color:#fbbf24; } .ac-amber .ac-l { color:#fbbf24; }
+.ac-teal  .ac-n { color:#5eead4; } .ac-teal  .ac-l { color:#5eead4; }
+.ac-divider { width:1px; height:32px; background:rgba(255,255,255,.1); }
 
-/* ══ PERSISTENCIA NUEVO DISEÑO ══ */
-.pc-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.04); display: flex; flex-direction: column; }
-.pc-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.06); background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); gap: 12px; }
-.pc-header-left { flex: 1; min-width: 0; }
-.pc-eyebrow { display: block; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 3px; }
-.pc-title { font-size: 14px; font-weight: 700; color: #f1f5f9; margin: 0 0 3px; letter-spacing: -.015em; }
-.pc-sub { font-size: 11px; color: #475569; margin: 0; line-height: 1.4; }
-.pc-header-right { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
-.pc-summary-pill { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 4px 12px; white-space: nowrap; }
-.pc-summary-pill.pill-green { border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.08); }
-.pill-label { font-size: 9.5px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
-.pill-value { font-size: 13px; font-weight: 700; color: #f1f5f9; font-variant-numeric: tabular-nums; }
-.pill-green .pill-value { color: #4ade80; }
-.pc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px 24px; color: #94a3b8; font-size: 12.5px; }
+.agenda-allclear { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:44px 24px; gap:10px; }
+.allclear-icon  { font-size:40px; }
+.allclear-title { font-size:16px; font-weight:700; color:#0f172a; }
+.allclear-sub   { font-size:13px; color:#94a3b8; }
 
-.pc-steps-wrapper { display: flex; align-items: stretch; padding: 20px 16px 6px; overflow-x: auto; gap: 0; }
+.ags-block { padding:16px 20px; }
+.ags-block + .ags-block { border-top:1px solid #f1f5f9; }
+.ags-hdr { display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; margin-bottom:12px; }
+.ags-hdr--red  { color:#b91c1c; }
+.ags-hdr--teal { color:#0f766e; }
+.ags-cnt { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-left:auto; }
+.ags-cnt--red  { background:#fee2e2; color:#b91c1c; }
+.ags-cnt--teal { background:#ccfbf1; color:#0f766e; }
 
-.pc-step-col { flex: 1; min-width: 120px; display: flex; flex-direction: column; align-items: center; position: relative; padding: 0 4px 12px; border-radius: 8px; transition: background .15s; }
-.pc-step-col--peak { background: linear-gradient(180deg, #f0f9ff 0%, rgba(240,249,255,0) 80%); }
-.pc-step-col--peak .step-bar-fill { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); box-shadow: 0 0 10px rgba(59,130,246,.4); }
+/* ══ CALL GRID ═══════════════════════════════════════════════ */
+.call-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:9px; }
+.call-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:11px 14px; display:flex; align-items:center; gap:10px; transition:box-shadow .15s; }
+.call-card:hover { box-shadow:0 3px 8px rgba(0,0,0,.08); }
+.call-card--overdue { background:#fff5f5; border-color:#fecaca; border-left:3px solid #ef4444; }
+.cc-urgency-bar { display:none; }
+.cc-body { flex:1; min-width:0; }
+.cc-name { font-size:13px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; }
+.cc-meta { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+.cc-tag { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:4px; white-space:nowrap; }
+.cc-tag--attempt { background:#f1f5f9; color:#475569; }
+.cc-tag--origin  { background:#e0e7ff; color:#4338ca; }
+.cc-time { display:inline-flex; align-items:center; gap:3px; font-size:10.5px; font-weight:600; }
+.cc-time--overdue { color:#dc2626; }
+.cc-time--ok      { color:#0f766e; }
+.cc-overdue-pill { font-size:9px; font-weight:800; background:#ef4444; color:#fff; padding:1px 6px; border-radius:4px; letter-spacing:.05em; }
+.btn-call { flex-shrink:0; display:inline-flex; align-items:center; gap:4px; padding:7px 14px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit; transition:opacity .15s; white-space:nowrap; }
+.btn-call:hover { opacity:.85; }
+.btn-call--urgent { background:#dc2626; }
 
-.step-label { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
-.step-num { font-size: 10.5px; font-weight: 700; color: #475569; letter-spacing: .03em; text-transform: uppercase; text-align: center; }
-.step-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; letter-spacing: .04em; text-transform: uppercase; }
-.step-tag--peak { background: #dbeafe; color: #1d4ed8; }
-.step-tag--drop { background: #fff7ed; color: #c2410c; }
+/* ══ PANEL ════════════════════════════════════════════════════ */
+.panel { background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.panel-head { padding:14px 18px; border-bottom:1px solid #f1f5f9; }
+.panel-title { font-size:13px; font-weight:700; color:#0f172a; letter-spacing:-.01em; }
+.panel-sub   { font-size:11px; color:#94a3b8; margin-top:2px; }
+.panel-head-standalone { background:#fff; border:1px solid #e2e8f0; border-radius:8px 8px 0 0; border-bottom:none; padding:14px 18px; }
+.empty-state { text-align:center; padding:28px; color:#94a3b8; font-size:12.5px; }
 
-.step-bar-track { width: 28px; height: 64px; background: #f1f5f9; border-radius: 5px; display: flex; align-items: flex-end; overflow: hidden; margin-bottom: 12px; flex-shrink: 0; }
-.step-bar-fill { width: 100%; background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%); border-radius: 5px; position: relative; transition: height .5s cubic-bezier(.34,1.56,.64,1); }
-.step-bar-shine { position: absolute; top: 0; left: 0; right: 0; height: 35%; background: rgba(255,255,255,.22); border-radius: 5px 5px 0 0; }
+/* ══ TWO-COL LAYOUT ══════════════════════════════════════════ */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 
-.step-numbers { display: flex; flex-direction: column; align-items: stretch; width: 100%; gap: 0; }
+/* ══ ORIGIN LIST ═════════════════════════════════════════════ */
+.origin-grid-list { padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
+.og-item { }
+.og-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.og-name { font-size:12px; font-weight:600; color:#334155; }
+.og-total { font-size:10px; font-weight:700; background:#1e293b; color:#fff; padding:1px 7px; border-radius:8px; }
+.stacked-bar { width:100%; height:7px; background:#f1f5f9; border-radius:4px; display:flex; overflow:hidden; }
+.sb { height:100%; transition:width .4s ease; }
+.sb-green { background:#22c55e; } .sb-amber { background:#f59e0b; } .sb-red { background:#ef4444; }
+.og-stats { display:flex; gap:12px; margin-top:4px; }
+.ogs { font-size:10.5px; font-weight:600; }
 
-.sn-card { display: flex; align-items: center; gap: 6px; border-radius: 7px; padding: 7px 10px; border: 1px solid transparent; }
-.sn-card--intentos   { background: #f8fafc; border-color: #e2e8f0; }
-.sn-card--contactados { background: #eff6ff; border-color: #bfdbfe; }
-.sn-card--ventas     { background: #f0fdf4; border-color: #bbf7d0; }
+/* ══ TABLA ════════════════════════════════════════════════════ */
+.table-scroll-sm { overflow-y:auto; max-height:260px; }
+.table-scroll-lider { overflow-x:auto; max-height:55vh; overflow-y:auto; }
+.ps-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.ps-table thead tr { background:#f8fafc; position:sticky; top:0; z-index:2; }
+.ps-table th { padding:7px 11px; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; font-weight:700; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+.ps-table td { padding:8px 11px; border-bottom:1px solid #f8fafc; }
+.ps-table tbody tr:hover td { background:#f8fafc; }
+.ta-r { text-align:right; }
+.fw6 { font-weight:600; } .fw7 { font-weight:700; }
+.th-sticky { position:sticky; left:0; z-index:3; background:#f8fafc; box-shadow:2px 0 4px -1px rgba(0,0,0,.07); }
+.td-sticky { position:sticky; left:0; z-index:1; background:#fff; border-right:2px solid #e2e8f0; box-shadow:2px 0 4px -1px rgba(0,0,0,.07); }
+.th-green { color:#15803d; background:#f0fdf4 !important; }
+.th-red   { color:#b91c1c; background:#fff1f2 !important; }
+.th-amber { color:#b45309; background:#fffbeb !important; }
+.th-indigo{ color:#4f46e5; background:#eef2ff !important; }
+.tr-lider { cursor:pointer; }
+.tr-selected td { background:#eef2ff !important; }
+.tr-lider:hover td:not(.td-sticky) { background:#f0f4ff !important; }
+.tr-selected .td-sticky { background:#eef2ff !important; }
+.advisor-cell { display:flex; align-items:center; gap:8px; font-weight:600; }
+.advisor-av { width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ibar-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+.ibar-val  { font-size:11.5px; font-weight:700; }
+.ibar-track { width:54px; height:4px; background:#f1f5f9; border-radius:3px; overflow:hidden; }
+.ibar-fill { height:100%; border-radius:3px; }
+.ibar-green { background:#22c55e; } .ibar-red { background:#ef4444; }
+.empty-cell { text-align:center; color:#94a3b8; padding:20px; }
 
-.sn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.sn-dot--slate { background: #94a3b8; } .sn-dot--blue { background: #3b82f6; } .sn-dot--green { background: #22c55e; }
+/* ══ TOGGLE ═══════════════════════════════════════════════════ */
+.toggle-group { display:inline-flex; background:#f1f5f9; border-radius:5px; padding:2px; }
+.tgl-btn { background:transparent; border:none; padding:4px 12px; font-size:11px; font-weight:600; color:#475569; border-radius:4px; cursor:pointer; font-family:inherit; transition:all .12s; }
+.tgl-teal { background:#fff; color:#0f766e; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+.tgl-red  { background:#fff; color:#b91c1c; box-shadow:0 1px 2px rgba(0,0,0,.05); }
 
-.sn-big { font-size: 18px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; display: block; }
-.sn-big--blue  { color: #1d4ed8; }
-.sn-big--green { color: #16a34a; }
-.sn-lbl { font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; display: block; }
+/* ══ PROGRESS BAR ════════════════════════════════════════════ */
+.prog-track { width:100%; height:5px; background:#f1f5f9; border-radius:3px; overflow:hidden; }
+.prog-fill  { height:100%; border-radius:3px; transition:width .4s; }
+.pf-teal { background:#0f766e; } .pf-red { background:#b91c1c; }
 
-.sn-arrow { display: flex; align-items: center; gap: 5px; padding: 2px 4px; color: #94a3b8; }
-.sn-rate { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
-.sn-rate--green { color: #15803d; background: rgba(21,128,61,.08); }
-.sn-rate--amber { color: #b45309; background: rgba(180,83,9,.08); }
-.sn-rate--red   { color: #b91c1c; background: rgba(185,28,28,.08); }
-.sn-empty { font-size: 10px; color: #cbd5e1; font-style: italic; text-align: center; padding: 5px 0; border: 1px dashed #e2e8f0; border-radius: 6px; }
+/* ══ PERSISTENCIA ════════════════════════════════════════════ */
+.pc-panel { background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.pc-head { display:flex; justify-content:space-between; align-items:flex-start; padding:14px 18px 12px; border-bottom:1px solid rgba(255,255,255,.06); background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); gap:12px; }
+.pc-head-left { flex:1; }
+.pc-eyebrow { display:block; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#64748b; font-weight:600; margin-bottom:3px; }
+.pc-title { font-size:13.5px; font-weight:700; color:#f1f5f9; margin:0 0 2px; }
+.pc-sub   { font-size:11px; color:#475569; margin:0; }
+.pc-pills { display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex-shrink:0; }
+.pc-pill  { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:4px 11px; }
+.pc-pill--green { border-color:rgba(34,197,94,.3); background:rgba(34,197,94,.07); }
+.pcpl { font-size:9px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.pcpv { font-size:13px; font-weight:800; color:#f1f5f9; font-variant-numeric:tabular-nums; }
+.pc-steps { display:flex; padding:16px 12px 8px; overflow-x:auto; gap:0; align-items:stretch; }
+.pc-step { flex:1; min-width:110px; display:flex; flex-direction:column; align-items:center; padding:0 6px 10px; border-radius:8px; position:relative; }
+.pc-step--peak { background:linear-gradient(180deg,#f0f9ff 0%,rgba(240,249,255,0) 80%); }
+.pc-step--peak .step-bar-fill { background:linear-gradient(180deg,#3b82f6,#1d4ed8); box-shadow:0 0 8px rgba(59,130,246,.35); }
+.step-lbl { display:flex; flex-direction:column; align-items:center; gap:3px; margin-bottom:8px; }
+.step-num { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.03em; text-align:center; }
+.step-tag { font-size:8.5px; font-weight:700; padding:1px 5px; border-radius:8px; text-transform:uppercase; letter-spacing:.04em; }
+.step-tag--peak { background:#dbeafe; color:#1d4ed8; }
+.step-tag--drop { background:#fff7ed; color:#c2410c; }
+.step-bar-track { width:24px; height:56px; background:#f1f5f9; border-radius:5px; display:flex; align-items:flex-end; overflow:hidden; margin-bottom:10px; flex-shrink:0; }
+.step-bar-fill { width:100%; background:linear-gradient(180deg,#94a3b8,#64748b); border-radius:5px; position:relative; transition:height .5s cubic-bezier(.34,1.56,.64,1); }
+.bar-shine { position:absolute; top:0; left:0; right:0; height:35%; background:rgba(255,255,255,.2); border-radius:5px 5px 0 0; }
+.step-data { display:flex; flex-direction:column; align-items:stretch; width:100%; gap:2px; }
+.sd-row { display:flex; align-items:center; gap:5px; border-radius:6px; padding:5px 8px; border:1px solid transparent; }
+.sd-row--slate { background:#f8fafc; border-color:#e2e8f0; }
+.sd-row--blue  { background:#eff6ff; border-color:#bfdbfe; }
+.sd-row--green { background:#f0fdf4; border-color:#bbf7d0; }
+.sd-n { font-size:16px; font-weight:800; color:#0f172a; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.sd-n--blue  { color:#1d4ed8; } .sd-n--green { color:#16a34a; }
+.sd-l { font-size:8.5px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+.sd-rate { font-size:9.5px; font-weight:700; padding:2px 6px; text-align:center; border-radius:4px; }
+.rate-green { color:#15803d; background:rgba(21,128,61,.08); }
+.rate-amber { color:#b45309; background:rgba(180,83,9,.08); }
+.rate-red   { color:#b91c1c; background:rgba(185,28,28,.08); }
+.sd-empty { font-size:9.5px; color:#cbd5e1; font-style:italic; text-align:center; border:1px dashed #e2e8f0; border-radius:5px; padding:4px; }
+.step-connector { position:absolute; right:-10px; top:38%; color:#cbd5e1; font-size:14px; font-weight:700; z-index:2; }
+.pc-insight { display:flex; gap:9px; align-items:flex-start; padding:10px 18px; border-top:1px solid #f1f5f9; background:#fffbeb; }
+.pc-insight span { font-size:11px; color:#78350f; line-height:1.55; }
+.pc-insight strong { color:#92400e; }
 
-.step-connector { position: absolute; right: -12px; top: 42%; transform: translateY(-50%); z-index: 2; background: #fff; border-radius: 50%; padding: 1px; }
+/* ══ TENDENCIA ═══════════════════════════════════════════════ */
+.chart-legend-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; font-size:11px; color:#475569; font-weight:500; padding:8px 18px; border-bottom:1px solid #f8fafc; }
+.cl-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:3px; }
+.chart-area { padding:14px 18px; height:240px; }
 
-.pc-insight { display: flex; gap: 10px; align-items: flex-start; padding: 11px 20px; border-top: 1px solid #f1f5f9; background: #fffbeb; }
-.pc-insight span { font-size: 11.5px; color: #78350f; line-height: 1.55; }
-.pc-insight strong { color: #92400e; }
+/* ══ REPROGRAMACIONES ════════════════════════════════════════ */
+.reschedule-list { padding:14px 18px; display:flex; flex-direction:column; gap:12px; }
+.rc-card { border:1px solid #e2e8f0; border-radius:7px; padding:13px; }
+.rc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.rc-who { font-size:11px; font-weight:700; padding:3px 9px; border-radius:10px; }
+.rc-who--lider   { background:#e0e7ff; color:#4f46e5; }
+.rc-who--sistema { background:#f1f5f9; color:#475569; }
+.rc-total-lbl { font-size:11px; color:#64748b; }
+.rc-metrics { display:flex; gap:0; }
+.rcm { flex:1; text-align:center; padding:6px 4px; }
+.rcm-val { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.rcm-lbl { font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin:2px 0; }
+.rc-alert { display:flex; align-items:flex-start; gap:6px; margin-top:9px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:7px 10px; font-size:10.5px; color:#92400e; }
 
-/* RESULTADOS LLAMADA */
-.toggle-group { display: flex; background: #f1f5f9; border-radius: 4px; padding: 2px; }
-.toggle-btn { background: transparent; border: none; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #475569; border-radius: 3px; cursor: pointer; font-family: inherit; transition: all .15s; }
-.toggle-active-teal { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-.toggle-active-red  { background: #fff; color: #b91c1c; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-.panel-scroll-area { overflow-y: auto; max-height: 280px; }
+/* ══ PENDING (LIDER) ══════════════════════════════════════════ */
+.pending-grid-lider { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:13px; background:#f1f5f9; padding:13px; border:1px solid #e2e8f0; border-radius:0 0 8px 8px; }
+.pend-card { background:#fff; border:1px solid #e2e8f0; border-radius:7px; overflow:hidden; }
+.pend-card-hdr { background:#1e293b; color:#fff; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
+.pend-origin { font-size:11.5px; font-weight:600; color:#e2e8f0; }
+.pend-badge  { background:var(--accent); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:9px; }
+.pend-scroll { max-height:210px; overflow-y:auto; }
+.pend-item   { display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-bottom:1px solid #f8fafc; }
+.pend-item:last-child { border-bottom:none; }
+.pend-item:hover { background:#f8fafc; }
+.pend-name { font-size:12.5px; font-weight:600; color:#0f172a; }
+.pend-meta { font-size:10.5px; color:#94a3b8; margin-top:1px; }
+.btn-manage { background:transparent; border:1px solid #cbd5e1; color:#475569; font-size:11px; font-weight:600; padding:4px 10px; border-radius:4px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.btn-manage:hover { background:var(--accent-light); color:var(--accent); border-color:var(--accent-mid); }
 
-/* TABLA ASESORES */
-.table-shell { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
-.control-table-wrapper { width: 100%; overflow-x: auto; max-height: 50vh; }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.thead-sub .ts { padding: 7px 12px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 2; }
-.ts-a { background: #f0f7ff; color: #3b82f6; border-left: 1px solid #dbeafe; }
-.ts-b { background: #f0fdf4; color: #16a34a; border-left: 1px solid #d1fae5; }
-.ts-c { background: #f0fdf4; color: #0f766e; border-left: 1px solid #bbf7d0; }
-.tbody-row td { padding: 9px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td:not(.sticky-col) { background: #f0f9ff !important; transition: background .1s; }
-.td-a { background: #f8fbff; border-left: 1px solid #e0eeff; }
-.td-b { background: #f7fdf9; border-left: 1px solid #d5f5e0; }
-.td-c { background: #f8fafc; border-left: 1px solid #e2e8f0; }
-.sticky-col { position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 5px -2px rgba(0,0,0,.12); }
-.exec-table thead .sticky-col { z-index: 3; }
-.exec-table tbody .sticky-col { border-right: 2px solid #e2e8f0; }
-.progress-track { width: 100%; height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
-.fill-teal { background: #0f766e; } .fill-red { background: #b91c1c; }
+/* ══ FOOTER ══════════════════════════════════════════════════ */
+.ps-foot { display:flex; align-items:center; gap:8px; padding:10px 28px; background:#fff; border-top:1px solid #e2e8f0; font-size:11.5px; color:#94a3b8; font-weight:500; }
+.ps-foot strong { color:#475569; }
+.foot-sep { color:#e2e8f0; }
+.foot-status { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.status-dot { width:6px; height:6px; border-radius:50%; }
+.dot-ok   { background:#22c55e; }
+.dot-load { background:#f59e0b; animation:pulse 1s ease-in-out infinite; }
 
-/* PENDIENTES */
-.pending-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 16px; background: #f8fafc; padding: 16px; border: 1px solid #e2e8f0; border-radius: 0 0 6px 6px; }
-.pending-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-.pending-card-header { background: #0f172a; color: #fff; padding: 12px 16px; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between; align-items: center; }
-.pending-origin-name { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; color: #f1f5f9; }
-.pending-badge { background: #0f766e; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
-.pending-list-scroll { max-height: 250px; overflow-y: auto; padding: 8px; }
-.pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #f1f5f9; border-radius: 4px; }
-.pending-item:hover { background: #f8fafc; }
-.pending-item:last-child { border-bottom: none; }
-.pending-lead-name { font-size: 12.5px; font-weight: 600; color: #0f172a; margin-bottom: 2px; }
-.pending-lead-meta { font-size: 11px; color: #94a3b8; }
-.btn-manage { background: transparent; border: 1px solid #cbd5e1; color: #475569; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all .2s; white-space: nowrap; }
-.btn-manage:hover { background: #f0fdf4; color: #0f766e; border-color: #5eead4; }
+/* ══ UTILS ═══════════════════════════════════════════════════ */
+.c-green  { color:#15803d; } .c-amber  { color:#b45309; }
+.c-red    { color:#b91c1c; } .c-indigo { color:#4f46e5; }
+.c-teal   { color:#0f766e; font-weight:600; }
 
-/* FOOTER */
-.exec-footer { display: flex; align-items: center; gap: 10px; padding: 10px 28px; background: #fff; border-top: 1px solid #e2e8f0; font-size: 11.5px; color: #94a3b8; font-weight: 500; }
-.exec-footer strong { color: #475569; }
-.footer-sep { color: #e2e8f0; }
-.footer-status { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-ok { background: #22c55e; }
-.dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
+/* ══ ANIMATIONS ══════════════════════════════════════════════ */
+@keyframes spin    { to { transform:rotate(360deg); } }
+@keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+@keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.spin { animation:spin .8s linear infinite; }
 
-/* UTILS */
-.c-green { color: #15803d; } .c-amber { color: #b45309; } .c-red { color: #b91c1c; } .c-teal { color: #0f766e; font-weight: 600; }
-.mb-4 { margin-bottom: 24px; }
-.text-right { text-align: right; } .text-center { text-align: center; } .text-muted { color: #94a3b8; } .text-mono { font-variant-numeric: tabular-nums; }
-.fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
-.fade-in { animation: fadeIn .35s ease; }
-.spin { animation: spin .8s linear infinite; }
-@keyframes spin   { to { transform: rotate(360deg); } }
-@keyframes pulse  { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-/* RESPONSIVE */
-@media (max-width: 1024px) {
-  .kpi-strip { grid-template-columns: 1fr 1fr; }
-  .chart-grid-2 { grid-template-columns: 1fr; }
-  .pc-header { flex-direction: column; gap: 10px; }
-  .pc-header-right { flex-direction: row; align-items: flex-start; }
+/* ══ RESPONSIVE ══════════════════════════════════════════════ */
+@media (max-width:1200px) {
+  .kpi-5 { grid-template-columns:repeat(3,1fr); }
+  .two-col { grid-template-columns:1fr; }
 }
-@media (max-width: 640px) {
-  .exec-body { padding: 16px; }
-  .pc-steps-wrapper { padding: 14px 10px 4px; }
-  .pc-step-col { min-width: 100px; }
-  .sn-big { font-size: 15px; }
+@media (max-width:900px) {
+  .kpi-4 { grid-template-columns:1fr 1fr; }
+  .kpi-5 { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:640px) {
+  .ps-body { padding:14px; }
+  .ps-head-inner, .ps-head-filters { padding-left:14px; padding-right:14px; }
+  .kpi-4 { grid-template-columns:1fr 1fr; }
+  .call-grid { grid-template-columns:1fr; }
 }
 </style>
