@@ -1904,7 +1904,7 @@ watchEffect(() => {
   // 5. Cálculo Final (Base - Descuentos)
 
   const final = base - totalDescuentos
-  insc.total_amount = Math.floor(final > 0 ? final : 0)
+insc.total_amount = Math.round(final > 0 ? final : 0)
 })
   function onChangeDescuentoFijo(opt) {
     if (!opt) {
@@ -2680,6 +2680,12 @@ cat_certificate_status,
 
 async function confirmarInscripcion() {
    if (!comercialService) return console.error('comercialService no inyectado')
+
+
+   if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
+  toast.warning('El Precio Base no está configurado. No se puede procesar la inscripción.')
+  return
+}
 
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
     // ← reemplaza el toast genérico por esto:
