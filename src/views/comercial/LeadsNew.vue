@@ -328,11 +328,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
 <div class="col-md-3">
               <label class="exec-label">F. Pago (prevista)</label>
-              <BaseDatePicker
-                v-model="form.pay_date"
-                :required="form.status_alias=='we_lead_status_bought'"
-                :config="pastDateConfig" placeholder="dd/mm/aaaa"
-              />
+              <BaseDatePicker v-model="form.pay_date" :config="{}" placeholder="dd/mm/aaaa" />
             </div>
 
             <div class="col-md-3">
@@ -891,7 +887,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   <BaseModal v-model="showViewModal" title="Inscripción del Lead" size="xl">
     <div class="insc-modal">
-
       <div class="insc-header mb-3">
         <div class="insc-info">
   <h5 class="program-title d-flex align-items-center gap-2">
@@ -1257,7 +1252,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           ref="voucherUploaderRef"
           label="Clic para subir Comprobante(s)"
           accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-          :required="!isVoucherOptional"
+          :required="val_porcentaje==100?false:!isVoucherOptional"
           :minFiles="1"
           :touched="voucherTouched"
         />
@@ -1268,7 +1263,9 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <label class="exec-label mb-1">Constancias / Adjuntos</label>
         <MultiFileUploader
           v-model="insc.attachments"
-          label="Adjuntar constancias de pago web"
+          required
+          :minFiles="2"
+          label="Adjuntar evidencias PAGO WEB"
           accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
         />
       </div>
@@ -1283,7 +1280,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
 
       <!-- Carnet: solo en canal General -->
-      <div class="col-12" v-if="isChannelGeneral">
+      <div class="col-12" v-if="isChannelGeneral && clientProfileType === 'estudiante' ">
         <label class="exec-label mb-2">Carnet / Documento ID</label>
         <FileUploader
           label="Subir carnet estudiantil"
@@ -1353,32 +1350,56 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
     </div>
 
-    <!-- ══ PLAN DE CUOTAS (nuevo, solo en modo cuotas) ══ -->
-<!-- ══ PLAN DE CUOTAS (referencia visual, todo disabled) ══ -->
-<div v-show="false" v-if="isInstallmentMode" style="flex:1;min-width:0">
+<div v-if="isInstallmentMode" style="flex:1;min-width:0">
   <div class="installment-card">
 
-    <!-- Cabecera con info del cálculo -->
+    <!-- Cabecera -->
     <div class="installment-header">
       <div class="d-flex align-items-center gap-2">
         <i class="fa-solid fa-table-list text-primary"></i>
         <span class="fw-700" style="font-size:13px;">Plan de Cuotas</span>
-        <span class="pill pill-slate border ms-1" style="font-size:9px;">REFERENCIAL</span>
-      </div>
-      <!-- Info del cálculo: sesiones y duración -->
-      <div class="d-flex align-items-center gap-3" style="font-size:11px;color:var(--slate-400);">
-        <span v-if="form.program_sessions">
-          <i class="fa-solid fa-chalkboard me-1"></i>
-          {{ form.program_sessions }} sesiones
+        <span class="pill border ms-1" :class="manualMode ? 'pill-amber' : 'pill-slate'" style="font-size:9px;">
+          {{ manualMode ? 'MANUAL' : 'AUTOMÁTICO' }}
         </span>
-        <span>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Selector nro cuotas en modo manual -->
+        <div v-if="manualMode" class="d-flex align-items-center gap-2">
+          <span style="font-size:11px;color:var(--slate-400)">N° cuotas:</span>
+          <input
+            type="number" v-model.number="numCuotasManual"
+            min="1" max="12"
+            @change="onNumCuotasManualChange"
+            class="exec-input-light text-center"
+            style="width:58px;height:28px;padding:3px 6px;font-size:12px;"
+          />
+        </div>
+        <div v-else style="font-size:11px;color:var(--slate-400);">
           <i class="fa-solid fa-calendar-days me-1"></i>
           {{ autoNumCuotas }} cuota{{ autoNumCuotas !== 1 ? 's' : '' }}
-        </span>
+        </div>
+        <!-- Toggle manual/auto -->
+        <button
+          type="button"
+          class="btn-exec btn-exec-sm"
+          :class="manualMode ? 'btn-exec-warning' : 'btn-exec-outline'"
+          @click="toggleManualMode"
+          :title="manualMode ? 'Restaurar cálculo automático' : 'Editar plan manualmente'"
+        >
+          <i class="fa-solid" :class="manualMode ? 'fa-rotate-left' : 'fa-pen-to-square'"></i>
+          {{ manualMode ? 'Restaurar auto' : 'Editar' }}
+        </button>
       </div>
     </div>
 
-    <!-- Separador: Reserva (fuera del plan) -->
+    <!-- Alerta de validación en modo manual -->
+    <div v-if="manualMode && !installmentPlanValid" class="installment-alert">
+      <i class="fa-solid fa-triangle-exclamation me-1"></i>
+      La suma de cuotas <strong>{{ selectedCurrency.symbol }} {{ fmt2(installmentTotalSum) }}</strong>
+      debe ser igual al saldo financiado <strong>{{ selectedCurrency.symbol }} {{ fmt2(installmentRemainder) }}</strong>
+    </div>
+
+    <!-- Fila de Reserva -->
     <div class="installment-reserva-row">
       <div class="d-flex align-items-center gap-2">
         <span class="cuota-num" style="background:#dbeafe;color:#1e40af;">R</span>
@@ -1393,9 +1414,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <span class="pill" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">Inicial</span>
     </div>
 
-    <div class="installment-divider">
-      <span>Cuotas del plan</span>
-    </div>
+    <div class="installment-divider"><span>Cuotas del plan</span></div>
 
     <!-- Tabla de cuotas -->
     <div class="installment-body">
@@ -1407,29 +1426,32 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
 
       <div
-        v-for="cuota in installmentPlan"
+        v-for="(cuota, idx) in installmentPlan"
         :key="cuota.installment_number"
         class="installment-row"
+        :class="{ 'installment-row--invalid': manualMode && !installmentPlanValid }"
       >
         <!-- Número -->
         <span class="cuota-num">{{ cuota.installment_number }}</span>
 
-        <!-- Fecha (disabled, solo visual) -->
+        <!-- Fecha -->
         <BaseDatePicker
           :model-value="cuota.due_date"
           :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: false, disableMobile: true }"
-          :disabled="true"
+          :disabled="!manualMode"
+          @update:model-value="val => updateEditableDate(idx, val)"
           class="w-100"
         />
 
-        <!-- Monto (disabled) -->
+        <!-- Monto -->
         <div class="d-flex justify-content-end">
           <CurrencyInput
             :model-value="cuota.amount"
+            @update:model-value="val => updateEditableAmount(idx, val)"
             :currency="selectedCurrency"
             :storeAsMinor="false"
-            disabled
-            class="cuota-currency-input"
+            :disabled="!manualMode"
+            :class="['cuota-currency-input', { 'is-invalid': manualMode && !installmentPlanValid }]"
             placeholder="0.00"
           />
         </div>
@@ -1440,19 +1462,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         </div>
       </div>
 
-      <!-- Fila saldo total del plan -->
+      <!-- Saldo financiado -->
       <div class="installment-row installment-row--total">
         <span></span>
         <span class="fw-700 text-muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
           Saldo financiado
         </span>
-        <span class="text-end fw-700 c-green">
+        <span class="text-end fw-700" :class="installmentPlanValid ? 'c-green' : 'text-danger'">
           {{ selectedCurrency.symbol }} {{ fmt2(installmentTotalSum) }}
         </span>
         <span></span>
       </div>
 
-      <!-- Fila gran total (reserva + plan) -->
+      <!-- Gran total -->
       <div class="installment-row installment-row--grand">
         <span></span>
         <span class="fw-700" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
@@ -1465,10 +1487,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
     </div>
 
-    <!-- Nota aclaratoria -->
+    <!-- Nota -->
     <div class="installment-footer-note">
       <i class="fa-solid fa-circle-info me-1 text-primary"></i>
-      Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.
+      <span v-if="manualMode">Modo manual activo. Ajusta montos y fechas según lo acordado con el alumno.</span>
+      <span v-else">Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.</span>
     </div>
 
   </div>
@@ -1581,6 +1604,7 @@ const formatDuration = (seconds) => {
     program_modality_alias: null,
     web: false,
     program_link: null,
+  count_children: 0,
     price_student_soles:       0,
 price_student_dollars:     0,
 price_profesional_soles:   0,
@@ -1964,6 +1988,7 @@ const currentEdition = ref(null)  // reemplazar el computed por un ref
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
       full_name: l.full_name ?? l.full_name_label ?? '',
       telefono:  l.origin_phone ?? l.phone ?? '',
+      count_children: Number(l.count_children || 0),
       status_alias:   l.status_alias,
       country_alias:  l.country_alias,
       ocupacion_alias: l.ocupacion_alias,
@@ -2897,6 +2922,7 @@ function onProgramaChange(opcion) {
     form.price_student_soles = 0
     form.price_student_dollars = 0
     form.price_profesional_soles = 0
+    form.count_children = 0
     form.price_profesional_dollars = 0
     return
   }
@@ -2912,6 +2938,7 @@ function onProgramaChange(opcion) {
   form.program_sessions_per_week = Number(opcion?.sessions_per_week || 1)
   form.price_student_soles       = Number(opcion.price_student_soles    || 0)
   form.price_student_dollars     = Number(opcion.price_student_dollars  || 0)
+  form.count_children = Number(opcion.count_children || 0)
   form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
   form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
 }
@@ -3068,8 +3095,8 @@ const calculatedBasePrice = computed(() => {
 // PLAN DE CUOTAS
 // ══════════════════════════════════════════════════
 
-// Helper formateador (evita repetir .toLocaleString en template)
 const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 
 const isInstallmentMode = computed(() =>
   isChannelGeneral.value &&
@@ -3077,134 +3104,151 @@ const isInstallmentMode = computed(() =>
   Number(insc.montoOriginal) > 0
 )
 
-
 // Monto que queda después del adelanto → se reparte en cuotas 2..N
 const installmentRemainder = computed(() => {
   const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
   return rem > 0 ? rem : 0
 })
 
+const autoNumCuotas = computed(() => {
+  const type     = form.category_alias
+  const spw      = form.program_sessions_per_week || 1
+  const children = form.count_children || 0
+
+  if (['we_program_type_course', 'we_program_type_minicourse'].includes(type)) return 1
+  if (type === 'we_program_type_pee')     return spw >= 2 ? 2 : 3
+  if (type === 'we_program_type_diploma') return spw >= 2 ? 4 : 5
+  if (type === 'we_program_type_specialization') {
+    if (children <= 2) return 2
+    return spw >= 2 ? 2 : 3
+  }
+  return 1
+})
 
 
+const autoInstallmentPlan = computed(() => {
+  if (!isInstallmentMode.value) return []
+  const saldo           = installmentRemainder.value
+  const n               = autoNumCuotas.value
+  const startRaw        = form.edition_start_date
+  const sessionsPerWeek = form.program_sessions_per_week || 1
+  const isEsp           = form.category_alias === 'we_program_type_specialization'
+  if (saldo <= 0 || n < 1) return []
+
+  const cuotaBase = Math.floor(saldo / n)
+  const remainder = round2(saldo - cuotaBase * n)
+  const base = startRaw
+    ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00')
+    : new Date()
+  const plan = []
+
+  if (isEsp) {
+    let prev = new Date(base)
+    for (let i = 0; i < n; i++) {
+      const d = new Date(prev)
+      if (i === 0)      d.setDate(d.getDate() + (sessionsPerWeek >= 2 ? 6 : 16))
+      else if (i === 1) d.setDate(d.getDate() + 16)
+      else              d.setDate(d.getDate() + 30)
+      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
+      prev = d
+    }
+  } else if (sessionsPerWeek >= 2) {
+    const f1 = new Date(base)
+    f1.setDate(f1.getDate() + 15)
+    for (let i = 0; i < n; i++) {
+      const d = new Date(f1)
+      d.setDate(d.getDate() + i * 20)
+      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
+    }
+  } else {
+    const f1 = new Date(base)
+    f1.setMonth(f1.getMonth() + 1)
+    f1.setDate(15)
+    for (let i = 0; i < n; i++) {
+      let d
+      if (i === 0) { d = new Date(f1) }
+      else { d = new Date(f1); d.setMonth(d.getMonth() + i); d.setDate(1) }
+      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
+    }
+  }
+  return plan
+})
+
+
+
+
+// ── Modo manual ───────────────────────────────────────────────
+const manualMode           = ref(false)
+const numCuotasManual      = ref(1)
+const editableInstallments = ref([])
+
+function seedEditableInstallments(n) {
+  const saldo = installmentRemainder.value
+  if (saldo <= 0 || n < 1) { editableInstallments.value = []; return }
+  const cuotaBase = Math.floor(saldo / n)
+  const rem       = round2(saldo - cuotaBase * n)
+  const startRaw  = form.edition_start_date
+  const base = startRaw ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00') : new Date()
+  const f1 = new Date(base)
+  f1.setMonth(f1.getMonth() + 1); f1.setDate(15)
+  editableInstallments.value = Array.from({ length: n }, (_, i) => {
+    let d
+    if (i === 0) { d = new Date(f1) }
+    else { d = new Date(f1); d.setMonth(d.getMonth() + i); d.setDate(1) }
+    return { installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase, due_date: d.toISOString().slice(0, 10) }
+  })
+}
+
+function toggleManualMode() {
+  if (!manualMode.value) {
+    numCuotasManual.value = autoNumCuotas.value
+    seedEditableInstallments(numCuotasManual.value)
+    manualMode.value = true
+  } else {
+    manualMode.value = false
+    editableInstallments.value = []
+  }
+}
+
+function onNumCuotasManualChange() {
+  const n = Math.min(Math.max(Number(numCuotasManual.value) || 1, 1), 12)
+  numCuotasManual.value = n
+  seedEditableInstallments(n)
+}
+
+function updateEditableAmount(idx, val) {
+  if (editableInstallments.value[idx]) editableInstallments.value[idx].amount = Number(val) || 0
+}
+
+function updateEditableDate(idx, val) {
+  if (editableInstallments.value[idx]) editableInstallments.value[idx].due_date = val
+}
+
+
+// Plan efectivo que se usa en template y en el payload
+const installmentPlan = computed(() =>
+  manualMode.value ? editableInstallments.value : autoInstallmentPlan.value
+)
+
+const installmentTotalSum = computed(() =>
+  round2((installmentPlan.value || []).reduce((acc, c) => acc + Number(c.amount || 0), 0))
+)
 
 const installmentPlanValid = computed(() => {
   if (!isInstallmentMode.value || installmentPlan.value.length === 0) return true
   return Math.abs(installmentTotalSum.value - installmentRemainder.value) < 0.01
 })
 
-// Suma total incluyendo adelanto
-const installmentTotalSum = computed(() =>
-  round2((installmentPlan.value || []).reduce((acc, c) => acc + c.amount, 0))
-)
-
-// Número de cuotas calculado automáticamente según duración del curso
-const autoNumCuotas = computed(() => {
-  const sessions        = form.program_sessions        || 18
-  const sessionsPerWeek = form.program_sessions_per_week || 1
-  const isEspecializacion = form.category_alias === 'we_program_type_specialization'
-
-  if (isEspecializacion) {
-    // 1 cuota por cada bloque de 8 sesiones (ej: 24 → 3)
-    return Math.min(Math.max(Math.ceil(sessions / 8), 1), 5)
-  }
-
-  // Lógica actual para cursos
-  const weeks  = sessions / sessionsPerWeek
-  const months = Math.round(weeks / 4)
-  return Math.min(Math.max(months, 1), 5)
+// Watchers
+watch(isInstallmentMode, (val) => {
+  if (!val) { manualMode.value = false; editableInstallments.value = [] }
 })
 
-const installmentPlan = computed(() => {
-  if (!isInstallmentMode.value) return []
-
-  const saldo    = installmentRemainder.value
-  const n        = autoNumCuotas.value
-  const startRaw = form.edition_start_date
-  const sessionsPerWeek = form.program_sessions_per_week || 1
-  const isEspecializacion = form.category_alias === 'we_program_type_specialization'
-
-  if (saldo <= 0 || n < 1) return []
-
-  const cuotaBase = Math.floor(saldo / n)           // entero hacia abajo
-  const remainder = round2(saldo - cuotaBase * n)
-
-  const base = startRaw
-    ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00')
-    : new Date()
-
-  const plan = []
-
-  if (isEspecializacion) {
-    // ── ESPECIALIZACIÓN: biweekly desde el inicio ──
-    // Cuota 1: +6 días si intensivo (≥2/sem), +16 días si semanal
-    // Cuota 2: +16 días desde cuota anterior
-    // Cuota 3+: +30 días desde cuota anterior
-
-    let fechaAnterior = new Date(base)
-
-    for (let i = 0; i < n; i++) {
-      const dueDate = new Date(fechaAnterior)
-
-      if (i === 0) {
-        // Primera cuota: depende de la intensidad
-        dueDate.setDate(dueDate.getDate() + (sessionsPerWeek >= 2 ? 6 : 16))
-      } else if (i === 1) {
-        // Segunda cuota: +16 días desde la anterior
-        dueDate.setDate(dueDate.getDate() + 16)
-      } else {
-        // Resto: +30 días desde la anterior
-        dueDate.setDate(dueDate.getDate() + 30)
-      }
-
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: dueDate.toISOString().slice(0, 10)
-      })
-
-      fechaAnterior = dueDate // ← la próxima parte desde esta fecha
-    }
-
-  } else if (sessionsPerWeek >= 2) {
-    // ── CURSOS INTENSIVOS (lógica actual) ──
-    const fecha1 = new Date(base)
-    fecha1.setDate(fecha1.getDate() + 15)
-
-    for (let i = 0; i < n; i++) {
-      const dueDate = new Date(fecha1)
-      dueDate.setDate(dueDate.getDate() + i * 20)
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: dueDate.toISOString().slice(0, 10)
-      })
-    }
-
-  } else {
-    // ── CURSOS SEMANALES (lógica actual) ──
-    const primerMes = new Date(base)
-    primerMes.setMonth(primerMes.getMonth() + 1)
-    primerMes.setDate(15)
-
-    for (let i = 0; i < n; i++) {
-      let dueDate
-      if (i === 0) {
-        dueDate = new Date(primerMes)
-      } else {
-        dueDate = new Date(primerMes)
-        dueDate.setMonth(dueDate.getMonth() + i)
-        dueDate.setDate(1)
-      }
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: dueDate.toISOString().slice(0, 10)
-      })
-    }
-  }
-
-  return plan
+watch(installmentRemainder, () => {
+  if (manualMode.value) seedEditableInstallments(numCuotasManual.value)
 })
+
+
 function isValidEmail(email) {
   if (!email) return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email).toLowerCase())
@@ -4044,5 +4088,6 @@ function toggleReschedule(contacto) {
   color: var(--slate-300, #cbd5e1);
   cursor: not-allowed;
 }
+.c-green { color: #15803d; }
 </style>
 

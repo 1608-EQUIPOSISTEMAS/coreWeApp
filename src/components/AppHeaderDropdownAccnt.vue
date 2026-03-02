@@ -55,7 +55,7 @@ async function syncCatalog() {
   
   async function syncRprospectosToSheet() {
     try {
-      const response = await integrationService.syncRprospectosToSheet()
+      const response = await integrationService.syncRprospectos()
       
       if (response && response.ok) {
         toast.success(`GOOGLE SHEET PROSPECTOS SINCRONIZADOS`);
