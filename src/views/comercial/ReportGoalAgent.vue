@@ -7,15 +7,27 @@
           <div class="brand-rule"></div>
           <div class="brand-text">
             <span class="brand-eyebrow">
-              {{ isStrictlyComercial ? 'Mi Desempeño · ' + (myData?.asesor || '') : 'Desempeño Comercial · Equipo de Ventas' }}
+              {{ effectivePersonalView
+                ? 'Mi Desempeño · ' + (myData?.asesor || '')
+                : 'Desempeño Comercial · Equipo de Ventas' }}
             </span>
             <h1 class="brand-title">
-              {{ isStrictlyComercial ? 'Mi Tablero de Objetivos' : 'Tablero de Asesor y Objetivos' }}
+              {{ effectivePersonalView ? 'Mi Tablero de Objetivos' : 'Tablero de Asesor y Objetivos' }}
             </h1>
           </div>
         </div>
         <div class="masthead-actions">
-          <button v-if="!isStrictlyComercial" @click="toggleView" class="btn-exec btn-exec-ghost">
+          <!-- Botón "Ver como Asesor" exclusivo para LIDER_COMERCIAL -->
+          <button v-if="isLiderComercial" @click="toggleAdvisorView"
+            class="btn-exec" :class="viewAsAdvisor ? 'btn-exec-advisor-active' : 'btn-exec-ghost'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            {{ viewAsAdvisor ? 'Salir · Vista Asesor' : 'Ver como Asesor' }}
+          </button>
+
+          <button v-if="!effectivePersonalView" @click="toggleView" class="btn-exec btn-exec-ghost">
             <svg v-if="!isDashboard" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><rect x="14" y="14" width="8" height="8"/></svg>
             <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
             {{ isDashboard ? 'Vista Tabular' : 'Vista Gráfica' }}
@@ -29,6 +41,18 @@
 
       <!-- Franja de filtros -->
       <div class="masthead-filters">
+
+        <!-- Selector de asesor a impersonar (solo visible cuando líder activa el modo) -->
+        <transition name="slide-fade">
+          <div v-if="isLiderComercial && viewAsAdvisor" class="filter-group filter-group-advisor-pick">
+            <label class="filter-label" style="color:#fbbf24;">👁 VIENDO COMO</label>
+            <select class="exec-select exec-select-advisor" v-model="selectedViewAdvisorId">
+              <option v-for="adv in tableData" :key="adv.cod" :value="adv.cod">{{ adv.asesor }}</option>
+            </select>
+          </div>
+        </transition>
+
+        <div v-if="isLiderComercial && viewAsAdvisor" class="filter-sep"></div>
 
         <div class="filter-group">
           <label class="filter-label">MODALIDAD</label>
@@ -106,13 +130,26 @@
 
       <div v-if="loading" class="exec-loader">
         <div class="loader-ring"></div>
-        <p class="loader-text">Cargando métricas{{ isStrictlyComercial ? ' de tu período' : ' del equipo' }}…</p>
+        <p class="loader-text">Cargando métricas{{ effectivePersonalView ? ' del asesor' : ' del equipo' }}…</p>
       </div>
 
       <!-- ═══════════════════════════════════════════
-           VISTA PERSONAL (asesor sin rol lider)
+           VISTA PERSONAL (asesor simple ó líder en modo asesor)
       ════════════════════════════════════════════ -->
-      <div v-else-if="isStrictlyComercial" class="view-personal">
+      <div v-else-if="effectivePersonalView" class="view-personal">
+
+        <!-- Banner informativo cuando el líder está en modo impersonación -->
+        <div v-if="isLiderComercial && viewAsAdvisor" class="advisor-impersonation-banner">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span>Estás viendo el tablero de <strong>{{ myData?.asesor || '—' }}</strong> tal como lo ve el asesor. Los datos son de solo lectura.</span>
+          <button class="banner-exit-btn" @click="toggleAdvisorView">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Salir
+          </button>
+        </div>
 
         <!-- Hero Card -->
         <div class="personal-hero" :class="heroStatusClass">
@@ -130,7 +167,7 @@
             </div>
           </div>
 
-<div class="hero-center">
+          <div class="hero-center">
             <div class="hero-gauge">
               <svg class="gauge-svg" viewBox="0 0 120 70">
                 <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10" stroke-linecap="round"/>
@@ -162,7 +199,8 @@
             </div>
           </div>
         </div>
-<div class="action-cards-row" v-if="filters.period!='ALL'">
+
+        <div class="action-cards-row" v-if="filters.period!='ALL'">
           <div class="action-card hot-leads-card actionable-card" @click="drillDown({ type: 'interestPriority', valueName: 'Caliente' })">
             <div class="ac-icon text-danger"><i class="fa-solid fa-fire text-danger"></i></div>
             <div class="ac-info">
@@ -181,6 +219,7 @@
             <div class="ac-value">{{ myData?.follow_up_pending || 0 }}</div>
           </div>
         </div>
+
         <!-- KPI Strip personal -->
         <div class="kpi-strip">
           <div class="kpi-card">
@@ -210,7 +249,7 @@
             <div class="kpi-card-sub">{{ myData?.activos || 0 }} activos · {{ myData?.pct_gestion || 0 }}% gestionados</div>
           </div>
 
-<div class="kpi-card" :class="(myData?.ratio || 0) === 0 ? 'card-ratio-zero' : ''">
+          <div class="kpi-card" :class="(myData?.ratio || 0) === 0 ? 'card-ratio-zero' : ''">
             <div class="kpi-card-header">
               <span class="kpi-card-label" :style="(myData?.ratio || 0) === 0 ? 'color: #dc2626;' : ''">RATIO LEADS→VENTA</span>
               <div class="kpi-indicator" :class="getRatioBgClass(myData?.ratio || 0)"></div>
@@ -311,7 +350,8 @@
             </div>
           </div>
         </div>
-<div class="chart-panel" style="margin-bottom: 18px;">
+
+        <div class="chart-panel" style="margin-bottom: 18px;">
           <div class="chart-panel-header">
             <div>
               <div class="chart-panel-title">Composición de Mis Leads por Estado</div>
@@ -322,6 +362,7 @@
             <Bar :data="myLeadsStackedChartData" :options="stackedBarOptions" />
           </div>
         </div>
+
         <!-- Micro-gestión (sin selector de asesor) -->
         <div class="micro-panel">
           <div class="micro-panel-header">
@@ -403,7 +444,18 @@
                 <td colspan="14" class="empty-row">No hay datos para este período</td>
               </tr>
               <tr v-for="(row, index) in tableData" :key="index" class="tbody-row" :class="{ 'row-alt': index % 2 === 0 }">
-                <td class="td-asesor">{{ row.asesor }}</td>
+                <!-- Nombre del asesor clickeable para entrar en su vista personal -->
+                <td class="td-asesor">
+                  <div class="td-asesor-inner">
+                    <span>{{ row.asesor }}</span>
+                    <button v-if="isLiderComercial" class="btn-view-as" @click.stop="quickViewAsAdvisor(row.cod)" title="Ver tablero de este asesor">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
 
                 <td class="td-a text-center">{{ row.obj }}</td>
                 <td class="td-a text-center fw-600 actionable" @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">{{ row.ven }}</td>
@@ -674,7 +726,8 @@
             </div>
           </div>
         </div>
-<div class="chart-panel" style="margin-top: 16px;">
+
+        <div class="chart-panel" style="margin-top: 16px;">
           <div class="chart-panel-header">
             <div>
               <div class="chart-panel-title">Composición de Leads por Estado</div>
@@ -685,6 +738,7 @@
             <Bar :data="leadsStackedChartData" :options="stackedBarOptions" />
           </div>
         </div>
+
         <!-- Fila 4: Ticket + Volumen -->
         <div class="chart-panel">
           <div class="chart-panel-header">
@@ -706,6 +760,10 @@
       <span>Período: <strong>{{ filters.month }} {{ filters.year }}</strong></span>
       <span class="footer-sep">·</span>
       <span>Modalidad: <strong>{{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : 'Online' }}</strong></span>
+      <span v-if="isLiderComercial && viewAsAdvisor" class="footer-sep">·</span>
+      <span v-if="isLiderComercial && viewAsAdvisor" style="color:#f59e0b;font-weight:600;">
+        👁 Vista de: {{ myData?.asesor || '—' }}
+      </span>
       <span class="footer-spacer"></span>
       <span class="footer-status">
         <span class="status-dot" :class="loading ? 'dot-loading' : 'dot-ok'"></span>
@@ -745,9 +803,12 @@ const filters             = reactive({ year: 2026, month: 'ENE', period: 'ALL', 
 const usersMap            = ref([])
 
 // ── RESTRICCIÓN DE ROL ──
-const isStrictlyComercial = ref(false)
-const loggedAdvisorId     = ref(null)
-const loggedAdvisorName   = ref('')
+const isStrictlyComercial   = ref(false)
+const isLiderComercial      = ref(false)   // ← NUEVO: líder que puede ver como asesor
+const viewAsAdvisor         = ref(false)   // ← NUEVO: toggle modo impersonación
+const selectedViewAdvisorId = ref(null)    // ← NUEVO: id del asesor que el líder está "siendo"
+const loggedAdvisorId       = ref(null)
+const loggedAdvisorName     = ref('')
 
 function applyRoleRestrictions() {
   try {
@@ -761,21 +822,55 @@ function applyRoleRestrictions() {
     if (isComercial && !isLider) {
       isStrictlyComercial.value = true
       loggedAdvisorId.value     = userData.user_id
-      console.log("datos:")
-      console.log(tableData)
       loggedAdvisorName.value   = userData.full_name || `Usuario ${userData.user_id}`
-      // Pre-seleccionamos el asesor en el micro-gestión (aunque no se muestra el selector)
       selectedAdvisorCode.value = userData.user_id
+    }
+
+    // ← NUEVO: Detectar LIDER_COMERCIAL
+    if (isLider) {
+      isLiderComercial.value = true
     }
   } catch (e) {
     console.error('Error procesando el usuario desde localStorage:', e)
   }
 }
 
-// ── COMPUTED PERSONALES (solo cuando isStrictlyComercial) ──
+// ── NUEVO: computed unificados para vista personal ──
+// effectivePersonalView = true cuando es asesor simple O cuando el líder activó modo vista-asesor
+const effectivePersonalView = computed(() =>
+  isStrictlyComercial.value || (isLiderComercial.value && viewAsAdvisor.value)
+)
+
+// effectiveAdvisorId: el id del "asesor que se está viendo"
+const effectiveAdvisorId = computed(() => {
+  if (isStrictlyComercial.value) return loggedAdvisorId.value
+  if (isLiderComercial.value && viewAsAdvisor.value) return selectedViewAdvisorId.value
+  return null
+})
+
+// ── NUEVO: activar/desactivar modo vista-asesor (líder) ──
+function toggleAdvisorView() {
+  viewAsAdvisor.value = !viewAsAdvisor.value
+  if (viewAsAdvisor.value) {
+    // Al activar, pre-seleccionamos el primer asesor disponible
+    if (tableData.value.length > 0) {
+      selectedViewAdvisorId.value = tableData.value[0].cod
+    }
+  } else {
+    selectedViewAdvisorId.value = null
+  }
+}
+
+// ── NUEVO: acceso rápido desde la fila de la tabla ──
+function quickViewAsAdvisor(cod) {
+  selectedViewAdvisorId.value = cod
+  viewAsAdvisor.value = true
+}
+
+// ── COMPUTED PERSONALES ──
 const myData = computed(() => {
-  if (!isStrictlyComercial.value) return null
-  return tableData.value.find(e=>e.cod== loggedAdvisorId.value) || null
+  if (!effectivePersonalView.value) return null
+  return tableData.value.find(e => e.cod == effectiveAdvisorId.value) || null
 })
 
 const pctMetaUnidades = computed(() => {
@@ -784,7 +879,6 @@ const pctMetaUnidades = computed(() => {
   return Math.min(100, Math.round((d.ven / d.obj) * 100))
 })
 
-// El gauge SVG usa un arco de 0..100 → mapeamos a 0..100 para el dasharray (max 157 = π*50)
 const gaugeProgress = computed(() => pctMetaUnidades.value)
 
 const heroStatusClass = computed(() => {
@@ -828,7 +922,7 @@ async function fetchData() {
       month:    filters.month,
       period:   filters.period === 'ALL' ? null : filters.period,
       modality: filters.modality,
-      // Si es asesor simple, filtramos por su ID para que el backend retorne solo su registro
+      // Solo filtramos por ID si es asesor simple; los líderes siempre traen todo el equipo
       ...(isStrictlyComercial.value && loggedAdvisorId.value
         ? { advisor_user_id: loggedAdvisorId.value }
         : {})
@@ -846,7 +940,7 @@ async function fetchData() {
     items.forEach(item => {
       if (!grouped[item.cod_asesor]) {
         grouped[item.cod_asesor] = {
-          asesor: item.asesor, cod: item.cod_asesor,high_interest_count: 0, follow_up_pending: 0,
+          asesor: item.asesor, cod: item.cod_asesor, high_interest_count: 0, follow_up_pending: 0,
           obj: 0, ven: 0, falta: 0, obj_monto: 0, ven_monto: 0, contactos: 0,
           activos: 0, acum_ventas_cohorte: 0, daily: []
         }
@@ -861,20 +955,19 @@ async function fetchData() {
       g.contactos += Number(item.consultas)
       g.activos   += Number(item.leads_activos || 0)
       g.acum_ventas_cohorte += Number(item.venta_cohorte || 0)
-if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desglose_diario)) {
+
+      if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desglose_diario)) {
         item.desglose_diario.forEach(dia => {
           g.daily.push({
             name: `${dia.dia_nombre} ${dia.dia_num}`, date: dia.fecha,
             con: Number(dia.leads), ven: Number(dia.ventas_op), ven_coh: Number(dia.ventas_coh),
             ratio_dia: dia.leads > 0 ? Math.round((dia.ventas_op / dia.leads) * 100) : 0,
             conv_dia:  dia.leads > 0 ? Math.round((dia.ventas_coh / dia.leads) * 100) : 0,
-            leads_by_status: dia.leads_by_status || {} // <-- AÑADIDO
+            leads_by_status: dia.leads_by_status || {}
           })
         })
-      }  else {
+      } else {
         const ventasCohorte = Math.round((Number(item.consultas) * Number(item.conversion)) / 100)
-        
-        // SUMAMOS LOS ESTADOS INCLUSO EN LA VISTA ACUMULADA (ALL)
         const consolidatedStatuses = {}
         if (item.desglose_diario && Array.isArray(item.desglose_diario)) {
           item.desglose_diario.forEach(dia => {
@@ -885,13 +978,12 @@ if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desgl
             }
           })
         }
-
         g.daily.push({
           name: item.week || 'Mes Completo', date: '', con: Number(item.consultas), ven: Number(item.logrado),
           ven_coh: ventasCohorte,
           ratio_dia: Number(item.consultas) > 0 ? Math.round((Number(item.logrado) / Number(item.consultas)) * 100) : 0,
           conv_dia:  item.conversion,
-          leads_by_status: consolidatedStatuses // <-- AHORA SÍ PASA LA DATA
+          leads_by_status: consolidatedStatuses
         })
       }
     })
@@ -907,6 +999,11 @@ if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desgl
       })
       return adv
     })
+
+    // Si el líder activó modo asesor pero no hay asesor seleccionado aún, auto-seleccionar el primero
+    if (isLiderComercial.value && viewAsAdvisor.value && !selectedViewAdvisorId.value && tableData.value.length > 0) {
+      selectedViewAdvisorId.value = tableData.value[0].cod
+    }
   } catch (error) {
     console.error('Error:', error); tableData.value = []
   } finally { loading.value = false }
@@ -916,20 +1013,21 @@ const DEAD_STATUS_ALIASES = [
   'we_lead_status_desestimado', 'we_lead_status_indiferente',
   'we_lead_status_closed', 'we_lead_status_anullment',
 ]
-// ── ESCALA DE COLORES PARA RATIOS ──
+
 const getRatioColorClass = (ratio) => {
-  if (ratio === 0) return 'text-ratio-zero'; // Rojo rojazo
-  if (ratio <= 14) return 'text-ratio-low';  // Naranja
-  if (ratio >= 40) return 'text-ratio-super';// Verde fuertísimo (Superó expectativas por mucho)
-  return 'text-ratio-good';                  // Verde lindo (15%+)
-};
+  if (ratio === 0) return 'text-ratio-zero'
+  if (ratio <= 14) return 'text-ratio-low'
+  if (ratio >= 40) return 'text-ratio-super'
+  return 'text-ratio-good'
+}
 
 const getRatioBgClass = (ratio) => {
-  if (ratio === 0) return 'bg-ratio-zero';
-  if (ratio <= 14) return 'bg-ratio-low';
-  if (ratio >= 40) return 'bg-ratio-super';
-  return 'bg-ratio-good';
-};
+  if (ratio === 0) return 'bg-ratio-zero'
+  if (ratio <= 14) return 'bg-ratio-low'
+  if (ratio >= 40) return 'bg-ratio-super'
+  return 'bg-ratio-good'
+}
+
 function drillDown(params = {}) {
   const { date, type, advisor } = params
   const query = {}
@@ -968,9 +1066,12 @@ function drillDown(params = {}) {
   if (type === 'sales') { query.pay_date_from = dStart; query.pay_date_to = dEnd }
   else if (['leads', 'active_leads', 'cohort_sales'].includes(type)) { query.from_date = dStart; query.to_date = dEnd }
 
-  // Para asesor simple: siempre inyectamos su propio ID en el drilldown
-  if (isStrictlyComercial.value) {
-    query.owner_user_ids = encodeFilter([{ value: loggedAdvisorId.value, label: loggedAdvisorName.value }])
+  // ← ACTUALIZADO: aplica el filtro de asesor tanto para asesor simple como para líder en modo impersonación
+  if (effectivePersonalView.value) {
+    const advRow = myData.value
+    if (advRow) {
+      query.owner_user_ids = encodeFilter([{ value: advRow.cod, label: advRow.asesor }])
+    }
   } else {
     const targetAdvisor = (advisor && advisor !== 'ALL') ? advisor : (selectedAdvisorCode.value !== 'ALL' ? selectedAdvisorCode.value : null)
     if (targetAdvisor) {
@@ -1007,43 +1108,29 @@ function drillDown(params = {}) {
   }
 
   if (type === 'interestPriority') {
-      const opts = catalog.options('we_lead_interest')
-      // Soporta "low" y "medium" basado en tu query de base de datos
-      const foundLow = opts.find(x => x.alias === 'we_lead_interest_low')
-      const foundMed = opts.find(x => x.alias === 'we_lead_interest_medium')
-      
-      const today = new Date()
-      const twoWeeksLater = new Date()
-      twoWeeksLater.setDate(today.getDate() + 14)
-      
-      const formatDate = d => d.toISOString().split('T')[0]
-      query.edition_start_from = formatDate(today)
-      query.edition_start_to   = formatDate(twoWeeksLater)
-      
-      const interestFilters = []
-      if (foundLow) interestFilters.push({ value: foundLow.id, label: foundLow.description })
-      if (foundMed) interestFilters.push({ value: foundMed.id, label: foundMed.description })
-      
-      if (interestFilters.length > 0) {
-         query.interest_level_ids = encodeFilter(interestFilters)
-      }
-
-      const optsx = catalog.options('we_lead_status')
-      const salesItems = optsx
-        .filter(x => ['we_lead_status_atendido', 'we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
-        .map(x => ({ value: x.id, label: x.description }))
-      
-      if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
-      
+    const opts = catalog.options('we_lead_interest')
+    const foundLow = opts.find(x => x.alias === 'we_lead_interest_low')
+    const foundMed = opts.find(x => x.alias === 'we_lead_interest_medium')
+    const today = new Date()
+    const twoWeeksLater = new Date()
+    twoWeeksLater.setDate(today.getDate() + 14)
+    const formatDate = d => d.toISOString().split('T')[0]
+    query.edition_start_from = formatDate(today)
+    query.edition_start_to   = formatDate(twoWeeksLater)
+    const interestFilters = []
+    if (foundLow) interestFilters.push({ value: foundLow.id, label: foundLow.description })
+    if (foundMed) interestFilters.push({ value: foundMed.id, label: foundMed.description })
+    if (interestFilters.length > 0) query.interest_level_ids = encodeFilter(interestFilters)
+    const optsx = catalog.options('we_lead_status')
+    const salesItems = optsx
+      .filter(x => ['we_lead_status_atendido', 'we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
+      .map(x => ({ value: x.id, label: x.description }))
+    if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
   } else if (type === 'follow') {
-      const opts  = catalog.options('we_calling') // <-- Ojo, asegúrate que este sea el catálogo de tu BD
-      const valueName = params.valueName
-      const found = opts.find(x => x.description === valueName)
-        ?? opts.find(x => x.alias === valueName)
-        
-      if (found) {
-        query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
-      }
+    const opts = catalog.options('we_calling')
+    const valueName = params.valueName
+    const found = opts.find(x => x.description === valueName) ?? opts.find(x => x.alias === valueName)
+    if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
   }
 
   const routeData = router.resolve({ path: '/comercial/leads', query })
@@ -1054,12 +1141,18 @@ const convClass = (val) =>
   val > 20 ? 'c-green fw-700' : val >= 10 ? 'accent-text fw-700' : 'text-muted'
 
 const totals = computed(() => {
-  const t = tableData.value.reduce((acc, row) => {
+  // En modo vista-asesor del líder, los totales deben reflejar SOLO el asesor seleccionado
+  const source = effectivePersonalView.value && myData.value
+    ? [myData.value]
+    : tableData.value
+
+  const t = source.reduce((acc, row) => {
     acc.obj += row.obj; acc.ven += row.ven; acc.contactos += row.contactos
     acc.obj_monto += row.obj_monto; acc.ven_monto += row.ven_monto
     acc.activos += row.activos; acc.acum_ventas_cohorte_total += row.acum_ventas_cohorte
     return acc
   }, { obj: 0, ven: 0, contactos: 0, obj_monto: 0, ven_monto: 0, activos: 0, acum_ventas_cohorte_total: 0 })
+
   t.falta         = Math.max(0, t.obj - t.ven)
   t.ticketProm    = t.ven > 0 ? t.ven_monto / t.ven : 0
   t.pctMetaMonto  = t.obj_monto > 0 ? Math.round((t.ven_monto / t.obj_monto) * 100) : 0
@@ -1068,9 +1161,12 @@ const totals = computed(() => {
   t.avgGestion    = t.contactos > 0 ? Math.round((t.activos / t.contactos) * 100) : 0
   return t
 })
+
 const currentDailyStats = computed(() => {
   if (tableData.value.length === 0) return []
-  if (isStrictlyComercial.value) {
+
+  // ← ACTUALIZADO: usa effectivePersonalView en lugar de isStrictlyComercial
+  if (effectivePersonalView.value) {
     const d = myData.value
     return d?.daily?.map(day => ({ ...day, ratio: day.ratio_dia || 0, conv: day.conv_dia || 0 })) || []
   }
@@ -1085,11 +1181,9 @@ const currentDailyStats = computed(() => {
       const key = d.date || d.name
       if (!periodsMap[key]) periodsMap[key] = { name: d.name, date: d.date, con: 0, ven: 0, ven_coh: 0, leads_by_status: {} }
       periodsMap[key].con += d.con; periodsMap[key].ven += d.ven; periodsMap[key].ven_coh += (d.ven_coh || 0)
-      
-      // NUEVO: Sumar los estados agrupados del equipo
       if (d.leads_by_status) {
         for (const [st, count] of Object.entries(d.leads_by_status)) {
-            periodsMap[key].leads_by_status[st] = (periodsMap[key].leads_by_status[st] || 0) + Number(count)
+          periodsMap[key].leads_by_status[st] = (periodsMap[key].leads_by_status[st] || 0) + Number(count)
         }
       }
     })
@@ -1108,7 +1202,7 @@ const currentDailyStats = computed(() => {
 const toggleView = () => isDashboard.value = !isDashboard.value
 const formatCurrency = (val) => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(val)
 
-// ════════ CHART DATA (sin cambios vs original) ════════
+// ════════ CHART DATA ════════
 
 const trendChartData = computed(() => {
   if (!currentDailyStats.value || currentDailyStats.value.length === 0) return { labels: [], datasets: [] }
@@ -1163,11 +1257,9 @@ const revenueChartData = computed(() => {
   const active = tableData.value.filter(d => selectedAdvisorCode.value !== 'ALL' ? d.cod === selectedAdvisorCode.value : (d.obj_monto > 0 || d.ven_monto > 0 || d.obj > 0))
   return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => Number(d.obj_monto) || 0), backgroundColor: '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => Number(d.ven_monto) || 0), backgroundColor: '#10b981', borderRadius: 4 }] }
 })
-// ════════ LÓGICA DEL NUEVO GRÁFICO APILADO ════════
+
 const leadsStackedChartData = computed(() => {
   if (tableData.value.length === 0) return { labels: [], datasets: [] }
-
-  // 1. Recolectar todos los estados únicos y sumar por asesor
   const allStatuses = new Set()
   const advisorData = tableData.value.map(adv => {
     const statusCounts = {}
@@ -1181,45 +1273,30 @@ const leadsStackedChartData = computed(() => {
     })
     return { asesor: adv.asesor, statusCounts }
   })
-
   const statusArray = Array.from(allStatuses)
-
-  // 2. Colores para los estados (puedes ajustarlos a tu branding)
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', '#0f172a']
-
-  // 3. Crear los datasets apilados
-  const datasets = statusArray.map((statusAlias, index) => {
-    // Si ya tienes acceso a tu catálogo aquí, podrías cruzar el alias por la descripción legible:
-    // const catItem = catalog.options('we_lead_status').find(s => s.alias === statusAlias)
-    // const labelName = catItem ? catItem.description : statusAlias
-
-    return {
-      label: statusAlias, // Cambia 'statusAlias' por 'labelName' si haces el cruce arriba
-      data: advisorData.map(adv => adv.statusCounts[statusAlias] || 0),
-      backgroundColor: colors[index % colors.length],
-      stack: 'StackLeads' // <-- Esto es lo que APILA las barras
-    }
-  })
-
-  return {
-    labels: advisorData.map(adv => adv.asesor),
-    datasets
-  }
+  const datasets = statusArray.map((statusAlias, index) => ({
+    label: statusAlias,
+    data: advisorData.map(adv => adv.statusCounts[statusAlias] || 0),
+    backgroundColor: colors[index % colors.length],
+    stack: 'StackLeads'
+  }))
+  return { labels: advisorData.map(adv => adv.asesor), datasets }
 })
 
-// Opciones de Chart.js para que sea apilado
 const stackedBarOptions = {
-  responsive: true, 
+  responsive: true,
   maintainAspectRatio: false,
-  plugins: { 
-    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 10 } } }, 
-    tooltip: { mode: 'index', intersect: false } 
+  plugins: {
+    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 10 } } },
+    tooltip: { mode: 'index', intersect: false }
   },
-  scales: { 
-    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }, 
-    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } } 
+  scales: {
+    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } }
   }
 }
+
 const shareChartData = computed(() => {
   if (tableData.value.length === 0) return { labels: [], datasets: [] }
   const top = tableData.value.filter(d => Number(d.ven) > 0)
@@ -1227,7 +1304,6 @@ const shareChartData = computed(() => {
   return { labels: filteredTop.map(d => d.asesor), datasets: [{ data: filteredTop.map(d => Number(d.ven)), backgroundColor: ['#0f172a','#334155','#64748b','#94a3b8','#cbd5e1','#e2e8f0','#f1f5f9','#2563eb','#3b82f6','#60a5fa'], borderWidth: 1, borderColor: '#ffffff' }] }
 })
 
-// ════════ CHART OPTIONS (sin cambios vs original) ════════
 const lineOptions = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top', labels: { boxWidth: 14, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => { if (ctx.dataset.label === 'Meta Proyectada' || ctx.dataset.label === 'Ventas Acumuladas') return ` ${ctx.dataset.label}: ${ctx.raw} ventas`; return ` ${ctx.dataset.label}: ${ctx.raw}` } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 } } } } }
 const rankingBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label === '% Cumplimiento Meta (#)' ? ` ${ctx.raw}% de la meta` : ` Referencia: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, max: Math.max(120, ...(rankingChartData.value?.datasets?.[0]?.data || [120])), ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } } }
 const convBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } } }
@@ -1236,27 +1312,15 @@ const ticketBarOptions = { responsive: true, maintainAspectRatio: false, interac
 const groupedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'bottom' } } }
 const doughnutOptions   = { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'right', labels: { boxWidth: 9, font: { size: 9 } } } } }
 
-// ════════ GRÁFICO APILADO (VISTA PERSONAL) ════════
 const myLeadsStackedChartData = computed(() => {
   if (!currentDailyStats.value || currentDailyStats.value.length === 0) return { labels: [], datasets: [] }
-
-  // 1. Recolectar todos los estados únicos en los días de este asesor
   const allStatuses = new Set()
   currentDailyStats.value.forEach(day => {
-    if (day.leads_by_status) {
-      Object.keys(day.leads_by_status).forEach(st => allStatuses.add(st))
-    }
+    if (day.leads_by_status) Object.keys(day.leads_by_status).forEach(st => allStatuses.add(st))
   })
-
   const statusArray = Array.from(allStatuses)
-  
-  // Paleta de colores atractiva
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', '#0f172a']
-
-  // 2. Crear los datasets apilados a lo largo del tiempo
   const datasets = statusArray.map((statusAlias, index) => {
-    
-    // Tratamos de buscar el nombre amigable en el catálogo, sino limpiamos el alias
     let labelName = statusAlias
     try {
       if (catalog && catalog.options) {
@@ -1264,31 +1328,19 @@ const myLeadsStackedChartData = computed(() => {
         if (catItem) labelName = catItem.description
       }
     } catch(e) {}
-    
-    // Fallback si no hay catálogo: quita "we_lead_status_" para que se lea mejor
-    if (labelName === statusAlias) {
-       labelName = statusAlias.replace('we_lead_status_', '').toUpperCase()
-    }
-
+    if (labelName === statusAlias) labelName = statusAlias.replace('we_lead_status_', '').toUpperCase()
     return {
       label: labelName,
-      // Mapeamos cuántos leads hubo en ese estado por cada día/semana
       data: currentDailyStats.value.map(day => day.leads_by_status?.[statusAlias] || 0),
       backgroundColor: colors[index % colors.length],
-      stack: 'StackMisLeads' // Esto apila las barras
+      stack: 'StackMisLeads'
     }
   })
-
-  return {
-    // El eje X serán los días o semanas (Ej: LUN 14, MAR 15...)
-    labels: currentDailyStats.value.map(day => day.name),
-    datasets
-  }
+  return { labels: currentDailyStats.value.map(day => day.name), datasets }
 })
 </script>
 
 <style scoped>
-/* ════════════════ (todos los estilos del original se mantienen igual) ════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 .exec-shell { font-family: 'IBM Plex Sans', system-ui, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; color: #0f172a; font-size: 13px; line-height: 1.4; }
@@ -1305,8 +1357,35 @@ const myLeadsStackedChartData = computed(() => {
 .btn-exec-primary { background: #0d9488; color: #fff; }
 .btn-exec-primary:hover:not(:disabled) { background: #14b8a6; }
 .btn-exec-primary:disabled { opacity: 0.5; cursor: default; }
-.masthead-filters { display: flex; align-items: center; padding: 0 28px; min-height: 52px; }
+
+/* ── NUEVO: botón "Ver como Asesor" para líder ── */
+.btn-exec-advisor-active {
+  background: rgba(251,191,36,0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.4);
+}
+.btn-exec-advisor-active:hover { background: rgba(251,191,36,0.28); }
+
+.masthead-filters { display: flex; align-items: center; padding: 0 28px; min-height: 52px; flex-wrap: wrap; gap: 2px; }
 .filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
+
+/* ── NUEVO: grupo resaltado para el selector de asesor impersonado ── */
+.filter-group-advisor-pick {
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.25);
+  border-radius: 4px;
+  padding: 6px 14px;
+  margin-right: 6px;
+}
+
+.exec-select-advisor {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(251,191,36,0.5);
+  color: #fbbf24 !important;
+  font-weight: 700;
+}
+
 .filter-label { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #64748b; font-weight: 700; cursor: default; }
 .exec-select { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.16); color: #fff; font-family: 'IBM Plex Sans', inherit; font-size: 12.5px; font-weight: 500; padding: 3px 0; outline: none; cursor: pointer; min-width: 100px; appearance: auto; }
 .exec-select option { color: #0f172a; background: #fff; }
@@ -1327,12 +1406,63 @@ const myLeadsStackedChartData = computed(() => {
 .loader-ring { width: 38px; height: 38px; border: 3px solid #e2e8f0; border-top-color: #0d9488; border-radius: 50%; animation: spin 0.8s linear infinite; }
 .loader-text { font-size: 13px; color: #64748b; font-weight: 500; letter-spacing: 0.02em; }
 
+/* ── NUEVO: Banner de impersonación ── */
+.advisor-impersonation-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.35);
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.advisor-impersonation-banner strong { color: #78350f; }
+.banner-exit-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  background: rgba(251,191,36,0.2);
+  border: 1px solid rgba(251,191,36,0.4);
+  border-radius: 4px;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.banner-exit-btn:hover { background: rgba(251,191,36,0.35); }
+
+/* ── NUEVO: botón ojo en celda de asesor ── */
+.td-asesor-inner { display: flex; align-items: center; gap: 8px; }
+.btn-view-as {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.tbody-row:hover .btn-view-as { opacity: 1; }
+.btn-view-as:hover { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+
 /* ═══════════════════════════════════════════════
    VISTA PERSONAL (asesor simple)
 ═══════════════════════════════════════════════ */
 .view-personal { display: flex; flex-direction: column; gap: 18px; }
 
-/* Hero Card */
 .personal-hero {
   border-radius: 8px; padding: 24px 28px;
   display: grid; grid-template-columns: 1fr auto 1fr;
@@ -1346,21 +1476,13 @@ const myLeadsStackedChartData = computed(() => {
 .hero-danger    { background: linear-gradient(135deg, #0f172a 0%, #3b0a0a 50%, #7f1d1d 100%); border-color: #ef4444; }
 
 .hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-avatar {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
-  letter-spacing: -0.02em;
-}
+.hero-avatar { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; letter-spacing: -0.02em; }
 .hero-info { display: flex; flex-direction: column; gap: 4px; }
 .hero-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
 .hero-period { font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 500; }
-
 .hero-center { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .gauge-svg { width: 130px; height: 78px; }
-.gauge-label { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); text-align: center; margin-top: -4px; }
-
+.gauge-label { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); text-align: center; margin-top: -4px; width: 100%; display: flex; justify-content: center; }
 .hero-right { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 .hero-stat-row { display: flex; align-items: baseline; gap: 10px; }
 .hero-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 500; }
@@ -1370,22 +1492,16 @@ const myLeadsStackedChartData = computed(() => {
 .hero-stat-ok  { color: #6ee7b7 !important; }
 .hero-divider  { width: 100%; height: 1px; background: rgba(255,255,255,0.1); }
 
-/* Personal chart row */
 .personal-chart-row { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
 .chart-panel-grow { flex: 1; }
 .personal-funnel-panel { display: flex; flex-direction: column; }
-
-/* Finance summary inside funnel panel */
-.personal-finance-summary {
-  border-top: 1px solid #f1f5f9; padding: 14px 18px;
-  display: flex; flex-direction: column; gap: 6px;
-}
+.personal-finance-summary { border-top: 1px solid #f1f5f9; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
 .pfs-row { display: flex; justify-content: space-between; align-items: center; }
 .pfs-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
 .pfs-val { font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* ═══════════════════════════════════════════════
-   VISTA TABLA EQUIPO (sin cambios)
+   VISTA TABLA EQUIPO
 ═══════════════════════════════════════════════ */
 .view-table { display: flex; flex-direction: column; gap: 18px; }
 .table-shell { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -1422,7 +1538,7 @@ const myLeadsStackedChartData = computed(() => {
 .status-low { background: #fee2e2; color: #b91c1c; }
 
 /* ═══════════════════════════════════════════════
-   MICRO-GESTIÓN (compartido)
+   MICRO-GESTIÓN
 ═══════════════════════════════════════════════ */
 .micro-panel { background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #0f172a; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .micro-panel-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
@@ -1451,7 +1567,7 @@ const myLeadsStackedChartData = computed(() => {
 .day-metric-sub   { font-size: 9.5px; color: #94a3b8; font-variant-numeric: tabular-nums; }
 
 /* ═══════════════════════════════════════════════
-   DASHBOARD (equipo)
+   DASHBOARD
 ═══════════════════════════════════════════════ */
 .view-dashboard { display: flex; flex-direction: column; gap: 18px; }
 .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -1533,6 +1649,37 @@ const myLeadsStackedChartData = computed(() => {
 .slide-fade-enter-from   { opacity: 0; transform: translateX(12px); }
 .slide-fade-leave-to     { opacity: 0; transform: translateX(-8px); }
 
+/* ── COLORES EXTREMOS PARA RATIO ── */
+.text-ratio-zero { color: #dc2626 !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(220, 38, 38, 0.2); }
+.bg-ratio-zero { background-color: #dc2626 !important; }
+.card-ratio-zero { border: 2px solid #ef4444 !important; background: linear-gradient(135deg, #fff 0%, #fef2f2 100%) !important; animation: pulse-danger 2s infinite ease-in-out; }
+@keyframes pulse-danger { 0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); } 50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); transform: scale(1.01); } 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); } }
+.text-ratio-low { color: #ea580c !important; font-weight: 700 !important; }
+.bg-ratio-low { background-color: #ea580c !important; }
+.text-ratio-good { color: #16a34a !important; font-weight: 700 !important; }
+.bg-ratio-good { background-color: #16a34a !important; }
+.text-ratio-super { color: #15803d !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(21, 128, 61, 0.3); }
+.bg-ratio-super { background-color: #15803d !important; }
+
+/* ── RESALTE DE META SEMANAL ── */
+.gauge-label { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); text-align: center; margin-top: -4px; width: 100%; display: flex; justify-content: center; }
+.label-semanal-destacada { color: #fbbf24 !important; font-size: 10px !important; letter-spacing: 0.05em !important; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); white-space: nowrap; }
+
+/* ── TARJETAS DE OPORTUNIDADES ── */
+.action-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 4px; }
+.action-card { display: flex; align-items: center; padding: 18px 22px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.03); gap: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+.actionable-card { cursor: pointer; }
+.actionable-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.hot-leads-card { border-left: 4px solid #ef4444; }
+.hot-leads-card:hover { border-color: #dc2626; background: #fef2f2; }
+.follow-up-card { border-left: 4px solid #3b82f6; }
+.follow-up-card:hover { border-color: #2563eb; background: #eff6ff; }
+.ac-icon { font-size: 28px; line-height: 1; }
+.ac-info { display: flex; flex-direction: column; flex: 1; gap: 3px; }
+.ac-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+.ac-desc { font-size: 11px; color: #64748b; }
+.ac-value { font-size: 26px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
+
 @media (max-width: 1280px) {
   .chart-grid-pipeline { grid-template-columns: 1fr 1fr; }
   .chart-col-right { flex-direction: row; min-width: unset; grid-column: 1 / -1; }
@@ -1551,120 +1698,6 @@ const myLeadsStackedChartData = computed(() => {
   .exec-body { padding: 14px; }
   .masthead-inner { padding: 14px; flex-direction: column; gap: 12px; align-items: flex-start; }
   .masthead-filters { flex-wrap: wrap; gap: 4px; }
-}
-/* ── COLORES EXTREMOS PARA RATIO ── */
-/* ── COLORES EXTREMOS PARA RATIO ── */
-.text-ratio-zero { color: #dc2626 !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(220, 38, 38, 0.2); }
-.bg-ratio-zero { background-color: #dc2626 !important; }
-
-/* NUEVO: Contenedor súper alarmante para 0% */
-.card-ratio-zero {
-  border: 2px solid #ef4444 !important; /* Borde rojo fuerte */
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important; /* Resplandor rojo */
-  background: linear-gradient(135deg, #fff 0%, #fef2f2 100%) !important; /* Fondo ligeramente rojizo */
-  animation: pulse-danger 2s infinite ease-in-out; /* Animación de latido sutil */
-}
-
-/* Animación para el 0% */
-@keyframes pulse-danger {
-  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); transform: scale(1.01); }
-  100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-}
-
-/* (Mantén el resto de tus clases de colores: text-ratio-low, text-ratio-good, etc.) */
-
-
-.text-ratio-low { color: #ea580c !important; font-weight: 700 !important; }
-.bg-ratio-low { background-color: #ea580c !important; }
-
-.text-ratio-good { color: #16a34a !important; font-weight: 700 !important; }
-.bg-ratio-good { background-color: #16a34a !important; }
-
-.text-ratio-super { color: #15803d !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(21, 128, 61, 0.3); }
-.bg-ratio-super { background-color: #15803d !important; }
-
-/* ── RESALTE DE META SEMANAL ── */
-.label-semanal-destacada {
-  color: #fbbf24 !important; 
-  font-size: 10px !important; 
-  letter-spacing: 0.18em !important;
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
-}
-
-/* ── NUEVAS TARJETAS DE OPORTUNIDADES ── */
-.action-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 4px; }
-.action-card { display: flex; align-items: center; padding: 18px 22px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.03); gap: 16px; transition: transform 0.2s, box-shadow 0.2s; }
-.actionable-card { cursor: pointer; }
-.actionable-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-
-.hot-leads-card { border-left: 4px solid #ef4444; }
-.hot-leads-card:hover { border-color: #dc2626; background: #fef2f2; }
-
-.follow-up-card { border-left: 4px solid #3b82f6; }
-.follow-up-card:hover { border-color: #2563eb; background: #eff6ff; }
-
-.ac-icon { font-size: 28px; line-height: 1; }
-.ac-info { display: flex; flex-direction: column; flex: 1; gap: 3px; }
-.ac-title { font-size: 13px; font-weight: 700; color: #0f172a; }
-.ac-desc { font-size: 11px; color: #64748b; }
-.ac-value { font-size: 26px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
-/* ── RESALTE DE META SEMANAL ── */
-.label-semanal-destacada {
-  color: #fbbf24 !important; 
-  font-size: 10px !important; 
-  letter-spacing: 0.05em !important; /* Reducimos esto para que no desborde hacia la derecha */
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
-  text-align: center;
-  width: 100%;
-  display: block;
-  white-space: nowrap; /* Evita que el texto salte a otra línea y se descuadre */
-}
-
-/* Modificamos el contenedor padre del texto para forzar el centrado */
-.gauge-label { 
-  font-size: 9px; 
-  font-weight: 700; 
-  letter-spacing: 0.14em; 
-  text-transform: uppercase; 
-  color: rgba(255,255,255,0.5); 
-  text-align: center; 
-  margin-top: -4px; 
-  width: 100%; /* Asegura que tome todo el ancho del gauge para centrar bien */
-  display: flex;
-  justify-content: center;
-}
-/* ── ARREGLO DE ALINEACIÓN DEL TEXTO DEL GAUGE ── */
-.gauge-label { 
-  font-size: 9px; 
-  font-weight: 700; 
-  letter-spacing: 0.14em; 
-  text-transform: uppercase; 
-  color: rgba(255,255,255,0.5); 
-  text-align: center; 
-  margin-top: -4px; 
-  width: 100%; 
-  display: flex;
-  justify-content: center;
-}
-.label-semanal-destacada {
-  color: #fbbf24 !important; 
-  font-size: 10px !important; 
-  letter-spacing: 0.05em !important; /* Disminuido para que no descuadre */
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
-  white-space: nowrap; /* Fuerza a que esté en una sola línea */
-}
-
-/* ── ANIMACIÓN ALERTA ROJA (0%) ── */
-.card-ratio-zero {
-  border: 2px solid #ef4444 !important; 
-  background: linear-gradient(135deg, #fff 0%, #fef2f2 100%) !important; 
-  animation: pulse-danger 2s infinite ease-in-out; 
-}
-
-@keyframes pulse-danger {
-  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); transform: scale(1.01); }
-  100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+  .action-cards-row { grid-template-columns: 1fr; }
 }
 </style>
