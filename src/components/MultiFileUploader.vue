@@ -3,8 +3,16 @@
 
     <div
       class="upload-trigger d-flex align-items-center justify-content-center"
-      :class="{ 'is-loading': loading, 'is-required-empty': showRequiredError }"
+      :class="{
+        'is-loading': loading,
+        'is-required-empty': showRequiredError,
+        'is-dragging': isDragging
+      }"
       @click="triggerInput"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent="onDragOver"
+      @dragleave.prevent="onDragLeave"
+      @drop.prevent="onDrop"
     >
       <input
         type="file"
@@ -16,6 +24,10 @@
 
       <div v-if="loading" class="text-teal-600 small fw-bold">
         <i class="fas fa-spinner fa-spin me-1"></i> Subiendo...
+      </div>
+
+      <div v-else-if="isDragging" class="drag-hint small fw-600">
+        <i class="fas fa-cloud-upload-alt me-1"></i> Suelta el archivo aquí
       </div>
 
       <div v-else class="text-muted small user-select-none fw-600">
@@ -31,6 +43,11 @@
               class="req-badge ms-1"
               :class="{ 'is-success': isMaxMet, 'is-error': !isMaxMet }">
           máx. {{ maxFiles }}
+        </span>
+
+        <span class="drag-hint-label ms-2">
+          <i class="fas fa-arrow-down me-1" style="font-size:9px;opacity:0.5;"></i>
+          o arrastra aquí
         </span>
       </div>
     </div>
@@ -83,6 +100,19 @@
   border-color: var(--teal-500, #12274e);
   cursor: wait;
 }
+
+/* Estado drag activo */
+.upload-trigger.is-dragging {
+  border-color: var(--teal-500, #12274e);
+  border-style: solid;
+  background-color: rgba(18, 39, 78, 0.06);
+  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.08);
+  transform: scale(1.01);
+}
+.upload-trigger.is-dragging .drag-hint {
+  color: var(--teal-600, #12274e);
+}
+
 /* Estado de error requerido */
 .upload-trigger.is-required-empty {
   border-color: var(--red-500, #ef4444);
@@ -102,12 +132,28 @@
   font-size: 10px;
   font-weight: 700;
   vertical-align: middle;
+  transition: all 0.3s ease;
+}
+.req-badge.is-success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.req-badge.is-error {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .req-error-msg {
   font-size: 10.5px;
   color: var(--red-600, #dc2626);
   font-weight: 600;
+}
+
+/* Hint de arrastrar */
+.drag-hint-label {
+  font-size: 10px;
+  opacity: 0.45;
+  font-weight: 500;
 }
 
 .file-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -156,32 +202,6 @@
 .text-muted    { color: var(--text-muted, #94a3b8); }
 .fw-600        { font-weight: 600; }
 .small         { font-size: 12.5px; }
-/* Modifica tu clase .req-badge y agrega las nuevas */
-.req-badge {
-  display: inline-flex;
-  align-items: center;
-  /* Colores por defecto (rojo/alerta) indicando que aún no se cumple */
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 999px;
-  padding: 0px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  vertical-align: middle;
-  transition: all 0.3s ease; /* Transición suave de color */
-}
-
-/* Cuando ya se cumplió el requisito (Verde) */
-.req-badge.is-success {
-  background: #dcfce7; /* Fondo verde claro */
-  color: #16a34a; /* Texto verde oscuro */
-}
-
-/* Por si el máximo se sobrepasa accidentalmente (Rojo) */
-.req-badge.is-error {
-  background: #fee2e2;
-  color: #b91c1c;
-}
 </style>
 
 <script setup>
@@ -196,7 +216,7 @@ const props = defineProps({
   maxSize:    { type: Number,  default: 20 },
   required:   { type: Boolean, default: false },
   minFiles:   { type: Number,  default: 1 },
-  maxFiles:   { type: Number,  default: 0 }, // 0 = sin límite (NUEVO)
+  maxFiles:   { type: Number,  default: 0 },
   touched:    { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue'])
@@ -206,47 +226,94 @@ const toast = useToast()
 
 const fileInput   = ref(null)
 const loading     = ref(false)
-const wasTouched  = ref(false)  // se activa al intentar subir o al hacer clic
+const wasTouched  = ref(false)
+const isDragging  = ref(false)
+let dragCounter   = 0  // contador para evitar parpadeos al pasar sobre hijos
 
 const safeModelValue = computed(() => props.modelValue || [])
 const isMinMet = computed(() => safeModelValue.value.length >= props.minFiles)
 const isMaxMet = computed(() => props.maxFiles === 0 || safeModelValue.value.length <= props.maxFiles)
-// Muestra el error si: es required, faltan archivos, y ya interactuó o el padre forzó validación
 const showRequiredError = computed(() =>
   props.required &&
   safeModelValue.value.length < props.minFiles &&
   (wasTouched.value || props.touched)
 )
-
-// Exponer para que el padre pueda validar sin interacción del usuario
 const isValid = computed(() =>
   !props.required || safeModelValue.value.length >= props.minFiles
 )
-
 defineExpose({ isValid })
 
+// ── Click ────────────────────────────────────────────────────────────────────
 function triggerInput() {
   wasTouched.value = true
   if (!loading.value && fileInput.value) fileInput.value.click()
 }
 
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+function onDragEnter(e) {
+  dragCounter++
+  if (e.dataTransfer?.items?.length) isDragging.value = true
+}
+function onDragOver(e) {
+  // Necesario para que el drop funcione
+  e.dataTransfer.dropEffect = 'copy'
+}
+function onDragLeave() {
+  dragCounter--
+  if (dragCounter === 0) isDragging.value = false
+}
+function onDrop(e) {
+  isDragging.value = false
+  dragCounter = 0
+  wasTouched.value = true
+
+  const files = Array.from(e.dataTransfer?.files || [])
+  if (!files.length) return
+
+  // Si maxFiles > 0, solo tomar los que quepan
+  const slots = props.maxFiles > 0
+    ? props.maxFiles - safeModelValue.value.length
+    : files.length
+
+  if (slots <= 0) {
+    toast.warning(`Solo se permiten hasta ${props.maxFiles} archivo(s)`)
+    return
+  }
+
+  files.slice(0, slots).forEach(file => processFile(file))
+}
+
+// ── Input change ──────────────────────────────────────────────────────────────
 async function handleFileChange(event) {
   const file = event.target.files[0]
   if (!file) return
+
   if (props.maxFiles > 0 && safeModelValue.value.length >= props.maxFiles) {
     toast.warning(`Solo se permiten hasta ${props.maxFiles} archivo(s)`)
     event.target.value = ''
     return
   }
 
-  if (file.size > props.maxSize * 1024 * 1024) {
-    toast.warning(`El archivo pesa más de ${props.maxSize}MB`)
-    event.target.value = ''
+  await processFile(file)
+  if (event.target) event.target.value = ''
+}
+
+// ── Lógica compartida de subida ───────────────────────────────────────────────
+async function processFile(file) {
+  // Validar extensión contra el accept
+  const allowed = props.accept.split(',').map(s => s.trim().toLowerCase())
+  const ext = '.' + file.name.split('.').pop().toLowerCase()
+  const mime = file.type.toLowerCase()
+  const isAllowed = allowed.some(a =>
+    a.startsWith('.') ? a === ext : mime.startsWith(a.replace('*', ''))
+  )
+  if (!isAllowed) {
+    toast.warning(`Tipo de archivo no permitido: ${ext}`)
     return
   }
+
   if (file.size > props.maxSize * 1024 * 1024) {
     toast.warning(`El archivo pesa más de ${props.maxSize}MB`)
-    event.target.value = ''
     return
   }
 
@@ -261,16 +328,15 @@ async function handleFileChange(event) {
     toast.error('Error al subir adjunto')
   } finally {
     loading.value = false
-    if (event.target) event.target.value = ''
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function removerArchivo(index) {
   const newList = [...safeModelValue.value]
   newList.splice(index, 1)
   emit('update:modelValue', newList)
 }
-
 function verArchivo(item) {
   if (item?.url) window.open(item.url, '_blank')
 }

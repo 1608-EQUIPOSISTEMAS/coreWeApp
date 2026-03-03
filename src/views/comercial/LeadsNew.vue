@@ -1328,7 +1328,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoPorcentaje) }}</span>
           </div>
           <div class="summary-row" v-if="insc.dsct_stick_id">
-            <span class="label">Promoción</span>
+            <span class="label">
+              Promoción
+              <small class="text-muted ms-1" style="font-size:9px;">
+                (precio fijo S/ {{ fmt2(insc.val_fijo) }})
+              </small>
+            </span>
             <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoFijo) }}</span>
           </div>
           <div class="summary-row" v-if="insc.dsct_benefit_id">
@@ -1866,55 +1871,50 @@ const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
 watchEffect(() => {
   const base = parseFloat(insc.montoOriginal) || 0
 
-  // 1. Calcular montos brutos
-  // Nota: Usamos round2 inmediatamente para que el dinero "exista" en 2 decimales desde el cálculo
+  // 1. Descuento porcentual (sin cambios)
   let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
-  let montoFijo = round2(parseFloat(insc.val_fijo) || 0)
+  let subtotalAfterPct = round2(base - montoPorcentaje)
+
+  // 2. PROMOCIÓN: val_fijo ahora es el PRECIO FINAL de la promo, no el descuento
+  let montoFijo = 0
+  const promoTarget = round2(parseFloat(insc.val_fijo) || 0)
+
+  if (insc.dsct_stick_id && promoTarget > 0) {
+    // El descuento = precio actual - precio promocional
+    montoFijo = round2(subtotalAfterPct - promoTarget)
+    if (montoFijo < 0) montoFijo = 0 // No puede ser negativo
+  }
+
+  const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0)
+    ? promoTarget
+    : subtotalAfterPct
+
+  // 3. Beneficio (sin cambios, sigue siendo deducción)
   let montoBeneficio = round2(parseFloat(insc.val_beneficio) || 0)
 
-  // 2. Sumar todos los descuentos
+  // Validación: descuentos no superan base
   const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
-
-  // 3. VALIDACIÓN: ¿Los descuentos superan el precio base?
   if (totalDescuentos > base) {
-    // A. Mostrar Alerta
     toast.warning('¡Cuidado! Los descuentos superan el Precio Base. Se han reiniciado los valores.')
-
-    // B. Limpiar inputs (Reseteamos los valores y los selectores para evitar negativos)
-    // Reiniciar Porcentaje
-    insc.val_porcentaje = 0
-    insc.dsct_porcent_id = null
-
-    // Reiniciar Monto Fijo
-    insc.val_fijo = 0
-    insc.dsct_stick_id = null
-
-    // Reiniciar Beneficio
-    insc.val_beneficio = 0
-    insc.dsct_benefit_id = null
+    insc.val_porcentaje = 0; insc.dsct_porcent_id = null
+    insc.val_fijo = 0;       insc.dsct_stick_id   = null
+    insc.val_beneficio = 0;  insc.dsct_benefit_id = null
     discountResetKey.value++
-
-    // C. Forzar recálculo visual a 0
     insc.montoDescuentoPorcentaje = 0
     insc.montoDescuentoFijo = 0
     insc.montoBeneficio = 0
     insc.total_amount = base
-
-
-
-    return // Salimos para evitar asignar valores erróneos
+    return
   }
 
-  // 4. Si todo está bien, asignamos los valores redondeados a la vista
   insc.montoDescuentoPorcentaje = montoPorcentaje
-  insc.montoDescuentoFijo = montoFijo
-  insc.montoBeneficio = montoBeneficio
+  insc.montoDescuentoFijo       = montoFijo       // Ahora muestra: base - promoTarget
+  insc.montoBeneficio           = montoBeneficio
 
-  // 5. Cálculo Final (Base - Descuentos)
-
-  const final = base - totalDescuentos
-insc.total_amount = Math.round(final > 0 ? final : 0)
+  const final = round2(subtotalAfterStick - montoBeneficio)
+  insc.total_amount = final > 0 ? final : 0
 })
+
   function onChangeDescuentoFijo(opt) {
     if (!opt) {
       insc.val_fijo = 0

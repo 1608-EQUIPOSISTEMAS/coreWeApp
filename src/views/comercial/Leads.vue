@@ -232,28 +232,28 @@
               <tr v-else class="thead-sub">
                 <th class="ts ts-c text-center">Acciones</th>
                 <th class="ts ts-c">Fecha Reg.</th>
-                <th class="ts ts-c">Status</th>
+                <th class="ts ts-c">Categoría</th>
+                <th class="ts ts-c">Modalidad</th>
+                <th class="ts ts-c">Programa</th>
+                <th class="ts ts-c">Edición</th>
+                <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
+                <th class="ts ts-c">Nombre</th>
                 <th class="ts ts-c">Teléfono</th>
                 <th class="ts ts-c">E. Cliente</th>
-                <th class="ts ts-c">Nombre</th>
-                <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
-                <th class="ts ts-c">Programa</th>
-                <th class="ts ts-c">Tipo</th>
-                <th class="ts ts-c">Modalidad</th>
-                <th class="ts ts-c">Edición</th>
+                <th class="ts ts-c">Status</th>
                 <th class="ts ts-c">F. Pago</th>
+                <th class="ts ts-c">Interés</th>
                 <th class="ts ts-c">Canal origen</th>
                 <th class="ts ts-c">Medio</th>
-                <th class="ts ts-c">Palabra Clave</th>
+                <th class="ts ts-c">Palabra MKT</th>
                 <th class="ts ts-c">Estrategia</th>
-                <th class="ts ts-c">Interés</th>
                 <th class="ts ts-c">Asesor/Usuario</th>
                 <th class="ts ts-c">Seguimiento</th>
               </tr>
-              <!-- ✅ FILTROS INLINE — VISTA COMPACT (columnas clave) -->
 <tr v-if="isCompact" class="thead-filter">
   <th class="tf"></th><!-- Acciones -->
-  <th class="tf"><!-- Fecha Reg. — rango creación -->
+
+  <th class="tf"><!-- Fecha Reg. -->
     <BaseDatePicker
       v-model="filters.created_range_string"
       :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
@@ -262,48 +262,65 @@
       @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }"
     />
   </th>
-  <th class="tf"><!-- Status -->
-    <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
-  <th class="tf"><!-- Teléfono / búsqueda -->
-    <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
-  </th>
-  <th class="tf"><!-- E. Cliente -->
-    <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
-  <th class="tf"></th><!-- Nombre -->
-  <th class="tf"><!-- T. Consulta -->
-    <MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
-  <th class="tf"><!-- Programa -->
-    <input v-model="filters.program_text" type="text" class="hf-input" placeholder="Programa..." @input="debouncedInlineFilter" />
-  </th>
-  <th class="tf"><!-- Tipo -->
+
+  <th class="tf"><!-- Categoría (Tipo de Programa) -->
     <MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Tipo..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+
   <th class="tf"><!-- Modalidad -->
     <MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Mod..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+
+  <th class="tf"><!-- Programa -->
+    <input v-model="filters.program_text" type="text" class="hf-input" placeholder="Programa..." @input="debouncedInlineFilter" />
+  </th>
+
   <th class="tf"></th><!-- Edición -->
+
+  <th class="tf"><!-- T. Consulta -->
+    <MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
+  <th class="tf"></th><!-- Nombre -->
+
+  <th class="tf"><!-- Teléfono / búsqueda -->
+    <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+  </th>
+
+  <th class="tf"><!-- E. Cliente -->
+    <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
+  <th class="tf"><!-- Status -->
+    <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
   <th class="tf"><!-- F. Pago -->
     <BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="Pago..." @on-change="(d,s) => { handleDateFilterChange(s,'pay_date'); triggerInlineFilter() }" />
   </th>
-  <th class="tf"><!-- Canal -->
-    <MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Canal..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
-  <th class="tf"><!-- Medio -->
-    <MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Medio..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
-  <th class="tf"></th><!-- Palabra -->
-  <th class="tf"><!-- Estrategia -->
-    <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
-  </th>
+
   <th class="tf"><!-- Interés -->
     <MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Interés..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-  <th class="tf"><!-- Asesor -->
+
+  <th class="tf"><!-- Canal origen -->
+    <MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Canal..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
+  <th class="tf"><!-- Medio -->
+    <MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Medio..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
+  <th class="tf"></th><!-- Palabra MKT -->
+
+  <th class="tf"><!-- Estrategia -->
+    <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+
+  <th class="tf"><!-- Asesor/Usuario -->
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+
   <th class="tf"></th><!-- Seguimiento -->
 </tr>
             </thead>
@@ -386,63 +403,102 @@
               </tr>
             </tbody>
 
-            <tbody v-else>
-              <tr
-                v-for="l in leadsRaw"
-                :key="l.id"
-                class="tbody-row"
-                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                @mousedown.left="startPress(l)"
-                @mouseup="cancelPress"
-                @mouseleave="cancelPress"
-              >
-                <td class="td-a text-center nowrap">
-                  <button class="btn-icon" @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
-                    <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
-                  </button>
-                  <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
-                    <i class="fa-solid fa-clone text-primary"></i>
-                  </button>
-                </td>
-                <td class="td-a small nowrap">{{ l.registration_date }}</td>
-                <td class="td-a">
-                  <span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
-                </td>
-                <td class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
-                <td class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
-                <td class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
-                <td class="td-a small" style="min-width:120px">{{ l.cat_promotion_description || '—' }}</td>
-                <td class="td-a small fw-600 accent-text">{{ l.program_label || '—' }}</td>
-                <td class="td-a small" style="min-width:120px">{{ l.cat_type_program_label || '—' }}</td>
-                <td class="td-a small" style="min-width:120px">{{ l.cat_model_modality_label || '—' }}</td>
-                <td class="td-a nowrap small text-mono">{{ l.edition_label || '—' }}</td>
-                <td class="td-a">
-                  <div class="small fw-700 pay-date-cell">{{ l.pay_date || '—' }}</div>
-                </td>
-                <td class="td-a small text-muted">{{ l.cat_channel_description || '—' }}</td>
-                <td class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
-                <td class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
-                <td class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
-                <td class="td-a">
-                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">
-                    {{ l.cat_interest_description }}
-                  </span>
-                </td>
-                <td class="td-a small">{{ l.user_registration_label }}</td>
-                <td class="td-a text-center">
-                  <i
-                    v-if="l.cat_last_follow_alias"
-                    class="fa-solid fa-circle cursor-pointer"
-                    :class="l.cat_last_follow_alias === 'we_calling_answered' ? 'c-green' : 'text-slate-400'"
-                    :title="l.cat_last_follow_alias"
-                  ></i>
-                  <span v-else class="text-muted">—</span>
-                </td>
-              </tr>
-              <tr v-if="!leadsRaw.length">
-                <td colspan="19" class="empty-state">No se encontraron leads con los filtros actuales.</td>
-              </tr>
-            </tbody>
+<tbody v-else>
+  <tr
+    v-for="l in leadsRaw"
+    :key="l.id"
+    class="tbody-row"
+    :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
+    @mousedown.left="startPress(l)"
+    @mouseup="cancelPress"
+    @mouseleave="cancelPress"
+  >
+    <!-- Acciones -->
+    <td class="td-a text-center nowrap">
+      <button class="btn-icon" @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+        <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
+      </button>
+      <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
+        <i class="fa-solid fa-clone text-primary"></i>
+      </button>
+    </td>
+
+    <!-- Fecha Reg. -->
+    <td class="td-a small nowrap">{{ l.registration_date }}</td>
+
+    <!-- Categoría (Tipo de Programa) -->
+    <td class="td-a small" style="min-width:120px">{{ l.cat_type_program_label || '—' }}</td>
+
+    <!-- Modalidad -->
+    <td class="td-a small" style="min-width:120px">{{ l.cat_model_modality_label || '—' }}</td>
+
+    <!-- Programa -->
+    <td class="td-a small fw-600 accent-text">{{ l.program_label || '—' }}</td>
+
+    <!-- Edición -->
+    <td class="td-a nowrap small text-mono">{{ l.edition_label || '—' }}</td>
+
+    <!-- T. Consulta -->
+    <td class="td-a small" style="min-width:140px">{{ l.cat_promotion_description || '—' }}</td>
+
+    <!-- Nombre -->
+    <td class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
+
+    <!-- Teléfono -->
+    <td class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
+
+    <!-- E. Cliente -->
+    <td class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
+
+    <!-- Status -->
+    <td class="td-a">
+      <span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
+    </td>
+
+    <!-- F. Pago -->
+    <td class="td-a">
+      <div class="small fw-700 pay-date-cell">{{ l.pay_date || '—' }}</div>
+    </td>
+
+    <!-- Interés -->
+    <td class="td-a">
+      <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">
+        {{ l.cat_interest_description }}
+      </span>
+      <span v-else class="text-muted small">—</span>
+    </td>
+
+    <!-- Canal origen -->
+    <td class="td-a small text-muted">{{ l.cat_channel_description || '—' }}</td>
+
+    <!-- Medio -->
+    <td class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
+
+    <!-- Palabra MKT -->
+    <td class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
+
+    <!-- Estrategia -->
+    <td class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
+
+    <!-- Asesor/Usuario -->
+    <td class="td-a small">{{ l.user_registration_label }}</td>
+
+    <!-- Seguimiento -->
+    <td class="td-a text-center">
+      <i
+        v-if="l.cat_last_follow_alias"
+        class="fa-solid fa-circle cursor-pointer"
+        :class="l.cat_last_follow_alias === 'we_calling_answered' ? 'c-green' : 'text-slate-400'"
+        :title="l.cat_last_follow_alias"
+      ></i>
+      <span v-else class="text-muted">—</span>
+    </td>
+  </tr>
+
+  <tr v-if="!leadsRaw.length">
+    <td colspan="19" class="empty-state">No se encontraron leads con los filtros actuales.</td>
+  </tr>
+</tbody>
           </table>
         </div>
       </div>
@@ -1041,7 +1097,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, computed,onBeforeUnmount } from 'vue'
+import { ref, reactive, onMounted, inject, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -1071,7 +1127,7 @@ const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
 // === ESTADO ===
 const showFilterModal = ref(false)
 const showFollowModal = ref(false)
-const isCompact = ref(false)
+const isCompact = ref(true)
 const dense = ref(false)
 const activeFilterChips = ref([])
 const leadsRaw = ref([])
@@ -1907,7 +1963,11 @@ function debouncedInlineFilter() {
 }
 // ═════════════════════════════════════════════════════════════
 
-const toolbarCollapsed = ref(false)
+const toolbarCollapsed = ref(localStorage.getItem('crm_leads_toolbar_collapsed') === 'true')
+
+watch(toolbarCollapsed, (val) => {
+  localStorage.setItem('crm_leads_toolbar_collapsed', val)
+})
 </script>
 
 <style scoped>
@@ -2616,4 +2676,5 @@ const toolbarCollapsed = ref(false)
   transition: font-size .2s ease;
 }
 /* ═════════════════════════════════════════════════════════════ */
+
 </style>
