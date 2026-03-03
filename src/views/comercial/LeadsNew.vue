@@ -69,8 +69,7 @@
                 :disabled="isEdit"
                 v-model="form.fechaContactoInicial"
                 required
-                clearable
-                :config="pastDateConfig"  />
+                clearable />
             </div>
 
             <div class="col-md-5"></div>
@@ -1970,14 +1969,14 @@ const currentEdition = ref(null)  // reemplazar el computed por un ref
   watch(() => form.b2b, (val) => {
     if (val) form.web = false
   })
-  function normalizeDateTime(v) {
-    if (!v) return ''
-    const s = String(v).replace('T', ' ')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 09:00:00`
-    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return `${s}:00`
-    return s
-  }
-
+function normalizeDateTime(v) {
+  if (!v) return ''
+  // Recortar a 19 chars elimina .000Z o cualquier sufijo de timezone
+  const s = String(v).slice(0, 19).replace('T', ' ')
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 09:00:00`
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(s)) return `${s}:00`
+  return s
+}
   async function loadLead(id) {
     console.log(id)
     const data = await comercialService.leadGet({ id })
@@ -2195,7 +2194,7 @@ watch(() => insc.cat_type_document, (newVal) => {
     form.country_alias = 'we_country_peru'
     form.status_alias  = 'we_lead_status_atendido'
     form.client_status   = 'we_client_person'
-form.key_word_alias = 'we_key_word_null'
+    form.key_word_alias = 'we_key_word_null'
     form.active = true
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
     form.category_alias = 'we_program_type_course'
