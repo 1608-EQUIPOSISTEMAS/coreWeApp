@@ -1912,7 +1912,9 @@ watchEffect(() => {
   insc.montoBeneficio           = montoBeneficio
 
   const final = round2(subtotalAfterStick - montoBeneficio)
-  insc.total_amount = final > 0 ? final : 0
+  // insc.total_amount = final > 0 ? final : 0
+
+insc.total_amount = final > 0 ? Math.floor(final) : 0
 })
 
   function onChangeDescuentoFijo(opt) {
@@ -2197,8 +2199,8 @@ watch(() => insc.cat_type_document, (newVal) => {
     form.key_word_alias = 'we_key_word_null'
     form.active = true
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
-    form.category_alias = 'we_program_type_course'
-    onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
+    // form.category_alias = 'we_program_type_course'
+    // onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
 
     loaded.value = true
   })
@@ -3149,6 +3151,8 @@ const autoInstallmentPlan = computed(() => {
   const startRaw        = form.edition_start_date
   const sessionsPerWeek = form.program_sessions_per_week || 1
   const isEsp           = form.category_alias === 'we_program_type_specialization'
+  const isCourse        = ['we_program_type_course', 'we_program_type_minicourse'].includes(form.category_alias)
+
   if (saldo <= 0 || n < 1) return []
 
   const cuotaBase = Math.floor(saldo / n)
@@ -3158,23 +3162,59 @@ const autoInstallmentPlan = computed(() => {
     : new Date()
   const plan = []
 
+  // ── CURSO / MINICURSO: única cuota = inicio + 6 días ──────
+  if (isCourse) {
+    const d = new Date(base)
+    d.setDate(d.getDate() + 6)
+    plan.push({
+      installment_number: 1,
+      amount: round2(cuotaBase + remainder),
+      due_date: d.toISOString().slice(0, 10)
+    })
+    return plan
+  }
+
+  // ── ESPECIALIZACIÓN: snap a fechas clave ──────────────────
   if (isEsp) {
-    let prev = new Date(base)
+    // Cuota 1 → [1, 15, 30] con mínimo 7 días desde inicio
+    const minC1 = new Date(base)
+    minC1.setDate(minC1.getDate() + 7)
+    const d1 = snapToKeyDate(minC1, [1, 15, 30])
+
+    // Cuota 2 → [1, 15] siguiente después de cuota 1
+    const minC2 = new Date(d1)
+    minC2.setDate(minC2.getDate() + 1)
+    const d2 = snapToKeyDate(minC2, [1, 15])
+
+    // Cuota 3 (si aplica) → [1, 15, 30] siguiente después de cuota 2
+    const minC3 = new Date(d2)
+    minC3.setDate(minC3.getDate() + 1)
+    const d3 = snapToKeyDate(minC3, [1, 15, 30])
+
+    const keyDates = [d1, d2, d3]
+
     for (let i = 0; i < n; i++) {
-      const d = new Date(prev)
-      if (i === 0)      d.setDate(d.getDate() + (sessionsPerWeek >= 2 ? 6 : 16))
-      else if (i === 1) d.setDate(d.getDate() + 16)
-      else              d.setDate(d.getDate() + 30)
-      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
-      prev = d
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: keyDates[i].toISOString().slice(0, 10)
+      })
     }
-  } else if (sessionsPerWeek >= 2) {
+    return plan
+  }
+
+  // ── PEE / DIPLOMA: lógica existente sin cambios ───────────
+  if (sessionsPerWeek >= 2) {
     const f1 = new Date(base)
     f1.setDate(f1.getDate() + 15)
     for (let i = 0; i < n; i++) {
       const d = new Date(f1)
       d.setDate(d.getDate() + i * 20)
-      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: d.toISOString().slice(0, 10)
+      })
     }
   } else {
     const f1 = new Date(base)
@@ -3184,13 +3224,37 @@ const autoInstallmentPlan = computed(() => {
       let d
       if (i === 0) { d = new Date(f1) }
       else { d = new Date(f1); d.setMonth(d.getMonth() + i); d.setDate(1) }
-      plan.push({ installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase, due_date: d.toISOString().slice(0, 10) })
+      plan.push({
+        installment_number: i + 1,
+        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
+        due_date: d.toISOString().slice(0, 10)
+      })
     }
   }
+
   return plan
 })
 
 
+// ── Helper: próxima fecha clave >= minDate ─────────────────
+function snapToKeyDate(afterDate, keys = [1, 15, 30]) {
+  const min = new Date(afterDate)
+  min.setHours(0, 0, 0, 0)
+
+  for (let mo = 0; mo <= 4; mo++) {
+    const year  = min.getFullYear()
+    const month = min.getMonth() + mo
+
+    for (const k of keys) {
+      const daysInMonth = new Date(year, month + 1, 0).getDate()
+      const day = Math.min(k, daysInMonth) // ej: Feb no tiene día 30
+      const candidate = new Date(year, month, day)
+      candidate.setHours(0, 0, 0, 0)
+      if (candidate >= min) return candidate
+    }
+  }
+  return min // fallback
+}
 
 
 // ── Modo manual ───────────────────────────────────────────────
