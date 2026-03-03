@@ -257,7 +257,7 @@
 }
 </style>
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue' 
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { Spanish } from 'flatpickr/dist/l10n/es.js'
@@ -276,6 +276,24 @@ const emit = defineEmits(['update:modelValue', 'change'])
 const hours12 = Array.from({ length: 12 }, (_, i) => i + 1)
 const minutes = [0,10,20,30,40,50,59]
 
+// ── NUEVO: al montar, si onlyHours está activo snap al :00 ──────────────
+onMounted(() => {
+  if (!props.onlyHours) return
+
+  if (props.modelValue) {
+    // Había un valor (ej: "2026-03-02T18:59") → lo limpiamos a la hora en punto
+    emitFull(datePart.value, hour12.value, 0, ampmPart.value)
+  } else {
+    // Sin valor inicial → tomamos la hora actual y establecemos :00
+    const now  = new Date()
+    const yyyy = now.getFullYear()
+    const mm   = String(now.getMonth() + 1).padStart(2, '0')
+    const dd   = String(now.getDate()).padStart(2, '0')
+    const dateStr = `${yyyy}-${mm}-${dd}`
+    const { hour, ampm } = to12h(String(now.getHours()).padStart(2, '0') + ':00')
+    emitFull(dateStr, hour, 0, ampm)
+  }
+})
 const flatpickrConfig = computed(() => {
   return {
     altInput: true,

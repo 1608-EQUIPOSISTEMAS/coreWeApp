@@ -1,21 +1,35 @@
 <template>
   <div class="exec-shell list-shell">
-
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">Gestión Comercial</span>
-            <h1 class="brand-title">Listado de Leads</h1>
-          </div>
-        </div>
+<header class="exec-masthead" :class="{ 'masthead--compact': toolbarCollapsed }">
+  <div class="masthead-inner">
+    <div class="masthead-brand">
+      <div class="brand-rule" :class="{ 'brand-rule--sm': toolbarCollapsed }"></div>
+      <div class="brand-text">
+        <span class="brand-eyebrow" v-show="!toolbarCollapsed">Gestión Comercial</span>
+        <h1 class="brand-title">
+          <span v-if="!toolbarCollapsed">Listado de Leads</span>
+          <span v-else class="brand-title--inline">
+            <span class="brand-eyebrow--inline">CRM</span>
+            Leads
+          </span>
+        </h1>
       </div>
-    </header>
+    </div>
 
+    <button
+      class="focus-toggle-btn"
+      :class="{ 'focus-toggle-btn--active': toolbarCollapsed }"
+      @click="toolbarCollapsed = !toolbarCollapsed"
+      :title="toolbarCollapsed ? 'Expandir barra' : 'Modo enfocado'"
+    >
+      <i class="fa-solid" :class="toolbarCollapsed ? 'fa-maximize' : 'fa-minimize'"></i>
+      <span v-show="!toolbarCollapsed">Enfocar</span>
+    </button>
+  </div>
+</header>
     <main class="exec-body">
 
-      <div class="toolbar-chips mb-2">
+<div class="toolbar-chips mb-2" v-show="!toolbarCollapsed">
         <BaseFilterChips
           :items="activeFilterChips"
           @remove="clearFilter"
@@ -23,7 +37,7 @@
         />
       </div>
 
-      <div class="exec-toolbar">
+<div class="exec-toolbar" v-show="!toolbarCollapsed">
         <div class="toolbar-pagination">
           <BasePagination
             v-model="pagin"
@@ -62,18 +76,159 @@
         <div class="table-responsive-custom">
           <table class="exec-table" :class="{ 'compact-table': isCompact }">
             <thead>
-              <tr v-if="!isCompact" class="thead-sub">
-                <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
-                <th class="ts ts-c">Status</th>
-                <th class="ts ts-c">Contacto</th>
-                <th class="ts ts-c" style="min-width: 160px!important;">T. Consulta</th>
-                <th class="ts ts-c">Programa / Interés</th>
-                <th class="ts ts-c">Ini. Edición</th>
-                <th class="ts ts-c">F. Pago</th>
-                <th class="ts ts-c">Nivel Interés</th>
-                <th class="ts ts-c">Registro</th>
-                <th class="ts ts-c text-center">Seguimiento</th>
-              </tr>
+<tr v-if="!isCompact" class="thead-sub">
+  <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
+  <th class="ts ts-c">Status</th>
+  <th class="ts ts-c">Contacto</th>
+  <th class="ts ts-c" style="min-width: 160px!important;">T. Consulta</th>
+  <th class="ts ts-c">Programa / Interés</th>
+  <th class="ts ts-c">Ini. Edición</th>
+  <th class="ts ts-c">F. Pago</th>
+  <th class="ts ts-c">Nivel Interés</th>
+  <th class="ts ts-c">Registro</th>
+  <th class="ts ts-c text-center">Seguimiento</th>
+</tr>
+<tr v-if="!isCompact" class="thead-filter">
+  <!-- Acciones: botón limpiar todo inline -->
+<!-- Celda acciones en thead-filter — maneja 3 estados -->
+<!-- Versión simplificada (recomendada) -->
+<th class="tf tf-actions-cell">
+  <div class="hf-actions-group">
+
+    <button
+      v-if="toolbarCollapsed && !hasActiveRestrictions"
+      class="hf-new-btn"
+      @click="goNew"
+      title="Nuevo Lead"
+    >
+      <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <button
+      v-if="activeFilterChips.length"
+      class="hf-clear-btn"
+      @click="clearFilters"
+      title="Limpiar filtros"
+    >
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+
+  </div>
+</th>
+
+  <!-- Status -->
+  <th class="tf">
+    <MultiSelect
+      v-model="filters.status_lead_ids"
+      :items="filtroPipeline"
+      label-key="description"
+      value-key="id"
+      placeholder="Todos..."
+      class="hf-multiselect"
+      @update:model-value="triggerInlineFilter"
+    />
+  </th>
+
+  <!-- Contacto (búsqueda general q) -->
+  <th class="tf">
+    <input
+      v-model="filters.q"
+      type="text"
+      class="hf-input"
+      placeholder="Nombre, teléfono..."
+      @input="debouncedInlineFilter"
+      @keyup.enter="triggerInlineFilter"
+    />
+  </th>
+
+  <!-- T. Consulta -->
+  <th class="tf">
+    <MultiSelect
+      v-model="filters.query_ids"
+      :items="filtroQuery"
+      label-key="description"
+      value-key="id"
+      placeholder="Todos..."
+      class="hf-multiselect"
+      @update:model-value="triggerInlineFilter"
+    />
+  </th>
+
+  <!-- Programa -->
+  <th class="tf">
+    <input
+      v-model="filters.program_text"
+      type="text"
+      class="hf-input"
+      placeholder="Buscar programa..."
+      @input="debouncedInlineFilter"
+      @keyup.enter="triggerInlineFilter"
+    />
+  </th>
+
+  <!-- Ini. Edición — rango de fechas -->
+  <th class="tf">
+    <BaseDatePicker
+      v-model="filters.edition_range_string"
+      :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+      class="hf-input"
+      placeholder="Desde → Hasta"
+      @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'edition_start'); triggerInlineFilter() }"
+    />
+  </th>
+
+  <!-- F. Pago -->
+  <th class="tf">
+    <BaseDatePicker
+      v-model="filters.pay_date_range_string"
+      :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+      class="hf-input"
+      placeholder="Desde → Hasta"
+      @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'pay_date'); triggerInlineFilter() }"
+    />
+  </th>
+
+  <!-- Nivel Interés -->
+  <th class="tf">
+    <MultiSelect
+      v-model="filters.interest_level_ids"
+      :items="filtroInterest"
+      label-key="description"
+      value-key="id"
+      placeholder="Todos..."
+      class="hf-multiselect"
+      @update:model-value="triggerInlineFilter"
+    />
+  </th>
+
+  <!-- Registro / Asesor -->
+  <th class="tf">
+    <MultiSelect
+      v-if="!isComercial"
+      v-model="filters.owner_user_ids"
+      :items="filtroOwners"
+      label-key="description"
+      value-key="id"
+      placeholder="Todos..."
+      class="hf-multiselect"
+      @update:model-value="triggerInlineFilter"
+    />
+    <span v-else class="text-muted" style="font-size:10px;">—</span>
+  </th>
+
+  <!-- Seguimiento -->
+  <th class="tf">
+    <MultiSelect
+      v-model="filters.last_follow_ids"
+      :items="filtroFollow"
+      label-key="description"
+      value-key="id"
+      placeholder="Todos..."
+      class="hf-multiselect"
+      @update:model-value="triggerInlineFilter"
+    />
+  </th>
+</tr>
               <tr v-else class="thead-sub">
                 <th class="ts ts-c text-center">Acciones</th>
                 <th class="ts ts-c">Fecha Reg.</th>
@@ -95,6 +250,62 @@
                 <th class="ts ts-c">Asesor/Usuario</th>
                 <th class="ts ts-c">Seguimiento</th>
               </tr>
+              <!-- ✅ FILTROS INLINE — VISTA COMPACT (columnas clave) -->
+<tr v-if="isCompact" class="thead-filter">
+  <th class="tf"></th><!-- Acciones -->
+  <th class="tf"><!-- Fecha Reg. — rango creación -->
+    <BaseDatePicker
+      v-model="filters.created_range_string"
+      :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+      class="hf-input"
+      placeholder="Fecha..."
+      @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }"
+    />
+  </th>
+  <th class="tf"><!-- Status -->
+    <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Teléfono / búsqueda -->
+    <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+  </th>
+  <th class="tf"><!-- E. Cliente -->
+    <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"></th><!-- Nombre -->
+  <th class="tf"><!-- T. Consulta -->
+    <MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Programa -->
+    <input v-model="filters.program_text" type="text" class="hf-input" placeholder="Programa..." @input="debouncedInlineFilter" />
+  </th>
+  <th class="tf"><!-- Tipo -->
+    <MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Tipo..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Modalidad -->
+    <MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Mod..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"></th><!-- Edición -->
+  <th class="tf"><!-- F. Pago -->
+    <BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="Pago..." @on-change="(d,s) => { handleDateFilterChange(s,'pay_date'); triggerInlineFilter() }" />
+  </th>
+  <th class="tf"><!-- Canal -->
+    <MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Canal..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Medio -->
+    <MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Medio..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"></th><!-- Palabra -->
+  <th class="tf"><!-- Estrategia -->
+    <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Interés -->
+    <MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Interés..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"><!-- Asesor -->
+    <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf"></th><!-- Seguimiento -->
+</tr>
             </thead>
 
             <tbody v-if="!isCompact">
@@ -1679,6 +1890,24 @@ onMounted(async () => {
   rebuildChips()
   fetchLeads()
 })
+
+// ══ FILTROS INLINE EN CABECERA ═══════════════════════════════
+let inlineFilterTimer = null
+
+function triggerInlineFilter() {
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchLeads()
+}
+
+function debouncedInlineFilter() {
+  clearTimeout(inlineFilterTimer)
+  inlineFilterTimer = setTimeout(() => triggerInlineFilter(), 400)
+}
+// ═════════════════════════════════════════════════════════════
+
+const toolbarCollapsed = ref(false)
 </script>
 
 <style scoped>
@@ -2154,4 +2383,237 @@ onMounted(async () => {
   .toolbar-actions { justify-content: flex-end; }
   .exec-body { padding: 16px 12px; }
 }
+
+/* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
+.thead-filter .tf {
+  padding: 5px 6px;
+  background: #f0f4f8;
+  border-bottom: 2px solid var(--teal-500, #14b8a6);
+  vertical-align: middle;
+  position: relative;
+}
+
+/* Input de texto compacto */
+.hf-input {
+  width: 100%;
+  height: 28px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text-primary, #0f172a);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.hf-input:focus {
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15);
+}
+.hf-input::placeholder {
+  color: var(--slate-400, #94a3b8);
+  font-size: 10.5px;
+}
+
+/* MultiSelect compacto — override al componente */
+.hf-multiselect {
+  --ms-font-size: 11px;
+  --ms-line-height: 1.3;
+  --ms-min-height: 28px;
+  --ms-py: 2px;
+  --ms-px: 6px;
+  --ms-tag-py: 1px;
+  --ms-tag-px: 4px;
+  --ms-tag-font-size: 9.5px;
+  --ms-border-color: var(--border, #e2e8f0);
+  --ms-border-color-active: var(--teal-500, #14b8a6);
+  --ms-ring-color: rgba(20, 184, 166, .15);
+  font-size: 11px;
+}
+
+/* Botón limpiar en columna acciones */
+.hf-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all .15s;
+}
+.hf-clear-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+/* Flatpickr dentro de cabecera (BaseDatePicker) */
+.thead-filter .flatpickr-input {
+  height: 28px !important;
+  font-size: 10.5px !important;
+  padding: 3px 7px !important;
+}
+
+/* Separación visual entre thead-sub y thead-filter */
+.thead-sub .ts {
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+/* ═════════════════════════════════════════════════════════════ */
+
+/* ══ FOCUS MODE TOGGLE ════════════════════════════════════════ */
+
+/* Botón en el masthead */
+.focus-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--slate-300, #cbd5e1);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.focus-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Cuando el toolbar está colapsado, el masthead da feedback visual */
+.exec-masthead:has(+ .exec-body .exec-toolbar[style*="display: none"]) .focus-toggle-btn,
+.exec-masthead .focus-toggle-btn.is-active {
+  background: var(--teal-500, #14b8a6);
+  color: #fff;
+  border-color: var(--teal-500, #14b8a6);
+}
+
+/* Animación suave al ocultar/mostrar el toolbar */
+.exec-toolbar,
+.toolbar-chips {
+  transition: opacity 0.2s ease;
+}
+
+/* ══ CELDA ACCIONES EN FILTROS INLINE ════════════════════════ */
+.tf-actions-cell {
+  text-align: center;
+}
+
+.hf-actions-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Botón Nuevo Lead compacto (verde) */
+.hf-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  background: #f0fdf4;
+  color: #15803d;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.hf-new-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+/* Botón limpiar (ya definido antes, se mantiene igual) */
+.hf-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+.hf-clear-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+/* ═════════════════════════════════════════════════════════════ */
+/* ══ MASTHEAD COMPACT ═════════════════════════════════════════ */
+
+/* Reducir altura del header en focus mode */
+.masthead--compact .masthead-inner {
+  padding: 6px 28px;        /* era 12px — se achica verticalmente */
+}
+
+/* La regla de color se hace más delgada */
+.brand-rule--sm {
+  height: 24px !important;  /* era 42px */
+  width: 3px  !important;   /* era 4px */
+}
+
+/* Eyebrow desaparece (ya con v-show),
+   el título se hace más pequeño */
+.masthead--compact .brand-title {
+  font-size: 14px;           /* era 19px */
+  letter-spacing: .01em;
+}
+
+/* "CRM" inline antes del título en modo compacto */
+.brand-eyebrow--inline {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--teal-500, #14b8a6);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* El botón también se achica cuando está activo */
+.focus-toggle-btn--active {
+  background: var(--teal-500, #14b8a6) !important;
+  color: #fff !important;
+  border-color: var(--teal-500, #14b8a6) !important;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+/* Transición suave en todo el masthead */
+.exec-masthead {
+  transition: padding .2s ease;
+}
+.exec-masthead .masthead-inner {
+  transition: padding .2s ease;
+}
+.brand-rule {
+  transition: height .2s ease, width .2s ease;
+}
+.brand-title {
+  transition: font-size .2s ease;
+}
+/* ═════════════════════════════════════════════════════════════ */
 </style>

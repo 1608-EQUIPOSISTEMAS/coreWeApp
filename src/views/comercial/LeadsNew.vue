@@ -102,7 +102,7 @@
                 @change="onProgramaTypeChange"
               />
             </div>
-
+            
             <div
               class="col-6 col-md-4 col-lg-2"
               v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias"
@@ -110,7 +110,7 @@
               <label class="exec-label">Modalidad <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.program_modality_alias"
-                :items="programModalityCatalog"
+                :items="form.category_alias=='we_program_type_specialization'?programModalityCatalog.filter(e=>e.alias!='we_modality_online'):programModalityCatalog"
                 label-field="description"
                 :viewOpen="6"
                 value-field="alias"
@@ -1566,6 +1566,15 @@ const dateLimitConfig = {
   const catalog          = inject('catalog')
 
   const todayIso = new Date().toISOString().slice(0, 16)
+
+  function currentHourIso() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm   = String(now.getMonth() + 1).padStart(2, '0')
+  const dd   = String(now.getDate()).padStart(2, '0')
+  const hh   = String(now.getHours()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:00:00`
+}
 const paymentChannelCatalog = ref(catalog.options('we_payment_channel'))
 const certificateStatusCatalog = ref(catalog.options('we_certificate_status'))
 const tokenProviderCatalog  = ref(catalog.options('we_token_provider'))
@@ -1598,10 +1607,11 @@ const formatDuration = (seconds) => {
 }
 
   const form = reactive({
-    fechaContactoInicial: todayIso,
     query_alias: null,
     category_alias: null,
     program_modality_alias: null,
+
+  fechaContactoInicial: currentHourIso(),
     web: false,
     program_link: null,
   count_children: 0,
@@ -2198,7 +2208,8 @@ function createEmptyAttempt() {
   return {
     cat_type_attempt: 'we_attempt_call', // Valor por defecto
     calling_alias: 'we_calling_pending',
-    fechaContactoProximo: todayIso,
+
+    fechaContactoProximo: currentHourIso(),
     respuesta: '',
     contact_duration: 0, // Inicia en 0
     timerActive: false,
