@@ -415,7 +415,10 @@
   >
     <!-- Acciones -->
     <td class="td-a text-center nowrap">
-      <button class="btn-icon" @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+      <button class="btn-icon" 
+        @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)"
+        :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
+      @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
         <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
       </button>
       <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">

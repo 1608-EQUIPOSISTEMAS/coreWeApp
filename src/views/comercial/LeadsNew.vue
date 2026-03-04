@@ -22,7 +22,6 @@
   type="button"
   v-if="
     !form.enrollment_id &&
-    form.ocupacion_alias &&
     form.status_alias == 'we_lead_status_bought' &&
     form.pay_date &&
     form.client_status == 'we_client_person' &&
@@ -948,6 +947,16 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         {{ clientProfileType === 'estudiante' ? 'Estudiante' : 'Profesional' }}
       </span>
     </div>
+    <!-- Aviso: sin ocupación seleccionada -->
+<div
+  v-if="!clientProfileType"
+  class="profile-badge"
+  style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;"
+  title="Ve a 'Datos del Contacto' y selecciona una Ocupación"
+>
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <span>Sin ocupación · precio no definido</span>
+</div>
 
     <!-- B2B -->
     <div
