@@ -108,7 +108,7 @@
               <label class="exec-label">Modalidad <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.program_modality_alias"
-                :items="form.category_alias=='we_program_type_specialization'?programModalityCatalog.filter(e=>e.alias!='we_modality_online'):programModalityCatalog"
+                :items="form.category_alias=='we_program_type_specialization'?programModalityCatalog.filter(e=>e.alias!='we_modality_in_person'):programModalityCatalog"
                 label-field="description"
                 :viewOpen="6"
                 value-field="alias"
@@ -2245,12 +2245,25 @@ function createEmptyAttempt() {
       e.description && msj.includes(e.description.toLowerCase())
     )?.alias
   }
+
   function onStatusChange(opt) {
     if (!opt) return
-    if (opt.description === 'Pagó') {
+
+    // Verificamos por descripción o por el alias directamente
+    if (opt.description === 'Pagó' || opt.alias === 'we_lead_status_bought') {
       const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
       if (alto) form.nivel_alias = alto.alias
-    }else if(opt.description === 'Interesado'){
+
+      // NUEVO: Si 'F. Pago (prevista)' está vacío, asignamos la fecha de hoy
+      if (!form.pay_date) {
+        const now = new Date()
+        const yyyy = now.getFullYear()
+        const mm = String(now.getMonth() + 1).padStart(2, '0')
+        const dd = String(now.getDate()).padStart(2, '0')
+        form.pay_date = `${yyyy}-${mm}-${dd}`
+      }
+
+    } else if(opt.description === 'Interesado'){
       const alto = leadInterestCatalog.value?.find(e => e.alias === 'we_lead_interest_high')
       if (alto) form.nivel_alias = alto.alias
     }
@@ -2521,7 +2534,7 @@ function formatDateTime(isoString) {
   function cancelar() { 
     
       router.push({ name: 'ComercialListado' })
-      
+
    }
 
   function buildLeadPayload() {

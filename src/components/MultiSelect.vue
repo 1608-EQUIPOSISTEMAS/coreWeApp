@@ -35,16 +35,15 @@
       </div>
 
       <!-- Hover Preview -->
-       <Teleport to="body">
+<Teleport to="body">
         <Transition name="fade">
           <div
             v-if="hovering && !dropdownOpen && selected.length > 0"
             class="hover-preview"
             :style="previewStyle" 
           >
-            <div class="preview-header">Selección actual:</div>
             <ul class="preview-list">
-              <li v-for="(item, index) in selectedPreview" :key="index">• {{ item.label }}</li>
+              <li v-for="(item, index) in selectedPreview" :key="index">{{ item.label }}</li>
               <li v-if="selected.length > 5" class="preview-more">+ {{ selected.length - 5 }} más...</li>
             </ul>
           </div>
@@ -953,4 +952,68 @@ onBeforeUnmount(() => {
 .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from,
 .fade-leave-to { opacity: 0; }
+/* ── Hover Preview — Azul más oscuro ── */
+.hover-preview {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background: #00102b; /* Azul marino mucho más oscuro */
+  border: 1px solid #00081a; 
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); /* Sombra más pronunciada */
+  padding: 10px 12px;
+  z-index: 200;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* La flechita (tooltip pointer) que apunta hacia arriba */
+.hover-preview::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 14px;
+  width: 9px;
+  height: 9px;
+  background: #00102b; /* Debe coincidir con el nuevo fondo */
+  border-left: 1px solid #00081a;
+  border-top: 1px solid #00081a;
+  transform: rotate(45deg);
+}
+
+.preview-list {
+  list-style: none!important;
+  padding: 0;
+  margin: 0;
+}
+
+.preview-list li {
+  color: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  display: flex;
+  align-items: center; /* Alineación vertical perfecta */
+  gap: 8px; /* Separación entre el punto y el texto */
+}
+
+/* Punto generado por CSS, perfectamente alineado */
+.preview-list li::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.preview-more {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 0.73rem;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
 </style>

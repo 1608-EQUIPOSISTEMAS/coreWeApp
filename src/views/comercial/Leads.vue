@@ -90,29 +90,30 @@
   <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
-<th class="tf tf-actions-cell">
-  <div class="hf-actions-group">
+  <th class="tf tf-actions-cell">
+    x
+    <div class="hf-actions-group">
 
-    <button
-      v-if="toolbarCollapsed && !hasActiveRestrictions"
-      class="hf-new-btn"
-      @click="goNew"
-      title="Nuevo Lead"
-    >
-      <i class="fa-solid fa-plus"></i>
-    </button>
+      <button
+        v-if="toolbarCollapsed && !hasActiveRestrictions"
+        class="hf-new-btn"
+        @click="goNew"
+        title="Nuevo Lead"
+      >
+        <i class="fa-solid fa-plus"></i>
+      </button>
 
-    <button
-      v-if="activeFilterChips.length"
-      class="hf-clear-btn"
-      @click="clearFilters"
-      title="Limpiar filtros"
-    >
-      <i class="fa-solid fa-xmark"></i>
-    </button>
+      <button
+        v-if="activeFilterChips.length"
+        class="hf-clear-btn"
+        @click="clearFilters"
+        title="Limpiar filtros"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
 
-  </div>
-</th>
+    </div>
+  </th>
 
   <!-- Status -->
   <th class="tf">
@@ -163,17 +164,19 @@
     />
   </th>
 
-  <!-- Programa -->
-  <th class="tf">
-    <input
-      v-model="filters.program_text"
-      type="text"
-      class="hf-input"
-      placeholder="Buscar programa..."
-      @input="debouncedInlineFilter"
-      @keyup.enter="triggerInlineFilter"
-    />
-  </th>
+<th class="tf">
+  <MultiSelect
+    v-model="filters.program_version_ids"
+    mode="remote"
+    :fetcher="q => programService.programVersionCaller({ q })"
+    :debounce-ms="400"
+    label-key="abbreviation"
+    value-key="program_version_id"
+    placeholder="Programa..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
 
   <!-- Ini. Edición — rango de fechas -->
   <th class="tf">
@@ -281,9 +284,19 @@
     <MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Mod..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
 
-  <th class="tf"><!-- Programa -->
-    <input v-model="filters.program_text" type="text" class="hf-input" placeholder="Programa..." @input="debouncedInlineFilter" />
-  </th>
+<th class="tf">
+  <MultiSelect
+    v-model="filters.program_version_ids"
+    mode="remote"
+    :fetcher="q => programService.programVersionCaller({ q })"
+    :debounce-ms="400"
+    label-key="abbreviation"
+    value-key="program_version_id"
+    placeholder="Programa..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
 <th class="tf"><!-- Edición (rango) -->
   <BaseDatePicker
     v-model="filters.edition_range_string"
@@ -585,7 +598,7 @@
               ><td class="td-a text-center fw-700 text-muted align-top pt-3">
                   {{ attempt.attempt_number ?? '—' }}
                 </td>
-                <td class="td-a align-top pt-2">
+                <td class="td-a align-top pt-2"  style="min-width: 230px;">
                   <SearchSelect
                     :items="lAttempts"
                     v-model="attempt.cat_type_attempt"
@@ -612,10 +625,10 @@
                   </div>
                 </td>
 
-                <td class="td-a align-top pt-2">
+                <td class="td-a align-top pt-2" style="min-width: 230px;">
                   <SearchSelect
                     v-model="attempt.calling_alias"
-                    :items="filtroCalling"
+                    :items="filteredCallingByType(attempt.cat_type_attempt)"
                     label-field="description"
                     value-field="alias"
                     placeholder="Seleccionar..."
@@ -770,7 +783,18 @@
       <div class="exec-fieldset mb-4">
         <h6 class="fieldset-title" style="color: var(--teal-600);">Interés Académico</h6>
         <div class="row g-3">
-          <div class="col-md-6"><label class="exec-label">Nombre del Programa</label><input v-model="filters.program_text" type="text" class="exec-input-light w-100" placeholder="Ej. Gestión de Proyectos..."></div>
+          <div class="col-md-6">
+  <label class="exec-label">Programa</label>
+  <MultiSelect
+    v-model="filters.program_version_ids"
+    mode="remote"
+    :fetcher="q => programService.programVersionCaller({ q })"
+    :debounce-ms="400"
+    label-key="abbreviation"
+    value-key="program_version_id"
+    placeholder="Buscar programa..."
+  />
+</div>
           <div class="col-md-6"><label class="exec-label">Promoción</label><MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Tipo</label><MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Modalidad</label><MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
@@ -1203,6 +1227,7 @@ order_by: 0,
   interest_level_ids: [],
   channel_ids: [],
   query_ids: [],
+  program_version_ids: [],
   type_program_ids: [],
   model_modality_ids: [],
   strategy_ids: [],
@@ -1378,6 +1403,7 @@ async function parseQueryAndApply() {
   filters.prospect_situation_ids = decodeFilter(q.prospect_situation_ids)
   filters.type_program_ids   = decodeFilter(q.type_program_ids)
   filters.model_modality_ids = decodeFilter(q.model_modality_ids)
+  filters.program_version_ids = decodeFilter(q.program_version_ids)
   filters.strategy_ids       = decodeFilter(q.strategy_ids)
   filters.word_ids           = decodeFilter(q.word_ids)
   filters.medium_contact_ids = decodeFilter(q.medium_contact_ids)
@@ -1715,6 +1741,7 @@ if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio E
   makeChip('channel_ids',        'Canal',      filters.channel_ids)
   makeChip('prospect_situation_ids', 'Situación', filters.prospect_situation_ids)
   makeChip('query_ids',          'Promoción',  filters.query_ids)
+  makeChip('program_version_ids', 'Programa', filters.program_version_ids)
   makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
   makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
   makeChip('strategy_ids',       'Estrategia', filters.strategy_ids)
@@ -1768,6 +1795,7 @@ fico_status_ids:            getIds(filters.fico_status_ids),
       owner_user_ids:      getIds(filters.owner_user_ids),
       status_lead_ids:     getIds(filters.status_lead_ids),
       last_follow_ids:     getIds(filters.last_follow_ids),
+      program_version_ids: getIds(filters.program_version_ids),
       prospect_situation_ids: getIds(filters.prospect_situation_ids),
       interest_level_ids:  getIds(filters.interest_level_ids),
       channel_ids:         getIds(filters.channel_ids),
@@ -1850,7 +1878,7 @@ function clearFilters(reload = true) {
     created_range_string: null, updated_range_string: null,attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
     pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
-    inscription_modality_ids: [], installment_status_ids: [],
+    inscription_modality_ids: [], installment_status_ids: [],program_version_ids: [],
     payment_method_ids: [], settlement_status_ids: [],prospect_situation_ids: []
   })
 
@@ -2013,6 +2041,15 @@ const toolbarCollapsed = ref(localStorage.getItem('crm_leads_toolbar_collapsed')
 watch(toolbarCollapsed, (val) => {
   localStorage.setItem('crm_leads_toolbar_collapsed', val)
 })
+
+const filteredCallingByType = (catTypeAttempt) => {
+  if (catTypeAttempt === 'we_attempt_call') {
+    return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
+  }
+  // Para todos los demás tipos (mensajes, seguimientos) → resultado siempre Pendiente,
+  // no tiene sentido mostrar opciones de llamada, así que devolvemos solo Pendiente
+  return filtroCalling.value.filter(c => c.alias === 'we_calling_pending')
+}
 </script>
 
 <style scoped>
