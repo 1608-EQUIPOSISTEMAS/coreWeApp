@@ -2518,7 +2518,11 @@ function formatDateTime(isoString) {
          date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 }
 
-  function cancelar() { router.back() }
+  function cancelar() { 
+    
+      router.push({ name: 'ComercialListado' })
+      
+   }
 
   function buildLeadPayload() {
     const cat_status_lead        = idByAlias(form.status_alias,          leadStatusCatalog.value)

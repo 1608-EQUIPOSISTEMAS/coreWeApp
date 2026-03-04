@@ -80,6 +80,7 @@
   <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
   <th class="ts ts-c">Status</th>
   <th class="ts ts-c">Contacto</th>
+  <th class="ts ts-c">Situación</th>
   <th class="ts ts-c" style="min-width: 160px!important;">T. Consulta</th>
   <th class="ts ts-c">Programa / Interés</th>
   <th class="ts ts-c">Ini. Edición</th>
@@ -89,9 +90,6 @@
   <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
-  <!-- Acciones: botón limpiar todo inline -->
-<!-- Celda acciones en thead-filter — maneja 3 estados -->
-<!-- Versión simplificada (recomendada) -->
 <th class="tf tf-actions-cell">
   <div class="hf-actions-group">
 
@@ -140,6 +138,17 @@
       @keyup.enter="triggerInlineFilter"
     />
   </th>
+  <th class="tf">
+  <MultiSelect
+    v-model="filters.prospect_situation_ids"
+    :items="filtroProspectSituation"
+    label-key="variable_1"
+    value-key="id"
+    placeholder="Todos..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
 
   <!-- T. Consulta -->
   <th class="tf">
@@ -239,6 +248,7 @@
                 <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
                 <th class="ts ts-c">Nombre</th>
                 <th class="ts ts-c">Teléfono</th>
+                <th class="ts ts-c">Situación</th>
                 <th class="ts ts-c">E. Cliente</th>
                 <th class="ts ts-c">Status</th>
                 <th class="ts ts-c">F. Pago</th>
@@ -274,8 +284,15 @@
   <th class="tf"><!-- Programa -->
     <input v-model="filters.program_text" type="text" class="hf-input" placeholder="Programa..." @input="debouncedInlineFilter" />
   </th>
-
-  <th class="tf"></th><!-- Edición -->
+<th class="tf"><!-- Edición (rango) -->
+  <BaseDatePicker
+    v-model="filters.edition_range_string"
+    :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+    class="hf-input"
+    placeholder="Edición..."
+    @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'edition_start'); triggerInlineFilter() }"
+  />
+</th>
 
   <th class="tf"><!-- T. Consulta -->
     <MultiSelect v-model="filters.query_ids" :items="filtroQuery" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -286,6 +303,17 @@
   <th class="tf"><!-- Teléfono / búsqueda -->
     <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
   </th>
+  <th class="tf">
+  <MultiSelect
+    v-model="filters.prospect_situation_ids"
+    :items="filtroProspectSituation"
+    label-key="variable_1"
+    value-key="id"
+    placeholder="Todos..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
 
   <th class="tf"><!-- E. Cliente -->
     <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -354,6 +382,7 @@
                     <span class="small text-muted">{{ l.full_name_label || 'Sin nombre' }}</span>
                   </div>
                 </td>
+                <td class="td-a small">{{ l.cat_prospect_situation || '—' }}</td>
                 <td class="td-a minW">
                   <span class="pill pill-slate border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span>
                 </td>
@@ -396,7 +425,7 @@
                 </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="10" class="empty-state">
+                <td colspan="11" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -417,8 +446,7 @@
     <td class="td-a text-center nowrap">
       <button class="btn-icon" 
         @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)"
-        :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'"
-      @click.stop="editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+        :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
         <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
       </button>
       <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
@@ -449,7 +477,7 @@
 
     <!-- Teléfono -->
     <td class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
-
+<td class="td-a small">{{ l.cat_prospect_situation || '—' }}</td>
     <!-- E. Cliente -->
     <td class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
 
@@ -499,7 +527,7 @@
   </tr>
 
   <tr v-if="!leadsRaw.length">
-    <td colspan="19" class="empty-state">No se encontraron leads con los filtros actuales.</td>
+    <td colspan="20" class="empty-state">No se encontraron leads con los filtros actuales.</td>
   </tr>
 </tbody>
           </table>
@@ -704,6 +732,16 @@
           <div class="col-md-3 col-6"><label class="exec-label">País</label><MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Canal (Red Social)</label><MultiSelect v-model="filters.channel_ids" :items="filtroCanales" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Medio de Contacto</label><MultiSelect v-model="filters.medium_contact_ids" :items="filtroMedios" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6">
+  <label class="exec-label">Situación del Prospecto</label>
+  <MultiSelect
+    v-model="filters.prospect_situation_ids"
+    :items="filtroProspectSituation"
+    label-key="description"
+    value-key="id"
+    placeholder="Todas..."
+  />
+</div>
           <div class="col-md-3 col-6"><label class="exec-label">Estrategia</label><MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Palabra Clave</label><MultiSelect v-model="filters.word_ids" :items="mktWordsCatalog" label-key="description" value-key="id" placeholder="Todas..." /></div>
 <div class="col-md-3 col-6">
@@ -1126,7 +1164,7 @@ const catalog = inject('catalog')
 
 const programService = inject(ServiceKeys.Program)
 const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
-
+const filtroProspectSituation = ref(catalog.options('we_prospect_situation') || [])
 // === ESTADO ===
 const showFilterModal = ref(false)
 const showFollowModal = ref(false)
@@ -1176,6 +1214,7 @@ fico_status_ids: [],
   profile_ids: [],
   currency_ids: [],
   inscription_modality_ids: [],
+  prospect_situation_ids: [],
   installment_status_ids: [],
   payment_method_ids: [],
   // payment_type_ids: [], // Ignorado como solicitaste
@@ -1336,6 +1375,7 @@ async function parseQueryAndApply() {
   filters.interest_level_ids = decodeFilter(q.interest_level_ids)
   filters.channel_ids        = decodeFilter(q.channel_ids)
   filters.query_ids          = decodeFilter(q.query_ids)
+  filters.prospect_situation_ids = decodeFilter(q.prospect_situation_ids)
   filters.type_program_ids   = decodeFilter(q.type_program_ids)
   filters.model_modality_ids = decodeFilter(q.model_modality_ids)
   filters.strategy_ids       = decodeFilter(q.strategy_ids)
@@ -1673,6 +1713,7 @@ if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio E
   makeChip('attempt_origin_ids', 'O. Intento', filters.attempt_origin_ids)
   makeChip('interest_level_ids', 'Interés',    filters.interest_level_ids)
   makeChip('channel_ids',        'Canal',      filters.channel_ids)
+  makeChip('prospect_situation_ids', 'Situación', filters.prospect_situation_ids)
   makeChip('query_ids',          'Promoción',  filters.query_ids)
   makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
   makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
@@ -1727,6 +1768,7 @@ fico_status_ids:            getIds(filters.fico_status_ids),
       owner_user_ids:      getIds(filters.owner_user_ids),
       status_lead_ids:     getIds(filters.status_lead_ids),
       last_follow_ids:     getIds(filters.last_follow_ids),
+      prospect_situation_ids: getIds(filters.prospect_situation_ids),
       interest_level_ids:  getIds(filters.interest_level_ids),
       channel_ids:         getIds(filters.channel_ids),
       query_ids:           getIds(filters.query_ids),
@@ -1805,11 +1847,11 @@ function clearFilters(reload = true) {
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
     word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
-    created_range_string: null, updated_range_string: null,ttempt_origin_ids: [],
+    created_range_string: null, updated_range_string: null,attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
     pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
     inscription_modality_ids: [], installment_status_ids: [],
-    payment_method_ids: [], settlement_status_ids: []
+    payment_method_ids: [], settlement_status_ids: [],prospect_situation_ids: []
   })
 
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
