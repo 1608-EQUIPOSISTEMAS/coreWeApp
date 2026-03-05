@@ -460,14 +460,15 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <label class="exec-label d-lg-none">Tipo / Origen</label>
 
               <SearchSelect
-                v-model="c.cat_type_attempt"
-                :items="lAttempts"
-                label-field="description"
-                value-field="alias"
-                placeholder="TIPO..."
-                class="exec-select-light w-100"
-                :disabled="!!c.id"
-              />
+  v-model="c.cat_type_attempt"
+  :items="lAttempts"
+  label-field="description"
+  value-field="alias"
+  placeholder="TIPO..."
+  class="exec-select-light w-100"
+  :disabled="!!c.id"
+  @update:model-value="(val) => handleTypeChange(c, val)" 
+/>
 
               <template v-if="c.id">
 
@@ -544,7 +545,9 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
             <div class="attempt-row__result">
               <label class="exec-label d-lg-none">T. Resultado</label>
+              
               <SearchSelect
+                v-if="c.cat_type_attempt === 'we_attempt_call'"
                 v-model="c.calling_alias"
                 :viewOpen="6"
                 :items="callingCatalog"
@@ -556,6 +559,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="exec-select-light w-100"
                 :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
               />
+
+              <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
+                <i class="fa-regular fa-paper-plane me-2"></i>
+                <span>Mensaje / Gestión</span>
+              </div>
             </div>
 
             <div class="attempt-row__obs">
@@ -565,7 +573,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="exec-textarea w-100"
                 rows="2"
                 placeholder="Observación..."
-                :disabled="c.calling_alias != 'we_calling_pending'"
+                :disabled="!!c.id && c.cat_type_attempt === 'we_attempt_call' && c.calling_alias !== 'we_calling_pending'"
                 v-restrict="{ trim: true, max: 250 }"
               ></textarea>
             </div>
@@ -1179,59 +1187,65 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </template>
 
           <template v-if="isEdit || validateInscriptionPaymentInfo()">
-          <div class="col-md-4 mt-3">
-            <label class="exec-label">
-              Descuento
-              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
-            </label>
-            <SearchSelect
-              :key="`porcent-${discountResetKey}`"
+            <!-- DESCUENTO % — oculto si hay promo activa -->
+            <div class="col-md-4 mt-3" v-if="!hasStick">
+              <label class="exec-label">
+                Descuento
+                <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+              </label>
+              <SearchSelect
+                :key="`porcent-${discountResetKey}`"
+                v-model="insc.dsct_porcent_id"
+                mode="remote"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
+                label-field="full_label" value-field="id" :viewOpen="6"
+                placeholder="DESCUENTO (%)" :minChars="0" :cache="false"
+                class="exec-select-light w-100"
+                :disabled="!insc.montoOriginal"
+                :model-label="insc.dsct_porcent_label"
+                @change="onChangeDescuentoPorcentual"
+              />
+            </div>
 
-              v-model="insc.dsct_porcent_id"
-              mode="remote"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
-              label-field="full_label" value-field="id" :viewOpen="6"
-              placeholder="DESCUENTO (%)" :minChars="0" :cache="false"
-              class="exec-select-light w-100"
-              :disabled="!insc.montoOriginal"
-              @change="onChangeDescuentoPorcentual"
-            />
-          </div>
-          <div class="col-md-4 mt-3">
-            <label class="exec-label">
-              Promoción
-              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
-            </label>
-            <SearchSelect
-              :key="`stick-${discountResetKey}`"
-              v-model="insc.dsct_stick_id"
-              mode="remote" :viewOpen="6"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id"
-              placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
-              class="exec-select-light w-100"
-              :disabled="!insc.montoOriginal"
-              @change="onChangeDescuentoFijo"
-            />
-          </div>
-          <div class="col-md-4 mt-3">
-            <label class="exec-label">
-              Beneficio
-              <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
-            </label>
-            <SearchSelect
-              :key="`benefit-${discountResetKey}`"
+            <!-- PROMOCIÓN (stick) — oculta si hay % o beneficio activo -->
+            <div class="col-md-4 mt-3" v-if="!hasPorcentOrBenefit">
+              <label class="exec-label">
+                Promoción
+                <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+              </label>
+              <SearchSelect
+                :key="`stick-${discountResetKey}`"
+                v-model="insc.dsct_stick_id"
+                mode="remote" :viewOpen="6"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
+                label-field="full_label" value-field="id"
+                placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
+                class="exec-select-light w-100"
+                :disabled="!insc.montoOriginal"
+                :model-label="insc.dsct_stick_label"
+                @change="onChangeDescuentoFijo"
+              />
+            </div>
 
-              v-model="insc.dsct_benefit_id"
-              mode="remote"
-              :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
-              label-field="full_label" value-field="id" :viewOpen="6"
-              placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
-              class="exec-select-light w-100"
-              :disabled="!insc.montoOriginal"
-              @change="onChangeBeneficio"
-            />
-          </div>
+            <!-- BENEFICIO — oculto si hay promo activa -->
+            <div class="col-md-4 mt-3" v-if="!hasStick">
+              <label class="exec-label">
+                Beneficio
+                <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
+              </label>
+              <SearchSelect
+                :key="`benefit-${discountResetKey}`"
+                v-model="insc.dsct_benefit_id"
+                mode="remote"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
+                label-field="full_label" value-field="id" :viewOpen="6"
+                placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
+                class="exec-select-light w-100"
+                :disabled="!insc.montoOriginal"
+                :model-label="insc.dsct_benefit_label"
+                @change="onChangeBeneficio"
+              />
+            </div>
           </template>
         </div>
       </div>
@@ -1679,6 +1693,9 @@ price_profesional_dollars: 0,
     cat_certificate_status: null,
     promocion_id: null,
     descuento_id: null,
+    dsct_porcent_label: null,
+    dsct_stick_label: null,
+    dsct_benefit_label: null,
     cat_method_payment: null,
     modalidadPago: 'CONTADO',
     montoOriginal: 0,
@@ -1865,13 +1882,21 @@ const hcEnrollmentData = ref([
   { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
 ])
 
-  function onChangeDescuentoPorcentual(opt) {
-    if (!opt) {
-      insc.val_porcentaje = 0
-      return
-    }
-    insc.val_porcentaje = Number(opt.value) || 0
+function onChangeDescuentoPorcentual(opt) {
+  if (!opt) {
+    insc.val_porcentaje = 0
+    insc.dsct_porcent_label = null
+    return
   }
+  insc.val_porcentaje = Number(opt.value) || 0
+  insc.dsct_porcent_label = opt.full_label || opt.label || null
+  // Limpiar stick si se selecciona porcentaje
+  insc.dsct_stick_id    = null
+  insc.dsct_stick_label = null
+  insc.val_fijo         = 0
+  discountResetKey.value++
+}
+
   import { watchEffect } from 'vue'
 // Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
 const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
@@ -1925,20 +1950,38 @@ watchEffect(() => {
 insc.total_amount = final > 0 ? Math.floor(final) : 0
 })
 
+ 
   function onChangeDescuentoFijo(opt) {
     if (!opt) {
       insc.val_fijo = 0
+      insc.dsct_stick_label = null
       return
     }
     insc.val_fijo = Number(opt.value) || 0
+    insc.dsct_stick_label = opt.full_label || opt.label || null
+    // Limpiar porcentaje y beneficio si se selecciona promo
+    insc.dsct_porcent_id    = null
+    insc.dsct_porcent_label = null
+    insc.val_porcentaje     = 0
+    insc.dsct_benefit_id    = null
+    insc.dsct_benefit_label = null
+    insc.val_beneficio      = 0
+    discountResetKey.value++
   }
 
   function onChangeBeneficio(opt) {
     if (!opt) {
       insc.val_beneficio = 0
+      insc.dsct_benefit_label = null
       return
     }
     insc.val_beneficio = Number(opt.value) || 0
+    insc.dsct_benefit_label = opt.full_label || opt.label || null
+    // Limpiar stick si se selecciona beneficio
+    insc.dsct_stick_id    = null
+    insc.dsct_stick_label = null
+    insc.val_fijo         = 0
+    discountResetKey.value++
   }
 
     const montoFinalCalculado = computed(() => {
@@ -2213,6 +2256,29 @@ watch(() => insc.cat_type_document, (newVal) => {
     loaded.value = true
   })
 
+  // Función para manejar el cambio de tipo de intento
+function handleTypeChange(contacto, newVal) {
+  // 1. Asignar valor
+  contacto.cat_type_attempt = newVal;
+
+  // 2. Lógica: Si NO es llamada
+  if (newVal !== 'we_attempt_call') {
+    // Forzamos el resultado a 'Mensaje / Gestión'
+    contacto.calling_alias = 'we_calling_message'; 
+    
+    // Detenemos cronómetro si estaba activo y reseteamos duración
+    if (contacto.timerActive) {
+        clearInterval(contacto.timerId);
+        contacto.timerActive = false;
+        contacto.timerId = null;
+    }
+    contacto.contact_duration = 0;
+  } else {
+    // Si vuelve a ser llamada, lo ponemos en Pendiente
+    contacto.calling_alias = 'we_calling_pending';
+  }
+}
+
 function createEmptyAttempt() {
   return {
     cat_type_attempt: 'we_attempt_call', // Valor por defecto
@@ -2454,6 +2520,9 @@ function resetInscriptionData() {
     val_porcentaje: 0,
     val_fijo: 0,
     val_beneficio: 0,
+    dsct_porcent_label: null,
+    dsct_stick_label: null,
+    dsct_benefit_label: null,
     montoDescuentoPorcentaje: 0,
     montoDescuentoFijo: 0,
     montoBeneficio: 0,
@@ -3372,6 +3441,8 @@ function isValidEmail(email) {
 const isOnlineProgram = computed(() =>
   form.program_modality_selected_alias === 'we_modality_online'
 )
+const hasStick           = computed(() => !!insc.dsct_stick_id)
+const hasPorcentOrBenefit = computed(() => !!insc.dsct_porcent_id || !!insc.dsct_benefit_id)
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false

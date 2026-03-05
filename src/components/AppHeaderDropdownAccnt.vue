@@ -1,6 +1,6 @@
 <script setup>
   import avatar from '@/assets/images/avatars/8.jpg'
-
+import { cilReload } from '@coreui/icons'
   const itemsCount = 0
 
   import { ServiceKeys } from '@/services'
@@ -161,11 +161,9 @@
       </CDropdownHeader>
       <!-- <CDropdownItem> <CIcon icon="cil-user" /> Perfil </CDropdownItem>
       <CDropdownItem> <CIcon icon="cil-settings" /> Ajustes </CDropdownItem> -->
-      <CDropdownItem
-        @click="syncCatalog"
-      >
-        <CIcon icon="cil-sync" /> Sincronizar Catálogo
-      </CDropdownItem>
+      <CDropdownItem @click="syncCatalog">
+  <CIcon :icon="cilReload" /> Actualizar Sistema
+</CDropdownItem>
       <CDropdownDivider />
       <CDropdownItem @click="logout()"> <CIcon icon="cil-lock-locked"/> Cerrar Sesión </CDropdownItem>
     </CDropdownMenu>

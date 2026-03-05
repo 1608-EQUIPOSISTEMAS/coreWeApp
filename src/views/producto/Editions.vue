@@ -4047,12 +4047,10 @@ function loadState() {
   }
 }
 const searchEditionsFiltered = async (q, child, index) => {
-  // 1. Llamar al servicio original
   const response = await editionService.editionCaller({
     q,
     program_version_id: child.child_program_version_id,
-    //si es el primer hijo y es new que se rija bajo el mesy año seleccionado
-    ...(!hasActiveFilters.value ? {
+    ...((!hasActiveFilters.value && child.new) ? {
       month: selectedMonth.value,
       year: selectedYear.value
     } : {})
@@ -4060,82 +4058,57 @@ const searchEditionsFiltered = async (q, child, index) => {
 
   if (!Array.isArray(response)) return [];
 
-  // --- LÓGICA DE LÍMITE INFERIOR (Hermanos Anteriores) ---
-  let minDateLimit = null; // Fecha mínima permitida (piso)
+  let minDateLimit = null;
+  let maxDateLimit = null;
 
-  if (index > 0) {
-    const arrItemsBefore = modalForm.program_version_children.slice(0, index);
-    const prevDates = arrItemsBefore
-      .map(item => item.start_date)
-      .filter(date => date);
+if (index > 0) {
+  const prevDates = modalForm.program_version_children
+    .slice(0, index)
+    .map(item => item.start_date)
+    .filter(Boolean)
+    .map(d => d.slice(0, 10)); // ✅ Normalizar también aquí
 
-    if (prevDates.length > 0) {
-      prevDates.sort();
-      // Queremos la ÚLTIMA fecha de los anteriores (la más grande)
-      minDateLimit = prevDates[prevDates.length - 1];
-    }
+  if (prevDates.length > 0) {
+    prevDates.sort();
+    minDateLimit = prevDates[prevDates.length - 1];
   }
+}
 
-  // --- LÓGICA DE LÍMITE SUPERIOR (Hermanos Siguientes) ---
-  let maxDateLimit = null; // Fecha máxima permitida (techo)
+if (index !== 0) {
+  const nextDates = modalForm.program_version_children
+    .slice(index + 1)
+    .filter(item => item.edition_id && item.start_date) // ✅ Solo los ya vinculados
+    .map(item => item.start_date.slice(0, 10))          // ✅ Normalizar formato
+    .filter(Boolean);
 
-
-  if (index != 0 ) {
-
-    // slice(index + 1) toma desde el siguiente hasta el final
-    const arrItemsAfter = modalForm.program_version_children.slice(index + 1);
-    const nextDates = arrItemsAfter
-      .map(item => item.start_date)
-      .filter(date => date);
-
-    if (nextDates.length > 0) {
-      nextDates.sort();
-      // Queremos la PRIMERA fecha de los siguientes (la más pequeña / más pronta)
-      // porque no podemos empezar después de que el siguiente empiece.
-      maxDateLimit = nextDates[0];
-    }
+  if (nextDates.length > 0) {
+    nextDates.sort();
+    maxDateLimit = nextDates[0];
   }
+}
 
-  // --- FILTRADO FINAL ---
   const filteredResponse = response.filter(edition => {
-    // Seguridad: Si la edición no tiene fecha, la descartamos (o la dejas, según tu regla de negocio)
     if (!edition.start_date) return false;
 
-    const editionDate = edition.start_date;
+    // ✅ NORMALIZAR a YYYY-MM-DD antes de comparar
+    const editionDate = edition.start_date.slice(0, 10);
+    debugger
+    if (minDateLimit && editionDate < minDateLimit) return false;
+    if (maxDateLimit && editionDate > maxDateLimit) return false;
 
-    // 1. Validar contra el pasado (PISO)
-    // Si existe límite inferior y la edición es menor a ese límite -> False
-    if (minDateLimit && editionDate < minDateLimit) {
-      return false;
-    }
-
-    // 2. Validar contra el futuro (TECHO)
-    // Si existe límite superior y la edición es mayor a ese límite -> False
-    if (maxDateLimit && editionDate > maxDateLimit) {
-      return false;
-    }
-
-    // si es una edición nueva la modal y tambien hasActiveFilters es false y es una edicion nueva hija y es la es la primera hija, tiene que ser del mismo mes y año del selectedMonth y year
     if (
       !currentEdition.value &&
       !hasActiveFilters.value &&
       index === 0 &&
-      !child.new
+      child.new
     ) {
-      const date = new Date(editionDate);
-
-      const editionMonth = date.getUTCMonth() + 1; // 1–12
-      const editionYear  = date.getUTCFullYear();
-
-      if (
-        editionMonth !== selectedMonth.value ||
-        editionYear !== selectedYear.value
-      ) {
+      const editionMonth = parseInt(editionDate.slice(5, 7));
+      const editionYear  = parseInt(editionDate.slice(0, 4));
+      if (editionMonth !== selectedMonth.value || editionYear !== selectedYear.value) {
         return false;
       }
     }
 
-    // Si pasa ambas, es válida
     return true;
   });
 

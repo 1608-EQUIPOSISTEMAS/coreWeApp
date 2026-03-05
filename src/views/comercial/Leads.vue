@@ -632,16 +632,16 @@
                 </td>
                 <td class="td-a align-top pt-2"  style="min-width: 230px;">
                   <SearchSelect
-                    :items="lAttempts"
-                    v-model="attempt.cat_type_attempt"
-                    label-field="description"
-                    value-field="alias"
-                    placeholder="Seleccionar..."
-                    :disabled="attempt.id"
-                    class="exec-select-light w-100"
-                    required
-                  />
-
+                      :items="lAttempts"
+                      v-model="attempt.cat_type_attempt"
+                      label-field="description"
+                      value-field="alias"
+                      placeholder="Seleccionar..."
+                      :disabled="attempt.id"
+                      class="exec-select-light w-100"
+                      required
+                      @update:model-value="(val) => handleTypeChange(attempt, val)"
+                    />
                   <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
                     <span
                       class="pill border w-100 justify-content-center"
@@ -657,17 +657,25 @@
                   </div>
                 </td>
 
-                <td class="td-a align-top pt-2" style="min-width: 230px;">
-                  <SearchSelect
-                    v-model="attempt.calling_alias"
-                    :items="filteredCallingByType(attempt.cat_type_attempt)"
-                    label-field="description"
-                    value-field="alias"
-                    placeholder="Seleccionar..."
-                    :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias"
-                    class="exec-select-light w-100"
-                  />
-                </td>
+<td class="td-a align-top pt-2" style="min-width: 230px;">
+  
+  <SearchSelect
+    v-if="attempt.cat_type_attempt === 'we_attempt_call'"
+    v-model="attempt.calling_alias"
+    :items="filteredCallingByType(attempt.cat_type_attempt)"
+    label-field="description"
+    value-field="alias"
+    placeholder="Seleccionar..."
+    :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias"
+    class="exec-select-light w-100"
+  />
+
+  <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
+    <i class="fa-regular fa-paper-plane me-2"></i>
+    <span>Mensaje / Gestión</span>
+  </div>
+
+</td>
 
                 <td class="td-a align-top pt-2">
                   <DateTime12
@@ -700,16 +708,15 @@
                     </div>
                   </div>
                 </td>
-
-                <td class="td-a align-top pt-2">
-                  <textarea
-                    v-model="attempt.response"
-                    class="exec-textarea w-100"
-                    rows="2"
-                    placeholder="Escribe una observación..."
-                    :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'"
-                  ></textarea>
-                </td>
+<td class="td-a align-top pt-2">
+  <textarea
+    v-model="attempt.response"
+    class="exec-textarea w-100"
+    rows="2"
+    placeholder="Escribe una observación..."
+    :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"
+  ></textarea>
+</td>
                 <td class="td-a align-top pt-2">
   <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">
     {{ attempt.user_registration_label }}
@@ -2126,7 +2133,25 @@ const filteredCallingByType = (catTypeAttempt) => {
 const withNull = (items) => [
   { id: -1, description: '(Vacío)', alias: '__null__' },
   ...(items || [])
-]
+] 
+
+function handleTypeChange(attempt, newVal) {
+  // 1. Asignar el valor seleccionado al modelo (si el componente no lo hace auto)
+  attempt.cat_type_attempt = newVal; 
+
+  // 2. Lógica de la corrección solicitada
+  if (newVal !== 'we_attempt_call') {
+    // CORRECCIÓN: Si no es llamada, forzar 'we_calling_message'
+    attempt.calling_alias = 'we_calling_message';
+    
+    // Limpiar cronómetro si estaba corriendo
+    if (attempt.timerActive) toggleTimer(attempt);
+    attempt.contact_duration = 0;
+  } else {
+    // Si vuelve a ser llamada, dejarlo en Pendiente para que el asesor decida
+    attempt.calling_alias = 'we_calling_pending';
+  }
+}
 </script>
 
 <style scoped>
