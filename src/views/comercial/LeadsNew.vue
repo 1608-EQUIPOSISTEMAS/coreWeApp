@@ -53,8 +53,7 @@
         </div>
       </div>
     </header>
-
-    <main class="exec-body pb-5 d-flex justify-content-center" v-if="loaded">
+<main class="exec-body pb-5" v-if="loaded">
       <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
 
         <div class="exec-fieldset mb-4">
@@ -3382,9 +3381,10 @@ function toggleReschedule(contacto) {
 </script>
 
 <style scoped>
+/* ── CONTENEDORES PRINCIPALES (Solución de scroll único) ── */
 .exec-shell {
   background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
+  min-height: 100%; 
   display: flex;
   flex-direction: column;
 }
@@ -3394,9 +3394,16 @@ function toggleReschedule(contacto) {
   color: #fff;
   border-bottom: 1px solid var(--navy-700, #334155);
   position: sticky;
-  top: 0;
+  top: 60px; /* IMPORTANTE: Ajusta este valor si tu barra superior blanca es más alta o más baja. Si tu barra superior no es fija, pon esto en 0 */
   z-index: 100;
 }
+
+.exec-body { 
+  flex: 1;
+  padding: 32px 28px;
+}
+
+/* ── RESTO DE TUS ESTILOS ── */
 .masthead-inner {
   display: flex;
   justify-content: space-between;
@@ -3422,7 +3429,6 @@ function toggleReschedule(contacto) {
 }
 .masthead-actions { display: flex; gap: 10px; align-items: center; }
 
-.exec-body { padding: 32px 28px; }
 .exec-form-wrapper {
   background: #fff;
   border: 1px solid var(--border, #e2e8f0);
@@ -4196,4 +4202,3 @@ function toggleReschedule(contacto) {
 }
 .c-green { color: #15803d; }
 </style>
-
