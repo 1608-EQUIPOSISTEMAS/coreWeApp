@@ -3066,7 +3066,7 @@ function onProgramaChange(opcion) {
   form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
 }
 
-const searchEditionsFiltered = async (q, child, index) => {
+const searchEditionsFiltered = async (q) => {
   const month = new Date().getMonth() + 1
   const year  = new Date().getFullYear()
 
@@ -3078,20 +3078,25 @@ const searchEditionsFiltered = async (q, child, index) => {
   })
 
   const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
+
+  // Desde el 1° del mes pasado
+  const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+  desde.setHours(0, 0, 0, 0)
+
+  // Hasta el 31 dic del año actual
+  const hasta = new Date(hoy.getFullYear(), 11, 31)
+  hasta.setHours(23, 59, 59, 999)
 
   return (response || [])
-    // 1️⃣ filtrar solo desde hoy en adelante
     .filter(e => {
       if (!e.start_date) return true
-      return new Date(e.start_date) >= hoy
+      const fecha = new Date(e.start_date)
+      return fecha >= desde && fecha <= hasta
     })
-    // 2️⃣ ordenar por fecha más cercana → más lejana
     .sort((a, b) => {
       if (!a.start_date && !b.start_date) return 0
-      if (!a.start_date) return 1   // sin fecha al final
+      if (!a.start_date) return 1
       if (!b.start_date) return -1
-
       return new Date(a.start_date) - new Date(b.start_date)
     })
 }

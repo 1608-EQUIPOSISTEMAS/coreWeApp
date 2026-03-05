@@ -87,6 +87,7 @@
   <th class="ts ts-c">F. Pago</th>
   <th class="ts ts-c">Nivel Interés</th>
   <th class="ts ts-c">Registro</th>
+<th class="ts ts-c">Canal Pago</th>
   <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
@@ -241,30 +242,30 @@
     />
   </th>
 </tr>
-              <tr v-else class="thead-sub">
-                <th class="ts ts-c text-center">Acciones</th>
-
-<th class="ts ts-c">F. Contacto</th>
-                <th class="ts ts-c">Categoría</th>
-                <th class="ts ts-c">Modalidad</th>
-                <th class="ts ts-c">Programa</th>
-                <th class="ts ts-c">Edición</th>
-                <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
-                <th class="ts ts-c">Nombre</th>
-                <th class="ts ts-c">Teléfono</th>
-                <th class="ts ts-c">Situación</th>
-                <th class="ts ts-c">E. Cliente</th>
-                <th class="ts ts-c">Status</th>
-                <th class="ts ts-c">F. Pago</th>
-                <th class="ts ts-c">Interés</th>
-                <th class="ts ts-c">Canal origen</th>
-                <th class="ts ts-c">Medio</th>
-                <th class="ts ts-c">Palabra MKT</th>
-                <th class="ts ts-c">Estrategia</th>
-                <th class="ts ts-c">Asesor/Usuario</th>
-                <th class="ts ts-c">F. Registro</th>
-                <th class="ts ts-c">Seguimiento</th>
-              </tr>
+<tr v-else class="thead-sub">
+  <th class="ts ts-c text-center">Acciones</th>
+  <th class="ts ts-c">F. Contacto</th>
+  <th class="ts ts-c">Categoría</th>
+  <th class="ts ts-c">Modalidad</th>
+  <th class="ts ts-c">Programa</th>
+  <th class="ts ts-c">Edición</th>
+  <th class="ts ts-c" style="min-width: 140px!important;">T. Consulta</th>
+  <th class="ts ts-c">Nombre</th>
+  <th class="ts ts-c">Teléfono</th>
+  <th class="ts ts-c">Situación</th>
+  <th class="ts ts-c">E. Cliente</th>
+  <th class="ts ts-c">Status</th>
+  <th class="ts ts-c">F. Pago</th>
+  <th class="ts ts-c">Interés</th>
+  <th class="ts ts-c">Canal origen</th>
+  <th class="ts ts-c">Medio</th>
+  <th class="ts ts-c">Palabra MKT</th>
+  <th class="ts ts-c">Estrategia</th>
+  <th class="ts ts-c">Asesor/Usuario</th>
+  <th class="ts ts-c">F. Registro</th>
+  <th class="ts ts-c">Canal Pago</th>      <!-- ← NUEVO -->
+  <th class="ts ts-c text-center">Seguimiento</th>
+</tr>
 <tr v-if="isCompact" class="thead-filter">
   <!-- DESPUÉS -->
 <th class="tf tf-actions-cell">
@@ -394,7 +395,32 @@
     @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }"
   />
 </th>
-  <th class="tf"></th><!-- Seguimiento -->
+<!-- Canal de Pago — NUEVO -->
+<th class="tf">
+  <MultiSelect
+    v-model="filters.payment_channel_ids"
+    :items="filtroPaymentChannel"
+    label-key="description"
+    value-key="id"
+    placeholder="Canal pago..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
+
+
+<!-- Seguimiento — ahora con filtro real -->
+<th class="tf">
+  <MultiSelect
+    v-model="filters.last_follow_ids"
+    :items="filtroFollow"
+    label-key="description"
+    value-key="id"
+    placeholder="Seguim..."
+    class="hf-multiselect"
+    @update:model-value="triggerInlineFilter"
+  />
+</th>
 </tr>
             </thead>
 
@@ -471,7 +497,7 @@
                 </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="11" class="empty-state">
+                <td colspan="12" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -559,16 +585,19 @@
     <!-- Asesor/Usuario -->
     <td class="td-a small">{{ l.user_registration_label }}</td>
 <td class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
-    <!-- Seguimiento -->
-    <td class="td-a text-center">
-      <i
-        v-if="l.cat_last_follow_alias"
-        class="fa-solid fa-circle cursor-pointer"
-        :class="l.cat_last_follow_alias === 'we_calling_answered' ? 'c-green' : 'text-slate-400'"
-        :title="l.cat_last_follow_alias"
-      ></i>
-      <span v-else class="text-muted">—</span>
-    </td>
+<!-- Canal de Pago — NUEVO -->
+    <td class="td-a small text-muted">{{ l.description || '—' }}</td>   <!-- Canal Pago -->
+<td class="td-a text-center" style="min-width:140px">               <!-- Seguimiento -->
+  <div
+    v-if="l.cat_last_follow_alias"
+    class="pill d-inline-flex align-items-center gap-1"
+    :class="badgeForFollow(l.cat_last_follow_alias)"
+  >
+    <span>{{ followMap[l.cat_last_follow_alias] }}</span>
+    <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
+  </div>
+  <span v-else class="text-muted small">—</span>
+</td>
   </tr>
 
   <tr v-if="!leadsRaw.length">
@@ -886,6 +915,17 @@
           <div class="col-md-3 col-6"><label class="exec-label">Estado Cuotas</label><MultiSelect v-model="filters.installment_status_ids" :items="filtroPaymentStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Método de Pago</label><MultiSelect v-model="filters.payment_method_ids" :items="filtroPaymentMethod" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Conciliación Bancaria</label><MultiSelect v-model="filters.settlement_status_ids" :items="filtroSettlementStatus" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <!-- NUEVO: al final del row g-3 de Financieros -->
+<div class="col-md-3 col-6">
+  <label class="exec-label">Canal de Pago</label>
+  <MultiSelect
+    v-model="filters.payment_channel_ids"
+    :items="filtroPaymentChannel"
+    label-key="description"
+    value-key="id"
+    placeholder="Todos..."
+  />
+</div>
         </div>
       </div>
 
@@ -1281,6 +1321,8 @@ const filters = reactive({
   web: null,
   b2b: null,
 order_by: 0,
+
+payment_channel_ids: [],
   // Ahora todos los MultiSelect guardan [{value, label}]
   owner_user_ids: [],
   status_lead_ids: [],
@@ -1323,6 +1365,7 @@ first_contact_to: '',
 
 // === CATÁLOGOS ===
 const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
+const filtroPaymentChannel = ref(catalog.options('we_payment_channel') || [])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
@@ -1464,6 +1507,7 @@ async function parseQueryAndApply() {
   filters.interest_level_ids = decodeFilter(q.interest_level_ids)
   filters.channel_ids        = decodeFilter(q.channel_ids)
   filters.query_ids          = decodeFilter(q.query_ids)
+  filters.payment_channel_ids = decodeFilter(q.payment_channel_ids)
   filters.prospect_situation_ids = decodeFilter(q.prospect_situation_ids)
   filters.type_program_ids   = decodeFilter(q.type_program_ids)
   filters.model_modality_ids = decodeFilter(q.model_modality_ids)
@@ -1811,6 +1855,8 @@ if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio E
   makeChip('type_program_ids',   'Tipo',       filters.type_program_ids)
   makeChip('model_modality_ids', 'Modalidad',  filters.model_modality_ids)
   makeChip('strategy_ids',       'Estrategia', filters.strategy_ids)
+
+makeChip('payment_channel_ids', 'Canal Pago', filters.payment_channel_ids)
   makeChip('word_ids',           'Palabra',    filters.word_ids)
   makeChip('medium_contact_ids', 'Medio',      filters.medium_contact_ids)
   makeChip('code_country_ids',   'País',       filters.code_country_ids)
@@ -1842,6 +1888,8 @@ async function fetchLeads() {
       web:                 filters.web           || null,
       b2b:                 filters.b2b           || null,
   order_by: filters.order_by ?? 0,
+
+payment_channel_ids: getIds(filters.payment_channel_ids),
 
       from_date:           filters.rangoFechas?.start        || null,
       to_date:             filters.rangoFechas?.end          || null,
@@ -1941,6 +1989,7 @@ function clearFilters(reload = true) {
     owner_user_ids: [], status_lead_ids: [], last_follow_ids: [],order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
+payment_channel_ids: [],
     word_ids: [], medium_contact_ids: [], code_country_ids: [], moment_ids: [],
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
     created_range_string: null, updated_range_string: null,attempt_origin_ids: [],
@@ -2248,9 +2297,21 @@ function handleTypeChange(attempt, newVal) {
   background: #fff;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
-  overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
 }
+
+
+/* DESPUÉS */
+.table-shell {
+  overflow: visible;  /* permite que los dropdowns escapen */
+}
+
+.table-responsive-custom {
+  overflow-x: auto;
+  border-radius: 6px; /* compensar el border-radius que perdemos */
+}
+
+
 .table-responsive-custom { width: 100%; overflow-x: auto; }
 .exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 
@@ -2860,5 +2921,9 @@ function handleTypeChange(attempt, newVal) {
   transition: font-size .2s ease;
 }
 /* ═════════════════════════════════════════════════════════════ */
-
+/* Últimas celdas del thead-filter — dropdown abre a la izquierda */
+.thead-filter .tf:nth-last-child(-n+3) :deep(.multiselect-dropdown) {
+  left: auto !important;
+  right: 0 !important;
+}
 </style>
