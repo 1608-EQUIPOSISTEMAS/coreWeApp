@@ -3,64 +3,82 @@
 
   const itemsCount = 0
 
-  //updateBase()
   import { ServiceKeys } from '@/services'
   import { useToast } from 'vue-toastification'
-import { inject } from 'vue'
+  import { inject, onMounted, onUnmounted } from 'vue'
 
-const catalog = inject('catalog')
-
-
-async function syncCatalog() {
-  try {
-    toast.info('Sincronizando catálogo...')
-
-    await catalog.refresh()
-
-    // limpiar cache dependiente
-    localStorage.removeItem('membershipList')
-
-    // precargar nuevamente si deseas
-    await catalog.membershipList({ active: true })
-
-    toast.success('Catálogo sincronizado correctamente')
-  } catch (error) {
-    console.error('Error al sincronizar catálogo:', error)
-    toast.error('Error al sincronizar el catálogo')
-  }
-}
+  const catalog = inject('catalog')
   const toast = useToast()
   const integrationService = inject(ServiceKeys.Integration)
 
-  //extraer localstorage info user
+  // Canal de comunicación entre pestañas
+  const syncChannel = new BroadcastChannel('catalog_sync')
+
+  // Escuchar el mensaje en todas las pestañas
+  onMounted(() => {
+    syncChannel.onmessage = (event) => {
+      if (event.data === 'reload') {
+        window.location.reload()
+      }
+    }
+  })
+
+  onUnmounted(() => {
+    syncChannel.close()
+  })
+
+  // extraer localstorage info user
   const user = JSON.parse(localStorage.getItem('user'))
   const userAlias = user.alias
-  
+
+  async function syncCatalog() {
+    try {
+      toast.info('Sincronizando catálogo...')
+
+      await catalog.refresh()
+
+      localStorage.removeItem('membershipList')
+      await catalog.membershipList({ active: true })
+
+      toast.success('Catálogo sincronizado correctamente')
+
+      // Avisar a todas las OTRAS pestañas que recarguen
+      syncChannel.postMessage('reload')
+
+      // Recargar la pestaña actual con delay para que se vea el toast
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+
+    } catch (error) {
+      console.error('Error al sincronizar catálogo:', error)
+      toast.error('Error al sincronizar el catálogo')
+    }
+  }
 
   async function updateBase() {
     try {
       const response = await integrationService.updateLeadBase()
-      
+
       if (response && response.ok) {
-        toast.success(`Base actualizada. Registros generados: ${response.data.rows_generated}`);
+        toast.success(`Base actualizada. Registros generados: ${response.data.rows_generated}`)
       } else {
-        throw new Error(response?.message || 'Error desconocido al actualizar la base');
+        throw new Error(response?.message || 'Error desconocido al actualizar la base')
       }
     } catch (error) {
       console.error('Error al actualizar la base de Asesor:', error)
       toast.error('Error al actualizar la base de Asesor')
     }
-    
   }
-  
+
   async function syncRprospectosToSheet() {
     try {
       const response = await integrationService.syncRprospectos()
-      
+
       if (response && response.ok) {
-        toast.success(`GOOGLE SHEET PROSPECTOS SINCRONIZADOS`);
+        toast.success(`GOOGLE SHEET PROSPECTOS SINCRONIZADOS`)
       } else {
-        throw new Error(response?.message || 'Error desconocido al sincronizar prospectos');
+        throw new Error(response?.message || 'Error desconocido al sincronizar prospectos')
       }
     } catch (error) {
       console.error('Error al sincronizar prospectos:', error)
@@ -68,47 +86,42 @@ async function syncCatalog() {
     }
   }
 
-
-  //updateEnrollmentBase
   async function updateEnrollmentBase() {
     try {
       const response = await integrationService.updateEnrollmentBase()
-      
+
       if (response && response.ok) {
-        toast.success(`Base de inscritos actualizada correctamente`);
+        toast.success(`Base de inscritos actualizada correctamente`)
       } else {
-        throw new Error(response?.message || 'Error desconocido al actualizar inscritos');
+        throw new Error(response?.message || 'Error desconocido al actualizar inscritos')
       }
     } catch (error) {
       console.error('Error al actualizar la base de inscritos:', error)
       toast.error('Error al actualizar la base de inscritos')
     }
   }
-  
 
-  //syncScheduleToSheet
   async function syncScheduleToSheet() {
     try {
       const response = await integrationService.syncScheduleToSheet()
-      
+
       if (response && response.ok) {
-        toast.success(`GOOGLE SHEET PLANEAMIENTO SINCRONIZADO`);
+        toast.success(`GOOGLE SHEET PLANEAMIENTO SINCRONIZADO`)
       } else {
-        throw new Error(response?.message || 'Error desconocido al sincronizar el cronograma');
+        throw new Error(response?.message || 'Error desconocido al sincronizar el cronograma')
       }
     } catch (error) {
       console.error('Error al sincronizar el cronograma:', error)
       toast.error('Error al sincronizar el cronograma')
     }
   }
-  
-  function logout(){
-    console.log("datos")
+
+  function logout() {
     localStorage.removeItem('user')
     localStorage.removeItem('token')
     window.location.reload()
   }
-  
+
 </script>
 
 <template>
@@ -133,7 +146,7 @@ async function syncCatalog() {
        <!-- <CDropdownItem @click="updateEnrollmentBase()"  v-if="$hasRole(['LIDER_COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Inscritos
       </CDropdownItem> -->
-      
+
        <CDropdownItem @click="syncRprospectosToSheet()"  v-if="$hasRole(['LIDER_COMERCIAL','ADMIN'])">
         <CIcon  icon="cil-cloud-download" /> Prospectos
       </CDropdownItem>

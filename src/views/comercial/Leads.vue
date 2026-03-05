@@ -91,7 +91,7 @@
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
-    x
+
     <div class="hf-actions-group">
 
       <button
@@ -142,7 +142,7 @@
   <th class="tf">
   <MultiSelect
     v-model="filters.prospect_situation_ids"
-    :items="filtroProspectSituation"
+    :items="withNull(filtroProspectSituation)"
     label-key="variable_1"
     value-key="id"
     placeholder="Todos..."
@@ -243,7 +243,8 @@
 </tr>
               <tr v-else class="thead-sub">
                 <th class="ts ts-c text-center">Acciones</th>
-                <th class="ts ts-c">Fecha Reg.</th>
+
+<th class="ts ts-c">F. Contacto</th>
                 <th class="ts ts-c">Categoría</th>
                 <th class="ts ts-c">Modalidad</th>
                 <th class="ts ts-c">Programa</th>
@@ -261,20 +262,42 @@
                 <th class="ts ts-c">Palabra MKT</th>
                 <th class="ts ts-c">Estrategia</th>
                 <th class="ts ts-c">Asesor/Usuario</th>
+                <th class="ts ts-c">F. Registro</th>
                 <th class="ts ts-c">Seguimiento</th>
               </tr>
 <tr v-if="isCompact" class="thead-filter">
-  <th class="tf"></th><!-- Acciones -->
+  <!-- DESPUÉS -->
+<th class="tf tf-actions-cell">
+  <div class="hf-actions-group">
+    <button
+      v-if="toolbarCollapsed && !hasActiveRestrictions"
+      class="hf-new-btn"
+      @click="goNew"
+      title="Nuevo Lead"
+    >
+      <i class="fa-solid fa-plus"></i>
+    </button>
+    <button
+      v-if="activeFilterChips.length"
+      class="hf-clear-btn"
+      @click="clearFilters"
+      title="Limpiar filtros"
+    >
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+</th>
 
-  <th class="tf"><!-- Fecha Reg. -->
-    <BaseDatePicker
-      v-model="filters.created_range_string"
-      :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-      class="hf-input"
-      placeholder="Fecha..."
-      @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }"
-    />
-  </th>
+<!-- DESPUÉS: ahora filtra first_contact -->
+<th class="tf">
+  <BaseDatePicker
+    v-model="filters.first_contact_range_string"
+    :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+    class="hf-input"
+    placeholder="F. Contacto..."
+    @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'first_contact'); triggerInlineFilter() }"
+  />
+</th>
 
   <th class="tf"><!-- Categoría (Tipo de Programa) -->
     <MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Tipo..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -319,7 +342,8 @@
   <th class="tf">
   <MultiSelect
     v-model="filters.prospect_situation_ids"
-    :items="filtroProspectSituation"
+
+:items="withNull(filtroProspectSituation)"
     label-key="variable_1"
     value-key="id"
     placeholder="Todos..."
@@ -361,7 +385,15 @@
   <th class="tf"><!-- Asesor/Usuario -->
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-
+<th class="tf">
+  <BaseDatePicker
+    v-model="filters.created_range_string"
+    :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+    class="hf-input"
+    placeholder="F. Registro..."
+    @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }"
+  />
+</th>
   <th class="tf"></th><!-- Seguimiento -->
 </tr>
             </thead>
@@ -422,7 +454,8 @@
                 <td class="td-a" style="min-width:120px">
                   <div v-if="l.user_registration_label">
                     <div class="small fw-600 text-dark">{{ l.user_registration_label }}</div>
-                    <div class="text-muted x-small">{{ l.registration_date }}</div>
+
+<div class="text-muted x-small">{{ l.system_registration_date }}</div>
                   </div>
                 </td>
                 <td class="td-a text-center" style="min-width:140px">
@@ -457,7 +490,7 @@
   >
     <!-- Acciones -->
     <td class="td-a text-center nowrap">
-      <button class="btn-icon" 
+      <button class="btn-icon"
         @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)"
         :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
         <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
@@ -467,8 +500,7 @@
       </button>
     </td>
 
-    <!-- Fecha Reg. -->
-    <td class="td-a small nowrap">{{ l.registration_date }}</td>
+<td class="td-a small nowrap">{{ l.first_contact_date || '—' }}</td>
 
     <!-- Categoría (Tipo de Programa) -->
     <td class="td-a small" style="min-width:120px">{{ l.cat_type_program_label || '—' }}</td>
@@ -526,7 +558,7 @@
 
     <!-- Asesor/Usuario -->
     <td class="td-a small">{{ l.user_registration_label }}</td>
-
+<td class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
     <!-- Seguimiento -->
     <td class="td-a text-center">
       <i
@@ -749,7 +781,8 @@
   <label class="exec-label">Situación del Prospecto</label>
   <MultiSelect
     v-model="filters.prospect_situation_ids"
-    :items="filtroProspectSituation"
+:items="withNull(filtroProspectSituation)"
+
     label-key="description"
     value-key="id"
     placeholder="Todas..."
@@ -810,7 +843,28 @@
         <div class="row g-3">
           <div class="col-md-4"><label class="exec-label">Fecha de Pago</label><BaseDatePicker v-model="filters.pay_date_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'pay_date')" /></div>
           <div class="col-md-4"><label class="exec-label">Fecha de Creación</label><BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')" /></div>
-          <div class="col-md-4"><label class="exec-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
+          <!-- DESPUÉS: agrega F. Primer Contacto al lado -->
+<div class="col-md-4">
+  <label class="exec-label">F. Primer Contacto</label>
+  <BaseDatePicker
+    v-model="filters.first_contact_range_string"
+    :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+    class="exec-input-light w-100"
+    placeholder="Seleccionar fechas..."
+    @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'first_contact')"
+  />
+</div>
+<div class="col-md-4">
+  <label class="exec-label">Fecha de Registro (Sistema)</label>
+  <BaseDatePicker
+  v-model="filters.created_range_string"
+  :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+  class="exec-input-light w-100"
+  placeholder="Seleccionar fechas..."
+  @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'created')"
+/>
+</div>
+<div class="col-md-4"><label class="exec-label">Última Modificación</label><BaseDatePicker v-model="filters.updated_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="exec-input-light w-100" placeholder="Seleccionar fechas..." @on-change="(dates, dateStr) => handleDateFilterChange(dateStr, 'updated')" /></div>
         </div>
       </div>
 
@@ -1252,6 +1306,9 @@ fico_status_ids: [],
   edition_range_string: null,
   edition_start_from: '',
   edition_start_to: '',
+  first_contact_range_string: null,
+first_contact_from: '',
+first_contact_to: '',
   pay_date_from: '',
   pay_date_to: '',
   pay_date_range_string: null
@@ -1474,7 +1531,7 @@ async function openFollowModal(lead) {
 
         const originAlias = d.cat_creation_origin || 'we_origin_manual'
         const originObj = attemptOriginCatalog.value.find(o => o.alias === originAlias)
-        
+
         return {
           id: d.lead_contact_attempt_id,
           attempt_number: d.attempt_number ?? null,
@@ -1730,6 +1787,8 @@ if (filters.order_by === 1) chips.push({ key: 'order_by', text: 'Orden: Inicio E
     chips.push({ key: 'rangoFechas', label: `Reg: ${filters.rangoFechas.start} → ${filters.rangoFechas.end}` })
   if (filters.pay_date_from)
     chips.push({ key: 'pay_date', label: `Pago: ${filters.pay_date_from} → ${filters.pay_date_to}` })
+  if (filters.first_contact_from)
+    chips.push({ key: 'first_contact', label: `F.Contacto: ${filters.first_contact_from} → ${filters.first_contact_to}` })
   if (filters.edition_start_from)
     chips.push({ key: 'edition_start', label: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
 
@@ -1791,6 +1850,8 @@ fico_status_ids:            getIds(filters.fico_status_ids),
       inscription_modality_ids:   getIds(filters.inscription_modality_ids),
       installment_status_ids:     getIds(filters.installment_status_ids),
       payment_method_ids:         getIds(filters.payment_method_ids),
+      first_contact_from: filters.first_contact_from || null,
+first_contact_to:   filters.first_contact_to   || null,
       settlement_status_ids:      getIds(filters.settlement_status_ids),
       owner_user_ids:      getIds(filters.owner_user_ids),
       status_lead_ids:     getIds(filters.status_lead_ids),
@@ -1878,7 +1939,9 @@ function clearFilters(reload = true) {
     created_range_string: null, updated_range_string: null,attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
     pay_date_from: '', pay_date_to: '', pay_date_range_string: null,fico_status_ids: [], profile_ids: [], currency_ids: [],
-    inscription_modality_ids: [], installment_status_ids: [],program_version_ids: [],
+    inscription_modality_ids: [], installment_status_ids: [],program_version_ids: [],first_contact_range_string: null,
+first_contact_from: '',
+first_contact_to: '',
     payment_method_ids: [], settlement_status_ids: [],prospect_situation_ids: []
   })
 
@@ -1933,7 +1996,11 @@ function clearFilter(key) {
     filters.edition_start_from = ''
     filters.edition_start_to = ''
     filters.edition_range_string = null
-  } else if (Array.isArray(filters[key])) {
+  } else if (key === 'first_contact') {
+  filters.first_contact_from = ''
+  filters.first_contact_to   = ''
+  filters.first_contact_range_string = null
+}else if (Array.isArray(filters[key])) {
     filters[key] = []
   } else {
     filters[key] = null
@@ -1950,6 +2017,11 @@ function handleDateFilterChange(dateStr, type) {
     filters.pay_date_to = end;
     filters.pay_date_range_string = dateStr;
   }
+  else if (type === 'first_contact') {
+  filters.first_contact_from = start
+  filters.first_contact_to   = end
+  filters.first_contact_range_string = dateStr
+}
   else if (type === 'edition_start') { filters.edition_start_from = start; filters.edition_start_to = end; filters.edition_range_string = dateStr }
 }
 // Helpers visuales
@@ -2050,6 +2122,11 @@ const filteredCallingByType = (catTypeAttempt) => {
   // no tiene sentido mostrar opciones de llamada, así que devolvemos solo Pendiente
   return filtroCalling.value.filter(c => c.alias === 'we_calling_pending')
 }
+// Helper reutilizable — prepende la opción (Vacío) a cualquier catálogo
+const withNull = (items) => [
+  { id: -1, description: '(Vacío)', alias: '__null__' },
+  ...(items || [])
+]
 </script>
 
 <style scoped>

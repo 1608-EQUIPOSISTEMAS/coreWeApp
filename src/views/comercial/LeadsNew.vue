@@ -99,7 +99,7 @@
                 @change="onProgramaTypeChange"
               />
             </div>
-            
+
             <div
               class="col-6 col-md-4 col-lg-2"
               v-if="['we_program_type_course', 'we_program_type_specialization'].includes(form.category_alias) && form.category_alias"
@@ -2530,8 +2530,8 @@ function formatDateTime(isoString) {
          date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 }
 
-  function cancelar() { 
-    
+  function cancelar() {
+
       router.push({ name: 'ComercialListado' })
 
    }
@@ -2939,16 +2939,27 @@ function validateInscriptionPaymentInfo() {
   const montoOriginal = computed(() => 1000)
 
 
-    function onProgramaTypeChange(opcion) {
-        if (!opcion){
-          form.program_version_id = null
-          form.program_modality_alias = null
-          form.edition_id = null
-    form.edition_label = null
-          return
-        }
-    }
+function onProgramaTypeChange(opcion) {
+  // Siempre limpiar programa y edición al cambiar (o limpiar) la categoría
+  form.program_version_id              = null
+  form.program_label                   = null
+  form.program_link                    = null
+  form.edition_id                      = null
+  form.edition_label                   = null
+  form.program_modality_selected_alias = null
+  form.price_student_soles             = 0
+  form.price_student_dollars           = 0
+  form.price_profesional_soles         = 0
+  form.price_profesional_dollars       = 0
+  form.program_sessions                = 0
+  form.program_sessions_per_week       = 1
+  form.edition_start_date              = null
 
+  if (!opcion) {
+    form.program_modality_alias = null
+    return
+  }
+}
     function openURL(param){
       window.open(param, '_blank', 'noopener,noreferrer');
     }
@@ -3384,7 +3395,7 @@ function toggleReschedule(contacto) {
 /* ── CONTENEDORES PRINCIPALES (Solución de scroll único) ── */
 .exec-shell {
   background: var(--slate-50, #f8fafc);
-  min-height: 100%; 
+  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -3398,7 +3409,7 @@ function toggleReschedule(contacto) {
   z-index: 100;
 }
 
-.exec-body { 
+.exec-body {
   flex: 1;
   padding: 32px 28px;
 }
