@@ -202,15 +202,25 @@ function updatePreviewPosition() {
   if (!triggerRef.value) return
   
   const rect = triggerRef.value.getBoundingClientRect()
-  
-  // Posicionamos justo debajo del trigger, alineado a la izquierda
-  previewStyle.value = {
-    position: 'fixed', // Usamos fixed porque está en el body
-    top: `${rect.bottom + 8}px`, // +8px es tu margen visual
-    left: `${rect.left}px`,
-    width: `${rect.width}px`, // Que tenga el mismo ancho del trigger
-    zIndex: '99999' // Aseguramos que esté encima del modal
+  const vW = window.innerWidth
+  const previewWidth = rect.width // O el ancho que desees
+
+  const style = {
+    position: 'fixed',
+    top: `${rect.bottom + 8}px`,
+    width: `${rect.width}px`,
+    zIndex: '99999'
   }
+
+  if (rect.left + rect.width > vW) {
+    style.left = 'auto'
+    style.right = `${vW - rect.right}px`
+  } else {
+    style.left = `${rect.left}px`
+    style.right = 'auto'
+  }
+
+  previewStyle.value = style
 }
 function onMouseEnter() {
   hovering.value = true
@@ -261,24 +271,36 @@ watch(() => props.modelValue, (val) => {
 
 function calcDropdownPosition() {
   if (!triggerRef.value) return
-  const rect       = triggerRef.value.getBoundingClientRect()
-  const vH         = window.innerHeight
+  const rect = triggerRef.value.getBoundingClientRect()
+  const vH = window.innerHeight
+  const vW = window.innerWidth // Ancho de la ventana
   const spaceBelow = vH - rect.bottom
   const spaceAbove = rect.top
-  const maxH       = 320
+  const maxH = 320
+  const dropdownWidth = Math.max(rect.width, 270) // Ancho que tendrá el dropdown
 
   const style = {
     position: 'fixed',
-    left:     `${rect.left}px`,
-    width:    `${Math.max(rect.width, 270)}px`,
-    zIndex:   '99999',
+    width: `${dropdownWidth}px`,
+    zIndex: '99999',
   }
 
+  // --- Lógica Horizontal (Evitar corte a la derecha) ---
+  // Si la posición izquierda + el ancho del dropdown superan el ancho de pantalla
+  if (rect.left + dropdownWidth > vW) {
+    style.left = 'auto' // Quitamos el left
+    style.right = `${vW - rect.right}px` // Alineamos al borde derecho del disparador
+  } else {
+    style.left = `${rect.left}px`
+    style.right = 'auto'
+  }
+
+  // --- Lógica Vertical (Se mantiene igual) ---
   if (spaceBelow >= maxH || spaceBelow >= spaceAbove) {
-    style.top       = `${rect.bottom + 4}px`
+    style.top = `${rect.bottom + 4}px`
     style.maxHeight = `${Math.min(maxH, spaceBelow - 8)}px`
   } else {
-    style.bottom    = `${vH - rect.top + 4}px`
+    style.bottom = `${vH - rect.top + 4}px`
     style.maxHeight = `${Math.min(maxH, spaceAbove - 8)}px`
   }
 
@@ -583,12 +605,16 @@ onBeforeUnmount(() => {
   content: '';
   position: absolute;
   top: -5px;
-  left: 14px;
+  /* Si el style tiene right, lo movemos a la derecha */
+  left: 14px; 
+  /* Si prefieres que siempre esté centrado o detecte el lado, 
+     puedes usar una clase dinámica, pero 14px suele bastar 
+     si el dropdown no es extremadamente pequeño. */
   width: 9px;
   height: 9px;
-  background: #002060;
-  border-left: 1px solid #001540;
-  border-top: 1px solid #001540;
+  background: #00102b;
+  border-left: 1px solid #00081a;
+  border-top: 1px solid #00081a;
   transform: rotate(45deg);
 }
 .preview-header {

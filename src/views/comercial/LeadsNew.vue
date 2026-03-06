@@ -2306,9 +2306,7 @@ function createEmptyAttempt() {
       e.description && msj.includes(e.description.toLowerCase())
     )?.alias || 'we_key_word_null'
 
-    form.key_word_alias = mktWordsCatalog.value?.find(e =>
-      e.description && msj.includes(e.description.toLowerCase())
-    )?.alias
+
   }
 
   function onStatusChange(opt) {
@@ -2576,7 +2574,7 @@ function onChannelChange(option) {
 
 
   // Regla 1: COTI o CHATBOT → forzar Medio a WEB y deshabilitar
-  if (['we_social_media_wechat'].includes(alias)) {
+  if (['we_social_media_wechat','we_social_media_other'].includes(alias)) {
     form.medium_alias = 'we_social_media_whatsapp'
     return
   }
