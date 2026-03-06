@@ -87,8 +87,7 @@
   <th class="ts ts-c">F. Pago</th>
   <th class="ts ts-c">Nivel Interés</th>
   <th class="ts ts-c">Registro</th>
-<th class="ts ts-c">Canal Pago</th>
-  <th class="ts ts-c text-center">Seguimiento</th>
+  <th class="ts ts-c">Canal Pago</th> <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
@@ -201,7 +200,6 @@
     />
   </th>
 
-  <!-- Nivel Interés -->
   <th class="tf">
     <MultiSelect
       v-model="filters.interest_level_ids"
@@ -481,9 +479,13 @@
                   <div v-if="l.user_registration_label">
                     <div class="small fw-600 text-dark">{{ l.user_registration_label }}</div>
 
-<div class="text-muted x-small">{{ l.system_registration_date }}</div>
-                  </div>
+                <div class="text-muted x-small">{{ l.system_registration_date }}</div>
+                                  </div>
+                                </td>
+                                <td class="td-a small text-muted">
+                  {{ l.payment_channel_label || '—' }}
                 </td>
+
                 <td class="td-a text-center" style="min-width:140px">
                   <div
                     v-if="l.cat_last_follow_alias"
@@ -514,6 +516,7 @@
     @mouseup="cancelPress"
     @mouseleave="cancelPress"
   >
+
     <!-- Acciones -->
     <td class="td-a text-center nowrap">
       <button class="btn-icon"
@@ -586,7 +589,8 @@
     <td class="td-a small">{{ l.user_registration_label }}</td>
 <td class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
 <!-- Canal de Pago — NUEVO -->
-    <td class="td-a small text-muted">{{ l.description || '—' }}</td>   <!-- Canal Pago -->
+
+<td class="td-a small text-muted">{{ l.payment_channel_label || '—' }}</td>   <!-- Canal Pago -->
 <td class="td-a text-center" style="min-width:140px">               <!-- Seguimiento -->
   <div
     v-if="l.cat_last_follow_alias"
@@ -1261,6 +1265,7 @@
     </template>
   </BaseModal>
 </template>
+
 
 <script setup>
 import { ref, reactive, onMounted, inject, computed, onBeforeUnmount, watch } from 'vue'
@@ -2202,6 +2207,7 @@ function handleTypeChange(attempt, newVal) {
   }
 }
 </script>
+
 
 <style scoped>
 .exec-shell {
