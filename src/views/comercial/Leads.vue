@@ -206,6 +206,7 @@
   <th v-show="colGroups.cliente" class="ts ts-c">Teléfono</th>
   <th v-show="colGroups.cliente" class="ts ts-c">Situación</th>
   <th v-show="colGroups.cliente" class="ts ts-c">E. Cliente</th>
+  <th v-show="colGroups.cliente" class="ts ts-c">Member</th>
   <th v-if="!colGroups.cliente" class="ts ts-c tg-placeholder-cell"></th>
 
   <!-- D. LEAD -->
@@ -267,6 +268,9 @@
   </th>
   <th v-show="colGroups.cliente" class="tf">
     <MultiSelect v-model="filters.moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th v-show="colGroups.cliente" class="tf">
+    <MultiSelect v-model="filters.membership_moment_ids" :items="membershipList" label-key="tier_name" value-key="membership_tier_id" placeholder="Etapa..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-if="!colGroups.cliente" class="tf tg-placeholder-cell"></th>
 
@@ -415,9 +419,10 @@
     <td v-show="colGroups.cliente" class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
     <td v-show="colGroups.cliente" class="td-a small">{{ l.cat_prospect_situation || '—' }}</td>
     <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
+    <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.membership_moment }}</td>
     <td v-if="!colGroups.cliente" class="td-a tg-placeholder-cell">
       <div class="tg-collapsed-hint tg-hint-cliente">
-        <i class="fa-solid fa-user"></i>
+        <i class="fa-solid fa-user"></i>{{ l.origin_phone }}
       </div>
     </td>
 
@@ -1448,6 +1453,8 @@ function rebuildChips() {
   makeChip('status_lead_ids',    'Estatus',    filters.status_lead_ids)
   makeChip('last_follow_ids',    'Seguim.',    filters.last_follow_ids)
   makeChip('attempt_origin_ids', 'O. Intento', filters.attempt_origin_ids)
+  makeChip('membership_moment_ids', 'Member', filters.membership_moment_ids)
+
   makeChip('interest_level_ids', 'Interés',    filters.interest_level_ids)
   makeChip('channel_ids',        'Canal',      filters.channel_ids)
   makeChip('prospect_situation_ids', 'Situación', filters.prospect_situation_ids)
@@ -1489,6 +1496,7 @@ async function fetchLeads() {
       order_by:            filters.order_by ?? 0,
       payment_channel_ids: getIds(filters.payment_channel_ids),
       from_date:           filters.rangoFechas?.start        || null,
+      membership_moment_ids: getIds(filters.membership_moment_ids),
       to_date:             filters.rangoFechas?.end          || null,
       updated_from:        filters.rangoModificacion?.start  || null,
       updated_to:          filters.rangoModificacion?.end    || null,
@@ -1578,7 +1586,7 @@ function clearFilters(reload = true) {
     created_range_string: null, updated_range_string: null, attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
     pay_date_from: '', pay_date_to: '', pay_date_range_string: null,
-    fico_status_ids: [], profile_ids: [], currency_ids: [],
+    fico_status_ids: [], profile_ids: [], currency_ids: [],membership_moment_ids: [],
     inscription_modality_ids: [], installment_status_ids: [], program_version_ids: [],
     first_contact_range_string: null, first_contact_from: '', first_contact_to: '',
     payment_method_ids: [], settlement_status_ids: [], prospect_situation_ids: []
@@ -1674,6 +1682,8 @@ function editLead(lead) { router.push({ name: 'ComercialLeadDetalle', params: { 
 function handlePaginationChange() { fetchLeads() }
 
 onMounted(async () => {
+  const data = await catalog.membershipList({ active: true });// 3. Asignamos el valor real a la variable reactiva
+  membershipList.value = data;
   if (isComercial && currentUserId) {
     filters.owner_user_ids = [currentUserId]
     checkMyRestrictions()
@@ -1708,6 +1718,7 @@ function handleTypeChange(attempt, newVal) {
     attempt.calling_alias = 'we_calling_pending';
   }
 }
+const membershipList = ref([]);
 </script>
 
 

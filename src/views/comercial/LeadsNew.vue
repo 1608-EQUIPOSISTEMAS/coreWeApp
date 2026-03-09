@@ -164,7 +164,7 @@
 
             <div
               class="col-12 col-lg-3"
-              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_event','we_program_type_membership'].includes(form.category_alias))"
+              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))"
             >
               <label class="exec-label">Edición / Fecha prevista <span class="c-red">*</span></label>
 <SearchSelect
@@ -277,13 +277,13 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <SearchSelect
                 v-model="form.status_alias"
                 :items="leadStatusCatalog"
+  :class="['exec-select-light w-100', { 'select--danger': isDeleteStatus }]"
                 :viewOpen="6"
                 label-field="description"
                 value-field="alias"
                 placeholder="STATUS..."
                 required
-                :model-label="form.status_label"
-                class="exec-select-light w-100"
+                :model-label="form.status_label" 
                 @change="onStatusChange"
               />
             </div>
@@ -609,6 +609,21 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         </div> -->
 
       </div>
+      <!-- BANNER: Estado Eliminado -->
+<Transition name="delete-warn">
+  <div v-if="isDeleteStatus" class="delete-status-banner">
+    <div class="delete-banner-icon">
+      <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
+    </div>
+    <div class="delete-banner-body">
+      <strong>¡Atención! Este lead será marcado como ELIMINADO.</strong>
+      <span>Al guardar, desaparecerá del listado comercial y no será visible para el equipo.</span>
+    </div>
+    <div class="delete-banner-label">
+      <span class="pill pill-red border">ELIMINADO</span>
+    </div>
+  </div>
+</Transition>
     </main>
 
     <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height:50vh;">
@@ -1541,7 +1556,37 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </button>
     </template>
   </BaseModal>
-
+<BaseModal v-model="showDeleteWarningModal" title="" size="sm" :hideHeader="true">
+  <div class="delete-confirm-modal">
+    <div class="delete-confirm-icon">
+      <i class="fa-solid fa-trash-can fa-2x"></i>
+    </div>
+    <h5 class="delete-confirm-title">¿Eliminar este lead?</h5>
+    <p class="delete-confirm-desc">
+      Al confirmar, este lead será marcado como <strong>Eliminado</strong> y 
+      <strong>desaparecerá del listado comercial</strong>. Esta acción puede 
+      revertirse desde administración si es necesario.
+    </p>
+    <div class="delete-confirm-lead-info">
+      <i class="fa-solid fa-user me-2 text-muted"></i>
+      <span class="fw-bold">{{ form.full_name || '—' }}</span>
+      <span class="text-muted ms-2">{{ form.telefono || '' }}</span>
+    </div>
+  </div>
+  <template #footer>
+    <button class="btn-exec btn-exec-outline btn-exec-sm" @click="showDeleteWarningModal = false">
+      <i class="fa-solid fa-arrow-left me-1"></i> Cancelar
+    </button>
+    <button
+      class="btn-exec btn-exec-danger btn-exec-sm"
+      @click="confirmarEliminacion"
+      :disabled="saving"
+    >
+      <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-trash-can'" ></i>
+      {{ saving ? 'Eliminando...' : 'Sí, eliminar del listado' }}
+    </button>
+  </template>
+</BaseModal>
 </template>
 
 
@@ -1592,7 +1637,8 @@ const dateLimitConfig = {
   const catalog          = inject('catalog')
 
   const todayIso = new Date().toISOString().slice(0, 16)
-
+const showDeleteWarningModal = ref(false)
+const isDeleteStatus = computed(() => form.status_alias === 'we_lead_status_deleted')
   function currentHourIso() {
   const now = new Date()
   const yyyy = now.getFullYear()
@@ -2873,9 +2919,16 @@ if (isInstallmentMode.value && !installmentPlanValid.value) {
     savingInsc.value = false
   }
 }
-
+async function confirmarEliminacion() {
+  showDeleteWarningModal.value = false
+  await guardarEfectivo()
+}
 async function guardar() {
   if (!comercialService) return console.error('comercialService no inyectado')
+  if (isDeleteStatus.value) {
+    showDeleteWarningModal.value = true
+    return
+  }
   saving.value = true
   try {
     const payload = buildLeadPayload()
@@ -4286,4 +4339,92 @@ function toggleReschedule(contacto) {
   cursor: not-allowed;
 }
 .c-green { color: #15803d; }
+/* ══ ESTADO ELIMINADO ══════════════════════════════════════ */
+.delete-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 7px;
+  padding: .85rem 1.2rem;
+  margin-bottom: 1.25rem;
+  animation: pulseRed 2s ease-in-out infinite;
+}
+@keyframes pulseRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,.12); }
+}
+.delete-banner-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+  font-size: 1.4rem;
+}
+.delete-banner-body {
+  flex: 1;
+  font-size: .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  color: #7f1d1d;
+}
+.delete-banner-body strong { font-size: .9rem; color: #991b1b; }
+.delete-banner-label { flex-shrink: 0; }
+
+.select--danger {
+  border-color: #f87171 !important;
+  background: #fff5f5 !important;
+  color: #b91c1c !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.12) !important;
+}
+
+/* Modal de confirmación eliminación */
+.delete-confirm-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem 1rem .5rem;
+  gap: .75rem;
+}
+.delete-confirm-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: #fef2f2;
+  border: 2px solid #fca5a5;
+  display: flex; align-items: center; justify-content: center;
+  color: #dc2626;
+}
+.delete-confirm-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #7f1d1d;
+  margin: 0;
+}
+.delete-confirm-desc {
+  font-size: .88rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.6;
+  max-width: 340px;
+}
+.delete-confirm-lead-info {
+  background: var(--slate-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: .55rem 1rem;
+  font-size: .83rem;
+  width: 100%;
+}
+.btn-exec-danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+.btn-exec-danger:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+
+/* Transición suave del banner */
+.delete-warn-enter-active, .delete-warn-leave-active { transition: all .25s ease; }
+.delete-warn-enter-from, .delete-warn-leave-to { opacity: 0; transform: translateY(-8px); }
 </style>

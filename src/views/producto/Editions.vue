@@ -779,7 +779,7 @@
                 <label class="form-label-sm">Versión de Programa</label>
                 <SearchSelect v-model="modalForm.program_version_id" mode="remote" :disabled="!!(currentEdition && currentEdition.edition_num_id)" :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e => e.alias == 'we_modality_online').id })" label-field="program_type_for_iu" value-field="program_version_id" placeholder="Buscar programa…" :minChars="0" :cache="false" required :view-open="6" :model-label="modalForm.abbreviation" @change="onProgramVersionChange" />
               </div>
-              <div class="col-6" v-if="modalForm.cat_type_program_alias === 'we_program_type_course'">
+              <div class="col-6" v-if="isCourse">
                 <label class="form-label-sm">Docente Asignado</label>
                 <SearchSelect v-model="modalForm.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" showSubValue label-field="full_name" sublabel-field="document_number" value-field="instructor_id" placeholder="Buscar docente…" :model-label="modalForm.instructor_label" :minChars="0" :cache="false" />
               </div>
@@ -794,7 +794,7 @@
             </div>
           </section>
 
-          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias === 'we_program_type_course'">
+          <section class="form-section mt-3" v-if="modalForm.program_version_id && (modalForm.cat_type_program_alias === 'we_program_type_course' || modalForm.cat_type_program_alias === 'we_program_type_event')">
             <div class="section-label">Logística y Horarios</div>
             <div class="row g-3">
               <div class="col-md-6 position-relative">
@@ -867,7 +867,7 @@
             </div>
           </section>
 
-          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course'">
+          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course' && modalForm.cat_type_program_alias !== 'we_program_type_event'">
             <div class="section-label">Estructura del Programa</div>
             <div class="hierarchy-container">
               <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.8rem;">
@@ -978,21 +978,21 @@
           <div class="status-card mb-3">
             <div class="status-card__header"><i class="fa-solid fa-sliders me-2"></i>Configuración</div>
             <div class="status-card__body">
-              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+              <div class="switch-row" v-if="isCourse">
                 <div class="switch-label"><span class="fw-bold">Ficha</span><small class="d-block text-muted">Generar expediente</small></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.expedient" /><span></span></label>
               </div>
-              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+              <div class="switch-row" v-if="isCourse">
                 <div class="switch-label"><span class="fw-bold">Pre-Confirmación</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.preconfirmation" /><span></span></label>
               </div>
-              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
+              <div class="switch-row" v-if="isCourse">
                 <div class="switch-label"><span class="fw-bold text-primary">Confirmación</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.confirmation" /><span></span></label>
               </div>
-              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
-              <div class="switch-row" v-if="modalForm.cat_type_program_alias == 'we_program_type_course'">
+              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
+              <div class="switch-row" v-if="isCourse">
                 <div class="switch-label"><span class="fw-bold">Mejora</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.upgrade" /><span></span></label>
               </div>
@@ -1000,7 +1000,7 @@
                 <div class="switch-label"><span class="fw-bold">Estado (Activo)</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.active" /><span></span></label>
               </div>
-              <hr v-if="modalForm.cat_type_program_alias == 'we_program_type_course'" class="my-2 border-secondary-subtle">
+              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
               <div class="col-12 mb-2">
                 <label class="form-label-sm">Histórico</label>
                 <input type="text" class="form-control form-control-sm" v-model.number="modalForm.global_code" />
@@ -2850,7 +2850,10 @@ watch(
 );
 
 // Helpers Computados
-const isCourse = computed(() => modalForm.cat_type_program_alias === 'we_program_type_course')
+const isCourse = computed(() =>
+  modalForm.cat_type_program_alias === 'we_program_type_course' ||
+  modalForm.cat_type_program_alias === 'we_program_type_event'
+)
 
 const isCourseValid = computed(() => {
   if (!isCourse.value) return true
@@ -3184,6 +3187,7 @@ function setChildren(children, field, value) {
 function onProgramVersionChange(opcion) {
 
   if (currentEdition.value && modalForm.cat_type_program_alias !== 'we_program_type_course') return
+
   if (!opcion) {
     modalForm.cat_type_program = null
     modalForm.cat_type_program_alias = null
