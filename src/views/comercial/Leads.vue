@@ -476,9 +476,21 @@
           <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
           <div>
             <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-            <div class="d-flex gap-3 text-secondary small mt-1 fw-500">
+            <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
               <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
-              <span><i class="fa-solid fa-bullseye me-1"></i>{{ filtroPipeline.find(e => e.alias == selectedFollowLead.cat_status_alias)?.description || 'Estado desc.' }}</span>
+              
+              <div class="d-flex align-items-center">
+                <i class="fa-solid fa-bullseye me-2"></i>
+                <SearchSelect
+                  v-model="selectedFollowLead.cat_status_alias"
+                  :items="filtroPipeline"
+                  label-field="description"
+                  value-field="alias"
+                  placeholder="Cambiar estado..."
+                  class="exec-select-light"
+                  style="min-width: 160px; height: 32px;"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -869,6 +881,17 @@
               </div>
               <hr class="my-2" style="border-color:var(--slate-100);">
             </div>
+            <!-- Después del bloque de descuentos, antes de "Total a Pagar" -->
+            <div v-if="enrollmentData.reserva_amount > 0" 
+                class="d-flex justify-content-between align-items-center mb-2 pb-1">
+              <span class="fw-600 text-muted" style="font-size:12px;">
+                <i class="fa-solid fa-hand-holding-dollar me-1 text-blue-400"></i>
+                Adelanto / Reserva:
+              </span>
+              <span class="fw-700" style="font-size:12.5px; color:#1d4ed8;">
+                {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.reserva_amount) }}
+              </span>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
               <span class="fw-700 text-dark" style="font-size:12.5px;">Total a Pagar:</span>
               <span class="fw-700 accent-text" style="font-size:16px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}</span>
@@ -884,16 +907,7 @@
             </div>
           </div>
         </div>
-      </div>
-      <div v-if="enrollmentData.pending_amount > 0" class="exec-alert alert-warning mt-4">
-        <i class="fa-solid fa-clock mt-1 me-2" style="color:var(--amber-500)"></i>
-        <div>
-          <strong class="d-block text-dark">Próximo vencimiento:</strong>
-          <span v-if="enrollmentData.next_due_date" style="color:#92400e;">{{ enrollmentData.next_due_date }} por <b>{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.next_due_amount) }}</b></span>
-          <span v-else class="text-muted fst-italic">No hay fecha de cuota programada.</span>
-        </div>
-      </div>
-      <div v-else class="exec-alert alert-success mt-4"><i class="fa-solid fa-check-circle me-1"></i> ¡Pagos al día!</div>
+      </div> 
       <div class="mt-4 pt-2">
         <h6 class="fieldset-title"><i class="fa-solid fa-paperclip me-1"></i> Documentos y Adjuntos</h6>
         <div v-if="enrollmentData.files_list && enrollmentData.files_list.length > 0" class="file-list">
@@ -913,6 +927,76 @@
           </div>
         </div>
         <div v-else class="empty-state" style="padding:1.5rem;"><p>No hay archivos adjuntos en esta matrícula.</p></div>
+      </div>
+            <div class="mt-4 pt-2" v-if="enrollmentData.installment_plan && enrollmentData.installment_plan.length > 0">
+        <h6 class="fieldset-title">
+          <i class="fa-solid fa-table-list me-1"></i> Plan de Cuotas
+        </h6>
+        <div class="table-shell">
+          <table class="exec-table" style="font-size:12px;">
+            <thead>
+              <tr class="thead-sub">
+                <th class="ts ts-c text-center" style="width:40px;">#</th>
+                <th class="ts ts-c">Vencimiento</th>
+                <th class="ts ts-c text-end">Monto</th>
+                <th class="ts ts-c text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="cuota in enrollmentData.installment_plan"
+                :key="cuota.installment_id"
+                class="tbody-row"
+                :class="{
+                  'row-blue':    cuota.is_reserva,
+                  'row-inscrito': cuota.status_alias === 'we_payment_status_paid',
+                  'row-red':     isOverdue(cuota) && cuota.status_alias !== 'we_payment_status_paid'
+                }"
+              >
+                <!-- # -->
+                <td class="td-a text-center fw-700 text-muted">
+                  <span v-if="cuota.is_reserva" 
+                        class="pill pill-slate" 
+                        style="background:#dbeafe;color:#1e40af;font-size:9px;">R</span>
+                  <span v-else>{{ cuota.installment_number }}</span>
+                </td>
+
+                <!-- Vencimiento -->
+                <td class="td-a">
+                  <span :class="{ 'c-red fw-700': isOverdue(cuota) && cuota.status_alias !== 'we_payment_status_paid' }">
+                    {{ cuota.due_date }}
+                  </span>
+                  <span v-if="isNextDue(cuota)" 
+                        class="pill pill-amber ms-2" 
+                        style="font-size:9px;">Próxima</span>
+                </td>
+
+                <!-- Monto -->
+                <td class="td-a text-end fw-700">
+                  {{ formatMoney(enrollmentData.currency_symbol, cuota.amount) }}
+                </td>
+
+                <!-- Estado -->
+                <td class="td-a text-center">
+                  <span class="pill" :class="badgeForInstallment(cuota.status_alias)">
+                    {{ cuota.status_label }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="background:#f8fafc; border-top: 2px solid #e2e8f0;">
+                <td colspan="2" class="td-a fw-700 text-end" style="font-size:11.5px; color:#475569;">
+                  TOTAL PLAN:
+                </td>
+                <td class="td-a text-end fw-700 accent-text" style="font-size:13px;">
+                  {{ formatMoney(enrollmentData.currency_symbol, totalPlanSum) }}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
       <div class="mt-4 pt-2" v-if="enrollmentData.lead_observations">
         <h6 class="fieldset-title"><i class="fa-solid fa-comment-dots me-1 text-secondary"></i> Observaciones del Asesor</h6>
@@ -1407,9 +1491,18 @@ async function saveFastFollow() {
       contact_duration: item.contact_duration,
       cat_reschedule_origin: item.cat_reschedule_origin || null
     }))
-    const resp = await comercialService.leadUpdate({ id: selectedFollowLead.value.id, lead: {}, contact_attempts: attemptsPayload })
+
+    // Obtenemos el ID del estado recién seleccionado en el select
+    const cat_status_lead_id = getIdFromAlias(selectedFollowLead.value.cat_status_alias, filtroPipeline.value)
+
+    const resp = await comercialService.leadUpdate({ 
+      id: selectedFollowLead.value.id, 
+      lead: { cat_status_lead: cat_status_lead_id }, // Enviamos el nuevo estado aquí
+      contact_attempts: attemptsPayload 
+    })
+    
     if (resp.result === 1) {
-      toast.success(resp.message || 'Seguimiento actualizado correctamente')
+      toast.success(resp.message || 'Seguimiento y estado actualizados correctamente')
       showFollowModal.value = false
       fetchLeads()
     } else if (resp.result === 0) {
@@ -1424,7 +1517,6 @@ async function saveFastFollow() {
     isSavingFollow.value = false
   }
 }
-
 const minDateForNewAttempt = computed(() => {
   const existing = editableHistory.value.filter(a => a.id)
   if (!existing.length) return null
@@ -1719,6 +1811,41 @@ function handleTypeChange(attempt, newVal) {
   }
 }
 const membershipList = ref([]);
+
+// Badge por estado de cuota
+function badgeForInstallment(alias) {
+  const map = {
+    'we_payment_status_paid':      'pill-teal',
+    'we_payment_status_pending':   'pill-amber',
+    'we_payment_status_draft':     'pill-slate',
+    'we_payment_status_cancelled': 'pill-red',
+  }
+  return map[alias] || 'pill-slate'
+}
+
+// ¿Está vencida? (fecha pasada y no pagada)
+function isOverdue(cuota) {
+  // La reserva nunca se marca como vencida
+  if (cuota.is_reserva) return false
+  if (!cuota.due_date || cuota.status_alias === 'we_payment_status_paid') return false
+  const [d, m, y] = cuota.due_date.split('/')
+  return new Date(`${y}-${m}-${d}`) < new Date()
+}
+
+// ¿Es la próxima a vencer? (coincide con next_due_date del SP)
+function isNextDue(cuota) {
+  return cuota.due_date === enrollmentData.value?.next_due_date &&
+         cuota.status_alias !== 'we_payment_status_paid'
+}
+
+// Suma total del plan
+const totalPlanSum = computed(() => {
+  if (!enrollmentData.value?.installment_plan) return 0
+  return enrollmentData.value.installment_plan
+    .reduce((acc, c) => acc + Number(c.amount || 0), 0)
+    .toFixed(2)
+})
+
 </script>
 
 

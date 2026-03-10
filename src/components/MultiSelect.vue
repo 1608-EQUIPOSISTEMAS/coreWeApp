@@ -408,14 +408,18 @@ async function fetchRemoteData(query) {
     loading.value = false
   }
 }
-
+// En MultiSelect.vue → acceptSelection()
 function acceptSelection() {
-  const selectedIds     = Array.from(tempSelection.value)
+  const selectedIds = Array.from(tempSelection.value)
   const selectedObjects = selectedIds.map(id => {
     const cached = internalCache.value.get(id)
     return cached
-      ? { value: cached[props.valueKey], label: cached[props.labelKey] }
-      : { value: id, label: String(id) }
+      ? {
+          value: cached[props.valueKey],
+          label: cached[props.labelKey],
+          raw: cached   // ← AGREGAR ESTO
+        }
+      : { value: id, label: String(id), raw: null }
   })
   emit('update:modelValue', selectedObjects)
   emit('change', selectedObjects)

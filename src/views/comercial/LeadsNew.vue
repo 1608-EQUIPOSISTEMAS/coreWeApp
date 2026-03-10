@@ -1127,7 +1127,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             />
           </div>
 
-          <template v-if="isChannelGeneral">
+          <template v-if="!isChannelWeb">
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
@@ -1203,7 +1203,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
           <template v-if="isEdit || validateInscriptionPaymentInfo()">
             <!-- DESCUENTO % — oculto si hay promo activa -->
-            <div class="col-md-4 mt-3" v-if="!hasStick">
+            <div class="col-md-4 mt-3" >
               <label class="exec-label">
                 Descuento
                 <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
@@ -1223,7 +1223,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </div>
 
             <!-- PROMOCIÓN (stick) — oculta si hay % o beneficio activo -->
-            <div class="col-md-4 mt-3" v-if="!hasPorcentOrBenefit">
+            <div class="col-md-4 mt-3" >
               <label class="exec-label">
                 Promoción
                 <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
@@ -1243,23 +1243,36 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </div>
 
             <!-- BENEFICIO — oculto si hay promo activa -->
-            <div class="col-md-4 mt-3" v-if="!hasStick">
+            <div class="col-md-4 mt-3">
               <label class="exec-label">
-                Beneficio
+                Beneficio(s)
                 <span v-if="!insc.montoOriginal" class="ms-1 text-muted" style="font-size:9px;font-weight:400;">(requiere precio base)</span>
               </label>
-              <SearchSelect
+              <MultiSelect
                 :key="`benefit-${discountResetKey}`"
-                v-model="insc.dsct_benefit_id"
-                mode="remote"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_benefit').id, cat_currency: selectedCurrency.alias })"
-                label-field="full_label" value-field="id" :viewOpen="6"
-                placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
-                class="exec-select-light w-100"
+                v-model="insc.dsct_benefit_ids"
+                 mode="remote" :debounce-ms="400" 
                 :disabled="!insc.montoOriginal"
-                :model-label="insc.dsct_benefit_label"
-                @change="onChangeBeneficio"
+                label-key="full_label" value-key="id" 
+                :fetcher="q => discountService.discountCaller({
+                  q,
+                  cat_discount_type: discountCatalog.find(e => e.alias === 'we_discount_type_benefit').id,
+                  cat_currency: selectedCurrency.alias
+                })"
+                placeholder="BENEFICIOS..."
+                @change="onChangeBeneficios"
               />
+              <!-- Resumen inline de beneficios seleccionados -->
+              <div v-if="insc.dsct_benefit_ids.length > 0" class="mt-1">
+                <div
+                  v-for="ben in insc.dsct_benefit_ids"
+                  :key="ben.value"
+                  class="d-flex justify-content-between align-items-center"
+                  style="font-size:11px; color: #b91c1c; padding: 1px 4px;"
+                >
+                  <span>• {{ ben.label }}</span>
+                </div>
+              </div>
             </div>
           </template>
         </div>
@@ -1373,10 +1386,26 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </span>
             <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoFijo) }}</span>
           </div>
-          <div class="summary-row" v-if="insc.dsct_benefit_id">
-            <span class="label">Beneficio</span>
-            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficio) }}</span>
-          </div>
+          <template v-if="insc.dsct_benefit_ids.length > 0">
+            <div
+              class="summary-row"
+              v-for="(ben, i) in insc.dsct_benefit_ids"
+              :key="ben.value"
+            >
+              <span class="label" style="font-size:.8rem;">
+                Beneficio {{ insc.dsct_benefit_ids.length > 1 ? (i + 1) : '' }}
+                <small class="text-muted ms-1" style="font-size:.7rem;">{{ ben.label }}</small>
+              </span>
+              <span class="value text-danger">
+                - {{ selectedCurrency.symbol }} {{ fmt2(insc.val_beneficios[i] || 0) }}
+              </span>
+            </div>
+            <!-- Total beneficios si hay más de uno -->
+            <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1" style="opacity:.7; font-size:.78rem;">
+              <span class="label text-muted">Subtotal beneficios</span>
+              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficioTotal) }}</span>
+            </div>
+          </template>
           <div class="summary-divider"></div>
           <div class="summary-row total">
             <div class="d-flex flex-column">
@@ -1439,20 +1468,73 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       La suma de cuotas <strong>{{ selectedCurrency.symbol }} {{ fmt2(installmentTotalSum) }}</strong>
       debe ser igual al saldo financiado <strong>{{ selectedCurrency.symbol }} {{ fmt2(installmentRemainder) }}</strong>
     </div>
+    <div class="installment-reserva-row" :class="{ 'is-split': reservaSplitEnabled }">
 
-    <!-- Fila de Reserva -->
-    <div class="installment-reserva-row">
-      <div class="d-flex align-items-center gap-2">
+      <!-- Badge + Título -->
+      <div class="reserva-id">
         <span class="cuota-num" style="background:#dbeafe;color:#1e40af;">R</span>
         <div>
           <div class="fw-700" style="font-size:12px;">Reserva / Pago Inicial</div>
-          <div style="font-size:10px;color:var(--slate-400);">Hoy · No forma parte del plan</div>
+          <div style="font-size:10px;color:var(--slate-400);">Abono inicial al confirmar</div>
         </div>
       </div>
-      <span class="cuota-amount-fixed" style="color:#1d4ed8;">
-        {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
-      </span>
-      <span class="pill" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">Inicial</span>
+
+      <!-- Zona de montos -->
+      <div class="reserva-amounts">
+        <!-- Sin split: monto directo -->
+        <div v-if="!reservaSplitEnabled" class="reserva-single">
+          <span class="fw-700" style="font-size:15px;color:#1d4ed8;">
+            {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
+          </span>
+        </div>
+
+        <!-- Con split: 2 filas -->
+        <template v-else>
+          <div class="reserva-split-line">
+            <span class="reserva-tag" style="background:#dbeafe;color:#1e40af;">Hoy</span>
+            <CurrencyInput
+              v-model="reservaInmediata"
+              :currency="selectedCurrency"
+              :storeAsMinor="false"
+              class="exec-input-light text-end fw-700"
+              style="font-size:13px;color:#1d4ed8;max-width:110px;height:28px;padding:3px 8px;"
+              placeholder="0.00"
+            />
+          </div>
+          <div class="reserva-split-line">
+            <span class="reserva-tag" style="background:#fef3c7;color:#92400e;">Diferido</span>
+            <span class="fw-700" style="font-size:13px;color:#b45309;min-width:80px;text-align:right;">
+              {{ selectedCurrency.symbol }} {{ fmt2(reservaDiferida) }}
+            </span>
+            <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:9px;"></i>
+            <BaseDatePicker
+              v-model="reservaDiferidaFecha"
+              :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: false, disableMobile: true }"
+              style="max-width:105px;"
+            />
+          </div>
+          <div v-if="Number(reservaInmediata) >= Number(insc.saved_money)" class="reserva-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            El monto inmediato no puede igualar o superar la reserva total.
+          </div>
+        </template>
+      </div>
+
+      <!-- Acciones -->
+      <div class="reserva-actions">
+        <span class="pill" style="background:#dbeafe;color:#1e40af;font-size:9px;">Inicial</span>
+        <button
+          type="button"
+          class="btn-exec btn-exec-sm"
+          :class="reservaSplitEnabled ? 'btn-exec-warning' : 'btn-exec-outline'"
+          @click="reservaSplitEnabled = !reservaSplitEnabled"
+          title="Aplazar parte de la reserva como cuota adicional"
+        >
+          <i class="fa-solid" :class="reservaSplitEnabled ? 'fa-xmark' : 'fa-scissors'"></i>
+          {{ reservaSplitEnabled ? 'Cancelar' : 'Aplazar parte' }}
+        </button>
+      </div>
+
     </div>
 
     <div class="installment-divider"><span>Cuotas del plan</span></div>
@@ -1470,7 +1552,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         v-for="(cuota, idx) in installmentPlan"
         :key="cuota.installment_number"
         class="installment-row"
-        :class="{ 'installment-row--invalid': manualMode && !installmentPlanValid }"
+        :class="{
+            'installment-row--invalid': manualMode && !installmentPlanValid,
+            'installment-row--diferida': cuota.is_reserva_diferida
+          }" 
       >
         <!-- Número -->
         <span class="cuota-num">{{ cuota.installment_number }}</span>
@@ -1499,6 +1584,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
         <!-- Estado -->
         <div class="text-center">
+          <span v-if="cuota.is_reserva_diferida" 
+                class="pill" style="background:#fef3c7;color:#92400e;font-size:9.5px;">
+            Reserva
+          </span>
           <span class="pill pill-draft">Borrador</span>
         </div>
       </div>
@@ -1522,7 +1611,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           Total (Reserva + Cuotas)
         </span>
         <span class="text-end fw-700" style="font-size:14px;color:var(--navy-900);">
-          {{ selectedCurrency.symbol }} {{ fmt2(round2(Number(insc.saved_money || 0) + installmentTotalSum)) }}
+         {{ fmt2(round2(
+            (reservaSplitEnabled ? Number(reservaInmediata) : Number(insc.saved_money || 0))
+            + installmentTotalSum
+          )) }}
         </span>
         <span></span>
       </div>
@@ -1532,7 +1624,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <div class="installment-footer-note">
       <i class="fa-solid fa-circle-info me-1 text-primary"></i>
       <span v-if="manualMode">Modo manual activo. Ajusta montos y fechas según lo acordado con el alumno.</span>
-      <span v-else">Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.</span>
+      <span v-else>Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.</span>
     </div>
 
   </div>
@@ -1594,6 +1686,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
+import MultiSelect from '@/components/MultiSelect.vue'
 
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
@@ -1747,13 +1840,13 @@ price_profesional_dollars: 0,
     montoOriginal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
-    dsct_benefit_id: null,
+dsct_benefit_ids: [],
+val_beneficios: [],
     val_porcentaje: 0,
     val_fijo: 0,
-    val_beneficio: 0,
     montoDescuentoPorcentaje: 0,
     montoDescuentoFijo: 0,
-    montoBeneficio: 0,
+    montoBeneficioTotal: 0,
     montoFinal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
@@ -1935,65 +2028,57 @@ function onChangeDescuentoPorcentual(opt) {
     return
   }
   insc.val_porcentaje = Number(opt.value) || 0
-  insc.dsct_porcent_label = opt.full_label || opt.label || null
-  // Limpiar stick si se selecciona porcentaje
-  insc.dsct_stick_id    = null
-  insc.dsct_stick_label = null
-  insc.val_fijo         = 0
-  discountResetKey.value++
+  insc.dsct_porcent_label = opt.full_label || opt.label || null 
 }
 
   import { watchEffect } from 'vue'
 // Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
 const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
 
-watchEffect(() => {
+watchEffect(async () => {
   const base = parseFloat(insc.montoOriginal) || 0
 
   // 1. Descuento porcentual (sin cambios)
   let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
   let subtotalAfterPct = round2(base - montoPorcentaje)
 
-  // 2. PROMOCIÓN: val_fijo ahora es el PRECIO FINAL de la promo, no el descuento
+  // 2. Promoción fija (sin cambios)
   let montoFijo = 0
   const promoTarget = round2(parseFloat(insc.val_fijo) || 0)
-
   if (insc.dsct_stick_id && promoTarget > 0) {
-    // El descuento = precio actual - precio promocional
     montoFijo = round2(subtotalAfterPct - promoTarget)
-    if (montoFijo < 0) montoFijo = 0 // No puede ser negativo
+    if (montoFijo < 0) montoFijo = 0
   }
-
   const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0)
     ? promoTarget
     : subtotalAfterPct
 
-  // 3. Beneficio (sin cambios, sigue siendo deducción)
-  let montoBeneficio = round2(parseFloat(insc.val_beneficio) || 0)
+  // 3. BENEFICIOS MÚLTIPLES — sumar todos los val_beneficios
+  const montoBeneficioTotal = round2(
+    (insc.val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0)
+  )
 
   // Validación: descuentos no superan base
-  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
+  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
   if (totalDescuentos > base) {
-    toast.warning('¡Cuidado! Los descuentos superan el Precio Base. Se han reiniciado los valores.')
+    toast.warning('¡Cuidado! Los descuentos superan el Precio Base.')
     insc.val_porcentaje = 0; insc.dsct_porcent_id = null
     insc.val_fijo = 0;       insc.dsct_stick_id   = null
-    insc.val_beneficio = 0;  insc.dsct_benefit_id = null
+    insc.val_beneficios = []; insc.dsct_benefit_ids = []
     discountResetKey.value++
     insc.montoDescuentoPorcentaje = 0
     insc.montoDescuentoFijo = 0
-    insc.montoBeneficio = 0
+    insc.montoBeneficioTotal = 0
     insc.total_amount = base
     return
   }
 
   insc.montoDescuentoPorcentaje = montoPorcentaje
-  insc.montoDescuentoFijo       = montoFijo       // Ahora muestra: base - promoTarget
-  insc.montoBeneficio           = montoBeneficio
+  insc.montoDescuentoFijo       = montoFijo
+  insc.montoBeneficioTotal      = montoBeneficioTotal  // ← nuevo nombre
 
-  const final = round2(subtotalAfterStick - montoBeneficio)
-  // insc.total_amount = final > 0 ? final : 0
-
-insc.total_amount = final > 0 ? Math.floor(final) : 0
+  const final = round2(subtotalAfterStick - montoBeneficioTotal)
+  insc.total_amount = final > 0 ? Math.floor(final) : 0
 })
 
  
@@ -2005,29 +2090,11 @@ insc.total_amount = final > 0 ? Math.floor(final) : 0
     }
     insc.val_fijo = Number(opt.value) || 0
     insc.dsct_stick_label = opt.full_label || opt.label || null
-    // Limpiar porcentaje y beneficio si se selecciona promo
-    insc.dsct_porcent_id    = null
-    insc.dsct_porcent_label = null
-    insc.val_porcentaje     = 0
-    insc.dsct_benefit_id    = null
-    insc.dsct_benefit_label = null
-    insc.val_beneficio      = 0
-    discountResetKey.value++
   }
 
-  function onChangeBeneficio(opt) {
-    if (!opt) {
-      insc.val_beneficio = 0
-      insc.dsct_benefit_label = null
-      return
-    }
-    insc.val_beneficio = Number(opt.value) || 0
-    insc.dsct_benefit_label = opt.full_label || opt.label || null
-    // Limpiar stick si se selecciona beneficio
-    insc.dsct_stick_id    = null
-    insc.dsct_stick_label = null
-    insc.val_fijo         = 0
-    discountResetKey.value++
+  function onChangeBeneficios(selectedItems) {
+    insc.dsct_benefit_ids = selectedItems
+    insc.val_beneficios   = selectedItems.map(i => parseFloat(i.raw?.value || 0)) 
   }
 
     const montoFinalCalculado = computed(() => {
@@ -2560,10 +2627,11 @@ function resetInscriptionData() {
     montoOriginal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
-    dsct_benefit_id: null,
+    dsct_benefit_ids: [],
     val_porcentaje: 0,
     val_fijo: 0,
-    val_beneficio: 0,
+    val_beneficios: [],
+    montoBeneficioTotal: 0,
     dsct_porcent_label: null,
     dsct_stick_label: null,
     dsct_benefit_label: null,
@@ -2809,14 +2877,19 @@ cat_certificate_status,
       cat_currency,
       cat_method_payment,                                // null si TOKEN o WEB
       cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
-      saved_money:          Number(insc.saved_money),
+      saved_money: reservaSplitEnabled.value
+  ? Number(reservaInmediata.value)   // solo lo que paga ahora
+  : Number(insc.saved_money),
 
       // Precios y descuentos
       list_price:           insc.montoOriginal,
       total_amount:         Number(insc.total_amount),
       dsct_porcent_id:      insc.dsct_porcent_id,
       dsct_stick_id:        insc.dsct_stick_id,
-      dsct_benefit_id:      insc.dsct_benefit_id,
+      dsct_benefit_ids: insc.dsct_benefit_ids.map(b => ({
+        value: b.value,
+        label: b.label
+      })),
     installment_plan: isInstallmentMode.value ? installmentPlan.value : null,
 
       // Observaciones y archivos
@@ -2833,9 +2906,9 @@ async function confirmarInscripcion() {
 
 
    if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
-  toast.warning('El Precio Base no está configurado. No se puede procesar la inscripción.')
-  return
-}
+      toast.warning('El Precio Base no está configurado. No se puede procesar la inscripción.')
+      return
+    }
 
   if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
     // ← reemplaza el toast genérico por esto:
@@ -2864,10 +2937,25 @@ async function confirmarInscripcion() {
     toast.warning('Debe seleccionar el proveedor del Link / Token.')
     return
   }
+
+  if (isInstallmentMode.value && reservaSplitEnabled.value && !reservaSplitValid.value) {
+  toast.warning('Si aplazas parte de la reserva, debes indicar el monto inmediato y la fecha de la cuota diferida.')
+  return
+}
+
   // Validar plan de cuotas
 if (isInstallmentMode.value && !installmentPlanValid.value) {
   toast.warning('El plan de cuotas no cuadra con el monto final. Ajusta los montos antes de guardar.')
   return
+}
+if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha.value) {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const fechaDif = new Date(reservaDiferidaFecha.value)
+  if (fechaDif < hoy) {
+    toast.warning('La fecha de la cuota diferida no puede ser una fecha pasada.')
+    return
+  }
 }
   savingInsc.value = true
 
@@ -2923,6 +3011,34 @@ async function confirmarEliminacion() {
   showDeleteWarningModal.value = false
   await guardarEfectivo()
 }
+async function guardarEfectivo() {
+  if (!comercialService) return console.error('comercialService no inyectado')
+  
+  saving.value = true
+  try {
+    // Construimos los datos del formulario (incluyendo el nuevo status "Eliminado")
+    const payload = buildLeadPayload()
+    
+    // Ejecutamos únicamente el UPDATE del lead
+    const resp = await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
+    
+    // Manejo de la respuesta
+    if (resp.result === 1) {
+      toast.success(resp.message || 'Lead eliminado correctamente')
+      router.push({ name: 'ComercialListado' })
+    } else if (resp.result === 0) {
+      toast.error(resp.message)
+    } else {
+      toast.warning(resp.message)
+    }
+  } catch (err) {
+    console.error(err)
+    toast.error('Error inesperado al intentar eliminar el lead.')
+  } finally {
+    saving.value = false
+  }
+}
+
 async function guardar() {
   if (!comercialService) return console.error('comercialService no inyectado')
   if (isDeleteStatus.value) {
@@ -3039,6 +3155,13 @@ function validateInscriptionPaymentInfo() {
     if (!insc.cat_type_payment) return false
     if (!insc.cat_method_payment) return false
     // Cuotas: requiere adelanto > 0
+    if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
+    return true
+  }
+
+  if (isChannelToken.value) {
+    if (!insc.cat_token_provider) return false
+    // Si eligió cuotas, también requiere reserva
     if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
     return true
   }
@@ -3221,54 +3344,21 @@ const calculatedBasePrice = computed(() => {
     : Number(form.price_student_soles   || 0)
 })
 
-    import { watch } from 'vue'
+  import { watch } from 'vue'
 
-    watch(calculatedBasePrice, (newPrice) => {
-      insc.montoOriginal = newPrice
-    }, { immediate: true })
+  watch(calculatedBasePrice, (newPrice) => {
+    insc.montoOriginal = newPrice
+  }, { immediate: true })
 
-    watch(() => insc.selectedCurrencyAlias, () => {
-    })
+  watch(() => insc.selectedCurrencyAlias, () => {
+  })
 
-    const alCerrarModal = () => {
-      console.log('La modal se ha cerrado. Limpiando formulario...')
-      Object.assign(insc, {
-        dni: '',
-        nombres: '',
-        apellidos: '',
-        correo: '',
-        saved_money: 0,
-        selectedCurrencyAlias: '',
-        modalidadPrograma: 'NORMAL',
-        promocion_id: null,
-        descuento_id: null,
-        modalidadPago: 'CONTADO',
-        cat_method_payment: null,
-        montoOriginal: 0,
-        adelanto: 0,
-        observacion: '',
-        montoDescuentoPorcentaje: 0,
-        montoDescuentoFijo: 0,
-        montoFinal: 0,
-        dsct_porcent_id: null,
-        dsct_stick_id: null,
-        dsct_benefit_id: null,
-        val_porcentaje: 0,
-        val_fijo: 0,
-        val_beneficio: 0,
-        montoDescuentoPorcentaje: 0,
-        montoDescuentoFijo: 0,
-        montoBeneficio: 0,
-        montoFinal: 0,
-      })
 
+  watch(showViewModal, (estaAbierto) => {
+    if (!estaAbierto) {
+      resetInscriptionData();
     }
-
-    watch(showViewModal, (estaAbierto) => {
-      if (!estaAbierto) {
-        resetInscriptionData();
-      }
-    })
+  })
 
 // ══════════════════════════════════════════════════
 // PLAN DE CUOTAS
@@ -3278,14 +3368,18 @@ const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFracti
 
 
 const isInstallmentMode = computed(() =>
-  isChannelGeneral.value &&
+  !isChannelWeb.value &&
+  !!insc.cat_payment_channel &&
   insc.cat_type_payment === 'we_payment_way_installments' &&
   Number(insc.montoOriginal) > 0
 )
 
-// Monto que queda después del adelanto → se reparte en cuotas 2..N
+// Monto que queda después del adelanto → se reparte en cuotas 2..N 
 const installmentRemainder = computed(() => {
-  const rem = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
+  const adelantoEfectivo = reservaSplitEnabled.value
+    ? (Number(reservaInmediata.value) || 0)
+    : (Number(insc.saved_money)       || 0)
+  const rem = round2((Number(insc.total_amount) || 0) - adelantoEfectivo)
   return rem > 0 ? rem : 0
 })
 
@@ -3303,11 +3397,10 @@ const autoNumCuotas = computed(() => {
   }
   return 1
 })
-
-
+ 
 const autoInstallmentPlan = computed(() => {
   if (!isInstallmentMode.value) return []
-  const saldo           = installmentRemainder.value
+  const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
   const n               = autoNumCuotas.value
   const startRaw        = form.edition_start_date
   const sessionsPerWeek = form.program_sessions_per_week || 1
@@ -3417,14 +3510,48 @@ function snapToKeyDate(afterDate, keys = [1, 15, 30]) {
   return min // fallback
 }
 
-
 // ── Modo manual ───────────────────────────────────────────────
 const manualMode           = ref(false)
 const numCuotasManual      = ref(1)
-const editableInstallments = ref([])
+const editableInstallments = ref([]) 
+const reservaSplitEnabled  = ref(false)
+const reservaInmediata     = ref(0)      // lo que paga ahora (los 100)
+const reservaDiferidaFecha = ref('')     // fecha de la cuota diferida
 
-function seedEditableInstallments(n) {
-  const saldo = installmentRemainder.value
+watch(reservaSplitEnabled, (val) => {
+  if (val) {
+    reservaInmediata.value     = 0
+    reservaDiferidaFecha.value = defaultDiferidaFecha()
+  } else {
+    reservaInmediata.value     = 0
+    reservaDiferidaFecha.value = ''
+  }
+})
+
+// Si cambia saved_money y el split está activo, recalcular inmediata si supera el límite
+watch(() => insc.saved_money, (val) => {
+  if (reservaSplitEnabled.value && Number(reservaInmediata.value) > Number(val)) {
+    reservaInmediata.value = Number(val)
+  }
+})
+
+const reservaDiferida = computed(() =>
+  round2(Math.max(0, (Number(insc.saved_money) || 0) - (Number(reservaInmediata.value) || 0)))
+)
+
+const reservaSplitValid = computed(() =>
+  !reservaSplitEnabled.value ||
+  (Number(reservaInmediata.value) > 0 && reservaDiferida.value > 0 && !!reservaDiferidaFecha.value)
+)
+
+function defaultDiferidaFecha() {
+  const d = new Date()
+  d.setDate(d.getDate() + 7)
+  return d.toISOString().slice(0, 10)
+}
+function seedEditableInstallments(n) { 
+  const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
+
   if (saldo <= 0 || n < 1) { editableInstallments.value = []; return }
   const cuotaBase = Math.floor(saldo / n)
   const rem       = round2(saldo - cuotaBase * n)
@@ -3467,10 +3594,35 @@ function updateEditableDate(idx, val) {
 
 
 // Plan efectivo que se usa en template y en el payload
-const installmentPlan = computed(() =>
-  manualMode.value ? editableInstallments.value : autoInstallmentPlan.value
-)
+// REEMPLAZA el computed installmentPlan existente
+const installmentPlan = computed(() => {
+  const basePlan = manualMode.value
+    ? editableInstallments.value
+    : autoInstallmentPlan.value
 
+  if (!reservaSplitEnabled.value || reservaDiferida.value <= 0 || !reservaDiferidaFecha.value) {
+    return basePlan
+  }
+
+  // Insertar la cuota diferida y ordenar por fecha
+  const extraCuota = {
+    installment_number: 0,        // se reasigna abajo
+    amount: reservaDiferida.value,
+    due_date: reservaDiferidaFecha.value,
+    is_reserva_diferida: true     // flag visual
+  }
+
+  const merged = [...basePlan, extraCuota]
+    .slice()
+    .sort((a, b) => {
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return new Date(a.due_date) - new Date(b.due_date)
+    })
+    .map((c, i) => ({ ...c, installment_number: i + 1 }))
+
+  return merged
+})
 const installmentTotalSum = computed(() =>
   round2((installmentPlan.value || []).reduce((acc, c) => acc + Number(c.amount || 0), 0))
 )
@@ -3481,8 +3633,15 @@ const installmentPlanValid = computed(() => {
 })
 
 // Watchers
+// En el watcher de isInstallmentMode (el existente)
 watch(isInstallmentMode, (val) => {
-  if (!val) { manualMode.value = false; editableInstallments.value = [] }
+  if (!val) {
+    manualMode.value           = false
+    editableInstallments.value = []
+    reservaSplitEnabled.value  = false   // ← AGREGAR
+    reservaInmediata.value     = 0       // ← AGREGAR
+    reservaDiferidaFecha.value = ''      // ← AGREGAR
+  }
 })
 
 watch(installmentRemainder, () => {
@@ -3498,7 +3657,9 @@ const isOnlineProgram = computed(() =>
   form.program_modality_selected_alias === 'we_modality_online'
 )
 const hasStick           = computed(() => !!insc.dsct_stick_id)
-const hasPorcentOrBenefit = computed(() => !!insc.dsct_porcent_id || !!insc.dsct_benefit_id)
+const hasPorcentOrBenefit = computed(() =>
+  !!insc.dsct_porcent_id || insc.dsct_benefit_ids.length > 0
+)
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false
@@ -4267,14 +4428,15 @@ function toggleReschedule(contacto) {
   border-color: #f87171 !important;
   background: #fff5f5 !important;
 }
+
 .installment-reserva-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
   align-items: center;
-  gap: .75rem;
-  padding: .65rem 1rem;
+  gap: 1rem;
+  padding: .7rem 1rem;
   background: #eff6ff;
   border-bottom: 1px solid #bfdbfe;
+  transition: min-height .2s;
 }
 
 .installment-divider {
@@ -4427,4 +4589,59 @@ function toggleReschedule(contacto) {
 /* Transición suave del banner */
 .delete-warn-enter-active, .delete-warn-leave-active { transition: all .25s ease; }
 .delete-warn-enter-from, .delete-warn-leave-to { opacity: 0; transform: translateY(-8px); }
+.installment-row--diferida {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+.installment-reserva-row.is-split { align-items: flex-start; padding-top: .8rem; padding-bottom: .8rem; }
+
+.reserva-id {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 155px;
+  flex-shrink: 0;
+}
+
+.reserva-amounts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.reserva-single {
+  display: flex;
+  align-items: center;
+}
+.reserva-split-line {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.reserva-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  min-width: 54px;
+  text-align: center;
+  letter-spacing: .03em;
+}
+.reserva-error {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: 10px;
+  color: #dc2626;
+  font-weight: 600;
+  margin-top: .15rem;
+}
+
+.reserva-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-shrink: 0;
+}
 </style>
