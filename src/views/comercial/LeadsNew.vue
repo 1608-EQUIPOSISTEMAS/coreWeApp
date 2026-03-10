@@ -1016,12 +1016,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </div>
           <div class="col-md-4">
             <label class="exec-label">Documento <span class="c-red">*</span></label>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2">  
               <input
                 autocomplete="nope" required v-model="insc.document" type="text"
                 :placeholder="docConfig.placeholder" class="exec-input-light w-100"
                 :maxlength="docConfig.maxLength" @keyup.enter="searchCustomerByDocument"
-                v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, only:'numbers', transform:'upper' }"
+                v-restrict="{ trim:true, spaces:false, max:docConfig.maxLength, ...(docConfig.isNumeric ? { only: 'numbers' } : {}), transform:'upper' }"
                 :disabled="!insc.cat_type_document"
               />
               <button
@@ -1127,7 +1127,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             />
           </div>
 
-          <template v-if="!isChannelWeb">
+          <template v-if="isChannelGeneral">
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
@@ -1301,7 +1301,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           ref="voucherUploaderRef"
           label="Clic para subir Comprobante(s)"
           accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-          :required="val_porcentaje==100?false:!isVoucherOptional"
+          :required="insc.val_porcentaje==100?false:!isVoucherOptional"
           :minFiles="1"
           :touched="voucherTouched"
         />
@@ -1641,7 +1641,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <button
   class="btn-exec btn-exec-primary btn-exec-sm"
   @click="confirmarInscripcion"
-  :disabled="savingInsc || form.enrollment_id || (isInstallmentMode && !installmentPlanValid)"
+  :disabled="
+  savingInsc ||
+  form.enrollment_id ||
+  (isInstallmentMode && !installmentPlanValid) ||
+  (isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
+"
 >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
         {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
@@ -1683,11 +1688,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
 
 <script setup>
-  import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount} from 'vue'
+  import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount, watch} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
-import MultiSelect from '@/components/MultiSelect.vue'
-
+import MultiSelect from '@/components/MultiSelect.vue' 
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
@@ -1837,11 +1841,9 @@ price_profesional_dollars: 0,
     dsct_benefit_label: null,
     cat_method_payment: null,
     modalidadPago: 'CONTADO',
-    montoOriginal: 0,
-    dsct_porcent_id: null,
-    dsct_stick_id: null,
-dsct_benefit_ids: [],
-val_beneficios: [],
+    montoOriginal: 0,  
+    dsct_benefit_ids: [],
+    val_beneficios: [],
     val_porcentaje: 0,
     val_fijo: 0,
     montoDescuentoPorcentaje: 0,
@@ -1856,10 +1858,13 @@ val_beneficios: [],
   cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
   cat_token_provider: null,
   })
+
+
 // Comprobante opcional cuando el descuento porcentual es exactamente 100
 const isVoucherOptional = computed(() =>
   !isChannelGeneral.value || Number(insc.val_porcentaje) === 100
 )
+
 watch(() => insc.cat_payment_channel, () => {
   insc.cat_token_provider    = null
   insc.cat_method_payment    = null
@@ -2030,56 +2035,67 @@ function onChangeDescuentoPorcentual(opt) {
   insc.val_porcentaje = Number(opt.value) || 0
   insc.dsct_porcent_label = opt.full_label || opt.label || null 
 }
-
-  import { watchEffect } from 'vue'
+ 
 // Función auxiliar para redondear correctamente a 2 decimales (evita errores de punto flotante)
 const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100
 
-watchEffect(async () => {
-  const base = parseFloat(insc.montoOriginal) || 0
+watch(
+  () => [
+    insc.montoOriginal,
+    insc.val_porcentaje,
+    insc.val_fijo,
+    insc.val_beneficios,
+    insc.dsct_porcent_id,
+    insc.dsct_stick_id,
+    insc.dsct_benefit_ids,
+  ],
+  () => {
+    const base = parseFloat(insc.montoOriginal) || 0
 
-  // 1. Descuento porcentual (sin cambios)
-  let montoPorcentaje = round2((base * (insc.val_porcentaje || 0)) / 100)
-  let subtotalAfterPct = round2(base - montoPorcentaje)
+    // 1. Descuento porcentual
+    let montoPorcentaje   = round2((base * (insc.val_porcentaje || 0)) / 100)
+    let subtotalAfterPct  = round2(base - montoPorcentaje)
 
-  // 2. Promoción fija (sin cambios)
-  let montoFijo = 0
-  const promoTarget = round2(parseFloat(insc.val_fijo) || 0)
-  if (insc.dsct_stick_id && promoTarget > 0) {
-    montoFijo = round2(subtotalAfterPct - promoTarget)
-    if (montoFijo < 0) montoFijo = 0
-  }
-  const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0)
-    ? promoTarget
-    : subtotalAfterPct
+    // 2. Promoción fija
+    let montoFijo = 0
+    const promoTarget = round2(parseFloat(insc.val_fijo) || 0)
+    if (insc.dsct_stick_id && promoTarget > 0) {
+      montoFijo = round2(subtotalAfterPct - promoTarget)
+      if (montoFijo < 0) montoFijo = 0
+    }
+    const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0)
+      ? promoTarget
+      : subtotalAfterPct
 
-  // 3. BENEFICIOS MÚLTIPLES — sumar todos los val_beneficios
-  const montoBeneficioTotal = round2(
-    (insc.val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0)
-  )
+    // 3. Beneficios múltiples
+    const montoBeneficioTotal = round2(
+      (insc.val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0)
+    )
 
-  // Validación: descuentos no superan base
-  const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
-  if (totalDescuentos > base) {
-    toast.warning('¡Cuidado! Los descuentos superan el Precio Base.')
-    insc.val_porcentaje = 0; insc.dsct_porcent_id = null
-    insc.val_fijo = 0;       insc.dsct_stick_id   = null
-    insc.val_beneficios = []; insc.dsct_benefit_ids = []
-    discountResetKey.value++
-    insc.montoDescuentoPorcentaje = 0
-    insc.montoDescuentoFijo = 0
-    insc.montoBeneficioTotal = 0
-    insc.total_amount = base
-    return
-  }
+    // Validación: descuentos no superan base
+    const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
+    if (totalDescuentos > base) {
+      toast.warning('¡Cuidado! Los descuentos superan el Precio Base.')
+      insc.val_porcentaje   = 0; insc.dsct_porcent_id   = null
+      insc.val_fijo         = 0; insc.dsct_stick_id     = null
+      insc.val_beneficios   = []; insc.dsct_benefit_ids = []
+      discountResetKey.value++
+      insc.montoDescuentoPorcentaje = 0
+      insc.montoDescuentoFijo       = 0
+      insc.montoBeneficioTotal      = 0
+      insc.total_amount             = base
+      return
+    }
 
-  insc.montoDescuentoPorcentaje = montoPorcentaje
-  insc.montoDescuentoFijo       = montoFijo
-  insc.montoBeneficioTotal      = montoBeneficioTotal  // ← nuevo nombre
+    insc.montoDescuentoPorcentaje = montoPorcentaje
+    insc.montoDescuentoFijo       = montoFijo
+    insc.montoBeneficioTotal      = montoBeneficioTotal
 
-  const final = round2(subtotalAfterStick - montoBeneficioTotal)
-  insc.total_amount = final > 0 ? Math.floor(final) : 0
-})
+    const final = round2(subtotalAfterStick - montoBeneficioTotal)
+    insc.total_amount = final > 0 ? Math.floor(final) : 0
+  },
+  { deep: true }
+)
 
  
   function onChangeDescuentoFijo(opt) {
@@ -2959,43 +2975,51 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
 }
   savingInsc.value = true
 
-  try {
-    // --- PASO A: GUARDAR EL LEAD ---
-    const leadPayload = buildLeadPayload()
-    const currentLeadId = leadIdParam.value || createdLeadId.value
 
+  try {
+    // ── PASO A: Preparar payload del lead ──────────────────────
+    const leadPayload    = buildLeadPayload()
+    const currentLeadId  = leadIdParam.value || createdLeadId.value
+    let   resolvedLeadId = currentLeadId
+    let   resolvedPersonId = createdPersonId.value
+
+    // ── PASO B: Preparar payload del enrollment ────────────────
+    // Lo construimos ANTES de guardar nada, para detectar errores de validación
+    // local sin haber tocado el servidor aún
+    const enrollmentPayload = buildEnrollmentPayload()
+
+    // ── PASO C: Guardar lead (solo si pasó la validación local) ─
     if (currentLeadId) {
       const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
-      if (leadResp.result === 0) {
-        toast.error(leadResp.message)
-        return
-      } else if (leadResp.result === 2) {
-        toast.warning(leadResp.message)
-        return
-      }
+      if (leadResp.result === 0) { toast.error(leadResp.message);   return }
+      if (leadResp.result === 2) { toast.warning(leadResp.message); return }
     } else {
       const leadResp = await comercialService.leadRegister(leadPayload)
-      if (leadResp.result === 0) {
-        toast.error(leadResp.message)
-        return
-      } else if (leadResp.result === 2) {
-        toast.warning(leadResp.message)
-        return
-      }
-      createdLeadId.value   = leadResp.lead_id
-      createdPersonId.value = leadResp.person_id
+      if (leadResp.result === 0) { toast.error(leadResp.message);   return }
+      if (leadResp.result === 2) { toast.warning(leadResp.message); return }
+      resolvedLeadId   = leadResp.lead_id
+      resolvedPersonId = leadResp.person_id
+      createdLeadId.value   = resolvedLeadId
+      createdPersonId.value = resolvedPersonId
     }
 
-    // --- PASO B: GUARDAR LA INSCRIPCIÓN ---
-    const enrollmentPayload = buildEnrollmentPayload()
+    // ── PASO D: Guardar enrollment ─────────────────────────────
+    // Actualizamos el lead_id en el payload con el ID real ya resuelto
+    enrollmentPayload.inscription.lead_id = resolvedLeadId
+
     const enrollResp = await comercialService.enrollmentRegister(enrollmentPayload)
 
     if (enrollResp.result === 1) {
       toast.success(enrollResp.message)
       showViewModal.value = false
       router.push({ name: 'ComercialListado' })
+
     } else if (enrollResp.result === 0) {
-      toast.error(enrollResp.message)
+      // ── ROLLBACK VISUAL: avisamos que el lead sí se guardó pero la inscripción no ──
+      toast.error(
+        `${enrollResp.message} — El lead fue guardado, pero la inscripción no se registró. Inténtalo nuevamente.`,
+        { timeout: 8000 }
+      )
     } else {
       toast.warning(enrollResp.message)
     }
@@ -3006,6 +3030,7 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
   } finally {
     savingInsc.value = false
   }
+
 }
 async function confirmarEliminacion() {
   showDeleteWarningModal.value = false
@@ -3117,7 +3142,7 @@ function openInscription() {
       )
     }
 
-    showViewModal.value = true  // ✅ abrir DESPUÉS de que los datos estén listos
+    showViewModal.value = true   
   })
 }
   function validateLeadInfo() {
@@ -3166,11 +3191,6 @@ function validateInscriptionPaymentInfo() {
     return true
   }
 
-  // Canal Token: requiere proveedor
-  if (isChannelToken.value) {
-    return !!insc.cat_token_provider
-  }
-
   // Canal Web: solo necesita el canal seleccionado
   if (isChannelWeb.value) return true
 
@@ -3178,8 +3198,7 @@ function validateInscriptionPaymentInfo() {
   return false
 }
 
-
-  const montoOriginal = computed(() => 1000)
+ 
 
 
 function onProgramaTypeChange(opcion) {
@@ -3319,8 +3338,7 @@ function onEditionChange(opcion) {
       return ocupacionInfo?.variable_3 || null
     })
 
-const calculatedBasePrice = computed(() => {
-  debugger
+const calculatedBasePrice = computed(() => { 
   if (!insc.selectedCurrencyAlias) return 0
   const isUSD  = insc.selectedCurrencyAlias === 'we_currency_usd'
   const type   = clientProfileType.value
@@ -3344,7 +3362,6 @@ const calculatedBasePrice = computed(() => {
     : Number(form.price_student_soles   || 0)
 })
 
-  import { watch } from 'vue'
 
   watch(calculatedBasePrice, (newPrice) => {
     insc.montoOriginal = newPrice
@@ -3518,6 +3535,12 @@ const reservaSplitEnabled  = ref(false)
 const reservaInmediata     = ref(0)      // lo que paga ahora (los 100)
 const reservaDiferidaFecha = ref('')     // fecha de la cuota diferida
 
+ watch(reservaInmediata, () => {
+  if (manualMode.value && reservaSplitEnabled.value) {
+    nextTick(() => seedEditableInstallments(numCuotasManual.value))
+  }
+})
+
 watch(reservaSplitEnabled, (val) => {
   if (val) {
     reservaInmediata.value     = 0
@@ -3526,8 +3549,11 @@ watch(reservaSplitEnabled, (val) => {
     reservaInmediata.value     = 0
     reservaDiferidaFecha.value = ''
   }
+  // ← NUEVO: recalcular plan manual cuando cambia el split
+  if (manualMode.value) {
+    nextTick(() => seedEditableInstallments(numCuotasManual.value))
+  }
 })
-
 // Si cambia saved_money y el split está activo, recalcular inmediata si supera el límite
 watch(() => insc.saved_money, (val) => {
   if (reservaSplitEnabled.value && Number(reservaInmediata.value) > Number(val)) {
@@ -3648,18 +3674,13 @@ watch(installmentRemainder, () => {
   if (manualMode.value) seedEditableInstallments(numCuotasManual.value)
 })
 
-
 function isValidEmail(email) {
   if (!email) return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email).toLowerCase())
 }
 const isOnlineProgram = computed(() =>
   form.program_modality_selected_alias === 'we_modality_online'
-)
-const hasStick           = computed(() => !!insc.dsct_stick_id)
-const hasPorcentOrBenefit = computed(() =>
-  !!insc.dsct_porcent_id || insc.dsct_benefit_ids.length > 0
-)
+) 
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false
