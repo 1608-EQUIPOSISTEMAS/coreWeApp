@@ -29,6 +29,13 @@ export default class NotificationService {
     return response.data.data  
   }
 
+  // pushRestrictionsUpdate: (body) =>
+  // api.post('/notifications/push-restrictions-update', body)
+  async pushRestrictionsUpdate(body) {
+    return (await api.post('/notifications/push-restrictions-update', body, { meta: { skipLoader: true } })).data
+  }
+  
+
   connectStream(onEvent) {
     // 1. Registramos la función del componente que quiere escuchar
     // ✅ Ahora el código sabe qué es activeListeners

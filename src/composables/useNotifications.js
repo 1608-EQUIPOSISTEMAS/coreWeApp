@@ -46,9 +46,20 @@ export function useNotifications() {
       if (
         event.tipo_evento === 'llamada_sin_atencion' || 
         event.tipo_evento === 'nueva_notificacion' ||
-        event.tipo_evento === 'llamada_por_vencer_30m' // 🔴 Con esto basta para que aparezca en la lista
+        event.tipo_evento === 'llamada_por_vencer_30m'
       ) {
         await loadNotifications()
+      }
+
+      if (event.tipo_evento === 'restricciones_actualizadas') {
+        console.log('[SSE] Restricciones actualizadas, redirigiendo...')
+        // Pequeño delay para que cualquier modal abierto cierre visualmente
+        setTimeout(() => {
+          const router = useRouter()  // importar useRouter arriba si no está
+          router.push({ name: 'ComercialLeads' }).then(() => {
+            window.location.reload() // recarga dura para re-aplicar filtros del servidor
+          })
+        }, 800)
       }
 
       // 2. Mostrar modal de las 5pm
