@@ -19,7 +19,10 @@ async getDetailLeads(payload) {
     const response = (await api.post('/dashboard/detailsales', payload)).data;
     return response.data;
   }
-
+async getAvailableWeeks(payload) {
+  const response = (await api.post('/dashboard/available-weeks', payload)).data;
+  return response.data;
+}
 
   async programGoalsList(payload) {
     const response = (await api.post('/dashboard/program-goals', payload)).data;

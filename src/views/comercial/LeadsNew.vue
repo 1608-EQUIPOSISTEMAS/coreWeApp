@@ -1186,6 +1186,23 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="exec-select-light w-100"
               />
             </div>
+            <div class="col-md-3">
+              <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_type_payment"
+                required
+                :items="inscPaymentModes"
+                placeholder="M. PAGO"
+                label-field="description"
+                value-field="alias"
+                class="exec-select-light w-100"
+              />
+            </div>
+            <div class="col-md-3" v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+              <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
+              <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
+            </div>
             <div class="col-md-12 mt-1">
               <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
                 <i class="fa-solid fa-link me-2"></i> Este pago se registrará en la hoja <strong>"TOKEN DIGITAL 2026"</strong>
@@ -1685,7 +1702,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   </template>
 </BaseModal>
 </template>
-
 
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount, watch} from 'vue'
@@ -3678,9 +3694,11 @@ function isValidEmail(email) {
   if (!email) return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email).toLowerCase())
 }
+
 const isOnlineProgram = computed(() =>
-  form.program_modality_selected_alias === 'we_modality_online'
-) 
+  form.program_modality_selected_alias === 'we_modality_online' &&
+  form.category_alias !== 'we_program_type_membership'
+)
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false

@@ -1284,7 +1284,23 @@ async function parseQueryAndApply() {
     filters.edition_start_from = q.edition_start_from
     filters.edition_start_to   = q.edition_start_to || q.edition_start_from
     filters.edition_range_string = `${q.edition_start_from} a ${filters.edition_start_to}`
+  } 
+  if (q.created_from) {
+    const createdTo = q.created_to || q.created_from
+    filters.rangoFechas = { start: q.created_from, end: createdTo }
+    filters.created_range_string = `${q.created_from} a ${createdTo}`
   }
+  if (q.updated_from) {
+    const updatedTo = q.updated_to || q.updated_from
+    filters.rangoModificacion = { start: q.updated_from, end: updatedTo }
+    filters.updated_range_string = `${q.updated_from} a ${updatedTo}`
+  }
+  if (q.first_contact_from) {
+    filters.first_contact_from = q.first_contact_from
+    filters.first_contact_to   = q.first_contact_to || q.first_contact_from
+    filters.first_contact_range_string = `${q.first_contact_from} a ${filters.first_contact_to}`
+  }
+
   filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
   filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
   filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
