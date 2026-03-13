@@ -1625,7 +1625,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="pill" style="background:#fef3c7;color:#92400e;font-size:9.5px;">
             Reserva
           </span>
-          <span class="pill pill-draft">Borrador</span>
+          <span class="pill pill-draft" v-else>Borrador</span>
         </div>
       </div>
 
@@ -2925,8 +2925,8 @@ function buildEnrollmentPayload() {
       cat_insc_modality,
 cat_certificate_status,
       // Canal y pago
-      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id)
-      cat_type_payment:     isChannelGeneral.value ? cat_type_payment : null,
+      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id) 
+      cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
       cat_currency,
       cat_method_payment,                                // null si TOKEN o WEB
       cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
@@ -3571,22 +3571,18 @@ const reservaInmediata     = ref(0)      // lo que paga ahora (los 100)
 const reservaDiferidaFecha = ref('')     // fecha de la cuota diferida
 
  watch(reservaInmediata, () => {
-  if (manualMode.value && reservaSplitEnabled.value) {
-    nextTick(() => seedEditableInstallments(numCuotasManual.value))
+  if (reservaSplitEnabled.value && Number(reservaInmediata.value) >= Number(insc.saved_money)) {
+    reservaInmediata.value = Math.max(0, Number(insc.saved_money) - 1)
   }
 })
 
-watch(reservaSplitEnabled, (val) => {
+watch(reservaSplitEnabled, (val) => { 
   if (val) {
     reservaInmediata.value     = 0
     reservaDiferidaFecha.value = defaultDiferidaFecha()
   } else {
     reservaInmediata.value     = 0
     reservaDiferidaFecha.value = ''
-  }
-  // ← NUEVO: recalcular plan manual cuando cambia el split
-  if (manualMode.value) {
-    nextTick(() => seedEditableInstallments(numCuotasManual.value))
   }
 })
 // Si cambia saved_money y el split está activo, recalcular inmediata si supera el límite
@@ -3734,6 +3730,10 @@ watch(isInstallmentMode, (val) => {
       ...c,  // ← preserva due_date que el usuario editó
       amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase
     }))
+    toast.warning(
+      '⚠️ Los montos del plan se recalcularon automáticamente. Las fechas que editaste se conservaron.',
+      { timeout: 5000 }
+    )
   }
 })
 
