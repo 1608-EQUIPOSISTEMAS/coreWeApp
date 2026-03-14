@@ -24,6 +24,10 @@ async getAvailableWeeks(payload) {
   return response.data;
 }
 
+async liderList(payload) {
+  const response = (await api.post('/dashboard/lider', payload)).data;
+  return response.data;
+}
   async programGoalsList(payload) {
     const response = (await api.post('/dashboard/program-goals', payload)).data;
     return response.data;

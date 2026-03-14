@@ -55,17 +55,36 @@
         <div v-if="isLiderComercial && viewAsAdvisor" class="filter-sep"></div>
 
         <div class="filter-group">
-          <label class="filter-label">MODALIDAD</label>
+          <label class="filter-label">TIPO OBJETIVO</label>
           <div class="modality-toggle">
             <button class="mod-btn" :class="{ active: filters.modality === 'NO_ONLINE' }"
               @click="filters.modality = 'NO_ONLINE'; loadWeeks()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
               EN VIVO
             </button>
-            <button class="mod-btn" :class="{ active: filters.modality === 'ONLINE' }"
+            <button class="mod-btn" :class="{ active: filters.modality === 'ONLINE' }" disabled
               @click="filters.modality = 'ONLINE'; loadWeeks()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <circle cx="12" cy="20" r="1"/>
+              </svg>
               ONLINE
+            </button>
+            <!-- ── NUEVO ── -->
+            <button class="mod-btn" :class="{ active: filters.modality === 'CONGRESO' }" disabled
+              @click="filters.modality = 'CONGRESO'; loadWeeks()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              CONGRESO
             </button>
           </div>
         </div>
@@ -751,7 +770,9 @@
       <span class="footer-sep">·</span>
       <span>Año: <strong>{{ filters.year }}</strong></span>
       <span class="footer-sep">·</span>
-      <span>Modalidad: <strong>{{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : 'Online' }}</strong></span>
+      <span>Tipo Objetivo: <strong>
+        {{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : filters.modality === 'ONLINE' ? 'Online' : 'Congreso' }}
+      </strong></span>
       <span v-if="isLiderComercial && viewAsAdvisor" class="footer-sep">·</span>
       <span v-if="isLiderComercial && viewAsAdvisor" style="color:#f59e0b;font-weight:600;">
         👁 Vista de: {{ myData?.asesor || '—' }}
@@ -1148,7 +1169,20 @@ function drillDown(params = {}) {
     if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
   }
 // ── Excluir tipo Congreso/Evento ──────────────────────────────
-const EVENT_ALIAS = 'we_program_type_event' // ajusta si el alias real es distinto
+const EVENT_ALIAS = 'we_program_type_event'
+if (filters.modality === 'CONGRESO') {
+  // Solo incluir tipo Congreso/Evento
+  const eventType = catalog.options('we_program_type')
+    .filter(t => t.alias === EVENT_ALIAS)
+    .map(t => ({ value: t.id, label: t.description }))
+  if (eventType.length) query.type_program_ids = encodeFilter(eventType)
+} else {
+  // Excluir tipo Congreso/Evento (comportamiento original)
+  const validProgramTypes = catalog.options('we_program_type')
+    .filter(t => t.alias !== EVENT_ALIAS)
+    .map(t => ({ value: t.id, label: t.description }))
+  if (validProgramTypes.length) query.type_program_ids = encodeFilter(validProgramTypes)
+}
 const validProgramTypes = catalog.options('we_program_type')
   .filter(t => t.alias !== EVENT_ALIAS)
   .map(t => ({ value: t.id, label: t.description }))
