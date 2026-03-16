@@ -41,10 +41,11 @@ const props = defineProps({
 
 const sizeClass = computed(() => {
   switch (props.size) {
-    case 'sm': return 'modal-sm'
-    case 'lg': return 'modal-lg'
-    case 'xl': return 'modal-xl'
-    default:   return 'modal-md'
+    case 'sm':  return 'modal-sm'
+    case 'lg':  return 'modal-lg'
+    case 'xl':  return 'modal-xl'
+    case 'xxl': return 'modal-xxl'
+    default:    return 'modal-md'
   }
 })
 
@@ -96,7 +97,8 @@ onBeforeUnmount(() => { document.body.style.overflow = originalOverflow })
 .modal-sm { max-width: 420px; }
 .modal-md { max-width: 560px; }
 .modal-lg { max-width: 780px; }
-.modal-xl { max-width: 1080px; }
+.modal-xl  { max-width: 1080px; }
+.modal-xxl { max-width: 1320px; }
 
 .modal-header { display:flex; justify-content:space-between; align-items:center;
   padding:.75rem 1rem; border-bottom:1px solid #e5e7eb; font-weight:600; }
