@@ -263,6 +263,14 @@
                 <div class="pc-pills">
                   <div class="pc-pill"><span class="pcpl">Intentos</span><span class="pcpv">{{ fmt(persistenceData.totalIntentos) }}</span></div>
                   <div class="pc-pill pc-pill--green"><span class="pcpl">Ventas</span><span class="pcpv" style="color:#4ade80">{{ fmt(persistenceData.totalVentas) }}</span></div>
+  <div class="toggle-group" style="margin-left:auto">
+    <button class="tgl-btn" :class="{ 'tgl-teal': persistenceMode === 'monthly' }" @click="persistenceMode = 'monthly'">
+      Este mes
+    </button>
+    <button class="tgl-btn" :class="{ 'tgl-teal': persistenceMode === 'global' }" @click="persistenceMode = 'global'">
+      Histórico
+    </button>
+  </div>
                 </div>
               </div>
               <div v-if="!persistenceData.steps.length" class="empty-state">Sin datos.</div>
@@ -302,10 +310,13 @@
                 <div class="panel-sub">Correlación entre intentos, contacto y cierre por hora.</div>
               </div>
               <div class="chart-legend-row">
-                <span class="cl-dot" style="background:#f87171"></span><span>% No Contactados</span>
-                <span class="cl-dot" style="background:#2563eb"></span><span>% Contactados</span>
-                <span class="cl-dot" style="background:#0f766e"></span><span>% Cierre s/ Intentos</span>
-              </div>
+  <span class="cl-dot" style="background:rgba(148,163,184,0.7)"></span>
+  <span>Intentos totales</span>
+  <span class="cl-dot" style="background:#2563eb"></span>
+  <span>% Contactados efectivos</span>
+  <span class="cl-dot" style="background:#0f766e"></span>
+  <span>% Cierre s/ intentos</span>
+</div>
               <div class="chart-area">
                 <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
               </div>
@@ -352,12 +363,14 @@
               <div>
                 <div class="panel-title">Tendencia Horaria: Del Intento al Pago</div>
                 <div class="panel-sub">Correlación entre esfuerzo, contacto y cierre por franja horaria.</div>
-              </div>
-              <div class="chart-legend-row">
-                <span class="cl-dot" style="background:#f87171"></span><span>% No Contactados</span>
-                <span class="cl-dot" style="background:#2563eb"></span><span>% Contactados Efectivos</span>
-                <span class="cl-dot" style="background:#0f766e"></span><span>% Cierre s/ Intentos</span>
-              </div>
+              </div> <div class="chart-legend-row">
+  <span class="cl-dot" style="background:rgba(148,163,184,0.7)"></span>
+  <span>Intentos totales</span>
+  <span class="cl-dot" style="background:#2563eb"></span>
+  <span>% Contactados efectivos</span>
+  <span class="cl-dot" style="background:#0f766e"></span>
+  <span>% Cierre s/ intentos</span>
+</div>
             </div>
             <div class="chart-area" style="height:300px">
               <Line :data="hourlyFlowChartData" :options="hourlyFlowOptions" />
@@ -439,6 +452,14 @@
                 <div class="pc-pills">
                   <div class="pc-pill"><span class="pcpl">Intentos</span><span class="pcpv">{{ fmt(persistenceData.totalIntentos) }}</span></div>
                   <div class="pc-pill pc-pill--green"><span class="pcpl">Ventas</span><span class="pcpv" style="color:#4ade80">{{ fmt(persistenceData.totalVentas) }}</span></div>
+  <div class="toggle-group" style="margin-left:auto">
+    <button class="tgl-btn" :class="{ 'tgl-teal': persistenceMode === 'monthly' }" @click="persistenceMode = 'monthly'">
+      Este mes
+    </button>
+    <button class="tgl-btn" :class="{ 'tgl-teal': persistenceMode === 'global' }" @click="persistenceMode = 'global'">
+      Histórico
+    </button>
+  </div>
                 </div>
               </div>
               <div v-if="!persistenceData.steps.length" class="empty-state">Sin datos.</div>
@@ -617,12 +638,16 @@ import { useRouter } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-  LineElement, Title, Tooltip, Legend, Filler
+  LineElement, BarElement, BarController, LineController,  // ← agregados
+  Title, Tooltip, Legend, Filler
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
-
+ChartJS.register(
+  CategoryScale, LinearScale, PointElement,
+  LineElement, BarElement, BarController, LineController,  // ← agregados
+  Title, Tooltip, Legend, Filler
+)
 // ── Servicios ──────────────────────────────────────────────
 const dashboardService = inject(ServiceKeys.Dashboard)
 const authService      = inject(ServiceKeys.Auth)
@@ -641,6 +666,7 @@ const filtroOwners   = ref([])
 const storedUser     = ref(null)
 const myName         = ref('')
 const isEffFilter    = ref(0)
+const persistenceMode = ref('monthly')
 
 const meses = [
   { v:1, l:'Enero'}, { v:2, l:'Febrero'}, { v:3, l:'Marzo'},
@@ -891,47 +917,132 @@ const hourlyFlowChartData = computed(() => {
   return {
     labels: hours.map(h => String(h).padStart(2,'0') + ':00'),
     datasets: [
+      // Barras: volumen de intentos (eje derecho)
       {
-        label: 'No Contactados', type: 'line',
-        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((Math.max(0,d.intentos-d.contactados)/d.intentos)*100).toFixed(1):0 }),
-        borderColor:'#f87171', backgroundColor:'rgba(248,113,113,0.08)', fill:true, tension:0.4,
-        borderWidth:1.5, borderDash:[5,4], pointRadius:3, pointBackgroundColor:'#f87171', yAxisID:'yPct'
+        type: 'bar',
+        label: 'Intentos totales',
+        data: hours.map(h => dmap[h].intentos),
+        backgroundColor: 'rgba(148,163,184,0.35)',
+        borderColor: 'rgba(148,163,184,0.6)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'yCount',
+        order: 3
       },
+      // Línea: % contactados efectivos (eje izquierdo)
       {
-        label: 'Contactados Efectivos', type: 'line',
-        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((d.contactados/d.intentos)*100).toFixed(1):0 }),
-        borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.06)', fill:true, tension:0.4,
-        borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#2563eb', yAxisID:'yPct'
+        type: 'line',
+        label: '% Contactados efectivos',
+        data: hours.map(h => {
+          const d = dmap[h]
+          return d.intentos > 0 ? +((d.contactados / d.intentos) * 100).toFixed(1) : 0
+        }),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.07)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#2563eb',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
+        yAxisID: 'yPct',
+        order: 1
       },
+      // Línea: % cierre sobre intentos (eje izquierdo)
       {
-        label: 'Cierre s/ Intentos', type: 'line',
-        data: hours.map(h => { const d=dmap[h]; return d.intentos>0 ? +((d.ventas/d.intentos)*100).toFixed(1):0 }),
-        borderColor:'#0f766e', backgroundColor:'rgba(15,118,110,0.12)', fill:true, tension:0.4,
-        borderWidth:3, pointRadius:5, pointBackgroundColor:'#0f766e', yAxisID:'yPct'
+        type: 'line',
+        label: '% Cierre s/ intentos',
+        data: hours.map(h => {
+          const d = dmap[h]
+          return d.intentos > 0 ? +((d.ventas / d.intentos) * 100).toFixed(1) : 0
+        }),
+        borderColor: '#0f766e',
+        backgroundColor: 'rgba(15,118,110,0.10)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3,
+        pointRadius: 5,
+        pointBackgroundColor: '#0f766e',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
+        yAxisID: 'yPct',
+        order: 2
       }
     ]
   }
 })
-
 const hourlyFlowOptions = {
-  responsive:true, maintainAspectRatio:false,
-  interaction:{ mode:'index', intersect:false },
-  plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.dataset.label+': '+ctx.parsed.y+'%' } } },
-  scales:{
-    x: { grid:{ display:false }, ticks:{ font:baseFont } },
-    yPct: { type:'linear', position:'left', beginAtZero:true, max:100, grid:{ color:'#f1f5f9' },
-      ticks:{ font:baseFont, callback: v => v+'%' },
-      title:{ display:true, text:'% sobre intentos', font:{ size:10 }, color:'#94a3b8' } }
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: ctx => {
+          if (ctx.dataset.yAxisID === 'yCount') {
+            return `  ${ctx.dataset.label}: ${ctx.raw} llamadas`
+          }
+          return `  ${ctx.dataset.label}: ${ctx.parsed.y}%`
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 10.5 } }
+    },
+    yPct: {
+      type: 'linear',
+      position: 'left',
+      beginAtZero: true,
+      max: 100,
+      grid: { color: '#f1f5f9' },
+      ticks: {
+        font: { size: 10 },
+        callback: v => v + '%'
+      },
+      title: {
+        display: true,
+        text: '% sobre intentos',
+        font: { size: 10 },
+        color: '#94a3b8'
+      }
+    },
+    yCount: {
+      type: 'linear',
+      position: 'right',
+      beginAtZero: true,
+      grid: { drawOnChartArea: false },   // no duplica las líneas de fondo
+      ticks: {
+        font: { size: 10 },
+        callback: v => v + ' ll.'
+      },
+      title: {
+        display: true,
+        text: 'Nº intentos',
+        font: { size: 10 },
+        color: '#94a3b8'
+      }
+    }
   }
 }
 
-// ── Curva Persistencia ─────────────────────────────────────
 const persistenceData = computed(() => {
-  const keys = [1,2,3,4,'5+']; const labels = ['1er intento','2do intento','3er intento','4to intento','5to+']
-  const pMap = {}
+  const keys   = [1,2,3,4,'5+']
+  const labels = ['1er intento','2do intento','3er intento','4to intento','5to+']
+  const pMap   = {}
   keys.forEach(k => { pMap[k] = { intentos:0, contactados:0, ventas:0 } })
+
+  // ← única línea que cambia según el toggle
+  const field = persistenceMode.value === 'monthly'
+    ? 'chart_curva_persistencia_mensual'
+    : 'chart_curva_persistencia'
+
   rawCallData.value.forEach(row => {
-    ;(row.chart_curva_persistencia || []).forEach(item => {
+    ;(row[field] || []).forEach(item => {
       const key = item.intento_num >= 5 ? '5+' : item.intento_num
       if (pMap[key] !== undefined) {
         pMap[key].intentos    += item.intentos    || 0
@@ -940,12 +1051,13 @@ const persistenceData = computed(() => {
       }
     })
   })
+
   const steps = keys.map((k,i) => {
     const d = pMap[k]
     return {
       label: labels[i], intentos:d.intentos, contactados:d.contactados, ventas:d.ventas,
-      tasaContacto: d.intentos    > 0 ? +((d.contactados/d.intentos)    *100).toFixed(0) : 0,
-      tasaCierre:   d.contactados > 0 ? +((d.ventas/d.contactados)      *100).toFixed(0) : 0
+      tasaContacto: d.intentos    > 0 ? +((d.contactados/d.intentos)   *100).toFixed(0) : 0,
+      tasaCierre:   d.contactados > 0 ? +((d.ventas/d.contactados)     *100).toFixed(0) : 0
     }
   })
   const totalIntentos = steps.reduce((s,r) => s+r.intentos, 0)
@@ -953,7 +1065,6 @@ const persistenceData = computed(() => {
   const peakIndex     = steps.reduce((best,s,i) => s.intentos>steps[best].intentos ? i : best, 0)
   return { steps, totalIntentos, totalVentas, peakIndex }
 })
-
 const maxIntentosPers = computed(() => Math.max(...persistenceData.value.steps.map(s => s.intentos), 1))
 const getBarHeight = intentos => Math.max(6, Math.round((intentos / maxIntentosPers.value) * 100))
 const getDropPct   = i => {

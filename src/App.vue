@@ -1,6 +1,7 @@
 <script setup>
-  import { onBeforeMount } from 'vue'
+  import { onBeforeMount, onMounted, onUnmounted  } from 'vue'
   import { useColorModes } from '@coreui/vue'
+  import { useRouter } from 'vue-router'  // añadir
   import { useThemeStore } from '@/stores/theme.js'
   import LoadingOverlay from '@/components/LoadingOverlay.vue'
 
@@ -9,6 +10,7 @@
     'coreui-free-vue-admin-template-theme',
   )
   const currentTheme = useThemeStore()
+  const router = useRouter()  // añadir
 
   onBeforeMount(() => {
     const urlParams = new URLSearchParams(window.location.href.split('?')[1])
@@ -28,6 +30,19 @@
     }
 
     setColorMode(currentTheme.theme)
+  })
+
+  // ── Restricciones actualizadas por SSE ───────────────────────
+  function handleRestrictionsUpdated() {
+    router.push({ name: 'ComercialLeads' }).then(() => window.location.reload())
+  }
+
+  onMounted(() => {
+    window.addEventListener('crm:restrictions-updated', handleRestrictionsUpdated)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('crm:restrictions-updated', handleRestrictionsUpdated)
   })
 </script>
 

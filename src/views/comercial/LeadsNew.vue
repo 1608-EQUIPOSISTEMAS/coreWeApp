@@ -935,7 +935,26 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   </h5>
 
   <!-- Edición -->
-  <div class="program-edition" v-if="form.edition_label">
+  <div class="program-edition" v-if="form.program_modality_selected_alias !== 'we_modality_online'">
+    <i class="fa-solid fa-calendar-days me-1" style="color:var(--slate-400);font-size:.8rem;"></i>
+    <SearchSelect
+      v-model="form.edition_id"
+      mode="remote"
+      :fetcher="searchEditionsFiltered"
+      label-field="start_date_label"
+      value-field="edition_num_id"
+      :viewOpen="6"
+      placeholder="Seleccionar edición..."
+      :model-label="form.edition_label"
+      :minChars="0"
+      :cache="false"
+      style="min-width: 180px; font-size: .85rem;"
+      @change="onEditionChange"
+    />
+  </div>
+
+  <!-- Si es online: solo muestra el label estático (sin selector) -->
+  <div class="program-edition" v-else-if="form.edition_label">
     <i class="fa-solid fa-calendar-days me-1"></i>
     <span>Edición: {{ form.edition_label }}</span>
   </div>
@@ -1000,6 +1019,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               :storeAsMinor="false"
               class="exec-input-light border-0 bg-transparent text-end p-0 fw-bold"
               style="font-size:1.5rem;color:var(--teal-600,#0d9488);max-width:150px"
+              @update:model-value="priceManuallySet = true"
               placeholder="0.00"
             />
           </div>
@@ -1185,6 +1205,23 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 required
                 class="exec-select-light w-100"
               />
+            </div>
+            <div class="col-md-3">
+              <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_type_payment"
+                required
+                :items="inscPaymentModes"
+                placeholder="M. PAGO"
+                label-field="description"
+                value-field="alias"
+                class="exec-select-light w-100"
+              />
+            </div>
+            <div class="col-md-3" v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+              <label class="exec-label">Adelanto / Reserva <span class="c-red">*</span></label>
+              <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
               <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
@@ -1564,8 +1601,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <BaseDatePicker
           :model-value="cuota.due_date"
           :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: false, disableMobile: true }"
-          :disabled="!manualMode"
-          @update:model-value="val => updateEditableDate(idx, val)"
+          :disabled="!manualMode || cuota.is_reserva_diferida || cuota._editableIdx === -1"
+          @update:model-value="val => cuota._editableIdx !== -1 && updateEditableDate(cuota._editableIdx, val)"
           class="w-100"
         />
 
@@ -1573,10 +1610,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <div class="d-flex justify-content-end">
           <CurrencyInput
             :model-value="cuota.amount"
-            @update:model-value="val => updateEditableAmount(idx, val)"
+            @update:model-value="val => cuota._editableIdx !== -1 && updateEditableAmount(cuota._editableIdx, val)"
             :currency="selectedCurrency"
             :storeAsMinor="false"
-            :disabled="!manualMode"
+            :disabled="!manualMode || cuota.is_reserva_diferida || cuota._editableIdx === -1"
             :class="['cuota-currency-input', { 'is-invalid': manualMode && !installmentPlanValid }]"
             placeholder="0.00"
           />
@@ -1588,7 +1625,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="pill" style="background:#fef3c7;color:#92400e;font-size:9.5px;">
             Reserva
           </span>
-          <span class="pill pill-draft">Borrador</span>
+          <span class="pill pill-draft" v-else>Borrador</span>
         </div>
       </div>
 
@@ -1686,7 +1723,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 </BaseModal>
 </template>
 
-
 <script setup>
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount, watch} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
@@ -1716,7 +1752,7 @@ const pastDateConfig = {
     minDate: sevenDaysAgo,
     maxDate: 'today' // Bloquea fechas futuras
 };
-
+const inscInitialized = ref(false)
 // Configuración 2: Fechas futuras o presentes (Para Seguimientos)
 // El usuario puede elegir desde HOY hacia el futuro.
 const futureDateConfig = {
@@ -2302,8 +2338,8 @@ watch(() => insc.cat_type_document, (newVal) => {
       console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
 
-          Object.assign(form, {
-              fechaContactoInicial: normalizeDateTime(originalData.first_contact_date || originalData.registration_date) || todayIso,
+          Object.assign(form, { 
+              fechaContactoInicial: currentHourIso(),
               query_alias: originalData.query_alias ?? null,
               category_alias: originalData.cat_type_program_alias || originalData.category_alias || null,
               program_modality_alias: originalData.program_modality_alias ?? null,
@@ -2623,6 +2659,7 @@ function onStrategyChange(option){
 
 // Función centralizada para limpiar todo el estado de la inscripción
 function resetInscriptionData() {
+  priceManuallySet.value = false
   Object.assign(insc, {
     dni: '',
     document: '',
@@ -2888,8 +2925,8 @@ function buildEnrollmentPayload() {
       cat_insc_modality,
 cat_certificate_status,
       // Canal y pago
-      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id)
-      cat_type_payment:     isChannelGeneral.value ? cat_type_payment : null,
+      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id) 
+      cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
       cat_currency,
       cat_method_payment,                                // null si TOKEN o WEB
       cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
@@ -2964,6 +3001,7 @@ if (isInstallmentMode.value && !installmentPlanValid.value) {
   toast.warning('El plan de cuotas no cuadra con el monto final. Ajusta los montos antes de guardar.')
   return
 }
+
 if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha.value) {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -3011,6 +3049,7 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
 
     if (enrollResp.result === 1) {
       toast.success(enrollResp.message)
+  inscInitialized.value = false 
       showViewModal.value = false
       router.push({ name: 'ComercialListado' })
 
@@ -3030,12 +3069,13 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
   } finally {
     savingInsc.value = false
   }
-
 }
+
 async function confirmarEliminacion() {
   showDeleteWarningModal.value = false
   await guardarEfectivo()
 }
+
 async function guardarEfectivo() {
   if (!comercialService) return console.error('comercialService no inyectado')
   
@@ -3065,6 +3105,8 @@ async function guardarEfectivo() {
 }
 
 async function guardar() {
+    console.log('[guardar] edition_id:', form.edition_id, '| edition_label:', form.edition_label)
+
   if (!comercialService) return console.error('comercialService no inyectado')
   if (isDeleteStatus.value) {
     showDeleteWarningModal.value = true
@@ -3107,44 +3149,39 @@ async function guardar() {
 }
 
 function openInscription() {
-  resetInscriptionData()
-  insc.full_name             = form.full_name || ''
-  insc.email                 = ''
-  insc.cat_insc_modality     = 'we_insc_modality_normal'
-  insc.selectedCurrencyAlias = 'we_currency_soles'
-  insc.cat_type_payment      = 'we_payment_way_single'
-  insc.cat_certificate_status = 'we_certificate_status_paid'
+  if (!inscInitialized.value) {
+    resetInscriptionData()
+    insc.full_name              = form.full_name || ''
+    insc.email                  = ''
+    insc.cat_insc_modality      = 'we_insc_modality_normal'
+    insc.selectedCurrencyAlias  = 'we_currency_soles'
+    insc.cat_type_payment       = 'we_payment_way_single'
+    insc.cat_certificate_status = 'we_certificate_status_paid'
 
-  const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
-  if (generalChannel) insc.cat_payment_channel = generalChannel.id
+    const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
+    if (generalChannel) insc.cat_payment_channel = generalChannel.id
 
-  // ✅ nextTick garantiza que Vue haya procesado todos los reactivos
-  // antes de leer calculatedBasePrice
+    inscInitialized.value = true
+  }
+
   nextTick(() => {
-    const precio = calculatedBasePrice.value
+    // ✅ Solo carga el precio automático si el usuario NO lo editó manualmente
+    if (!priceManuallySet.value) {
+      const precio = calculatedBasePrice.value
+      insc.montoOriginal = precio
 
-    console.table({
-      ocupacion:   form.ocupacion_alias,
-      clientType:  clientProfileType.value,
-      est_soles:   form.price_student_soles,
-      est_usd:     form.price_student_dollars,
-      pro_soles:   form.price_profesional_soles,
-      pro_usd:     form.price_profesional_dollars,
-      basePrice:   precio,
-    })
-
-    insc.montoOriginal = precio
-
-    if (!precio) {
-      toast.warning(
-        '⚠️ No se pudo cargar el Precio Base. Verifique que el programa tenga precios configurados.',
-        { timeout: 7000 }
-      )
+      if (!precio) {
+        toast.warning(
+          '⚠️ No se pudo cargar el Precio Base. Verifique que el programa tenga precios configurados.',
+          { timeout: 7000 }
+        )
+      }
     }
 
-    showViewModal.value = true   
+    showViewModal.value = true
   })
 }
+
   function validateLeadInfo() {
     const required = ['fechaContactoInicial']
     for (const field of required) {
@@ -3228,6 +3265,8 @@ function onProgramaTypeChange(opcion) {
 
   // Busca esta función y REEMPLAZA las dos versiones que tienes por esta sola:
 function onProgramaChange(opcion) {
+  inscInitialized.value = false 
+  priceManuallySet.value = false
   if (!opcion) {
     selectedProgram.value = null
     form.program_label = null
@@ -3361,21 +3400,17 @@ const calculatedBasePrice = computed(() => {
     ? Number(form.price_student_dollars || 0)
     : Number(form.price_student_soles   || 0)
 })
+const priceManuallySet = ref(false)
 
 
-  watch(calculatedBasePrice, (newPrice) => {
+watch(calculatedBasePrice, (newPrice) => {
+  if (!priceManuallySet.value) {
     insc.montoOriginal = newPrice
-  }, { immediate: true })
-
+  }
+}, { immediate: true })
   watch(() => insc.selectedCurrencyAlias, () => {
   })
-
-
-  watch(showViewModal, (estaAbierto) => {
-    if (!estaAbierto) {
-      resetInscriptionData();
-    }
-  })
+ 
 
 // ══════════════════════════════════════════════════
 // PLAN DE CUOTAS
@@ -3536,22 +3571,18 @@ const reservaInmediata     = ref(0)      // lo que paga ahora (los 100)
 const reservaDiferidaFecha = ref('')     // fecha de la cuota diferida
 
  watch(reservaInmediata, () => {
-  if (manualMode.value && reservaSplitEnabled.value) {
-    nextTick(() => seedEditableInstallments(numCuotasManual.value))
+  if (reservaSplitEnabled.value && Number(reservaInmediata.value) >= Number(insc.saved_money)) {
+    reservaInmediata.value = Math.max(0, Number(insc.saved_money) - 1)
   }
 })
 
-watch(reservaSplitEnabled, (val) => {
+watch(reservaSplitEnabled, (val) => { 
   if (val) {
     reservaInmediata.value     = 0
     reservaDiferidaFecha.value = defaultDiferidaFecha()
   } else {
     reservaInmediata.value     = 0
     reservaDiferidaFecha.value = ''
-  }
-  // ← NUEVO: recalcular plan manual cuando cambia el split
-  if (manualMode.value) {
-    nextTick(() => seedEditableInstallments(numCuotasManual.value))
   }
 })
 // Si cambia saved_money y el split está activo, recalcular inmediata si supera el límite
@@ -3575,21 +3606,38 @@ function defaultDiferidaFecha() {
   d.setDate(d.getDate() + 7)
   return d.toISOString().slice(0, 10)
 }
-function seedEditableInstallments(n) { 
+function seedEditableInstallments(n) {
   const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
-
   if (saldo <= 0 || n < 1) { editableInstallments.value = []; return }
+
   const cuotaBase = Math.floor(saldo / n)
   const rem       = round2(saldo - cuotaBase * n)
-  const startRaw  = form.edition_start_date
-  const base = startRaw ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00') : new Date()
-  const f1 = new Date(base)
-  f1.setMonth(f1.getMonth() + 1); f1.setDate(15)
+
+  // ✅ Usamos las fechas ya calculadas por autoInstallmentPlan como base
+  const autoPlan = autoInstallmentPlan.value
+
   editableInstallments.value = Array.from({ length: n }, (_, i) => {
-    let d
-    if (i === 0) { d = new Date(f1) }
-    else { d = new Date(f1); d.setMonth(d.getMonth() + i); d.setDate(1) }
-    return { installment_number: i + 1, amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase, due_date: d.toISOString().slice(0, 10) }
+    // Si existe la fecha en el plan automático, la reutilizamos
+    // Si no (el usuario pidió más cuotas que las auto), calculamos desde la última
+    let due_date
+    if (autoPlan[i]?.due_date) {
+      due_date = autoPlan[i].due_date
+    } else {
+      // Extiende desde la última fecha disponible sumando 1 mes
+      const lastDate = autoPlan[autoPlan.length - 1]?.due_date
+      const base = lastDate
+        ? new Date(lastDate + 'T00:00:00')
+        : new Date()
+      base.setMonth(base.getMonth() + (i - autoPlan.length + 1))
+      base.setDate(1)
+      due_date = base.toISOString().slice(0, 10)
+    }
+
+    return {
+      installment_number: i + 1,
+      amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase,
+      due_date
+    }
   })
 }
 
@@ -3622,33 +3670,34 @@ function updateEditableDate(idx, val) {
 // Plan efectivo que se usa en template y en el payload
 // REEMPLAZA el computed installmentPlan existente
 const installmentPlan = computed(() => {
-  const basePlan = manualMode.value
+  // Añadimos _editableIdx para rastrear posición real en editableInstallments
+  const basePlan = (manualMode.value
     ? editableInstallments.value
     : autoInstallmentPlan.value
+  ).map((c, i) => ({ ...c, _editableIdx: i }))
 
   if (!reservaSplitEnabled.value || reservaDiferida.value <= 0 || !reservaDiferidaFecha.value) {
     return basePlan
   }
 
-  // Insertar la cuota diferida y ordenar por fecha
   const extraCuota = {
-    installment_number: 0,        // se reasigna abajo
+    installment_number: 0,
     amount: reservaDiferida.value,
     due_date: reservaDiferidaFecha.value,
-    is_reserva_diferida: true     // flag visual
+    is_reserva_diferida: true,
+    _editableIdx: -1   // ← no existe en editableInstallments
   }
 
-  const merged = [...basePlan, extraCuota]
-    .slice()
+  return [...basePlan, extraCuota]
     .sort((a, b) => {
       if (!a.due_date) return 1
       if (!b.due_date) return -1
       return new Date(a.due_date) - new Date(b.due_date)
     })
     .map((c, i) => ({ ...c, installment_number: i + 1 }))
-
-  return merged
 })
+
+
 const installmentTotalSum = computed(() =>
   round2((installmentPlan.value || []).reduce((acc, c) => acc + Number(c.amount || 0), 0))
 )
@@ -3670,17 +3719,33 @@ watch(isInstallmentMode, (val) => {
   }
 })
 
-watch(installmentRemainder, () => {
-  if (manualMode.value) seedEditableInstallments(numCuotasManual.value)
+ watch(installmentRemainder, () => {
+  if (manualMode.value) {
+    const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
+    const n = editableInstallments.value.length || numCuotasManual.value
+    if (saldo <= 0 || n < 1) return
+    const cuotaBase = Math.floor(saldo / n)
+    const rem = round2(saldo - cuotaBase * n)
+    editableInstallments.value = editableInstallments.value.map((c, i) => ({
+      ...c,  // ← preserva due_date que el usuario editó
+      amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase
+    }))
+    toast.warning(
+      '⚠️ Los montos del plan se recalcularon automáticamente. Las fechas que editaste se conservaron.',
+      { timeout: 5000 }
+    )
+  }
 })
 
 function isValidEmail(email) {
   if (!email) return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email).toLowerCase())
 }
+
 const isOnlineProgram = computed(() =>
-  form.program_modality_selected_alias === 'we_modality_online'
-) 
+  form.program_modality_selected_alias === 'we_modality_online' &&
+  form.category_alias !== 'we_program_type_membership'
+)
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false

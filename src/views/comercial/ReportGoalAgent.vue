@@ -55,51 +55,62 @@
         <div v-if="isLiderComercial && viewAsAdvisor" class="filter-sep"></div>
 
         <div class="filter-group">
-          <label class="filter-label">MODALIDAD</label>
+          <label class="filter-label">TIPO OBJETIVO</label>
           <div class="modality-toggle">
             <button class="mod-btn" :class="{ active: filters.modality === 'NO_ONLINE' }"
-              @click="filters.modality = 'NO_ONLINE'; fetchData()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              @click="filters.modality = 'NO_ONLINE'; loadWeeks()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
               EN VIVO
             </button>
-            <button class="mod-btn" :class="{ active: filters.modality === 'ONLINE' }"
-              @click="filters.modality = 'ONLINE'; fetchData()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+            <button class="mod-btn" :class="{ active: filters.modality === 'ONLINE' }" disabled
+              @click="filters.modality = 'ONLINE'; loadWeeks()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <circle cx="12" cy="20" r="1"/>
+              </svg>
               ONLINE
+            </button>
+            <!-- ── NUEVO ── -->
+            <button class="mod-btn" :class="{ active: filters.modality === 'CONGRESO' }" disabled
+              @click="filters.modality = 'CONGRESO'; loadWeeks()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              CONGRESO
             </button>
           </div>
         </div>
 
         <div class="filter-sep"></div>
 
-        <div class="filter-group">
-          <label class="filter-label">AÑO</label>
-          <select class="exec-select" v-model="filters.year" @change="fetchData">
-            <option :value="2026">2026</option>
-            <option :value="2025">2025</option>
-          </select>
-        </div>
+        <!-- Reemplaza los grupos de AÑO + MES + PERÍODO -->
+<div class="filter-group">
+  <label class="filter-label">AÑO</label>
+  <select class="exec-select" v-model="filters.year" @change="loadWeeks">
+    <option :value="2026">2026</option>
+    <option :value="2025">2025</option>
+  </select>
+</div>
 
-        <div class="filter-sep"></div>
+<div class="filter-sep"></div>
 
-        <div class="filter-group">
-          <label class="filter-label">MES</label>
-          <select class="exec-select" v-model="filters.month" @change="fetchData">
-            <option value="ENE">Enero</option>
-            <option value="FEB">Febrero</option>
-            <option value="MAR">Marzo</option>
-          </select>
-        </div>
-
-        <div class="filter-sep"></div>
-
-        <div class="filter-group">
-          <label class="filter-label">PERÍODO</label>
-          <select class="exec-select" v-model="filters.period" @change="fetchData">
-            <option value="ALL">Acumulado (MTD)</option>
-            <option v-for="opt in currentPeriodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-        </div>
+<div class="filter-group">
+  <label class="filter-label">SEMANA</label>
+  <select class="exec-select" v-model="selectedWeek" style="min-width: 200px;">
+    <option :value="null">Acumulado (MTD)</option>
+    <option v-for="w in availableWeeks" :key="w.value + w.month" :value="w">
+      {{ w.label }}
+    </option>
+  </select>
+</div> 
 
         <div class="filter-spacer"></div>
 
@@ -161,7 +172,7 @@
               <div class="hero-name">{{ myData?.asesor || '—' }}</div>
               <div class="hero-period">
                 {{ filters.month }} {{ filters.year }} ·
-                <span>{{ filters.period === 'ALL' ? 'Acumulado mensual' : filters.period }}</span> ·
+                <span>{{ selectedWeek ? selectedWeek.label : 'Acumulado mensual' }}</span> ·
                 <span>{{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : 'Online' }}</span>
               </div>
             </div>
@@ -200,7 +211,7 @@
           </div>
         </div>
 
-        <div class="action-cards-row" v-if="filters.period!='ALL'">
+        <div class="action-cards-row" v-if="selectedWeek !== null">
           <div class="action-card hot-leads-card actionable-card" @click="drillDown({ type: 'interestPriority', valueName: 'Caliente' })">
             <div class="ac-icon text-danger"><i class="fa-solid fa-fire text-danger"></i></div>
             <div class="ac-info">
@@ -755,11 +766,13 @@
 
     <!-- ══════════════ FOOTER ══════════════ -->
     <footer class="exec-footer">
-      <span>Vista: <strong>{{ filters.period === 'ALL' ? 'Mensual (MTD)' : filters.period }}</strong></span>
+      <span>Vista: <strong>{{ selectedWeek ? selectedWeek.label : 'Acumulado (MTD)' }}</strong></span>
       <span class="footer-sep">·</span>
-      <span>Período: <strong>{{ filters.month }} {{ filters.year }}</strong></span>
+      <span>Año: <strong>{{ filters.year }}</strong></span>
       <span class="footer-sep">·</span>
-      <span>Modalidad: <strong>{{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : 'Online' }}</strong></span>
+      <span>Tipo Objetivo: <strong>
+        {{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : filters.modality === 'ONLINE' ? 'Online' : 'Congreso' }}
+      </strong></span>
       <span v-if="isLiderComercial && viewAsAdvisor" class="footer-sep">·</span>
       <span v-if="isLiderComercial && viewAsAdvisor" style="color:#f59e0b;font-weight:600;">
         👁 Vista de: {{ myData?.asesor || '—' }}
@@ -780,6 +793,10 @@ import { useRouter } from 'vue-router'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler } from 'chart.js'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
 import { ServiceKeys } from '@/services'
+
+const availableWeeks  = ref([])
+const selectedWeek    = ref(null)
+
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
 
@@ -894,8 +911,7 @@ const avatarInitials = computed(() => {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?'
 })
 
-const currentPeriodOptions = computed(() => PERIODS_CONFIG[filters.month] || [])
-watch(() => filters.month, () => { filters.period = 'ALL'; fetchData() })
+const currentPeriodOptions = computed(() => PERIODS_CONFIG[filters.month] || []) 
 
 onMounted(async () => {
   applyRoleRestrictions()
@@ -903,7 +919,27 @@ onMounted(async () => {
     const users = await authService.userList({})
     usersMap.value = users
   } catch(e) { console.error('Error users', e) }
-  fetchData()
+  
+  await loadWeeks()   // primero carga semanas (setea selectedWeek)
+  await fetchData()   // luego fetch con la semana ya seteada
+})
+
+
+async function loadWeeks() {
+  const weeks = await dashboardService.getAvailableWeeks({ 
+    year: filters.year, 
+    modality: filters.modality 
+  })
+  availableWeeks.value = weeks
+  const today = new Date().toISOString().split('T')[0]
+  const current = weeks.find(w => w.date_start <= today && w.date_end >= today)
+  selectedWeek.value = current || weeks[weeks.length - 1] || null
+  // fetchData se llama desde el watch de selectedWeek
+}
+
+// Evita el doble fetch en el arranque
+watch(selectedWeek, (newVal, oldVal) => {
+  if (oldVal !== undefined) fetchData()  // solo si ya no es la primera asignación
 })
 
 const activePeriodRange = reactive({ start: null, end: null })
@@ -918,18 +954,14 @@ async function fetchData() {
   activePeriodRange.end = null
   try {
     const payload = {
-      year:     filters.year,
-      month:    filters.month,
-      period:   filters.period === 'ALL' ? null : filters.period,
-      modality: filters.modality,
-      // Solo filtramos por ID si es asesor simple; los líderes siempre traen todo el equipo
-      ...(isStrictlyComercial.value && loggedAdvisorId.value
-        ? { advisor_user_id: loggedAdvisorId.value }
-        : {})
+      year:       filters.year,
+      modality:   filters.modality,
+      date_start: selectedWeek.value?.date_start || null,
+      date_end:   selectedWeek.value?.date_end   || null,
     }
     const rawResponse = await dashboardService.dashboardList(payload)
     const items = rawResponse.items || []
-    if (items.length > 0 && filters.period !== 'ALL') {
+    if (items.length > 0 && selectedWeek.value !== null) {
       const rawStart = items[0].fecha_inicio
       const rawEnd   = items[0].fecha_fin
       if (rawStart) activePeriodRange.start = String(rawStart).split('T')[0]
@@ -956,7 +988,7 @@ async function fetchData() {
       g.activos   += Number(item.leads_activos || 0)
       g.acum_ventas_cohorte += Number(item.venta_cohorte || 0)
 
-      if (filters.period !== 'ALL' && item.desglose_diario && Array.isArray(item.desglose_diario)) {
+if (selectedWeek.value !== null && item.desglose_diario && Array.isArray(item.desglose_diario)) {
         item.desglose_diario.forEach(dia => {
           g.daily.push({
             name: `${dia.dia_nombre} ${dia.dia_num}`, date: dia.fecha,
@@ -1032,48 +1064,51 @@ function drillDown(params = {}) {
   const { date, type, advisor } = params
   const query = {}
   let dStart = null, dEnd = null
-  const monthIndex   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'].indexOf(filters.month)
-  const y            = filters.year
-  const monthNumStr  = String(monthIndex + 1).padStart(2, '0')
-  const toSql        = (d) => d.toISOString().split('T')[0]
+  const toSql = (d) => d.toISOString().split('T')[0]
 
   if (date && String(date).includes('-')) {
-    dStart = String(date).split('T')[0]; dEnd = String(date).split('T')[0]
-  } else if (date && String(date).startsWith('S')) {
-    const periodData = PERIODS_CONFIG[filters.month]?.find(p => p.value === date)
-    if (periodData) {
-      const matches = periodData.label.match(/\((\d{2})(?:-(\d{2}))?/)
-      if (matches) {
-        dStart = `${y}-${monthNumStr}-${String(parseInt(matches[1], 10)).padStart(2, '0')}`
-        dEnd   = `${y}-${monthNumStr}-${String(matches[2] ? parseInt(matches[2], 10) : parseInt(matches[1], 10)).padStart(2, '0')}`
+    // Clic en un día específico del desglose diario
+    dStart = String(date).split('T')[0]
+    dEnd   = String(date).split('T')[0]
+  } else {
+    // Usa el rango de la semana seleccionada, o el mes completo si es MTD
+    if (selectedWeek.value) {
+      dStart = selectedWeek.value.date_start
+      dEnd   = selectedWeek.value.date_end
+    } else {
+      // Acumulado MTD → rango del año completo o lo que tengas disponible
+      // Usamos el rango de la primera y última semana disponible
+      if (availableWeeks.value.length > 0) {
+        dStart = availableWeeks.value[0].date_start
+        dEnd   = availableWeeks.value[availableWeeks.value.length - 1].date_end
       } else {
-        dStart = toSql(new Date(y, monthIndex, 1)); dEnd = toSql(new Date(y, monthIndex + 1, 0))
+        // Fallback: año completo
+        dStart = `${filters.year}-01-01`
+        dEnd   = `${filters.year}-12-31`
       }
     }
-  } else if (filters.period !== 'ALL') {
-    const periodData = PERIODS_CONFIG[filters.month]?.find(p => p.value === filters.period)
-    if (periodData) {
-      const matches = periodData.label.match(/\((\d{2})(?:-(\d{2}))?/)
-      if (matches) {
-        dStart = `${y}-${monthNumStr}-${String(parseInt(matches[1], 10)).padStart(2, '0')}`
-        dEnd   = `${y}-${monthNumStr}-${String(matches[2] ? parseInt(matches[2], 10) : parseInt(matches[1], 10)).padStart(2, '0')}`
-      } else { dStart = activePeriodRange.start; dEnd = activePeriodRange.end }
-    } else { dStart = activePeriodRange.start; dEnd = activePeriodRange.end }
-  } else {
-    dStart = toSql(new Date(y, monthIndex, 1)); dEnd = toSql(new Date(y, monthIndex + 1, 0))
   }
 
-  if (type === 'sales') { query.pay_date_from = dStart; query.pay_date_to = dEnd }
-  else if (['leads', 'active_leads', 'cohort_sales'].includes(type)) { query.from_date = dStart; query.to_date = dEnd }
+  // Aplicar rango según tipo
+  if (type === 'sales') {
+    query.pay_date_from = dStart
+    query.pay_date_to   = dEnd
+  } else if (['leads', 'active_leads', 'cohort_sales'].includes(type)) {
+    query.first_contact_from = dStart
+    query.first_contact_to   = dEnd
+}
 
-  // ← ACTUALIZADO: aplica el filtro de asesor tanto para asesor simple como para líder en modo impersonación
+  // Filtro de asesor
   if (effectivePersonalView.value) {
     const advRow = myData.value
     if (advRow) {
       query.owner_user_ids = encodeFilter([{ value: advRow.cod, label: advRow.asesor }])
     }
   } else {
-    const targetAdvisor = (advisor && advisor !== 'ALL') ? advisor : (selectedAdvisorCode.value !== 'ALL' ? selectedAdvisorCode.value : null)
+    const targetAdvisor = (advisor && advisor !== 'ALL')
+      ? advisor
+      : (selectedAdvisorCode.value !== 'ALL' ? selectedAdvisorCode.value : null)
+
     if (targetAdvisor) {
       const advisorRow = tableData.value.find(r => r.cod == targetAdvisor)
       if (advisorRow) {
@@ -1082,32 +1117,34 @@ function drillDown(params = {}) {
         const found = usersMap.value.find(u => u.user_id == targetAdvisor)
         if (found) query.owner_user_ids = encodeFilter([{ value: found.user_id, label: found.first_name }])
       }
+    } else {
+      // Sin asesor específico → encodear TODOS los del tablero actual
+      const allAdvisors = tableData.value.map(r => ({ value: r.cod, label: r.asesor }))
+      if (allAdvisors.length) query.owner_user_ids = encodeFilter(allAdvisors)
     }
   }
 
+  // Filtro por tipo de venta/lead
   const salesAliases = ['we_lead_status_bought', 'we_lead_status_insc', 'we_lead_status_matriculado']
   if (type === 'sales' || type === 'cohort_sales') {
-    const salesItems = salesAliases.map(alias => catalog.options('we_lead_status').find(s => s.alias === alias)).filter(Boolean).map(s => ({ value: s.id, label: s.description }))
+    const salesItems = salesAliases
+      .map(alias => catalog.options('we_lead_status').find(s => s.alias === alias))
+      .filter(Boolean)
+      .map(s => ({ value: s.id, label: s.description }))
     if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+
   } else if (type === 'leads' || type === 'active_leads') {
-    const activeItems = catalog.options('we_lead_status').filter(s => !DEAD_STATUS_ALIASES.includes(s.alias)).map(s => ({ value: s.id, label: s.description }))
+    const activeItems = catalog.options('we_lead_status')
+      .filter(s => !DEAD_STATUS_ALIASES.includes(s.alias))
+      .map(s => ({ value: s.id, label: s.description }))
     if (activeItems.length) query.status_lead_ids = encodeFilter(activeItems)
+
     if (type === 'active_leads') {
       const pendingFollow = catalog.options('we_follow_lead').find(s => s.alias === 'we_follow_lead_pending')
       if (pendingFollow) query.last_follow_ids = encodeFilter([{ value: pendingFollow.id, label: pendingFollow.description }])
     }
-  }
 
-  const ONLINE_ALIAS = 'we_modality_online'
-  if (filters.modality === 'NO_ONLINE') {
-    const noOnlineItems = catalog.options('we_modality').filter(m => m.alias !== ONLINE_ALIAS).map(m => ({ value: m.id, label: m.description }))
-    if (noOnlineItems.length) query.model_modality_ids = encodeFilter(noOnlineItems)
-  } else if (filters.modality === 'ONLINE') {
-    const onlineItem = catalog.options('we_modality').find(m => m.alias === ONLINE_ALIAS)
-    if (onlineItem) query.model_modality_ids = encodeFilter([{ value: onlineItem.id, label: onlineItem.description }])
-  }
-
-  if (type === 'interestPriority') {
+  } else if (type === 'interestPriority') {
     const opts = catalog.options('we_lead_interest')
     const foundLow = opts.find(x => x.alias === 'we_lead_interest_low')
     const foundMed = opts.find(x => x.alias === 'we_lead_interest_medium')
@@ -1120,23 +1157,52 @@ function drillDown(params = {}) {
     const interestFilters = []
     if (foundLow) interestFilters.push({ value: foundLow.id, label: foundLow.description })
     if (foundMed) interestFilters.push({ value: foundMed.id, label: foundMed.description })
-    if (interestFilters.length > 0) query.interest_level_ids = encodeFilter(interestFilters)
-    const optsx = catalog.options('we_lead_status')
-    const salesItems = optsx
-      .filter(x => ['we_lead_status_atendido', 'we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
+    if (interestFilters.length) query.interest_level_ids = encodeFilter(interestFilters)
+    const salesItems = catalog.options('we_lead_status')
+      .filter(x => ['we_lead_status_atendido','we_lead_status_proximo','we_lead_status_unique','we_lead_status_will_pay','we_lead_status_interesado'].includes(x.alias))
       .map(x => ({ value: x.id, label: x.description }))
     if (salesItems.length) query.status_lead_ids = encodeFilter(salesItems)
+
   } else if (type === 'follow') {
     const opts = catalog.options('we_calling')
-    const valueName = params.valueName
-    const found = opts.find(x => x.description === valueName) ?? opts.find(x => x.alias === valueName)
+    const found = opts.find(x => x.description === params.valueName) ?? opts.find(x => x.alias === params.valueName)
     if (found) query.last_follow_ids = encodeFilter([{ value: found.id, label: found.description }])
+  }
+// ── Excluir tipo Congreso/Evento ──────────────────────────────
+const EVENT_ALIAS = 'we_program_type_event'
+if (filters.modality === 'CONGRESO') {
+  // Solo incluir tipo Congreso/Evento
+  const eventType = catalog.options('we_program_type')
+    .filter(t => t.alias === EVENT_ALIAS)
+    .map(t => ({ value: t.id, label: t.description }))
+  if (eventType.length) query.type_program_ids = encodeFilter(eventType)
+} else {
+  // Excluir tipo Congreso/Evento (comportamiento original)
+  const validProgramTypes = catalog.options('we_program_type')
+    .filter(t => t.alias !== EVENT_ALIAS)
+    .map(t => ({ value: t.id, label: t.description }))
+  if (validProgramTypes.length) query.type_program_ids = encodeFilter(validProgramTypes)
+}
+const validProgramTypes = catalog.options('we_program_type')
+  .filter(t => t.alias !== EVENT_ALIAS)
+  .map(t => ({ value: t.id, label: t.description }))
+if (validProgramTypes.length) query.type_program_ids = encodeFilter(validProgramTypes)
+
+  // Filtro de modalidad
+  const ONLINE_ALIAS = 'we_modality_online'
+  if (filters.modality === 'NO_ONLINE') {
+    const noOnlineItems = catalog.options('we_modality')
+      .filter(m => m.alias !== ONLINE_ALIAS)
+      .map(m => ({ value: m.id, label: m.description }))
+    if (noOnlineItems.length) query.model_modality_ids = encodeFilter(noOnlineItems)
+  } else if (filters.modality === 'ONLINE') {
+    const onlineItem = catalog.options('we_modality').find(m => m.alias === ONLINE_ALIAS)
+    if (onlineItem) query.model_modality_ids = encodeFilter([{ value: onlineItem.id, label: onlineItem.description }])
   }
 
   const routeData = router.resolve({ path: '/comercial/leads', query })
   window.open(routeData.href, '_blank')
 }
-
 const convClass = (val) =>
   val > 20 ? 'c-green fw-700' : val >= 10 ? 'accent-text fw-700' : 'text-muted'
 

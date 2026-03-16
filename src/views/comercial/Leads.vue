@@ -159,7 +159,7 @@
 
   <!-- D. CLIENTE -->
   <th
-    :colspan="colGroups.cliente ? 4 : 1"
+    :colspan="colGroups.cliente ? 5 : 1"
     class="tg-header tg-cliente"
     :class="{ 'tg-collapsed': !colGroups.cliente }"
     @click="colGroups.cliente = !colGroups.cliente"
@@ -174,7 +174,7 @@
 
   <!-- D. LEAD -->
   <th
-    :colspan="colGroups.lead ? 11 : 1"
+    :colspan="colGroups.lead ? 7 : 1"
     class="tg-header tg-lead"
     :class="{ 'tg-collapsed': !colGroups.lead }"
     @click="colGroups.lead = !colGroups.lead"
@@ -186,6 +186,20 @@
       <i class="fa-solid tg-chevron" :class="colGroups.lead ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
     </div>
   </th>
+
+<th
+  :colspan="colGroups.asesor ? 4 : 1"
+  class="tg-header tg-asesor"
+  :class="{ 'tg-collapsed': !colGroups.asesor }"
+  @click="colGroups.asesor = !colGroups.asesor"
+  :title="colGroups.asesor ? 'Colapsar D. ASESOR' : 'Expandir D. ASESOR'"
+>
+  <div class="tg-label">
+    <i class="fa-solid fa-user-tie tg-icon"></i>
+    <span class="tg-text">D. ASESOR</span>
+    <i class="fa-solid tg-chevron" :class="colGroups.asesor ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+  </div>
+</th>
 </tr>
 
 <!-- ══ COMPACT: FILA DE CABECERAS CON v-show ════════════════════════ -->
@@ -208,8 +222,7 @@
   <th v-show="colGroups.cliente" class="ts ts-c">E. Cliente</th>
   <th v-show="colGroups.cliente" class="ts ts-c">Member</th>
   <th v-if="!colGroups.cliente" class="ts ts-c tg-placeholder-cell"></th>
-
-  <!-- D. LEAD -->
+  <!-- D. LEAD (7 cols) -->
   <th v-show="colGroups.lead" class="ts ts-c">Status</th>
   <th v-show="colGroups.lead" class="ts ts-c">F. Pago</th>
   <th v-show="colGroups.lead" class="ts ts-c">Interés</th>
@@ -217,11 +230,14 @@
   <th v-show="colGroups.lead" class="ts ts-c">Medio</th>
   <th v-show="colGroups.lead" class="ts ts-c">Palabra MKT</th>
   <th v-show="colGroups.lead" class="ts ts-c">Estrategia</th>
-  <th v-show="colGroups.lead" class="ts ts-c">Asesor/Usuario</th>
-  <th v-show="colGroups.lead" class="ts ts-c">F. Registro</th>
-  <th v-show="colGroups.lead" class="ts ts-c">Canal Pago</th>
-  <th v-show="colGroups.lead" class="ts ts-c text-center">Seguimiento</th>
   <th v-if="!colGroups.lead" class="ts ts-c tg-placeholder-cell"></th>
+
+  <!-- D. ASESOR (4 cols) -->
+  <th v-show="colGroups.asesor" class="ts ts-c">Asesor/Usuario</th>
+  <th v-show="colGroups.asesor" class="ts ts-c">F. Registro</th>
+  <th v-show="colGroups.asesor" class="ts ts-c">Canal Pago</th>
+  <th v-show="colGroups.asesor" class="ts ts-c text-center">Seguimiento</th>
+  <th v-if="!colGroups.asesor" class="ts ts-c tg-placeholder-cell"></th>
 </tr>
 
 <!-- ══ COMPACT: FILA DE FILTROS ══════════════════════════════════════ -->
@@ -274,7 +290,7 @@
   </th>
   <th v-if="!colGroups.cliente" class="tf tg-placeholder-cell"></th>
 
-  <!-- D. LEAD filtros -->
+   <!-- D. LEAD filtros (7 cols) -->
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -294,19 +310,22 @@
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-  <th v-show="colGroups.lead" class="tf">
+  <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
+
+  <!-- D. ASESOR filtros (4 cols) -->
+  <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-  <th v-show="colGroups.lead" class="tf">
+  <th v-show="colGroups.asesor" class="tf">
     <BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="F. Registro..." @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }" />
   </th>
-  <th v-show="colGroups.lead" class="tf">
+  <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-  <th v-show="colGroups.lead" class="tf">
+  <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
-  <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
+  <th v-if="!colGroups.asesor" class="tf tg-placeholder-cell"></th>
 </tr>
             </thead>
 
@@ -320,11 +339,13 @@
                 @mouseup="cancelPress"
                 @mouseleave="cancelPress"
               >
-                <td class="td-a text-center nowrap">
-                  <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+                <td class="td-a text-center nowrap"> 
+                    <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+
                     <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
-                  </button>
-                  <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
+                  </button> 
+                    <button class="btn-icon ms-1" @click.stop="viewLead(l, $event)" title="Clonar/Ver">
+
                     <i class="fa-solid fa-clone text-primary"></i>
                   </button>
                 </td>
@@ -392,11 +413,13 @@
     @mouseleave="cancelPress"
   >
     <!-- Acciones (siempre visible) -->
-    <td class="td-a text-center nowrap">
-      <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+    <td class="td-a text-center nowrap"> 
+        <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
+
         <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
-      </button>
-      <button class="btn-icon ms-1" @click.stop="viewLead(l)" title="Clonar/Ver">
+      </button> 
+        <button class="btn-icon ms-1" @click.stop="viewLead(l, $event)" title="Clonar/Ver">
+
         <i class="fa-solid fa-clone text-primary"></i>
       </button>
     </td>
@@ -409,10 +432,11 @@
     <td v-show="colGroups.programa" class="td-a nowrap small text-mono">{{ l.edition_label || '—' }}</td>
     <td v-show="colGroups.programa" class="td-a small" style="min-width:140px">{{ l.cat_promotion_description || '—' }}</td>
     <td v-if="!colGroups.programa" class="td-a tg-placeholder-cell">
-      <div class="tg-collapsed-hint tg-hint-programa">
-        <i class="fa-solid fa-film"></i>
-      </div>
-    </td>
+  <div class="tg-collapsed-hint tg-hint-programa">
+    <span class="tg-hint-line tg-hint-muted">{{ l.first_contact_date || '—' }}</span>
+    <span class="tg-hint-line tg-hint-main" :title="l.program_label">{{ l.program_label || '—' }}</span>
+  </div>
+</td>
 
     <!-- ── D. CLIENTE ───────────────────────────────────────── -->
     <td v-show="colGroups.cliente" class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
@@ -421,12 +445,15 @@
     <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
     <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.membership_moment }}</td>
     <td v-if="!colGroups.cliente" class="td-a tg-placeholder-cell">
-      <div class="tg-collapsed-hint tg-hint-cliente">
-        <i class="fa-solid fa-user"></i>{{ l.origin_phone }}
-      </div>
-    </td>
+  <div class="tg-collapsed-hint tg-hint-cliente">
+    <span class="tg-hint-line tg-hint-strong">{{ l.origin_phone }}</span>
+    <span class="tg-hint-line tg-hint-muted">{{ l.cat_client_moment_description || '—' }}</span>
+    <span class="tg-hint-line tg-hint-muted">{{ l.membership_moment || '—' }}</span>
+  </div>
+</td>
 
     <!-- ── D. LEAD ───────────────────────────────────────────── -->
+    <!-- ── D. LEAD ── -->
     <td v-show="colGroups.lead" class="td-a">
       <span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
     </td>
@@ -441,19 +468,28 @@
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
-    <td v-show="colGroups.lead" class="td-a small">{{ l.user_registration_label }}</td>
-    <td v-show="colGroups.lead" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
-    <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.description || '—' }}</td>
-    <td v-show="colGroups.lead" class="td-a text-center" style="min-width:140px">
+    <td v-if="!colGroups.lead" class="td-a tg-placeholder-cell">
+      <div class="tg-collapsed-hint tg-hint-lead">
+        <span class="tg-hint-line tg-hint-main">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
+        <span class="tg-hint-line tg-hint-strong pay-date-cell">{{ l.pay_date || '—' }}</span>
+      </div>
+    </td>
+
+    <!-- ── D. ASESOR ── -->
+    <td v-show="colGroups.asesor" class="td-a small">{{ l.user_registration_label }}</td>
+    <td v-show="colGroups.asesor" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
       <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
         <span>{{ followMap[l.cat_last_follow_alias] }}</span>
         <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
       </div>
       <span v-else class="text-muted small">—</span>
     </td>
-    <td v-if="!colGroups.lead" class="td-a tg-placeholder-cell">
-      <div class="tg-collapsed-hint tg-hint-lead">
-        <i class="fa-solid fa-chart-line"></i>
+    <td v-if="!colGroups.asesor" class="td-a tg-placeholder-cell">
+      <div class="tg-collapsed-hint tg-hint-asesor">
+        <span class="tg-hint-line tg-hint-main">{{ l.user_registration_label || '—' }}</span>
+        <span class="tg-hint-line tg-hint-muted">{{ l.system_registration_date || '—' }}</span>
       </div>
     </td>
   </tr>
@@ -1070,12 +1106,13 @@ const currentUserId = storedUser?.user_id;
 // ═══════════════════════════════════════════════════════════════
 // GRUPOS DE COLUMNAS COLAPSABLES (solo vista compacta)
 // ═══════════════════════════════════════════════════════════════
-const COL_GROUPS_KEY = 'crm_leads_col_groups_v1'
 
+const COL_GROUPS_KEY = 'crm_leads_col_groups_v2'
 const colGroups = reactive({
   programa: true,
   cliente: true,
-  lead: true
+  lead: true,
+  asesor: true
 })
 
 // Cargar estado guardado desde localStorage
@@ -1086,6 +1123,7 @@ try {
     if (typeof parsed.programa === 'boolean') colGroups.programa = parsed.programa
     if (typeof parsed.cliente === 'boolean') colGroups.cliente = parsed.cliente
     if (typeof parsed.lead === 'boolean') colGroups.lead = parsed.lead
+    if (typeof parsed.asesor === 'boolean') colGroups.asesor = parsed.asesor
   }
 } catch (e) { /* ignorar errores de parse */ }
 
@@ -1246,7 +1284,23 @@ async function parseQueryAndApply() {
     filters.edition_start_from = q.edition_start_from
     filters.edition_start_to   = q.edition_start_to || q.edition_start_from
     filters.edition_range_string = `${q.edition_start_from} a ${filters.edition_start_to}`
+  } 
+  if (q.created_from) {
+    const createdTo = q.created_to || q.created_from
+    filters.rangoFechas = { start: q.created_from, end: createdTo }
+    filters.created_range_string = `${q.created_from} a ${createdTo}`
   }
+  if (q.updated_from) {
+    const updatedTo = q.updated_to || q.updated_from
+    filters.rangoModificacion = { start: q.updated_from, end: updatedTo }
+    filters.updated_range_string = `${q.updated_from} a ${updatedTo}`
+  }
+  if (q.first_contact_from) {
+    filters.first_contact_from = q.first_contact_from
+    filters.first_contact_to   = q.first_contact_to || q.first_contact_from
+    filters.first_contact_range_string = `${q.first_contact_from} a ${filters.first_contact_to}`
+  }
+
   filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
   filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
   filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
@@ -1448,34 +1502,46 @@ function handleAsesorDateChange(asesor, dateStr, type) {
 async function saveControlRestrictions() {
   isSavingRestrictions.value = true;
   try {
-const payloadMasivo = asesoresControl.value.map(asesor => ({
-  user_id:             asesor.user_id,
-  is_active:           true,
-  type_program_ids:    extractIds(asesor.type_program_ids),
-  model_modality_ids:  extractIds(asesor.model_modality_ids),
-  program_ids:         extractIds(asesor.program_ids),
-  status_lead_ids:     extractIds(asesor.status_lead_ids),
-  last_follow_ids:     extractIds(asesor.last_follow_ids),
-  interest_level_ids:  extractIds(asesor.interest_level_ids),
-  channel_ids:         extractIds(asesor.channel_ids),
-  strategy_ids:        extractIds(asesor.strategy_ids),
-  moment_ids:          extractIds(asesor.moment_ids),
-  // ── NUEVOS ──────────────────────────────────────────────────
-  first_contact_date_from: asesor.first_contact_date_from || null,
-  first_contact_date_to:   asesor.first_contact_date_to   || null,
-  edition_start_date_from: asesor.edition_start_date_from || null,
-  edition_start_date_to:   asesor.edition_start_date_to   || null,
-}))
-    await comercialService.restrictionsUpdate(payloadMasivo);
-    toast.success('Filtros restrictivos aplicados correctamente');
-    showControlModal.value = false;
+    const payloadMasivo = asesoresControl.value.map(asesor => ({
+      user_id:                 asesor.user_id,
+      is_active:               true,
+      type_program_ids:        extractIds(asesor.type_program_ids),
+      model_modality_ids:      extractIds(asesor.model_modality_ids),
+      program_ids:             extractIds(asesor.program_ids),
+      status_lead_ids:         extractIds(asesor.status_lead_ids),
+      last_follow_ids:         extractIds(asesor.last_follow_ids),
+      interest_level_ids:      extractIds(asesor.interest_level_ids),
+      channel_ids:             extractIds(asesor.channel_ids),
+      strategy_ids:            extractIds(asesor.strategy_ids),
+      moment_ids:              extractIds(asesor.moment_ids),
+      first_contact_date_from: asesor.first_contact_date_from || null,
+      first_contact_date_to:   asesor.first_contact_date_to   || null,
+      edition_start_date_from: asesor.edition_start_date_from || null,
+      edition_start_date_to:   asesor.edition_start_date_to   || null,
+    }))
+
+    await comercialService.restrictionsUpdate(payloadMasivo)
+
+    // ── Notificar por SSE a todos los asesores afectados ──────────
+    const affectedIds = asesoresControl.value.map(a => a.user_id)
+    try {
+      await comercialService.pushRestrictionsUpdate({ user_ids: affectedIds })
+    } catch (e) {
+      // No crítico: si falla el push, las restricciones igual se guardaron
+      console.warn('[Restricciones] No se pudo notificar por SSE:', e.message)
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    toast.success('Filtros restrictivos aplicados correctamente')
+    showControlModal.value = false
   } catch (error) {
-    console.error("Error guardando restricciones:", error);
-    toast.error('Error al guardar las restricciones');
+    console.error('Error guardando restricciones:', error)
+    toast.error('Error al guardar las restricciones')
   } finally {
-    isSavingRestrictions.value = false;
+    isSavingRestrictions.value = false
   }
 }
+
 
 async function saveFastFollow() {
   if (!selectedFollowLead.value) return
@@ -1767,10 +1833,27 @@ function getIdFromAlias(alias, catalogArray) {
   if (!alias || !catalogArray) return null;
   const item = catalogArray.find(i => i.alias === alias);
   return item ? item.id : null
-}
+} 
 function goNew() { router.push({ name: 'ComercialLeadsNew' }) }
-function viewLead(lead) { router.push({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } }) }
-function editLead(lead) { router.push({ name: 'ComercialLeadDetalle', params: { id: lead.id } }) }
+
+function editLead(lead, event) {
+  const resolved = router.resolve({ name: 'ComercialLeadDetalle', params: { id: lead.id } })
+  if (event?.ctrlKey) {
+    window.open(resolved.href, '_blank')
+  } else {
+    router.push(resolved)
+  }
+}
+
+function viewLead(lead, event) {
+  const resolved = router.resolve({ name: 'ComercialLeadsNew', query: { clone_from: lead.id } })
+  if (event?.ctrlKey) {
+    window.open(resolved.href, '_blank')
+  } else {
+    router.push(resolved)
+  }
+}
+
 function handlePaginationChange() { fetchLeads() }
 
 onMounted(async () => {
@@ -1985,27 +2068,23 @@ const totalPlanSum = computed(() => {
 
 /* Celda placeholder cuando grupo está colapsado */
 .tg-placeholder-cell {
-  width: 36px !important;
-  min-width: 36px !important;
-  max-width: 36px !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
+  width: 88px !important;
+  min-width: 88px !important;
+  max-width: 88px !important;
+  padding: 4px 6px !important;
+  vertical-align: middle;
 }
 
 /* Indicador visual en filas del tbody cuando colapsado */
 .tg-collapsed-hint {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 100%;
-  min-height: 32px;
-  margin: 0 auto;
-  border-radius: 3px;
-  font-size: 10px;
-  opacity: 0.5;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  width: 100%;
 }
+
 .tg-hint-programa { color: #3b82f6; background: #eff6ff; }
 .tg-hint-cliente  { color: #22c55e; background: #f0fdf4; }
 .tg-hint-lead     { color: #f59e0b; background: #fffbeb; }
@@ -2171,4 +2250,37 @@ const totalPlanSum = computed(() => {
   .toolbar-actions { justify-content: flex-end; }
   .exec-body { padding: 16px 12px; }
 }
+
+
+.tg-hint-line {
+  display: block;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 76px;
+  line-height: 1.3;
+}
+
+.tg-hint-main  { font-weight: 600; color: var(--text-primary, #0f172a); }
+.tg-hint-strong { font-weight: 700; }
+.tg-hint-muted { color: var(--text-muted, #94a3b8); }
+
+.tg-hint-programa { background: #eff6ff; }
+.tg-hint-cliente  { background: #f0fdf4; }
+.tg-hint-lead     { background: #fffbeb; }
+.tg-hint-asesor   { background: #f5f3ff; }
+
+/* AÑADIR colores del grupo D. ASESOR */
+.tg-asesor {
+  background: #2e1a47;
+  color: #c4b5fd;
+  border-bottom: 2px solid #8b5cf6;
+}
+.tg-asesor:hover { background: #5b21b6; color: #ede9fe; }
+
+.tg-collapsed.tg-asesor { background: #2e1a47; }
+
+.tg-hint-asesor { color: #6d28d9; }
+
 </style>
