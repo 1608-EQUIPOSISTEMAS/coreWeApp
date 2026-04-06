@@ -167,9 +167,81 @@ const routes = [
         path: 'business',
         name: 'Business',
         component: RouterViewStub,
-        redirect: { name: 'BusinessAgreement' },
+        redirect: { name: 'B2BCompanies' },
         meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
         children: [
+          {
+            path: 'companies',
+            name: 'B2BCompanies',
+            component: () => import('@/views/b2b/companies/Index.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'companies/new',
+            name: 'B2BCompanyNew',
+            component: () => import('@/views/b2b/companies/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'companies/:id',
+            name: 'B2BCompanyEdit',
+            component: () => import('@/views/b2b/companies/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'company-leads',
+            name: 'B2BCompanyLeads',
+            component: () => import('@/views/b2b/company-leads/Index.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'company-leads/new',
+            name: 'B2BCompanyLeadNew',
+            component: () => import('@/views/b2b/company-leads/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'company-leads/:id',
+            name: 'B2BCompanyLeadEdit',
+            component: () => import('@/views/b2b/company-leads/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'contracts',
+            name: 'B2BContracts',
+            component: () => import('@/views/b2b/contracts/Index.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'contracts/new',
+            name: 'B2BContractNew',
+            component: () => import('@/views/b2b/contracts/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'contracts/:id',
+            name: 'B2BContractEdit',
+            component: () => import('@/views/b2b/contracts/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'agreements',
+            name: 'B2BAgreements',
+            component: () => import('@/views/b2b/agreements/Index.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'agreements/new',
+            name: 'B2BAgreementNew',
+            component: () => import('@/views/b2b/agreements/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
+          {
+            path: 'agreements/:id',
+            name: 'B2BAgreementEdit',
+            component: () => import('@/views/b2b/agreements/Form.vue'),
+            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          },
           {
             path: 'agreement',
             name: 'BusinessAgreement',
@@ -353,6 +425,89 @@ const routes = [
           name: 'ReportCoverageForecast',
           component: () => import('@/views/comercial/ReportCoverageForecast.vue'),
           meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+      ],
+    },
+
+    // =====================
+    // FUNDACION
+    // =====================
+    {
+      path: 'fundacion',
+      name: 'Fundacion',
+      component: RouterViewStub,
+      redirect: { name: 'FundacionLeads' },
+      meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+      children: [
+        {
+          path: 'leads',
+          name: 'FundacionLeads',
+          component: () => import('@/views/fundacion/Leads.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/new',
+          name: 'FundacionLeadsNew',
+          component: () => import('@/views/fundacion/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/:id',
+          name: 'FundacionLeadsEdit',
+          component: () => import('@/views/fundacion/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          props: true,
+        },
+        {
+          path: 'company-leads',
+          name: 'FundacionCompanyLeads',
+          component: () => import('@/views/fundacion/company-leads/Index.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+        },
+        {
+          path: 'company-leads/new',
+          name: 'FundacionCompanyLeadNew',
+          component: () => import('@/views/fundacion/company-leads/Form.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+        },
+        {
+          path: 'company-leads/:id',
+          name: 'FundacionCompanyLeadEdit',
+          component: () => import('@/views/fundacion/company-leads/Form.vue'),
+          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          props: true,
+        },
+      ],
+    },
+
+    // =====================
+    // B2B LEADS
+    // =====================
+    {
+      path: 'b2b',
+      name: 'B2B',
+      component: RouterViewStub,
+      redirect: { name: 'B2BLeads' },
+      meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+      children: [
+        {
+          path: 'leads',
+          name: 'B2BLeads',
+          component: () => import('@/views/b2b/Leads.vue'),
+          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/new',
+          name: 'B2BLeadsNew',
+          component: () => import('@/views/b2b/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+        },
+        {
+          path: 'leads/:id',
+          name: 'B2BLeadsEdit',
+          component: () => import('@/views/b2b/LeadsNew.vue'),
+          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          props: true,
         },
       ],
     },

@@ -12,6 +12,7 @@ import FicoService from './fico';
 import DashboardService from './dashboard.service'
 
 import NotificationService from './notificationService'
+import B2bService from './b2b.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -29,7 +30,8 @@ export const ServiceKeys = {
   Integration: Symbol('IntegrationService'),
 Notification: Symbol('NotificationService'),
   Fico: Symbol('FicoService'),
-  Dashboard: Symbol('DashboardService')
+  Dashboard: Symbol('DashboardService'),
+  B2b: Symbol('B2bService')
 }
 
 export function createServices() {
@@ -45,6 +47,7 @@ export function createServices() {
     [ServiceKeys.Integration]: new IntegrationService(api),
     [ServiceKeys.Fico]: new FicoService(api),
 [ServiceKeys.Notification]: new NotificationService(),
-    [ServiceKeys.Dashboard]: new DashboardService(api)
+    [ServiceKeys.Dashboard]: new DashboardService(api),
+    [ServiceKeys.B2b]: new B2bService(api)
   }
 }

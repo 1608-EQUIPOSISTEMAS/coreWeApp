@@ -99,6 +99,27 @@ export default [
   },
   {
     component: 'CNavGroup',
+    name: 'Fundación',
+    to: '/fundacion',
+    icon: 'cil-education',
+    roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Leads Fundación',
+        to: '/fundacion/leads',
+        roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Leads Empresas',
+        to: '/fundacion/company-leads',
+        roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
+      },
+    ],
+  },
+  {
+    component: 'CNavGroup',
     name: 'B2B',
     to: '/business',
     icon: 'cil-people',
@@ -106,9 +127,33 @@ export default [
     items: [
       {
         component: 'CNavItem',
+        name: 'Leads B2B',
+        to: '/b2b/leads',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Leads Empresas',
+        to: '/business/company-leads',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Empresas',
+        to: '/business/companies',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Contratos',
+        to: '/business/contracts',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Convenios',
-        to: '/business/agreement',
-        roles: ['ADMIN', 'B2B', 'GERENCIA'], // 👈
+        to: '/business/agreements',
+        roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
     ],
   },
@@ -133,15 +178,15 @@ export default [
   },
   {
     component: 'CNavGroup',
-    name: 'Cliente',
-    to: '/cliente',
+    name: 'General',
+    to: '/general',
     icon: 'cil-user',
     roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
     items: [
       {
         component: 'CNavItem',
         name: 'Cliente',
-        to: '/cliente/cliente',
+        to: '/general/cliente',
         roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
       },
     ],

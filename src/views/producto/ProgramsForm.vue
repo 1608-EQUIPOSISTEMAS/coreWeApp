@@ -93,7 +93,7 @@
             </div>
 
             <div class="col-md-3">
-              <label class="exec-label">Línea de negocio <span class="c-red">*</span></label>
+              <label class="exec-label">Categoría del Programa <span class="c-red">*</span></label>
               <SearchSelect
                 :disabled="isEdit"
                 v-model="form.cat_category"
@@ -103,6 +103,20 @@
                 placeholder="Seleccionar..."
                 :model-label="form.cat_category_label"
                 class="exec-select-light w-100"
+              />
+            </div>
+
+            <div class="col-md-3">
+              <label class="exec-label">Línea de Negocio <span class="c-red">*</span></label>
+              <SearchSelect
+                :disabled="isEdit"
+                v-model="form.cat_business_line_id"
+                :items="catalogs.businessLineList"
+                label-field="description"
+                value-field="id"
+                placeholder="Seleccionar..."
+                class="exec-select-light w-100"
+                required
               />
             </div>
 
@@ -404,6 +418,7 @@ import FileUploader from '@/components/FileUploader.vue'
     skem_clasification: null,
     cat_type_program: null,
     cat_category: null,
+    cat_business_line_id: null,
     cat_model_modality: null,
     link: null,
     active: true,
@@ -414,7 +429,8 @@ import FileUploader from '@/components/FileUploader.vue'
     programTypeList: catalog?.options('we_program_type') || [],
     categoryList: catalog?.options('we_program_category') || [],
     modalityList: catalog?.options('we_modality') || [],
-    courseCategoryList: catalog?.options('we_course_category') || []
+    courseCategoryList: catalog?.options('we_course_category') || [],
+    businessLineList: catalog?.options('we_business_line') || []
   })
 
   const typeProgramLabel = computed(() => {
@@ -475,6 +491,7 @@ import FileUploader from '@/components/FileUploader.vue'
       !!form.cat_type_program &&
       !!form.cat_model_modality &&
       !!form.cat_category &&
+      !!form.cat_business_line_id &&
       hasAtLeastOneValidVersion.value
     )
   })
@@ -543,6 +560,7 @@ import FileUploader from '@/components/FileUploader.vue'
     form.program_name = data.program_name ?? null
     form.cat_type_program = data.cat_type_program ?? null
     form.cat_category = data.cat_category ?? null
+    form.cat_business_line_id = data.cat_business_line_id ?? null
     form.link = data.link ?? null
 
     form.cat_model_modality = data.cat_model_modality ?? null
@@ -604,6 +622,7 @@ import FileUploader from '@/components/FileUploader.vue'
 
         skem_clasification: form.skem_clasification || null,
         cat_category: form.cat_category ?? null,
+        cat_business_line_id: form.cat_business_line_id ?? null,
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
         program_versions: form.program_versions.map(v => ({
@@ -638,6 +657,7 @@ import FileUploader from '@/components/FileUploader.vue'
         link: form.link || null,
         cat_type_program: form.cat_type_program ?? null,
         cat_category: form.cat_category ?? null,
+        cat_business_line_id: form.cat_business_line_id ?? null,
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
         skem_clasification: form.skem_clasification || null,

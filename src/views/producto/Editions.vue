@@ -63,6 +63,16 @@
             </div>
           </div>
           <div class="filter-sep"></div>
+          <div class="filter-group">
+            <label class="filter-label">LÍNEA</label>
+            <MultiSelect
+              v-model="columnFilters.business_line"
+              :items="catalogs.businessLineList"
+              label-key="description"
+              value-key="id"
+              placeholder="Todas…"
+            />
+          </div>
           <div class="filter-spacer"></div>
           <!-- KPIs inline -->
           <div class="masthead-kpis">
@@ -137,7 +147,7 @@
                   <th class="ts ts-a" v-if="isCompact">
                     <div class="d-flex align-items-center justify-content-between">
                       <span>LÍNEA</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
+                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.business_line_label || item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
                     </div>
                   </th>
                   <th class="ts ts-a" v-if="isCompact">
@@ -246,11 +256,11 @@
 
                     <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
                       <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
-                      <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                      <div class="small text-muted">{{ (e.business_line_label || e.program_line_business) ? 'Línea: ' + (e.business_line_label || e.program_line_business) : '—' }}</div>
                     </td>
 
                     <td class="td-a" v-if="isCompact" style="min-width:120px;max-width:300px;">
-                      {{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                      {{ e.business_line_label || e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
                     </td>
                     <td class="td-a text-center" v-if="isCompact">
                       <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
@@ -721,6 +731,10 @@
         <div class="mb-3 col-6">
           <label class="form-label small fw-bold">Línea de Negocio</label>
           <MultiSelect v-model="filterForm.category_ids" :items="catalogs.catLines" label-key="description" value-key="id" placeholder="LINEAS…" />
+        </div>
+        <div class="mb-3 col-6">
+          <label class="form-label small fw-bold">Línea de Negocio (Segmento)</label>
+          <MultiSelect v-model="filterForm.business_line_ids" :items="catalogs.businessLineList" label-key="description" value-key="id" placeholder="EN VIVO, ONLINE, B2B…" />
         </div>
         <div class="mb-3 col-6">
           <label class="form-label small fw-bold">Categoría</label>
@@ -1977,7 +1991,8 @@ const columnFilters = reactive({
   schedule: [],
   instructor: [],
   notes: [],
-  edition_code: []
+  edition_code: [],
+  business_line: []
 })
 
 import BaseModal from '@/components/BaseModal.vue'
@@ -2178,6 +2193,11 @@ const effectiveItems = computed(() => {
         // Línea
         if (columnFilters.line.length > 0) {
           if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
+        }
+
+        // Línea de Negocio
+        if (columnFilters.business_line.length > 0) {
+          if (!columnFilters.business_line.includes(item.business_line_id)) return false
         }
 
         // Tipado
@@ -2529,6 +2549,7 @@ const filterForm = reactive({
     hour_combination_ids: [],
     model_modality_ids: [],
     instructores_seleccionados: [],
+    business_line_ids: [],
 })
 
 // Filtros activos (aplicados)
@@ -2570,6 +2591,7 @@ const formattedActiveFilters = computed(() => {
   // Definimos qué campos son arrays y cómo se llaman en el catálogo
   const arrayFilters = [
     { key: 'category_ids', labelPrefix: 'Línea', catalogName: 'catLines' },
+    { key: 'business_line_ids', labelPrefix: 'L. Negocio', catalogName: 'businessLineList' },
     { key: 'type_program_ids', labelPrefix: 'Cat', catalogName: 'catCategories' },
     { key: 'segment_ids', labelPrefix: 'Seg', catalogName: 'catSegments' },
     { key: 'combination_days_ids', labelPrefix: 'Días', catalogName: 'dayCombinationList' },
@@ -2787,7 +2809,8 @@ const catalogs = ref({
   catCategories: (catalog && catalog.options('we_program_type')) || [],
   catTypes: (catalog && catalog.options('we_course_category')) || [],
   catSegments: (catalog && catalog.options('we_segment')) || [],
-  catHolidays: (catalog && catalog.options('we_holiday')) || []
+  catHolidays: (catalog && catalog.options('we_holiday')) || [],
+  businessLineList: (catalog && catalog.options('we_business_line')) || []
 }
 )
 // 2. Función para procesar el cambio del DatePicker
@@ -3961,6 +3984,11 @@ const filteredSchedules = computed(() => {
       // 3. Línea
       if (columnFilters.line.length > 0) {
         if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
+      }
+
+      // 3b. Línea de Negocio
+      if (columnFilters.business_line.length > 0) {
+        if (!columnFilters.business_line.includes(item.business_line_id)) return false
       }
 
       // 4. Tipado

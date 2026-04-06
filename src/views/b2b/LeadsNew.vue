@@ -7,8 +7,8 @@
           <div class="brand-rule"></div>
           <div class="brand-text d-flex align-items-center gap-3">
             <div>
-              <span class="brand-eyebrow">CRM Comercial</span>
-              <h1 class="brand-title">Formulario Comercial</h1>
+              <span class="brand-eyebrow">CRM B2B</span>
+              <h1 class="brand-title">Formulario B2B</h1>
             </div>
           </div>
         </div>
@@ -193,7 +193,6 @@
                 value-field="alias"
                 placeholder="TIPO..."
                 required
-                disabled
                 :model-label="form.client_status_label"
                 class="exec-select-light w-100"
               />
@@ -1805,11 +1804,11 @@ const {
   updateEditableAmount, updateEditableDate,
   onChangeDescuentoPorcentual, onChangeDescuentoFijo, onChangeBeneficios,
 } = useLeadForm({
-  businessLine:     'we_business_line_envivo',
-  acceptsCompany:   false,
+  businessLine:     'we_business_line_b2b',
+  acceptsCompany:   true,
   fixedProgramType: null,
   requiresEdition:  false,
-  showInscription:  true,
+  showInscription:  false,
 })
 </script>
 

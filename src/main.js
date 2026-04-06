@@ -70,7 +70,7 @@ async function bootstrap () {
   app.provide(ServiceKeys.Integration, services[ServiceKeys.Integration])
   app.provide(ServiceKeys.Fico, services[ServiceKeys.Fico])
   app.provide(ServiceKeys.Dashboard, services[ServiceKeys.Dashboard])
-
+app.provide(ServiceKeys.B2b, services[ServiceKeys.B2b])
 app.provide(ServiceKeys.Notification, services[ServiceKeys.Notification])
 
 

@@ -7,8 +7,8 @@
           <div class="brand-rule"></div>
           <div class="brand-text d-flex align-items-center gap-3">
             <div>
-              <span class="brand-eyebrow">CRM Comercial</span>
-              <h1 class="brand-title">Formulario Comercial</h1>
+              <span class="brand-eyebrow">CRM Fundación</span>
+              <h1 class="brand-title">Formulario Fundación</h1>
             </div>
           </div>
         </div>
@@ -79,7 +79,8 @@
               />
             </div>
 
-            <div class="col-6 col-md-4 col-lg-3">
+            <!-- Categoría oculta: fija como we_program_type_event vía composable -->
+            <div class="col-6 col-md-4 col-lg-3" v-if="false">
               <label class="exec-label">Categoría <span class="c-red">*</span></label>
 
               <SearchSelect
@@ -158,7 +159,7 @@
 
             <div
               class="col-12 col-lg-3"
-              v-if="(isEdit && form.edition_id) || (form.program_modality_selected_alias && form.program_modality_selected_alias!='we_modality_online' && form.category_alias && form.program_version_id && !['we_program_type_membership'].includes(form.category_alias))"
+              v-if="form.category_alias && form.program_version_id"
             >
               <label class="exec-label">Edición / Fecha prevista <span class="c-red">*</span></label>
 <SearchSelect
@@ -193,7 +194,6 @@
                 value-field="alias"
                 placeholder="TIPO..."
                 required
-                disabled
                 :model-label="form.client_status_label"
                 class="exec-select-light w-100"
               />
@@ -1805,11 +1805,11 @@ const {
   updateEditableAmount, updateEditableDate,
   onChangeDescuentoPorcentual, onChangeDescuentoFijo, onChangeBeneficios,
 } = useLeadForm({
-  businessLine:     'we_business_line_envivo',
-  acceptsCompany:   false,
-  fixedProgramType: null,
-  requiresEdition:  false,
-  showInscription:  true,
+  businessLine:     'we_business_line_fundacion',
+  acceptsCompany:   true,
+  fixedProgramType: 'we_program_type_event',
+  requiresEdition:  true,
+  showInscription:  false,
 })
 </script>
 
