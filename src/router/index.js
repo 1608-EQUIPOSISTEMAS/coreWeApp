@@ -51,6 +51,13 @@ const routes = [
             component: () => import('@/views/fico/EnrollmentForm.vue'),
             meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
           },
+          {
+            path: 'inscripciones/:id',
+            name: 'enrollmentDetail',
+            component: () => import('@/views/fico/enrollment/EnrollmentDetailView.vue'),
+            props: true,
+            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+          },
           // {
           //   path: 'reportes',
           //   name: 'FicoReportes',
@@ -119,9 +126,14 @@ const routes = [
           {
             path: 'precios',
             name: 'Prices',
-            // catálogo maestro de programas
             component: () => import('@/views/producto/Prices.vue'),
             meta: { roles: ['ADMIN', 'GERENCIA'] },
+          },
+          {
+            path: 'links',
+            name: 'BulkLinks',
+            component: () => import('@/views/producto/BulkLinks.vue'),
+            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
         ],
       },

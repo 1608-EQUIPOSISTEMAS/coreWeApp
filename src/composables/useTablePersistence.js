@@ -30,10 +30,10 @@ export function useTablePersistence(storageKey, filters, pagination, extraState 
         // Restaurar filtros
         if (parsed.filters) Object.assign(filters, parsed.filters)
         
-        // Restaurar paginación
+        // Restaurar paginación (siempre inicia en página 1)
         if (parsed.pagination) {
           pagination.value.size = parsed.pagination.size || 25
-          pagination.value.page = parsed.pagination.page || 1
+          pagination.value.page = 1
         }
 
         // Restaurar extra (selectedType)

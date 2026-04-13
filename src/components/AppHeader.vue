@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useColorModes } from '@coreui/vue'
 
 import AppBreadcrumb from '@/components/AppBreadcrumb.vue'
@@ -7,12 +8,19 @@ import AppHeaderDropdownAccnt from '@/components/AppHeaderDropdownAccnt.vue'
 import { useSidebarStore } from '@/stores/sidebar.js'
 import { useNotifications } from '@/composables/useNotifications'
 
-import UnattendedCallsModal from '@/components/UnattendedCallsModal.vue' 
+import UnattendedCallsModal from '@/components/UnattendedCallsModal.vue'
 const headerClassNames = ref('mb-4 p-0')
 const { colorMode, setColorMode } = useColorModes('coreui-free-vue-admin-template-theme')
 const sidebar = useSidebarStore()
+const router = useRouter()
 
 const { notifications, unreadCount, onOpenBell, modal5pm } = useNotifications()
+
+function goToNotification (notif) {
+  if (notif.lead_id) {
+    router.push({ name: 'ComercialLeadDetalle', params: { id: notif.lead_id } })
+  }
+}
 
 onMounted(() => {
   document.addEventListener('scroll', () => {
@@ -60,6 +68,8 @@ onMounted(() => {
               <CDropdownItem
                 class="d-flex flex-column align-items-start py-2 border-bottom"
                 :style="notif.is_read ? 'opacity: 0.55;' : 'background-color: rgba(var(--cui-primary-rgb), 0.05);'"
+                @click="goToNotification(notif)"
+                style="cursor: pointer;"
               >
                 <!-- Punto azul para no leídas -->
                 <div class="d-flex align-items-center gap-2 w-100">
