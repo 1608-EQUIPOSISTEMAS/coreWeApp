@@ -158,6 +158,13 @@ export default [
     ],
   },
   {
+    component: 'CNavItem',
+    name: 'Bot Académico',
+    to: '/academica/bot',
+    icon: 'cil-chat-bubble',
+    roles: ['ADMIN', 'GERENCIA'],
+  },
+  {
     component: 'CNavGroup',
     name: 'Marketing',
     to: '/marketing',

@@ -127,6 +127,7 @@
                   <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
                   <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
+                  <th v-if="isAcademica" colspan="2" class="th-group th-group-e">ACADÉMICA</th>
                 </tr>
 
                 <!-- FILA 2: Columnas individuales -->
@@ -194,6 +195,12 @@
                       <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
                     </div>
                   </th>
+                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
+                    <i class="fa-brands fa-whatsapp" style="color:#25d366;"></i>
+                  </th>
+                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
+                    <i class="fa-solid fa-video" style="color:#6264a7;"></i> Teams
+                  </th>
                 </tr>
               </thead>
 
@@ -201,7 +208,7 @@
               <tbody v-if="!hasActiveFilters">
                 <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
                   <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
-                    <td :colspan="isCompact ? 16 : 11" class="week-header-cell">
+                    <td :colspan="(isCompact ? 16 : 11) + (isAcademica ? 2 : 0)" class="week-header-cell">
                       <div class="week-header-inner">
                         <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         <span class="week-label">Semana {{ week.schedule }}</span>
@@ -233,7 +240,7 @@
                       <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
                        <i class="fa-solid fa-book-bookmark"></i>
                       </button>
-<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+<button v-if="$hasRole(['ADMIN', 'PRODUCTO', 'ACADEMICA'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
                         <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
                         <i v-else class="fa-solid fa-sitemap"></i>
                       </button>
@@ -401,6 +408,20 @@
                         <b v-if="e.clasification">{{ e.clasification }}</b>
                       </div>
                     </td>
+                    <template v-if="isAcademica">
+                      <td class="td-e text-center">
+                        <a v-if="e.program_type === 'Curso' && e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="link-icon link-wa" title="Grupo WhatsApp">
+                          <i class="fa-brands fa-whatsapp"></i>
+                        </a>
+                        <span v-else class="text-muted">—</span>
+                      </td>
+                      <td class="td-e text-center">
+                        <a v-if="e.program_type === 'Curso' && e.teams_link" :href="e.teams_link" target="_blank" class="link-icon link-teams" title="Reunión Teams">
+                          <i class="fa-solid fa-video"></i>
+                        </a>
+                        <span v-else class="text-muted">—</span>
+                      </td>
+                    </template>
                   </tr>
                 </template>
               </tbody>
@@ -425,7 +446,7 @@
                       <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
                        <i class="fa-solid fa-book-bookmark"></i>
                       </button>
-<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+<button v-if="$hasRole(['ADMIN', 'PRODUCTO', 'ACADEMICA'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
                         <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
                         <i v-else class="fa-solid fa-sitemap"></i>
                       </button>
@@ -523,6 +544,20 @@
                       <b v-if="e.clasification">{{ e.clasification }}</b>
                     </div>
                   </td>
+                  <template v-if="isAcademica">
+                    <td class="td-e text-center">
+                      <a v-if="e.program_type === 'Curso' && e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="link-icon link-wa" title="Grupo WhatsApp">
+                        <i class="fa-brands fa-whatsapp"></i>
+                      </a>
+                      <span v-else class="text-muted">—</span>
+                    </td>
+                    <td class="td-e text-center">
+                      <a v-if="e.program_type === 'Curso' && e.teams_link" :href="e.teams_link" target="_blank" class="link-icon link-teams" title="Reunión Teams">
+                        <i class="fa-solid fa-video"></i>
+                      </a>
+                      <span v-else class="text-muted">—</span>
+                    </td>
+                  </template>
                 </tr>
               </tbody>
             </table>
@@ -1031,6 +1066,19 @@
               <textarea class="form-control border-0 bg-transparent" rows="6" v-model="modalForm.notes" placeholder="Notas internas…" style="resize:vertical;min-height:150px;max-height:none;font-size:0.85rem;"></textarea>
             </div>
           </div>
+          <div class="status-card" v-if="currentEdition && isCourse">
+            <div class="status-card__header"><i class="fa-brands fa-whatsapp me-2" style="color:#25d366;"></i>Links Académicos</div>
+            <div class="status-card__body">
+              <div class="mb-2">
+                <label class="form-label-sm"><i class="fa-brands fa-whatsapp me-1" style="color:#25d366;"></i>WhatsApp Link</label>
+                <input type="url" class="form-control form-control-sm" v-model="modalForm.whatsapp_link" placeholder="https://chat.whatsapp.com/..." :readonly="!$hasRole(['ACADEMICA'])" />
+              </div>
+              <div>
+                <label class="form-label-sm"><i class="fa-solid fa-video me-1" style="color:#6264a7;"></i>Teams Link</label>
+                <input type="url" class="form-control form-control-sm" v-model="modalForm.teams_link" placeholder="https://teams.microsoft.com/..." :readonly="!$hasRole(['ACADEMICA'])" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -1515,6 +1563,7 @@
 .th-group-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 2px solid var(--col-b-border); }
 .th-group-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 2px solid var(--col-c-border); }
 .th-group-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 2px solid var(--col-d-border); }
+.th-group-e { background: #052e16; color: #86efac; border-left: 2px solid #16a34a; }
 
 /* ── Fila 2: Columnas individuales ── */
 .thead-sub .ts {
@@ -1578,6 +1627,13 @@
 .td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
 .td-c { background: var(--col-c-td); border-left: 1px solid var(--col-c-tdbdr); }
 .td-d { background: var(--col-d-td); border-left: 1px solid var(--col-d-tdbdr); }
+.td-e { background: #f0fdf4; border-left: 1px solid #bbf7d0; }
+.ts-e { background: #052e16; color: #86efac; border-left: 1px solid #166534; }
+.link-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; text-decoration: none; transition: all .15s; }
+.link-wa { background: #dcfce7; color: #16a34a; }
+.link-wa:hover { background: #25d366; color: #fff; }
+.link-teams { background: #ede9fe; color: #6264a7; }
+.link-teams:hover { background: #6264a7; color: #fff; }
 
 .td-prog { max-width: 200px; }
 
@@ -1965,7 +2021,7 @@ tr[class*="row-segment-"]:hover .td-d {
 </style>
 <script setup>
 
-import { ref, reactive, computed, onMounted, inject, watch, nextTick } from 'vue' // <--- Agrega nextTick
+import { ref, reactive, computed, onMounted, inject, watch, nextTick, getCurrentInstance } from 'vue' // <--- Agrega nextTick
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
@@ -2012,6 +2068,8 @@ const editionService = inject(ServiceKeys.Edition)
 const instructorService = inject(ServiceKeys.Instructor)
 const catalog = inject('catalog')
 const toast = useToast()
+const { proxy } = getCurrentInstance()
+const isAcademica = computed(() => proxy.$hasRole(['ACADEMICA']))
 const date = ref();
 const isCompact = ref(true)
 // --- ESTADOS GENERALES ---
@@ -2848,6 +2906,8 @@ const modalForm = reactive({
   confirmation: false,
   active: false,
   notes: '',
+  whatsapp_link: '',
+  teams_link: '',
   program_version_children: []
 })
 
@@ -2920,6 +2980,8 @@ function resetModalForm() {
   modalForm.cat_type_program_alias = null
   modalForm.cat_day_combination_id = null
   modalForm.cat_hour_combination_id = null
+  modalForm.whatsapp_link = ''
+  modalForm.teams_link = ''
   modalForm.program_version_children = []
 }
 
@@ -3059,6 +3121,8 @@ async function openEditModal(edition) {
     modalForm.preconfirmation = !!data.preconfirmation
     modalForm.confirmation = !!data.confirmation
     modalForm.notes = data.notes || ''
+    modalForm.whatsapp_link = data.whatsapp_link || ''
+    modalForm.teams_link = data.teams_link || ''
     modalForm.sessions = data.sessions || null
 
     // Alias UI
@@ -3119,6 +3183,8 @@ async function applyModalForm() {
         preconfirmation: modalForm.preconfirmation ? 'Y' : 'N',
         confirmation: modalForm.confirmation ? 'Y' : 'N',
         notes: modalForm.notes,
+        whatsapp_link: modalForm.whatsapp_link || null,
+        teams_link: modalForm.teams_link || null,
         active: modalForm.active ? 'Y' : 'N',
       }
 

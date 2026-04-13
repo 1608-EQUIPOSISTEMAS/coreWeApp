@@ -72,6 +72,7 @@ async function bootstrap () {
   app.provide(ServiceKeys.Dashboard, services[ServiceKeys.Dashboard])
 app.provide(ServiceKeys.B2b, services[ServiceKeys.B2b])
 app.provide(ServiceKeys.Notification, services[ServiceKeys.Notification])
+app.provide(ServiceKeys.Bot, services[ServiceKeys.Bot])
 
 
   app.config.globalProperties.$hasRole = (roles) => {
