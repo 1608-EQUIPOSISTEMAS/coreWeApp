@@ -1,0 +1,758 @@
+<template>
+  <div class="edv-page">
+    <!-- Top bar -->
+    <div class="edv-topbar">
+      <button class="edv-back" @click="goBack">
+        <i class="fa-solid fa-arrow-left"></i> Volver al listado
+      </button>
+      <div class="edv-topbar-info">
+        <span class="edv-topbar-name">{{ detail.student_full_name || enrollment?.student_full_name || '' }}</span>
+        <span class="edv-topbar-program">{{ detail.program_name || enrollment?.program_name || '' }}</span>
+        <span class="edv-topbar-pill" :class="statusPillClass">{{ statusLabel }}</span>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="edv-loading">
+      <div class="edv-spinner"></div>
+      <span>Cargando detalle...</span>
+    </div>
+
+    <!-- Two-column layout -->
+    <div v-else class="edv-layout">
+      <!-- LEFT PANEL (40%) - Info fija -->
+      <aside class="edv-sidebar">
+        <EnrollmentHeader
+          :enrollment="enrollment"
+          :detail="detail"
+          :current-profile="currentProfile"
+          :total="modalTotal"
+        />
+        <EnrollmentOdoo
+          :odoo-email="odooEmail"
+          :odoo-password="odooPassword"
+        />
+      </aside>
+
+      <!-- RIGHT PANEL (60%) - Tabs de contenido -->
+      <main class="edv-main">
+        <div class="edv-tabs">
+          <button
+            :class="['edv-tab', { active: activeTab === 'finanzas' }]"
+            @click="activeTab = 'finanzas'"
+          >
+            <i class="fa-solid fa-file-invoice-dollar"></i> Finanzas
+          </button>
+          <button
+            v-if="modalMode === 'view'"
+            :class="['edv-tab', { active: activeTab === 'acciones' }]"
+            @click="activeTab = 'acciones'"
+          >
+            <i class="fa-solid fa-bolt"></i> Acciones
+          </button>
+          <button
+            :class="['edv-tab', { active: activeTab === 'historial' }]"
+            @click="activeTab = 'historial'"
+          >
+            <i class="fa-solid fa-clock-rotate-left"></i> Historial
+            <span v-if="auditLog.length" class="edv-tab-badge">{{ auditLog.length }}</span>
+          </button>
+        </div>
+
+        <div class="edv-tab-content">
+          <EnrollmentFinancials
+            v-show="activeTab === 'finanzas'"
+            :enrollment="enrollment"
+            :detail="detail"
+            :catalogs="catalogData"
+            :form="ficoForm"
+            :installments="modalInstallments"
+            :mode="modalMode"
+            :is-editing="isEditing"
+            :saving="savingFinancials"
+            :last-payment="lastPayment"
+            :enrollment-id="enrollmentId"
+            @start-edit="startEditing"
+            @cancel-edit="cancelEditing"
+            @save-edit="handleSaveEdit"
+            @confirm-payment="handleConfirmPayment"
+            @confirm-plan="handleConfirmPlan"
+            @save-cuotas="handleSaveCuotasData"
+            @add-cuota="addCuota"
+            @remove-cuota="removeCuota"
+            @reject-enrollment="handleRejectEnrollment"
+          />
+
+          <EnrollmentActions
+            v-if="modalMode === 'view'"
+            v-show="activeTab === 'acciones'"
+            :enrollment="enrollment"
+            :detail="detail"
+            :catalogs="catalogData"
+            :mode="modalMode"
+            :current-modality="currentModality"
+            :current-profile="currentProfile"
+            :modality-options="modalityOptions"
+            :profile-options="profileOptions"
+            @action-completed="handleActionCompleted"
+          />
+
+          <EnrollmentAuditLog
+            v-show="activeTab === 'historial'"
+            :audit-log="auditLog"
+          />
+        </div>
+      </main>
+    </div>
+
+    <!-- Redirect overlay -->
+    <Teleport to="body">
+      <div v-if="redirecting" class="edv-redirect-overlay">
+        <div class="edv-redirect-card">
+          <i class="fa-solid fa-check-circle"></i>
+          <span>Redirigiendo al listado...</span>
+          <button class="edv-redirect-cancel" @click="cancelRedirect">Cancelar</button>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, computed, watch, inject, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ServiceKeys } from '@/services'
+import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
+import { useEnrollmentCatalogs } from '@/composables/useEnrollmentCatalogs'
+import { useToast } from 'vue-toastification'
+import EnrollmentHeader from './EnrollmentHeader.vue'
+import EnrollmentOdoo from './EnrollmentOdoo.vue'
+import EnrollmentFinancials from './EnrollmentFinancials.vue'
+import EnrollmentActions from './EnrollmentActions.vue'
+import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
+
+const props = defineProps({
+  id: { type: [String, Number], required: true }
+})
+
+const router = useRouter()
+const route = useRoute()
+const ficoService = inject(ServiceKeys.Fico)
+const catalogService = inject('catalog', null)
+const toast = useToast()
+const fmt = useEnrollmentFormatters()
+const catalogs = useEnrollmentCatalogs()
+
+const loading = ref(true)
+const enrollment = ref(null)
+const detail = ref({ installments: [], payment_history: [] })
+const auditLog = ref([])
+const activeTab = ref('finanzas')
+
+// Odoo
+const odooEmail = ref(null)
+const odooPassword = ref(null)
+
+// Profile & Modality
+const activeProfileId = ref(null)
+const activeModalityId = ref(null)
+
+// Financials
+const isEditing = ref(false)
+const savingFinancials = ref(false)
+const modalInstallments = ref([])
+
+const ficoForm = reactive({
+  cat_currency: null,
+  cat_payment_medium: null,
+  cat_business_entity: null,
+  bank_account_id: null,
+  transaction_code: ''
+})
+
+
+// Redirect
+const redirecting = ref(false)
+let redirectTimer = null
+
+const enrollmentId = computed(() => Number(props.id))
+
+const catalogData = computed(() => ({
+  catCurrency: catalogs.catCurrency.value,
+  catPaymentMedium: catalogs.catPaymentMedium.value,
+  catBusinessEntity: catalogs.catBusinessEntity.value,
+  catFinancialEntity: catalogs.catFinancialEntity.value,
+  allBankAccounts: catalogs.allBankAccounts.value,
+  filteredAccounts: catalogs.filteredAccounts
+}))
+
+const modalMode = computed(() => {
+  const s = (enrollment.value?.confirmation || enrollment.value?.student_status || '').toLowerCase()
+  if (s.includes('aprob') || s.includes('confirm')) return 'view'
+  return 'confirm'
+})
+
+const modalTotal = computed(() => Number(enrollment.value?.total_to_pay) || Number(detail.value?.net_amount) || 0)
+
+const statusLabel = computed(() => {
+  const s = enrollment.value?.confirmation
+  if (!s || s.toLowerCase().includes('pendiente')) return 'Pendiente Revisar'
+  return s
+})
+const statusPillClass = computed(() => fmt.statusPill(enrollment.value?.confirmation))
+
+const lastPayment = computed(() => {
+  const hist = detail.value?.payment_history
+  if (!hist || !Array.isArray(hist) || !hist.length) return null
+  return hist[0]
+})
+
+const profileOptions = computed(() => {
+  if (catalogService) {
+    return catalogService.options('we_profile').map(i => ({
+      id: i.id ?? i.raw?.id,
+      description: i.description ?? i.raw?.description
+    }))
+  }
+  return [
+    { id: 3086, description: 'PROFESIONAL' },
+    { id: 3087, description: 'ESTUDIANTE' },
+    { id: 3200, description: 'GENERAL' }
+  ]
+})
+
+const currentProfile = computed(() => {
+  const profId = activeProfileId.value || detail.value?.cat_profile_id || enrollment.value?.cat_profile_id
+  if (!profId) return enrollment.value?.occupation_label === 'E' ? 'ESTUDIANTE' : 'PROFESIONAL'
+  const found = profileOptions.value.find(p => p.id === profId)
+  return found?.description || '---'
+})
+
+const modalityOptions = computed(() => {
+  if (catalogService) {
+    return catalogService.options('we_insc_modality').map(i => ({
+      id: i.id ?? i.raw?.id,
+      description: i.description ?? i.raw?.description,
+      alias: i.alias
+    }))
+  }
+  return [
+    { id: 2626, description: 'Normal (Regular)', alias: 'we_insc_modality_normal' },
+    { id: 2625, description: 'Flexible (Flex)', alias: 'we_insc_modality_flexible' }
+  ]
+})
+
+const currentModality = computed(() => {
+  const modId = activeModalityId.value || detail.value?.cat_inscription_modality_id || enrollment.value?.cat_inscription_modality
+  if (!modId) return enrollment.value?.modality || enrollment.value?.student_type_label || '---'
+  const found = modalityOptions.value.find(m => m.id === modId)
+  return found?.description || enrollment.value?.modality || '---'
+})
+
+function goBack () {
+  router.push({ name: 'enrollment' })
+}
+
+function resolveInstallmentStatus (i) {
+  const alias = i.status_alias || ''
+  if (alias.includes('paid')) return 'paid'
+  if (alias.includes('pending')) return 'pending'
+  return 'draft'
+}
+
+function buildInstallments () {
+  const inst = detail.value?.installments || []
+  modalInstallments.value = inst.map(i => ({
+    ...i,
+    status: resolveInstallmentStatus(i),
+    _cat_currency: i.cat_currency || null,
+    _cat_payment_medium: i.cat_payment_medium || null,
+    _cat_business_entity: i.cat_business_entity || null,
+    _bank_account_id: i.bank_account_id || null,
+    _transaction_code: i.transaction_code || '',
+    _voucher_url: i.evidence_url || null,
+    _isNew: false
+  }))
+}
+
+function addCuota () {
+  const cuotas = modalInstallments.value.filter(i => i.installment_number !== 0 && !i.is_reserva)
+  modalInstallments.value.push({
+    installment_number: cuotas.length + 1,
+    amount: 0,
+    due_date: '',
+    status: 'pending',
+    _cat_currency: null,
+    _cat_payment_medium: null,
+    _cat_business_entity: null,
+    _bank_account_id: null,
+    _transaction_code: '',
+    _voucher_url: null,
+    _isNew: true
+  })
+}
+
+function removeCuota (idx) {
+  const cuotas = modalInstallments.value.filter(i => i.installment_number !== 0 && !i.is_reserva)
+  const cuota = cuotas[idx]
+  const realIdx = modalInstallments.value.indexOf(cuota)
+  if (realIdx !== -1) modalInstallments.value.splice(realIdx, 1)
+}
+
+function resetFicoForm () {
+  ficoForm.cat_currency = null
+  ficoForm.cat_payment_medium = null
+  ficoForm.cat_business_entity = null
+  ficoForm.bank_account_id = null
+  ficoForm.transaction_code = ''
+}
+
+function startEditing () {
+  const p = lastPayment.value
+  ficoForm.cat_currency = detail.value?.cat_currency_id || null
+  ficoForm.cat_payment_medium = p?.cat_payment_medium_id || null
+  ficoForm.cat_business_entity = p?.cat_business_entity_id || null
+  ficoForm.bank_account_id = p?.bank_account_id || null
+  ficoForm.transaction_code = p?.transaction_code || ''
+  isEditing.value = true
+}
+
+function cancelEditing () {
+  isEditing.value = false
+  resetFicoForm()
+}
+
+async function handleSaveEdit (justificacion) {
+  savingFinancials.value = true
+  try {
+    const eid = enrollmentId.value
+    const fields = {}
+    if (ficoForm.cat_payment_medium) fields.cat_payment_medium = ficoForm.cat_payment_medium
+    if (ficoForm.cat_business_entity) fields.cat_business_entity = ficoForm.cat_business_entity
+    if (ficoForm.bank_account_id) fields.bank_account_id = ficoForm.bank_account_id
+    if (ficoForm.transaction_code) fields.transaction_code = ficoForm.transaction_code
+    if (ficoForm.cat_currency) fields.cat_currency = ficoForm.cat_currency
+    fields.notes = detail.value?.notes || null
+    await ficoService.enrollmentUpdate({ enrollment_id: eid, justificacion: justificacion.trim(), fields })
+    toast.success('Cambios guardados correctamente.')
+    isEditing.value = false
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error('Error al guardar cambios.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
+async function handleConfirmPayment () {
+  savingFinancials.value = true
+  try {
+    const eid = enrollmentId.value
+    await ficoService.confirmPayment({
+      enrollment_id: eid,
+      action: 'confirm_contado',
+      cat_currency: ficoForm.cat_currency,
+      cat_payment_medium: ficoForm.cat_payment_medium,
+      cat_business_entity: ficoForm.cat_business_entity,
+      bank_account_id: ficoForm.bank_account_id,
+      transaction_code: ficoForm.transaction_code
+    })
+    const odoo = await ficoService.enrollInOdoo(eid)
+    if (odoo?.error) {
+      toast.warning('Pago registrado, pero no se pudo inscribir en Odoo: ' + odoo.error, { timeout: 6000 })
+    } else {
+      toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
+    }
+    const emailResult = await ficoService.sendConfirmationEmail(eid)
+    if (emailResult?.success) {
+      toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+    }
+    startRedirect()
+  } catch (err) {
+    console.error(err)
+    toast.error('Error al confirmar el pago.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
+async function handleConfirmPlan () {
+  savingFinancials.value = true
+  try {
+    const eid = enrollmentId.value
+    const keepInstallments = modalInstallments.value.map(c => ({
+      installment_id: c.installment_id || null,
+      installment_number: c.installment_number,
+      amount: Number(c.amount) || 0,
+      due_date: c.due_date || null,
+      is_new: c._isNew || false
+    }))
+    await ficoService.confirmPayment({ enrollment_id: eid, action: 'confirm_plan', installments: keepInstallments })
+    const odoo = await ficoService.enrollInOdoo(eid)
+    if (odoo?.error) {
+      toast.warning('Plan confirmado, pero no se pudo inscribir en Odoo: ' + odoo.error, { timeout: 6000 })
+    } else {
+      toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
+    }
+    const emailResult = await ficoService.sendConfirmationEmail(eid)
+    if (emailResult?.success) {
+      toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+    }
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error('Error al confirmar el plan.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
+async function handleSaveCuotasData () {
+  savingFinancials.value = true
+  try {
+    const eid = enrollmentId.value
+    const inicial = modalInstallments.value.find(i => i.installment_number === 0 || i.is_reserva)
+    const cuotas = modalInstallments.value.filter(i => i.installment_number !== 0 && !i.is_reserva)
+    const allInst = [...(inicial ? [inicial] : []), ...cuotas]
+    const installments = allInst
+      .filter(c => c.status !== 'paid')
+      .map(c => ({
+        installment_id: c.installment_id || null,
+        installment_number: c.installment_number,
+        amount: Number(c.amount) || 0,
+        due_date: c.due_date || null,
+        cat_currency: c._cat_currency,
+        cat_payment_medium: c._cat_payment_medium,
+        cat_business_entity: c._cat_business_entity,
+        bank_account_id: c._bank_account_id,
+        transaction_code: c._transaction_code,
+        is_new: c._isNew || false
+      }))
+    await ficoService.confirmPayment({ enrollment_id: eid, action: 'update_installments_data', installments })
+    toast.success('Datos financieros guardados correctamente.', { timeout: 3000 })
+    ficoService.sendPaymentConfirmationEmail(eid).then(r => {
+      if (r?.success) toast.info('Correo de confirmacion de cuota enviado.', { timeout: 4000 })
+    }).catch(() => {})
+    ficoService.syncInstallmentPayment(eid).then(r => {
+      if (r?.success) toast.info('Cuota sincronizada con Odoo.', { timeout: 4000 })
+    }).catch(() => {})
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error('Error al guardar los datos financieros.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
+async function handleRejectEnrollment (reason) {
+  try {
+    await ficoService.rejectEnrollment({
+      enrollment_id: enrollmentId.value,
+      reason: reason.trim()
+    })
+    toast.success('Inscripcion observada. Se notifico al asesor.')
+    startRedirect()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al observar inscripcion.')
+  }
+}
+
+function handleActionCompleted () {
+  startRedirect()
+}
+
+function startRedirect () {
+  redirecting.value = true
+  redirectTimer = setTimeout(() => {
+    router.push({ name: 'enrollment' })
+  }, 2000)
+}
+
+function cancelRedirect () {
+  redirecting.value = false
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+    redirectTimer = null
+  }
+  refreshDetail()
+}
+
+async function refreshDetail () {
+  try {
+    const [paymentResponse, listResult] = await Promise.all([
+      ficoService.getPaymentDetail(enrollmentId.value),
+      ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
+    ])
+    detail.value = paymentResponse || { installments: [], payment_history: [] }
+    const items = listResult?.items || (Array.isArray(listResult) ? listResult : [])
+    const match = items.find(i => Number(i.enrollment_id) === enrollmentId.value)
+    if (match) enrollment.value = match
+    buildInstallments()
+    refreshAuditLog()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+function refreshAuditLog () {
+  ficoService.getAuditLog(enrollmentId.value).then(r => { auditLog.value = r || [] }).catch(() => {})
+}
+
+async function loadEnrollment () {
+  loading.value = true
+  resetFicoForm()
+  activeProfileId.value = null
+  activeModalityId.value = null
+  odooEmail.value = null
+  odooPassword.value = null
+
+  const routeState = window.history.state?.enrollment
+  if (routeState) {
+    enrollment.value = routeState
+  } else {
+    try {
+      const result = await ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
+      const items = result?.items || (Array.isArray(result) ? result : [])
+      const match = items.find(i => Number(i.enrollment_id) === enrollmentId.value)
+      enrollment.value = match || items[0] || {}
+    } catch (err) {
+      console.error('Error cargando enrollment:', err)
+      enrollment.value = {}
+    }
+  }
+
+  try {
+    const response = await ficoService.getPaymentDetail(enrollmentId.value)
+    detail.value = response || { installments: [], payment_history: [] }
+  } catch (err) {
+    console.error('Error cargando detalle:', err)
+    detail.value = { installments: [], payment_history: [] }
+  } finally {
+    loading.value = false
+    buildInstallments()
+  }
+
+  ficoService.getEnrollmentFlags(enrollmentId.value).then(flags => {
+    if (flags) {
+      activeProfileId.value = flags.cat_profile_id || null
+      activeModalityId.value = flags.cat_inscription_modality || null
+      odooEmail.value = flags.odoo_email || null
+      odooPassword.value = flags.odoo_password || null
+    }
+  }).catch(() => {})
+
+  refreshAuditLog()
+}
+
+onMounted(() => {
+  catalogs.loadCatalogs()
+  loadEnrollment()
+})
+</script>
+
+<style scoped>
+.edv-page {
+  background: #F9FAFB;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #111827;
+}
+
+/* Top bar */
+.edv-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 28px;
+  background: #fff;
+  border-bottom: 1px solid #E5E7EB;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.edv-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6B7280;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.edv-back:hover { border-color: #0D9488; color: #0D9488; }
+
+.edv-topbar-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.edv-topbar-name { font-size: 14px; font-weight: 700; color: #111827; }
+.edv-topbar-program { font-size: 12.5px; color: #6B7280; font-weight: 500; }
+
+.edv-topbar-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.edv-topbar-pill.pill-green { background: #DCFCE7; color: #166534; }
+.edv-topbar-pill.pill-amber { background: #FEF3C7; color: #92400E; }
+.edv-topbar-pill.pill-red { background: #FEE2E2; color: #991B1B; }
+
+/* Loading */
+.edv-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 24px;
+  color: #9CA3AF;
+  font-size: 13px;
+}
+
+.edv-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top-color: #0D9488;
+  border-radius: 50%;
+  animation: edv-spin .7s linear infinite;
+}
+@keyframes edv-spin { to { transform: rotate(360deg); } }
+
+/* Two-column layout */
+.edv-layout {
+  display: grid;
+  grid-template-columns: 38% 62%;
+  gap: 0;
+  height: calc(100vh - 57px);
+  overflow: hidden;
+}
+
+.edv-sidebar {
+  padding: 24px;
+  overflow-y: auto;
+  border-right: 1px solid #E5E7EB;
+  background: #fff;
+}
+
+.edv-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tabs */
+.edv-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #E5E7EB;
+  background: #fff;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.edv-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  font-family: inherit;
+}
+.edv-tab:hover { color: #111827; }
+.edv-tab.active { color: #0D9488; border-bottom-color: #0D9488; }
+
+.edv-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #0D9488;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.edv-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Redirect overlay */
+.edv-redirect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 40px;
+  pointer-events: none;
+}
+
+.edv-redirect-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: #111827;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  pointer-events: auto;
+  animation: edv-slide-up .3s ease-out;
+}
+
+.edv-redirect-card i { color: #34D399; font-size: 18px; }
+
+.edv-redirect-cancel {
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.edv-redirect-cancel:hover { background: rgba(255,255,255,.25); }
+
+@keyframes edv-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

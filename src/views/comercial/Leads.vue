@@ -865,6 +865,18 @@
       <p class="text-muted small mt-2 fw-600">Cargando información financiera...</p>
     </div>
     <div v-else-if="enrollmentData" class="px-4 py-3">
+      <!-- Banner de observacion FICO -->
+      <div v-if="enrollmentObserved" class="obs-enroll-banner mb-4">
+        <div class="obs-enroll-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="obs-enroll-body">
+          <strong>Inscripcion Observada por FICO</strong>
+          <p>{{ enrollmentObserved.reason }}</p>
+        </div>
+        <button class="obs-enroll-btn" :disabled="resubmittingEnrollment" @click="handleResubmitFromModal">
+          <i class="fa-solid" :class="resubmittingEnrollment ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+          {{ resubmittingEnrollment ? 'Reenviando...' : 'Reenviar a FICO' }}
+        </button>
+      </div>
       <div class="enrollment-header mb-4">
         <div>
           <h6 class="enrollment-title">{{ enrollmentData.abbreviation }}</h6>
@@ -1075,6 +1087,7 @@ const router = useRouter()
 const route = useRoute()
 const comercialService = inject(ServiceKeys.Comercial)
 const authService = inject(ServiceKeys.Auth)
+const ficoService = inject(ServiceKeys.Fico)
 const catalog = inject('catalog')
 const programService = inject(ServiceKeys.Program)
 const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
@@ -1701,11 +1714,14 @@ async function fetchLeads() {
 const showEnrollmentModal = ref(false)
 const enrollmentData = ref(null)
 const isLoadingEnrollment = ref(false)
+const enrollmentObserved = ref(null)
+const resubmittingEnrollment = ref(false)
 
 async function openEnrollmentModal(enrollmentId) {
   if (!enrollmentId) return;
   isLoadingEnrollment.value = true;
   enrollmentData.value = null;
+  enrollmentObserved.value = null;
   showEnrollmentModal.value = true;
   try {
     const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
@@ -1713,12 +1729,34 @@ async function openEnrollmentModal(enrollmentId) {
     if (!data || !data.enrollment_id) { toast.error("No se encontraron datos para esta matrícula"); showEnrollmentModal.value = false; return; }
     data.files_list = (data.files_list || []).filter(f => f !== null);
     enrollmentData.value = data;
+
+    const flags = await ficoService.getEnrollmentFlags(Number(enrollmentId))
+    if (flags?.fico_status_alias === 'we_enrollment_status_observed') {
+      const audit = await ficoService.getAuditLog(Number(enrollmentId))
+      const obs = (audit || []).find(a => a.action === 'observed')
+      enrollmentObserved.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle', enrollmentId: Number(enrollmentId) }
+    }
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar la información de la matrícula");
     showEnrollmentModal.value = false;
   } finally {
     isLoadingEnrollment.value = false;
+  }
+}
+
+async function handleResubmitFromModal () {
+  if (!enrollmentObserved.value) return
+  resubmittingEnrollment.value = true
+  try {
+    await ficoService.resubmitEnrollment({ enrollment_id: enrollmentObserved.value.enrollmentId })
+    toast.success('Inscripcion reenviada a FICO correctamente.')
+    enrollmentObserved.value = null
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al reenviar inscripcion.')
+  } finally {
+    resubmittingEnrollment.value = false
   }
 }
 
@@ -2282,5 +2320,23 @@ const totalPlanSum = computed(() => {
 .tg-collapsed.tg-asesor { background: #2e1a47; }
 
 .tg-hint-asesor { color: #6d28d9; }
+
+.obs-enroll-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px; background: #FFFBEB;
+  border: 1px solid #FDE68A; border-left: 4px solid #F59E0B; border-radius: 8px;
+}
+.obs-enroll-icon { font-size: 22px; color: #F59E0B; flex-shrink: 0; }
+.obs-enroll-body { flex: 1; }
+.obs-enroll-body strong { display: block; font-size: 13px; color: #92400E; margin-bottom: 3px; }
+.obs-enroll-body p { margin: 0; font-size: 12px; color: #B45309; line-height: 1.5; }
+.obs-enroll-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; font-size: 12.5px; font-weight: 600;
+  background: #0D9488; color: #fff; border: none; border-radius: 6px;
+  cursor: pointer; font-family: inherit; flex-shrink: 0; transition: opacity .15s;
+}
+.obs-enroll-btn:hover { opacity: .9; }
+.obs-enroll-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 </style>

@@ -50,6 +50,20 @@
 <main class="exec-body pb-5" v-if="loaded">
       <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
 
+        <!-- Banner de inscripcion observada -->
+        <div v-if="observedData" class="obs-banner mb-4">
+          <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="obs-banner-body">
+            <strong>Inscripcion Observada por FICO</strong>
+            <p>{{ observedData.reason }}</p>
+            <p class="obs-banner-hint">Corrige los datos del lead y luego reenviar a FICO.</p>
+          </div>
+          <button class="obs-banner-btn" :disabled="resubmitting" @click="handleResubmit">
+            <i :class="['fa-solid me-1', resubmitting ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+            {{ resubmitting ? 'Reenviando...' : 'Reenviar a FICO' }}
+          </button>
+        </div>
+
         <div class="exec-fieldset mb-4">
           <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
           <div class="row g-3">
@@ -912,7 +926,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   </BaseModal>
 
 
-  <BaseModal v-model="showViewModal" title="Inscripción del Lead" size="xl">
+  <BaseModal v-model="showViewModal" title="Inscripcion del Lead" size="xl">
     <div class="insc-modal">
       <div class="insc-header mb-3">
         <div class="insc-info">
@@ -1707,17 +1721,17 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <template #footer>
       <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
       <button
-  class="btn-exec btn-exec-primary btn-exec-sm"
-  @click="confirmarInscripcion"
-  :disabled="
-  savingInsc ||
-  form.enrollment_id ||
-  (isInstallmentMode && !installmentPlanValid) ||
-  (isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
-"
->
+        class="btn-exec btn-exec-primary btn-exec-sm"
+        @click="confirmarInscripcion"
+        :disabled="
+        savingInsc ||
+        form.enrollment_id ||
+        (isInstallmentMode && !installmentPlanValid) ||
+        (isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
+      "
+      >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
-        {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
+        {{ savingInsc ? 'Guardando...' : 'Guardar inscripcion' }}
       </button>
     </template>
   </BaseModal>
@@ -1755,6 +1769,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 </template>
 
 <script setup>
+import { ref, watch, inject } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import { ServiceKeys } from '@/services'
 import { useLeadForm } from '@/composables/useLeadForm'
 import MultiSelect from '@/components/MultiSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
@@ -1811,6 +1829,43 @@ const {
   requiresEdition:  false,
   showInscription:  true,
 })
+
+const router = useRouter()
+const toast  = useToast()
+const ficoService = inject(ServiceKeys.Fico)
+const observedData = ref(null)
+const resubmitting = ref(false)
+
+async function checkObservedStatus() {
+  if (!form.enrollment_id) return
+  try {
+    const flags = await ficoService.getEnrollmentFlags(Number(form.enrollment_id))
+    if (flags?.fico_status_alias === 'we_enrollment_status_observed') {
+      const audit = await ficoService.getAuditLog(Number(form.enrollment_id))
+      const obs = (audit || []).find(a => a.action === 'observed')
+      observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
+    }
+  } catch { /* ignore */ }
+}
+
+async function handleResubmit() {
+  resubmitting.value = true
+  try {
+    await ficoService.resubmitEnrollment({ enrollment_id: Number(form.enrollment_id) })
+    toast.success('Inscripcion reenviada a FICO correctamente.')
+    observedData.value = null
+    router.push({ name: 'ComercialListado' })
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al reenviar inscripcion.')
+  } finally {
+    resubmitting.value = false
+  }
+}
+
+watch(loaded, async (val) => {
+  if (val && isEdit.value) await checkObservedStatus()
+}, { once: true })
 </script>
 
 <style scoped>
@@ -2778,4 +2833,60 @@ const {
   gap: .5rem;
   flex-shrink: 0;
 }
+
+.obs-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-left: 4px solid #F59E0B;
+  border-radius: 8px;
+}
+.obs-banner-icon {
+  font-size: 22px;
+  color: #F59E0B;
+  flex-shrink: 0;
+}
+.obs-banner-body {
+  flex: 1;
+}
+.obs-banner-body strong {
+  display: block;
+  font-size: 13.5px;
+  color: #92400E;
+  margin-bottom: 4px;
+}
+.obs-banner-body p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #B45309;
+  line-height: 1.5;
+}
+.obs-banner-hint {
+  font-size: 11px;
+  color: #92400E;
+  opacity: .7;
+  margin-top: 4px;
+  font-style: italic;
+}
+.obs-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: #0D9488;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: opacity .15s;
+}
+.obs-banner-btn:hover { opacity: .9; }
+.obs-banner-btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>

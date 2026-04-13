@@ -71,5 +71,10 @@ export default class EditionService {
     console.log(response)
     return response.items;
   }
-  
+
+  async bulkUpdateWhatsapp(items) {
+    const response = (await api.post('/edition/bulkupdatewhatsapp', { items })).data;
+    return response.data;
+  }
+
 }

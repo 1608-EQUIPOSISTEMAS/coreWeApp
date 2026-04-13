@@ -50,6 +50,12 @@ export default [
         to: '/producto/precios',
         roles: ['ADMIN', 'GERENCIA'], // 👈
       },
+      {
+        component: 'CNavItem',
+        name: 'Carga de Links',
+        to: '/producto/links',
+        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
+      },
     ],
   },
   {
