@@ -96,7 +96,7 @@
         <div class="row g-4">
           <div class="col-md-6 border-end pe-4">
             <h6 class="fieldset-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Programas Matriculados</h6>
-            <div v-if="selectedStudent.programs && selectedStudent.programs.length">
+            <div v-if="selectedStudent.programs && selectedStudent.programs.length" class="student-scroll-area">
               <div v-for="(prog, idx) in selectedStudent.programs" :key="idx" class="finance-card mb-2 p-3">
                 <div class="fw-700 text-dark" style="font-size: 13px;">{{ prog.program_name }}</div>
                 <div class="d-flex justify-content-between align-items-center mt-2">
@@ -112,7 +112,7 @@
 
           <div class="col-md-6 ps-3">
             <h6 class="fieldset-title text-amber"><i class="fa-solid fa-ticket me-1"></i> Historial con el Bot</h6>
-            <div v-if="selectedStudent.tickets && selectedStudent.tickets.length">
+            <div v-if="selectedStudent.tickets && selectedStudent.tickets.length" class="student-scroll-area">
               <div v-for="(tick, idx) in selectedStudent.tickets" :key="idx" class="file-item mb-2" style="padding: 8px 12px;">
                 <div class="d-flex flex-column w-100">
                   <div class="d-flex justify-content-between align-items-center">
@@ -295,4 +295,14 @@ onActivated(() => {
 .lead-avatar { width: 40px; height: 40px; border-radius: 50%; background: #f0f9ff; color: #2563eb; display: flex; align-items: center; justify-content: center; border: 1px solid #e0f2fe; }
 .finance-card { background: var(--slate-50, #f8fafc); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; }
 .file-item { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; }
+
+.student-scroll-area {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.student-scroll-area::-webkit-scrollbar { width: 4px; }
+.student-scroll-area::-webkit-scrollbar-track { background: transparent; }
+.student-scroll-area::-webkit-scrollbar-thumb { background: var(--slate-300, #cbd5e1); border-radius: 4px; }
+.student-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--slate-400, #94a3b8); }
 </style>

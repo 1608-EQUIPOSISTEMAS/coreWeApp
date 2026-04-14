@@ -42,7 +42,7 @@ export default [
         component: 'CNavItem',
         name: 'Cronograma',
         to: '/producto/cronograma',
-        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA', 'ACADEMICA'], // 👈
       },
       {
         component: 'CNavItem',
@@ -164,11 +164,19 @@ export default [
     ],
   },
   {
-    component: 'CNavItem',
-    name: 'Bot Académico',
-    to: '/academica/bot',
-    icon: 'cil-chat-bubble',
-    roles: ['ADMIN', 'GERENCIA'],
+    component: 'CNavGroup',
+    name: 'Académica',
+    to: '/academica',
+    icon: 'cil-school',
+    roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Bot Académico',
+        to: '/academica/bot',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
+    ],
   },
   {
     component: 'CNavGroup',
@@ -190,18 +198,17 @@ export default [
     name: 'General',
   },
   {
-    component: 'CNavGroup',
-    name: 'General',
-    to: '/general',
+    component: 'CNavItem',
+    name: 'Cliente',
+    to: '/general/cliente',
     icon: 'cil-user',
-    roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Cliente',
-        to: '/general/cliente',
-        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
-      },
-    ],
+    roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
+  },
+  {
+    component: 'CNavItem',
+    name: 'Notificaciones',
+    to: '/general/notificaciones',
+    icon: 'cil-bell',
+    roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
   },
 ]

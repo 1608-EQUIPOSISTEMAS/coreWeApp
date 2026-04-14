@@ -362,15 +362,29 @@
           </div>
         </div>
 
-        <div class="chart-panel" style="margin-bottom: 18px;">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Composición de Mis Leads por Estado</div>
-              <div class="chart-panel-sub">Evolución de la gestión de mis contactos en el tiempo</div>
+        <div class="split-panel-row" style="margin-bottom: 18px;">
+          <div class="chart-panel split-panel-main">
+            <div class="chart-panel-header">
+              <div>
+                <div class="chart-panel-title">Composición de Mis Leads por Estado</div>
+                <div class="chart-panel-sub">Evolución de la gestión de mis contactos en el tiempo</div>
+              </div>
+            </div>
+            <div class="chart-area chart-area-lg">
+              <Bar :data="myLeadsStackedChartData" :options="stackedBarOptions" />
             </div>
           </div>
-          <div class="chart-area chart-area-lg">
-            <Bar :data="myLeadsStackedChartData" :options="stackedBarOptions" />
+
+          <div class="chart-panel split-panel-side">
+            <div class="chart-panel-header">
+              <div>
+                <div class="chart-panel-title">Ventas por Programa</div>
+                <div class="chart-panel-sub">Distribución de mis ventas en el período</div>
+              </div>
+            </div>
+            <div class="chart-area chart-area-donut">
+              <Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" />
+            </div>
           </div>
         </div>
 
@@ -738,15 +752,29 @@
           </div>
         </div>
 
-        <div class="chart-panel" style="margin-top: 16px;">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Composición de Leads por Estado</div>
-              <div class="chart-panel-sub">Distribución de estados de gestión por cada asesor</div>
+        <div class="split-panel-row" style="margin-top: 16px;">
+          <div class="chart-panel split-panel-main">
+            <div class="chart-panel-header">
+              <div>
+                <div class="chart-panel-title">Composición de Leads por Estado</div>
+                <div class="chart-panel-sub">Distribución de estados de gestión por cada asesor</div>
+              </div>
+            </div>
+            <div class="chart-area chart-area-lg">
+              <Bar :data="leadsStackedChartData" :options="stackedBarOptions" />
             </div>
           </div>
-          <div class="chart-area chart-area-lg">
-            <Bar :data="leadsStackedChartData" :options="stackedBarOptions" />
+
+          <div class="chart-panel split-panel-side">
+            <div class="chart-panel-header">
+              <div>
+                <div class="chart-panel-title">Ventas por Programa</div>
+                <div class="chart-panel-sub">Distribución de ventas del equipo en el período</div>
+              </div>
+            </div>
+            <div class="chart-area chart-area-donut">
+              <Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" />
+            </div>
           </div>
         </div>
 
@@ -1277,8 +1305,14 @@ const trendChartData = computed(() => {
   const labels = stats.map(d => d.name)
   const ventasDiarias = stats.map(d => Number(d.ven) || 0)
   const consultasDiarias = stats.map(d => Number(d.con) || 0)
-  const cumulative = ventasDiarias.reduce((acc, curr, i) => { acc.push((i > 0 ? acc[i - 1] : 0) + curr); return acc }, [])
-  const metaTotal = totals.obj
+  const today = new Date().toISOString().split('T')[0]
+  let running = 0
+  const cumulative = stats.map(d => {
+    if (d.date && d.date > today) return null
+    running += Number(d.ven) || 0
+    return running
+  })
+  const metaTotal = totals.value.obj
   const projection = Array.from({ length: n }, (_, i) => Math.round((metaTotal / n) * (i + 1)))
   return {
     labels,
@@ -1360,6 +1394,57 @@ const stackedBarOptions = {
   scales: {
     x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
     y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } }
+  }
+}
+
+const PROGRAM_COLORS = ['#0d9488', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b', '#10b981', '#ec4899', '#0f172a']
+
+const programSalesChartData = computed(() => {
+  let rows = []
+
+  if (effectivePersonalView.value) {
+    rows = (myData.value?.ventas_por_programa || []).filter(p => Number(p.cantidad) > 0)
+  } else {
+    // Consolidar ventas_por_programa de todos los asesores
+    const map = {}
+    tableData.value.forEach(adv => {
+      ;(adv.ventas_por_programa || []).forEach(p => {
+        if (!map[p.nombre]) map[p.nombre] = 0
+        map[p.nombre] += Number(p.cantidad) || 0
+      })
+    })
+    rows = Object.entries(map)
+      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+      .filter(p => p.cantidad > 0)
+  }
+
+  if (rows.length === 0) return { labels: ['Sin datos'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] }
+
+  return {
+    labels: rows.map(p => p.nombre),
+    datasets: [{
+      data: rows.map(p => Number(p.cantidad)),
+      backgroundColor: rows.map((_, i) => PROGRAM_COLORS[i % PROGRAM_COLORS.length]),
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  }
+})
+
+const programSalesDoughnutOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '65%',
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: { boxWidth: 10, padding: 10, font: { size: 9 } }
+    },
+    tooltip: {
+      callbacks: {
+        label: ctx => `  ${ctx.label}: ${ctx.raw} ventas`
+      }
+    }
   }
 }
 
@@ -1765,5 +1850,11 @@ const myLeadsStackedChartData = computed(() => {
   .masthead-inner { padding: 14px; flex-direction: column; gap: 12px; align-items: flex-start; }
   .masthead-filters { flex-wrap: wrap; gap: 4px; }
   .action-cards-row { grid-template-columns: 1fr; }
+  .split-panel-row { flex-direction: column; }
+  .split-panel-main, .split-panel-side { width: 100%; }
 }
+/* ── Split panel row (Composición + Ventas por Programa) ── */
+.split-panel-row { display: flex; gap: 16px; align-items: stretch; }
+.split-panel-main { flex: 0 0 65%; min-width: 0; }
+.split-panel-side { flex: 0 0 calc(35% - 16px); min-width: 0; }
 </style>

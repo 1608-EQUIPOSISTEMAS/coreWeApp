@@ -136,10 +136,6 @@ import { cilReload } from '@coreui/icons'
       >
         Cuenta
       </CDropdownHeader>
-      <CDropdownItem>
-        <CIcon icon="cil-envelope-open" /> Mensajes
-        <CBadge color="success" class="ms-auto">{{ itemsCount }}</CBadge>
-      </CDropdownItem>
        <CDropdownItem @click="updateBase()" v-if="$hasRole(['COMERCIAL'])">
         <CIcon  icon="cil-cloud-download" /> Actualizar {{ userAlias }}
       </CDropdownItem>

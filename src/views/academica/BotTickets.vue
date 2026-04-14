@@ -232,7 +232,7 @@
     </div>
     <template #footer>
       <div class="d-flex justify-content-between w-100 align-items-center">
-        <a v-if="selectedTicket?.conversation_id" :href="`https://tu-chatwoot.com/app/accounts/1/conversations/${selectedTicket.conversation_id}`" target="_blank" class="btn-exec btn-exec-outline text-primary">
+        <a v-if="selectedTicket?.conversation_id" :href="`https://chat.we-educacion-ejecutiva.site/app/accounts/1/inbox/1/conversations/${selectedTicket.conversation_id}`" target="_blank" class="btn-exec btn-exec-outline text-primary">
           <i class="fa-solid fa-up-right-from-square me-1"></i> Abrir en Chatwoot
         </a>
         <span v-else></span>

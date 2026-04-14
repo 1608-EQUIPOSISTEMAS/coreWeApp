@@ -76,10 +76,7 @@ onMounted(load)
               :color="filterRead === false ? 'primary' : 'light'"
               @click="setFilter(false)"
             >
-              <span class="d-flex align-items-center gap-1">
-                <span style="width:8px;height:8px;border-radius:50%;background:#0d6efd;display:inline-block;"/>
-                Sin leer
-              </span>
+              Sin leer
             </CButton>
             <CButton
               size="sm"
@@ -89,7 +86,7 @@ onMounted(load)
               Leídas
             </CButton>
             <CButton size="sm" color="light" @click="load" title="Actualizar">
-              <CIcon icon="cil-reload" />
+              <i class="fa-solid fa-rotate-right"></i>
             </CButton>
           </div>
         </CCardHeader>

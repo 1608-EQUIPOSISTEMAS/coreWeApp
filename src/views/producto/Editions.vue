@@ -206,6 +206,14 @@
 
               <!-- ── TBODY: Vista Mensual ── -->
               <tbody v-if="!hasActiveFilters">
+                <template v-if="isTableLoading">
+                  <tr v-for="n in 8" :key="'sk-'+n" class="skeleton-row">
+                    <td :colspan="tableColCount">
+                      <div class="sk-cell" :style="{ width: (40 + (n * 17) % 45) + '%' }"></div>
+                    </td>
+                  </tr>
+                </template>
+                <template v-else>
                 <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
                   <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
                     <td :colspan="(isCompact ? 16 : 11) + (isAcademica ? 2 : 0)" class="week-header-cell">
@@ -424,10 +432,19 @@
                     </template>
                   </tr>
                 </template>
+                </template>
               </tbody>
 
               <!-- ── TBODY: Vista Histórica ── -->
               <tbody v-if="hasActiveFilters">
+                <template v-if="isTableLoading">
+                  <tr v-for="n in 8" :key="'skh-'+n" class="skeleton-row">
+                    <td :colspan="tableColCount">
+                      <div class="sk-cell" :style="{ width: (40 + (n * 17) % 45) + '%' }"></div>
+                    </td>
+                  </tr>
+                </template>
+                <template v-else>
                 <tr
                   v-for="(e, eIndex) in historyList"
                   :key="e.edition_num_id"
@@ -559,6 +576,7 @@
                     </td>
                   </template>
                 </tr>
+                </template>
               </tbody>
             </table>
             </div>
@@ -1608,6 +1626,20 @@
   letter-spacing: 0.04em; border: solid 1px white;
 }
 
+/* ── Skeleton Loading ── */
+.skeleton-row td { padding: 8px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
+.sk-cell {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Filas de datos ── */
 .tbody-row td {
   padding: 1px 4px; border-bottom: 1px solid #f8fafc;
@@ -2072,6 +2104,7 @@ const { proxy } = getCurrentInstance()
 const isAcademica = computed(() => proxy.$hasRole(['ACADEMICA']))
 const date = ref();
 const isCompact = ref(true)
+const tableColCount = computed(() => (isCompact.value ? 16 : 11) + (isAcademica.value ? 2 : 0))
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])
@@ -2805,6 +2838,7 @@ function clearAllFilters(reload = true) {
 
 // --- LISTADO ---
 async function fetchSchedule() {
+  isTableLoading.value = true
   try {
     if(!hasActiveFilters.value){
       const payload = {
@@ -2844,6 +2878,8 @@ async function fetchSchedule() {
     toast.error('Error al cargar el listado')
     schedules.value = []
     historyList.value = []
+  } finally {
+    isTableLoading.value = false
   }
 }
 onMounted(() => {
@@ -4217,6 +4253,7 @@ if (index !== 0) {
 const showHistoryModal = ref(false)
 const globalHistoryList = ref([])
 const isLoadingHistory = ref(false)
+const isTableLoading = ref(false)
 
 async function openGlobalHistory() {
   await openAuditHistory(null)

@@ -1,12 +1,7 @@
 <template>
-  <transition name="fade">
-    <div v-if="isLoading" class="overlay">
-      <div class="panel">
-        <!-- Tu logo opcional -->
-        <!-- <img class="logo" src="@/assets/logo.svg" alt="logo" /> -->
-        <div class="spinner" aria-label="Cargando"></div>
-        <div class="msg">Cargando…</div>
-      </div>
+  <transition name="bar-fade">
+    <div v-if="isLoading" class="top-progress-bar">
+      <div class="top-progress-track"></div>
     </div>
   </transition>
 </template>
@@ -17,30 +12,38 @@ const isLoading = loader.isLoading
 </script>
 
 <style scoped>
-.overlay{
-  position: fixed; inset: 0; z-index: 20000;
-  background: rgba(0,0,0,.35);          /* oscurecer */
-  display: grid; place-items: center;
-  backdrop-filter: blur(1px);
+.top-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 99999;
+  overflow: hidden;
 }
-.panel{
-  background: #fff; border-radius: 12px; padding: 18px 22px;
-  box-shadow: 0 10px 25px rgba(0,0,0,.15);
-  display: flex; align-items: center; gap: 12px;
-}
-.logo{ height: 28px; }
-.msg{ font-weight: 600; color: #111827; }
 
-.spinner, .spinner::after{
-  box-sizing: border-box;
+.top-progress-track {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    #0d9488 0%,
+    #14b8a6 30%,
+    #5eead4 50%,
+    #14b8a6 70%,
+    #0d9488 100%
+  );
+  background-size: 200% 100%;
+  animation: progress-slide 1.2s ease-in-out infinite;
 }
-.spinner{
-  width: 26px; height: 26px; border-radius: 50%;
-  border: 3px solid #e5e7eb; border-top-color: #3b82f6;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 
-.fade-enter-active, .fade-leave-active{ transition: opacity .15s ease; }
-.fade-enter-from, .fade-leave-to{ opacity: 0; }
+@keyframes progress-slide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.bar-fade-enter-active { transition: opacity 0.15s ease; }
+.bar-fade-leave-active { transition: opacity 0.3s ease 0.1s; }
+.bar-fade-enter-from,
+.bar-fade-leave-to   { opacity: 0; }
 </style>

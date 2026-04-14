@@ -330,6 +330,23 @@
             </thead>
 
             <tbody v-if="!isCompact">
+              <template v-if="isTableLoading">
+                <tr v-for="n in 10" :key="'sk-'+n" class="skeleton-row">
+                  <td><div class="sk-cell" style="width:52px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:120px"></div><div class="sk-cell mt-1" style="width:80px;height:8px"></div></td>
+                  <td><div class="sk-cell" style="width:80px"></div></td>
+                  <td><div class="sk-cell" style="width:60px"></div></td>
+                  <td><div class="sk-cell" style="width:180px"></div><div class="sk-cell mt-1" style="width:100px;height:8px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:60px"></div></td>
+                  <td><div class="sk-cell" style="width:55px"></div></td>
+                  <td><div class="sk-cell" style="width:90px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr
                 v-for="l in leadsRaw"
                 :key="l.id"
@@ -399,10 +416,25 @@
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
               </tr>
+              </template>
             </tbody>
 
 <!-- ══ COMPACT TBODY ══════════════════════════════════════════════════ -->
 <tbody v-else>
+  <template v-if="isTableLoading">
+    <tr v-for="n in 10" :key="'skc-'+n" class="skeleton-row">
+      <td><div class="sk-cell" style="width:52px"></div></td>
+      <td v-show="colGroups.programa" v-for="c in 6" :key="'p'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.programa"></td>
+      <td v-show="colGroups.cliente" v-for="c in 5" :key="'cl'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.cliente"></td>
+      <td v-show="colGroups.lead" v-for="c in 7" :key="'l'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.lead"></td>
+      <td v-show="colGroups.asesor" v-for="c in 4" :key="'a'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.asesor"></td>
+    </tr>
+  </template>
+  <template v-else>
   <tr
     v-for="l in leadsRaw"
     :key="l.id"
@@ -497,6 +529,7 @@
   <tr v-if="!leadsRaw.length">
     <td colspan="20" class="empty-state">No se encontraron leads con los filtros actuales.</td>
   </tr>
+  </template>
 </tbody>
           </table>
         </div>
@@ -1100,6 +1133,7 @@ const isCompact = ref(true)
 const dense = ref(false)
 const activeFilterChips = ref([])
 const leadsRaw = ref([])
+const isTableLoading = ref(false)
 const filtroOwners = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
 
@@ -1652,6 +1686,7 @@ function rebuildChips() {
 
 // === API ===
 async function fetchLeads() {
+  isTableLoading.value = true
   try {
     const getIds = (arr) => {
       if (!Array.isArray(arr)) return []
@@ -1708,6 +1743,8 @@ async function fetchLeads() {
     console.error('Error cargando leads:', e)
     leadsRaw.value = []
     pagin.value.total = 0
+  } finally {
+    isTableLoading.value = false
   }
 }
 
@@ -2250,15 +2287,83 @@ const totalPlanSum = computed(() => {
 
 .text-slate-400 { color: var(--slate-400, #94a3b8); }
 
+/* ══ SKELETON LOADING ════════════════════════════════════════ */
+.skeleton-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; }
+.sk-cell {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+  width: 100%;
+}
+.sk-cell.mt-1 { margin-top: 5px; }
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* ═══════════════════════════════════════════════════════════════ */
+
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }
 .hf-input { width: 100%; height: 28px; padding: 3px 8px; font-size: 11px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
 .hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20, 184, 166, .15); }
 .hf-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 10.5px; }
-.hf-multiselect { --ms-font-size: 11px; --ms-line-height: 1.3; --ms-min-height: 28px; --ms-py: 2px; --ms-px: 6px; --ms-tag-py: 1px; --ms-tag-px: 4px; --ms-tag-font-size: 9.5px; --ms-border-color: var(--border, #e2e8f0); --ms-border-color-active: var(--teal-500, #14b8a6); --ms-ring-color: rgba(20, 184, 166, .15); font-size: 11px; }
+.hf-multiselect { font-size: 11px; }
+.thead-filter .hf-multiselect :deep(.ms-trigger) {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-color: var(--border, #e2e8f0);
+  border-radius: 4px;
+  gap: 4px;
+}
+.thead-filter .hf-multiselect :deep(.ms-trigger:hover:not(.is-disabled)) {
+  border-color: var(--slate-400, #94a3b8);
+  background: #fff;
+}
+.thead-filter .hf-multiselect :deep(.ms-trigger.is-open),
+.thead-filter .hf-multiselect :deep(.ms-trigger.has-selection) {
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15);
+}
+.thead-filter .hf-multiselect :deep(.placeholder-text),
+.thead-filter .hf-multiselect :deep(.value-text) {
+  font-size: 10.5px;
+  color: var(--slate-400, #94a3b8);
+  font-family: inherit;
+}
+.thead-filter .hf-multiselect :deep(.value-text) {
+  color: var(--text-primary, #0f172a);
+}
+.thead-filter .hf-multiselect :deep(.trigger-icon) {
+  font-size: 10px;
+}
 .hf-clear-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 auto; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer; font-size: 11px; transition: all .15s; }
 .hf-clear-btn:hover { background: #fee2e2; border-color: #f87171; }
-.thead-filter .flatpickr-input { height: 28px !important; font-size: 10.5px !important; padding: 3px 7px !important; }
+.thead-filter :deep(.exec-flatpickr-input) {
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 10.5px !important;
+  padding: 0 8px !important;
+  font-family: inherit !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  color: var(--text-primary, #0f172a) !important;
+  box-sizing: border-box !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  outline: none !important;
+}
+.thead-filter :deep(.exec-flatpickr-input::placeholder) {
+  color: var(--slate-400, #94a3b8) !important;
+  font-size: 10.5px !important;
+}
+.thead-filter :deep(.exec-flatpickr-input:focus) {
+  border-color: var(--teal-500, #14b8a6) !important;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15) !important;
+}
 .thead-sub .ts { border-bottom: 1px solid var(--border, #e2e8f0); }
 /* ═══════════════════════════════════════════════════════════════ */
 

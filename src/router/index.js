@@ -121,7 +121,7 @@ const routes = [
             name: 'Edition',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Editions.vue'),
-            meta: { roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA', 'ACADEMICA'] },
           },
           {
             path: 'precios',
@@ -531,7 +531,7 @@ const routes = [
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),
-      meta: { roles: ['ADMIN', 'GERENCIA'] },
+      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
 
     ],
