@@ -173,7 +173,7 @@ export default [
     component: 'CNavGroup',
     name: 'Académica',
     to: '/academica',
-    icon: 'cil-school',
+    icon: 'cil-notes',
     roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
     items: [
       {

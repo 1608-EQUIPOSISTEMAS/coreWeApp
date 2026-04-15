@@ -18,11 +18,11 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Objetivos
           </button>
-          <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
+          <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
             Historial
           </button>
-          <button type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
+          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtros
             <span v-if="hasActiveFilters" class="btn-exec-dot"></span>
@@ -59,6 +59,34 @@
               </select>
               <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div v-if="isAcademica" class="filter-group">
+            <label class="filter-label">VISTA</label>
+            <div class="d-flex gap-2">
+              <button
+                type="button"
+                class="btn-exec btn-exec-sm"
+                :class="onlyCursos ? 'btn-exec-teal' : 'btn-exec-ghost'"
+                @click="onlyCursos = !onlyCursos"
+                :title="onlyCursos ? 'Mostrando solo Cursos · clic para ver todo' : 'Ver solo Cursos'"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                Solo Cursos
+                <span v-if="onlyCursos" class="btn-exec-dot"></span>
+              </button>
+              <button
+                type="button"
+                class="btn-exec btn-exec-sm"
+                :class="onlyActivos ? 'btn-exec-teal' : 'btn-exec-ghost'"
+                @click="onlyActivos = !onlyActivos"
+                :title="onlyActivos ? 'Mostrando solo Activos · clic para ver todo' : 'Ver solo Activos'"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Activo
+                <span v-if="onlyActivos" class="btn-exec-dot"></span>
               </button>
             </div>
           </div>
@@ -242,13 +270,13 @@
                       <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
                         <i class="fa-solid fa-hamsa"></i>
                       </button>
-                      <button class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
+                      <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                       </button>
                       <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
                        <i class="fa-solid fa-book-bookmark"></i>
                       </button>
-<button v-if="$hasRole(['ADMIN', 'PRODUCTO', 'ACADEMICA'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                      <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
                         <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
                         <i v-else class="fa-solid fa-sitemap"></i>
                       </button>
@@ -377,20 +405,32 @@
 
                     <!-- SEGUIMIENTO -->
                     <td class="td-c text-center">
-                      <label class="exec-switch scale-75" title="Ficha / Expediente">
-                        <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span>
-                      </label>
-                      <label class="exec-switch scale-75" title="Mejora / Upgrade">
-                        <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
-                      </label>
+                      <template v-if="!isAcademica">
+                        <label class="exec-switch scale-75" title="Ficha / Expediente">
+                          <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span>
+                        </label>
+                        <label class="exec-switch scale-75" title="Mejora / Upgrade">
+                          <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
+                        </label>
+                      </template>
+                      <template v-else>
+                        <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
+                        <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
+                      </template>
                     </td>
                     <td class="td-c text-center">
-                      <label class="exec-switch scale-75" title="Pre-Confirmación">
-                        <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
-                      </label>
-                      <label class="exec-switch scale-75" title="Confirmación">
-                        <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
-                      </label>
+                      <template v-if="!isAcademica">
+                        <label class="exec-switch scale-75" title="Pre-Confirmación">
+                          <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
+                        </label>
+                        <label class="exec-switch scale-75" title="Confirmación">
+                          <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
+                        </label>
+                      </template>
+                      <template v-else>
+                        <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
+                        <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
+                      </template>
                     </td>
 
                     <!-- REFERENCIA -->
@@ -417,17 +457,79 @@
                       </div>
                     </td>
                     <template v-if="isAcademica">
-                      <td class="td-e text-center">
-                        <a v-if="e.program_type === 'Curso' && e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="link-icon link-wa" title="Grupo WhatsApp">
-                          <i class="fa-brands fa-whatsapp"></i>
-                        </a>
-                        <span v-else class="text-muted">—</span>
+                      <!-- WA -->
+                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link' }">
+                        <template v-if="e.program_type === 'Curso'">
+                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link'" class="lac-inline-edit">
+                            <input
+                              ref="linkInputEl"
+                              class="lac-inline-input"
+                              v-model="editingLink.value"
+                              placeholder="https://chat.whatsapp.com/..."
+                              type="url"
+                              @keyup.enter="saveEditLink(e)"
+                              @keyup.escape="cancelEditLink()"
+                            />
+                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
+                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
+                            </button>
+                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
+                              <i class="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                          <div v-else class="lac-chip lac-chip--wa" :class="{ 'lac-chip--no-link': !e.whatsapp_link }">
+                            <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                            <div class="lac-chip-actions">
+                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'whatsapp_link')" title="Editar link de WhatsApp">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </a>
+                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </span>
+                            </div>
+                          </div>
+                        </template>
+                        <span v-else class="text-muted small">—</span>
                       </td>
-                      <td class="td-e text-center">
-                        <a v-if="e.program_type === 'Curso' && e.teams_link" :href="e.teams_link" target="_blank" class="link-icon link-teams" title="Reunión Teams">
-                          <i class="fa-solid fa-video"></i>
-                        </a>
-                        <span v-else class="text-muted">—</span>
+                      <!-- Teams -->
+                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'teams_link' }">
+                        <template v-if="e.program_type === 'Curso'">
+                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'teams_link'" class="lac-inline-edit">
+                            <input
+                              ref="linkInputEl"
+                              class="lac-inline-input"
+                              v-model="editingLink.value"
+                              placeholder="https://teams.microsoft.com/..."
+                              type="url"
+                              @keyup.enter="saveEditLink(e)"
+                              @keyup.escape="cancelEditLink()"
+                            />
+                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
+                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
+                            </button>
+                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
+                              <i class="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                          <div v-else class="lac-chip lac-chip--teams" :class="{ 'lac-chip--no-link': !e.teams_link }">
+                            <i class="fa-solid fa-video lac-chip-icon"></i>
+                            <div class="lac-chip-actions">
+                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'teams_link')" title="Editar link de Teams">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </a>
+                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </span>
+                            </div>
+                          </div>
+                        </template>
+                        <span v-else class="text-muted small">—</span>
                       </td>
                     </template>
                   </tr>
@@ -457,13 +559,13 @@
                       <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
                         <i class="fa-solid fa-hamsa"></i>
                       </button>
-                      <button class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
+                      <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                       </button>
-                      <button :class="['action-btn', (e.tree_detail.length == 0 && program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
+                      <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
                        <i class="fa-solid fa-book-bookmark"></i>
                       </button>
-<button v-if="$hasRole(['ADMIN', 'PRODUCTO', 'ACADEMICA'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
+                      <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
                         <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
                         <i v-else class="fa-solid fa-sitemap"></i>
                       </button>
@@ -531,12 +633,24 @@
                   </td>
 
                   <td class="td-c text-center">
-                    <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span></label>
-                    <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
+                    <template v-if="!isAcademica">
+                      <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span></label>
+                      <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
+                    </template>
+                    <template v-else>
+                      <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
+                      <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
+                    </template>
                   </td>
                   <td class="td-c text-center">
-                    <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
-                    <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
+                    <template v-if="!isAcademica">
+                      <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
+                      <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
+                    </template>
+                    <template v-else>
+                      <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
+                      <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
+                    </template>
                   </td>
 
                   <td class="td-d">
@@ -562,17 +676,43 @@
                     </div>
                   </td>
                   <template v-if="isAcademica">
-                    <td class="td-e text-center">
-                      <a v-if="e.program_type === 'Curso' && e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="link-icon link-wa" title="Grupo WhatsApp">
-                        <i class="fa-brands fa-whatsapp"></i>
-                      </a>
-                      <span v-else class="text-muted">—</span>
+                    <td class="td-e td-e-lac">
+                      <template v-if="e.program_type === 'Curso'">
+                        <div class="lac-chip lac-chip--wa">
+                          <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                          <div class="lac-chip-actions">
+                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de WhatsApp">
+                              <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <span v-else class="text-muted small">—</span>
                     </td>
-                    <td class="td-e text-center">
-                      <a v-if="e.program_type === 'Curso' && e.teams_link" :href="e.teams_link" target="_blank" class="link-icon link-teams" title="Reunión Teams">
-                        <i class="fa-solid fa-video"></i>
-                      </a>
-                      <span v-else class="text-muted">—</span>
+                    <td class="td-e td-e-lac">
+                      <template v-if="e.program_type === 'Curso'">
+                        <div class="lac-chip lac-chip--teams">
+                          <i class="fa-solid fa-video lac-chip-icon"></i>
+                          <div class="lac-chip-actions">
+                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de Teams">
+                              <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <span v-else class="text-muted small">—</span>
                     </td>
                   </template>
                 </tr>
@@ -1667,6 +1807,141 @@
 .link-teams { background: #ede9fe; color: #6264a7; }
 .link-teams:hover { background: #6264a7; color: #fff; }
 
+/* ── ACADÉMICA: celda con chip animado ── */
+.td-e-lac { padding: 0 6px !important; vertical-align: middle; }
+
+.lac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 20px;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  cursor: default;
+  transition: gap .2s ease, background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.lac-chip:hover {
+  gap: 5px;
+  border-color: rgba(0,0,0,.1);
+}
+.lac-chip--wa { color: #16a34a; }
+.lac-chip--wa:hover { background: #f0fdf4; border-color: #bbf7d0; }
+.lac-chip--teams { color: #6264a7; }
+.lac-chip--teams:hover { background: #f5f3ff; border-color: #ddd6fe; }
+.lac-chip--no-link { color: var(--slate-300, #cbd5e1) !important; }
+.lac-chip--no-link:hover { background: var(--slate-50, #f8fafc); border-color: var(--slate-200, #e2e8f0); }
+
+.lac-chip-icon {
+  font-size: 1.05rem;
+  transition: transform .2s ease;
+  flex-shrink: 0;
+}
+.lac-chip:hover .lac-chip-icon { transform: scale(0.88); }
+
+.lac-chip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width .25s ease, opacity .2s ease .05s;
+}
+.lac-chip:hover .lac-chip-actions {
+  max-width: 64px;
+  opacity: 1;
+}
+
+.lac-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: .68rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0;
+  transition: background .15s, color .15s, transform .1s;
+  flex-shrink: 0;
+}
+.lac-chip-btn:hover { transform: scale(1.15); }
+.lac-chip-btn--edit { color: var(--slate-500, #64748b); }
+.lac-chip-btn--edit:hover { background: var(--slate-100, #f1f5f9); color: var(--teal-600, #0d9488); }
+.lac-chip-btn--go { color: var(--slate-500, #64748b); }
+.lac-chip--wa .lac-chip-btn--go:hover { background: #dcfce7; color: #16a34a; }
+.lac-chip--teams .lac-chip-btn--go:hover { background: #ede9fe; color: #6264a7; }
+.lac-chip-btn--empty { opacity: .3; cursor: not-allowed; }
+.lac-chip-btn--empty:hover { transform: none; background: transparent; }
+
+/* ── Inline edit de links ── */
+.td-e-editing { min-width: 220px !important; padding: 4px 6px !important; }
+
+.lac-inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: lac-expand .15s ease;
+}
+@keyframes lac-expand {
+  from { opacity: 0; transform: scaleX(.85); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+
+.lac-inline-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  font-size: .72rem;
+  border: 1.5px solid var(--teal-400, #2dd4bf);
+  border-radius: 5px;
+  outline: none;
+  background: #fff;
+  color: var(--text-primary, #0f172a);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
+  transition: border-color .15s;
+}
+.lac-inline-input:focus { border-color: var(--teal-500, #14b8a6); }
+
+.lac-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: .7rem;
+  flex-shrink: 0;
+  transition: background .12s, transform .1s;
+  padding: 0;
+}
+.lac-inline-btn:hover:not(:disabled) { transform: scale(1.1); }
+.lac-inline-btn:disabled { opacity: .5; cursor: not-allowed; }
+.lac-inline-btn--save { background: #dcfce7; color: #16a34a; }
+.lac-inline-btn--save:hover:not(:disabled) { background: #22c55e; color: #fff; }
+.lac-inline-btn--cancel { background: #fee2e2; color: #dc2626; }
+.lac-inline-btn--cancel:hover:not(:disabled) { background: #ef4444; color: #fff; }
+
+/* ── Dots read-only para SEGUIMIENTO ── */
+.status-dot-ro {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 3px;
+  vertical-align: middle;
+}
+.dot-ro-on  { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
+.dot-ro-off { background: #cbd5e1; }
+
 .td-prog { max-width: 200px; }
 
 /* ── Botones de Acción en tabla ── */
@@ -2102,6 +2377,66 @@ const catalog = inject('catalog')
 const toast = useToast()
 const { proxy } = getCurrentInstance()
 const isAcademica = computed(() => proxy.$hasRole(['ACADEMICA']))
+
+// ── Filtros rápidos (ACADEMICA) ──────────────────────────────
+const onlyCursos  = ref(false)
+const onlyActivos = ref(false)
+// ── Inline link edit (ACADEMICA) ─────────────────────────────
+const linkInputEl   = ref(null)
+const savingLinkId  = ref(null)
+const editingLink   = reactive({ id: null, field: null, value: '' })
+
+function startEditLink(edition, field) {
+  editingLink.id    = edition.edition_num_id
+  editingLink.field = field
+  editingLink.value = edition[field] || ''
+  nextTick(() => { if (linkInputEl.value) linkInputEl.value.focus() })
+}
+
+function cancelEditLink() {
+  editingLink.id    = null
+  editingLink.field = null
+  editingLink.value = ''
+}
+
+async function saveEditLink(edition) {
+  const id    = editingLink.id
+  const field = editingLink.field
+  const value = editingLink.value.trim() || null
+  if (!id || !field) return
+
+  savingLinkId.value = id
+  try {
+    const currentData = await editionService.editionGet({ id })
+    if (!currentData) { toast.error('Error al sincronizar'); return }
+
+    const payload = {
+      expedient:       currentData.expedient       ? 'Y' : 'N',
+      upgrade:         currentData.upgrade          ? 'Y' : 'N',
+      preconfirmation: currentData.preconfirmation  ? 'Y' : 'N',
+      confirmation:    currentData.confirmation     ? 'Y' : 'N',
+      notes:           currentData.notes            || '',
+      whatsapp_link:   field === 'whatsapp_link' ? value : (currentData.whatsapp_link || null),
+      teams_link:      field === 'teams_link'    ? value : (currentData.teams_link    || null),
+    }
+
+    const resp = await editionService.editionUpdate({ id, edition: payload })
+    if (resp?.result === 1) {
+      edition[field] = value
+      toast.success('Link actualizado', { timeout: 1500 })
+      cancelEditLink()
+    } else {
+      toast.error(resp?.message || 'Error al guardar')
+    }
+  } catch (err) {
+    console.error(err)
+    toast.error('Error al guardar el link')
+  } finally {
+    savingLinkId.value = null
+  }
+}
+// ─────────────────────────────────────────────────────────────
+
 const date = ref();
 const isCompact = ref(true)
 const tableColCount = computed(() => (isCompact.value ? 16 : 11) + (isAcademica.value ? 2 : 0))
@@ -4065,9 +4400,23 @@ const filteredSchedules = computed(() => {
 
   // Verificar si hay algún filtro activo
   const hasFilter = Object.values(columnFilters).some(arr => arr.length > 0)
-  if (!hasFilter) return schedules.value
 
-  return schedules.value.map(week => {
+  const isActive = (item) => (item.active === true || item.active === 'Y') && item.cat_segment !== 'A5'
+
+  const baseSchedules = (hasFilter || onlyCursos.value || onlyActivos.value)
+    ? schedules.value.map(week => {
+        const filteredItems = (week.items || []).filter(item => {
+          if (onlyCursos.value  && item.program_type !== 'Curso') return false
+          if (onlyActivos.value && !isActive(item))               return false
+          return true
+        })
+        return { ...week, items: filteredItems }
+      }).filter(week => week.items.length > 0)
+    : schedules.value
+
+  if (!hasFilter) return baseSchedules
+
+  return baseSchedules.map(week => {
     const filteredItems = (week.items || []).filter(item => {
       // Helper para obtener valor comparable
       const getValue = (val) => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
