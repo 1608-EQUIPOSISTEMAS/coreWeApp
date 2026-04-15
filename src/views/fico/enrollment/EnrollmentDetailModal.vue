@@ -177,6 +177,13 @@
             <span class="edm-fin-label">Total</span>
             <span class="edm-fin-value fw700">S/. {{ fmt.formatMoney(modalTotal) }}</span>
           </div>
+          <template v-if="modalReserva > 0">
+            <div class="edm-fin-sep"></div>
+            <div class="edm-fin-item">
+              <span class="edm-fin-label">Inicial</span>
+              <span class="edm-fin-value c-blue">S/. {{ fmt.formatMoney(modalReserva) }}</span>
+            </div>
+          </template>
           <div class="edm-fin-sep"></div>
           <div class="edm-fin-item">
             <span class="edm-fin-label">Pagado</span>
@@ -300,10 +307,8 @@
                 <div class="edm-inicial-info">
                   <span class="edm-fin-label">Pago Inicial</span>
                   <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(modalInicial.amount) }}</span>
-                  <span class="c-muted" style="font-size:11px">Vencimiento: {{ fmt.formatDate(modalInicial.due_date) }}</span>
                 </div>
                 <div class="edm-inicial-actions">
-                  <span class="edm-pill" :class="fmt.cuotaStatusPill(modalInicial)">{{ fmt.cuotaStatusLabel(modalInicial) }}</span>
                   <a v-if="modalVoucher" :href="modalVoucher" target="_blank" class="edm-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
                 </div>
               </div>
@@ -381,9 +386,9 @@
                   <td class="fw700 tc">{{ c.installment_number || (idx + 1) }}</td>
                   <td v-if="c._isNew"><input v-model.number="c.amount" type="number" step="0.01" class="edm-input tr mono" placeholder="0.00" /></td>
                   <td v-else class="tr mono fw700">S/. {{ fmt.formatMoney(c.amount) }}</td>
-                  <td v-if="c._isNew"><input v-model="c.due_date" type="date" class="edm-input" /></td>
+                  <td v-if="c._isNew"><BaseDatePicker v-model="c.due_date" placeholder="dd/mm/aaaa" class="edm-datepicker" /></td>
                   <td v-else :class="{ 'c-red fw700': fmt.isOverdue(c.due_date) && c.status !== 'paid' }">{{ fmt.formatDate(c.due_date) }}</td>
-                  <td class="tc"><span class="edm-pill" :class="fmt.cuotaStatusPill(c)">{{ fmt.cuotaStatusLabel(c) }}</span></td>
+                  <td class="tc"><span class="edm-pill" :class="fmt.cuotaStatusPill(c, planStatus)">{{ fmt.cuotaStatusLabel(c, planStatus) }}</span></td>
                   <td>
                     <select v-model="c._cat_currency" class="edm-select-sm" :disabled="c.status === 'paid' || planStatus === 'borrador'">
                       <option :value="null">---</option>
@@ -511,7 +516,7 @@
             @click="handleConfirmPlan"
           >
             <i class="fa-solid" :class="confirmingPayment ? 'fa-spinner fa-spin' : 'fa-clipboard-check'"></i>
-            {{ confirmingPayment ? 'Confirmando...' : 'Confirmar Plan de Cuotas' }}
+            {{ confirmingPayment ? 'Confirmando...' : 'Confirmar Pago' }}
           </button>
           <button
             v-else-if="planStatus === 'pendiente'"
@@ -626,6 +631,7 @@ import { ref, reactive, computed, watch, inject } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import BaseModal from '@/components/BaseModal.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
 
 const props = defineProps({
@@ -889,8 +895,13 @@ const modalDescuento = computed(() => {
 })
 
 const modalTotal = computed(() => {
+  if (modalInstallments.value?.length) {
+    return modalInstallments.value.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
+  }
   return Number(props.enrollment?.total_to_pay) || Number(selectedDetail.value?.net_amount) || 0
 })
+
+const modalReserva = computed(() => props.enrollment ? fmt.getReserva(props.enrollment) : 0)
 
 const modalPagado = computed(() => {
   const e = props.enrollment
@@ -946,17 +957,21 @@ function filteredAccounts (entityId) {
 
 function buildInstallments () {
   const inst = selectedDetail.value?.installments || []
-  modalInstallments.value = inst.map(i => ({
-    ...i,
-    status: resolveInstallmentStatus(i),
-    _cat_currency: i.cat_currency || null,
-    _cat_payment_medium: i.cat_payment_medium || null,
-    _cat_business_entity: i.cat_business_entity || null,
-    _bank_account_id: i.bank_account_id || null,
-    _transaction_code: i.transaction_code || '',
-    _voucher_url: i.evidence_url || null,
-    _isNew: false
-  }))
+  const payments = selectedDetail.value?.payment_history || []
+  modalInstallments.value = inst.map(i => {
+    const pay = payments.find(p => p.installment_id === i.installment_id)
+    return {
+      ...i,
+      status: resolveInstallmentStatus(i),
+      _cat_currency: pay?.cat_payment_medium_id ? (selectedDetail.value?.cat_currency_id || null) : (i.cat_currency || null),
+      _cat_payment_medium: pay?.cat_payment_medium_id || i.cat_payment_medium || null,
+      _cat_business_entity: pay?.cat_business_entity_id || i.cat_business_entity || null,
+      _bank_account_id: pay?.bank_account_id || i.bank_account_id || null,
+      _transaction_code: pay?.transaction_code || i.transaction_code || '',
+      _voucher_url: pay?.evidence_url || i.evidence_url || null,
+      _isNew: false
+    }
+  })
 }
 
 function addCuota () {
@@ -1835,6 +1850,7 @@ watch(() => props.enrollment, async (e) => {
 .pill-green { background: #DCFCE7; color: #166534; }
 .pill-amber { background: #FEF3C7; color: #92400E; }
 .pill-red { background: #FEE2E2; color: #991B1B; }
+.pill-muted { background: #F3F4F6; color: #6B7280; }
 .pill-slate { background: #F1F5F9; color: #475569; }
 
 /* Actions bar */
@@ -2064,6 +2080,7 @@ watch(() => props.enrollment, async (e) => {
 .fw700 { font-weight: 700; }
 .mono { font-family: var(--e-mono); }
 .c-green { color: var(--e-success); }
+.c-blue  { color: #2563EB; }
 .c-red { color: var(--e-danger); }
 .c-muted { color: var(--e-text-muted); }
 </style>

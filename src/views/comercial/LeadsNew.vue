@@ -36,6 +36,24 @@
 >
   <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
 </button>
+<button
+  type="button"
+  v-if="
+    !form.enrollment_id &&
+    form.status_alias == 'we_lead_status_will_pay' &&
+    form.client_status == 'we_client_person' &&
+    form.program_version_id
+  "
+  class="btn-exec btn-exec-warning"
+  style="background: #6366F1;"
+  :disabled="
+    !!form.enrollment_id ||
+    (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)
+  "
+  @click="openTokenInscription()"
+>
+  <i class="fa-solid fa-link"></i> INSCRIPCION TOKEN
+</button>
           <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
             <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
           </button>
@@ -1144,6 +1162,50 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         </div>
       </div>
 
+      <!-- CONVALIDACION -->
+      <div class="exec-fieldset mb-3" v-if="programChildren.length > 0">
+        <h6 class="fieldset-title"><i class="fa-solid fa-rotate-right me-2"></i> Convalidacion</h6>
+        <label class="validation-toggle-label">
+          <input type="checkbox" v-model="hasValidation" />
+          Alumno tiene modulos ya cursados (convalidar)
+        </label>
+        <div v-if="hasValidation" class="mt-3">
+          <div v-for="child in programChildren" :key="child.child_program_version_id" class="validation-row">
+            <label class="validation-check">
+              <input type="checkbox"
+                :value="child.child_program_version_id"
+                v-model="validatedChildren" />
+              <span class="validation-name">{{ child.child_name }}</span>
+              <span v-if="validatedChildren.includes(child.child_program_version_id)" class="validation-badge-conv">Convalidar</span>
+              <span v-else class="validation-badge-insc">Inscribir</span>
+            </label>
+            <div v-if="!validatedChildren.includes(child.child_program_version_id) && child.editions?.length > 1" class="validation-edition">
+              <label class="validation-radio">
+                <input type="radio" :name="'edition_'+child.child_program_version_id" value="same"
+                  v-model="customEditionMode[child.child_program_version_id]" />
+                Misma edicion
+              </label>
+              <label class="validation-radio">
+                <input type="radio" :name="'edition_'+child.child_program_version_id" value="custom"
+                  v-model="customEditionMode[child.child_program_version_id]" />
+                Otra edicion:
+                <select v-if="customEditionMode[child.child_program_version_id] === 'custom'"
+                  v-model="customEditionIds[child.child_program_version_id]" class="exec-select-light ms-2" style="min-width:160px;display:inline-block;">
+                  <option v-for="ed in child.editions" :key="ed.edition_id" :value="ed.edition_id">
+                    {{ ed.code }} - {{ ed.start_date }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="mt-2">
+            <label class="exec-label">Nota de convalidacion</label>
+            <textarea v-model="validationNotes" class="exec-input-light w-100" rows="2"
+              placeholder="Motivo de la convalidacion..."></textarea>
+          </div>
+        </div>
+      </div>
+
 <div class="exec-fieldset mb-3" v-if="isEdit || validateInscriptionClientInfo()">
         <h6 class="fieldset-title">Condiciones de Pago</h6>
         <div class="row g-3">
@@ -1688,19 +1750,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     </div>
 
     <template #footer>
-      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
+      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
       <button
         class="btn-exec btn-exec-primary btn-exec-sm"
-        @click="confirmarInscripcion"
+        @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
         :disabled="
         savingInsc ||
-        form.enrollment_id ||
-        (isInstallmentMode && !installmentPlanValid) ||
-        (isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
+        (!isTokenMode && form.enrollment_id) ||
+        (!isTokenMode && isInstallmentMode && !installmentPlanValid) ||
+        (!isTokenMode && isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
       "
       >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
-        {{ savingInsc ? 'Guardando...' : 'Guardar inscripcion' }}
+        {{ savingInsc ? 'Guardando...' : (isTokenMode ? 'Crear Token' : 'Guardar inscripcion') }}
       </button>
     </template>
   </BaseModal>
@@ -1783,6 +1845,26 @@ const dateLimitConfig = {
   const editionService = inject(ServiceKeys.Edition)
   const ficoService      = inject(ServiceKeys.Fico)
   const catalog          = inject('catalog')
+
+const programChildren = ref([])
+const hasValidation = ref(false)
+const validatedChildren = ref([])
+const customEditionMode = reactive({})
+const customEditionIds = reactive({})
+const validationNotes = ref('')
+
+async function loadProgramChildren() {
+  if (!form.program_version_id) { programChildren.value = []; return }
+  try {
+    const children = await ficoService.getProgramChildren(form.program_version_id)
+    programChildren.value = children || []
+    for (const c of programChildren.value) {
+      if (!customEditionMode[c.child_program_version_id]) {
+        customEditionMode[c.child_program_version_id] = 'same'
+      }
+    }
+  } catch { programChildren.value = [] }
+}
 
   const todayIso = new Date().toISOString().slice(0, 16)
 const showDeleteWarningModal = ref(false)
@@ -2752,6 +2834,12 @@ function resetInscriptionData() {
 
   voucherTouched.value = false
   form.carnet_url = null
+  programChildren.value = []
+  hasValidation.value = false
+  validatedChildren.value = []
+  Object.keys(customEditionMode).forEach(k => delete customEditionMode[k])
+  Object.keys(customEditionIds).forEach(k => delete customEditionIds[k])
+  validationNotes.value = ''
 }
 const isMedioDisabled = computed(() =>
   ['we_social_media_coti', 'we_social_media_chatbot','we_social_media_wechat'].includes(form.canal_alias)
@@ -2954,7 +3042,7 @@ function buildEnrollmentPayload() {
     type: f.type || null
   }))
 
-  return {
+  const payload = {
     inscription: {
       lead_id:              createdLeadId.value,
       program_version_id:   form.edition_id ? null : form.program_version_id,
@@ -2971,13 +3059,13 @@ function buildEnrollmentPayload() {
       cat_insc_modality,
 cat_certificate_status,
       // Canal y pago
-      cat_payment_channel:  insc.cat_payment_channel,   // ← NUEVO (id) 
+      cat_payment_channel:  insc.cat_payment_channel,
       cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
       cat_currency,
-      cat_method_payment,                                // null si TOKEN o WEB
-      cat_token_provider:   insc.cat_token_provider,    // ← NUEVO (id)
+      cat_method_payment,
+      cat_token_provider:   insc.cat_token_provider,
       saved_money: reservaSplitEnabled.value
-  ? Number(reservaInmediata.value)   // solo lo que paga ahora
+  ? Number(reservaInmediata.value)
   : Number(insc.saved_money),
 
       // Precios y descuentos
@@ -2994,10 +3082,23 @@ cat_certificate_status,
       // Observaciones y archivos
       observations:         insc.observacions,
       student_attachment_url: form.carnet_url || null,
-      ticket_payment_urls:  paymentFiles,     // → enrollment_attachments
-      attachments:          generalAttachments // → lead_attachments
+      ticket_payment_urls:  paymentFiles,
+      attachments:          generalAttachments
     }
   }
+
+  if (hasValidation.value && validatedChildren.value.length > 0) {
+    payload.validations = {
+      enabled: true,
+      validated_children: validatedChildren.value,
+      custom_editions: Object.fromEntries(
+        Object.entries(customEditionIds).filter(([k, v]) => customEditionMode[k] === 'custom' && v)
+      ),
+      notes: validationNotes.value
+    }
+  }
+
+  return payload
 }
 
 async function confirmarInscripcion() {
@@ -3117,6 +3218,75 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
   }
 }
 
+async function confirmarToken() {
+  if (!comercialService) return
+  if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
+    toast.warning('El Precio Base no esta configurado.')
+    return
+  }
+  if (!validateInscriptionClientInfo()) {
+    toast.warning('Complete los campos obligatorios de la inscripcion')
+    return
+  }
+  if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) {
+    toast.warning('Faltan datos obligatorios en el formulario del Lead.')
+    return
+  }
+  if (!insc.cat_token_provider) {
+    toast.warning('Debe seleccionar el proveedor del Token (PayPal, Culqi, etc.).')
+    return
+  }
+
+  savingInsc.value = true
+  try {
+    const leadPayload = buildLeadPayload()
+    const currentLeadId = leadIdParam.value || createdLeadId.value
+    let resolvedLeadId = currentLeadId
+
+    if (currentLeadId) {
+      const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
+      if (leadResp.result === 0) { toast.error(leadResp.message); return }
+      if (leadResp.result === 2) { toast.warning(leadResp.message); return }
+    } else {
+      const leadResp = await comercialService.leadRegister(leadPayload)
+      if (leadResp.result === 0) { toast.error(leadResp.message); return }
+      if (leadResp.result === 2) { toast.warning(leadResp.message); return }
+      resolvedLeadId = leadResp.lead_id
+      createdLeadId.value = resolvedLeadId
+      createdPersonId.value = leadResp.person_id
+    }
+
+    const enrollmentPayload = buildEnrollmentPayload()
+    enrollmentPayload.inscription.lead_id = resolvedLeadId
+
+    const tokenPayload = {
+      lead_id: resolvedLeadId,
+      cat_provider: insc.cat_token_provider || null,
+      amount: Number(insc.montoFinal) || Number(insc.montoOriginal) || 0,
+      currency: insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
+      notes: `Generando link para ${form.full_name || '---'}`,
+      cat_payment_channel: insc.cat_payment_channel || null,
+      inscription_data: enrollmentPayload
+    }
+
+    const resp = await ficoService.tokenCreate(tokenPayload)
+    if (resp?.token_id || resp?.data?.token_id) {
+      toast.success('Token de pago creado correctamente.')
+      isTokenMode.value = false
+      showViewModal.value = false
+      inscInitialized.value = false
+      router.push({ name: 'ComercialListado' })
+    } else {
+      toast.error('Error al crear el token.')
+    }
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al crear token.')
+  } finally {
+    savingInsc.value = false
+  }
+}
+
 async function confirmarEliminacion() {
   showDeleteWarningModal.value = false
   await guardarEfectivo()
@@ -3194,7 +3364,19 @@ async function guardar() {
   }
 }
 
+const isTokenMode = ref(false)
+
+function openTokenInscription() {
+  isTokenMode.value = true
+  openInscription()
+  nextTick(() => {
+    const tokenChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_token')
+    if (tokenChannel) insc.cat_payment_channel = tokenChannel.id
+  })
+}
+
 function openInscription() {
+  if (!isTokenMode.value) isTokenMode.value = false
   if (!inscInitialized.value || observedData.value) {
     resetInscriptionData()
     insc.full_name              = form.full_name || ''
@@ -3224,8 +3406,15 @@ function openInscription() {
     }
 
     showViewModal.value = true
+    loadProgramChildren()
   })
 }
+
+watch(() => form.program_version_id, () => {
+  loadProgramChildren()
+  hasValidation.value = false
+  validatedChildren.value = []
+})
 
   function validateLeadInfo() {
     const required = ['fechaContactoInicial']
@@ -4831,4 +5020,65 @@ function toggleReschedule(contacto) {
 }
 .obs-banner-btn:hover { opacity: .9; }
 .obs-banner-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.validation-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  cursor: pointer;
+}
+.validation-toggle-label input[type="checkbox"] { accent-color: #0D9488; }
+.validation-row {
+  padding: 10px 12px;
+  border: 1px solid #F0F0F0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #FAFAFA;
+}
+.validation-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.validation-check input[type="checkbox"] { accent-color: #0D9488; }
+.validation-name { font-weight: 600; color: #1A1A1A; }
+.validation-badge-conv {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #FFF8EB;
+  color: #92400E;
+}
+.validation-badge-insc {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #ECFDF5;
+  color: #065F46;
+}
+.validation-edition {
+  margin-top: 8px;
+  padding-left: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.validation-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+.validation-radio input[type="radio"] { accent-color: #0D9488; }
 </style>

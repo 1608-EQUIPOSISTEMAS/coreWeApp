@@ -1,14 +1,12 @@
 <template>
   <div class="eh-card">
-    <div class="eh-avatar"><i class="fa-solid fa-user-graduate"></i></div>
-    <div class="eh-info">
-      <h2 class="eh-name">{{ detail.student_full_name || enrollment?.student_full_name || '---' }}</h2>
-      <div class="eh-meta">
-        <div class="eh-meta-col">
+    <div class="eh-card-top">
+      <div class="eh-avatar"><i class="fa-solid fa-user-graduate"></i></div>
+      <div class="eh-info">
+        <h2 class="eh-name">{{ detail.student_full_name || enrollment?.student_full_name || '---' }}</h2>
+        <div class="eh-meta">
           <span class="eh-meta-item"><i class="fa-solid fa-id-card"></i> {{ detail.document_number || enrollment?.document_number || '---' }}</span>
           <span class="eh-meta-item"><i class="fa-solid fa-user-tag"></i> {{ currentProfile }}</span>
-        </div>
-        <div class="eh-meta-col">
           <span v-if="email" class="eh-meta-item"><i class="fa-solid fa-envelope"></i> {{ email }}</span>
           <span v-if="phone" class="eh-meta-item"><i class="fa-solid fa-phone"></i> {{ phone }}</span>
         </div>
@@ -78,103 +76,138 @@ const additionalInfo = computed(() => props.enrollment?.additional_info || null)
 <style scoped>
 .eh-card {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+  background: transparent;
+  margin-bottom: 24px;
+}
+
+.eh-card-top {
+  display: flex;
   align-items: flex-start;
-  gap: 14px;
-  padding: 16px;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-left: 3px solid #0D9488;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  gap: 12px;
 }
 
 .eh-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #F0FDFA, #CCFBF1);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #F0F0F0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0D9488;
-  font-size: 20px;
+  color: #737373;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .eh-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.eh-meta { display: flex; flex-direction: column; gap: 3px; }
-.eh-meta-col { display: flex; flex-direction: column; gap: 3px; }
-.eh-name { margin: 0; font-size: 16px; font-weight: 700; color: #111827; line-height: 1.3; }
+.eh-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.eh-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
 
 .eh-meta-item {
-  font-size: 12.5px;
-  color: #6B7280;
+  font-size: 12px;
+  color: #737373;
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
-.eh-meta-item i { font-size: 11px; color: #9CA3AF; }
-.eh-meta-item i.fa-envelope,
-.eh-meta-item i.fa-phone { color: #0D9488; }
+.eh-meta-item i { font-size: 10px; color: #C4C4C4; }
 
 .eh-total {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #F0F0F0;
 }
-.eh-total-label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #9CA3AF; font-weight: 600; }
-.eh-total-amount { font-size: 18px; font-weight: 700; color: #111827; font-family: 'JetBrains Mono', monospace; }
+.eh-total-label {
+  font-size: 12px;
+  color: #A3A3A3;
+  font-weight: 500;
+}
+.eh-total-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1A1A1A;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.02em;
+}
 
 .eh-info-cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 .eh-ic {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px;
+  padding: 12px 14px;
   background: #fff;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid #F0F0F0;
 }
 
 .eh-ic-icon {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .ic-blue { background: #EFF6FF; color: #3B82F6; }
 .ic-purple { background: #F5F3FF; color: #8B5CF6; }
 .ic-green { background: #F0FDF4; color: #059669; }
-.ic-amber { background: #FFFBEB; color: #D97706; }
+.ic-amber { background: #FFF8EB; color: #D97706; }
 
-.eh-ic-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #9CA3AF; font-weight: 600; margin-bottom: 3px; }
-.eh-ic-value { display: block; font-size: 13px; font-weight: 600; color: #111827; line-height: 1.3; word-break: break-word; }
+.eh-ic-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #A3A3A3;
+  font-weight: 500;
+  margin-bottom: 1px;
+}
+.eh-ic-value {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A1A1A;
+  line-height: 1.3;
+  word-break: break-word;
+}
 
 .eh-additional {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 12px 14px;
   background: #F0FDFA;
-  border: 1px solid #99F6E4;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
   font-size: 12.5px;
   color: #115E59;
   word-break: break-word;
   overflow-wrap: break-word;
+  line-height: 1.5;
 }
-.eh-additional i { font-size: 13px; color: #0D9488; flex-shrink: 0; }
+.eh-additional i { font-size: 13px; color: #0D9488; flex-shrink: 0; margin-top: 1px; }
 </style>

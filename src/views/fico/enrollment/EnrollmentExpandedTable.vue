@@ -41,7 +41,7 @@
 
           <th
             class="eet-group-header eet-grp-finance"
-            :colspan="cg.finance ? 16 : 1"
+            :colspan="cg.finance ? 14 : 1"
             @click="toggle('finance')"
           >
             <span class="eet-group-label">
@@ -110,8 +110,6 @@
             <th class="eet-col-header">Medio Pago</th>
             <th class="eet-col-header">Ent. Empresa</th>
             <th class="eet-col-header">Ent. Financ.</th>
-            <th class="eet-col-header">Voucher</th>
-            <th class="eet-col-header">Estado FICO</th>
           </template>
           <th v-else class="eet-col-header eet-collapsed-hint">...</th>
 
@@ -185,22 +183,6 @@
             <td class="eet-cell">{{ e.method_payment_label || '\u2014' }}</td>
             <td class="eet-cell">{{ e.account_label || '\u2014' }}</td>
             <td class="eet-cell">{{ e.token_provider_label || '\u2014' }}</td>
-            <td class="eet-cell">
-              <a
-                v-if="e.payment_vouchers"
-                :href="e.payment_vouchers"
-                target="_blank"
-                rel="noopener"
-                class="eet-voucher-link"
-                title="Ver voucher"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M4 9.5l2-2.5 1.5 1.5L9.5 6 11 8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="5" r="1" fill="currentColor"/></svg>
-              </a>
-              <span v-else class="eet-muted">&mdash;</span>
-            </td>
-            <td class="eet-cell">
-              <span :class="['eet-pill', fmt.statusPill(e.confirmation)]">{{ e.confirmation || '\u2014' }}</span>
-            </td>
           </template>
           <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
 
@@ -268,7 +250,7 @@ const totalCols = computed(() => {
   n += cg.identity ? 4 : 1
   n += cg.profile ? 5 : 1
   n += cg.program ? 4 : 1
-  n += cg.finance ? 16 : 1
+  n += cg.finance ? 14 : 1
   n += cg.installments ? 16 : 1
   return n
 })

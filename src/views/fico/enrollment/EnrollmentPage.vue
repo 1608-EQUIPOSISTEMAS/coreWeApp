@@ -1,9 +1,10 @@
 <template>
   <div class="enrollment-page">
-    <span class="ep-breadcrumb">FICO / Inscripciones</span>
-
     <header class="ep-masthead">
-      <h1 class="ep-title">Inscripciones</h1>
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">FICO</span>
+        <h1 class="ep-title">Inscripciones</h1>
+      </div>
       <div class="ep-masthead-actions">
         <div class="ep-view-toggle">
           <button :class="['ep-toggle-btn', { 'is-active': list.viewMode.value === 'compact' }]" @click="list.viewMode.value = 'compact'">
@@ -13,7 +14,7 @@
             <i class="fa-solid fa-table-columns"></i> Expandida
           </button>
         </div>
-        <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nuevo</button>
+        <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nueva inscripcion</button>
       </div>
     </header>
 
@@ -72,62 +73,113 @@ onMounted(() => {
 <style scoped>
 .enrollment-page {
   --e-bg: #FFFFFF;
-  --e-bg-subtle: #F9FAFB;
-  --e-bg-muted: #F3F4F6;
-  --e-border: #E5E7EB;
-  --e-text: #111827;
-  --e-text-secondary: #6B7280;
-  --e-text-muted: #9CA3AF;
+  --e-bg-subtle: #FAFAFA;
+  --e-border: #EFEFEF;
+  --e-text: #1A1A1A;
+  --e-text-secondary: #737373;
+  --e-text-muted: #A3A3A3;
   --e-accent: #0D9488;
   --e-accent-soft: #F0FDFA;
-  --e-success: #059669;
-  --e-warning: #D97706;
-  --e-danger: #DC2626;
 
   background: var(--e-bg);
-  padding: 24px;
+  padding: 32px 32px 24px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
   min-height: 100vh;
 }
 
-.ep-breadcrumb {
-  display: block; font-size: 11px; color: var(--e-text-muted);
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 600;
-}
-
 .ep-masthead {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
 }
 
-.ep-title { font-size: 20px; font-weight: 700; color: var(--e-text); margin: 0; }
+.ep-masthead-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
-.ep-masthead-actions { display: flex; align-items: center; gap: 12px; }
+.ep-breadcrumb {
+  font-size: 11px;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.ep-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--e-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ep-masthead-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .ep-view-toggle {
-  display: flex; border: 1px solid var(--e-border); border-radius: 20px; overflow: hidden;
+  display: flex;
+  background: var(--e-bg-subtle);
+  border-radius: 8px;
+  padding: 3px;
 }
 
 .ep-toggle-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; font-size: 12.5px; font-weight: 600;
-  color: var(--e-text-secondary); background: var(--e-bg);
-  border: none; cursor: pointer; transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--e-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s ease;
+  font-family: inherit;
 }
-.ep-toggle-btn:first-child { border-right: 1px solid var(--e-border); }
-.ep-toggle-btn.is-active { background: var(--e-accent); color: #fff; }
-.ep-toggle-btn:not(.is-active):hover { background: var(--e-bg-subtle); }
+.ep-toggle-btn.is-active {
+  background: #fff;
+  color: var(--e-text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+}
+.ep-toggle-btn:not(.is-active):hover {
+  color: var(--e-text);
+}
 
 .ep-btn-new {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 18px; font-size: 12.5px; font-weight: 600;
-  color: #fff; background: var(--e-accent); border: none;
-  border-radius: 6px; cursor: pointer; transition: opacity .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--e-text);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s ease;
+  font-family: inherit;
+  letter-spacing: -0.01em;
 }
-.ep-btn-new:hover { opacity: 0.9; }
+.ep-btn-new:hover { background: #333; }
+.ep-btn-new i { font-size: 11px; }
 
 .ep-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 </style>

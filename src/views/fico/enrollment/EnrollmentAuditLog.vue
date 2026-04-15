@@ -90,51 +90,51 @@ function parseChanges (changes) {
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: #0D9488;
-  color: #fff;
+  background: #F0F0F0;
+  color: #737373;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .ea-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 40px;
-  color: #9CA3AF;
+  gap: 10px;
+  padding: 56px;
+  color: #C4C4C4;
   font-size: 13px;
 }
-.ea-empty i { font-size: 28px; opacity: .4; }
+.ea-empty i { font-size: 24px; opacity: .5; }
 
 .ea-item {
   display: flex;
   gap: 14px;
   position: relative;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
 }
 
 .ea-item:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: 15px;
-  top: 34px;
+  left: 13px;
+  top: 30px;
   bottom: 0;
-  width: 2px;
-  background: #E5E7EB;
+  width: 1px;
+  background: #F0F0F0;
 }
 
 .ea-dot {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   color: #fff;
-  background: #9CA3AF;
+  background: #C4C4C4;
   position: relative;
   z-index: 1;
 }
@@ -151,11 +151,15 @@ function parseChanges (changes) {
 .dot-children_created { background: #0D9488; }
 .dot-modality_changed { background: #D97706; }
 .dot-profile_changed { background: #D97706; }
+.dot-student_edited { background: #D97706; }
+.dot-created_from_token { background: #6366F1; }
 .dot-retired { background: #DC2626; }
 .dot-observed { background: #F59E0B; }
 .dot-resubmitted { background: #3B82F6; }
+.dot-validation_requested { background: #8B5CF6; }
+.dot-validation_applied { background: #059669; }
 
-.ea-body { flex: 1; padding-top: 4px; }
+.ea-body { flex: 1; padding-top: 3px; }
 
 .ea-head {
   display: flex;
@@ -164,41 +168,40 @@ function parseChanges (changes) {
   flex-wrap: wrap;
 }
 
-.ea-action { font-size: 13px; font-weight: 600; color: #111827; }
-.ea-user { font-size: 12px; color: #6B7280; }
-.ea-date { font-size: 11px; color: #9CA3AF; margin-left: auto; }
+.ea-action { font-size: 13px; font-weight: 600; color: #1A1A1A; letter-spacing: -0.01em; }
+.ea-user { font-size: 12px; color: #A3A3A3; font-weight: 400; }
+.ea-date { font-size: 11px; color: #C4C4C4; margin-left: auto; }
 
 .ea-details {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: #6B7280;
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  color: #737373;
   line-height: 1.5;
 }
 
 .ea-justificacion {
-  margin-top: 6px;
-  padding: 8px 12px;
-  background: #FEF3C7;
-  border-radius: 6px;
-  font-size: 12px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #FFF8EB;
+  border-radius: 8px;
+  font-size: 12.5px;
   color: #92400E;
-  line-height: 1.4;
+  line-height: 1.5;
 }
-.ea-justificacion i { margin-right: 4px; font-size: 10px; opacity: .6; }
+.ea-justificacion i { margin-right: 4px; font-size: 10px; opacity: .5; }
 
 .ea-changes {
-  margin-top: 6px;
-  padding: 8px 12px;
-  background: #F9FAFB;
-  border-radius: 6px;
-  border: 1px solid #E5E7EB;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #FAFAFA;
+  border-radius: 8px;
 }
 
-.ea-change-row { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; }
-.ea-change-row.ea-change-modified { background: #FEFCE8; margin: 0 -8px; padding: 3px 8px; border-radius: 4px; }
-.ea-change-field { font-weight: 600; color: #6B7280; min-width: 90px; }
-.ea-old { color: #DC2626; text-decoration: line-through; }
+.ea-change-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 0; }
+.ea-change-row.ea-change-modified { background: #FFFDF5; margin: 0 -10px; padding: 4px 10px; border-radius: 6px; }
+.ea-change-field { font-weight: 500; color: #A3A3A3; min-width: 90px; }
+.ea-old { color: #DC2626; text-decoration: line-through; opacity: .7; }
 .ea-new { color: #059669; font-weight: 600; }
-.ea-same { color: #374151; }
-.ea-arrow { font-size: 10px; color: #9CA3AF; }
+.ea-same { color: #1A1A1A; }
+.ea-arrow { font-size: 10px; color: #C4C4C4; }
 </style>

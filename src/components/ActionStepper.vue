@@ -77,13 +77,13 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
 
 <style scoped>
 .as-stepper {
-  --as-accent: #0D9488;
-  --as-border: #E5E7EB;
-  --as-text: #111827;
-  --as-text-muted: #9CA3AF;
-  --as-bg-subtle: #F9FAFB;
+  --as-accent: #1A1A1A;
+  --as-border: #F0F0F0;
+  --as-text: #1A1A1A;
+  --as-text-muted: #A3A3A3;
+  --as-bg-subtle: #FAFAFA;
   border: 1px solid var(--as-border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   background: #fff;
 }
@@ -107,58 +107,57 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
 .as-step-dot {
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 700;
-  background: var(--as-border);
+  font-weight: 600;
+  background: #E8E8E8;
   color: var(--as-text-muted);
-  transition: all .2s;
+  transition: all .25s ease;
 }
 
 .as-step.is-active .as-step-dot {
   background: var(--as-accent);
   color: #fff;
-  box-shadow: 0 0 0 3px rgba(13,148,136,.15);
 }
 
 .as-step.is-done .as-step-dot {
-  background: var(--as-accent);
+  background: #059669;
   color: #fff;
 }
 
 .as-step-label {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--as-text-muted);
-  transition: color .2s;
+  transition: color .25s ease;
 }
 
-.as-step.is-active .as-step-label { color: var(--as-text); }
-.as-step.is-done .as-step-label { color: var(--as-accent); }
+.as-step.is-active .as-step-label { color: var(--as-text); font-weight: 600; }
+.as-step.is-done .as-step-label { color: #059669; }
 
 .as-step-line {
   flex: 1;
-  height: 2px;
-  background: var(--as-border);
-  margin: 0 12px;
+  height: 1px;
+  background: #E8E8E8;
+  margin: 0 14px;
   min-width: 24px;
-  transition: background .2s;
+  transition: background .25s ease;
 }
 
-.as-step-line.is-done { background: var(--as-accent); }
+.as-step-line.is-done { background: #059669; }
 
 .as-body {
-  padding: 20px 24px;
+  padding: 24px;
 }
 
 .as-footer {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 24px;
+  padding: 16px 24px;
   border-top: 1px solid var(--as-border);
   background: var(--as-bg-subtle);
 }
@@ -168,35 +167,35 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
 .as-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
-  font-size: 12.5px;
-  font-weight: 600;
-  border-radius: 6px;
+  gap: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   font-family: inherit;
-  transition: all .15s;
+  transition: all .2s ease;
 }
 
-.as-btn:disabled { opacity: .5; cursor: not-allowed; }
+.as-btn:disabled { opacity: .4; cursor: not-allowed; }
 
 .as-btn--ghost {
   background: #fff;
-  color: #6B7280;
-  border: 1px solid var(--as-border);
+  color: #737373;
+  border: 1px solid #E8E8E8;
 }
-.as-btn--ghost:hover:not(:disabled) { background: var(--as-bg-subtle); border-color: #D1D5DB; }
+.as-btn--ghost:hover:not(:disabled) { background: #FAFAFA; border-color: #D4D4D4; color: #1A1A1A; }
 
 .as-btn--primary {
   background: var(--as-accent);
   color: #fff;
 }
-.as-btn--primary:hover:not(:disabled) { opacity: .9; }
+.as-btn--primary:hover:not(:disabled) { background: #333; }
 
 .as-btn--confirm {
   background: var(--as-accent);
   color: #fff;
 }
-.as-btn--confirm:hover:not(:disabled) { opacity: .9; }
+.as-btn--confirm:hover:not(:disabled) { background: #333; }
 </style>
