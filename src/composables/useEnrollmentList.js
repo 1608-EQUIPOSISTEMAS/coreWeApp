@@ -33,17 +33,17 @@ export function useEnrollmentList () {
 
   const { saveState } = useTablePersistence('fico_enrollments_state_v3', filters, pagin)
 
-  const colFilters = reactive({ alumno: '', programa: '', agente: null, estado: null })
+  const colFilters = reactive({ alumno: '', programa: '', agente: null, fPago: '', tipoPago: null, estado: null })
   let _colDebounce = null
 
   function clearColFilters () {
-    Object.assign(colFilters, { alumno: '', programa: '', agente: null, estado: null })
+    Object.assign(colFilters, { alumno: '', programa: '', agente: null, fPago: '', tipoPago: null, estado: null })
     filters.q = ''
     pagin.value.page = 1
     fetchEnrollments()
   }
 
-  watch([() => colFilters.alumno, () => colFilters.programa], () => {
+  watch([() => colFilters.alumno, () => colFilters.programa, () => colFilters.fPago], () => {
     clearTimeout(_colDebounce)
     _colDebounce = setTimeout(() => {
       const parts = []
@@ -61,6 +61,14 @@ export function useEnrollmentList () {
   const filteredEnrollments = computed(() => {
     let list = enrollments.value
     if (colFilters.agente) list = list.filter(e => (e.seller_agent_name || '') === colFilters.agente)
+    if (colFilters.fPago?.trim()) {
+      const q = colFilters.fPago.trim().toLowerCase()
+      list = list.filter(e => (e.pay_date || '').toLowerCase().includes(q))
+    }
+    if (colFilters.tipoPago) {
+      const isContado = colFilters.tipoPago === 'Al contado'
+      list = list.filter(e => (e.payment_type === 'PT') === isContado)
+    }
     if (colFilters.estado) list = list.filter(e => (e.confirmation || 'Pendiente') === colFilters.estado)
     return list
   })

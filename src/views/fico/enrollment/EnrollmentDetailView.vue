@@ -72,6 +72,8 @@
             :saving="savingFinancials"
             :last-payment="lastPayment"
             :enrollment-id="enrollmentId"
+            :validations="validations"
+            :program-children="programChildrenList"
             @start-edit="startEditing"
             @cancel-edit="cancelEditing"
             @save-edit="handleSaveEdit"
@@ -80,7 +82,10 @@
             @save-cuotas="handleSaveCuotasData"
             @add-cuota="addCuota"
             @remove-cuota="removeCuota"
+            @confirm-cuota="handleConfirmCuota"
             @reject-enrollment="handleRejectEnrollment"
+            @toggle-validation="handleToggleValidation"
+            @change-edition="handleChangeEdition"
           />
 
           <EnrollmentActions
@@ -94,6 +99,8 @@
             :current-profile="currentProfile"
             :modality-options="modalityOptions"
             :profile-options="profileOptions"
+            :odoo-email="odooEmail"
+            :student-flags="studentFlags"
             @action-completed="handleActionCompleted"
           />
 
@@ -152,6 +159,7 @@ const activeTab = ref('finanzas')
 // Odoo
 const odooEmail = ref(null)
 const odooPassword = ref(null)
+const studentFlags = ref(null)
 
 // Profile & Modality
 const activeProfileId = ref(null)
@@ -170,6 +178,10 @@ const ficoForm = reactive({
   transaction_code: ''
 })
 
+
+// Validations
+const validations = ref([])
+const programChildrenList = ref([])
 
 // Redirect
 const redirecting = ref(false)
@@ -192,7 +204,12 @@ const modalMode = computed(() => {
   return 'confirm'
 })
 
-const modalTotal = computed(() => Number(enrollment.value?.total_to_pay) || Number(detail.value?.net_amount) || 0)
+const modalTotal = computed(() => {
+  if (modalInstallments.value?.length) {
+    return modalInstallments.value.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
+  }
+  return Number(enrollment.value?.total_to_pay) || Number(detail.value?.net_amount) || 0
+})
 
 const statusLabel = computed(() => {
   const s = enrollment.value?.confirmation
@@ -262,17 +279,21 @@ function resolveInstallmentStatus (i) {
 
 function buildInstallments () {
   const inst = detail.value?.installments || []
-  modalInstallments.value = inst.map(i => ({
-    ...i,
-    status: resolveInstallmentStatus(i),
-    _cat_currency: i.cat_currency || null,
-    _cat_payment_medium: i.cat_payment_medium || null,
-    _cat_business_entity: i.cat_business_entity || null,
-    _bank_account_id: i.bank_account_id || null,
-    _transaction_code: i.transaction_code || '',
-    _voucher_url: i.evidence_url || null,
-    _isNew: false
-  }))
+  const payments = detail.value?.payment_history || []
+  modalInstallments.value = inst.map(i => {
+    const pay = payments.find(p => p.installment_id === i.installment_id)
+    return {
+      ...i,
+      status: resolveInstallmentStatus(i),
+      _cat_currency: pay?.cat_payment_medium_id ? (detail.value?.cat_currency_id || null) : (i.cat_currency || null),
+      _cat_payment_medium: pay?.cat_payment_medium_id || i.cat_payment_medium || null,
+      _cat_business_entity: pay?.cat_business_entity_id || i.cat_business_entity || null,
+      _bank_account_id: pay?.bank_account_id || i.bank_account_id || null,
+      _transaction_code: pay?.transaction_code || i.transaction_code || '',
+      _voucher_url: pay?.evidence_url || i.evidence_url || null,
+      _isNew: false
+    }
+  })
 }
 
 function addCuota () {
@@ -326,12 +347,14 @@ async function handleSaveEdit (justificacion) {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
+    const isCuotas = enrollment.value && !fmt.isContado(enrollment.value)
+    const ini = isCuotas ? modalInstallments.value.find(i => i.installment_number === 0 || i.is_reserva) : null
     const fields = {}
-    if (ficoForm.cat_payment_medium) fields.cat_payment_medium = ficoForm.cat_payment_medium
-    if (ficoForm.cat_business_entity) fields.cat_business_entity = ficoForm.cat_business_entity
-    if (ficoForm.bank_account_id) fields.bank_account_id = ficoForm.bank_account_id
-    if (ficoForm.transaction_code) fields.transaction_code = ficoForm.transaction_code
-    if (ficoForm.cat_currency) fields.cat_currency = ficoForm.cat_currency
+    fields.cat_payment_medium = ini ? ini._cat_payment_medium : ficoForm.cat_payment_medium
+    fields.cat_business_entity = ini ? ini._cat_business_entity : ficoForm.cat_business_entity
+    fields.bank_account_id = ini ? ini._bank_account_id : ficoForm.bank_account_id
+    fields.transaction_code = ini ? ini._transaction_code : ficoForm.transaction_code
+    fields.cat_currency = ini ? ini._cat_currency : ficoForm.cat_currency
     fields.notes = detail.value?.notes || null
     await ficoService.enrollmentUpdate({ enrollment_id: eid, justificacion: justificacion.trim(), fields })
     toast.success('Cambios guardados correctamente.')
@@ -381,14 +404,29 @@ async function handleConfirmPlan () {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
+    const inicial = modalInstallments.value.find(i => i.installment_number === 0 || i.is_reserva)
     const keepInstallments = modalInstallments.value.map(c => ({
       installment_id: c.installment_id || null,
       installment_number: c.installment_number,
       amount: Number(c.amount) || 0,
       due_date: c.due_date || null,
-      is_new: c._isNew || false
+      is_new: c._isNew || false,
+      cat_currency: c._cat_currency || null,
+      cat_payment_medium: c._cat_payment_medium || null,
+      cat_business_entity: c._cat_business_entity || null,
+      bank_account_id: c._bank_account_id || null,
+      transaction_code: c._transaction_code || ''
     }))
-    await ficoService.confirmPayment({ enrollment_id: eid, action: 'confirm_plan', installments: keepInstallments })
+    await ficoService.confirmPayment({
+      enrollment_id: eid,
+      action: 'confirm_plan',
+      installments: keepInstallments,
+      cat_currency: inicial?._cat_currency || null,
+      cat_payment_medium: inicial?._cat_payment_medium || null,
+      cat_business_entity: inicial?._cat_business_entity || null,
+      bank_account_id: inicial?._bank_account_id || null,
+      transaction_code: inicial?._transaction_code || ''
+    })
     const odoo = await ficoService.enrollInOdoo(eid)
     if (odoo?.error) {
       toast.warning('Plan confirmado, pero no se pudo inscribir en Odoo: ' + odoo.error, { timeout: 6000 })
@@ -399,12 +437,32 @@ async function handleConfirmPlan () {
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
     }
-    await refreshDetail()
+    startRedirect()
   } catch (err) {
     console.error(err)
     toast.error('Error al confirmar el plan.')
   } finally {
     savingFinancials.value = false
+  }
+}
+
+async function handleConfirmCuota (cuota) {
+  try {
+    await ficoService.confirmInstallment({
+      installment_id: cuota.installment_id,
+      enrollment_id: enrollmentId.value,
+      cat_currency: cuota._cat_currency,
+      cat_payment_medium: cuota._cat_payment_medium,
+      cat_business_entity: cuota._cat_business_entity,
+      bank_account_id: cuota._bank_account_id,
+      transaction_code: cuota._transaction_code,
+      voucher_url: cuota._voucher_url
+    })
+    toast.success(`Cuota ${cuota.installment_number} confirmada.`)
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al confirmar cuota.')
   }
 }
 
@@ -541,10 +599,58 @@ async function loadEnrollment () {
       activeModalityId.value = flags.cat_inscription_modality || null
       odooEmail.value = flags.odoo_email || null
       odooPassword.value = flags.odoo_password || null
+      studentFlags.value = flags
     }
-  }).catch(() => {})
+    loadValidationData()
+  }).catch(() => { loadValidationData() })
 
   refreshAuditLog()
+}
+
+function loadValidationData () {
+  const pvId = studentFlags.value?.program_version_id || enrollment.value?.program_version_id
+  if (pvId) {
+    ficoService.getProgramChildren(pvId).then(children => {
+      programChildrenList.value = children || []
+    }).catch(() => { programChildrenList.value = [] })
+  }
+  ficoService.getValidations(enrollmentId.value).then(vals => {
+    validations.value = vals || []
+  }).catch(() => { validations.value = [] })
+}
+
+async function handleToggleValidation (childVersionId) {
+  const current = [...validations.value]
+  const exists = current.some(v => v.child_version_id === childVersionId)
+  let updated
+  if (exists) {
+    updated = current.filter(v => v.child_version_id !== childVersionId)
+  } else {
+    updated = [...current, { child_version_id: childVersionId }]
+  }
+  try {
+    await ficoService.saveValidations({
+      enrollment_id: enrollmentId.value,
+      validations: updated
+    })
+    validations.value = updated
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function handleChangeEdition ({ childVersionId, editionId }) {
+  const current = [...validations.value]
+  const idx = current.findIndex(v => v.child_version_id === childVersionId)
+  if (idx >= 0) {
+    current[idx] = { ...current[idx], custom_edition_id: editionId || null, validation_type: editionId ? 'cross_edition' : 'same_edition' }
+  } else {
+    current.push({ child_version_id: childVersionId, custom_edition_id: editionId || null, validation_type: editionId ? 'cross_edition' : 'same_edition' })
+  }
+  try {
+    await ficoService.saveValidations({ enrollment_id: enrollmentId.value, validations: current })
+    validations.value = current
+  } catch (err) { console.error(err) }
 }
 
 onMounted(() => {
@@ -555,10 +661,10 @@ onMounted(() => {
 
 <style scoped>
 .edv-page {
-  background: #F9FAFB;
+  background: #fff;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #111827;
+  color: #1A1A1A;
 }
 
 /* Top bar */
@@ -569,51 +675,62 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 14px 28px;
+  padding: 0 32px;
+  height: 56px;
   background: #fff;
-  border-bottom: 1px solid #E5E7EB;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  border-bottom: 1px solid #F0F0F0;
 }
 
 .edv-back {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #6B7280;
-  background: #fff;
-  border: 1px solid #E5E7EB;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #737373;
+  background: transparent;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
-  transition: all .15s;
+  transition: all .2s ease;
 }
-.edv-back:hover { border-color: #0D9488; color: #0D9488; }
+.edv-back:hover { background: #FAFAFA; color: #1A1A1A; }
+.edv-back i { font-size: 12px; }
 
 .edv-topbar-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex: 1;
 }
 
-.edv-topbar-name { font-size: 14px; font-weight: 700; color: #111827; }
-.edv-topbar-program { font-size: 12.5px; color: #6B7280; font-weight: 500; }
+.edv-topbar-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A1A1A;
+  letter-spacing: -0.01em;
+}
+.edv-topbar-program {
+  font-size: 13px;
+  color: #A3A3A3;
+  font-weight: 400;
+}
 
 .edv-topbar-pill {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.01em;
 }
-.edv-topbar-pill.pill-green { background: #DCFCE7; color: #166534; }
-.edv-topbar-pill.pill-amber { background: #FEF3C7; color: #92400E; }
-.edv-topbar-pill.pill-red { background: #FEE2E2; color: #991B1B; }
+.edv-topbar-pill.pill-green { background: #ECFDF5; color: #065F46; }
+.edv-topbar-pill.pill-amber { background: #FFF8EB; color: #92400E; }
+.edv-topbar-pill.pill-red   { background: #FEF2F2; color: #991B1B; }
 
 /* Loading */
 .edv-loading {
@@ -621,72 +738,79 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 80px 24px;
-  color: #9CA3AF;
+  gap: 16px;
+  padding: 120px 24px;
+  color: #C4C4C4;
   font-size: 13px;
 }
 
 .edv-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #E5E7EB;
-  border-top-color: #0D9488;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #F0F0F0;
+  border-top-color: #1A1A1A;
   border-radius: 50%;
-  animation: edv-spin .7s linear infinite;
+  animation: edv-spin .6s linear infinite;
 }
 @keyframes edv-spin { to { transform: rotate(360deg); } }
 
 /* Two-column layout */
 .edv-layout {
   display: grid;
-  grid-template-columns: 38% 62%;
+  grid-template-columns: 360px 1fr;
   gap: 0;
-  height: calc(100vh - 57px);
+  height: calc(100vh - 56px);
   overflow: hidden;
 }
 
 .edv-sidebar {
-  padding: 24px;
+  padding: 28px 24px;
   overflow-y: auto;
-  border-right: 1px solid #E5E7EB;
-  background: #fff;
+  border-right: 1px solid #F0F0F0;
+  background: #FAFAFA;
 }
 
 .edv-main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff;
 }
 
 /* Tabs */
 .edv-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid #E5E7EB;
+  border-bottom: 1px solid #F0F0F0;
   background: #fff;
-  padding: 0 24px;
+  padding: 0 32px;
   flex-shrink: 0;
 }
 
 .edv-tab {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 14px 22px;
+  gap: 8px;
+  padding: 16px 20px;
   font-size: 13px;
-  font-weight: 600;
-  color: #6B7280;
+  font-weight: 500;
+  color: #A3A3A3;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
   cursor: pointer;
-  transition: color .15s, border-color .15s;
+  transition: color .2s ease, border-color .2s ease;
   font-family: inherit;
+  letter-spacing: -0.01em;
 }
-.edv-tab:hover { color: #111827; }
-.edv-tab.active { color: #0D9488; border-bottom-color: #0D9488; }
+.edv-tab:hover { color: #1A1A1A; }
+.edv-tab.active {
+  color: #1A1A1A;
+  font-weight: 600;
+  border-bottom-color: #1A1A1A;
+}
+.edv-tab i { font-size: 13px; }
 
 .edv-tab-badge {
   display: inline-flex;
@@ -696,16 +820,16 @@ onMounted(() => {
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #0D9488;
-  color: #fff;
+  background: #F0F0F0;
+  color: #737373;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .edv-tab-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 28px 32px;
 }
 
 /* Redirect overlay */
@@ -725,34 +849,34 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 24px;
-  background: #111827;
+  background: #1A1A1A;
   color: #fff;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  font-weight: 500;
+  box-shadow: 0 16px 48px rgba(0,0,0,.16);
   pointer-events: auto;
-  animation: edv-slide-up .3s ease-out;
+  animation: edv-slide-up .3s cubic-bezier(.16,1,.3,1);
 }
 
-.edv-redirect-card i { color: #34D399; font-size: 18px; }
+.edv-redirect-card i { color: #34D399; font-size: 16px; }
 
 .edv-redirect-cancel {
-  background: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.12);
   border: none;
-  color: #fff;
+  color: rgba(255,255,255,.8);
   padding: 5px 14px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s;
+  transition: background .2s ease;
 }
-.edv-redirect-cancel:hover { background: rgba(255,255,255,.25); }
+.edv-redirect-cancel:hover { background: rgba(255,255,255,.2); }
 
 @keyframes edv-slide-up {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 </style>

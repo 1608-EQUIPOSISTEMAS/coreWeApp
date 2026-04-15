@@ -15,7 +15,13 @@ export default [
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
-        roles: ['ADMIN', 'FICO', 'GERENCIA'], // 👈 agrega esto
+        roles: ['ADMIN', 'FICO', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Tokens de Pago',
+        to: '/fico/tokens',
+        roles: ['ADMIN', 'FICO', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
     ],
   },

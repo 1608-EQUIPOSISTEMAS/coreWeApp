@@ -4,8 +4,11 @@ export function useEnrollmentFormatters () {
 
   const formatDate = v => {
     if (!v) return '\u2014'
-    const m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})/)
-    if (m) return `${m[1]}/${m[2]}/${m[3]}`
+    const s = String(v)
+    const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/)
+    if (m1) return `${m1[1]}/${m1[2]}/${m1[3]}`
+    const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m2) return `${m2[3]}/${m2[2]}/${m2[1]}`
     const d = new Date(v)
     return isNaN(d) ? '\u2014' : d.toLocaleDateString('es-PE')
   }
@@ -36,15 +39,19 @@ export function useEnrollmentFormatters () {
 
   const isContado = e => e.payment_type === 'PT'
 
+  const getReserva = e => Number(e.reservation_amount) || 0
+
   const getPagado = e => {
-    if (isPendiente(e)) return 0
-    return Number(e.total_to_pay) || 0
+    if (isContado(e)) return isPendiente(e) ? 0 : Number(e.total_to_pay) || 0
+    return Number(e.paid_amount) || 0
   }
 
   const calcSaldo = e => {
     if (isContado(e)) return 0
     const total = Number(e.total_to_pay) || 0
-    return total - getPagado(e)
+    const pagado = getPagado(e)
+    const reserva = getReserva(e)
+    return total - Math.max(pagado, reserva)
   }
 
   const rowClass = e => {
@@ -54,7 +61,13 @@ export function useEnrollmentFormatters () {
     return (saldo / total) < 0.5 ? 'row-amber' : 'row-red'
   }
 
-  const isOverdue = d => d ? new Date(d) < new Date() : false
+  const parseLocalDate = d => {
+    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3])
+    return new Date(d)
+  }
+
+  const isOverdue = d => d ? parseLocalDate(d) < new Date() : false
 
   const cuotaRowClass = c => {
     if (c.status === 'paid') return 'cuota-paid'
@@ -62,31 +75,35 @@ export function useEnrollmentFormatters () {
     return ''
   }
 
-  const cuotaStatusPill = c => {
+  const isInicial = c => c.installment_number === 0 || c.is_reserva
+
+  const cuotaStatusPill = (c, planStatus) => {
     if (c.status === 'paid') return 'pill-green'
-    if (isOverdue(c.due_date)) return 'pill-red'
+    if (!isInicial(c) && isOverdue(c.due_date)) return 'pill-red'
+    if (planStatus === 'borrador') return 'pill-muted'
     return 'pill-amber'
   }
 
-  const cuotaStatusLabel = c => {
+  const cuotaStatusLabel = (c, planStatus) => {
     if (c.status === 'paid') return 'Pagado'
-    if (isOverdue(c.due_date)) return 'Vencido'
+    if (!isInicial(c) && isOverdue(c.due_date)) return 'Vencido'
+    if (planStatus === 'borrador') return 'Borrador'
     return 'Pendiente'
   }
 
   const auditIcon = action => {
-    const map = { created: 'fa-solid fa-circle-plus', approved: 'fa-solid fa-circle-check', edited: 'fa-solid fa-pen', odoo_enrolled: 'fa-solid fa-graduation-cap', odoo_unenrolled: 'fa-solid fa-user-xmark', email_sent: 'fa-solid fa-envelope', edition_reprogrammed: 'fa-solid fa-calendar-xmark', course_changed: 'fa-solid fa-right-left', created_from_cc: 'fa-solid fa-right-to-bracket', children_created: 'fa-solid fa-sitemap', modality_changed: 'fa-solid fa-shuffle', profile_changed: 'fa-solid fa-user-tag', retired: 'fa-solid fa-user-slash', observed: 'fa-solid fa-eye', resubmitted: 'fa-solid fa-rotate-right' }
+    const map = { created: 'fa-solid fa-circle-plus', approved: 'fa-solid fa-circle-check', edited: 'fa-solid fa-pen', odoo_enrolled: 'fa-solid fa-graduation-cap', odoo_unenrolled: 'fa-solid fa-user-xmark', email_sent: 'fa-solid fa-envelope', edition_reprogrammed: 'fa-solid fa-calendar-xmark', course_changed: 'fa-solid fa-right-left', created_from_cc: 'fa-solid fa-right-to-bracket', children_created: 'fa-solid fa-sitemap', modality_changed: 'fa-solid fa-shuffle', profile_changed: 'fa-solid fa-user-tag', student_edited: 'fa-solid fa-user-pen', retired: 'fa-solid fa-user-slash', observed: 'fa-solid fa-eye', resubmitted: 'fa-solid fa-rotate-right', created_from_token: 'fa-solid fa-link', validation_requested: 'fa-solid fa-rotate-right', validation_applied: 'fa-solid fa-circle-check' }
     return map[action] || 'fa-solid fa-circle-info'
   }
 
   const auditLabel = action => {
-    const map = { created: 'Inscripcion creada', approved: 'Pago aprobado', edited: 'Datos editados', odoo_enrolled: 'Inscrito en Odoo', odoo_unenrolled: 'Desinscrito de Odoo', email_sent: 'Correo enviado', edition_reprogrammed: 'Edicion reprogramada', course_changed: 'Cambio de curso', created_from_cc: 'Creado por cambio de curso', children_created: 'Modulos hijos creados', modality_changed: 'Cambio de modalidad', profile_changed: 'Cambio de perfil', retired: 'Alumno retirado', observed: 'Inscripcion observada', resubmitted: 'Reenviado a FICO' }
+    const map = { created: 'Inscripcion creada', approved: 'Pago aprobado', edited: 'Datos editados', odoo_enrolled: 'Inscrito en Odoo', odoo_unenrolled: 'Desinscrito de Odoo', email_sent: 'Correo enviado', edition_reprogrammed: 'Edicion reprogramada', course_changed: 'Cambio de curso', created_from_cc: 'Creado por cambio de curso', children_created: 'Modulos hijos creados', modality_changed: 'Cambio de modalidad', profile_changed: 'Cambio de perfil', student_edited: 'Datos del alumno editados', retired: 'Alumno retirado', observed: 'Inscripcion observada', resubmitted: 'Reenviado a FICO', created_from_token: 'Creado desde token de pago', validation_requested: 'Convalidacion solicitada', validation_applied: 'Convalidacion aplicada' }
     return map[action] || action
   }
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, isPendiente, isContado, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel,
     auditIcon, auditLabel
   }

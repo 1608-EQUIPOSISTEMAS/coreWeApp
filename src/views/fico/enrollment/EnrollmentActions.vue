@@ -16,8 +16,8 @@
       <button class="eact-btn" @click="startAction('modality')">
         <i class="fa-solid fa-shuffle"></i> Cambiar Modalidad
       </button>
-      <button class="eact-btn" @click="startAction('profile')">
-        <i class="fa-solid fa-user-tag"></i> Cambiar Perfil
+      <button class="eact-btn" @click="startAction('editStudent')">
+        <i class="fa-solid fa-user-pen"></i> Editar Alumno
       </button>
       <div class="eact-sep"></div>
       <button class="eact-btn eact-btn-danger" @click="startAction('retire')">
@@ -231,28 +231,48 @@
         </template>
       </ActionStepper>
 
-      <!-- CAMBIAR PERFIL -->
+      <!-- EDITAR ALUMNO -->
       <ActionStepper
-        v-if="activeAction === 'profile'"
+        v-if="activeAction === 'editStudent'"
         v-model="stepperStep"
-        :steps="['Cambiar Perfil']"
-        :can-advance="!!newProfileId && !!profileJustificacion.trim()"
+        :steps="['Editar Alumno']"
+        :can-advance="canAdvanceEditStudent"
         :loading="saving"
         confirm-label="Confirmar"
         confirm-icon="fa-check"
         @cancel="cancelAction"
-        @confirm="handleChangeProfile"
+        @confirm="handleEditStudent"
       >
         <template #step-0>
           <div class="eact-form">
             <div class="eact-grid-2">
               <div class="eact-field">
-                <label>Perfil actual</label>
-                <div class="eact-readonly">{{ currentProfile }}</div>
+                <label>Nombres</label>
+                <input v-model="editStudentForm.first_name" type="text" class="eact-input" />
               </div>
               <div class="eact-field">
-                <label>Nuevo perfil</label>
-                <select v-model="newProfileId" class="eact-select">
+                <label>Apellidos</label>
+                <input v-model="editStudentForm.last_name" type="text" class="eact-input" />
+              </div>
+              <div class="eact-field">
+                <label>N. Documento</label>
+                <input v-model="editStudentForm.document_number" type="text" class="eact-input" />
+              </div>
+              <div class="eact-field">
+                <label>Correo Original</label>
+                <input v-model="editStudentForm.origin_email" type="email" class="eact-input" />
+              </div>
+              <div class="eact-field">
+                <label>Correo Odoo</label>
+                <input v-model="editStudentForm.odoo_email" type="email" class="eact-input" />
+              </div>
+              <div class="eact-field">
+                <label>Telefono</label>
+                <input v-model="editStudentForm.origin_phone" type="text" class="eact-input" />
+              </div>
+              <div class="eact-field">
+                <label>Perfil</label>
+                <select v-model="editStudentForm.cat_profile_id" class="eact-select">
                   <option :value="null">Seleccionar...</option>
                   <option v-for="p in profileOptions" :key="p.id" :value="p.id">{{ p.description }}</option>
                 </select>
@@ -260,7 +280,7 @@
             </div>
             <div class="eact-field">
               <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
-              <textarea v-model="profileJustificacion" class="eact-textarea" rows="2" placeholder="Motivo del cambio..."></textarea>
+              <textarea v-model="editStudentJustificacion" class="eact-textarea" rows="2" placeholder="Motivo de la edicion..."></textarea>
             </div>
           </div>
         </template>
@@ -346,7 +366,9 @@ const props = defineProps({
   currentModality: { type: String, default: '---' },
   currentProfile: { type: String, default: '---' },
   modalityOptions: { type: Array, default: () => [] },
-  profileOptions: { type: Array, default: () => [] }
+  profileOptions: { type: Array, default: () => [] },
+  odooEmail: { type: String, default: null },
+  studentFlags: { type: Object, default: null }
 })
 
 const emit = defineEmits(['action-completed'])
@@ -369,6 +391,7 @@ function startAction (action) {
   stepperStep.value = 0
   if (action === 'rp') loadRPEditions()
   if (action === 'cc') loadCCPrograms()
+  if (action === 'editStudent') initEditStudent()
 }
 
 function cancelAction () {
@@ -390,8 +413,8 @@ function resetAllForms () {
   Object.assign(ccForm, { cat_currency: null, cat_method_payment: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', ticket_payment_urls: [] })
   newModalityId.value = null
   modalityJustificacion.value = ''
-  newProfileId.value = null
-  profileJustificacion.value = ''
+  Object.assign(editStudentForm, { first_name: '', last_name: '', document_number: '', origin_email: '', odoo_email: '', origin_phone: '', cat_profile_id: null })
+  editStudentJustificacion.value = ''
   retireReason.value = ''
   retireHasRefund.value = false
   retireRefundAmount.value = 0
@@ -580,23 +603,58 @@ async function handleChangeModality () {
   }
 }
 
-// ── CAMBIAR PERFIL ──
-const newProfileId = ref(null)
-const profileJustificacion = ref('')
+// ── EDITAR ALUMNO ──
+const editStudentForm = reactive({
+  first_name: '', last_name: '', document_number: '',
+  origin_email: '', odoo_email: '', origin_phone: '', cat_profile_id: null
+})
+const editStudentOriginal = reactive({
+  first_name: '', last_name: '', document_number: '',
+  origin_email: '', odoo_email: '', origin_phone: '', cat_profile_id: null
+})
+const editStudentJustificacion = ref('')
 
-async function handleChangeProfile () {
+const canAdvanceEditStudent = computed(() => {
+  if (!editStudentJustificacion.value.trim()) return false
+  return Object.keys(editStudentOriginal).some(k => editStudentForm[k] !== editStudentOriginal[k])
+})
+
+function initEditStudent () {
+  const e = props.enrollment || {}
+  const d = props.detail || {}
+  const f = props.studentFlags || {}
+  const initial = {
+    first_name: f.first_name || d.first_name || '',
+    last_name: f.last_name || d.last_name || '',
+    document_number: e.document_number || d.document_number || '',
+    origin_email: f.origin_email || e.email || d.origin_email || d.email || '',
+    odoo_email: f.odoo_email || props.odooEmail || '',
+    origin_phone: f.origin_phone || e.phone || d.origin_phone || d.phone || '',
+    cat_profile_id: f.cat_profile_id || e.cat_profile_id || d.cat_profile_id || null
+  }
+  Object.assign(editStudentForm, initial)
+  Object.assign(editStudentOriginal, { ...initial })
+}
+
+async function handleEditStudent () {
   saving.value = true
   try {
-    await ficoService.changeProfile({
+    await ficoService.editStudent({
       enrollment_id: enrollmentId.value,
-      new_profile_id: newProfileId.value,
-      justificacion: profileJustificacion.value.trim()
+      first_name: editStudentForm.first_name.trim(),
+      last_name: editStudentForm.last_name.trim(),
+      document_number: editStudentForm.document_number.trim(),
+      origin_email: editStudentForm.origin_email.trim(),
+      odoo_email: editStudentForm.odoo_email.trim(),
+      origin_phone: editStudentForm.origin_phone.trim(),
+      cat_profile_id: editStudentForm.cat_profile_id,
+      justificacion: editStudentJustificacion.value.trim()
     })
-    toast.success('Perfil actualizado correctamente.')
+    toast.success('Datos del alumno actualizados.')
     emit('action-completed')
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al cambiar perfil.')
+    toast.error(err?.response?.data?.error || 'Error al editar alumno.')
   } finally {
     saving.value = false
   }
@@ -668,145 +726,145 @@ async function handleRetire () {
 .eact-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
-  border: 1px solid #E5E7EB;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #E8E8E8;
   border-radius: 8px;
   background: #fff;
-  color: #374151;
+  color: #1A1A1A;
   cursor: pointer;
-  transition: all .15s;
+  transition: all .2s ease;
   font-family: inherit;
 }
-.eact-btn:hover { border-color: #0D9488; color: #0D9488; }
-.eact-btn i { font-size: 12px; color: #6B7280; }
-.eact-btn:hover i { color: #0D9488; }
+.eact-btn:hover { border-color: #1A1A1A; background: #FAFAFA; }
+.eact-btn i { font-size: 13px; color: #A3A3A3; transition: color .2s ease; }
+.eact-btn:hover i { color: #1A1A1A; }
 
-.eact-btn-danger { border-color: #FCA5A5; color: #DC2626; }
-.eact-btn-danger:hover { border-color: #DC2626; background: #FEF2F2; color: #DC2626; }
-.eact-btn-danger i { color: #DC2626; }
+.eact-btn-danger { border-color: #E8E8E8; color: #DC2626; }
+.eact-btn-danger:hover { border-color: #FCA5A5; background: #FFFBFB; }
+.eact-btn-danger i { color: #E8A3A3; }
+.eact-btn-danger:hover i { color: #DC2626; }
 
-.eact-btn-warn { border-color: #FDE68A; color: #D97706; }
-.eact-btn-warn:hover { border-color: #F59E0B; background: #FFFBEB; color: #B45309; }
-.eact-btn-warn i { color: #D97706; }
+.eact-btn-warn { border-color: #E8E8E8; color: #B45309; }
+.eact-btn-warn:hover { border-color: #FDE68A; background: #FFFDF5; }
+.eact-btn-warn i { color: #D4B783; }
+.eact-btn-warn:hover i { color: #D97706; }
 
 .eact-tag {
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 10px;
-  font-weight: 700;
-  background: #FEF3C7;
-  color: #92400E;
+  font-weight: 600;
+  background: #F5F5F5;
+  color: #737373;
 }
-.eact-tag-cc { background: #EDE9FE; color: #6D28D9; }
+.eact-tag-cc { background: #F3F0FF; color: #6D28D9; }
 
-.eact-sep { width: 1px; height: 28px; background: #E5E7EB; }
+.eact-sep { width: 1px; height: 24px; background: #F0F0F0; }
 
 /* Active action */
 .eact-active { margin-top: 4px; }
 
 /* Form elements */
-.eact-form { display: flex; flex-direction: column; gap: 16px; }
+.eact-form { display: flex; flex-direction: column; gap: 18px; }
 
 .eact-student-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: #FAFAFA;
+  border-radius: 10px;
+  padding: 14px 18px;
 }
 .eact-student-main { display: flex; flex-direction: column; gap: 2px; }
-.eact-student-name { font-size: 13.5px; font-weight: 700; color: #111827; }
-.eact-student-doc { font-size: 11.5px; color: #6B7280; font-weight: 500; }
+.eact-student-name { font-size: 14px; font-weight: 600; color: #1A1A1A; letter-spacing: -0.01em; }
+.eact-student-doc { font-size: 12px; color: #A3A3A3; font-weight: 400; }
 .eact-program-pill {
   font-size: 11px; font-weight: 600; color: #4338CA;
-  background: #EEF2FF; border: 1px solid #C7D2FE;
-  padding: 4px 12px; border-radius: 20px;
+  background: #F3F0FF;
+  padding: 5px 14px; border-radius: 6px;
   white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;
 }
 
-.eact-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.eact-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.eact-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eact-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 
-.eact-field { display: flex; flex-direction: column; gap: 5px; }
-.eact-field label { font-size: 11px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: .03em; }
+.eact-field { display: flex; flex-direction: column; gap: 6px; }
+.eact-field label { font-size: 11px; font-weight: 500; color: #A3A3A3; text-transform: uppercase; letter-spacing: .05em; }
 .eact-req { color: #DC2626; }
 
 .eact-readonly {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
-  background: #F3F4F6;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  padding: 8px 12px;
+  color: #1A1A1A;
+  background: #FAFAFA;
+  border-radius: 8px;
+  padding: 9px 14px;
 }
 
 .eact-select-wrap { position: relative; }
 .eact-select {
   width: 100%;
-  padding: 8px 36px 8px 12px;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
+  padding: 9px 36px 9px 14px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  color: #374151;
+  color: #1A1A1A;
   background: #fff;
   appearance: none;
   cursor: pointer;
-  transition: border-color .15s;
+  transition: all .2s ease;
 }
-.eact-select:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,.08); }
-.eact-select:disabled { background: #F9FAFB; color: #9CA3AF; cursor: not-allowed; }
-.eact-select-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #9CA3AF; pointer-events: none; }
+.eact-select:focus { outline: none; border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
+.eact-select:disabled { background: #FAFAFA; color: #C4C4C4; cursor: not-allowed; }
+.eact-select-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #C4C4C4; pointer-events: none; }
 
 .eact-input {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #E5E7EB;
-  border-radius: 6px;
+  padding: 9px 14px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  color: #374151;
+  color: #1A1A1A;
   background: #fff;
   outline: none;
-  transition: border-color .15s;
+  transition: all .2s ease;
 }
-.eact-input:focus { border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,.08); }
+.eact-input:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
 .eact-input-amount { font-variant-numeric: tabular-nums; font-weight: 600; }
 
 .eact-textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1.5px solid #F59E0B;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
-  color: #374151;
-  background: #FFFBEB;
+  color: #1A1A1A;
+  background: #FFFDF5;
   resize: vertical;
   min-height: 72px;
-  transition: border-color .15s, box-shadow .15s;
+  transition: all .2s ease;
 }
-.eact-textarea:focus { outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(245,158,11,.1); }
+.eact-textarea:focus { outline: none; border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.06); }
 .eact-textarea::placeholder { color: #D1D5DB; }
-.eact-textarea-danger { border-color: #FCA5A5; background: #FFF5F5; }
-.eact-textarea-danger:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+.eact-textarea-danger { border-color: #FCA5A5; background: #FFFBFB; }
+.eact-textarea-danger:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.06); }
 
 .eact-subsection-label {
   font-size: 10px;
   text-transform: uppercase;
-  font-weight: 700;
-  color: #9CA3AF;
-  letter-spacing: .5px;
+  font-weight: 500;
+  color: #A3A3A3;
+  letter-spacing: .06em;
   padding-top: 4px;
 }
 
-.eact-amount { font-size: 13px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; padding: 8px 0; }
+.eact-amount { font-size: 14px; font-weight: 600; color: #1A1A1A; font-variant-numeric: tabular-nums; padding: 8px 0; }
 .eact-amount-green { color: #059669; }
 .eact-amount-red { color: #DC2626; }
 
@@ -815,7 +873,7 @@ async function handleRetire () {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: #92400E;
 }
 .eact-warn-label i { font-size: 13px; color: #D97706; }
@@ -823,32 +881,31 @@ async function handleRetire () {
 .eact-refund-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .eact-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+  color: #1A1A1A;
   cursor: pointer;
 }
-.eact-checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
+.eact-checkbox-label input { width: 16px; height: 16px; cursor: pointer; accent-color: #1A1A1A; }
 
 .eact-observe-banner {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
-  border-radius: 8px;
+  padding: 14px 18px;
+  background: #FFF8EB;
+  border-radius: 10px;
   font-size: 12.5px;
   color: #92400E;
   line-height: 1.5;
 }
-.eact-observe-banner i { font-size: 18px; color: #F59E0B; margin-top: 2px; flex-shrink: 0; }
+.eact-observe-banner i { font-size: 16px; color: #F59E0B; margin-top: 2px; flex-shrink: 0; }
 .eact-observe-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
 .eact-observe-banner p { margin: 0; }
 </style>

@@ -35,36 +35,40 @@ const showPass = ref(false)
 .eo-bar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  background: #F5F3FF;
-  border: 1px solid #DDD6FE;
-  border-radius: 8px;
+  gap: 0;
+  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #F0F0F0;
 }
 
 .eo-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 12.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F5F5F5;
+  overflow: hidden;
 }
+.eo-item:last-child { border-bottom: none; }
 
-.eo-item > i { color: #7C3AED; font-size: 13px; }
-.eo-label { color: #9CA3AF; font-weight: 600; }
-.eo-value { color: #111827; font-weight: 700; }
-.eo-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: .02em; }
-.eo-muted { color: #9CA3AF; font-style: italic; font-weight: 500; }
+.eo-item > i { color: #8B5CF6; font-size: 13px; opacity: .7; }
+.eo-label { color: #A3A3A3; font-weight: 500; font-size: 12px; }
+.eo-value { color: #1A1A1A; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.eo-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: .02em; font-size: 12px; }
+.eo-muted { color: #C4C4C4; font-style: italic; font-weight: 400; }
 
 .eo-toggle {
   background: none;
   border: none;
-  color: #7C3AED;
+  color: #A3A3A3;
   cursor: pointer;
   font-size: 12px;
-  padding: 2px 4px;
+  padding: 4px 6px;
   border-radius: 4px;
-  transition: all .15s;
+  transition: all .2s ease;
 }
-.eo-toggle:hover { background: #EDE9FE; }
+.eo-toggle:hover { background: #F5F5F5; color: #737373; }
 </style>

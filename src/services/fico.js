@@ -32,6 +32,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async confirmInstallment(payload) {
+    const response = (await api.post('/fico/confirminstallment', payload)).data;
+    return response.data;
+  }
+
   async sendConfirmationEmail(enrollment_id) {
     const response = (await api.post('/fico/sendconfirmationemail', { enrollment_id })).data;
     return response.data;
@@ -82,6 +87,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async editStudent(payload) {
+    const response = (await api.post('/fico/editstudent', payload)).data;
+    return response.data;
+  }
+
   async changeModality(payload) {
     const response = (await api.post('/fico/changemodality', payload)).data;
     return response.data;
@@ -119,6 +129,51 @@ export default class FicoService {
 
   async resubmitEnrollment(payload) {
     const response = (await api.post('/fico/resubmitenrollment', payload)).data;
+    return response.data;
+  }
+
+  async getProgramChildren(programVersionId) {
+    const response = (await api.get(`/fico/programchildren/${programVersionId}`)).data;
+    return response.data;
+  }
+
+  async getValidations(enrollmentId) {
+    const response = (await api.get(`/fico/validations/${enrollmentId}`)).data;
+    return response.data;
+  }
+
+  async saveValidations(payload) {
+    const response = (await api.post('/fico/validations', payload)).data;
+    return response.data;
+  }
+
+  async tokenList(params) {
+    const response = (await api.get('/token/list', { params })).data;
+    return response.data;
+  }
+
+  async tokenCreate(payload) {
+    const response = (await api.post('/token/create', payload)).data;
+    return response.data;
+  }
+
+  async tokenUpdate(payload) {
+    const response = (await api.put('/token/update', payload)).data;
+    return response.data;
+  }
+
+  async tokenMarkPaid(payload) {
+    const response = (await api.post('/token/markpaid', payload)).data;
+    return response.data;
+  }
+
+  async tokenConfirm(payload) {
+    const response = (await api.post('/token/confirm', payload)).data;
+    return response.data;
+  }
+
+  async tokenDelete(id) {
+    const response = (await api.delete(`/token/delete/${id}`)).data;
     return response.data;
   }
 }
