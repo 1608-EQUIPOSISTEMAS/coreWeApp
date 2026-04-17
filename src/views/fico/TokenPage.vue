@@ -31,6 +31,7 @@
           <tr class="ect-head">
             <th>Alumno / Documento</th>
             <th>Programa / Edicion</th>
+            <th class="tc" style="width:90px">Tipo</th>
             <th class="tc" style="width:110px">Proveedor</th>
             <th class="tr" style="width:110px">Monto</th>
             <th class="tc" style="width:120px">Estado</th>
@@ -47,11 +48,15 @@
             </td>
             <td>
               <div class="cell-main cell-clip">{{ t.program_name }}</div>
-              <span class="pill pill-sm pill-slate">{{ t.edition_code }}</span>
+              <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ t.edition_start_date ? `(${new Date(t.edition_start_date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})` : '' }}</span>
               <span v-if="hasValidations(t)" class="pill pill-sm pill-amber" style="margin-left:4px">Convalida</span>
             </td>
             <td class="tc">
-              <span class="pill pill-sm pill-blue">{{ t.provider_name }}</span>
+              <span v-if="t.payment_type" class="pill pill-sm" :class="t.payment_type === 'credito' ? 'pill-amber' : 'pill-teal'">{{ t.payment_type === 'credito' ? 'Credito' : 'Debito' }}</span>
+              <span v-else class="pill pill-sm pill-slate">---</span>
+            </td>
+            <td class="tc">
+              <span class="pill pill-sm pill-blue">{{ t.provider_name || '---' }}</span>
             </td>
             <td class="tr mono">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
             <td class="tc">
@@ -128,14 +133,27 @@
             </button>
           </div>
           <div class="tp-modal-body">
-            <label class="tp-label">URL de pago</label>
+            <div v-if="tokenAdvisorObs" class="tp-obs-ref">
+              <div class="tp-obs-ref-title"><i class="fa-solid fa-comment-dots"></i> Observacion del asesor</div>
+              <div class="tp-obs-ref-text">{{ tokenAdvisorObs }}</div>
+            </div>
+            <div v-if="linkToken?.payment_type" class="tp-obs-ref" style="margin-top:8px;background:#FEF3C7;border-color:#FCD34D">
+              <div class="tp-obs-ref-title"><i class="fa-solid fa-credit-card"></i> Tipo de pago</div>
+              <div class="tp-obs-ref-text" style="font-weight:700">{{ linkToken.payment_type === 'credito' ? 'Credito' : 'Debito' }}</div>
+            </div>
+            <label class="tp-label" style="margin-top:16px">Proveedor <span style="color:#DC2626">*</span></label>
+            <select v-model="linkForm.cat_provider" class="tp-input">
+              <option :value="null">--- Seleccionar proveedor ---</option>
+              <option v-for="p in providerCatalog" :key="p.id" :value="p.id">{{ p.description }}</option>
+            </select>
+            <label class="tp-label">URL de pago <span style="color:#DC2626">*</span></label>
             <input v-model="linkForm.payment_url" class="tp-input" placeholder="https://..." />
             <label class="tp-label">Notas</label>
             <textarea v-model="linkForm.notes" class="tp-input tp-textarea" rows="2"></textarea>
           </div>
           <div class="tp-modal-foot">
             <button class="tp-btn-cancel" @click="showLinkModal = false">Cancelar</button>
-            <button class="ep-btn-new" :disabled="!linkForm.payment_url" @click="submitLink">Guardar</button>
+            <button class="ep-btn-new" :disabled="!linkForm.payment_url || !linkForm.cat_provider" @click="submitLink">Guardar</button>
           </div>
         </div>
       </div>
@@ -145,13 +163,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 
 const toast = useToast()
 const router = useRouter()
+const catalog = inject('catalog')
+const providerCatalog = (() => {
+  const items = catalog.options('we_token_provider')
+  if (items.length > 0) return items
+  return [
+    { id: 3247, description: 'Qulqi' },
+    { id: 3248, description: 'MercadoPago' },
+    { id: 3249, description: 'PayPal' }
+  ]
+})()
 
 const PAGE_SIZE = 20
 
@@ -202,12 +230,22 @@ async function fetchTokens () {
 // --- Add Link ---
 const showLinkModal = ref(false)
 const linkToken = ref(null)
-const linkForm = ref({ payment_url: '', provider_reference: '', notes: '' })
+const linkForm = ref({ payment_url: '', cat_provider: null, notes: '' })
+
+const tokenAdvisorObs = computed(() => {
+  const t = linkToken.value
+  if (!t) return null
+  if (t.advisor_observation) return t.advisor_observation
+  const obs = t.inscription_data?.inscription?.observations
+  if (obs) return obs
+  return null
+})
 
 function openAddLink (t) {
   linkToken.value = t
-  const defaultNotes = t.notes || `Generando link para ${t.student_name || '---'}`
-  linkForm.value = { payment_url: t.payment_url || '', notes: defaultNotes }
+  let defaultNotes = t.notes || `Link para ${t.student_name || '---'}`
+  if (defaultNotes.includes(' | ')) defaultNotes = defaultNotes.split(' | ').pop()
+  linkForm.value = { payment_url: t.payment_url || '', cat_provider: t.cat_provider || null, notes: defaultNotes }
   showLinkModal.value = true
 }
 
@@ -216,6 +254,7 @@ async function submitLink () {
     await api.put('/token/update', {
       token_id: linkToken.value.token_id,
       payment_url: linkForm.value.payment_url,
+      cat_provider: linkForm.value.cat_provider,
       notes: linkForm.value.notes || undefined
     })
     toast.success('Link actualizado')
@@ -666,6 +705,26 @@ onMounted(() => {
 .tp-modal-close:hover { background: #EBEBEB; color: #1A1A1A; }
 .tp-modal-body {
   padding: 20px 24px;
+}
+.tp-obs-ref {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.tp-obs-ref-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+.tp-obs-ref-title i { margin-right: 4px; }
+.tp-obs-ref-text {
+  font-size: 13px;
+  color: #1A1A1A;
+  line-height: 1.4;
 }
 .tp-modal-foot {
   display: flex;
