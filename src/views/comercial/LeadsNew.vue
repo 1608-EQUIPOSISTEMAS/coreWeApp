@@ -939,6 +939,18 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   <BaseModal v-model="showViewModal" title="Inscripcion del Lead" size="xl">
     <div class="insc-modal">
+      <div v-if="observedData" class="obs-banner mb-3">
+        <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="obs-banner-body">
+          <strong>Inscripcion Observada por FICO</strong>
+          <p>{{ observedData.reason }}</p>
+          <p class="obs-banner-hint">Corrige los datos de la inscripcion y luego reenviar a FICO.</p>
+        </div>
+        <button class="obs-banner-btn" :disabled="resubmitting" @click="handleResubmit">
+          <i :class="['fa-solid me-1', resubmitting ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+          {{ resubmitting ? 'Reenviando...' : 'Reenviar a FICO' }}
+        </button>
+      </div>
       <div class="insc-header mb-3">
         <div class="insc-info">
   <h5 class="program-title d-flex align-items-center gap-2">
@@ -1271,16 +1283,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
             <div class="col-md-2">
-              <label class="exec-label">Proveedor del Link <span class="c-red">*</span></label>
-              <SearchSelect
-                v-model="insc.cat_token_provider"
-                :items="tokenProviderCatalog"
-                label-field="description"
-                value-field="id"
-                placeholder="Qulqi, MercadoPago..."
-                required
-                class="exec-select-light w-100"
-              />
+              <label class="exec-label">Tipo de Pago <span class="c-red">*</span></label>
+              <select v-model="insc.token_payment_type" class="exec-input-light w-100" required>
+                <option value="">Seleccionar...</option>
+                <option value="debito">Debito</option>
+                <option value="credito">Credito</option>
+              </select>
             </div>
             <div class="col-md-3">
               <label class="exec-label">Modalidad de pago <span class="c-red">*</span></label>
@@ -1752,6 +1760,16 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <template #footer>
       <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
       <button
+        v-if="observedData"
+        class="btn-exec btn-exec-warning btn-exec-sm"
+        :disabled="resubmitting"
+        @click="handleResubmit"
+      >
+        <i :class="['fa-solid me-1', resubmitting ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+        {{ resubmitting ? 'Reenviando...' : 'Reenviar a FICO' }}
+      </button>
+      <button
+        v-else
         class="btn-exec btn-exec-primary btn-exec-sm"
         @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
         :disabled="
@@ -1990,6 +2008,7 @@ price_profesional_dollars: 0,
     attachments: [],
   cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
   cat_token_provider: null,
+  token_payment_type: '',
   })
 
 
@@ -2498,6 +2517,7 @@ watch(() => insc.cat_type_document, (newVal) => {
         const audit = await ficoService.getAuditLog(Number(form.enrollment_id))
         const obs = (audit || []).find(a => a.action === 'observed')
         observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
+        nextTick(() => openInscription())
       }
     } catch { /* ignore */ }
   }
@@ -3132,9 +3152,9 @@ async function confirmarInscripcion() {
     return
   }
 
-  // Token provider
-  if (isChannelToken.value && !insc.cat_token_provider) {
-    toast.warning('Debe seleccionar el proveedor del Link / Token.')
+  // Token payment type
+  if (isChannelToken.value && !insc.token_payment_type) {
+    toast.warning('Debe seleccionar el tipo de pago (Debito/Credito).')
     return
   }
 
@@ -3232,7 +3252,11 @@ async function confirmarToken() {
     toast.warning('Faltan datos obligatorios en el formulario del Lead.')
     return
   }
-  if (!insc.cat_token_provider) {
+  if (!insc.token_payment_type) {
+    toast.warning('Debe seleccionar el tipo de pago (Debito/Credito).')
+    return
+  }
+  if (false && !insc.cat_token_provider) {
     toast.warning('Debe seleccionar el proveedor del Token (PayPal, Culqi, etc.).')
     return
   }
@@ -3261,10 +3285,12 @@ async function confirmarToken() {
 
     const tokenPayload = {
       lead_id: resolvedLeadId,
-      cat_provider: insc.cat_token_provider || null,
-      amount: Number(insc.montoFinal) || Number(insc.montoOriginal) || 0,
+      cat_provider: null,
+      payment_type: insc.token_payment_type || null,
+      amount: Number(insc.total_amount) || Number(insc.montoOriginal) || 0,
       currency: insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
-      notes: `Generando link para ${form.full_name || '---'}`,
+      notes: `Link para ${form.full_name || '---'}`,
+      advisor_observation: insc.observacions || null,
       cat_payment_channel: insc.cat_payment_channel || null,
       inscription_data: enrollmentPayload
     }
@@ -3456,7 +3482,7 @@ function validateInscriptionPaymentInfo() {
   }
 
   if (isChannelToken.value) {
-    if (!insc.cat_token_provider) return false
+    if (!insc.token_payment_type) return false
     // Si eligió cuotas, también requiere reserva
     if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
     return true

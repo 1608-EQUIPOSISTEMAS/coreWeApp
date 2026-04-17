@@ -439,6 +439,7 @@
             <span class="ef-confirm-label">Total</span>
             <span class="ef-confirm-value fw700">S/. {{ fmt.formatMoney(total) }}</span>
           </div>
+          <p v-if="isBeca" class="ef-confirm-note" style="color:#D97706;font-weight:600">Beca — Descuento 100%. No requiere pago.</p>
           <p class="ef-confirm-note">Al confirmar se inscribira al alumno en Odoo y se enviara el correo de confirmacion.</p>
         </div>
       </template>
@@ -557,7 +558,8 @@ const planStatus = computed(() => {
   return 'borrador'
 })
 
-const canConfirmContado = computed(() => props.form.cat_currency && props.form.cat_payment_medium)
+const isBeca = computed(() => total.value === 0 && discount.value > 0)
+const canConfirmContado = computed(() => isBeca.value || (props.form.cat_currency && props.form.cat_payment_medium))
 
 async function uploadVoucher (event, cuota) {
   const file = event.target.files?.[0]
