@@ -3,6 +3,7 @@
 
     <div class="pagination-left">
       <button
+        v-if="!hideFilters"
         class="btn-exec btn-exec-outline"
         @click="$emit('open-filters')"
         title="Configurar filtros avanzados"
@@ -91,6 +92,10 @@ const props = defineProps({
     type: Object,
     required: true,
     default: () => ({ size: 25, page: 1, total: 0 })
+  },
+  hideFilters: {
+    type: Boolean,
+    default: false
   }
 })
 

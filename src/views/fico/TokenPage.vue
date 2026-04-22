@@ -4,26 +4,64 @@
       <div class="ep-masthead-left">
         <span class="ep-breadcrumb">FICO</span>
         <h1 class="ep-title">Tokens de Pago</h1>
+        <span class="ep-subtitle">Gestion de links de pago</span>
       </div>
-      <div class="ep-masthead-actions"></div>
     </header>
 
-    <div class="tp-toolbar">
-      <div class="tp-status-tabs">
+    <section class="ep-section">
+      <div class="ep-section-head">
+        <h2 class="ep-section-title">Cola de trabajo</h2>
+        <span class="ep-section-meta">
+          <i class="fa-solid fa-clock"></i>
+          {{ statsTimestamp }}
+          <button class="ep-refresh-btn" :disabled="stats.loading" @click="fetchStats" title="Actualizar">
+            <i class="fa-solid" :class="stats.loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+          </button>
+        </span>
+      </div>
+
+      <div class="ep-kpis">
+        <article v-for="k in kpiCards" :key="k.key" class="ep-kpi" :class="`ep-kpi-${k.color}`">
+          <div class="ep-kpi-head">
+            <span class="ep-kpi-label">{{ k.label }}</span>
+            <i class="fa-solid ep-kpi-icon" :class="k.icon"></i>
+          </div>
+          <div class="ep-kpi-main">
+            <span class="ep-kpi-value">{{ k.formatted }}</span>
+          </div>
+          <span class="ep-kpi-foot">
+            {{ k.description }}
+            <strong v-if="k.secondary">{{ k.secondary }}</strong>
+          </span>
+        </article>
+      </div>
+    </section>
+
+    <section class="ep-section">
+      <nav class="ep-tabs" aria-label="Estados de tokens">
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
-          :class="['tp-tab', { 'is-active': filterStatus === tab.value }]"
-          @click="filterStatus = tab.value; currentPage = 1; fetchTokens()"
-        >{{ tab.label }}</button>
+          :class="['ep-tab', { 'is-active': filterStatus === tab.value }]"
+          @click="setStatusFilter(tab.value)"
+        >
+          <i class="fa-solid" :class="tab.icon"></i> {{ tab.label }}
+        </button>
+      </nav>
+
+      <div class="ep-toolbar">
+        <div class="tp-search-wrap">
+          <i class="fa-solid fa-magnifying-glass tp-search-icon"></i>
+          <input
+            v-model="searchQuery"
+            class="tp-search"
+            placeholder="Buscar alumno, documento..."
+            @input="debounceSearch"
+          />
+        </div>
+        <BasePagination v-model="pagination" :hide-filters="true" @change="fetchTokens" />
       </div>
-      <input
-        v-model="searchQuery"
-        class="tp-search"
-        placeholder="Buscar alumno, documento..."
-        @input="debounceSearch"
-      />
-    </div>
+    </section>
 
     <div class="ect-wrap">
       <table class="ect">
@@ -41,88 +79,101 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="t in tokens" :key="t.token_id" class="ect-row">
-            <td>
-              <div class="cell-main cell-clip">{{ t.student_name }}</div>
-              <div class="cell-sub">{{ t.document_number }} {{ t.student_email ? '· ' + t.student_email : '' }}</div>
-            </td>
-            <td>
-              <div class="cell-main cell-clip">{{ t.program_name }}</div>
-              <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ t.edition_start_date ? `(${new Date(t.edition_start_date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})` : '' }}</span>
-              <span v-if="hasValidations(t)" class="pill pill-sm pill-amber" style="margin-left:4px">Convalida</span>
-            </td>
-            <td class="tc">
-              <span v-if="t.payment_type" class="pill pill-sm" :class="t.payment_type === 'credito' ? 'pill-amber' : 'pill-teal'">{{ t.payment_type === 'credito' ? 'Credito' : 'Debito' }}</span>
-              <span v-else class="pill pill-sm pill-slate">---</span>
-            </td>
-            <td class="tc">
-              <span class="pill pill-sm pill-blue">{{ t.provider_name || '---' }}</span>
-            </td>
-            <td class="tr mono">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
-            <td class="tc">
-              <span class="pill" :class="statusConfig[t.status]?.class || 'pill-slate'">
-                {{ statusConfig[t.status]?.label || t.status }}
-              </span>
-            </td>
-            <td>
-              <div v-if="t.payment_url" class="tp-link-cell">
-                <span class="tp-link-text" :title="t.payment_url">{{ truncateUrl(t.payment_url) }}</span>
-                <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
-                  <i class="fa-solid fa-copy"></i>
-                </button>
-              </div>
-              <span v-else class="cell-sub">--</span>
-            </td>
-            <td class="cell-date">{{ formatDate(t.created_at) }}</td>
-            <td class="tc">
-              <div class="tp-actions">
-                <template v-if="t.status === 'pending'">
-                  <button class="act-btn act-teal" title="Agregar Link" @click="openAddLink(t)">
-                    <i class="fa-solid fa-link"></i>
-                  </button>
-                  <button class="act-btn act-red" title="Eliminar" @click="deleteToken(t)">
-                    <i class="fa-solid fa-trash-can"></i>
-                  </button>
-                </template>
-                <template v-else-if="t.status === 'link_sent' || t.status === 'paid'">
-                  <template v-if="t.enrollment_id">
-                    <button class="tp-btn-confirm" title="Ver inscripcion" @click="router.push({ name: 'enrollmentDetail', params: { id: t.enrollment_id } })">
-                      <i class="fa-solid fa-eye"></i> Ver
-                    </button>
-                  </template>
-                  <template v-else>
-                    <button class="tp-btn-confirm" title="Crear inscripcion" @click="confirmToken(t)">
-                      <i class="fa-solid fa-graduation-cap"></i> Inscribir
-                    </button>
-                  </template>
+          <template v-if="isLoading">
+            <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
+              <td>
+                <div class="sk-cell" style="width:140px"></div>
+                <div class="sk-cell mt-1" style="width:90px;height:8px"></div>
+              </td>
+              <td>
+                <div class="sk-cell" style="width:160px"></div>
+                <div class="sk-cell mt-1" style="width:60px;height:8px"></div>
+              </td>
+              <td class="tc"><div class="sk-cell" style="width:60px;margin:0 auto"></div></td>
+              <td class="tc"><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
+              <td class="tr"><div class="sk-cell" style="width:80px;margin-left:auto"></div></td>
+              <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
+              <td><div class="sk-cell" style="width:170px"></div></td>
+              <td><div class="sk-cell" style="width:80px"></div></td>
+              <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
+            </tr>
+          </template>
+          <template v-else>
+            <tr v-for="t in tokens" :key="t.token_id" class="ect-row">
+              <td>
+                <div class="cell-main cell-clip">{{ t.student_name }}</div>
+                <div class="cell-sub">{{ t.document_number }} {{ t.student_email ? '· ' + t.student_email : '' }}</div>
+              </td>
+              <td>
+                <div class="cell-main cell-clip">{{ t.program_name }}</div>
+                <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ t.edition_start_date ? `(${new Date(t.edition_start_date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})` : '' }}</span>
+                <span v-if="hasValidations(t)" class="pill pill-sm pill-amber" style="margin-left:4px">Convalida</span>
+              </td>
+              <td class="tc">
+                <span v-if="t.payment_type" class="pill pill-sm" :class="t.payment_type === 'credito' ? 'pill-amber' : 'pill-teal'">{{ t.payment_type === 'credito' ? 'Credito' : 'Debito' }}</span>
+                <span v-else class="pill pill-sm pill-slate">---</span>
+              </td>
+              <td class="tc">
+                <span class="pill pill-sm pill-blue">{{ t.provider_name || '---' }}</span>
+              </td>
+              <td class="tr mono">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
+              <td class="tc">
+                <span class="pill" :class="statusConfig[t.status]?.class || 'pill-slate'">
+                  {{ statusConfig[t.status]?.label || t.status }}
+                </span>
+              </td>
+              <td>
+                <div v-if="t.payment_url" class="tp-link-cell">
+                  <span class="tp-link-text" :title="t.payment_url">{{ truncateUrl(t.payment_url) }}</span>
                   <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
                     <i class="fa-solid fa-copy"></i>
                   </button>
-                </template>
-                <template v-else-if="t.status === 'confirmed'">
-                  <i class="fa-solid fa-circle-check tp-confirmed-icon"></i>
-                </template>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!tokens.length">
-            <td colspan="8" class="empty-row">Sin resultados</td>
-          </tr>
+                </div>
+                <span v-else class="cell-sub">--</span>
+              </td>
+              <td class="cell-date">{{ formatDate(t.created_at) }}</td>
+              <td class="tc">
+                <div class="tp-actions">
+                  <template v-if="t.status === 'pending'">
+                    <template v-if="canWrite">
+                      <button class="act-btn act-teal" title="Agregar Link" @click="openAddLink(t)">
+                        <i class="fa-solid fa-link"></i>
+                      </button>
+                      <button class="act-btn act-red" title="Eliminar" @click="deleteToken(t)">
+                        <i class="fa-solid fa-trash-can"></i>
+                      </button>
+                    </template>
+                    <span v-else class="cell-sub">En espera</span>
+                  </template>
+                  <template v-else-if="t.status === 'link_sent' || t.status === 'paid'">
+                    <template v-if="t.enrollment_id">
+                      <button class="tp-btn-confirm" title="Ver inscripcion" @click="goToEnrollment(t.enrollment_id)">
+                        <i class="fa-solid fa-eye"></i> Ver
+                      </button>
+                    </template>
+                    <template v-else-if="canWrite">
+                      <button class="tp-btn-confirm" title="Crear inscripcion" @click="confirmToken(t)">
+                        <i class="fa-solid fa-graduation-cap"></i> Inscribir
+                      </button>
+                    </template>
+                    <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
+                      <i class="fa-solid fa-copy"></i>
+                    </button>
+                  </template>
+                  <template v-else-if="t.status === 'confirmed'">
+                    <i class="fa-solid fa-circle-check tp-confirmed-icon"></i>
+                  </template>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!tokens.length">
+              <td colspan="9" class="empty-row">Sin resultados</td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
 
-    <div v-if="totalPages > 1" class="tp-pagination">
-      <button :disabled="currentPage <= 1" class="tp-page-btn" @click="currentPage--; fetchTokens()">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <span class="tp-page-info">{{ currentPage }} / {{ totalPages }}</span>
-      <button :disabled="currentPage >= totalPages" class="tp-page-btn" @click="currentPage++; fetchTokens()">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </div>
-
-    <!-- Add Link Modal -->
     <Teleport to="body">
       <div v-if="showLinkModal" class="tp-overlay" @click.self="showLinkModal = false">
         <div class="tp-modal tp-modal-sm">
@@ -163,14 +214,30 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, reactive, computed, inject, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import BasePagination from '@/components/BasePagination.vue'
 
 const toast = useToast()
 const router = useRouter()
 const catalog = inject('catalog')
+
+const currentUserRoles = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}').roles || []
+  } catch {
+    return []
+  }
+})()
+const WRITE_ROLES = ['ADMIN', 'FICO', 'LIDER_FICO']
+const canWrite = WRITE_ROLES.some(r => currentUserRoles.includes(r))
+
+function goToEnrollment (enrollmentId) {
+  router.push({ name: 'enrollmentDetail', params: { id: enrollmentId } })
+}
+
 const providerCatalog = (() => {
   const items = catalog.options('we_token_provider')
   if (items.length > 0) return items
@@ -181,8 +248,6 @@ const providerCatalog = (() => {
   ]
 })()
 
-const PAGE_SIZE = 20
-
 const statusConfig = {
   pending:   { label: 'Pendiente',    class: 'pill-amber' },
   link_sent: { label: 'Link Enviado', class: 'pill-blue' },
@@ -191,39 +256,116 @@ const statusConfig = {
 }
 
 const statusTabs = [
-  { label: 'Todos',       value: '' },
-  { label: 'Pendiente',   value: 'pending' },
-  { label: 'Link Enviado', value: 'link_sent' },
-  { label: 'Pagado',      value: 'paid' },
-  { label: 'Confirmado',  value: 'confirmed' }
+  { label: 'Todos',        value: '',          icon: 'fa-inbox' },
+  { label: 'Pendiente',    value: 'pending',   icon: 'fa-hourglass-half' },
+  { label: 'Link Enviado', value: 'link_sent', icon: 'fa-paper-plane' },
+  { label: 'Pagado',       value: 'paid',      icon: 'fa-dollar-sign' },
+  { label: 'Confirmado',   value: 'confirmed', icon: 'fa-circle-check' }
 ]
 
 const tokens = ref([])
+const isLoading = ref(false)
 const filterStatus = ref('')
 const searchQuery = ref('')
-const currentPage = ref(1)
-const totalItems = ref(0)
-const totalPages = computed(() => Math.ceil(totalItems.value / PAGE_SIZE) || 1)
+const pagination = ref({ page: 1, size: 25, total: 0 })
+
+const stats = reactive({
+  pending: 0,
+  linkSent: 0,
+  paidUnconfirmed: 0,
+  amountPen: 0,
+  amountUsd: 0,
+  loading: false,
+  loadedAt: null
+})
+
+const statsTimestamp = computed(() => {
+  if (!stats.loadedAt) return stats.loading ? 'Cargando...' : 'Sin datos'
+  return `Actualizado ${stats.loadedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
+})
+
+const kpiCards = computed(() => [
+  {
+    key: 'pending',
+    label: 'Pendientes totales',
+    icon: 'fa-hourglass-half',
+    color: 'amber',
+    formatted: stats.pending.toLocaleString('es-PE'),
+    description: 'Esperan link de FICO'
+  },
+  {
+    key: 'linkSent',
+    label: 'Links enviados',
+    icon: 'fa-paper-plane',
+    color: 'indigo',
+    formatted: stats.linkSent.toLocaleString('es-PE'),
+    description: 'Esperan pago del alumno'
+  },
+  {
+    key: 'paidUnconfirmed',
+    label: 'Por confirmar',
+    icon: 'fa-circle-exclamation',
+    color: 'teal',
+    formatted: stats.paidUnconfirmed.toLocaleString('es-PE'),
+    description: 'Pagados, esperan inscribir'
+  },
+  {
+    key: 'amount',
+    label: 'Monto en espera',
+    icon: 'fa-coins',
+    color: 'green',
+    formatted: 'S/ ' + formatMoneyInt(stats.amountPen),
+    description: stats.amountUsd > 0 ? 'USD pendiente:' : 'En tokens no confirmados',
+    secondary: stats.amountUsd > 0 ? '$ ' + formatMoneyInt(stats.amountUsd) : ''
+  }
+])
 
 let searchTimer = null
 function debounceSearch () {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { currentPage.value = 1; fetchTokens() }, 350)
+  searchTimer = setTimeout(() => { pagination.value.page = 1; fetchTokens() }, 350)
+}
+
+function setStatusFilter (value) {
+  filterStatus.value = value
+  pagination.value.page = 1
+  fetchTokens()
 }
 
 async function fetchTokens () {
+  isLoading.value = true
   try {
     const params = {
       status: filterStatus.value,
       q: searchQuery.value,
-      page: currentPage.value,
-      size: PAGE_SIZE
+      page: pagination.value.page,
+      size: pagination.value.size
     }
     const res = (await api.get('/token/list', { params })).data
     tokens.value = res.data?.items || []
-    totalItems.value = res.data?.total || 0
+    pagination.value.total = res.data?.total || 0
   } catch {
     toast.error('Error al cargar tokens')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function fetchStats () {
+  stats.loading = true
+  try {
+    const res = (await api.get('/token/stats')).data
+    const d = res.data || {}
+    stats.pending = d.pending || 0
+    stats.linkSent = d.linkSent || 0
+    stats.paidUnconfirmed = d.paidUnconfirmed || 0
+    stats.amountPen = d.amountPen || 0
+    stats.amountUsd = d.amountUsd || 0
+    stats.loadedAt = new Date()
+  } catch {
+    toast.error('Error al cargar indicadores')
+  } finally {
+    stats.loading = false
   }
 }
 
@@ -259,13 +401,12 @@ async function submitLink () {
     })
     toast.success('Link actualizado')
     showLinkModal.value = false
-    fetchTokens()
+    await Promise.all([fetchTokens(), fetchStats()])
   } catch {
     toast.error('Error al actualizar link')
   }
 }
 
-// --- Confirm & Enroll ---
 async function confirmToken (t) {
   try {
     const res = await api.post('/token/confirm', {
@@ -277,26 +418,24 @@ async function confirmToken (t) {
     if (enrollmentId) {
       router.push({ name: 'enrollmentDetail', params: { id: enrollmentId } })
     } else {
-      fetchTokens()
+      await Promise.all([fetchTokens(), fetchStats()])
     }
   } catch (err) {
     toast.error(err?.response?.data?.error || 'Error al inscribir')
   }
 }
 
-// --- Delete ---
 async function deleteToken (t) {
   if (!confirm('Eliminar este token?')) return
   try {
     await api.delete(`/token/delete/${t.token_id}`)
     toast.success('Token eliminado')
-    fetchTokens()
+    await Promise.all([fetchTokens(), fetchStats()])
   } catch {
     toast.error('Error al eliminar token')
   }
 }
 
-// --- Helpers ---
 function hasValidations (t) {
   const vals = t.inscription_data?.validations
   return vals?.enabled && vals.validated_children?.length > 0
@@ -304,6 +443,10 @@ function hasValidations (t) {
 
 function formatMoney (v) {
   return Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatMoneyInt (v) {
+  return Number(v || 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
 function formatDate (d) {
@@ -334,6 +477,7 @@ async function copyLink (url) {
 
 onMounted(() => {
   fetchTokens()
+  fetchStats()
 })
 </script>
 
@@ -342,106 +486,191 @@ onMounted(() => {
   --e-bg: #FFFFFF;
   --e-bg-subtle: #FAFAFA;
   --e-border: #EFEFEF;
+  --e-border-strong: #E5E5E5;
   --e-text: #1A1A1A;
   --e-text-secondary: #737373;
   --e-text-muted: #A3A3A3;
+  --e-accent: #0D9488;
+  --e-accent-soft: #F0FDFA;
 
-  background: var(--e-bg);
-  padding: 32px 32px 24px;
+  background: #FAFAFA;
+  padding: 28px 32px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
   min-height: 100vh;
 }
 
-/* --- Masthead (reused from EnrollmentPage) --- */
 .ep-masthead {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
-.ep-masthead-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
 .ep-breadcrumb {
   font-size: 11px;
   color: var(--e-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 500;
+  font-weight: 600;
 }
 .ep-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--e-text);
   margin: 0;
   letter-spacing: -0.02em;
+  line-height: 1.1;
 }
-.ep-masthead-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.ep-btn-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  background: #1A1A1A;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background .2s ease;
-  font-family: inherit;
-}
-.ep-btn-new:hover { background: #333; }
-.ep-btn-new:disabled { opacity: .4; cursor: not-allowed; }
-
-/* --- Toolbar --- */
-.tp-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.tp-status-tabs {
-  display: flex;
-  background: var(--e-bg-subtle);
-  border-radius: 8px;
-  padding: 3px;
-}
-.tp-tab {
-  padding: 6px 14px;
-  font-size: 12px;
+.ep-subtitle {
+  font-size: 12.5px;
+  color: var(--e-text-muted);
   font-weight: 500;
-  color: var(--e-text-secondary);
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all .2s ease;
-  font-family: inherit;
-  white-space: nowrap;
+  margin-top: 2px;
 }
-.tp-tab.is-active {
-  background: #fff;
-  color: var(--e-text);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
-}
-.tp-tab:not(.is-active):hover { color: var(--e-text); }
 
+.ep-section {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.ep-section-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.ep-section-title {
+  font-size: 13px; font-weight: 700; margin: 0;
+  color: var(--e-text); letter-spacing: -0.01em;
+}
+.ep-section-meta {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--e-text-muted); font-weight: 500;
+}
+.ep-section-meta i { font-size: 10px; }
+.ep-refresh-btn {
+  width: 26px; height: 26px;
+  border: 1px solid var(--e-border);
+  background: #fff;
+  border-radius: 6px; cursor: pointer;
+  color: var(--e-text-secondary); font-size: 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease; margin-left: 4px;
+}
+.ep-refresh-btn:hover:not(:disabled) {
+  background: var(--e-accent-soft);
+  border-color: var(--e-accent);
+  color: var(--e-accent);
+}
+.ep-refresh-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.ep-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.ep-kpi {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ep-kpi:hover {
+  border-color: var(--e-border-strong);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.04);
+}
+.ep-kpi::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: currentColor;
+}
+.ep-kpi-head {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ep-kpi-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ep-kpi-icon { font-size: 12px; color: currentColor; opacity: 0.65; }
+.ep-kpi-main {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px;
+}
+.ep-kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--e-text);
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ep-kpi-foot {
+  font-size: 11px; color: var(--e-text-muted);
+  border-top: 1px solid var(--e-border);
+  padding-top: 8px; margin-top: 2px;
+}
+.ep-kpi-foot strong { color: var(--e-text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 4px; }
+
+.ep-kpi-indigo { color: #6366F1; }
+.ep-kpi-amber  { color: #D97706; }
+.ep-kpi-green  { color: #10B981; }
+.ep-kpi-teal   { color: #0D9488; }
+
+.ep-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--e-border);
+}
+.ep-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--e-text-secondary);
+  background: var(--e-bg-subtle);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+}
+.ep-tab i { font-size: 11px; opacity: 0.7; }
+.ep-tab:hover { color: var(--e-text); background: #F5F5F5; }
+.ep-tab.is-active {
+  color: var(--e-accent);
+  background: var(--e-accent-soft);
+  border-color: rgba(13, 148, 136, 0.25);
+  font-weight: 600;
+}
+.ep-tab.is-active i { opacity: 1; }
+
+.ep-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+
+.tp-search-wrap { position: relative; flex: 0 0 auto; }
+.tp-search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--e-text-muted); font-size: 12px; pointer-events: none;
+}
 .tp-search {
-  width: 260px;
+  width: 280px;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 12px 0 34px;
   border: 1px solid #E8E8E8;
   border-radius: 8px;
   font-size: 13px;
@@ -449,20 +678,20 @@ onMounted(() => {
   background: #fff;
   font-family: inherit;
   transition: all .2s ease;
+  box-sizing: border-box;
 }
 .tp-search:focus {
   outline: none;
-  border-color: #0D9488;
+  border-color: var(--e-accent);
   box-shadow: 0 0 0 3px rgba(13,148,136,.06);
 }
 .tp-search::placeholder { color: #C4C4C4; }
 
-/* --- Table (reused class names from EnrollmentCompactTable) --- */
 .ect-wrap {
   background: #fff;
-  border-radius: 10px;
+  border-radius: 14px;
   overflow-x: auto;
-  border: 1px solid #F0F0F0;
+  border: 1px solid var(--e-border);
 }
 .ect {
   width: 100%;
@@ -526,7 +755,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* --- Pills --- */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -543,8 +771,8 @@ onMounted(() => {
 .pill-amber { background: #FFF8EB; color: #92400E; }
 .pill-blue  { background: #EFF6FF; color: #1E40AF; }
 .pill-red   { background: #FEF2F2; color: #991B1B; }
+.pill-teal  { background: #F0FDFA; color: #0F766E; }
 
-/* --- Actions --- */
 .tp-actions {
   display: flex;
   align-items: center;
@@ -565,24 +793,10 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
 }
-.act-btn.act-teal {
-  border-color: #E8E8E8;
-  color: #737373;
-}
-.act-btn.act-teal:hover {
-  background: #F0FDFA;
-  border-color: #0D9488;
-  color: #0D9488;
-}
-.act-btn.act-red {
-  border-color: #E8E8E8;
-  color: #737373;
-}
-.act-btn.act-red:hover {
-  background: #FEF2F2;
-  border-color: #FCA5A5;
-  color: #EF4444;
-}
+.act-btn.act-teal { border-color: #E8E8E8; color: #737373; }
+.act-btn.act-teal:hover { background: #F0FDFA; border-color: var(--e-accent); color: var(--e-accent); }
+.act-btn.act-red { border-color: #E8E8E8; color: #737373; }
+.act-btn.act-red:hover { background: #FEF2F2; border-color: #FCA5A5; color: #EF4444; }
 
 .tp-btn-confirm {
   display: inline-flex;
@@ -601,10 +815,7 @@ onMounted(() => {
 }
 .tp-btn-confirm:hover { background: #333; }
 
-.tp-confirmed-icon {
-  color: #059669;
-  font-size: 16px;
-}
+.tp-confirmed-icon { color: #059669; font-size: 16px; }
 
 .tp-link-cell {
   display: flex;
@@ -627,37 +838,27 @@ onMounted(() => {
   font-size: 13px;
 }
 
-/* --- Pagination --- */
-.tp-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
+.skeleton-row td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #F5F5F5;
+  vertical-align: middle;
+  height: 52px;
+  box-sizing: border-box;
 }
-.tp-page-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #E8E8E8;
-  background: #fff;
-  border-radius: 8px;
-  cursor: pointer;
-  color: var(--e-text-secondary);
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s ease;
+.sk-cell {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #F5F5F5 25%, #EBEBEB 50%, #F5F5F5 75%);
+  background-size: 200% 100%;
+  animation: tp-sk-shimmer 1.4s ease-in-out infinite;
+  width: 100%;
 }
-.tp-page-btn:hover:not(:disabled) { background: var(--e-bg-subtle); }
-.tp-page-btn:disabled { opacity: .3; cursor: not-allowed; }
-.tp-page-info {
-  font-size: 13px;
-  color: var(--e-text-secondary);
-  font-weight: 500;
+.sk-cell.mt-1 { margin-top: 6px; }
+@keyframes tp-sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* --- Modal --- */
 .tp-overlay {
   position: fixed;
   inset: 0;
@@ -682,12 +883,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 20px 24px 12px;
 }
-.tp-modal-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1A1A1A;
-  margin: 0;
-}
+.tp-modal-title { font-size: 15px; font-weight: 600; color: #1A1A1A; margin: 0; }
 .tp-modal-close {
   width: 30px;
   height: 30px;
@@ -703,9 +899,7 @@ onMounted(() => {
   transition: background .2s;
 }
 .tp-modal-close:hover { background: #EBEBEB; color: #1A1A1A; }
-.tp-modal-body {
-  padding: 20px 24px;
-}
+.tp-modal-body { padding: 20px 24px; }
 .tp-obs-ref {
   background: #EFF6FF;
   border: 1px solid #BFDBFE;
@@ -721,11 +915,7 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 .tp-obs-ref-title i { margin-right: 4px; }
-.tp-obs-ref-text {
-  font-size: 13px;
-  color: #1A1A1A;
-  line-height: 1.4;
-}
+.tp-obs-ref-text { font-size: 13px; color: #1A1A1A; line-height: 1.4; }
 .tp-modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -743,10 +933,6 @@ onMounted(() => {
   margin-top: 16px;
 }
 .tp-label:first-child { margin-top: 0; }
-.tp-label-hint {
-  font-weight: 400;
-  color: #A3A3A3;
-}
 
 .tp-input {
   width: 100%;
@@ -763,20 +949,10 @@ onMounted(() => {
 }
 .tp-input:focus {
   outline: none;
-  border-color: #0D9488;
+  border-color: var(--e-accent);
   box-shadow: 0 0 0 3px rgba(13,148,136,.06);
 }
-.tp-textarea {
-  height: auto;
-  padding: 10px 12px;
-  resize: vertical;
-}
-
-.tp-row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
+.tp-textarea { height: auto; padding: 10px 12px; resize: vertical; }
 
 .tp-btn-cancel {
   padding: 9px 20px;
@@ -792,12 +968,34 @@ onMounted(() => {
 }
 .tp-btn-cancel:hover { background: #F5F5F5; color: #1A1A1A; }
 
+.ep-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #1A1A1A;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s ease;
+  font-family: inherit;
+}
+.ep-btn-new:hover { background: #333; }
+.ep-btn-new:disabled { opacity: .4; cursor: not-allowed; }
 
+@media (max-width: 1280px) {
+  .ep-kpis { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 768px) {
   .token-page { padding: 16px; }
-  .tp-toolbar { flex-direction: column; align-items: stretch; }
+  .ep-toolbar { flex-direction: column; align-items: stretch; }
+  .tp-search-wrap { width: 100%; }
   .tp-search { width: 100%; }
   .tp-modal { width: 95vw; }
   .tp-modal-sm { width: 95vw; }
+  .ep-kpis { grid-template-columns: 1fr; }
 }
 </style>

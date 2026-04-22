@@ -9,6 +9,11 @@
         <div><span class="ep-meta-label">Para:</span> <span class="ep-meta-value">{{ previewData.to }}</span></div>
         <div><span class="ep-meta-label">Asunto:</span> <span class="ep-meta-value">{{ previewData.subject }}</span></div>
       </div>
+      <div v-if="previewData.hasAttachment" class="ep-attachment">
+        <i class="fa-solid fa-paperclip"></i>
+        <span class="ep-attachment-label">Se adjuntará:</span>
+        <span class="ep-attachment-file">{{ previewData.attachmentName }}</span>
+      </div>
       <div class="ep-frame-wrap">
         <iframe class="ep-frame" :srcdoc="previewData.html"></iframe>
       </div>
@@ -76,6 +81,21 @@ defineExpose({ previewData })
 }
 .ep-meta-label { color: #9CA3AF; font-weight: 600; }
 .ep-meta-value { font-weight: 700; color: #111827; }
+
+.ep-attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.ep-attachment i { color: #0369A1; font-size: 12px; }
+.ep-attachment-label { color: #475569; font-weight: 600; }
+.ep-attachment-file { color: #0c4a6e; font-weight: 700; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; }
 
 .ep-frame-wrap {
   border: 1px solid #E5E7EB;
