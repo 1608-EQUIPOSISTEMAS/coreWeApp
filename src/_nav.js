@@ -9,19 +9,19 @@ export default [
     name: 'Finanzas',
     to: '/fico',
     icon: 'cil-calculator',
-    roles: ['ADMIN', 'FICO', 'GERENCIA'], // 👈 agrega esto
+    roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
-        roles: ['ADMIN', 'FICO', 'GERENCIA'],
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Tokens de Pago',
         to: '/fico/tokens',
-        roles: ['ADMIN', 'FICO', 'LIDER_COMERCIAL', 'GERENCIA'],
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
       },
     ],
   },
@@ -215,6 +215,6 @@ export default [
     name: 'Notificaciones',
     to: '/general/notificaciones',
     icon: 'cil-bell',
-    roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
+    roles: ['ADMIN'],
   },
 ]

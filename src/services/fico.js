@@ -47,11 +47,6 @@ export default class FicoService {
     return response.data;
   }
 
-  async sendActivationEmail(enrollment_id) {
-    const response = (await api.post('/fico/sendactivationemail', { enrollment_id })).data;
-    return response.data;
-  }
-
   async syncInstallmentPayment(enrollment_id) {
     const response = (await api.post('/fico/syncinstallmentpayment', { enrollment_id })).data;
     return response.data;

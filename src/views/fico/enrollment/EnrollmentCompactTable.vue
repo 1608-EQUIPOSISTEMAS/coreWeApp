@@ -57,28 +57,52 @@
         </tr>
       </thead>
       <tbody>
+        <template v-if="isLoading">
+          <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
+            <td class="tc"><div class="sk-cell" style="width:30px;height:30px;border-radius:8px;margin:0 auto"></div></td>
+            <td><div class="sk-cell" style="width:90px"></div></td>
+            <td>
+              <div class="sk-cell" style="width:140px"></div>
+              <div class="sk-cell mt-1" style="width:90px;height:8px"></div>
+            </td>
+            <td>
+              <div class="sk-cell" style="width:160px"></div>
+              <div class="sk-cell mt-1" style="width:60px;height:8px"></div>
+            </td>
+            <td><div class="sk-cell" style="width:70px"></div></td>
+            <td><div class="sk-cell" style="width:70px"></div></td>
+            <td class="tc"><div class="sk-cell" style="width:62px;margin:0 auto"></div></td>
+            <td class="tr"><div class="sk-cell" style="width:80px;margin-left:auto"></div></td>
+            <td class="tr"><div class="sk-cell" style="width:64px;margin-left:auto"></div></td>
+            <td class="tr"><div class="sk-cell" style="width:64px;margin-left:auto"></div></td>
+            <td class="tr"><div class="sk-cell" style="width:70px;margin-left:auto"></div></td>
+            <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
+          </tr>
+        </template>
+        <template v-else>
         <tr
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="fmt.rowClass(e)"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId }]"
+          @click="onRowClick(e, $event)"
         >
           <td class="tc">
-            <button class="act-btn act-teal" title="Revisar" @click="openDetail(e)">
+            <button class="act-btn act-teal" title="Abrir detalle completo" @click.stop="openDetail(e)">
               <i class="fa-solid fa-clipboard-check"></i>
             </button>
           </td>
           <td class="cell-date">{{ fmt.formatDateTime(e.registration_date) }}</td>
-          <td>
-            <div class="cell-main cell-clip">{{ e.student_full_name }}</div>
+          <td class="col-alumno">
+            <div class="cell-main cell-clip" :title="e.student_full_name">{{ e.student_full_name }}</div>
             <div class="cell-sub cell-extra">{{ e.document_number }}</div>
           </td>
-          <td>
-            <div class="cell-main cell-clip">{{ e.program_name }}</div>
+          <td class="col-programa">
+            <div class="cell-main cell-clip" :title="e.program_name">{{ e.program_name }}</div>
             <span class="pill pill-slate cell-extra">{{ e.edition_code }}</span>
           </td>
-          <td>
-            <div class="cell-main cell-clip">{{ e.seller_agent_name }}</div>
+          <td class="col-agente">
+            <div class="cell-main cell-clip" :title="e.seller_agent_name">{{ e.seller_agent_name }}</div>
           </td>
           <td class="cell-date">{{ fmt.formatDate(e.pay_date) }}</td>
           <td class="tc">
@@ -102,8 +126,17 @@
           </td>
         </tr>
         <tr v-if="!enrollments.length">
-          <td colspan="12" class="empty-row">Sin resultados</td>
+          <td colspan="12" class="empty-row">
+            <div class="empty-state">
+              <div class="empty-icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </div>
+              <h4 class="empty-title">No hay matriculas que coincidan</h4>
+              <p class="empty-text">Cambia los filtros o limpia los chips activos para ver mas resultados.</p>
+            </div>
+          </td>
         </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -118,11 +151,19 @@ const props = defineProps({
   enrollments: { type: Array, default: () => [] },
   colFilters:  { type: Object, required: true },
   uniqueAgents:  { type: Array, default: () => [] },
-  uniqueEstados: { type: Array, default: () => [] }
+  uniqueEstados: { type: Array, default: () => [] },
+  isLoading:   { type: Boolean, default: false },
+  selectedId:  { type: [Number, String], default: null }
 })
+const emit = defineEmits(['select-row'])
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
+
+function onRowClick (e, evt) {
+  if (evt.target.closest('button, input, select, a')) return
+  emit('select-row', e)
+}
 
 const uniqueTipoPago = computed(() => {
   const set = new Set()
@@ -163,7 +204,7 @@ function clearColFilters () {
 .ect {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 11.5px;
   color: #1A1A1A;
 }
 .tc { text-align: center; }
@@ -172,12 +213,12 @@ function clearColFilters () {
 /* ---- header ---- */
 .ect-head th {
   background: #FAFAFA;
-  padding: 11px 12px;
+  padding: 8px 10px;
   text-align: left;
   font-weight: 500;
   color: #8C8C8C;
   border-bottom: 1px solid #F0F0F0;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -253,15 +294,25 @@ function clearColFilters () {
 
 /* ---- body rows ---- */
 .ect-row td {
-  padding: 14px 12px;
+  padding: 7px 10px;
   border-bottom: 1px solid #F5F5F5;
   vertical-align: middle;
-  height: 52px;
+  height: 36px;
   box-sizing: border-box;
   transition: background .15s ease;
 }
+.ect-row {
+  cursor: pointer;
+}
 .ect-row:hover td {
   background: #FAFAFA;
+}
+.ect-row.is-selected td {
+  background: #F0FDFA;
+  box-shadow: inset 0 -1px 0 #CCFBF1;
+}
+.ect-row.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 #0D9488, inset 0 -1px 0 #CCFBF1;
 }
 .ect-row:last-child td {
   border-bottom: none;
@@ -301,7 +352,7 @@ function clearColFilters () {
 .cell-main {
   font-weight: 600;
   color: #1A1A1A;
-  font-size: 13px;
+  font-size: 11.5px;
   line-height: 1.35;
 }
 .cell-clip {
@@ -309,14 +360,23 @@ function clearColFilters () {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
+/* Per-column max widths so long names get clipped to ellipsis instead
+   of stretching the table out of proportion. Native title=hover shows full name. */
+.col-alumno { max-width: 180px; }
+.col-alumno .cell-clip { max-width: 180px; }
+.col-programa { max-width: 220px; }
+.col-programa .cell-clip { max-width: 220px; }
+.col-agente { max-width: 90px; }
+.col-agente .cell-clip { max-width: 90px; }
 .cell-sub {
   color: #A3A3A3;
-  font-size: 11.5px;
-  margin-top: 2px;
+  font-size: 10.5px;
+  margin-top: 1px;
 }
 .cell-date {
-  font-size: 12px;
+  font-size: 11px;
   color: #737373;
   white-space: nowrap;
 }
@@ -325,7 +385,7 @@ function clearColFilters () {
 .mono {
   font-variant-numeric: tabular-nums;
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 12.5px;
+  font-size: 11px;
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
@@ -359,10 +419,53 @@ function clearColFilters () {
 
 /* ---- empty state ---- */
 .empty-row {
-  padding: 48px;
-  text-align: center;
-  color: #C4C4C4;
-  font-size: 13px;
+  padding: 0;
+}
+.empty-state {
+  padding: 56px 24px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 6px;
+}
+.empty-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: #FAFAFA;
+  color: #A3A3A3;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 8px;
+  border: 1px solid #EFEFEF;
+}
+.empty-title {
+  font-size: 14px; font-weight: 700;
+  color: #1A1A1A; margin: 0;
+  letter-spacing: -0.01em;
+}
+.empty-text {
+  font-size: 12.5px; color: #737373;
+  margin: 0; max-width: 320px; line-height: 1.5;
+}
+
+/* ---- skeleton loading ---- */
+.skeleton-row td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #F5F5F5;
+  vertical-align: middle;
+  height: 52px;
+  box-sizing: border-box;
+}
+.sk-cell {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #F5F5F5 25%, #EBEBEB 50%, #F5F5F5 75%);
+  background-size: 200% 100%;
+  animation: ect-sk-shimmer 1.4s ease-in-out infinite;
+  width: 100%;
+}
+.sk-cell.mt-1 { margin-top: 6px; }
+@keyframes ect-sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ---- responsive ---- */

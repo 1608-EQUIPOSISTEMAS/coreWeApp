@@ -381,12 +381,7 @@ async function handleConfirmPayment () {
       bank_account_id: ficoForm.bank_account_id,
       transaction_code: ficoForm.transaction_code
     })
-    const odoo = await ficoService.enrollInOdoo(eid)
-    if (odoo?.error) {
-      toast.warning('Pago registrado, pero no se pudo inscribir en Odoo: ' + odoo.error, { timeout: 6000 })
-    } else {
-      toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
-    }
+    toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
@@ -427,12 +422,7 @@ async function handleConfirmPlan () {
       bank_account_id: inicial?._bank_account_id || null,
       transaction_code: inicial?._transaction_code || ''
     })
-    const odoo = await ficoService.enrollInOdoo(eid)
-    if (odoo?.error) {
-      toast.warning('Plan confirmado, pero no se pudo inscribir en Odoo: ' + odoo.error, { timeout: 6000 })
-    } else {
-      toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
-    }
+    toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })

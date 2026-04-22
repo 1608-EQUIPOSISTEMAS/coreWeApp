@@ -125,6 +125,41 @@
       </thead>
 
       <tbody>
+        <template v-if="isLoading">
+          <tr v-for="n in 10" :key="'sk-' + n" class="eet-skeleton-row">
+            <td class="eet-td-action eet-sticky-col">
+              <div class="eet-sk-cell" style="width:18px;height:18px;border-radius:4px;margin:0 auto"></div>
+            </td>
+            <template v-if="cg.identity">
+              <td class="eet-cell"><div class="eet-sk-cell" style="width:80px"></div></td>
+              <td class="eet-cell"><div class="eet-sk-cell" style="width:140px"></div></td>
+              <td class="eet-cell"><div class="eet-sk-cell" style="width:90px"></div></td>
+              <td class="eet-cell"><div class="eet-sk-cell" style="width:140px"></div></td>
+            </template>
+            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+
+            <template v-if="cg.profile">
+              <td v-for="c in 5" :key="'skp-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+            </template>
+            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+
+            <template v-if="cg.program">
+              <td v-for="c in 4" :key="'skpr-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+            </template>
+            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+
+            <template v-if="cg.finance">
+              <td v-for="c in 14" :key="'skf-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+            </template>
+            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+
+            <template v-if="cg.installments">
+              <td v-for="c in 16" :key="'ski-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+            </template>
+            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+          </tr>
+        </template>
+        <template v-else>
         <tr
           v-for="e in enrollments"
           :key="e.id"
@@ -199,6 +234,7 @@
         <tr v-if="!enrollments.length">
           <td :colspan="totalCols" class="eet-empty">Sin registros</td>
         </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -210,7 +246,8 @@ import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 
 const props = defineProps({
-  enrollments: { type: Array, default: () => [] }
+  enrollments: { type: Array, default: () => [] },
+  isLoading:   { type: Boolean, default: false }
 })
 
 const router = useRouter()
@@ -508,5 +545,26 @@ const totalCols = computed(() => {
   color: #9CA3AF;
   font-size: 13px;
   border-bottom: none;
+}
+
+/* Skeleton loading */
+.eet-skeleton-row {
+  height: 44px;
+}
+.eet-skeleton-row td {
+  border-bottom: 1px solid #F3F4F6;
+  vertical-align: middle;
+}
+.eet-sk-cell {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  animation: eet-sk-shimmer 1.4s ease-in-out infinite;
+  width: 100%;
+}
+@keyframes eet-sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>

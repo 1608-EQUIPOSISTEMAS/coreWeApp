@@ -37,32 +37,32 @@ const routes = [
         name: 'FICO',
         component: RouterViewStub,
         redirect: { name: 'FicoInscripciones' },
-        meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+        meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
         children: [
           {
             path: 'inscripciones',
             name: 'enrollment',
             component: () => import('@/views/fico/Enrollment.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/new',
             name: 'enrollmentForm',
             component: () => import('@/views/fico/EnrollmentForm.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/:id',
             name: 'enrollmentDetail',
             component: () => import('@/views/fico/enrollment/EnrollmentDetailView.vue'),
             props: true,
-            meta: { roles: ['ADMIN', 'FICO', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'tokens',
             name: 'ficoTokens',
             component: () => import('@/views/fico/TokenPage.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_COMERCIAL', 'GERENCIA'] },
+            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
           },
           // {
           //   path: 'reportes',
@@ -318,7 +318,7 @@ const routes = [
             path: 'notificaciones',
             name: 'NotificationList',
             component: () => import('@/views/general/notification.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+            meta: { roles: ['ADMIN'] },
           },
           {
             path: 'cliente',
