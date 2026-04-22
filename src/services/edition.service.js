@@ -77,4 +77,13 @@ export default class EditionService {
     return response.data;
   }
 
+  async downloadSchedulePdf(parentEditionId, childEditionId) {
+    const response = await api.post(
+      '/edition/schedule-pdf',
+      { parent_edition_id: parentEditionId, child_edition_id: childEditionId },
+      { responseType: 'blob', meta: { skipLoader: true } }
+    )
+    return response.data
+  }
+
 }

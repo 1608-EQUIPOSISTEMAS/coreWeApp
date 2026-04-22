@@ -13,16 +13,77 @@
             </h1>
           </div>
         </div>
-        <div class="masthead-actions">
-<button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
+
+        <!-- ── ACADEMICA: controles inline en la misma fila ── -->
+        <template v-if="isAcademica && !hasActiveFilters">
+          <div class="masthead-inline-filters">
+            <div class="filter-period-nav">
+              <button type="button" class="filter-nav-btn" @click="changeMonth(-1)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <select v-model.number="selectedMonth" @change="fetchSchedule" class="exec-select" style="min-width:100px;">
+                <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+              </select>
+              <select v-model.number="selectedYear" @change="fetchSchedule" class="exec-select" style="min-width:62px;">
+                <option :value="2024">2024</option>
+                <option :value="2025">2025</option>
+                <option :value="2026">2026</option>
+              </select>
+              <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="filter-sep"></div>
+            <button
+              type="button" class="btn-exec btn-exec-sm"
+              :class="onlyCursos === 'all' ? 'btn-exec-ghost' : 'btn-exec-teal'"
+              @click="cycleVista()"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              {{ onlyCursos === 'all' ? 'Todos' : onlyCursos === 'courses' ? 'Solo Cursos' : 'Solo Programas' }}
+              <span v-if="onlyCursos !== 'all'" class="btn-exec-dot"></span>
+            </button>
+            <button
+              type="button" class="btn-exec btn-exec-sm"
+              :class="onlyActivos ? 'btn-exec-teal' : 'btn-exec-ghost'"
+              @click="onlyActivos = !onlyActivos"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Activo
+              <span v-if="onlyActivos" class="btn-exec-dot"></span>
+            </button>
+            <div class="filter-sep"></div>
+            <MultiSelect
+              v-model="columnFilters.business_line"
+              :items="catalogs.businessLineList"
+              label-key="description"
+              value-key="id"
+              placeholder="Línea…"
+              style="min-width:130px;"
+            />
+            <div class="filter-sep"></div>
+            <div class="inline-kpi">
+              <span class="inline-kpi-label">SEM</span>
+              <span class="inline-kpi-value">{{ schedules.length }}</span>
+            </div>
+            <div class="inline-kpi">
+              <span class="inline-kpi-label">EDIC.</span>
+              <span class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── Resto de roles: botones de acción normales ── -->
+        <div v-if="!isAcademica" class="masthead-actions">
+          <button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Objetivos
           </button>
-          <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
+          <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
             Historial
           </button>
-          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
+          <button type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtros
             <span v-if="hasActiveFilters" class="btn-exec-dot"></span>
@@ -40,8 +101,8 @@
         </div>
       </div>
 
-      <!-- Filtros / Periodo / KPIs en línea -->
-      <div class="masthead-filters">
+      <!-- Filtros / Periodo / KPIs en línea — solo para NO academica -->
+      <div v-if="!isAcademica" class="masthead-filters">
         <template v-if="!hasActiveFilters">
           <div class="filter-group">
             <label class="filter-label">PERÍODO</label>
@@ -63,34 +124,6 @@
             </div>
           </div>
           <div class="filter-sep"></div>
-          <div v-if="isAcademica" class="filter-group">
-            <label class="filter-label">VISTA</label>
-            <div class="d-flex gap-2">
-              <button
-                type="button"
-                class="btn-exec btn-exec-sm"
-                :class="onlyCursos ? 'btn-exec-teal' : 'btn-exec-ghost'"
-                @click="onlyCursos = !onlyCursos"
-                :title="onlyCursos ? 'Mostrando solo Cursos · clic para ver todo' : 'Ver solo Cursos'"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                Solo Cursos
-                <span v-if="onlyCursos" class="btn-exec-dot"></span>
-              </button>
-              <button
-                type="button"
-                class="btn-exec btn-exec-sm"
-                :class="onlyActivos ? 'btn-exec-teal' : 'btn-exec-ghost'"
-                @click="onlyActivos = !onlyActivos"
-                :title="onlyActivos ? 'Mostrando solo Activos · clic para ver todo' : 'Ver solo Activos'"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Activo
-                <span v-if="onlyActivos" class="btn-exec-dot"></span>
-              </button>
-            </div>
-          </div>
-          <div class="filter-sep"></div>
           <div class="filter-group">
             <label class="filter-label">LÍNEA</label>
             <MultiSelect
@@ -102,7 +135,6 @@
             />
           </div>
           <div class="filter-spacer"></div>
-          <!-- KPIs inline -->
           <div class="masthead-kpis">
             <div class="inline-kpi">
               <span class="inline-kpi-label">SEMANAS</span>
@@ -118,8 +150,6 @@
             </div>
           </div>
         </template>
-
-        <!-- Modo histórico: chips de filtros activos -->
         <template v-else>
           <div class="filter-chips-bar">
             <BaseFilterChips :items="formattedActiveFilters" @remove="removeFilter($event)" @clear-all="clearAllFilters" />
@@ -136,10 +166,14 @@
     </header>
 
     <!-- ══════════════ CUERPO ══════════════ -->
-    <main class="exec-body">
+     
+    <main class="exec-body pb-5 mb-5">
+      
       <div class="view-table">
+        
         <div class="table-shell">
           <div class="table-responsive-custom">
+            
             <table class="exec-table" :class="{ 'exec-table-dense': isCompact }">
               <thead>
                 <!-- FILA 1: Grupos principales -->
@@ -719,26 +753,13 @@
                 </template>
               </tbody>
             </table>
+            
             </div>
         </div>
+        
       </div>
+      
     </main>
-
-    <!-- ══════════════ FOOTER ══════════════ -->
-    <footer class="exec-footer">
-      <span>Período: <strong>{{ months[selectedMonth - 1] }} {{ selectedYear }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span>Vista: <strong>{{ isCompact ? 'Compacta' : 'Normal' }}</strong></span>
-      <span v-if="hasActiveFilters">
-        <span class="footer-sep">·</span>
-        <span style="color:var(--gold-400); font-weight:600;">Modo Histórico activo</span>
-      </span>
-      <span class="footer-spacer"></span>
-      <span class="footer-status">
-        <span class="status-dot dot-ok"></span>
-        Datos sincronizados
-      </span>
-    </footer>
 
     <!-- ══════════════ MODALES ══════════════ -->
 
@@ -1277,7 +1298,7 @@
               <div class="table-responsive">
                 <table class="table table-hover mb-0" style="font-size:0.85rem;">
                   <thead class="table-light text-muted text-uppercase" style="font-size:0.7rem;">
-                    <tr><th class="ps-4 py-2">Curso / Módulo</th><th class="py-2">Fechas</th><th class="py-2">Horario</th><th class="py-2 text-end pe-4">Estado</th></tr>
+                    <tr><th class="ps-4 py-2">Curso / Módulo</th><th class="py-2">Fechas</th><th class="py-2">Horario</th><th class="py-2 text-center">Estado</th><th class="py-2 text-center pe-3" style="width:48px;">PDF</th></tr>
                   </thead>
                   <tbody>
                     <tr v-for="child in group.children" :key="child.edition_num_id || child.global_code" :class="{ 'table-active': child.is_current }">
@@ -1307,7 +1328,20 @@
                         <div v-else-if="child.day_combination_label"><div class="fw-medium">{{ child.day_combination_label }}</div><div class="text-muted text-xs">{{ child.hour_combination_label }}</div></div>
                         <span v-else class="text-muted">-</span>
                       </td>
-                      <td class="text-end pe-4"><span class="badge border" :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'">{{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}</span></td>
+                      <td class="text-center"><span class="badge border" :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'">{{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}</span></td>
+                      <td class="text-center pe-3">
+                        <button
+                          v-if="child.start_date && child.end_date"
+                          class="btn-pdf-dl"
+                          :disabled="downloadingPdfId === child.edition_num_id"
+                          :title="'Descargar programación: ' + (child.program_abreviature || child.abbreviation)"
+                          @click.stop="downloadChildPdf(group, child)"
+                        >
+                          <i v-if="downloadingPdfId === child.edition_num_id" class="fa-solid fa-spinner fa-spin"></i>
+                          <i v-else class="fa-solid fa-file-pdf"></i>
+                        </button>
+                        <span v-else class="text-muted" style="font-size:0.7rem;">—</span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -1503,9 +1537,10 @@
 .exec-shell {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   background: #f8fafc;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   color: #0f172a;
 
   --navy-900: #0f172a;
@@ -1589,6 +1624,15 @@
 .brand-title:hover { opacity: 0.85; }
 
 .masthead-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Controles inline para ACADEMICA (una sola fila junto al brand) */
+.masthead-inline-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-left: auto;
+}
 
 /* Filtros */
 .masthead-filters {
@@ -1677,18 +1721,39 @@
 /* ═══════════════════════════════════════════════
    CUERPO
 ═══════════════════════════════════════════════ */
-.exec-body { flex: 1; padding: 20px 24px; }
+.exec-body {
+  flex: 1;
+  padding: 12px 24px 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
-.view-table { width: 100%; }
+.view-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
 
 .table-shell {
+  flex: 1;
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: 6px;
-  /* overflow-x: auto;  <-- ELIMINAR */
-  /* overflow-y: hidden; <-- ELIMINAR */
   box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  /* -webkit-overflow-scrolling: touch; <-- ELIMINAR */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-responsive-custom {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
 }
 
 /* ═══════════════════════════════════════════════
@@ -1703,6 +1768,12 @@
 .exec-table-dense td { padding: 5px 8px !important; }
 
 /* ── Fila 1: Grupos principales ── */
+.exec-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .thead-group th {
   padding: 8px 10px; font-size: 10px;
   letter-spacing: 0.1em; text-transform: uppercase;
@@ -1967,6 +2038,16 @@
 
 .action-btn-hier  { background: rgba(99,102,241,0.12); color: #6366f1; }
 .action-btn-hier:hover {  background: rgba(244, 243, 243, 0.767); }
+
+/* ── Botón descarga PDF (modal jerarquía) ── */
+.btn-pdf-dl {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;
+  background: rgba(220,38,38,0.08); color: #dc2626;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-pdf-dl:hover:not(:disabled) { background: rgba(220,38,38,0.18); transform: scale(1.08); }
+.btn-pdf-dl:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Programa ── */
 .prog-name { font-weight: 600; }
@@ -2328,7 +2409,7 @@ tr[class*="row-segment-"]:hover .td-d {
 </style>
 <script setup>
 
-import { ref, reactive, computed, onMounted, inject, watch, nextTick, getCurrentInstance } from 'vue' // <--- Agrega nextTick
+import { ref, reactive, computed, onMounted, onUnmounted, inject, watch, nextTick, getCurrentInstance } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
@@ -2379,7 +2460,13 @@ const { proxy } = getCurrentInstance()
 const isAcademica = computed(() => proxy.$hasRole(['ACADEMICA']))
 
 // ── Filtros rápidos (ACADEMICA) ──────────────────────────────
-const onlyCursos  = ref(false)
+// 'all' | 'courses' | 'programs'
+const onlyCursos  = ref('all')
+function cycleVista() {
+  if      (onlyCursos.value === 'all')     onlyCursos.value = 'courses'
+  else if (onlyCursos.value === 'courses') onlyCursos.value = 'programs'
+  else                                      onlyCursos.value = 'all'
+}
 const onlyActivos = ref(false)
 // ── Inline link edit (ACADEMICA) ─────────────────────────────
 const linkInputEl   = ref(null)
@@ -2778,6 +2865,28 @@ function calculateMetaSummary() {
 const showTreeModal = ref(false)
 const treeGroups = ref([]) // Usamos Grupos para el Acordeón
 const treeModalTitle = ref('Estructura Académica')
+const downloadingPdfId = ref(null) // id del hijo que está generando PDF
+
+async function downloadChildPdf(group, child) {
+  if (downloadingPdfId.value) return
+  downloadingPdfId.value = child.edition_num_id
+  try {
+    const blob = await editionService.downloadSchedulePdf(group.id, child.edition_num_id)
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    const name = (child.program_abreviature || child.abbreviation || 'modulo').replace(/\s+/g, '_')
+    a.href     = url
+    a.download = `Programacion_${name}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    toast.error('No se pudo generar el PDF')
+  } finally {
+    downloadingPdfId.value = null
+  }
+}
 async function openMonthlyGoalsModal() {
   // 1. Forzamos actualizar el listado primero para traer datos frescos
   await fetchSchedule()
@@ -3220,7 +3329,12 @@ async function fetchSchedule() {
 onMounted(() => {
   loadState()
   applyFiltersFromQueryParams()
-  // fetchSchedule()
+  // Eliminar scroll exterior — la tabla tiene su propio scroll interno
+  document.body.style.overflow = 'hidden'
+})
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
 })
 
 const historyList = ref([])
@@ -4403,11 +4517,12 @@ const filteredSchedules = computed(() => {
 
   const isActive = (item) => (item.active === true || item.active === 'Y') && item.cat_segment !== 'A5'
 
-  const baseSchedules = (hasFilter || onlyCursos.value || onlyActivos.value)
+  const baseSchedules = (hasFilter || onlyCursos.value !== 'all' || onlyActivos.value)
     ? schedules.value.map(week => {
         const filteredItems = (week.items || []).filter(item => {
-          if (onlyCursos.value  && item.program_type !== 'Curso') return false
-          if (onlyActivos.value && !isActive(item))               return false
+          if (onlyCursos.value === 'courses'  && item.program_type !== 'Curso') return false
+          if (onlyCursos.value === 'programs' && item.program_type === 'Curso') return false
+          if (onlyActivos.value && !isActive(item))                             return false
           return true
         })
         return { ...week, items: filteredItems }
