@@ -1,7 +1,9 @@
 <template>
-  <transition name="bar-fade">
-    <div v-if="isLoading" class="top-progress-bar">
-      <div class="top-progress-track"></div>
+  <transition name="overlay-fade">
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="top-progress-bar">
+        <div class="top-progress-track"></div>
+      </div>
     </div>
   </transition>
 </template>
@@ -12,13 +14,22 @@ const isLoading = loader.isLoading
 </script>
 
 <style scoped>
-.top-progress-bar {
+.loading-overlay {
   position: fixed;
+  inset: 0;
+  z-index: 9998;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: all;
+}
+
+.top-progress-bar {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 3px;
-  z-index: 99999;
   overflow: hidden;
 }
 
@@ -42,8 +53,8 @@ const isLoading = loader.isLoading
   100% { background-position: -200% 0; }
 }
 
-.bar-fade-enter-active { transition: opacity 0.15s ease; }
-.bar-fade-leave-active { transition: opacity 0.3s ease 0.1s; }
-.bar-fade-enter-from,
-.bar-fade-leave-to   { opacity: 0; }
+.overlay-fade-enter-active { transition: opacity 0.2s ease; }
+.overlay-fade-leave-active { transition: opacity 0.3s ease; }
+.overlay-fade-enter-from,
+.overlay-fade-leave-to    { opacity: 0; }
 </style>

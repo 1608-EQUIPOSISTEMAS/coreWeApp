@@ -2,10 +2,10 @@
   <main class="exec-body">
     <div class="exec-toolbar mb-4">
       <div class="toolbar-pagination">
-        <BasePagination v-model="pagin" @change="fetchCsat" />
+        <BasePagination v-model="pagin" @change="fetchCsat" :hide-filters="true" />
       </div>
       <div class="toolbar-actions">
-        <div style="width: 220px;">
+        <div style="width: 210px;">
           <SearchSelect
             v-model="filters.rating"
             :items="ratingOptions"
@@ -15,28 +15,29 @@
             @change="(opt) => { filters.rating = opt?.value ?? null; triggerFilter() }"
           />
         </div>
-        
-        <div style="width: 220px;">
-          <BaseDatePicker 
-            v-model="filters.date_range_string" 
-            :config="{ mode: 'range', dateFormat: 'Y-m-d' }" 
-            class="exec-input-light w-100" 
-            placeholder="Filtrar fechas..." 
-            @on-change="handleDateChange" 
+        <div class="filter-date-wrap">
+          <i class="fa-regular fa-calendar filter-icon"></i>
+          <BaseDatePicker
+            v-model="filters.date_range_string"
+            :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+            class="filter-input"
+            placeholder="Desde → Hasta"
+            @on-change="handleDateChange"
           />
         </div>
-        
-        <input 
-          v-model="filters.q" 
-          type="text" 
-          class="exec-input-light" 
-          style="width: 200px;"
-          placeholder="Buscar alumno o ticket..." 
-          @input="debouncedSearch"
-        />
-        
-        <button v-if="hasFilters" class="btn-exec btn-exec-outline" @click="clearFilters">
-          <i class="fa-solid fa-eraser"></i>
+        <div class="filter-search-wrap">
+          <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+          <input
+            v-model="filters.q"
+            type="text"
+            class="filter-input"
+            style="width: 200px;"
+            placeholder="Buscar alumno o ticket..."
+            @input="debouncedSearch"
+          />
+        </div>
+        <button v-if="hasFilters" class="btn-exec btn-exec-outline" @click="clearFilters" title="Limpiar filtros">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
     </div>
@@ -55,7 +56,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in csatList" :key="c.id" class="tbody-row">
+            <tr v-for="c in csatList" :key="c.id" class="tbody-row"
+              v-if="!isLoading">
               <td class="td-a small fw-600 text-dark">{{ c.created_at_fmt }}</td>
               <td class="td-a fw-700 text-mono accent-text">{{ c.ticket_number || '—' }}</td>
               <td class="td-a">
@@ -96,9 +98,19 @@
                 <p>No se encontraron encuestas de satisfacción con estos filtros.</p>
               </td>
             </tr>
-            <tr v-if="isLoading">
-              <td colspan="6" class="text-center py-5"><div class="loader-ring mx-auto"></div></td>
-            </tr>
+            <template v-if="isLoading">
+              <tr v-for="n in 8" :key="`sk-${n}`" class="tbody-row skel-row">
+                <td class="td-a"><div class="skel" style="width:80px;height:12px;"></div></td>
+                <td class="td-a"><div class="skel" style="width:90px;height:12px;"></div></td>
+                <td class="td-a">
+                  <div class="skel mb-1" style="width:120px;height:12px;"></div>
+                  <div class="skel" style="width:80px;height:10px;"></div>
+                </td>
+                <td class="td-a"><div class="skel" style="width:100px;height:14px;"></div></td>
+                <td class="td-a"><div class="skel" style="width:80px;height:20px;border-radius:10px;"></div></td>
+                <td class="td-a text-center"><div class="skel" style="width:26px;height:26px;border-radius:4px;margin:0 auto;"></div></td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -214,6 +226,12 @@ onActivated(() => {
 .exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+.filter-search-wrap, .filter-date-wrap { position: relative; display: flex; align-items: center; }
+.filter-icon { position: absolute; left: 9px; color: #94a3b8; font-size: 11px; pointer-events: none; z-index: 1; }
+.filter-input { height: 34px; padding: 0 10px 0 28px; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: #fff; font-size: 12px; font-family: inherit; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; }
+.filter-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20,184,166,.1); }
+.filter-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 11.5px; }
+
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
 .btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
@@ -281,6 +299,10 @@ onActivated(() => {
 .exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
 .loader-ring { width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: #0d9488; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.skel-row td { background: #fafbfc !important; }
+.skel { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }

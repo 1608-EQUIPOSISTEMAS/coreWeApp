@@ -2,16 +2,23 @@
   <main class="exec-body">
     <div class="exec-toolbar mb-4">
       <div class="toolbar-pagination">
-        <BasePagination v-model="pagin" @change="fetchStudents" />
+        <BasePagination v-model="pagin" @change="fetchStudents" :hide-filters="true" />
       </div>
-      <div class="toolbar-actions" style="width: 300px;">
-        <input 
-          v-model="filters.q" 
-          type="text" 
-          class="exec-input-light w-100" 
-          placeholder="Buscar por nombre, correo o teléfono..." 
-          @input="debouncedSearch"
-        />
+      <div class="toolbar-actions">
+        <div class="filter-search-wrap">
+          <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+          <input
+            v-model="filters.q"
+            type="text"
+            class="filter-input"
+            style="width: 280px;"
+            placeholder="Buscar por nombre, correo o teléfono..."
+            @input="debouncedSearch"
+          />
+        </div>
+        <button v-if="filters.q" class="btn-exec btn-exec-outline" @click="filters.q = ''; fetchStudents()" title="Limpiar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
     </div>
 
@@ -31,6 +38,7 @@
             <tr 
               v-for="s in students" 
               :key="s.id" 
+              v-if="!isLoading"
               class="tbody-row"
               @click="openStudentProfile(s.id)"
             >
@@ -60,9 +68,18 @@
                 <p>No se encontraron alumnos.</p>
               </td>
             </tr>
-            <tr v-if="isLoading">
-              <td colspan="5" class="text-center py-5"><div class="loader-ring mx-auto"></div></td>
-            </tr>
+            <template v-if="isLoading">
+              <tr v-for="n in 8" :key="`sk-${n}`" class="tbody-row skel-row">
+                <td class="td-a text-center"><div class="skel" style="width:32px;height:32px;border-radius:50%;margin:0 auto;"></div></td>
+                <td class="td-a"><div class="skel" style="width:130px;height:12px;"></div></td>
+                <td class="td-a">
+                  <div class="skel mb-1" style="width:110px;height:12px;"></div>
+                  <div class="skel" style="width:140px;height:10px;"></div>
+                </td>
+                <td class="td-a"><div class="skel" style="width:80px;height:20px;border-radius:10px;"></div></td>
+                <td class="td-a"><div class="skel" style="width:80px;height:12px;"></div></td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -209,6 +226,12 @@ onActivated(() => {
 .exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
 .toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+.filter-search-wrap { position: relative; display: flex; align-items: center; }
+.filter-icon { position: absolute; left: 9px; color: #94a3b8; font-size: 11px; pointer-events: none; z-index: 1; }
+.filter-input { height: 34px; padding: 0 10px 0 28px; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: #fff; font-size: 12px; font-family: inherit; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; }
+.filter-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20,184,166,.1); }
+.filter-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 11.5px; }
+
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
 .btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
@@ -276,6 +299,10 @@ onActivated(() => {
 .exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
 .loader-ring { width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: #0d9488; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.skel-row td { background: #fafbfc !important; }
+.skel { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }

@@ -13,7 +13,7 @@ function start() {
   state.active++
   // muestra tras un pequeño delay (evita blink en requests muy rápidos)
   clearTimeout(state.delayTimer)
-  state.delayTimer = setTimeout(() => { state.show = true }, 150)
+  state.delayTimer = setTimeout(() => { state.show = true }, 300)
 }
 
 function stop() {
