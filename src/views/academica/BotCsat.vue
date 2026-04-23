@@ -51,6 +51,7 @@
               <th class="ts ts-c">Alumno</th>
               <th class="ts ts-c" style="width: 180px;">Calificación (CSAT)</th>
               <th class="ts ts-c" style="width: 180px;">Cierre</th>
+              <th class="ts ts-c text-center" style="width: 80px;">Chat</th>
             </tr>
           </thead>
           <tbody>
@@ -75,15 +76,28 @@
                 <span v-if="c.resolved_by_agent" class="pill pill-slate border"><i class="fa-solid fa-user-tie me-1"></i> Por Asesor</span>
                 <span v-else class="pill pill-teal border"><i class="fa-solid fa-robot me-1"></i> Por el Bot</span>
               </td>
+              <td class="td-a text-center">
+                <a
+                  v-if="c.conversation_id"
+                  :href="`https://chat.we-educacion-ejecutiva.site/app/accounts/1/inbox/1/conversations/${c.conversation_id}`"
+                  target="_blank"
+                  class="btn-icon"
+                  title="Abrir conversación en Chatwoot"
+                  @click.stop
+                >
+                  <i class="fa-solid fa-up-right-from-square"></i>
+                </a>
+                <span v-else class="text-muted">—</span>
+              </td>
             </tr>
             <tr v-if="!csatList.length && !isLoading">
-              <td colspan="5" class="empty-state">
+              <td colspan="6" class="empty-state">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <p>No se encontraron encuestas de satisfacción con estos filtros.</p>
               </td>
             </tr>
             <tr v-if="isLoading">
-              <td colspan="5" class="text-center py-5"><div class="loader-ring mx-auto"></div></td>
+              <td colspan="6" class="text-center py-5"><div class="loader-ring mx-auto"></div></td>
             </tr>
           </tbody>
         </table>

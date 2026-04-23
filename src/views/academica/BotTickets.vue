@@ -76,11 +76,12 @@
               <th class="ts ts-c" style="width: 160px;">Tipo de Solicitud</th>
               <th class="ts ts-c">Alumno / Contacto</th>
               <th class="ts ts-c">Programa</th>
+              <th class="ts ts-c" style="width: 170px;">Asignado a</th>
               <th class="ts ts-c" style="width: 150px;">Fecha Registro</th>
             </tr>
             <tr class="thead-filter">
               <th class="tf tf-actions-cell">
-                <button v-if="filters.q || filters.status || filters.tipo" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
+                <button v-if="filters.q || filters.status || filters.tipo || filters.assigned_to" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
                   <i class="fa-solid fa-xmark"></i>
                 </button>
               </th>
@@ -107,6 +108,13 @@
                 <input v-model="filters.q" type="text" class="hf-input" placeholder="Nombre, correo, tel..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" disabled title="Usa la búsqueda del ticket" />
               </th>
               <th class="tf"></th>
+              <th class="tf">
+                <select v-model="filters.assigned_to" class="hf-input" @change="triggerInlineFilter">
+                  <option :value="null">Todos</option>
+                  <option :value="0">Sin asignar</option>
+                  <option v-for="a in advisorOptions" :key="a.id" :value="a.id">{{ a.full_name }}</option>
+                </select>
+              </th>
               <th class="tf"></th>
             </tr>
           </thead>
@@ -139,17 +147,25 @@
               </td>
               <td class="td-a small text-muted">{{ t.program_name || '—' }}</td>
               <td class="td-a small">
+                <span v-if="t.assigned_to_name" class="pill pill-assigned border">
+                  <i class="fa-solid fa-user-tie me-1"></i> {{ t.assigned_to_name }}
+                </span>
+                <span v-else class="pill pill-slate border">
+                  <i class="fa-solid fa-user-slash me-1"></i> Sin asignar
+                </span>
+              </td>
+              <td class="td-a small">
                 <div class="fw-600 text-dark">{{ t.created_at_fmt }}</div>
               </td>
             </tr>
             <tr v-if="!ticketsRaw.length && !isLoading">
-              <td colspan="7" class="empty-state">
+              <td colspan="8" class="empty-state">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 <p>No se encontraron tickets con los filtros actuales.</p>
               </td>
             </tr>
             <tr v-if="isLoading">
-              <td colspan="7" class="text-center py-5">
+              <td colspan="8" class="text-center py-5">
                 <div class="loader-ring mx-auto"></div>
               </td>
             </tr>
@@ -221,8 +237,21 @@
             />
           </div>
 
-          <label class="exec-label">Notas Internas (Solo Asesores)</label>
-          <textarea v-model="formTicket.notes" class="exec-textarea w-100" rows="4" placeholder="Registra las acciones tomadas o enlaces enviados..."></textarea>
+          <label class="exec-label">Asignar a Asesor</label>
+          <div class="mb-3">
+            <SearchSelect
+              v-model="formTicket.assigned_to"
+              :items="advisorOptions"
+              value-field="id"
+              label-field="full_name"
+              placeholder="Sin asignar..."
+              :clearable="true"
+              @change="(opt) => { formTicket.assigned_to = opt?.id ?? null }"
+            />
+          </div>
+
+          <label class="exec-label">Observaciones</label>
+          <textarea v-model="formTicket.notes" class="exec-textarea w-100" rows="4" placeholder="Registra las acciones tomadas, enlaces enviados o cualquier observación relevante..."></textarea>
 
           <div v-if="selectedTicket.resolved_at_fmt" class="mt-3 text-muted x-small">
             <i class="fa-solid fa-check-double text-success me-1"></i> Marcado como solucionado el {{ selectedTicket.resolved_at_fmt }}
@@ -277,6 +306,7 @@ const filters = reactive({
   q: '',
   status: null,
   tipo: null,
+  assigned_to: null,
   from_date: null,
   to_date: null,
   date_range_string: null
@@ -287,7 +317,18 @@ const showTicketModal = ref(false)
 const isLoadingModal = ref(false)
 const isSaving = ref(false)
 const selectedTicket = ref(null)
-const formTicket = reactive({ status: '', notes: '' })
+const formTicket = reactive({ status: '', notes: '', assigned_to: null })
+
+// === ASESORES (para asignación) ===
+const advisorOptions = ref([])
+async function loadAdvisors() {
+  try {
+    const data = await botService.botAdvisorList()
+    advisorOptions.value = data?.items || []
+  } catch (error) {
+    console.error('No se pudo cargar la lista de asesores', error)
+  }
+}
 
 // === FETCH DATA ===
 async function fetchData() {
@@ -303,6 +344,7 @@ async function fetchData() {
       q: filters.q || null,
       status: filters.status || null,
       tipo: filters.tipo || null,
+      assigned_to: filters.assigned_to,
       from_date: filters.from_date || null,
       to_date: filters.to_date || null,
       page: pagin.value.page,
@@ -328,6 +370,7 @@ async function openTicketModal(id) {
     selectedTicket.value = data
     formTicket.status = data.status
     formTicket.notes = data.notes || ''
+    formTicket.assigned_to = data.assigned_to || null
   } catch (error) {
     toast.error('No se pudo cargar el ticket')
     showTicketModal.value = false
@@ -342,7 +385,8 @@ async function saveTicket() {
     await botService.botTicketUpdate({
       id: selectedTicket.value.id,
       status: formTicket.status,
-      notes: formTicket.notes
+      notes: formTicket.notes,
+      assigned_to: formTicket.assigned_to
     })
     toast.success('Ticket actualizado correctamente')
     showTicketModal.value = false
@@ -384,6 +428,7 @@ function clearFilters() {
   filters.q = ''
   filters.status = null
   filters.tipo = null
+  filters.assigned_to = null
   filters.from_date = null
   filters.to_date = null
   filters.date_range_string = null
@@ -425,6 +470,7 @@ function rowClassForStatus(status) {
 
 // === INIT ===
 onActivated(() => {
+  if (!advisorOptions.value.length) loadAdvisors()
   fetchData()
 })
 </script>
@@ -471,6 +517,7 @@ onActivated(() => {
 .pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--text-secondary, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
 .pill-teal   { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important; }
 .pill-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
+.pill-assigned { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe !important; }
 
 .btn-icon { background: transparent; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary, #475569); transition: all .15s; font-size: 12px; vertical-align: middle; }
 .btn-icon:hover:not(:disabled) { background: var(--slate-100, #f1f5f9); color: var(--text-primary, #0f172a); border-color: var(--slate-300, #cbd5e1); }

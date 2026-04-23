@@ -39,4 +39,10 @@ export default class BotService {
     const res = await this.api.post('/bot/botcsatlist', payload)
     return res.data.data
   }
+
+  // ── MÓDULO 5: LISTA DE ASESORES PARA ASIGNAR TICKETS ──
+  async botAdvisorList() {
+    const res = await this.api.post('/bot/botadvisorlist', {})
+    return res.data.data
+  }
 }
