@@ -76,6 +76,9 @@ const activeComponent = computed(() => {
   background: var(--navy-900, #0f172a);
   color: #fff;
   border-bottom: 1px solid var(--navy-700, #334155);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .masthead-inner {
   display: flex;

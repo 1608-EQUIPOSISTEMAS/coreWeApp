@@ -62,18 +62,16 @@
         <button v-if="filters.q || filters.status || filters.tipo || filters.assigned_to || filters.from_date" class="btn-exec btn-exec-outline" @click="clearFilters" title="Limpiar Filtros">
           <i class="fa-solid fa-eraser"></i>
         </button>
-        <button class="btn-exec btn-exec-primary" @click="fetchData">
-          <i class="fa-solid fa-rotate-right"></i> Actualizar
-        </button>
+
       </div>
     </div>
 
-    <div class="table-shell">
+    <div class="tickets-layout">
+      <div class="table-shell">
       <div class="table-responsive-custom">
         <table class="exec-table">
           <thead>
             <tr class="thead-sub">
-              <th class="ts ts-c text-center" style="width: 60px;">Acciones</th>
               <th class="ts ts-c" style="width: 110px;">Ticket #</th>
               <th class="ts ts-c" style="width: 140px;">Estado</th>
               <th class="ts ts-c" style="width: 160px;">Tipo de Solicitud</th>
@@ -83,11 +81,6 @@
               <th class="ts ts-c" style="width: 150px;">Fecha Registro</th>
             </tr>
             <tr class="thead-filter">
-              <th class="tf tf-actions-cell">
-                <button v-if="filters.q || filters.status || filters.tipo || filters.assigned_to" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
-                  <i class="fa-solid fa-xmark"></i>
-                </button>
-              </th>
               <th class="tf">
                 <input v-model="filters.q" type="text" class="hf-input text-mono fw-600" placeholder="Buscar..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" />
               </th>
@@ -128,14 +121,9 @@
               :key="t.id"
               v-if="!isLoading"
               class="tbody-row"
-              :class="rowClassForStatus(t.status)"
-              @dblclick="openTicketModal(t.id)"
+              :class="[rowClassForStatus(t.status), { 'row-active': selectedTicket?.id === t.id }]"
+              @click="openTicketModal(t.id)"
             >
-              <td class="td-a text-center nowrap">
-                <button class="btn-icon" @click.stop="openTicketModal(t.id)" title="Gestionar Ticket">
-                  <i class="fa-solid fa-clipboard-check" :class="t.status === 'SOLUCIONADO' ? 'text-success' : 'text-primary'"></i>
-                </button>
-              </td>
               <td class="td-a fw-700 text-mono accent-text">{{ t.ticket_number }}</td>
               <td class="td-a">
                 <span class="pill border" :class="badgeForStatus(t.status)">
@@ -163,14 +151,13 @@
               </td>
             </tr>
             <tr v-if="!ticketsRaw.length && !isLoading">
-              <td colspan="8" class="empty-state">
+              <td colspan="7" class="empty-state">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 <p>No se encontraron tickets con los filtros actuales.</p>
               </td>
             </tr>
             <template v-if="isLoading">
               <tr v-for="n in 8" :key="`sk-${n}`" class="tbody-row skel-row">
-                <td class="td-a text-center"><div class="skel" style="width:28px;height:28px;margin:0 auto;"></div></td>
                 <td class="td-a"><div class="skel" style="width:90px;height:12px;"></div></td>
                 <td class="td-a"><div class="skel" style="width:76px;height:20px;border-radius:10px;"></div></td>
                 <td class="td-a"><div class="skel" style="width:110px;height:12px;"></div></td>
@@ -186,61 +173,67 @@
           </tbody>
         </table>
       </div>
-    </div>
-  </main>
-
-  <BaseModal v-model="showTicketModal" :title="`Gestión de Ticket: ${selectedTicket?.ticket_number || ''}`" size="lg">
-    <div v-if="isLoadingModal" class="exec-loader py-5">
-      <div class="loader-ring"></div>
-      <p class="text-muted small mt-2 fw-600">Cargando detalles...</p>
-    </div>
-    <div v-else-if="selectedTicket" class="px-4 py-3">
-      <div class="enrollment-header mb-4">
-        <div>
-          <h6 class="enrollment-title">{{ selectedTicket.student_name }}</h6>
-          <div class="enrollment-sub">
-            <span><i class="fa-solid fa-envelope me-1"></i> {{ selectedTicket.email }}</span>
-            <span class="mx-2 text-slate-300">|</span>
-            <span><i class="fa-solid fa-phone me-1"></i> {{ selectedTicket.phone }}</span>
-          </div>
-        </div>
-        <span v-if="selectedTicket.membership_tier_name" class="pill border" :class="selectedTicket.membership_active ? 'pill-amber' : 'pill-slate'">
-          <i class="fa-solid fa-crown me-1"></i> {{ selectedTicket.membership_tier_name }}
-        </span>
       </div>
 
-      <div class="row g-4">
-        <div class="col-md-6 border-end pe-4">
-          <h6 class="fieldset-title">Detalles de la Solicitud</h6>
-          <div class="info-block mb-3">
-            <label class="exec-label">Tipo de Consulta</label>
-            <span class="info-value">{{ selectedTicket.tipo.replace(/_/g, ' ') }}</span>
-          </div>
-          <div class="info-block mb-3">
-            <label class="exec-label">Programa Vinculado</label>
-            <span class="info-value">{{ selectedTicket.program_name || '—' }}</span>
-          </div>
-          <div class="info-block mb-3">
-            <label class="exec-label">Fecha de Solicitud</label>
-            <span class="info-value text-muted">{{ selectedTicket.created_at_fmt }}</span>
-          </div>
+      <!-- PANEL LATERAL -->
+      <aside v-if="selectedTicket !== null || isPanelLoading" class="tkt-panel">
 
-          <div v-if="selectedTicket.csat_info" class="exec-alert alert-info mt-4" style="border-left-color: #f59e0b; background:#fffbeb; color:#92400e;">
-            <div>
-              <strong>Calificación del Alumno:</strong><br>
-              <div class="text-warning mt-1" style="font-size: 16px;">
-                <i v-for="n in 5" :key="n" class="fa-star" :class="n <= selectedTicket.csat_info.rating ? 'fa-solid' : 'fa-regular opacity-50'"></i>
-              </div>
-              <span class="x-small text-muted mt-1 d-block">Recibido: {{ selectedTicket.csat_info.created_at }}</span>
-            </div>
-          </div>
+        <div v-if="isPanelLoading" class="tkt-panel-loading">
+          <div class="loader-ring"></div>
+          <p class="text-muted small mt-2">Cargando ticket...</p>
         </div>
 
-        <div class="col-md-6 ps-3">
-          <h6 class="fieldset-title">Resolución</h6>
+        <template v-else-if="selectedTicket">
+          <header class="tkt-panel-head">
+            <div>
+              <div class="tkt-panel-num">{{ selectedTicket.ticket_number }}</div>
+              <div class="tkt-panel-student">{{ selectedTicket.full_name || selectedTicket.student_name }}</div>
+            </div>
+            <button class="tkt-close-btn" @click="closePanel" title="Cerrar">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </header>
 
-          <label class="exec-label">Estado Actual</label>
-          <div class="mb-3" :class="{'border-success-wrapper': formTicket.status === 'SOLUCIONADO'}">
+          <div class="tkt-panel-meta">
+            <span><i class="fa-solid fa-envelope me-1"></i>{{ selectedTicket.email }}</span>
+            <span><i class="fa-brands fa-whatsapp text-success me-1"></i>{{ selectedTicket.phone }}</span>
+          </div>
+
+          <div class="tkt-panel-pills">
+            <span class="pill border" :class="badgeForStatus(selectedTicket.status)">
+              <i class="fa-solid me-1" :class="iconForStatus(selectedTicket.status)"></i>{{ selectedTicket.status }}
+            </span>
+            <span v-if="selectedTicket.membership_tier_name" class="pill pill-amber border">
+              <i class="fa-solid fa-crown me-1"></i>{{ selectedTicket.membership_tier_name }}
+            </span>
+          </div>
+
+          <div class="tkt-section">
+            <div class="tkt-section-title">Detalles</div>
+            <dl class="tkt-dl">
+              <div class="tkt-dl-row"><dt>Tipo</dt><dd>{{ selectedTicket.tipo?.replace(/_/g, ' ') }}</dd></div>
+              <div class="tkt-dl-row"><dt>Programa</dt><dd>{{ selectedTicket.program_name || '—' }}</dd></div>
+              <div class="tkt-dl-row"><dt>Fecha</dt><dd>{{ selectedTicket.created_at_fmt }}</dd></div>
+              <div v-if="selectedTicket.resolved_at_fmt" class="tkt-dl-row">
+                <dt>Resuelto</dt><dd class="text-success fw-600">{{ selectedTicket.resolved_at_fmt }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div v-if="selectedTicket.csat_info" class="tkt-csat-card">
+            <div class="tkt-section-title mb-2">Calificación CSAT</div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="text-warning" style="font-size:14px;">
+                <i v-for="n in 5" :key="n" class="fa-star" :class="n <= selectedTicket.csat_info.rating ? 'fa-solid' : 'fa-regular opacity-40'"></i>
+              </div>
+              <span class="fw-700 text-warning">{{ selectedTicket.csat_info.rating }}.0</span>
+            </div>
+            <div class="x-small text-muted mt-1">{{ selectedTicket.csat_info.created_at }}</div>
+          </div>
+
+          <div class="tkt-section">
+            <div class="tkt-section-title">Resolución</div>
+            <label class="exec-label mt-2">Estado actual</label>
             <SearchSelect
               v-model="formTicket.status"
               :items="ticketStatusOptions"
@@ -249,10 +242,7 @@
               placeholder="Seleccionar estado..."
               @change="(opt) => { if (opt) formTicket.status = opt.value }"
             />
-          </div>
-
-          <label class="exec-label">Asignar a Asesor</label>
-          <div class="mb-3">
+            <label class="exec-label mt-3">Asesor asignado</label>
             <SearchSelect
               v-model="formTicket.assigned_to"
               :items="advisorOptions"
@@ -262,38 +252,27 @@
               :clearable="true"
               @change="(opt) => { formTicket.assigned_to = opt?.id ?? null }"
             />
+            <label class="exec-label mt-3">Observaciones</label>
+            <textarea v-model="formTicket.notes" class="exec-textarea w-100 mt-1" rows="4" placeholder="Registra las acciones tomadas, enlaces enviados..."></textarea>
           </div>
 
-          <label class="exec-label">Observaciones</label>
-          <textarea v-model="formTicket.notes" class="exec-textarea w-100" rows="4" placeholder="Registra las acciones tomadas, enlaces enviados o cualquier observación relevante..."></textarea>
-
-          <div v-if="selectedTicket.resolved_at_fmt" class="mt-3 text-muted x-small">
-            <i class="fa-solid fa-check-double text-success me-1"></i> Marcado como solucionado el {{ selectedTicket.resolved_at_fmt }}
-          </div>
-        </div>
-      </div>
+          <footer class="tkt-panel-footer">
+            <a v-if="selectedTicket.conversation_id" :href="`https://chat.we-educacion-ejecutiva.site/app/accounts/1/inbox/1/conversations/${selectedTicket.conversation_id}`" target="_blank" class="tkt-chatwoot-btn">
+              <i class="fa-solid fa-up-right-from-square me-1"></i> Chatwoot
+            </a>
+            <span v-else></span>
+            <button class="tkt-save-btn" @click="saveTicket" :disabled="isSaving">
+              <i class="fa-solid fa-floppy-disk me-1"></i>{{ isSaving ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </footer>
+        </template>
+      </aside>
     </div>
-    <template #footer>
-      <div class="d-flex justify-content-between w-100 align-items-center">
-        <a v-if="selectedTicket?.conversation_id" :href="`https://chat.we-educacion-ejecutiva.site/app/accounts/1/inbox/1/conversations/${selectedTicket.conversation_id}`" target="_blank" class="btn-exec btn-exec-outline text-primary">
-          <i class="fa-solid fa-up-right-from-square me-1"></i> Abrir en Chatwoot
-        </a>
-        <span v-else></span>
-
-        <div class="d-flex gap-2">
-          <button class="btn-exec btn-exec-outline" @click="showTicketModal = false">Cancelar</button>
-          <button class="btn-exec btn-exec-primary" @click="saveTicket" :disabled="isSaving">
-            <i class="fa-solid fa-save me-1"></i> {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
-          </button>
-        </div>
-      </div>
-    </template>
-  </BaseModal>
+  </main>
 </template>
 
 <script setup>
-import { ref, reactive, onActivated, inject } from 'vue'
-import BaseModal from '@/components/BaseModal.vue'
+import { ref, reactive, onActivated, onMounted, onBeforeUnmount, inject } from 'vue'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -326,9 +305,8 @@ const filters = reactive({
   date_range_string: null
 })
 
-// === MODAL ESTADOS ===
-const showTicketModal = ref(false)
-const isLoadingModal = ref(false)
+// === PANEL ESTADOS ===
+const isPanelLoading = ref(false)
 const isSaving = ref(false)
 const selectedTicket = ref(null)
 const formTicket = reactive({ status: '', notes: '', assigned_to: null })
@@ -376,8 +354,8 @@ async function fetchData() {
 
 // === GESTIÓN DE TICKET ===
 async function openTicketModal(id) {
-  showTicketModal.value = true
-  isLoadingModal.value = true
+  if (selectedTicket.value?.id === id) { closePanel(); return }
+  isPanelLoading.value = true
   selectedTicket.value = null
   try {
     const { data } = await botService.botTicketGet({ id })
@@ -387,10 +365,15 @@ async function openTicketModal(id) {
     formTicket.assigned_to = data.assigned_to || null
   } catch (error) {
     toast.error('No se pudo cargar el ticket')
-    showTicketModal.value = false
+    isPanelLoading.value = false
   } finally {
-    isLoadingModal.value = false
+    isPanelLoading.value = false
   }
+}
+
+function closePanel() {
+  selectedTicket.value = null
+  isPanelLoading.value = false
 }
 
 async function saveTicket() {
@@ -403,7 +386,7 @@ async function saveTicket() {
       assigned_to: formTicket.assigned_to
     })
     toast.success('Ticket actualizado correctamente')
-    showTicketModal.value = false
+    closePanel()
     fetchData()
   } catch (error) {
     toast.error('Error al guardar los cambios')
@@ -418,6 +401,7 @@ function triggerInlineFilter() {
   pagin.value.page = 1
   fetchData()
 }
+
 function debouncedInlineFilter() {
   clearTimeout(inlineFilterTimer)
   inlineFilterTimer = setTimeout(() => triggerInlineFilter(), 400)
@@ -483,6 +467,13 @@ function rowClassForStatus(status) {
 }
 
 // === INIT ===
+function onKeyDown(e) {
+  if (e.key === 'Escape') closePanel()
+}
+
+onMounted(() => window.addEventListener('keydown', onKeyDown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
+
 onActivated(() => {
   if (!advisorOptions.value.length) loadAdvisors()
   fetchData()
@@ -562,6 +553,63 @@ onActivated(() => {
 .exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
 .loader-ring { width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: #0d9488; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══ TICKETS LAYOUT (tabla + panel) ══════════════════════════ */
+.tickets-layout { display: flex; gap: 16px; align-items: flex-start; }
+.tickets-layout .table-shell { flex: 1; min-width: 0; }
+
+.row-active td { background: #f0fdfa !important; }
+.row-active { border-left: 3px solid #0d9488 !important; }
+
+/* ══ PANEL LATERAL ═══════════════════════════════════════════ */
+.tkt-panel {
+  width: 370px;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #efefef;
+  border-radius: 12px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tkt-panel::-webkit-scrollbar { width: 4px; }
+.tkt-panel::-webkit-scrollbar-track { background: transparent; }
+.tkt-panel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+.tkt-panel-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; }
+
+.tkt-panel-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 18px 0; gap: 10px; }
+.tkt-panel-num { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #0d9488; font-weight: 700; letter-spacing: .04em; }
+.tkt-panel-student { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-top: 2px; letter-spacing: -.01em; }
+.tkt-close-btn { width: 28px; height: 28px; border: 1px solid #efefef; background: #fff; border-radius: 6px; cursor: pointer; color: #737373; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+.tkt-close-btn:hover { background: #f5f5f5; color: #1a1a1a; }
+
+.tkt-panel-meta { padding: 8px 18px 0; display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: #737373; }
+.tkt-panel-pills { padding: 10px 18px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.tkt-section { padding: 16px 18px 0; display: flex; flex-direction: column; gap: 6px; }
+.tkt-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #a3a3a3; }
+.tkt-dl { margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tkt-dl-row { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #f5f5f5; }
+.tkt-dl-row:last-child { border-bottom: none; }
+.tkt-dl-row dt { font-size: 11px; color: #a3a3a3; font-weight: 500; }
+.tkt-dl-row dd { font-size: 12.5px; color: #1a1a1a; font-weight: 500; margin: 0; word-break: break-word; }
+
+.tkt-csat-card { margin: 14px 18px 0; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; }
+
+.tkt-panel-footer { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #efefef; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+.tkt-chatwoot-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #0d9488; text-decoration: none; padding: 6px 10px; border: 1px solid #99f6e4; border-radius: 6px; background: #f0fdfa; transition: all .15s; }
+.tkt-chatwoot-btn:hover { background: #ccfbf1; }
+.tkt-save-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s; font-family: inherit; }
+.tkt-save-btn:hover:not(:disabled) { background: #333; }
+.tkt-save-btn:disabled { opacity: .5; cursor: default; }
+
+.exec-textarea { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: inherit; color: var(--text-primary, #0f172a); transition: border-color .15s; resize: vertical; min-height: 72px; display: block; width: 100%; box-sizing: border-box; }
+.exec-textarea:focus { outline: none; border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20,184,166,.1); }
 
 .skel-row td { background: #fafbfc !important; }
 .skel { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 4px; }
