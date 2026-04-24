@@ -185,15 +185,22 @@
                       </button>
                     </div>
                   </th>
+                  <th v-if="isAcademica" colspan="2" class="th-group th-group-e">ACADÉMICA</th>
                   <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
                   <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
                   <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
-                  <th v-if="isAcademica" colspan="2" class="th-group th-group-e">ACADÉMICA</th>
                 </tr>
 
                 <!-- FILA 2: Columnas individuales -->
                 <tr class="thead-sub">
+                  <!-- Académica -->
+                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
+                    <i class="fa-brands fa-whatsapp" style="color:#25d366;"></i>
+                  </th>
+                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
+                    <i class="fa-solid fa-video" style="color:#6264a7;"></i> Teams
+                  </th>
                   <!-- Identificación -->
                   <th class="ts ts-a">
                     <div class="d-flex align-items-center justify-content-between">
@@ -257,12 +264,6 @@
                       <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
                     </div>
                   </th>
-                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
-                    <i class="fa-brands fa-whatsapp" style="color:#25d366;"></i>
-                  </th>
-                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
-                    <i class="fa-solid fa-video" style="color:#6264a7;"></i> Teams
-                  </th>
                 </tr>
               </thead>
 
@@ -316,6 +317,84 @@
                       </button>
                     </div>
                   </td>
+
+                    <!-- ACADÉMICA -->
+                    <template v-if="isAcademica">
+                      <!-- WA -->
+                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link' }">
+                        <template v-if="e.program_type === 'Curso'">
+                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link'" class="lac-inline-edit">
+                            <input
+                              ref="linkInputEl"
+                              class="lac-inline-input"
+                              v-model="editingLink.value"
+                              placeholder="https://chat.whatsapp.com/..."
+                              type="url"
+                              @keyup.enter="saveEditLink(e)"
+                              @keyup.escape="cancelEditLink()"
+                            />
+                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
+                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
+                            </button>
+                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
+                              <i class="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                          <div v-else class="lac-chip lac-chip--wa" :class="{ 'lac-chip--no-link': !e.whatsapp_link }">
+                            <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                            <div class="lac-chip-actions">
+                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'whatsapp_link')" title="Editar link de WhatsApp">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </a>
+                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </span>
+                            </div>
+                          </div>
+                        </template>
+                        <span v-else class="text-muted small">—</span>
+                      </td>
+                      <!-- Teams -->
+                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'teams_link' }">
+                        <template v-if="e.program_type === 'Curso'">
+                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'teams_link'" class="lac-inline-edit">
+                            <input
+                              ref="linkInputEl"
+                              class="lac-inline-input"
+                              v-model="editingLink.value"
+                              placeholder="https://teams.microsoft.com/..."
+                              type="url"
+                              @keyup.enter="saveEditLink(e)"
+                              @keyup.escape="cancelEditLink()"
+                            />
+                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
+                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
+                            </button>
+                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
+                              <i class="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                          <div v-else class="lac-chip lac-chip--teams" :class="{ 'lac-chip--no-link': !e.teams_link }">
+                            <i class="fa-solid fa-video lac-chip-icon"></i>
+                            <div class="lac-chip-actions">
+                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'teams_link')" title="Editar link de Teams">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </a>
+                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                              </span>
+                            </div>
+                          </div>
+                        </template>
+                        <span v-else class="text-muted small">—</span>
+                      </td>
+                    </template>
 
                     <!-- IDENTIFICACIÓN -->
                     <td class="td-a td-prog">
@@ -490,82 +569,6 @@
                         <b v-if="e.clasification">{{ e.clasification }}</b>
                       </div>
                     </td>
-                    <template v-if="isAcademica">
-                      <!-- WA -->
-                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link' }">
-                        <template v-if="e.program_type === 'Curso'">
-                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link'" class="lac-inline-edit">
-                            <input
-                              ref="linkInputEl"
-                              class="lac-inline-input"
-                              v-model="editingLink.value"
-                              placeholder="https://chat.whatsapp.com/..."
-                              type="url"
-                              @keyup.enter="saveEditLink(e)"
-                              @keyup.escape="cancelEditLink()"
-                            />
-                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
-                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
-                            </button>
-                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
-                              <i class="fa-solid fa-xmark"></i>
-                            </button>
-                          </div>
-                          <div v-else class="lac-chip lac-chip--wa" :class="{ 'lac-chip--no-link': !e.whatsapp_link }">
-                            <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
-                            <div class="lac-chip-actions">
-                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'whatsapp_link')" title="Editar link de WhatsApp">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                              </button>
-                              <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </a>
-                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </span>
-                            </div>
-                          </div>
-                        </template>
-                        <span v-else class="text-muted small">—</span>
-                      </td>
-                      <!-- Teams -->
-                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'teams_link' }">
-                        <template v-if="e.program_type === 'Curso'">
-                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'teams_link'" class="lac-inline-edit">
-                            <input
-                              ref="linkInputEl"
-                              class="lac-inline-input"
-                              v-model="editingLink.value"
-                              placeholder="https://teams.microsoft.com/..."
-                              type="url"
-                              @keyup.enter="saveEditLink(e)"
-                              @keyup.escape="cancelEditLink()"
-                            />
-                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
-                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
-                            </button>
-                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
-                              <i class="fa-solid fa-xmark"></i>
-                            </button>
-                          </div>
-                          <div v-else class="lac-chip lac-chip--teams" :class="{ 'lac-chip--no-link': !e.teams_link }">
-                            <i class="fa-solid fa-video lac-chip-icon"></i>
-                            <div class="lac-chip-actions">
-                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'teams_link')" title="Editar link de Teams">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                              </button>
-                              <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </a>
-                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </span>
-                            </div>
-                          </div>
-                        </template>
-                        <span v-else class="text-muted small">—</span>
-                      </td>
-                    </template>
                   </tr>
                 </template>
                 </template>
@@ -606,6 +609,47 @@
                     </div>
 
                   </td>
+
+                  <template v-if="isAcademica">
+                    <td class="td-e td-e-lac">
+                      <template v-if="e.program_type === 'Curso'">
+                        <div class="lac-chip lac-chip--wa">
+                          <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                          <div class="lac-chip-actions">
+                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de WhatsApp">
+                              <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <span v-else class="text-muted small">—</span>
+                    </td>
+                    <td class="td-e td-e-lac">
+                      <template v-if="e.program_type === 'Curso'">
+                        <div class="lac-chip lac-chip--teams">
+                          <i class="fa-solid fa-video lac-chip-icon"></i>
+                          <div class="lac-chip-actions">
+                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de Teams">
+                              <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <span v-else class="text-muted small">—</span>
+                    </td>
+                  </template>
 
                   <td class="td-a td-prog">
                     <div class="prog-name">
@@ -709,46 +753,6 @@
                       <b v-if="e.clasification">{{ e.clasification }}</b>
                     </div>
                   </td>
-                  <template v-if="isAcademica">
-                    <td class="td-e td-e-lac">
-                      <template v-if="e.program_type === 'Curso'">
-                        <div class="lac-chip lac-chip--wa">
-                          <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
-                          <div class="lac-chip-actions">
-                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de WhatsApp">
-                              <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </a>
-                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </span>
-                          </div>
-                        </div>
-                      </template>
-                      <span v-else class="text-muted small">—</span>
-                    </td>
-                    <td class="td-e td-e-lac">
-                      <template v-if="e.program_type === 'Curso'">
-                        <div class="lac-chip lac-chip--teams">
-                          <i class="fa-solid fa-video lac-chip-icon"></i>
-                          <div class="lac-chip-actions">
-                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de Teams">
-                              <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </a>
-                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </span>
-                          </div>
-                        </div>
-                      </template>
-                      <span v-else class="text-muted small">—</span>
-                    </td>
-                  </template>
                 </tr>
                 </template>
               </tbody>
@@ -1792,7 +1796,7 @@
 .th-group-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 2px solid var(--col-b-border); }
 .th-group-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 2px solid var(--col-c-border); }
 .th-group-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 2px solid var(--col-d-border); }
-.th-group-e { background: #052e16; color: #86efac; border-left: 2px solid #16a34a; }
+.th-group-e { background: #ede9fe; color: #5b21b6; border-left: 2px solid #c4b5fd; }
 
 /* ── Fila 2: Columnas individuales ── */
 .thead-sub .ts {
@@ -1870,8 +1874,8 @@
 .td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
 .td-c { background: var(--col-c-td); border-left: 1px solid var(--col-c-tdbdr); }
 .td-d { background: var(--col-d-td); border-left: 1px solid var(--col-d-tdbdr); }
-.td-e { background: #f0fdf4; border-left: 1px solid #bbf7d0; }
-.ts-e { background: #052e16; color: #86efac; border-left: 1px solid #166534; }
+.td-e { background: #faf5ff; border-left: 1px solid #e9d5ff; }
+.ts-e { background: #f5f3ff; color: #6d28d9; border-left: 1px solid #ddd6fe; }
 .link-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; text-decoration: none; transition: all .15s; }
 .link-wa { background: #dcfce7; color: #16a34a; }
 .link-wa:hover { background: #25d366; color: #fff; }
