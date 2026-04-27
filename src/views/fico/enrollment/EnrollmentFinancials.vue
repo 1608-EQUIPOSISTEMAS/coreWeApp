@@ -66,24 +66,31 @@
             </td>
             <td>
               <template v-if="isValidated(child.child_program_version_id)">&mdash;</template>
-              <template v-else-if="child.editions?.length > 1 && planStatus !== 'pendiente'">
-                <span v-if="!editingEdition[child.child_program_version_id]"
+              <template v-else>
+                <!-- Hijo NO esta en el arbol del padre Y no tiene custom edition: requiere accion -->
+                <span v-if="needsEditionDecision(child)" class="ef-edition-warn"
+                  @click="editingEdition[child.child_program_version_id] = true">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  Falta elegir edicion
+                </span>
+                <span v-else-if="!editingEdition[child.child_program_version_id]"
                   class="ef-edition-link"
                   @click="editingEdition[child.child_program_version_id] = true">
-                  {{ getCustomEditionLabel(child) || 'Misma edicion' }}
+                  {{ getCustomEditionLabel(child) || sameEditionLabel() }}
                   <i class="fa-solid fa-pen" style="font-size:10px;margin-left:4px;opacity:.4"></i>
                 </span>
-                <select v-else class="ef-select-sm" style="min-width:160px"
+                <select v-if="editingEdition[child.child_program_version_id]" class="ef-select-sm" style="min-width:200px"
                   :value="getCustomEditionId(child.child_program_version_id)"
                   @change="$emit('change-edition', { childVersionId: child.child_program_version_id, editionId: Number($event.target.value) || null }); editingEdition[child.child_program_version_id] = false"
                   @blur="editingEdition[child.child_program_version_id] = false">
-                  <option :value="null">Misma edicion</option>
+                  <option :value="null" :disabled="!isInParentTree(child)">
+                    {{ isInParentTree(child) ? sameEditionLabel() : 'Seleccionar edicion...' }}
+                  </option>
                   <option v-for="ed in child.editions" :key="ed.edition_id" :value="ed.edition_id">
                     {{ ed.code }} - {{ formatEdDate(ed.start_date) }}
                   </option>
                 </select>
               </template>
-              <template v-else>Misma edicion</template>
             </td>
             <td class="tc">
               <button v-if="planStatus !== 'pendiente'" class="ef-btn-del"
@@ -150,6 +157,11 @@
           <span v-if="!isEditing" class="ef-readonly mono">{{ lastPayment?.transaction_code || '---' }}</span>
           <input v-else v-model="form.transaction_code" class="ef-input" placeholder="Numero de operacion" />
         </div>
+        <div class="ef-field">
+          <label>Fecha de Pago</label>
+          <span v-if="!isEditing" class="ef-readonly">{{ lastPayment?.payment_date ? fmt.formatDate(lastPayment.payment_date) : '---' }}</span>
+          <input v-else v-model="form.payment_date" type="date" class="ef-input" :max="todayIso" />
+        </div>
       </div>
 
       <!-- Confirm mode fields -->
@@ -185,6 +197,10 @@
         <div class="ef-field">
           <label>N. Operacion</label>
           <input v-model="form.transaction_code" class="ef-input" placeholder="Numero de operacion" />
+        </div>
+        <div class="ef-field">
+          <label>Fecha de Pago</label>
+          <input v-model="form.payment_date" type="date" class="ef-input" :max="todayIso" />
         </div>
       </div>
     </div>
@@ -246,6 +262,10 @@
               <label>N. Operacion</label>
               <input v-model="inicial._transaction_code" class="ef-input" placeholder="Numero de operacion" :disabled="inicial.status === 'paid' && !isEditing" />
             </div>
+            <div class="ef-field">
+              <label>Fecha de Pago</label>
+              <input v-model="inicial._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="inicial.status === 'paid' && !isEditing" />
+            </div>
           </div>
         </div>
         <div v-else class="ef-empty"><i class="fa-solid fa-inbox"></i><p>Sin pago inicial registrado</p></div>
@@ -263,7 +283,15 @@
 
         <div class="ef-cuotas-toolbar">
           <span class="c-muted" style="font-size:11px">{{ cuotas.length }} cuota{{ cuotas.length !== 1 ? 's' : '' }}</span>
-          <button class="ef-btn-sm ef-btn-teal" @click="$emit('add-cuota')"><i class="fa-solid fa-plus"></i> Agregar Cuota</button>
+          <div class="ef-toolbar-actions">
+            <button
+              v-if="planStatus === 'pendiente' && hasReschedulableCuotas"
+              class="ef-btn-sm ef-btn-outline"
+              @click="$emit('open-reschedule')"
+              title="Reprogramar fechas de cuotas pendientes"
+            ><i class="fa-solid fa-calendar-days"></i> Reprogramar</button>
+            <button class="ef-btn-sm ef-btn-teal" @click="$emit('add-cuota')"><i class="fa-solid fa-plus"></i> Agregar Cuota</button>
+          </div>
         </div>
 
         <table class="ef-table">
@@ -278,6 +306,7 @@
               <th>Ent. Empresa</th>
               <th>Cuenta Bancaria</th>
               <th style="width:100px">N. Operacion</th>
+              <th style="width:120px">Fecha Pago</th>
               <th class="tc" style="width:60px">Voucher</th>
               <th class="tc" style="width:40px"></th>
             </tr>
@@ -316,6 +345,9 @@
               </td>
               <td>
                 <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="c.status === 'paid' || planStatus === 'borrador'" />
+              </td>
+              <td>
+                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="c.status === 'paid' || planStatus === 'borrador'" />
               </td>
               <td class="tc">
                 <a v-if="c._voucher_url" :href="c._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher"><i class="fa-solid fa-image"></i></a>
@@ -510,7 +542,8 @@ defineEmits([
   'add-cuota', 'remove-cuota', 'reject-enrollment',
   'toggle-validation',
   'change-edition',
-  'confirm-cuota'
+  'confirm-cuota',
+  'open-reschedule'
 ])
 
 const fmt = useEnrollmentFormatters()
@@ -559,7 +592,10 @@ const planStatus = computed(() => {
 })
 
 const isBeca = computed(() => total.value === 0 && discount.value > 0)
+
+const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 const canConfirmContado = computed(() => isBeca.value || (props.form.cat_currency && props.form.cat_payment_medium))
+const hasReschedulableCuotas = computed(() => cuotas.value.some(c => c.status !== 'paid' && Number(c.cat_status) !== 4454))
 
 async function uploadVoucher (event, cuota) {
   const file = event.target.files?.[0]
@@ -591,13 +627,19 @@ function canDeleteCuota (c) {
 }
 
 const editingEdition = reactive({})
-const isValidated = (childVersionId) => props.validations.some(v => v.child_version_id === childVersionId)
+
+// Solo considera convalidado cuando el tipo es same/cross_edition.
+// El tipo 'edition_override' significa "se inscribe pero en otra edicion" (no es convalidar).
+const isValidated = (childVersionId) => props.validations.some(v =>
+  v.child_version_id === childVersionId &&
+  v.validation_type !== 'edition_override'
+)
 
 function getCustomEditionLabel (child) {
   const val = props.validations.find(v => v.child_version_id === child.child_program_version_id)
   if (val?.custom_edition_id && child.editions?.length) {
     const ed = child.editions.find(e => e.edition_id === val.custom_edition_id)
-    return ed ? `${ed.code} - ${ed.start_date}` : null
+    return ed ? `${ed.code} - ${formatEdDate(ed.start_date)}` : null
   }
   return null
 }
@@ -607,9 +649,38 @@ function getCustomEditionId (childVersionId) {
   return val?.custom_edition_id || null
 }
 
+// Fecha de la edicion del enrollment padre (la que se usaria para "misma edicion").
+// Se obtiene desde props.detail.start_date o props.enrollment.start_date.
+function getParentEditionDate () {
+  return props.detail?.start_date || props.enrollment?.start_date || null
+}
+
 function formatEdDate (d) {
   if (!d) return ''
   return fmt.formatDate(d)
+}
+
+// Etiqueta para mostrar en columna Edicion cuando NO se eligio una distinta.
+// Devuelve "Misma edicion (DD/MM/YYYY)" usando la fecha del enrollment padre.
+function sameEditionLabel () {
+  const d = getParentEditionDate()
+  if (!d) return 'Misma edicion'
+  return `Misma edicion (${formatEdDate(d)})`
+}
+
+// Indica si la edicion del padre incluye este modulo en su arbol.
+// Si NO esta en el arbol, "Misma edicion" no aplica - el operador debe elegir una.
+function isInParentTree (child) {
+  // Compatibilidad: si el backend no envia el campo (data vieja), asumimos que SI esta.
+  if (typeof child?.is_in_parent_tree === 'undefined') return true
+  return !!child.is_in_parent_tree
+}
+
+// True cuando el modulo NO esta en arbol Y el operador no eligio una edicion custom.
+// En este estado, el confirm pago se bloquea hasta que el operador decida.
+function needsEditionDecision (child) {
+  if (isInParentTree(child)) return false
+  return !getCustomEditionId(child.child_program_version_id)
 }
 </script>
 
@@ -904,6 +975,11 @@ function formatEdDate (d) {
 }
 .ef-btn-sm:hover { opacity: .85; }
 .ef-btn-teal { background: #1A1A1A; color: #fff; }
+.ef-btn-outline {
+  background: #fff; color: #4338CA; border: 1px solid #C7D2FE;
+}
+.ef-btn-outline:hover { background: #EEF2FF; opacity: 1; }
+.ef-toolbar-actions { display: inline-flex; gap: 8px; align-items: center; }
 
 /* Table */
 .ef-table {
@@ -1142,4 +1218,20 @@ function formatEdDate (d) {
   transition: color .2s;
 }
 .ef-edition-link:hover { color: #0D9488; }
+
+.ef-edition-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B91C1C;
+  background: #FEF2F2;
+  border: 1px dashed #FCA5A5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ef-edition-warn i { font-size: 11px; }
+.ef-edition-warn:hover { background: #FEE2E2; border-color: #F87171; }
 </style>

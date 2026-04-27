@@ -145,6 +145,11 @@ function parseChanges (changes) {
 .dot-odoo_enrolled { background: #6366F1; }
 .dot-odoo_unenrolled { background: #6366F1; }
 .dot-email_sent { background: #3B82F6; }
+.dot-email_failed { background: #DC2626; }
+.dot-payment_registered { background: #059669; }
+.dot-odoo_fees_activated { background: #6366F1; }
+.dot-children_skipped_no_edition { background: #F59E0B; }
+.dot-parent_marked_e0 { background: #8B5CF6; }
 .dot-edition_reprogrammed { background: #F59E0B; }
 .dot-course_changed { background: #8B5CF6; }
 .dot-created_from_cc { background: #8B5CF6; }
@@ -158,6 +163,8 @@ function parseChanges (changes) {
 .dot-resubmitted { background: #3B82F6; }
 .dot-validation_requested { background: #8B5CF6; }
 .dot-validation_applied { background: #059669; }
+.dot-installments_rescheduled { background: #F59E0B; }
+.dot-odoo_fee_paid { background: #6366F1; }
 
 .ea-body { flex: 1; padding-top: 3px; }
 

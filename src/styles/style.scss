@@ -19,6 +19,70 @@ body {
   z-index: 100000 !important; /* Mayor que 9999 para que siempre esté arriba */
 }
 
+/* ==========================================================================
+   SWEETALERT2 — overrides alineados al design system v2 (indigo #6366F1)
+   ========================================================================== */
+.swal2-container { z-index: 100001; }
+
+.swal-popup {
+  border-radius: 16px !important;
+  padding: 24px 24px 20px !important;
+  font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18) !important;
+}
+.swal-title {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #1F2937 !important;
+  padding: 0 !important;
+  margin-bottom: 6px !important;
+}
+.swal-text {
+  font-size: 14px !important;
+  color: #4B5563 !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+}
+.swal-actions {
+  gap: 8px !important;
+  margin-top: 20px !important;
+}
+.swal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.swal-btn-primary {
+  background: #6366F1 !important;
+  color: #FFFFFF !important;
+}
+.swal-btn-primary:hover { background: #4F46E5 !important; }
+
+.swal-btn-danger {
+  background: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+.swal-btn-danger:hover { background: #B91C1C !important; }
+
+.swal-btn-ghost {
+  background: #FFFFFF !important;
+  color: #374151 !important;
+  border-color: #E5E7EB !important;
+}
+.swal-btn-ghost:hover {
+  background: #F9FAFB !important;
+  border-color: #D1D5DB !important;
+}
+
+.swal-icon { margin-top: 4px !important; }
+
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);

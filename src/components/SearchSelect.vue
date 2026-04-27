@@ -73,7 +73,7 @@
         </div>
 
         <div
-          v-else-if="isRemote && loading"
+          v-else-if="(isRemote && loading) || externalLoading"
           class="dropdown-message"
         >
           <span class="spinner-small me-2"></span>
@@ -88,7 +88,7 @@
         </div>
 
         <button
-          v-if="!loading"
+          v-if="!loading && !externalLoading"
           v-for="opt in listItems"
           :key="opt[valueField]"
           type="button"
@@ -380,7 +380,8 @@ const props = defineProps({
   cacheNs: { type: [String, Number], default: '' },
   modelLabel: { type: String, default: '' },
   modelLabelMap: { type: Object, default: () => ({}) },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  externalLoading: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'change', 'search'])
@@ -423,8 +424,7 @@ const validationClass = computed(() => {
 
 const showSpinner = computed(
   () =>
-    isRemote.value &&
-    loading.value &&
+    ((isRemote.value && loading.value) || props.externalLoading) &&
     !isLocked.value &&
     !isDisabled.value
 )

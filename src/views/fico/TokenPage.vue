@@ -59,6 +59,13 @@
             @input="debounceSearch"
           />
         </div>
+        <span v-if="selectionMode" class="tp-selhint">
+          <i class="fa-solid fa-object-group"></i>
+          Modo seleccion — elige tus tokens compatibles
+          <button class="tp-selhint-cancel" @click="cancelGrouping" title="Salir (Esc)">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </span>
         <BasePagination v-model="pagination" :hide-filters="true" @change="fetchTokens" />
       </div>
     </section>
@@ -67,20 +74,24 @@
       <table class="ect">
         <thead>
           <tr class="ect-head">
-            <th>Alumno / Documento</th>
+            <th v-if="selectionMode" class="tc" style="width:36px"></th>
+            <th style="width:90px">Creado</th>
+            <th>Alumno / Contacto</th>
             <th>Programa / Edicion</th>
-            <th class="tc" style="width:90px">Tipo</th>
-            <th class="tc" style="width:110px">Proveedor</th>
-            <th class="tr" style="width:110px">Monto</th>
-            <th class="tc" style="width:120px">Estado</th>
-            <th style="width:200px">Link</th>
-            <th style="width:100px">Creado</th>
-            <th class="tc" style="width:120px">Acciones</th>
+            <th class="tc" style="width:80px">Tipo</th>
+            <th class="tc" style="width:100px">Proveedor</th>
+            <th class="tr" style="width:100px">Monto</th>
+            <th class="tc" style="width:110px">Estado</th>
+            <th style="width:170px">Link</th>
+            <th style="width:110px">Asesor</th>
+            <th style="width:90px">Fecha pago</th>
+            <th class="tc" style="width:170px">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <template v-if="isLoading">
             <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
+              <td><div class="sk-cell" style="width:70px"></div></td>
               <td>
                 <div class="sk-cell" style="width:140px"></div>
                 <div class="sk-cell mt-1" style="width:90px;height:8px"></div>
@@ -93,16 +104,43 @@
               <td class="tc"><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
               <td class="tr"><div class="sk-cell" style="width:80px;margin-left:auto"></div></td>
               <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
-              <td><div class="sk-cell" style="width:170px"></div></td>
-              <td><div class="sk-cell" style="width:80px"></div></td>
-              <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
+              <td><div class="sk-cell" style="width:150px"></div></td>
+              <td><div class="sk-cell" style="width:90px"></div></td>
+              <td><div class="sk-cell" style="width:70px"></div></td>
+              <td class="tc"><div class="sk-cell" style="width:120px;margin:0 auto"></div></td>
             </tr>
           </template>
           <template v-else>
-            <tr v-for="t in tokens" :key="t.token_id" class="ect-row">
+            <tr
+              v-for="t in tokens"
+              :key="t.token_id"
+              class="ect-row"
+              :class="{
+                'tp-row-grouped': !!t.group_id,
+                'tp-row-selected': selectedTokenIds.has(t.token_id),
+                'tp-row-disabled': selectionMode && !isSelectable(t) && !selectedTokenIds.has(t.token_id)
+              }"
+              @click="selectionMode && toggleTokenSelection(t)"
+              @contextmenu="openCtxMenu($event, t)"
+            >
+              <td v-if="selectionMode" class="tc">
+                <input
+                  type="checkbox"
+                  class="tp-chk"
+                  :checked="selectedTokenIds.has(t.token_id)"
+                  :disabled="!isSelectable(t)"
+                  :title="isSelectable(t) ? 'Seleccionar' : 'No seleccionable (no es tuyo, ya tiene link o esta en otro grupo)'"
+                  @click.stop="toggleTokenSelection(t)"
+                />
+              </td>
+              <td class="cell-date">{{ formatDate(t.created_at) }}</td>
               <td>
                 <div class="cell-main cell-clip">{{ t.student_name }}</div>
-                <div class="cell-sub">{{ t.document_number }} {{ t.student_email ? '· ' + t.student_email : '' }}</div>
+                <div class="cell-sub">{{ t.student_phone || '---' }}{{ t.student_email ? ' · ' + t.student_email : '' }}</div>
+                <span v-if="getGroup(t)" class="tp-group-chip" :title="`Grupo ${getGroup(t).shortId} · ${getGroup(t).count} tokens · Total ${getGroup(t).currency} ${formatMoney(getGroup(t).total)}`">
+                  <i class="fa-solid fa-object-group"></i>
+                  GRUPO {{ getGroup(t).shortId }} · {{ getGroup(t).count }} tokens · Total {{ getGroup(t).currency }} {{ formatMoney(getGroup(t).total) }}
+                </span>
               </td>
               <td>
                 <div class="cell-main cell-clip">{{ t.program_name }}</div>
@@ -124,18 +162,29 @@
               </td>
               <td>
                 <div v-if="t.payment_url" class="tp-link-cell">
-                  <span class="tp-link-text" :title="t.payment_url">{{ truncateUrl(t.payment_url) }}</span>
-                  <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
-                    <i class="fa-solid fa-copy"></i>
+                  <button class="tp-link-text" :title="`${t.payment_url}\n(Click para copiar)`" @click="copyLink(t.payment_url)">
+                    {{ truncateUrl(t.payment_url) }}
+                  </button>
+                  <button
+                    v-if="canAddLink && t.status !== 'confirmed'"
+                    class="act-btn act-teal"
+                    title="Editar link"
+                    @click="openAddLink(t)"
+                  >
+                    <i class="fa-solid fa-pen"></i>
                   </button>
                 </div>
                 <span v-else class="cell-sub">--</span>
               </td>
-              <td class="cell-date">{{ formatDate(t.created_at) }}</td>
+              <td class="cell-advisor">{{ t.requested_by_name || t.created_by_name || '---' }}</td>
+              <td class="cell-date">
+                <template v-if="t.status === 'paid' || t.status === 'confirmed'">{{ formatDate(t.updated_at) }}</template>
+                <span v-else class="cell-sub">—</span>
+              </td>
               <td class="tc">
                 <div class="tp-actions">
                   <template v-if="t.status === 'pending'">
-                    <template v-if="canWrite">
+                    <template v-if="canAddLink">
                       <button class="act-btn act-teal" title="Agregar Link" @click="openAddLink(t)">
                         <i class="fa-solid fa-link"></i>
                       </button>
@@ -143,7 +192,23 @@
                         <i class="fa-solid fa-trash-can"></i>
                       </button>
                     </template>
-                    <span v-else class="cell-sub">En espera</span>
+                    <button
+                      v-if="canEditInscription(t)"
+                      class="act-btn act-indigo"
+                      title="Editar inscripcion"
+                      @click="openEditInscription(t)"
+                    >
+                      <i class="fa-solid fa-user-pen"></i>
+                    </button>
+                    <button
+                      v-if="t.group_id && !t.payment_url && Number(t.requested_by) === Number(currentUserId)"
+                      class="act-btn act-slate"
+                      title="Desagrupar este grupo"
+                      @click="ungroupTokens(t.group_id)"
+                    >
+                      <i class="fa-solid fa-object-ungroup"></i>
+                    </button>
+                    <span v-if="!canAddLink && !canEditInscription(t) && !t.group_id" class="cell-sub">En espera</span>
                   </template>
                   <template v-else-if="t.status === 'link_sent' || t.status === 'paid'">
                     <template v-if="t.enrollment_id">
@@ -151,11 +216,19 @@
                         <i class="fa-solid fa-eye"></i> Ver
                       </button>
                     </template>
-                    <template v-else-if="canWrite">
+                    <template v-else-if="canConfirmEnrollment">
                       <button class="tp-btn-confirm" title="Crear inscripcion" @click="confirmToken(t)">
                         <i class="fa-solid fa-graduation-cap"></i> Inscribir
                       </button>
                     </template>
+                    <button
+                      v-if="canEditInscription(t)"
+                      class="act-btn act-indigo"
+                      title="Editar inscripcion"
+                      @click="openEditInscription(t)"
+                    >
+                      <i class="fa-solid fa-user-pen"></i>
+                    </button>
                     <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
                       <i class="fa-solid fa-copy"></i>
                     </button>
@@ -167,7 +240,7 @@
               </td>
             </tr>
             <tr v-if="!tokens.length">
-              <td colspan="9" class="empty-row">Sin resultados</td>
+              <td :colspan="selectionMode ? 12 : 11" class="empty-row">Sin resultados</td>
             </tr>
           </template>
         </tbody>
@@ -175,15 +248,95 @@
     </div>
 
     <Teleport to="body">
+      <div
+        v-if="ctxMenu.show"
+        class="tp-ctx-menu"
+        :style="{ top: ctxMenu.y + 'px', left: ctxMenu.x + 'px' }"
+        @click.stop
+      >
+        <button
+          v-if="!selectionMode && isSelectable(ctxMenu.token)"
+          class="tp-ctx-item"
+          @click="startGrouping(ctxMenu.token)"
+        >
+          <i class="fa-solid fa-object-group"></i> Agrupar tokens
+        </button>
+        <button
+          v-if="selectionMode"
+          class="tp-ctx-item"
+          @click="cancelGrouping"
+        >
+          <i class="fa-solid fa-xmark"></i> Cancelar seleccion
+        </button>
+        <button
+          v-if="ctxMenu.token?.group_id && Number(ctxMenu.token?.requested_by) === Number(currentUserId)"
+          class="tp-ctx-item"
+          @click="ungroupFromCtx"
+        >
+          <i class="fa-solid fa-object-ungroup"></i> Desagrupar grupo
+        </button>
+        <div v-if="!hasCtxActions" class="tp-ctx-empty">
+          Sin acciones disponibles
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="selectionMode && selectionSummary.count >= 2"
+        class="tp-selbar"
+        :class="{ 'is-over-limit': selectionSummary.overLimit }"
+      >
+        <div class="tp-selbar-info">
+          <strong>{{ selectionSummary.count }} tokens seleccionados</strong>
+          <span>
+            Total: <strong>{{ selectionSummary.currency }} {{ formatMoney(selectionSummary.total) }}</strong>
+            <span v-if="selectionSummary.overLimit" class="tp-selbar-warn">
+              · Supera el limite de {{ selectionSummary.currency }} {{ MAX_GROUP_AMOUNT }}
+            </span>
+          </span>
+        </div>
+        <button
+          class="ep-btn-new"
+          :disabled="selectionSummary.overLimit"
+          @click="submitGroup"
+        >
+          <i class="fa-solid fa-object-group"></i> Agrupar en un solo link
+        </button>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
       <div v-if="showLinkModal" class="tp-overlay" @click.self="showLinkModal = false">
         <div class="tp-modal tp-modal-sm">
           <div class="tp-modal-head">
-            <h2 class="tp-modal-title">Agregar Link de Pago</h2>
+            <h2 class="tp-modal-title">
+              {{ isEditingLink ? 'Editar' : 'Agregar' }} Link de Pago
+              <span v-if="getGroup(linkToken)" class="tp-modal-badge">
+                <i class="fa-solid fa-object-group"></i> Grupo {{ getGroup(linkToken).shortId }}
+              </span>
+            </h2>
             <button class="tp-modal-close" @click="showLinkModal = false">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
           <div class="tp-modal-body">
+            <div v-if="getGroup(linkToken)" class="tp-group-banner">
+              <div class="tp-group-banner-title">
+                <i class="fa-solid fa-layer-group"></i>
+                Este link {{ isEditingLink ? 'cubre' : 'cubrira' }} <strong>{{ getGroup(linkToken).count }} tokens</strong> del mismo pago — los cambios se aplican a todos
+              </div>
+              <ul class="tp-group-list">
+                <li v-for="gt in tokens.filter(x => x.group_id === linkToken?.group_id)" :key="gt.token_id">
+                  <span>{{ gt.student_name || '---' }} · {{ gt.program_name || '---' }}</span>
+                  <strong class="mono">{{ gt.currency }} {{ formatMoney(gt.amount) }}</strong>
+                </li>
+              </ul>
+              <div class="tp-group-banner-total">
+                <span>TOTAL</span>
+                <strong class="mono">{{ getGroup(linkToken).currency }} {{ formatMoney(getGroup(linkToken).total) }}</strong>
+              </div>
+            </div>
             <div v-if="tokenAdvisorObs" class="tp-obs-ref">
               <div class="tp-obs-ref-title"><i class="fa-solid fa-comment-dots"></i> Observacion del asesor</div>
               <div class="tp-obs-ref-text">{{ tokenAdvisorObs }}</div>
@@ -214,25 +367,27 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, inject, onMounted } from 'vue'
+import { ref, reactive, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import BasePagination from '@/components/BasePagination.vue'
+import { confirmAction } from '@/composables/useConfirm'
 
 const toast = useToast()
 const router = useRouter()
 const catalog = inject('catalog')
 
-const currentUserRoles = (() => {
-  try {
-    return JSON.parse(localStorage.getItem('user') || '{}').roles || []
-  } catch {
-    return []
-  }
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
 })()
-const WRITE_ROLES = ['ADMIN', 'FICO', 'LIDER_FICO']
-const canWrite = WRITE_ROLES.some(r => currentUserRoles.includes(r))
+const currentUserRoles = currentUser.roles || []
+const currentUserId    = currentUser.user_id || currentUser.id || null
+
+const LINK_ROLES    = ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL']
+const CONFIRM_ROLES = ['ADMIN', 'FICO', 'LIDER_FICO']
+const canAddLink           = LINK_ROLES.some(r => currentUserRoles.includes(r))
+const canConfirmEnrollment = CONFIRM_ROLES.some(r => currentUserRoles.includes(r))
 
 function goToEnrollment (enrollmentId) {
   router.push({ name: 'enrollmentDetail', params: { id: enrollmentId } })
@@ -268,6 +423,108 @@ const isLoading = ref(false)
 const filterStatus = ref('')
 const searchQuery = ref('')
 const pagination = ref({ page: 1, size: 25, total: 0 })
+
+const selectionMode    = ref(false)
+const selectedTokenIds = ref(new Set())
+const ctxMenu = ref({ show: false, x: 0, y: 0, token: null })
+
+function openCtxMenu (event, token) {
+  event.preventDefault()
+  ctxMenu.value = { show: true, x: event.clientX, y: event.clientY, token }
+}
+
+function closeCtxMenu () {
+  if (ctxMenu.value.show) ctxMenu.value = { show: false, x: 0, y: 0, token: null }
+}
+
+function startGrouping (t) {
+  selectionMode.value = true
+  toggleTokenSelection(t)
+  closeCtxMenu()
+}
+
+function cancelGrouping () {
+  selectionMode.value = false
+  selectedTokenIds.value = new Set()
+  closeCtxMenu()
+}
+
+function ungroupFromCtx () {
+  const gid = ctxMenu.value.token?.group_id
+  closeCtxMenu()
+  if (gid) ungroupTokens(gid)
+}
+
+const hasCtxActions = computed(() => {
+  const t = ctxMenu.value.token
+  if (!t) return false
+  if (selectionMode.value) return true
+  if (isSelectable(t)) return true
+  if (t.group_id && Number(t.requested_by) === Number(currentUserId)) return true
+  return false
+})
+
+function isSelectable (t) {
+  return t?.status === 'pending'
+    && !t?.payment_url
+    && !t?.group_id
+    && Number(t?.requested_by) === Number(currentUserId)
+}
+
+function toggleTokenSelection (t) {
+  if (!isSelectable(t)) return
+  const s = new Set(selectedTokenIds.value)
+  s.has(t.token_id) ? s.delete(t.token_id) : s.add(t.token_id)
+  selectedTokenIds.value = s
+}
+
+const MAX_GROUP_AMOUNT = 3000
+
+const selectionSummary = computed(() => {
+  const items = tokens.value.filter(t => selectedTokenIds.value.has(t.token_id))
+  const total = items.reduce((s, t) => s + Number(t.amount || 0), 0)
+  const overLimit = total > MAX_GROUP_AMOUNT
+  return { items, count: items.length, currency: items[0]?.currency || '', total, overLimit }
+})
+
+const isEditingLink = computed(() => !!linkToken.value?.payment_url)
+
+function canEditInscription (t) {
+  return Number(t?.requested_by) === Number(currentUserId)
+    && t?.status !== 'confirmed'
+    && t?.status !== 'paid'
+}
+
+function openEditInscription (t) {
+  if (!t.lead_id) {
+    toast.error('No se encontro el lead asociado al token')
+    return
+  }
+  router.push({
+    name:   'ComercialLeadDetalle',
+    params: { id: t.lead_id },
+    query:  { editToken: t.token_id }
+  })
+}
+
+const groupIndex = computed(() => {
+  const map = new Map()
+  for (const t of tokens.value) {
+    if (!t.group_id) continue
+    const g = map.get(t.group_id) || { count: 0, total: 0, currency: t.currency, ownedByMe: false, hasLink: false }
+    g.count += 1
+    g.total += Number(t.amount || 0)
+    if (Number(t.requested_by) === Number(currentUserId)) g.ownedByMe = true
+    if (t.payment_url) g.hasLink = true
+    map.set(t.group_id, g)
+  }
+  for (const [gid, g] of map) g.shortId = gid.slice(0, 4).toUpperCase()
+  return map
+})
+
+function getGroup (t) {
+  return t?.group_id ? groupIndex.value.get(t.group_id) : null
+}
 
 const stats = reactive({
   pending: 0,
@@ -385,9 +642,15 @@ const tokenAdvisorObs = computed(() => {
 
 function openAddLink (t) {
   linkToken.value = t
-  let defaultNotes = t.notes || `Link para ${t.student_name || '---'}`
-  if (defaultNotes.includes(' | ')) defaultNotes = defaultNotes.split(' | ').pop()
-  linkForm.value = { payment_url: t.payment_url || '', cat_provider: t.cat_provider || null, notes: defaultNotes }
+  const studentName = t.student_name || '---'
+  const stored     = (t.notes || '').trim()
+  const looksAuto  = !stored || /^Link para[\s\-_]*$/i.test(stored)
+  const notes      = looksAuto ? `Link para ${studentName}` : stored
+  linkForm.value = {
+    payment_url:  t.payment_url  || '',
+    cat_provider: t.cat_provider || null,
+    notes
+  }
   showLinkModal.value = true
 }
 
@@ -426,13 +689,56 @@ async function confirmToken (t) {
 }
 
 async function deleteToken (t) {
-  if (!confirm('Eliminar este token?')) return
+  const ok = await confirmAction({
+    title:       'Eliminar token?',
+    text:        `Se eliminara permanentemente el token de ${t.student_name || '---'}.`,
+    confirmText: 'Si, eliminar',
+    icon:        'warning',
+    danger:      true
+  })
+  if (!ok) return
   try {
     await api.delete(`/token/delete/${t.token_id}`)
     toast.success('Token eliminado')
     await Promise.all([fetchTokens(), fetchStats()])
   } catch {
     toast.error('Error al eliminar token')
+  }
+}
+
+async function submitGroup () {
+  const s = selectionSummary.value
+  if (s.count < 2) return
+  try {
+    await api.post('/token/group', { token_ids: Array.from(selectedTokenIds.value) })
+    toast.success(`${s.count} tokens agrupados en un solo link`)
+    selectedTokenIds.value = new Set()
+    selectionMode.value = false
+    await fetchTokens()
+  } catch (err) {
+    toast.error(err?.response?.data?.error || 'No se pudo agrupar')
+  }
+}
+
+async function ungroupTokens (groupId) {
+  const group = groupIndex.value.get(groupId)
+  const count = group?.count || 0
+  const ok = await confirmAction({
+    title:       'Desagrupar tokens?',
+    text:        count
+      ? `Se borrara el link compartido y los ${count} tokens volveran a estado pendiente, listos para pedir un link nuevo cada uno.`
+      : 'Se borrara el link compartido y los tokens volveran a pendiente.',
+    confirmText: 'Si, desagrupar',
+    icon:        'warning',
+    danger:      true
+  })
+  if (!ok) return
+  try {
+    await api.post('/token/ungroup', { group_id: groupId })
+    toast.success('Grupo desagrupado y tokens reiniciados a pendiente')
+    await fetchTokens()
+  } catch (err) {
+    toast.error(err?.response?.data?.error || 'No se pudo desagrupar')
   }
 }
 
@@ -475,9 +781,26 @@ async function copyLink (url) {
   }
 }
 
+function onGlobalClick () {
+  closeCtxMenu()
+}
+function onGlobalKeyDown (e) {
+  if (e.key === 'Escape') {
+    if (ctxMenu.value.show) closeCtxMenu()
+    else if (selectionMode.value) cancelGrouping()
+  }
+}
+
 onMounted(() => {
   fetchTokens()
   fetchStats()
+  window.addEventListener('click', onGlobalClick)
+  window.addEventListener('keydown', onGlobalKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', onGlobalClick)
+  window.removeEventListener('keydown', onGlobalKeyDown)
 })
 </script>
 
@@ -696,7 +1019,7 @@ onMounted(() => {
 .ect {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
   color: #1A1A1A;
 }
 .tc { text-align: center; }
@@ -704,21 +1027,21 @@ onMounted(() => {
 
 .ect-head th {
   background: #FAFAFA;
-  padding: 11px 12px;
+  padding: 10px 10px;
   text-align: left;
   font-weight: 500;
   color: #8C8C8C;
   border-bottom: 1px solid #F0F0F0;
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
 .ect-row td {
-  padding: 14px 12px;
+  padding: 10px 10px;
   border-bottom: 1px solid #F5F5F5;
   vertical-align: middle;
-  height: 52px;
+  height: 48px;
   box-sizing: border-box;
   transition: background .15s ease;
 }
@@ -728,8 +1051,8 @@ onMounted(() => {
 .cell-main {
   font-weight: 600;
   color: #1A1A1A;
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.3;
 }
 .cell-clip {
   display: block;
@@ -739,18 +1062,27 @@ onMounted(() => {
 }
 .cell-sub {
   color: #A3A3A3;
-  font-size: 11.5px;
+  font-size: 10.5px;
   margin-top: 2px;
 }
 .cell-date {
-  font-size: 12px;
+  font-size: 11px;
   color: #737373;
   white-space: nowrap;
+}
+.cell-advisor {
+  font-size: 11.5px;
+  color: #4B5563;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
 }
 .mono {
   font-variant-numeric: tabular-nums;
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 12.5px;
+  font-size: 11.5px;
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
@@ -759,13 +1091,13 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   white-space: nowrap;
 }
-.pill-sm { padding: 3px 8px; font-size: 10.5px; }
+.pill-sm { padding: 2px 7px; font-size: 10px; }
 .pill-slate { background: #F5F5F5; color: #737373; }
 .pill-green { background: #ECFDF5; color: #065F46; }
 .pill-amber { background: #FFF8EB; color: #92400E; }
@@ -775,19 +1107,21 @@ onMounted(() => {
 
 .tp-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  row-gap: 4px;
 }
 .act-btn {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #E8E8E8;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   color: #A3A3A3;
-  font-size: 12px;
+  font-size: 11px;
   transition: all .2s ease;
   display: inline-flex;
   align-items: center;
@@ -801,13 +1135,13 @@ onMounted(() => {
 .tp-btn-confirm {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 5px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #1A1A1A;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all .2s ease;
@@ -823,12 +1157,26 @@ onMounted(() => {
   gap: 6px;
 }
 .tp-link-text {
+  display: inline-block;
   font-size: 12px;
-  color: var(--e-text-secondary);
+  color: #4338CA;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 150px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(67, 56, 202, 0.35);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+.tp-link-text:hover {
+  color: #4F46E5;
+  text-decoration-color: #4F46E5;
 }
 
 .empty-row {
@@ -869,15 +1217,19 @@ onMounted(() => {
   z-index: 9999;
 }
 .tp-modal {
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 14px;
-  width: 520px;
+  width: 640px;
+  max-width: 95vw;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.15);
 }
-.tp-modal-sm { width: 420px; }
+.tp-modal-sm { width: 640px; max-width: 95vw; }
 .tp-modal-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -899,12 +1251,24 @@ onMounted(() => {
   transition: background .2s;
 }
 .tp-modal-close:hover { background: #EBEBEB; color: #1A1A1A; }
-.tp-modal-body { padding: 20px 24px; }
+.tp-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #D4D4D8 transparent;
+}
+.tp-modal-body::-webkit-scrollbar { width: 6px; }
+.tp-modal-body::-webkit-scrollbar-track { background: transparent; }
+.tp-modal-body::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 3px; }
+.tp-modal-body::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
 .tp-obs-ref {
   background: #EFF6FF;
   border: 1px solid #BFDBFE;
   border-radius: 8px;
   padding: 10px 14px;
+  overflow: hidden;
 }
 .tp-obs-ref-title {
   font-size: 11px;
@@ -915,8 +1279,16 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 .tp-obs-ref-title i { margin-right: 4px; }
-.tp-obs-ref-text { font-size: 13px; color: #1A1A1A; line-height: 1.4; }
+.tp-obs-ref-text {
+  font-size: 13px;
+  color: #1A1A1A;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .tp-modal-foot {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -989,6 +1361,196 @@ onMounted(() => {
 @media (max-width: 1280px) {
   .ep-kpis { grid-template-columns: repeat(2, 1fr); }
 }
+.tp-selhint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 14px;
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tp-selhint-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #4338CA;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tp-selhint-cancel:hover { background: #C7D2FE; }
+
+.tp-ctx-menu {
+  position: fixed;
+  z-index: 950;
+  min-width: 200px;
+  padding: 4px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
+.tp-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #1F2937;
+  font-size: 13px;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tp-ctx-item:hover { background: #EEF2FF; color: #4338CA; }
+.tp-ctx-item i { width: 16px; color: #6366F1; }
+.tp-ctx-empty {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+.tp-chk { width: 16px; height: 16px; cursor: pointer; accent-color: #6366F1; }
+.tp-chk:disabled { cursor: not-allowed; opacity: 0.35; }
+
+.tp-row-selected td { background: #EEF2FF !important; }
+.tp-row-grouped td:first-child { border-left: 3px solid #6366F1; }
+.tp-row-disabled td { opacity: 0.5; }
+.ect-row { cursor: default; }
+.ect-row.tp-row-grouped { cursor: default; }
+
+.tp-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.tp-selbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  background: #1F2937;
+  color: #FFFFFF;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 900;
+}
+.tp-selbar-info { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.tp-selbar-info strong { font-size: 14px; }
+.tp-selbar.is-over-limit { background: #7F1D1D; }
+.tp-selbar-warn { color: #FCA5A5; font-weight: 600; }
+.tp-selbar .ep-btn-new:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tp-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 3px 10px;
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+
+.tp-group-banner {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: #F5F3FF;
+  border: 1px solid #DDD6FE;
+  border-radius: 10px;
+}
+.tp-group-banner-title {
+  font-size: 13px;
+  color: #4338CA;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.tp-group-banner-title i { margin-right: 6px; }
+.tp-group-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #374151;
+}
+.tp-group-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed #DDD6FE;
+}
+.tp-group-list li:last-child { border-bottom: none; }
+.tp-group-banner-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 2px solid #DDD6FE;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.act-slate {
+  background: #F3F4F6;
+  color: #4B5563;
+  border: 1px solid #E5E7EB;
+}
+.act-slate:hover { background: #E5E7EB; }
+
+.act-indigo {
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
+}
+.act-indigo:hover { background: #E0E7FF; }
+
+.tp-insc-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  color: #1E40AF;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.tp-insc-hint i { margin-top: 2px; }
+.req { color: #DC2626; }
+
 @media (max-width: 768px) {
   .token-page { padding: 16px; }
   .ep-toolbar { flex-direction: column; align-items: stretch; }
@@ -997,5 +1559,6 @@ onMounted(() => {
   .tp-modal { width: 95vw; }
   .tp-modal-sm { width: 95vw; }
   .ep-kpis { grid-template-columns: 1fr; }
+  .tp-selbar { left: 16px; right: 16px; transform: none; flex-direction: column; align-items: stretch; }
 }
 </style>

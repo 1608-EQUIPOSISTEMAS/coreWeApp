@@ -146,18 +146,22 @@ const isApproved = computed(() => /aprobado|confirm/i.test(props.enrollment?.con
 
 const busy = ref(null)
 const actionMap = {
-  confirm: { fn: 'sendConfirmationEmail', ok: 'Correo de confirmacion enviado' },
-  sync:    { fn: 'syncInstallmentPayment', ok: 'Cuotas sincronizadas' }
+  confirm: { fn: 'sendConfirmationEmail', ok: 'Correo de confirmacion enviado', failBase: 'Error al enviar correo' },
+  sync:    { fn: 'syncInstallmentPayment', ok: 'Cuotas sincronizadas', failBase: 'Error al sincronizar cuotas' }
 }
 async function run (key) {
   const cfg = actionMap[key]
   if (!cfg || !props.enrollment?.enrollment_id) return
   busy.value = key
   try {
-    await ficoService[cfg.fn](props.enrollment.enrollment_id)
-    toast.success(cfg.ok)
+    const result = await ficoService[cfg.fn](props.enrollment.enrollment_id)
+    if (result?.success === false) {
+      toast.error(`${cfg.failBase}: ${result.error || 'No se pudo completar la accion'}`)
+    } else {
+      toast.success(cfg.ok)
+    }
   } catch (err) {
-    toast.error(err?.response?.data?.error || 'No se pudo completar la accion')
+    toast.error(`${cfg.failBase}: ${err?.response?.data?.error || err?.message || 'No se pudo completar la accion'}`)
   } finally {
     busy.value = null
   }

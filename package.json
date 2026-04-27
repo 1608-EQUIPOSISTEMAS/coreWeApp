@@ -33,6 +33,7 @@
     "flatpickr": "^4.6.13",
     "pinia": "^3.0.3",
     "simplebar-vue": "^2.4.2",
+    "sweetalert2": "^11.26.24",
     "vue": "^3.5.18",
     "vue-chartjs": "^5.3.3",
     "vue-currency-input": "^3.2.2",

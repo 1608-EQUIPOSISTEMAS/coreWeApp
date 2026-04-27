@@ -84,7 +84,7 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0 }]"
           @click="onRowClick(e, $event)"
         >
           <td class="tc">
@@ -98,7 +98,17 @@
             <div class="cell-sub cell-extra">{{ e.document_number }}</div>
           </td>
           <td class="col-programa">
-            <div class="cell-main cell-clip" :title="e.program_name">{{ e.program_name }}</div>
+            <div class="cell-main cell-clip" :title="e.program_name">
+              {{ e.program_name }}
+              <span
+                v-if="Number(e.validations_count) > 0"
+                class="pill pill-purple pill-sm pill-validation"
+                :title="`${e.validations_count} modulo(s) convalidado(s)`"
+              >
+                <i class="fa-solid fa-circle-check"></i>
+                Convalida
+              </span>
+            </div>
             <span class="pill pill-slate cell-extra">{{ e.edition_code }}</span>
           </td>
           <td class="col-agente">
@@ -416,6 +426,31 @@ function clearColFilters () {
 .pill-amber { background: #FFF8EB; color: #92400E; }
 .pill-blue  { background: #EFF6FF; color: #1E40AF; }
 .pill-red   { background: #FEF2F2; color: #991B1B; }
+.pill-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
+
+/* Badge especifico de convalidacion: distintivo + clickeable */
+.pill-validation {
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.pill-validation i {
+  font-size: 9px;
+}
+
+/* Fila completa con tinte morado claro cuando tiene convalidaciones */
+.ect-row.has-validations {
+  background: linear-gradient(90deg, #FAF5FF 0%, #FFFFFF 30%);
+}
+.ect-row.has-validations:hover {
+  background: linear-gradient(90deg, #F3E8FF 0%, #FAFAFA 30%);
+}
+.ect-row.has-validations.is-selected {
+  background: linear-gradient(90deg, #EDE9FE 0%, #F8FAFC 30%);
+}
 
 /* ---- empty state ---- */
 .empty-row {

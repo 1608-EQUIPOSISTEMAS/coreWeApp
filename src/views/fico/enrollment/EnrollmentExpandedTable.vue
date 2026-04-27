@@ -197,7 +197,16 @@
           <template v-if="cg.program">
             <td class="eet-cell">{{ e.program_type || '\u2014' }}</td>
             <td class="eet-cell">{{ e.program_modality || '\u2014' }}</td>
-            <td class="eet-cell eet-cell-program">{{ e.program_name || '\u2014' }}</td>
+            <td class="eet-cell eet-cell-program">
+              {{ e.program_name || '\u2014' }}
+              <span
+                v-if="Number(e.validations_count) > 0"
+                class="eet-validation-badge"
+                :title="`${e.validations_count} modulo(s) convalidado(s)`"
+              >
+                <i class="fa-solid fa-circle-check"></i> Convalida
+              </span>
+            </td>
             <td class="eet-cell">{{ e.edition_code || '\u2014' }}</td>
           </template>
           <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
@@ -456,6 +465,25 @@ const totalCols = computed(() => {
 
 .eet-cell-program {
   max-width: 220px;
+}
+
+.eet-validation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #5B21B6;
+  background: #F5F3FF;
+  border: 1px solid #DDD6FE;
+  border-radius: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.eet-validation-badge i {
+  font-size: 8px;
 }
 
 .eet-cell-money {

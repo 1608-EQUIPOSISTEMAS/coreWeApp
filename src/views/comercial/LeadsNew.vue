@@ -1210,11 +1210,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               </label>
             </div>
           </div>
-          <div class="mt-2">
-            <label class="exec-label">Nota de convalidacion</label>
-            <textarea v-model="validationNotes" class="exec-input-light w-100" rows="2"
-              placeholder="Motivo de la convalidacion..."></textarea>
-          </div>
         </div>
       </div>
 
@@ -1758,7 +1753,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     </div>
 
     <template #footer>
-      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
+      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false; editTokenId = null">Cerrar</button>
       <button
         v-if="observedData"
         class="btn-exec btn-exec-warning btn-exec-sm"
@@ -1771,16 +1766,16 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <button
         v-else
         class="btn-exec btn-exec-primary btn-exec-sm"
-        @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
+        @click="isEditingToken ? confirmarEdicionToken() : (isTokenMode ? confirmarToken() : confirmarInscripcion())"
         :disabled="
         savingInsc ||
-        (!isTokenMode && form.enrollment_id) ||
-        (!isTokenMode && isInstallmentMode && !installmentPlanValid) ||
-        (!isTokenMode && isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
+        (!isTokenMode && !isEditingToken && form.enrollment_id) ||
+        (!isTokenMode && !isEditingToken && isInstallmentMode && !installmentPlanValid) ||
+        (!isTokenMode && !isEditingToken && isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
       "
       >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
-        {{ savingInsc ? 'Guardando...' : (isTokenMode ? 'Crear Token' : 'Guardar inscripcion') }}
+        {{ savingInsc ? 'Guardando...' : (isEditingToken ? 'Guardar cambios' : (isTokenMode ? 'Crear Token' : 'Guardar inscripcion')) }}
       </button>
     </template>
   </BaseModal>
@@ -1869,7 +1864,6 @@ const hasValidation = ref(false)
 const validatedChildren = ref([])
 const customEditionMode = reactive({})
 const customEditionIds = reactive({})
-const validationNotes = ref('')
 
 async function loadProgramChildren() {
   if (!form.program_version_id) { programChildren.value = []; return }
@@ -2550,6 +2544,9 @@ watch(() => insc.cat_type_document, (newVal) => {
       await loadLead(leadIdParam.value)
       await checkObservedStatus()
       loaded.value = true
+      if (route.query.editToken) {
+        await loadTokenForEdit(Number(route.query.editToken))
+      }
       return
     }
 
@@ -2859,7 +2856,6 @@ function resetInscriptionData() {
   validatedChildren.value = []
   Object.keys(customEditionMode).forEach(k => delete customEditionMode[k])
   Object.keys(customEditionIds).forEach(k => delete customEditionIds[k])
-  validationNotes.value = ''
 }
 const isMedioDisabled = computed(() =>
   ['we_social_media_coti', 'we_social_media_chatbot','we_social_media_wechat'].includes(form.canal_alias)
@@ -3092,7 +3088,9 @@ cat_certificate_status,
       list_price:           insc.montoOriginal,
       total_amount:         Number(insc.total_amount),
       dsct_porcent_id:      insc.dsct_porcent_id,
+      dsct_porcent_label:   insc.dsct_porcent_label,
       dsct_stick_id:        insc.dsct_stick_id,
+      dsct_stick_label:     insc.dsct_stick_label,
       dsct_benefit_ids: insc.dsct_benefit_ids.map(b => ({
         value: b.value,
         label: b.label
@@ -3113,8 +3111,7 @@ cat_certificate_status,
       validated_children: validatedChildren.value,
       custom_editions: Object.fromEntries(
         Object.entries(customEditionIds).filter(([k, v]) => customEditionMode[k] === 'custom' && v)
-      ),
-      notes: validationNotes.value
+      )
     }
   }
 
@@ -3390,7 +3387,126 @@ async function guardar() {
   }
 }
 
-const isTokenMode = ref(false)
+const isTokenMode   = ref(false)
+const editTokenId   = ref(null)
+const isEditingToken = computed(() => editTokenId.value !== null)
+
+async function loadTokenForEdit (tokenId) {
+  try {
+    const token = await ficoService.tokenGetById(tokenId)
+    if (!token) {
+      toast.error('Token no encontrado')
+      return
+    }
+    const d = token.inscription_data?.inscription || {}
+
+    insc.document          = d.document          || ''
+    insc.full_name         = d.full_name         || ''
+    insc.last_name         = d.last_name         || ''
+    insc.mother_last_name  = d.mother_last_name  || ''
+    insc.email             = d.email             || ''
+    insc.observations      = d.observations      || ''
+    insc.saved_money       = Number(d.saved_money  || 0)
+    insc.montoOriginal     = Number(d.list_price   || 0)
+    insc.total_amount      = Number(d.total_amount || 0)
+    insc.installment_plan  = d.installment_plan  || null
+    insc.ticket_payment_urls = d.ticket_payment_urls || []
+    insc.attachments       = d.attachments       || []
+    insc.student_attachment_url = d.student_attachment_url || null
+
+    insc.cat_type_document      = aliasById(d.cat_type_document,       docTypeCatalog.value)          || null
+    insc.cat_insc_modality      = aliasById(d.cat_insc_modality,       inscModalidades.value)         || null
+    insc.cat_type_payment       = aliasById(d.cat_type_payment,        inscPaymentModes.value)        || null
+    insc.cat_certificate_status = aliasById(d.cat_certificate_status,  certificateStatusCatalog.value) || null
+    insc.cat_method_payment     = aliasById(d.cat_method_payment,      paymentMethodCatalog.value)    || null
+    insc.selectedCurrencyAlias  = aliasById(d.cat_currency,            currencyCatalog.value)         || null
+
+    insc.cat_payment_channel = d.cat_payment_channel || null
+    insc.cat_token_provider  = d.cat_token_provider  || null
+    insc.dsct_porcent_id     = d.dsct_porcent_id     || null
+    insc.dsct_porcent_label  = d.dsct_porcent_label  || null
+    insc.dsct_stick_id       = d.dsct_stick_id       || null
+    insc.dsct_stick_label    = d.dsct_stick_label    || null
+    insc.dsct_benefit_ids    = d.dsct_benefit_ids    || []
+    insc.agreement_id        = d.agreement_id        || null
+    insc.token_payment_type  = token.payment_type    || null
+
+    // Los descuentos necesitan el valor numerico (val_porcentaje/val_fijo/val_beneficios)
+    // para que el watcher recalcule el total. Ese valor NO se persiste en inscription_data,
+    // solo el ID — asi que los resolvemos desde discountCaller, que ademas devuelve
+    // el full_label ya formateado por el backend (matchea el dropdown).
+    const loadDiscountsOfType = async (typeAlias) => {
+      try {
+        const typeId = discountCatalog.value.find(e => e.alias === typeAlias)?.id
+        if (!typeId) return []
+        return await discountService.discountCaller({ q: '', cat_discount_type: typeId }) || []
+      } catch { return [] }
+    }
+
+    if (insc.dsct_porcent_id) {
+      const list = await loadDiscountsOfType('we_discount_type_percentage')
+      const match = list.find(it => it.id === insc.dsct_porcent_id)
+      if (match) {
+        insc.dsct_porcent_label = match.full_label
+        insc.val_porcentaje     = Number(match.value) || 0
+      }
+    }
+    if (insc.dsct_stick_id) {
+      const list = await loadDiscountsOfType('we_discount_type_fixed')
+      const match = list.find(it => it.id === insc.dsct_stick_id)
+      if (match) {
+        insc.dsct_stick_label = match.full_label
+        insc.val_fijo         = Number(match.value) || 0
+      }
+    }
+    if (Array.isArray(insc.dsct_benefit_ids) && insc.dsct_benefit_ids.length > 0) {
+      const list = await loadDiscountsOfType('we_discount_type_benefit')
+      insc.val_beneficios = insc.dsct_benefit_ids.map(b => {
+        const match = list.find(it => it.id === b.value)
+        return match ? Number(match.value) || 0 : 0
+      })
+    }
+
+    priceManuallySet.value = true
+    editTokenId.value      = tokenId
+    isTokenMode.value      = true
+    inscInitialized.value  = true
+
+    await nextTick()
+    showViewModal.value = true
+  } catch (err) {
+    console.error('[loadTokenForEdit]', err)
+    toast.error('No se pudo cargar la inscripcion del token')
+  }
+}
+
+async function confirmarEdicionToken () {
+  savingInsc.value = true
+  try {
+    const enrollmentPayload = buildEnrollmentPayload()
+    const resp = await ficoService.tokenEditInscription({
+      token_id:    editTokenId.value,
+      inscription: enrollmentPayload.inscription,
+      amount:       Number(insc.total_amount) || Number(insc.montoOriginal) || 0,
+      currency:     insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
+      payment_type: insc.token_payment_type || null,
+      cat_payment_channel: insc.cat_payment_channel || null,
+      advisor_observation: insc.observacions || null
+    })
+    const updated = resp?.updated_fields || []
+    if (updated.length === 0) {
+      toast.info('Sin cambios para guardar')
+    } else {
+      toast.success(`Inscripcion actualizada (${updated.length} campos)`)
+    }
+    showViewModal.value = false
+    router.push({ name: 'ficoTokens' })
+  } catch (err) {
+    toast.error(err?.response?.data?.error || 'No se pudo guardar los cambios')
+  } finally {
+    savingInsc.value = false
+  }
+}
 
 function openTokenInscription() {
   isTokenMode.value = true
