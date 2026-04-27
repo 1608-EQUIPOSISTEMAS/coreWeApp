@@ -182,8 +182,21 @@ export function useEnrollmentList () {
   function clearSelection () { selectedEnrollment.value = null }
 
   // === Daily KPIs (today vs yesterday — separate from page data) ===
-  const isPending = e => !e.confirmation || /pendiente/i.test(e.confirmation || '')
-  const isConfirmed = e => /confirm/i.test(e.confirmation || '')
+  // Confirmada = el sistema marco la inscripcion como aprobada/confirmada.
+  // Cubre los textos reales que vienen de BD: "Aprobado", "Confirmado", etc.
+  // Esta misma logica se usa en useEnrollmentFormatters.statusPill para el pill verde.
+  const isConfirmed = e => {
+    const s = (e.confirmation || '').toLowerCase()
+    return s.includes('confirm') || s.includes('aprob')
+  }
+  // Pendiente = no esta confirmada y/o tiene "Pendiente" en el texto.
+  // Excluye explicitamente las confirmadas para evitar doble-conteo si "Pendiente Revisar"
+  // y otra variante extrana convivieran.
+  const isPending = e => {
+    if (isConfirmed(e)) return false
+    const s = (e.confirmation || '').toLowerCase()
+    return !s || s.includes('pendiente')
+  }
 
   function computeKpis (items, total, hasFullSample) {
     const t = total != null ? total : items.length
@@ -194,6 +207,8 @@ export function useEnrollmentList () {
       total: t,
       pending: items.filter(isPending).length,
       confirmed: items.filter(isConfirmed).length,
+      // Monto neto: total comprometido a cobrar hoy (incluye confirmadas + pendientes).
+      // No filtra por confirmacion porque "neto" se interpreta como total facturado.
       amount: items.reduce((s, e) => s + Number(e.total_to_pay || 0), 0),
       partial: false
     }

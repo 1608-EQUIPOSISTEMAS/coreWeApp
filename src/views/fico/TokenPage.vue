@@ -414,7 +414,6 @@ const statusTabs = [
   { label: 'Todos',        value: '',          icon: 'fa-inbox' },
   { label: 'Pendiente',    value: 'pending',   icon: 'fa-hourglass-half' },
   { label: 'Link Enviado', value: 'link_sent', icon: 'fa-paper-plane' },
-  { label: 'Pagado',       value: 'paid',      icon: 'fa-dollar-sign' },
   { label: 'Confirmado',   value: 'confirmed', icon: 'fa-circle-check' }
 ]
 
@@ -528,8 +527,8 @@ function getGroup (t) {
 
 const stats = reactive({
   pending: 0,
-  linkSent: 0,
-  paidUnconfirmed: 0,
+  awaitingConfirmation: 0,
+  confirmedToday: 0,
   amountPen: 0,
   amountUsd: 0,
   loading: false,
@@ -551,20 +550,20 @@ const kpiCards = computed(() => [
     description: 'Esperan link de FICO'
   },
   {
-    key: 'linkSent',
-    label: 'Links enviados',
+    key: 'awaitingConfirmation',
+    label: 'Por confirmar',
     icon: 'fa-paper-plane',
     color: 'indigo',
-    formatted: stats.linkSent.toLocaleString('es-PE'),
-    description: 'Esperan pago del alumno'
+    formatted: stats.awaitingConfirmation.toLocaleString('es-PE'),
+    description: 'Link enviado, esperan inscribir'
   },
   {
-    key: 'paidUnconfirmed',
-    label: 'Por confirmar',
-    icon: 'fa-circle-exclamation',
+    key: 'confirmedToday',
+    label: 'Confirmados hoy',
+    icon: 'fa-circle-check',
     color: 'teal',
-    formatted: stats.paidUnconfirmed.toLocaleString('es-PE'),
-    description: 'Pagados, esperan inscribir'
+    formatted: stats.confirmedToday.toLocaleString('es-PE'),
+    description: 'Cerrados en el dia de hoy'
   },
   {
     key: 'amount',
@@ -572,7 +571,7 @@ const kpiCards = computed(() => [
     icon: 'fa-coins',
     color: 'green',
     formatted: 'S/ ' + formatMoneyInt(stats.amountPen),
-    description: stats.amountUsd > 0 ? 'USD pendiente:' : 'En tokens no confirmados',
+    description: stats.amountUsd > 0 ? 'USD pendiente:' : 'En tokens activos',
     secondary: stats.amountUsd > 0 ? '$ ' + formatMoneyInt(stats.amountUsd) : ''
   }
 ])
@@ -614,8 +613,8 @@ async function fetchStats () {
     const res = (await api.get('/token/stats')).data
     const d = res.data || {}
     stats.pending = d.pending || 0
-    stats.linkSent = d.linkSent || 0
-    stats.paidUnconfirmed = d.paidUnconfirmed || 0
+    stats.awaitingConfirmation = d.awaitingConfirmation || 0
+    stats.confirmedToday = d.confirmedToday || 0
     stats.amountPen = d.amountPen || 0
     stats.amountUsd = d.amountUsd || 0
     stats.loadedAt = new Date()
