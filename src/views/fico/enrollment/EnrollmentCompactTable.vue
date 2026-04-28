@@ -3,20 +3,59 @@
     <table class="ect">
       <thead>
         <tr class="ect-head">
+          <th class="tc" style="width:32px">
+            <label class="ect-check-wrap" title="Seleccionar todo">
+              <input type="checkbox"
+                :checked="allSelected"
+                :indeterminate.prop="someSelected && !allSelected"
+                @change="$emit('toggle-select-all', $event.target.checked)" />
+            </label>
+          </th>
           <th class="tc" style="width:42px"></th>
           <th style="width:120px">F. Registro</th>
           <th>Alumno / Documento</th>
           <th>Programa / Edicion</th>
-          <th style="width:70px">Agente</th>
+          <th style="width:90px">
+            <div class="th-flex">
+              <span>Agente</span>
+              <ColumnFilterDropdown
+                column-label="Agente"
+                :all-items="enrollments"
+                :value-extractor="e => e.seller_agent_name || '(Vacío)'"
+                v-model="colFilters.agente"
+              />
+            </div>
+          </th>
           <th style="width:85px">F. Pago</th>
-          <th class="tc" style="width:80px">Tipo Pago</th>
+          <th class="tc" style="width:100px">
+            <div class="th-flex">
+              <span>Tipo Pago</span>
+              <ColumnFilterDropdown
+                column-label="Tipo Pago"
+                :all-items="enrollments"
+                :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'"
+                v-model="colFilters.tipoPago"
+              />
+            </div>
+          </th>
           <th class="tr" style="width:95px">Monto Neto</th>
           <th class="tr" style="width:80px">Inicial</th>
           <th class="tr" style="width:80px">Pagado</th>
           <th class="tr" style="width:85px">Saldo</th>
-          <th class="tc" style="width:125px">Estado FICO</th>
+          <th class="tc" style="width:145px">
+            <div class="th-flex">
+              <span>Estado FICO</span>
+              <ColumnFilterDropdown
+                column-label="Estado FICO"
+                :all-items="enrollments"
+                :value-extractor="e => e.confirmation || 'Pendiente'"
+                v-model="colFilters.estado"
+              />
+            </div>
+          </th>
         </tr>
         <tr class="ect-filters">
+          <td></td>
           <td class="tc">
             <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
               <i class="fa-solid fa-eraser"></i>
@@ -29,31 +68,16 @@
           <td>
             <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
           </td>
-          <td>
-            <select v-model="colFilters.agente" class="filter-select">
-              <option :value="null">Todos</option>
-              <option v-for="a in uniqueAgents" :key="a" :value="a">{{ a }}</option>
-            </select>
-          </td>
+          <td></td>
           <td>
             <input v-model="colFilters.fPago" class="filter-input" placeholder="Buscar..." />
           </td>
-          <td>
-            <select v-model="colFilters.tipoPago" class="filter-select">
-              <option :value="null">Todos</option>
-              <option v-for="t in uniqueTipoPago" :key="t" :value="t">{{ t }}</option>
-            </select>
-          </td>
           <td></td>
           <td></td>
           <td></td>
           <td></td>
-          <td>
-            <select v-model="colFilters.estado" class="filter-select">
-              <option :value="null">Todos</option>
-              <option v-for="s in uniqueEstados" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </td>
+          <td></td>
+          <td></td>
         </tr>
       </thead>
       <tbody>
@@ -84,9 +108,16 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0 }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'is-checked': selectedIds.has(Number(e.enrollment_id)) }]"
           @click="onRowClick(e, $event)"
         >
+          <td class="tc">
+            <label class="ect-check-wrap" @click.stop>
+              <input type="checkbox"
+                :checked="selectedIds.has(Number(e.enrollment_id))"
+                @change="$emit('toggle-select', e.enrollment_id)" />
+            </label>
+          </td>
           <td class="tc">
             <button class="act-btn act-teal" title="Abrir detalle completo" @click.stop="openDetail(e)">
               <i class="fa-solid fa-clipboard-check"></i>
@@ -94,8 +125,15 @@
           </td>
           <td class="cell-date">{{ fmt.formatDateTime(e.registration_date) }}</td>
           <td class="col-alumno">
-            <div class="cell-main cell-clip" :title="e.student_full_name">{{ e.student_full_name }}</div>
-            <div class="cell-sub cell-extra">{{ e.document_number }}</div>
+            <div class="cell-main cell-clip" :title="e.student_full_name">
+              {{ e.student_full_name }}
+              <span v-for="chip in rowProblems(e)" :key="chip.key"
+                :class="['ect-chip', `ect-chip-${chip.tone}`]"
+                :title="chip.tooltip">
+                <i class="fa-solid" :class="chip.icon"></i> {{ chip.label }}
+              </span>
+            </div>
+            <div class="cell-sub cell-extra">{{ e.document_number || '— sin DNI' }}</div>
           </td>
           <td class="col-programa">
             <div class="cell-main cell-clip" :title="e.program_name">
@@ -136,7 +174,7 @@
           </td>
         </tr>
         <tr v-if="!enrollments.length">
-          <td colspan="12" class="empty-row">
+          <td colspan="13" class="empty-row">
             <div class="empty-state">
               <div class="empty-icon">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -156,6 +194,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 
 const props = defineProps({
   enrollments: { type: Array, default: () => [] },
@@ -163,9 +202,18 @@ const props = defineProps({
   uniqueAgents:  { type: Array, default: () => [] },
   uniqueEstados: { type: Array, default: () => [] },
   isLoading:   { type: Boolean, default: false },
-  selectedId:  { type: [Number, String], default: null }
+  selectedId:  { type: [Number, String], default: null },
+  selectedIds: { type: Set, default: () => new Set() }
 })
-const emit = defineEmits(['select-row'])
+const emit = defineEmits(['select-row', 'toggle-select', 'toggle-select-all'])
+
+const allSelected = computed(() => {
+  if (!props.enrollments.length) return false
+  return props.enrollments.every(e => props.selectedIds.has(Number(e.enrollment_id)))
+})
+const someSelected = computed(() => {
+  return props.enrollments.some(e => props.selectedIds.has(Number(e.enrollment_id)))
+})
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
@@ -175,13 +223,27 @@ function onRowClick (e, evt) {
   emit('select-row', e)
 }
 
-const uniqueTipoPago = computed(() => {
-  const set = new Set()
-  props.enrollments.forEach(e => {
-    set.add(fmt.isContado(e) ? 'Al contado' : 'Cuotas')
-  })
-  return [...set].sort()
-})
+// Detecta problemas comunes en una fila para mostrar chips de warning.
+// Cada chip lleva al ojo de FICO algo que necesita atencion antes de procesar.
+function rowProblems (e) {
+  const out = []
+  // Sin email: bloqueante para envio de confirmacion al alumno.
+  if (!e.email || !String(e.email).trim()) {
+    out.push({ key: 'email', tone: 'red', icon: 'fa-envelope-circle-check', label: 'sin correo', tooltip: 'No se podra enviar confirmacion ni acceso al campus' })
+  }
+  // Sin DNI: usual en B2B/WEB pero relevante avisar.
+  if (!e.document_number || !String(e.document_number).trim()) {
+    out.push({ key: 'doc', tone: 'amber', icon: 'fa-id-card', label: 'sin DNI', tooltip: 'Inscripcion sin documento (caso B2B/WEB tipico)' })
+  }
+  // Sin voucher en pago al contado pendiente: probablemente hay que pedirlo.
+  const isCash = fmt.isContado(e)
+  const pending = fmt.isPendiente(e)
+  if (isCash && pending && (!e.payment_vouchers || !String(e.payment_vouchers).trim())) {
+    out.push({ key: 'voucher', tone: 'amber', icon: 'fa-receipt', label: 'sin voucher', tooltip: 'Pago al contado pendiente sin comprobante adjunto' })
+  }
+  // Nota: convalidaciones ya tienen chip propio en columna Programa, no se duplican aqui.
+  return out
+}
 
 function openDetail (e) {
   router.push({
@@ -194,10 +256,10 @@ function openDetail (e) {
 function clearColFilters () {
   props.colFilters.alumno   = ''
   props.colFilters.programa = ''
-  props.colFilters.agente   = null
   props.colFilters.fPago    = ''
-  props.colFilters.tipoPago = null
-  props.colFilters.estado   = null
+  props.colFilters.agente   = []
+  props.colFilters.tipoPago = []
+  props.colFilters.estado   = []
 }
 </script>
 
@@ -233,6 +295,14 @@ function clearColFilters () {
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
+.th-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.tc .th-flex { justify-content: center; }
+.tc .th-flex > span { flex: 1; text-align: center; }
 
 /* ---- filter row ---- */
 .ect-filters {
@@ -428,6 +498,46 @@ function clearColFilters () {
 .pill-red   { background: #FEF2F2; color: #991B1B; }
 .pill-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
 
+/* Chips de problemas en fila (junto al nombre del alumno) */
+.ect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 600;
+  border-radius: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-transform: lowercase;
+}
+.ect-chip i { font-size: 8px; }
+.ect-chip-red    { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+.ect-chip-amber  { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+.ect-chip-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
+
+/* Checkbox de seleccion en lote */
+.ect-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+}
+.ect-check-wrap input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #0D9488;
+}
+.ect-row.is-checked {
+  background: rgba(13, 148, 136, 0.05);
+}
+.ect-row.is-checked.is-selected {
+  background: rgba(13, 148, 136, 0.10);
+}
+
 /* Badge especifico de convalidacion: distintivo + clickeable */
 .pill-validation {
   margin-left: 8px;
@@ -513,4 +623,57 @@ function clearColFilters () {
 @media (max-width: 640px) {
   .cell-clip { max-width: 100px; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ect-wrap {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ect { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ect-head th {
+  background: #1F1F1A;
+  color: #A0A099;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ect-filters,
+[data-coreui-theme="dark"] .ect-filters td {
+  background: #1F1F1A;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .filter-input,
+[data-coreui-theme="dark"] .filter-select {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .filter-input::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .filter-input:focus,
+[data-coreui-theme="dark"] .filter-select:focus {
+  border-color: #34D399;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+}
+[data-coreui-theme="dark"] .filter-clear {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #6F6F66;
+}
+[data-coreui-theme="dark"] .filter-clear:hover {
+  background: rgba(239,68,68,0.16);
+  border-color: rgba(239,68,68,0.4);
+  color: #F87171;
+}
+[data-coreui-theme="dark"] .ect-row td {
+  border-color: #2A2A22;
+  color: #D4D4CC;
+}
+[data-coreui-theme="dark"] .ect-row:hover td { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ect-row.is-selected td { background: #2A2A22; }
+[data-coreui-theme="dark"] .cell-main { color: #F4F4F0; }
+[data-coreui-theme="dark"] .cell-sub { color: #A0A099; }
+[data-coreui-theme="dark"] .cell-date { color: #A0A099; }
+[data-coreui-theme="dark"] .mono { color: #F4F4F0; }
+[data-coreui-theme="dark"] .c-muted { color: #6F6F66; }
+[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; }
 </style>

@@ -1,344 +1,355 @@
 <script setup>
-import { RouterLink } from 'vue-router'
-import logo from '@/assets/brand/WE-EDUCACION-PRINCIPAL-BLANCO.png'
-import { sygnet } from '@/assets/brand/sygnet'
-import { AppSidebarNav } from '@/components/AppSidebarNav.js'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import weLogo from '@/assets/brand/WE-EDUCACION-PRINCIPAL.png'
 import { useSidebarStore } from '@/stores/sidebar.js'
-
 import { useFilteredNav } from '@/composables/useFilteredNav.js'
+
 const sidebar = useSidebarStore()
 const { filteredNav } = useFilteredNav()
+const route = useRoute()
+
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+const userName = user.name || user.alias || user.username || 'Usuario'
+const userRole = (user.roles && user.roles[0]) || 'Sistema'
+const userInitials = computed(() => {
+  const parts = String(userName).trim().split(/\s+/)
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'US'
+})
+
+const expandedGroups = ref(new Set())
+
+function isExpanded(idx) {
+  return expandedGroups.value.has(idx)
+}
+
+function toggleGroup(idx) {
+  const next = new Set(expandedGroups.value)
+  if (next.has(idx)) next.delete(idx)
+  else next.add(idx)
+  expandedGroups.value = next
+}
+
+function hasActiveChild(group) {
+  if (!group.items) return false
+  return group.items.some(
+    (child) =>
+      child.to && (route.path === child.to || route.path.startsWith(child.to + '/')),
+  )
+}
+
+function goTo(navigate) {
+  navigate()
+  sidebar.toggleVisible(false)
+}
+
+function badgeText(b) {
+  if (b == null) return null
+  if (typeof b === 'object') return b.text
+  return b
+}
+
+onMounted(() => {
+  filteredNav.value.forEach((item, idx) => {
+    if (item.component === 'CNavGroup' && hasActiveChild(item)) {
+      expandedGroups.value.add(idx)
+    }
+  })
+  expandedGroups.value = new Set(expandedGroups.value)
+})
 </script>
 
 <template>
-  <CSidebar
-    class="border-end sidebar-we"
-    colorScheme="dark"
-    position="fixed"
-    :unfoldable="sidebar.unfoldable"
-    :visible="sidebar.visible"
-    @visible-change="(value) => sidebar.toggleVisible(value)"
-  >
-    <CSidebarHeader class="border-bottom">
-      <RouterLink custom to="/" v-slot="{ href, navigate }">
-        <CSidebarBrand v-bind="$attrs" as="a" :href="href" @click="navigate">
-          <img :src="logo" alt="Logo" class="sidebar-brand-full" height="60" width="150" />
-          <CIcon 
-            custom-class-name="sidebar-brand-narrow" 
-            :icon="sygnet" 
-            :height="32" 
-          />
-        </CSidebarBrand>
+  <aside class="sidebar-shell" :class="{ 'is-hidden': !sidebar.visible }">
+    <div class="brand">
+      <RouterLink to="/" class="brand-link">
+        <img :src="weLogo" alt="W|E" class="brand-logo-img" />
       </RouterLink>
-      <CCloseButton class="d-lg-none" dark @click="sidebar.toggleVisible()" />
-    </CSidebarHeader>
-    <AppSidebarNav :items="filteredNav" />
-    <CSidebarFooter class="border-top d-none d-lg-flex">
-      <CSidebarToggler @click="sidebar.toggleUnfoldable()" />
-    </CSidebarFooter>
-  </CSidebar>
+    </div>
+
+    <nav class="sidebar-nav">
+      <template v-for="(item, idx) in filteredNav" :key="idx">
+        <div
+          v-if="item.component === 'CNavTitle' && item.name !== 'Áreas'"
+          class="nav-section-label"
+        >
+          {{ item.name }}
+        </div>
+
+        <template v-else-if="item.component === 'CNavGroup'">
+          <button
+            class="nav-item nav-group-toggle"
+            :class="{
+              expanded: isExpanded(idx),
+              'has-active': hasActiveChild(item),
+            }"
+            type="button"
+            @click="toggleGroup(idx)"
+          >
+            <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
+            <span class="label">{{ item.name }}</span>
+            <CIcon icon="cil-chevron-bottom" size="sm" class="chevron" />
+          </button>
+          <div v-show="isExpanded(idx)" class="nav-children">
+            <RouterLink
+              v-for="child in item.items"
+              :key="child.to"
+              :to="child.to"
+              custom
+              v-slot="{ navigate, isActive }"
+            >
+              <button
+                class="nav-item nav-child"
+                :class="{ active: isActive }"
+                type="button"
+                @click="goTo(navigate)"
+              >
+                <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
+                <span class="label">{{ child.name }}</span>
+                <span v-if="badgeText(child.badge) != null" class="badge">
+                  {{ badgeText(child.badge) }}
+                </span>
+              </button>
+            </RouterLink>
+          </div>
+        </template>
+
+        <RouterLink
+          v-else-if="item.component === 'CNavItem'"
+          :to="item.to"
+          custom
+          v-slot="{ navigate, isActive }"
+        >
+          <button
+            class="nav-item"
+            :class="{ active: isActive }"
+            type="button"
+            @click="goTo(navigate)"
+          >
+            <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
+            <span class="label">{{ item.name }}</span>
+            <span v-if="badgeText(item.badge) != null" class="badge">
+              {{ badgeText(item.badge) }}
+            </span>
+          </button>
+        </RouterLink>
+      </template>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="avatar">{{ userInitials }}</div>
+      <div class="who">
+        <div class="n">{{ userName }}</div>
+        <div class="r">{{ userRole }}</div>
+      </div>
+    </div>
+  </aside>
 </template>
 
 <style scoped>
-/* ══════════════════════════════════════════
-   VARIABLES
-   ══════════════════════════════════════════ */
-.sidebar-we {
-  --s-bg:           #0d1b2a;
-  --s-bg-header:    #0a1520;
-  --s-surface:      rgba(255,255,255,0.04);
-  --s-hover:        rgba(255,255,255,0.06);
-  --s-active-bg:    rgba(20,184,166,0.12);
-  --s-text-muted:   rgba(255,255,255,0.28);
-  --s-text:         rgba(255,255,255,0.52);
-  --s-text-hover:   rgba(255,255,255,0.85);
-  --s-text-active:  #ffffff;
-  --s-accent:       #14b8a6;
-  --s-accent-soft:  rgba(20,184,166,0.35);
-  --s-accent-dim:   rgba(20,184,166,0.15);
-  --s-border:       rgba(255,255,255,0.07);
-  --s-r:            6px;
-  --s-ease:         cubic-bezier(0.25, 0.1, 0.25, 1);
+.sidebar-shell {
+  --bg-elev: #FFFFFF;
+  --bg-soft: #FAFAF8;
+  --line: #E8E8E3;
+  --line-soft: #EFEFEA;
+  --ink: #14140F;
+  --ink-2: #3A3A33;
+  --ink-3: #6F6F66;
+  --ink-4: #A0A099;
+  --green: #10B981;
+  --active-bg: #F0EFEB;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-  -webkit-font-smoothing: antialiased !important;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 232px;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--line);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: var(--ink-2);
+  z-index: 1000;
+  -webkit-font-smoothing: antialiased;
+  transform: translateX(0);
+  transition: transform 0.22s ease, background 0.18s, border-color 0.18s;
 }
-
-/* ══════════════════════════════════════════
-   BODY
-   ══════════════════════════════════════════ */
-.sidebar-we {
-  background: var(--s-bg) !important;
-  border-right: 1px solid var(--s-border) !important;
-  box-shadow: 4px 0 20px rgba(0,0,0,0.3) !important;
-}
-:deep(.sidebar) { background: var(--s-bg) !important; }
-
-/* ══════════════════════════════════════════
-   HEADER / LOGO
-   ══════════════════════════════════════════ */
-:deep(.sidebar-header) {
-  background: var(--s-bg-header) !important;
-  border-bottom: 1px solid var(--s-border) !important;
-  padding: 0 !important;
-  min-height: 68px !important;
-}
-:deep(.sidebar-brand) {
-  padding: 16px 20px !important;
-  min-height: 68px !important;
-  background: transparent !important;
-  transition: opacity 0.2s !important;
-}
-:deep(.sidebar-brand:hover) { opacity: 0.8 !important; }
-:deep(.sidebar-brand-full) { margin-left: 0 !important; }
-
-/* ══════════════════════════════════════════
-   NAV CONTAINER
-   ══════════════════════════════════════════ */
-:deep(.sidebar-nav) {
-  background: transparent !important;
-  padding: 8px 10px 16px !important;
-  font-family: inherit !important;
+.sidebar-shell.is-hidden {
+  transform: translateX(-100%);
+  box-shadow: none;
 }
 
-/* ══════════════════════════════════════════
-   SECTION TITLES  (ÁREAS, GENERAL)
-   ══════════════════════════════════════════ */
-:deep(.nav-title) {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  font-size: 0.58rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase !important;
-  color: var(--s-text-muted) !important;
-  padding: 20px 8px 6px !important;
-  margin: 0 !important;
-  border: none !important;
-  background: none !important;
+.brand {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 8px;
 }
-:deep(.nav-title::before) {
-  content: '' !important;
-  display: block !important;
-  width: 14px !important;
-  height: 1px !important;
-  background: var(--s-text-muted) !important;
-  flex-shrink: 0 !important;
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: opacity 0.15s;
 }
-:deep(.nav-title:first-child) { padding-top: 8px !important; }
-
-/* ══════════════════════════════════════════
-   NAV GROUPS
-   ══════════════════════════════════════════ */
-:deep(.nav-group) {
-  margin-bottom: 2px !important;
-  border: none !important;
-  border-radius: var(--s-r) !important;
-  overflow: hidden !important;
+.brand-link:hover { opacity: 0.75; }
+.brand-logo-img {
+  height: 32px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
-:deep(.nav-group-toggle) {
-  font-size: 0.8rem !important;
-  font-weight: 500 !important;
-  color: var(--s-text) !important;
-  padding: 8px 10px !important;
-  border-radius: var(--s-r) !important;
-  transition: all 0.16s var(--s-ease) !important;
-  background: transparent !important;
-  border: none !important;
-  letter-spacing: 0.1px !important;
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-right: 2px;
+  margin-right: -2px;
 }
-:deep(.nav-group-toggle:hover) {
-  color: var(--s-text-hover) !important;
-  background: var(--s-hover) !important;
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(20,20,15,0.15);
+  border-radius: 10px;
+}
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 14px 10px 6px;
 }
 
-/* Grupo abierto — borde izquierdo teal sutil */
-:deep(.nav-group.show) {
-  background: rgba(255,255,255,0.02) !important;
-  border-radius: var(--s-r) !important;
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
 }
-:deep(.nav-group.show > .nav-group-toggle) {
-  color: var(--s-text-active) !important;
-  background: transparent !important;
-  font-weight: 600 !important;
-  border-left: 2px solid var(--s-accent) !important;
-  padding-left: 8px !important;
-  border-radius: 0 var(--s-r) var(--s-r) 0 !important;
+.nav-item:hover { background: var(--bg-soft); color: var(--ink); }
+.nav-item.active {
+  background: var(--active-bg);
+  color: var(--ink);
+  font-weight: 500;
+}
+.nav-item .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.8;
+  color: var(--ink-3);
+}
+.nav-item.active .icon { opacity: 1; color: var(--ink); }
+.nav-item .label { flex: 1; }
+.nav-item .badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--ink);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.nav-item.active .badge { background: var(--green); }
+
+.nav-group-toggle .chevron {
+  width: 12px; height: 12px;
+  color: var(--ink-4);
+  transition: transform 0.2s ease;
+}
+.nav-group-toggle.expanded .chevron { transform: rotate(180deg); }
+.nav-group-toggle.has-active:not(.expanded) .label { font-weight: 500; color: var(--ink); }
+.nav-group-toggle.has-active:not(.expanded) .icon { color: var(--ink); opacity: 1; }
+
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 10px;
+  margin-left: 12px;
+  border-left: 1px solid var(--line-soft);
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+.nav-children .nav-child { font-size: 13px; padding: 6px 10px; }
+.nav-children .nav-child .icon { opacity: 0.7; width: 14px; height: 14px; }
+
+.sidebar-foot {
+  margin-top: auto;
+  padding: 10px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-foot .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FCD9B6, #F59E0B);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.sidebar-foot .who {
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-foot .who .n {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-foot .who .r { font-size: 11px; color: var(--ink-3); }
+.sidebar-foot .chev { color: var(--ink-3); }
+
+@media (max-width: 991px) {
+  .sidebar-shell:not(.is-hidden) {
+    box-shadow: 4px 0 24px rgba(20,20,15,0.18);
+  }
 }
 
-/* Chevron */
-:deep(.nav-group-toggle::after) {
-  opacity: 0.25 !important;
-  transition: transform 0.22s var(--s-ease), opacity 0.22s !important;
-  transform: scale(0.75) !important;
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .sidebar-shell {
+  --bg-elev: #14140F;
+  --bg-soft: #1F1F1A;
+  --line: #2A2A22;
+  --line-soft: #1F1F1A;
+  --ink: #F4F4F0;
+  --ink-2: #D4D4CC;
+  --ink-3: #A0A099;
+  --ink-4: #6F6F66;
+  --active-bg: #2A2A22;
 }
-:deep(.nav-group-toggle:hover::after) { opacity: 0.5 !important; }
-:deep(.nav-group.show > .nav-group-toggle::after) {
-  opacity: 0.6 !important;
-  transform: scale(0.75) rotate(180deg) !important;
+[data-coreui-theme="dark"] .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
 }
-
-/* Sub-items container — línea vertical conectora */
-:deep(.nav-group-items) {
-  position: relative !important;
-  padding: 2px 0 6px 18px !important;
-  background: transparent !important;
-  border: none !important;
-}
-:deep(.nav-group-items::before) {
-  content: '' !important;
-  position: absolute !important;
-  left: 20px !important;
-  top: 4px !important;
-  bottom: 10px !important;
-  width: 1px !important;
-  background: var(--s-border) !important;
-  border-radius: 1px !important;
-}
-
-/* ══════════════════════════════════════════
-   NAV LINKS
-   ══════════════════════════════════════════ */
-:deep(.nav-link) {
-  font-size: 0.78rem !important;
-  font-weight: 400 !important;
-  color: var(--s-text) !important;
-  padding: 7px 10px !important;
-  border-radius: var(--s-r) !important;
-  transition: all 0.16s var(--s-ease) !important;
-  margin: 1px 0 !important;
-  border: none !important;
-  background: transparent !important;
-  position: relative !important;
-}
-:deep(.nav-link:hover) {
-  color: var(--s-text-hover) !important;
-  background: var(--s-hover) !important;
-}
-
-/* ACTIVO */
-:deep(.nav-link.active) {
-  color: var(--s-text-active) !important;
-  background: var(--s-active-bg) !important;
-  font-weight: 600 !important;
-}
-:deep(.nav-link.active::before) {
-  content: '' !important;
-  position: absolute !important;
-  left: 0 !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 3px !important;
-  height: 16px !important;
-  background: var(--s-accent) !important;
-  border-radius: 0 3px 3px 0 !important;
-  box-shadow: 0 0 8px var(--s-accent-soft) !important;
-}
-
-/* ══════════════════════════════════════════
-   ICONS
-   ══════════════════════════════════════════ */
-:deep(.nav-icon) {
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  margin-right: 10px !important;
-  font-size: 0.9rem !important;
-  flex-shrink: 0 !important;
-  color: var(--s-text-muted) !important;
-  opacity: 1 !important;
-  transition: color 0.16s !important;
-}
-:deep(.nav-link:hover .nav-icon),
-:deep(.nav-group-toggle:hover .nav-icon) { color: var(--s-text-hover) !important; }
-:deep(.nav-link.active .nav-icon) {
-  color: var(--s-accent) !important;
-  filter: drop-shadow(0 0 5px var(--s-accent-soft)) !important;
-}
-:deep(.nav-group.show > .nav-group-toggle .nav-icon) { color: var(--s-accent) !important; }
-
-/* ══════════════════════════════════════════
-   BULLETS (sub-items sin icono)
-   ══════════════════════════════════════════ */
-:deep(.nav-icon-bullet) {
-  width: 5px !important;
-  height: 5px !important;
-  border-radius: 50% !important;
-  background: rgba(255,255,255,0.2) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  transition: all 0.16s !important;
-  margin-right: 10px !important;
-}
-:deep(.nav-link:hover .nav-icon-bullet) {
-  background: rgba(255,255,255,0.4) !important;
-  transform: scale(1.2) !important;
-}
-:deep(.nav-link.active .nav-icon-bullet) {
-  background: var(--s-accent) !important;
-  border-color: var(--s-accent) !important;
-  box-shadow: 0 0 6px var(--s-accent-soft) !important;
-}
-
-/* ══════════════════════════════════════════
-   FOOTER
-   ══════════════════════════════════════════ */
-:deep(.sidebar-footer) {
-  background: var(--s-bg-header) !important;
-  border-top: 1px solid var(--s-border) !important;
-  padding: 8px 10px !important;
-  min-height: auto !important;
-}
-:deep(.sidebar-toggler) {
-  background: transparent !important;
-  border: none !important;
-  border-radius: var(--s-r) !important;
-  transition: all 0.16s !important;
-  opacity: 0.3 !important;
-  color: #fff !important;
-  width: 100% !important;
-  padding: 8px !important;
-}
-:deep(.sidebar-toggler:hover) {
-  background: var(--s-hover) !important;
-  opacity: 0.6 !important;
-}
-
-/* ══════════════════════════════════════════
-   SCROLLBAR
-   ══════════════════════════════════════════ */
-:deep(.simplebar-scrollbar::before) {
-  background: rgba(255,255,255,0.12) !important;
-  border-radius: 10px !important;
-}
-:deep(.simplebar-track.simplebar-vertical) {
-  width: 6px !important;
-  right: 2px !important;
-}
-:deep(.simplebar-scrollbar.simplebar-visible::before) { opacity: 1 !important; }
-
-/* ══════════════════════════════════════════
-   COLLAPSED / UNFOLDABLE
-   ══════════════════════════════════════════ */
-:deep(.sidebar-narrow-unfoldable:not(:hover)) { background: var(--s-bg) !important; }
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-link) {
-  padding: 10px 0 !important;
-  justify-content: center !important;
-}
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-icon) { margin: 0 !important; }
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-link.active::before) { height: 20px !important; }
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-title) { padding: 12px 0 4px !important; }
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-group-items) { padding: 0 !important; }
-:deep(.sidebar-narrow-unfoldable:not(:hover) .nav-group-items::before) { display: none !important; }
-
-/* ══════════════════════════════════════════
-   MOBILE CLOSE
-   ══════════════════════════════════════════ */
-:deep(.btn-close) {
-  filter: invert(1) !important;
-  opacity: 0.3 !important;
-  transition: opacity 0.2s !important;
-}
-:deep(.btn-close:hover) { opacity: 0.7 !important; }
+[data-coreui-theme="dark"] .sidebar-shell .nav-item .badge { color: #14140F; background: #F4F4F0; }
+[data-coreui-theme="dark"] .sidebar-shell .nav-item.active .badge { background: var(--green); color: #fff; }
 </style>

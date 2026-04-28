@@ -113,7 +113,7 @@ export default [
     component: 'CNavGroup',
     name: 'Fundación',
     to: '/fundacion',
-    icon: 'cil-education',
+    icon: 'cil-school',
     roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
     items: [
       {
@@ -176,6 +176,12 @@ export default [
     icon: 'cil-notes',
     roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
     items: [
+      {
+        component: 'CNavItem',
+        name: 'Aulas',
+        to: '/academica/aulas',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
       {
         component: 'CNavItem',
         name: 'Bot Académico',

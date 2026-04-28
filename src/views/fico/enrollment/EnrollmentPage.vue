@@ -15,23 +15,16 @@
             <i class="fa-solid fa-table-columns"></i> Expandida
           </button>
         </div>
+        <button class="ep-btn-sheet" :disabled="syncingSheet" @click="syncToSheet" title="Subir ventas aprobadas a Google Sheets">
+          <i class="fa-solid" :class="syncingSheet ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'"></i>
+          {{ syncingSheet ? 'Sincronizando...' : 'Sincronizar ventas' }}
+        </button>
         <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nueva inscripcion</button>
       </div>
     </header>
 
     <!-- KPI Section -->
     <section class="ep-section">
-      <div class="ep-section-head">
-        <h2 class="ep-section-title">Indicadores de hoy</h2>
-        <span class="ep-section-meta">
-          <i class="fa-solid fa-clock"></i>
-          {{ kpiTimestamp }}
-          <button class="ep-refresh-btn" :disabled="list.kpisDaily.value.loading" @click="list.fetchKpisDaily()" title="Actualizar">
-            <i class="fa-solid" :class="list.kpisDaily.value.loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
-          </button>
-        </span>
-      </div>
-
       <div class="ep-kpis">
         <article v-for="k in kpiCards" :key="k.key" class="ep-kpi" :class="[`ep-kpi-${k.color}`, { 'is-missing': k.isMissing }]">
           <div class="ep-kpi-head">
@@ -54,12 +47,12 @@
     </section>
 
     <!-- Saved Views + Toolbar -->
-    <section class="ep-section">
+    <section class="ep-section ep-filter-bar">
       <nav class="ep-tabs" aria-label="Vistas rapidas">
         <button
           v-for="v in list.savedViews.value"
           :key="v.key"
-          :class="['ep-tab', { 'is-active': list.activeViewKey.value === v.key }]"
+          :class="['ep-tab', { 'is-active': list.activeViewKey.value === v.key, 'is-highlight': v.highlight }]"
           @click="list.applySavedView(v.key)"
         >
           <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
@@ -83,7 +76,10 @@
           :unique-estados="list.uniqueEstados.value"
           :is-loading="list.isLoading.value"
           :selected-id="list.selectedEnrollment.value?.enrollment_id"
+          :selected-ids="bulkSelected"
           @select-row="list.selectEnrollment"
+          @toggle-select="toggleSelectOne"
+          @toggle-select-all="toggleSelectAll"
         />
 
         <EnrollmentExpandedTable
@@ -103,6 +99,24 @@
       </transition>
     </div>
 
+    <!-- Barra flotante de acciones en lote -->
+    <Transition name="ep-bulk-fade">
+      <div v-if="bulkSelected.size > 0" class="ep-bulk-bar">
+        <div class="ep-bulk-info">
+          <i class="fa-solid fa-check-double"></i>
+          <strong>{{ bulkSelected.size }}</strong> {{ bulkSelected.size === 1 ? 'inscripcion seleccionada' : 'inscripciones seleccionadas' }}
+        </div>
+        <div class="ep-bulk-actions">
+          <button class="ep-bulk-btn ep-bulk-btn-secondary" @click="clearBulkSelection">
+            <i class="fa-solid fa-xmark"></i> Limpiar
+          </button>
+          <button class="ep-bulk-btn ep-bulk-btn-primary" @click="processSelectionInQueue">
+            <i class="fa-solid fa-list-check"></i> Procesar en cola
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <EnrollmentFilterModal
       :visible="list.showFilterModal.value"
       @update:visible="v => list.showFilterModal.value = v"
@@ -121,9 +135,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, inject, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useToast } from 'vue-toastification'
 import { useEnrollmentList } from '@/composables/useEnrollmentList'
+import { ServiceKeys } from '@/services'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import EnrollmentCompactTable from './EnrollmentCompactTable.vue'
@@ -133,6 +149,105 @@ import EnrollmentSidePanel from './EnrollmentSidePanel.vue'
 
 const list = useEnrollmentList()
 const router = useRouter()
+const route = useRoute()
+const toast = useToast()
+const integrationService = inject(ServiceKeys.Integration)
+
+// === Sync ventas a Google Sheets ===
+const syncingSheet = ref(false)
+async function syncToSheet () {
+  if (syncingSheet.value) return
+  syncingSheet.value = true
+  try {
+    const resp = await integrationService.syncFicoToSheets()
+    const ventas = resp?.data?.ventas?.rows_synced ?? 0
+    const aula = resp?.data?.aula?.rows_synced ?? 0
+    toast.success(`Ventas: ${ventas} filas · Aula: ${aula} filas sincronizadas`, { timeout: 5000 })
+  } catch (err) {
+    console.error('[syncToSheet]', err)
+    const msg = err?.response?.data?.error || err?.message || 'Error al sincronizar'
+    toast.error(`No se pudo sincronizar: ${msg}`, { timeout: 7000 })
+  } finally {
+    syncingSheet.value = false
+  }
+}
+
+// === URL sync: persiste vista + busqueda + pagina en query params ===
+// Permite compartir URLs y conservar contexto al hacer F5.
+// Solo sincroniza los filtros mas comunes; el resto sigue persistiendo en localStorage.
+let syncingFromUrl = false
+
+function syncFiltersToUrl () {
+  if (syncingFromUrl) return
+  const q = {}
+  if (list.activeViewKey.value && list.activeViewKey.value !== 'all') q.view = list.activeViewKey.value
+  if (list.filters.q) q.q = list.filters.q
+  if (list.pagin.value.page > 1) q.page = String(list.pagin.value.page)
+  router.replace({ query: q }).catch(() => {})
+}
+
+function applyFromUrl () {
+  syncingFromUrl = true
+  try {
+    const view = route.query.view
+    const q = route.query.q
+    const page = parseInt(route.query.page) || 1
+    if (view && typeof view === 'string') {
+      list.applySavedView(view)
+    }
+    if (q && typeof q === 'string') {
+      list.filters.q = q
+    }
+    if (page > 1) {
+      list.pagin.value.page = page
+    }
+  } finally {
+    syncingFromUrl = false
+  }
+}
+
+watch(() => list.activeViewKey.value, syncFiltersToUrl)
+watch(() => list.filters.q, syncFiltersToUrl)
+watch(() => list.pagin.value.page, syncFiltersToUrl)
+
+// === Bulk selection ===
+// Set de enrollment_id seleccionados. Se usa en la columna checkbox del listado
+// y en la barra flotante de acciones.
+const bulkSelected = ref(new Set())
+
+function toggleSelectOne (enrollmentId) {
+  const id = Number(enrollmentId)
+  const next = new Set(bulkSelected.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  bulkSelected.value = next
+}
+
+function toggleSelectAll (checked) {
+  if (!checked) {
+    bulkSelected.value = new Set()
+    return
+  }
+  const next = new Set()
+  list.filteredEnrollments.value.forEach(e => next.add(Number(e.enrollment_id)))
+  bulkSelected.value = next
+}
+
+function clearBulkSelection () {
+  bulkSelected.value = new Set()
+}
+
+// "Procesar en cola": guarda los IDs en localStorage y navega al primero.
+// EnrollmentDetailView lee la cola en startRedirect y avanza al siguiente al confirmar.
+function processSelectionInQueue () {
+  const ids = Array.from(bulkSelected.value)
+  if (ids.length === 0) return
+  try {
+    localStorage.setItem('fico_processing_queue', JSON.stringify(ids))
+  } catch (e) { /* ignore */ }
+  clearBulkSelection()
+  router.push({ name: 'enrollmentDetail', params: { id: String(ids[0]) } })
+}
 
 // Build KPI cards. When data is partial (DB couldn't return full sample),
 // breakdown KPIs come back null — show '—' instead of fake zeros.
@@ -155,12 +270,6 @@ const kpiCards = computed(() => {
     card('confirmed', 'Confirmadas',   'fa-circle-check',    'green',  t.confirmed, y.confirmed, 'count'),
     card('amount',    'Monto neto',    'fa-coins',           'teal',   t.amount,    y.amount,    'money')
   ]
-})
-
-const kpiTimestamp = computed(() => {
-  const at = list.kpisDaily.value.loadedAt
-  if (!at) return list.kpisDaily.value.loading ? 'Cargando...' : 'Sin datos'
-  return `Actualizado ${at.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
 })
 
 function formatVal (n, unit) {
@@ -210,6 +319,14 @@ function onKeyDown (e) {
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
   list.loadOwners()
+  // Prioridad de carga:
+  // 1. URL query params (si hay) -> contexto compartido por link
+  // 2. localStorage (manejado por useTablePersistence dentro del composable)
+  // Default: "Todos" sin filtros aplicados.
+  const hasUrlParams = !!(route.query.view || route.query.q || route.query.page)
+  if (hasUrlParams) {
+    applyFromUrl()
+  }
   await list.fetchEnrollments()
   list.fetchKpisDaily()
 })
@@ -220,20 +337,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 <style scoped>
 .enrollment-page {
   --e-bg: #FFFFFF;
-  --e-bg-subtle: #FAFAFA;
-  --e-border: #EFEFEF;
-  --e-border-strong: #E5E5E5;
-  --e-text: #1A1A1A;
-  --e-text-secondary: #737373;
-  --e-text-muted: #A3A3A3;
-  --e-accent: #0D9488;
-  --e-accent-soft: #F0FDFA;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
 
-  background: #FAFAFA;
-  padding: 28px 32px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
-  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* === Masthead === */
@@ -252,17 +368,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-weight: 600;
 }
 .ep-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
   color: var(--e-text);
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .ep-subtitle {
-  font-size: 12.5px;
-  color: var(--e-text-muted);
-  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--e-text-secondary);
+  font-weight: 400;
   margin-top: 2px;
 }
 .ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
@@ -290,17 +406,48 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 .ep-btn-new:hover { background: #333; }
 .ep-btn-new i { font-size: 11px; }
 
-/* === Section wrapper === */
+.ep-btn-sheet {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-sheet:hover:not(:disabled) { border-color: #34A853; color: #1E7E34; background: #F0FDF4; }
+.ep-btn-sheet:disabled { opacity: 0.6; cursor: not-allowed; }
+.ep-btn-sheet i { font-size: 11px; }
+
+/* === Section wrapper (transparent by default — Aulas style) === */
 .ep-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 14px;
+}
+.ep-section.ep-filter-bar {
   background: #fff;
   border: 1px solid var(--e-border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ep-section.ep-filter-bar .ep-tabs {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  flex: 0 1 auto;
+}
+.ep-section.ep-filter-bar .ep-toolbar {
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 .ep-section-head {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .ep-section-title {
   font-size: 13px; font-weight: 700; margin: 0;
@@ -375,12 +522,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   gap: 8px;
 }
 .ep-kpi-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 600;
   color: var(--e-text);
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.1;
 }
 .ep-kpi-delta {
   display: inline-flex; align-items: center; gap: 4px;
@@ -412,9 +559,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 .ep-tabs {
   display: flex;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--e-border);
 }
 .ep-tab {
@@ -441,6 +588,74 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-weight: 600;
 }
 .ep-tab.is-active i { opacity: 1; }
+
+/* Tab destacado (vista por defecto = trabajo del dia).
+   Mantiene el minimalismo: solo un punto sutil que indica "este es el atajo principal". */
+.ep-tab.is-highlight i { opacity: 1; }
+.ep-tab.is-highlight::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--e-accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* === Bulk action bar === */
+.ep-bulk-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 18px;
+  background: #1A1A1A;
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.20);
+  z-index: 1000;
+  font-size: 13px;
+}
+.ep-bulk-info { display: flex; align-items: center; gap: 8px; }
+.ep-bulk-info i { color: #34D399; }
+.ep-bulk-info strong { font-size: 14px; }
+.ep-bulk-actions { display: flex; gap: 8px; }
+.ep-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ep-bulk-btn-secondary {
+  background: rgba(255,255,255,.10);
+  color: rgba(255,255,255,.85);
+}
+.ep-bulk-btn-secondary:hover { background: rgba(255,255,255,.18); }
+.ep-bulk-btn-primary {
+  background: #0D9488;
+  color: #fff;
+}
+.ep-bulk-btn-primary:hover { background: #0F766E; }
+
+.ep-bulk-fade-enter-active,
+.ep-bulk-fade-leave-active {
+  transition: opacity .2s, transform .2s;
+}
+.ep-bulk-fade-enter-from,
+.ep-bulk-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
 
 /* === Toolbar === */
 .ep-toolbar {
@@ -483,4 +698,39 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   .ep-split { flex-direction: column; }
   .ep-split.has-panel .ep-split-main { max-width: 100%; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .enrollment-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16,185,129,0.16);
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .enrollment-page .ep-kpi { background: #1A1A14; }
+[data-coreui-theme="dark"] .enrollment-page .ep-kpi:hover {
+  border-color: #3A3A33;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.35);
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-view-toggle { background: #1A1A14; }
+[data-coreui-theme="dark"] .enrollment-page .ep-toggle-btn.is-active { background: #2A2A22; }
+[data-coreui-theme="dark"] .enrollment-page .ep-btn-sheet {
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .enrollment-page .ep-btn-new:hover { background: #E4E4DD; }
+[data-coreui-theme="dark"] .enrollment-page .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .enrollment-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .enrollment-page .ep-refresh-btn {
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-kpi-delta.is-up { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .enrollment-page .ep-kpi-delta.is-down { background: rgba(239,68,68,0.16); color: #F87171; }
+[data-coreui-theme="dark"] .enrollment-page .ep-kpi-delta.is-flat { background: #2A2A22; color: #A0A099; }
 </style>
