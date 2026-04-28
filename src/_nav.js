@@ -30,31 +30,31 @@ export default [
     name: 'Producto',
     to: '/producto',
     icon: 'cil-layers',
-    roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
+    roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Programas',
         to: '/producto/programas',
-        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Docentes',
         to: '/producto/docentes',
-        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Cronograma',
         to: '/producto/cronograma',
-        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA', 'ACADEMICA'], // 👈
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA', 'ACADEMICA'],
       },
       {
         component: 'CNavItem',
         name: 'Lista de Precios',
         to: '/producto/precios',
-        roles: ['ADMIN', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
@@ -69,43 +69,43 @@ export default [
     name: 'Comercial',
     to: '/comercial',
     icon: 'cil-dollar',
-    roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+    roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Comercial',
         to: '/comercial/leads',
-        roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Control - Gestión',
         to: '/comercial/RptControlComercial',
-        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Marketing - Gestión',
         to: '/comercial/RptMktProduct',
-        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Llamada - Gestión',
         to: '/comercial/RptCalling',
-        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Asesor - Objetivos',
         to: '/comercial/RptGoalAgent',
-        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Cronograma - Objetivos',
         to: '/comercial/RptGoalEdition',
-        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
     ],
   },
@@ -113,7 +113,7 @@ export default [
     component: 'CNavGroup',
     name: 'Fundación',
     to: '/fundacion',
-    icon: 'cil-school',
+    icon: 'cil-people',
     roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
     items: [
       {
@@ -135,7 +135,7 @@ export default [
     name: 'B2B',
     to: '/business',
     icon: 'cil-people',
-    roles: ['ADMIN', 'B2B', 'GERENCIA'], // 👈
+    roles: ['ADMIN', 'B2B', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
@@ -195,13 +195,13 @@ export default [
     name: 'Marketing',
     to: '/marketing',
     icon: 'cil-speech',
-    roles: ['ADMIN', 'MARKETING', 'GERENCIA'], // 👈
+    roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Overview',
         to: '/marketing/overview',
-        roles: ['ADMIN', 'MARKETING', 'GERENCIA'], // 👈
+        roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
       },
     ],
   },

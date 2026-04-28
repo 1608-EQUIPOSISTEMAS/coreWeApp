@@ -210,4 +210,40 @@ const additionalInfo = computed(() => props.enrollment?.additional_info || null)
   line-height: 1.5;
 }
 .eh-additional i { font-size: 13px; color: #0D9488; flex-shrink: 0; margin-top: 1px; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .eh-avatar {
+  background: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .eh-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eh-meta-item { color: #A0A099; }
+[data-coreui-theme="dark"] .eh-meta-item i { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .eh-total {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .eh-total-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .eh-total-amount { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .eh-ic {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ic-blue { background: rgba(59,130,246,0.16); color: #60A5FA; }
+[data-coreui-theme="dark"] .ic-purple { background: rgba(139,92,246,0.16); color: #A78BFA; }
+[data-coreui-theme="dark"] .ic-green { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .ic-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+
+[data-coreui-theme="dark"] .eh-ic-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .eh-ic-value { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .eh-additional {
+  background: rgba(13,148,136,0.14);
+  color: #2DD4BF;
+}
+[data-coreui-theme="dark"] .eh-additional i { color: #2DD4BF; }
 </style>

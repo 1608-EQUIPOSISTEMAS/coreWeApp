@@ -458,4 +458,67 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   .esp { width: 340px; }
   .esp-name { max-width: 180px; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .esp {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .esp-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .esp-doc { color: #A0A099; }
+[data-coreui-theme="dark"] .esp-icon-btn {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .esp-icon-btn:hover {
+  background: #2A2A22;
+  color: #F4F4F0;
+}
+
+[data-coreui-theme="dark"] .esp-pill-soft { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; }
+
+[data-coreui-theme="dark"] .esp-h-card {
+  background: #1F1F1A;
+  border-left-color: #3A3A33;
+}
+[data-coreui-theme="dark"] .esp-h-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-h-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .esp-h-green { background: rgba(16,185,129,0.12); border-left-color: #10B981; }
+[data-coreui-theme="dark"] .esp-h-green .esp-h-value { color: #34D399; }
+[data-coreui-theme="dark"] .esp-h-red { background: rgba(239,68,68,0.12); border-left-color: #EF4444; }
+[data-coreui-theme="dark"] .esp-h-red .esp-h-value { color: #F87171; }
+[data-coreui-theme="dark"] .esp-h-muted .esp-h-value { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .esp-section-title { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-dl-row { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .esp-dl-row dt { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-dl-row dd { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .esp-cuota { background: #1F1F1A; }
+[data-coreui-theme="dark"] .esp-cuota-num { color: #34D399; }
+[data-coreui-theme="dark"] .esp-cuota-date { color: #A0A099; }
+[data-coreui-theme="dark"] .esp-cuota-amt { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .esp-action-btn {
+  background: #1F1F1A;
+  border-color: #2A2A22;
+  color: #D4D4CC;
+}
+[data-coreui-theme="dark"] .esp-action-btn i { color: #34D399; }
+[data-coreui-theme="dark"] .esp-action-btn:hover:not(:disabled) {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+
+[data-coreui-theme="dark"] .esp-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .esp-btn-primary { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .esp-btn-primary:hover { background: #E4E4DD; }
 </style>

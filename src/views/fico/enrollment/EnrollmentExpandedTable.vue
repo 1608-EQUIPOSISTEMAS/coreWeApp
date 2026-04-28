@@ -595,4 +595,82 @@ const totalCols = computed(() => {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .eet-scroll-wrapper {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .eet-table { color: #D4D4CC; }
+
+[data-coreui-theme="dark"] .eet-sticky-col {
+  background: #1A1A14;
+  border-right-color: #2A2A22;
+}
+
+[data-coreui-theme="dark"] .eet-group-row,
+[data-coreui-theme="dark"] .eet-group-row .eet-sticky-col,
+[data-coreui-theme="dark"] .eet-col-row,
+[data-coreui-theme="dark"] .eet-col-row .eet-sticky-col,
+[data-coreui-theme="dark"] .eet-col-header {
+  background: #1F1F1A;
+  color: #6F6F66;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .eet-group-header {
+  background: #1A1A14;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .eet-group-header:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .eet-group-label { color: #D4D4CC; }
+
+/* Group accent borders — keep colors but slightly brighter on dark */
+[data-coreui-theme="dark"] .eet-grp-identity { border-left-color: #60A5FA; }
+[data-coreui-theme="dark"] .eet-grp-profile { border-left-color: #A78BFA; }
+[data-coreui-theme="dark"] .eet-grp-program { border-left-color: #34D399; }
+[data-coreui-theme="dark"] .eet-grp-finance { border-left-color: #FBBF24; }
+[data-coreui-theme="dark"] .eet-grp-installments { border-left-color: #38BDF8; }
+
+[data-coreui-theme="dark"] .eet-collapsed-hint { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .eet-data-row .eet-sticky-col,
+[data-coreui-theme="dark"] .eet-cell,
+[data-coreui-theme="dark"] .eet-td-action {
+  border-bottom-color: #1F1F1A;
+}
+[data-coreui-theme="dark"] .eet-data-row:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .eet-data-row:hover .eet-sticky-col { background: #1F1F1A; }
+
+[data-coreui-theme="dark"] .eet-cell-email { color: #A0A099; }
+[data-coreui-theme="dark"] .eet-cell-date { color: #A0A099; }
+[data-coreui-theme="dark"] .eet-muted { color: #3A3A33; }
+
+[data-coreui-theme="dark"] .eet-validation-badge {
+  background: rgba(139,92,246,0.16);
+  border-color: rgba(139,92,246,0.4);
+  color: #C4B5FD;
+}
+
+[data-coreui-theme="dark"] .eet-btn-detail { color: #A0A099; }
+[data-coreui-theme="dark"] .eet-btn-detail:hover {
+  background: rgba(37,99,235,0.16);
+  color: #60A5FA;
+}
+
+[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+
+[data-coreui-theme="dark"] .eet-voucher-link { color: #60A5FA; }
+[data-coreui-theme="dark"] .eet-voucher-link:hover { color: #93C5FD; }
+
+[data-coreui-theme="dark"] .eet-empty { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .eet-skeleton-row td { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .eet-sk-cell {
+  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
+  background-size: 200% 100%;
+}
 </style>
