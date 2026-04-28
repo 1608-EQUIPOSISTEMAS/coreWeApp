@@ -1025,4 +1025,63 @@ onMounted(() => {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .edv-page {
+  background: #0E0E0A;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .edv-topbar {
+  background: #14140F;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .edv-back { color: #A0A099; }
+[data-coreui-theme="dark"] .edv-back:hover { background: #1F1F1A; color: #F4F4F0; }
+[data-coreui-theme="dark"] .edv-topbar-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .edv-topbar-program { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .edv-topbar-pill.pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .edv-topbar-pill.pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .edv-topbar-pill.pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+
+[data-coreui-theme="dark"] .edv-loading { color: #6F6F66; }
+[data-coreui-theme="dark"] .edv-spinner {
+  border-color: #2A2A22;
+  border-top-color: #F4F4F0;
+}
+
+[data-coreui-theme="dark"] .edv-sidebar {
+  background: #14140F;
+  border-right-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .edv-main { background: #0E0E0A; }
+
+[data-coreui-theme="dark"] .edv-tabs {
+  background: #0E0E0A;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .edv-tab { color: #6F6F66; }
+[data-coreui-theme="dark"] .edv-tab:hover { color: #F4F4F0; }
+[data-coreui-theme="dark"] .edv-tab.active {
+  color: #F4F4F0;
+  border-bottom-color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .edv-tab-badge {
+  background: #2A2A22;
+  color: #A0A099;
+}
+
+[data-coreui-theme="dark"] .edv-redirect-card {
+  background: #F4F4F0;
+  color: #14140F;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .edv-redirect-card i { color: #10B981; }
+[data-coreui-theme="dark"] .edv-redirect-cancel {
+  background: rgba(20,20,15,.12);
+  color: rgba(20,20,15,.7);
+}
+[data-coreui-theme="dark"] .edv-redirect-cancel:hover { background: rgba(20,20,15,.2); }
 </style>

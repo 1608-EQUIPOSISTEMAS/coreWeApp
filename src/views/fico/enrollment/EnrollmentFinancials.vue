@@ -1234,4 +1234,219 @@ function needsEditionDecision (child) {
 }
 .ef-edition-warn i { font-size: 11px; }
 .ef-edition-warn:hover { background: #FEE2E2; border-color: #F87171; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ef-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .ef-bar-sep { background: #2A2A22; }
+[data-coreui-theme="dark"] .ef-bar-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-bar-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-tooltip {
+  background: #F4F4F0;
+  color: #14140F;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+[data-coreui-theme="dark"] .ef-tooltip::after { border-top-color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .ef-sub-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-sub-title i { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .ef-contado-card { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ef-voucher-link {
+  background: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-voucher-link:hover { background: #3A3A33; }
+[data-coreui-theme="dark"] .ef-voucher-sm { color: #A0A099; }
+[data-coreui-theme="dark"] .ef-voucher-sm:hover { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .ef-upload-btn { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-upload-btn:hover {
+  background: rgba(13,148,136,0.16);
+  color: #2DD4BF;
+}
+[data-coreui-theme="dark"] .ef-btn-confirm-cuota {
+  background: rgba(16,185,129,0.16);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+[data-coreui-theme="dark"] .ef-btn-confirm-cuota:hover { background: #10B981; color: #fff; }
+
+[data-coreui-theme="dark"] .ef-field label { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-readonly {
+  color: #F4F4F0;
+  border-bottom-color: #1F1F1A;
+}
+[data-coreui-theme="dark"] .ef-input,
+[data-coreui-theme="dark"] .ef-select,
+[data-coreui-theme="dark"] .ef-select-sm {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-input:focus,
+[data-coreui-theme="dark"] .ef-select:focus,
+[data-coreui-theme="dark"] .ef-select-sm:focus {
+  border-color: #F4F4F0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+}
+[data-coreui-theme="dark"] .ef-input:disabled,
+[data-coreui-theme="dark"] .ef-select:disabled,
+[data-coreui-theme="dark"] .ef-select-sm:disabled {
+  background: #1F1F1A;
+  color: #6F6F66;
+}
+[data-coreui-theme="dark"] .ef-datepicker :deep(input) {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+
+[data-coreui-theme="dark"] .ef-cuota-tabs { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .ef-cuota-tab { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-cuota-tab:hover { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-cuota-tab.active {
+  color: #F4F4F0;
+  border-bottom-color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-tab-badge {
+  background: #2A2A22;
+  color: #A0A099;
+}
+
+[data-coreui-theme="dark"] .ef-inicial-card { background: #1F1F1A; }
+
+[data-coreui-theme="dark"] .ef-notice {
+  background: rgba(245,158,11,0.14);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .ef-notice i { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .ef-btn-teal { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .ef-btn-outline {
+  background: #1A1A14;
+  color: #A78BFA;
+  border-color: rgba(167,139,250,0.4);
+}
+[data-coreui-theme="dark"] .ef-btn-outline:hover { background: rgba(99,102,241,0.16); }
+
+[data-coreui-theme="dark"] .ef-table { color: #D4D4CC; }
+[data-coreui-theme="dark"] .ef-table thead th {
+  background: #1F1F1A;
+  color: #6F6F66;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ef-table tbody td { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .ef-table tbody tr:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ef-table .cuota-paid td { background: rgba(16,185,129,0.08); }
+[data-coreui-theme="dark"] .ef-table .cuota-overdue td { background: rgba(239,68,68,0.08); }
+[data-coreui-theme="dark"] .ef-total-row td {
+  background: #1F1F1A;
+  border-top-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ef-empty-row { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .ef-btn-del { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-btn-del:hover {
+  background: rgba(239,68,68,0.16);
+  color: #F87171;
+}
+
+[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+[data-coreui-theme="dark"] .pill-muted { background: #2A2A22; color: #A0A099; }
+
+[data-coreui-theme="dark"] .ef-empty { color: #6F6F66; }
+
+[data-coreui-theme="dark"] .ef-edit-panel { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .ef-edit-head {
+  background: #1F1F1A;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ef-edit-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-edit-title i { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-edit-close { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-edit-close:hover { color: #F4F4F0; background: #2A2A22; }
+
+[data-coreui-theme="dark"] .ef-warn-label { color: #FBBF24; }
+[data-coreui-theme="dark"] .ef-warn-label i { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .ef-textarea {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-textarea:focus {
+  border-color: #F4F4F0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+}
+
+[data-coreui-theme="dark"] .ef-footer { border-top-color: #2A2A22; }
+
+[data-coreui-theme="dark"] .ef-action-btn {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .ef-action-btn:hover {
+  border-color: #F4F4F0;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-btn-primary { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .ef-btn-primary:hover { background: #E4E4DD; }
+
+[data-coreui-theme="dark"] .ef-btn-observe {
+  background: rgba(245,158,11,0.14);
+  border-color: rgba(245,158,11,0.4);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .ef-btn-observe:hover {
+  background: rgba(245,158,11,0.22);
+  border-color: rgba(245,158,11,0.6);
+}
+
+[data-coreui-theme="dark"] .ef-observe-banner {
+  background: rgba(245,158,11,0.14);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .ef-observe-banner i { color: #FBBF24; }
+[data-coreui-theme="dark"] .ef-observe-field label { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-observe-textarea {
+  background: #14140F;
+  border-color: rgba(245,158,11,0.4);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-observe-textarea::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-observe-textarea:focus {
+  border-color: #FBBF24;
+  box-shadow: 0 0 0 3px rgba(245,158,11,.16);
+}
+
+[data-coreui-theme="dark"] .ef-confirm-row { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ef-confirm-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-confirm-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-confirm-note {
+  background: #1F1F1A;
+  color: #A0A099;
+}
+
+[data-coreui-theme="dark"] .ef-validation-block { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .ef-edition-link { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-edition-link:hover { color: #2DD4BF; }
+[data-coreui-theme="dark"] .ef-edition-warn {
+  background: rgba(239,68,68,0.16);
+  border-color: rgba(239,68,68,0.4);
+  color: #F87171;
+}
+[data-coreui-theme="dark"] .ef-edition-warn:hover {
+  background: rgba(239,68,68,0.22);
+  border-color: rgba(239,68,68,0.6);
+}
+
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .c-blue  { color: #60A5FA; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .c-muted { color: #6F6F66; }
 </style>
