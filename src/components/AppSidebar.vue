@@ -88,7 +88,6 @@ onMounted(() => {
           >
             <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
             <span class="label">{{ item.name }}</span>
-            <CIcon icon="cil-chevron-bottom" size="sm" class="chevron" />
           </button>
           <div v-show="isExpanded(idx)" class="nav-children">
             <RouterLink
@@ -269,12 +268,8 @@ onMounted(() => {
 }
 .nav-item.active .badge { background: var(--green); }
 
-.nav-group-toggle .chevron {
-  width: 12px; height: 12px;
-  color: var(--ink-4);
-  transition: transform 0.2s ease;
-}
-.nav-group-toggle.expanded .chevron { transform: rotate(180deg); }
+.nav-group-toggle.expanded::after { transform: rotate(180deg) !important; }
+.nav-group-toggle::after { transition: transform 0.2s ease !important; }
 .nav-group-toggle.has-active:not(.expanded) .label { font-weight: 500; color: var(--ink); }
 .nav-group-toggle.has-active:not(.expanded) .icon { color: var(--ink); opacity: 1; }
 
