@@ -142,7 +142,10 @@
             <div class="eact-grid-3" style="margin-top:12px">
               <div class="eact-field">
                 <label>Precio lista nuevo</label>
-                <div class="eact-amount">{{ fmt.formatMoney(ccEditionListPrice) }}</div>
+                <div class="eact-amount">{{ fmt.formatMoney(ccEditionFinalPrice) }}</div>
+                <small v-if="ccDiscountRate > 0 && ccEditionListPrice > 0" class="eact-price-hint">
+                  Base S/. {{ fmt.formatMoney(ccEditionListPrice) }} − {{ Math.round(ccDiscountRate * 100) }}% dscto
+                </small>
               </div>
               <div class="eact-field">
                 <label>Diferencia</label>
@@ -498,7 +501,21 @@ const ccPagado = computed(() => {
   return Number(e.total_to_pay) || 0
 })
 
-const ccDiferencia = computed(() => Math.max(0, ccEditionListPrice.value - ccPagado.value))
+const ccDiscountRate = computed(() => {
+  const list = Number(props.enrollment?.list_price) || 0
+  const disc = Number(props.enrollment?.total_discounted) || 0
+  if (list <= 0 || disc <= 0) return 0
+  return Math.min(Math.max(disc / list, 0), 1)
+})
+
+const ccEditionFinalPrice = computed(() => {
+  const base = Number(ccEditionListPrice.value) || 0
+  if (!base) return 0
+  const finalPrice = base * (1 - ccDiscountRate.value)
+  return Math.round(finalPrice * 100) / 100
+})
+
+const ccDiferencia = computed(() => Math.max(0, ccEditionFinalPrice.value - ccPagado.value))
 const canAdvanceCC = computed(() => !!ccProgramVersionId.value && !!ccEditionId.value && !!ccJustificacion.value.trim())
 
 async function loadCCPrograms () {
@@ -536,9 +553,11 @@ async function onCCProgramChange () {
         label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
       }))
     if (priceData) {
-      const isStudent = props.enrollment?.occupation_label === 'E'
-      ccEditionListPrice.value = Number(isStudent ? priceData.price_student_soles : priceData.price_profesional_soles) || 0
-      ccTotalAmount.value = Math.max(0, ccEditionListPrice.value - ccPagado.value)
+      const isStudent   = props.enrollment?.occupation_label === 'E'
+      const primary     = isStudent ? priceData.price_student_soles : priceData.price_profesional_soles
+      const fallback    = isStudent ? priceData.price_profesional_soles : priceData.price_student_soles
+      ccEditionListPrice.value = Number(primary) || Number(fallback) || 0
+      ccTotalAmount.value = Math.max(0, ccEditionFinalPrice.value - ccPagado.value)
     }
   } catch (err) {
     console.error(err)
@@ -548,7 +567,7 @@ async function onCCProgramChange () {
 }
 
 function onCCEditionChange () {
-  ccTotalAmount.value = Math.max(0, ccEditionListPrice.value - ccPagado.value)
+  ccTotalAmount.value = Math.max(0, ccEditionFinalPrice.value - ccPagado.value)
 }
 
 async function handleCourseChangeConfirm () {
@@ -867,6 +886,7 @@ async function handleRetire () {
 .eact-amount { font-size: 14px; font-weight: 600; color: #1A1A1A; font-variant-numeric: tabular-nums; padding: 8px 0; }
 .eact-amount-green { color: #059669; }
 .eact-amount-red { color: #DC2626; }
+.eact-price-hint { display: block; font-size: 10.5px; color: #6B7280; margin-top: 2px; }
 
 .eact-warn-label {
   display: flex;

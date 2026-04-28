@@ -695,13 +695,13 @@ async function handleSendEmail () {
     if (result?.success) {
       toast.success('Correo enviado correctamente.')
     } else {
-      toast.warning(result?.error || 'No se pudo enviar el correo.')
+      toast.error(`Error al enviar correo: ${result?.error || 'No se pudo enviar el correo'}`)
     }
     showEmailPreview.value = false
     ficoService.getAuditLog(Number(props.enrollment.enrollment_id)).then(r => { auditLog.value = r || [] }).catch(() => {})
   } catch (err) {
     console.error(err)
-    toast.error('Error al enviar correo.')
+    toast.error(`Error al enviar correo: ${err?.response?.data?.error || err?.message || 'desconocido'}`)
   } finally { sendingEmail.value = false }
 }
 
@@ -1044,8 +1044,8 @@ async function handleConfirmPayment () {
     const emailResult = await ficoService.sendConfirmationEmail(enrollmentId)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
-    } else if (emailResult?.error) {
-      toast.warning('No se pudo enviar el correo: ' + emailResult.error, { timeout: 5000 })
+    } else {
+      toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
     emit('update:visible', false)
     emit('saved')
@@ -1081,8 +1081,8 @@ async function handleConfirmPlan () {
     const emailResult = await ficoService.sendConfirmationEmail(enrollmentId)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
-    } else if (emailResult?.error) {
-      toast.warning('No se pudo enviar el correo: ' + emailResult.error, { timeout: 5000 })
+    } else {
+      toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
     const response = await ficoService.getPaymentDetail(enrollmentId)
     selectedDetail.value = response || { installments: [], payment_history: [] }

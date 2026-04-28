@@ -979,12 +979,12 @@
             </div>
             <div class="d-flex justify-content-between mb-2 c-green">
               <span class="fw-600" style="font-size:12px;">Pagado:</span>
-              <span class="fw-700" style="font-size:13px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}</span>
+              <span class="fw-700" style="font-size:13px;">{{ formatMoney(enrollmentData.currency_symbol, totalPaidDisplay) }}</span>
             </div>
             <hr class="my-2" style="border-color:#dcfce7;">
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-700 text-dark" style="font-size:12.5px;">Saldo Pendiente:</span>
-              <span class="fw-700" style="font-size:18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}</span>
+              <span class="fw-700" style="font-size:18px;" :class="saldoPendienteDisplay > 0 ? 'c-red' : 'c-green'">{{ formatMoney(enrollmentData.currency_symbol, saldoPendienteDisplay) }}</span>
             </div>
           </div>
         </div>
@@ -1036,9 +1036,10 @@
               >
                 <!-- # -->
                 <td class="td-a text-center fw-700 text-muted">
-                  <span v-if="cuota.is_reserva" 
-                        class="pill pill-slate" 
-                        style="background:#dbeafe;color:#1e40af;font-size:9px;">R</span>
+                  <span v-if="cuota.is_reserva"
+                        class="pill pill-slate"
+                        title="Adelanto / Pago Inicial"
+                        style="background:#dbeafe;color:#1e40af;font-size:9px;">INI</span>
                   <span v-else>{{ cuota.installment_number }}</span>
                 </td>
 
@@ -2002,6 +2003,25 @@ const totalPlanSum = computed(() => {
   return enrollmentData.value.installment_plan
     .reduce((acc, c) => acc + Number(c.amount || 0), 0)
     .toFixed(2)
+})
+
+// Pagado real: el SP no siempre suma el inicial/reserva cuando ya se confirmo
+// Este computed consolida: si existe cuota reserva en estado paid, se incluye en el total
+const totalPaidDisplay = computed(() => {
+  const data = enrollmentData.value
+  if (!data) return 0
+  const spPaid = Number(data.total_paid) || 0
+  const reservaRow = (data.installment_plan || []).find(c => c.is_reserva)
+  const reservaPaid = reservaRow && reservaRow.status_alias === 'we_payment_status_paid'
+    ? Number(reservaRow.amount) || 0
+    : 0
+  return Math.max(spPaid, reservaPaid)
+})
+
+const saldoPendienteDisplay = computed(() => {
+  const data = enrollmentData.value
+  if (!data) return 0
+  return Math.max(0, Number(data.total_amount || 0) - Number(totalPaidDisplay.value || 0))
 })
 
 </script>

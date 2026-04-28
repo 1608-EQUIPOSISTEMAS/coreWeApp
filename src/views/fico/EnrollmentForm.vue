@@ -10,16 +10,55 @@
       </div>
     </div>
 
+    <!-- ASESOR -->
+    <div class="ef-card">
+      <h6 class="ef-section-title"><i class="fa-solid fa-user-tie"></i> ASESOR</h6>
+      <div class="ef-grid-3">
+        <div class="ef-field">
+          <label>Categoria <span class="ef-req">*</span></label>
+          <SearchSelect v-model="form.agent_category" :items="agentCategoryOptions" label-field="label" value-field="id" placeholder="Seleccionar..." @update:modelValue="form.seller_agent_id = null" />
+        </div>
+        <div class="ef-field" v-if="form.agent_category === 'comercial'">
+          <label>Asesor <span class="ef-req">*</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Buscar asesor..." />
+        </div>
+        <div class="ef-field" v-else-if="form.agent_category === 'b2b'">
+          <label>Asesor B2B <span class="ef-optional">(opcional)</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="b2bAgentsList" label-field="label" value-field="id" placeholder="Solo B2B (sin asesor)" />
+        </div>
+        <div class="ef-field" v-else-if="form.agent_category === 'web'">
+          <label>Asesor WEB <span class="ef-optional">(opcional)</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="webAgentsList" label-field="label" value-field="id" placeholder="Solo WEB (sin asesor)" />
+        </div>
+        <div class="ef-field" v-else-if="form.agent_category === 'we'">
+          <label>Area WE <span class="ef-req">*</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="weAreaOptions" label-field="label" value-field="id" placeholder="Seleccionar..." />
+        </div>
+        <div class="ef-field" v-if="form.agent_category === 'b2b' && !form.seller_agent_id">
+          <label>Tipo de Inscripcion B2B</label>
+          <SearchSelect v-model="form.cat_b2b_doctype" :items="catB2BDoctype" label-field="description" value-field="id" placeholder="Pago directo (default)" />
+        </div>
+      </div>
+      <div v-if="isB2BDocumental" class="ef-b2b-note">
+        <i class="fa-solid fa-circle-info"></i>
+        Inscripcion B2B documental: el pago no se registra en FICO (gestionado por la empresa B2B). Total: 0, descuento 100%.
+      </div>
+    </div>
+
     <!-- DATOS DEL CLIENTE -->
     <div class="ef-card">
       <h6 class="ef-section-title"><i class="fa-solid fa-user"></i> DATOS DEL CLIENTE</h6>
       <div class="ef-grid-3">
         <div class="ef-field">
-          <label>Tipo Documento <span class="ef-req">*</span></label>
+          <label>Tipo Documento <span v-if="requireDocument" class="ef-req">*</span></label>
           <SearchSelect v-model="form.cat_type_document" :items="catDocTypes" label-field="description" value-field="id" placeholder="DOC..." />
         </div>
         <div class="ef-field">
-          <label>Nro. Documento <span class="ef-req">*</span></label>
+          <label>
+            Nro. Documento
+            <span v-if="requireDocument" class="ef-req">*</span>
+            <span v-else class="ef-optional">(opcional)</span>
+          </label>
           <div class="ef-input-with-btn">
             <input
               v-model="form.document_number"
@@ -50,12 +89,20 @@
           <input v-model="form.email" type="email" placeholder="correo@ejemplo.com" />
         </div>
         <div class="ef-field">
-          <label>Telefono <span class="ef-req">*</span></label>
+          <label>
+            Telefono
+            <span v-if="requirePhone" class="ef-req">*</span>
+            <span v-else class="ef-optional">(opcional)</span>
+          </label>
           <input v-model="form.phone" type="text" placeholder="TELEFONO" />
         </div>
         <div class="ef-field">
           <label>Pais</label>
           <SearchSelect v-model="form.cat_country" :items="catCountries" label-field="description" value-field="id" placeholder="PAIS..." />
+        </div>
+        <div class="ef-field">
+          <label>Perfil <span class="ef-req">*</span></label>
+          <SearchSelect v-model="form.client_profile" :items="clientProfileOptions" label-field="label" value-field="id" placeholder="Profesional / Estudiante..." />
         </div>
       </div>
     </div>
@@ -70,11 +117,11 @@
         </div>
         <div class="ef-field">
           <label>Programa <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.program_version_id" :items="programsList" label-field="label" value-field="program_version_id" placeholder="Buscar programa..." :disabled="!form.cat_program_type" @update:modelValue="onProgramChange" />
+          <SearchSelect v-model="form.program_version_id" :items="programsList" label-field="label" value-field="program_version_id" placeholder="Buscar programa..." :disabled="!form.cat_program_type" :external-loading="loadingPrograms" @update:modelValue="onProgramChange" />
         </div>
         <div class="ef-field">
           <label>Edicion <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.program_edition_id" :items="editionsList" label-field="label" value-field="id" placeholder="Seleccionar edicion..." :disabled="!form.program_version_id" @update:modelValue="onEditionChange" />
+          <SearchSelect v-model="form.program_edition_id" :items="editionsList" label-field="label" value-field="id" placeholder="Seleccionar edicion..." :disabled="!form.program_version_id" :external-loading="loadingEditions" @update:modelValue="onEditionChange" />
         </div>
         <div class="ef-field">
           <label>Modalidad</label>
@@ -83,56 +130,10 @@
       </div>
     </div>
 
-    <!-- ASESOR -->
-    <div class="ef-card">
-      <h6 class="ef-section-title"><i class="fa-solid fa-user-tie"></i> ASESOR</h6>
-      <div class="ef-grid-3">
-        <div class="ef-field">
-          <label>Categoria <span class="ef-req">*</span></label>
-          <select v-model="form.agent_category" class="ef-input" @change="form.seller_agent_id = null">
-            <option value="">Seleccionar...</option>
-            <option value="comercial">Comercial</option>
-            <option value="b2b">B2B</option>
-            <option value="web">WEB</option>
-            <option value="we">WE</option>
-            <option value="sa">S/A</option>
-          </select>
-        </div>
-        <div class="ef-field" v-if="form.agent_category === 'comercial'">
-          <label>Asesor</label>
-          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Buscar asesor..." class="ef-select" />
-        </div>
-        <div class="ef-field" v-else-if="form.agent_category === 'b2b'">
-          <label>Agente B2B</label>
-          <SearchSelect v-model="form.seller_agent_id" :items="b2bAgentsList" label-field="label" value-field="id" placeholder="Buscar agente..." class="ef-select" />
-        </div>
-        <div class="ef-field" v-else-if="form.agent_category === 'web'">
-          <label>Asesor WEB</label>
-          <SearchSelect v-model="form.seller_agent_id" :items="webAgentsList" label-field="label" value-field="id" placeholder="Buscar asesor..." class="ef-select" />
-        </div>
-        <div class="ef-field" v-else-if="form.agent_category === 'we'">
-          <label>Area WE</label>
-          <select v-model="form.seller_agent_id" class="ef-input">
-            <option value="">Seleccionar...</option>
-            <option value="twe">TWE - Talento</option>
-            <option value="fwe">FWE - Fundacion</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
     <!-- INFORMACION DE PAGO -->
-    <div class="ef-card">
+    <div class="ef-card" v-if="!isB2BDocumental">
       <h6 class="ef-section-title"><i class="fa-solid fa-credit-card"></i> INFORMACION DE PAGO</h6>
       <div class="ef-grid-4">
-        <div class="ef-field">
-          <label>Perfil <span class="ef-req">*</span></label>
-          <select v-model="form.client_profile" class="ef-input">
-            <option value="">Seleccionar...</option>
-            <option value="profesional">Profesional</option>
-            <option value="estudiante">Estudiante</option>
-          </select>
-        </div>
         <div class="ef-field">
           <label>Moneda</label>
           <SearchSelect v-model="form.cat_currency" :items="catCurrency" label-field="description" value-field="id" placeholder="MONEDA..." />
@@ -165,7 +166,7 @@
     </div>
 
     <!-- DATOS DEL PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship">
+    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental">
       <h6 class="ef-section-title"><i class="fa-solid fa-money-check-dollar"></i> DATOS DEL PAGO</h6>
       <div class="ef-grid-3">
         <div class="ef-field">
@@ -189,11 +190,15 @@
           <label>N. Operacion</label>
           <input v-model="form.transaction_code" type="text" placeholder="Numero de operacion" />
         </div>
+        <div class="ef-field">
+          <label>Fecha de Pago</label>
+          <BaseDatePicker v-model="form.payment_date" placeholder="dd/mm/aaaa" class="ef-datepicker" />
+        </div>
       </div>
     </div>
 
     <!-- PLAN DE CUOTAS -->
-    <div class="ef-card" v-if="isInstallment && !form.is_scholarship">
+    <div class="ef-card" v-if="isInstallment && !form.is_scholarship && !isB2BDocumental">
       <h6 class="ef-section-title"><i class="fa-solid fa-calendar-days"></i> PLAN DE CUOTAS</h6>
 
       <div class="ef-grid-3" style="margin-bottom:16px">
@@ -248,7 +253,7 @@
     </div>
 
     <!-- COMPROBANTE DE PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship">
+    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental">
       <h6 class="ef-section-title"><i class="fa-solid fa-cloud-arrow-up"></i> COMPROBANTE DE PAGO</h6>
       <MultiFileUploader
         v-model="form.ticket_payment_urls"
@@ -298,6 +303,8 @@ const customerService = inject(ServiceKeys.Customer)
 
 const saving = ref(false)
 const searchingCustomer = ref(false)
+const loadingPrograms = ref(false)
+const loadingEditions = ref(false)
 const programsList = ref([])
 const editionsList = ref([])
 const installments = ref([])
@@ -328,6 +335,7 @@ const catPaymentChannel = catalog.options('we_payment_channel')
 const catProgramType = catalog.options('we_program_type')
 const catPaymentMedium = catalog.options('we_payment_medium')
 const catBusinessEntity = catalog.options('we_business_entity')
+const catB2BDoctype = catalog.options('we_enrollment_b2b_doctype')
 
 const channelGeneral = computed(() => catPaymentChannel.find(c => c.alias === 'we_channel_general'))
 
@@ -353,11 +361,21 @@ const form = reactive({
   cat_business_entity: null,
   bank_account_id: null,
   transaction_code: '',
+  payment_date: '',
   client_profile: '',
   agent_category: '',
   seller_agent_id: null,
+  cat_b2b_doctype: null,
   ticket_payment_urls: [],
   observations: ''
+})
+
+const isB2BDocumental = computed(() => {
+  return form.agent_category === 'b2b' && !form.seller_agent_id && !!form.cat_b2b_doctype
+})
+
+watch(() => form.seller_agent_id, (val) => {
+  if (val) form.cat_b2b_doctype = null
 })
 
 const docConfig = computed(() => {
@@ -483,6 +501,7 @@ async function loadBankAccounts () {
 }
 
 async function loadPrograms () {
+  loadingPrograms.value = true
   try {
     const items = await programService.programVersionCaller({
       active: 'Y',
@@ -493,6 +512,7 @@ async function loadPrograms () {
       label: `${p.abbreviation || ''} — ${p.version_code || ''}`
     }))
   } catch (e) { console.error(e) }
+  finally { loadingPrograms.value = false }
 }
 
 function onProgramTypeChange () {
@@ -518,6 +538,7 @@ async function onProgramChange () {
     programSessionsPerWeek.value = Number(prog.sessions_per_week || 1)
   }
 
+  loadingEditions.value = true
   try {
     const items = await editionService.editionCaller({ program_version_id: form.program_version_id })
     const hoy = new Date()
@@ -540,6 +561,7 @@ async function onProgramChange () {
         label: `${e.global_code || e.edition_code || ''} — ${e.start_date ? new Date(e.start_date).toLocaleDateString('es-PE') : ''}`
       }))
   } catch (e) { console.error('[EnrollmentForm] editionCaller error:', e) }
+  finally { loadingEditions.value = false }
 }
 
 function onEditionChange () {
@@ -565,11 +587,52 @@ async function loadAgents () {
     const users = await authService.userList({})
     agentsList.value = (users || []).map(u => ({
       id: u.user_id,
+      alias: u.alias || '',
       label: `${u.alias || ''} - ${(u.first_name || u.name || '').trim()}`,
       isAgent: true
     }))
   } catch (e) { console.error(e) }
 }
+
+const agentCategoryOptions = [
+  { id: 'comercial', label: 'Comercial' },
+  { id: 'b2b', label: 'B2B' },
+  { id: 'web', label: 'WEB' },
+  { id: 'we', label: 'WE' },
+  { id: 'sa', label: 'S/A' }
+]
+
+const weAreaOptions = [
+  { id: 'twe', label: 'TWE - Talento' },
+  { id: 'fwe', label: 'FWE - Fundacion' }
+]
+
+const clientProfileOptions = [
+  { id: 'profesional', label: 'Profesional' },
+  { id: 'estudiante', label: 'Estudiante' }
+]
+
+const B2B_HARDCODED_AGENTS = [
+  { id: 'NY12-B2B', label: 'NY12 - B2B', isHardcoded: true },
+  { id: 'MC40-B2B', label: 'MC40 - B2B', isHardcoded: true },
+  { id: 'JF39-B2B', label: 'JF39 - B2B', isHardcoded: true }
+]
+
+const b2bAgentsList = computed(() => {
+  const hardcodedAliases = new Set(B2B_HARDCODED_AGENTS.map(h => h.id.split('-')[0].toUpperCase()))
+  const reales = agentsList.value
+    .filter(a => !hardcodedAliases.has((a.alias || '').toUpperCase()))
+    .map(a => ({ id: a.id, label: `${a.alias || ''} - B2B`, isHardcoded: false }))
+  return [...reales, ...B2B_HARDCODED_AGENTS]
+})
+
+const webAgentsList = computed(() => {
+  return agentsList.value.map(a => ({
+    id: a.id,
+    label: `${a.alias || ''} - WEB`,
+    isHardcoded: false
+  }))
+})
 
 function onScholarshipToggle () {
   if (form.is_scholarship) {
@@ -649,19 +712,42 @@ async function searchSunat () {
   }
 }
 
-const b2bAgentsList = computed(() => {
-  return agentsList.value.map(a => ({ ...a, label: `${a.label} - B2B` }))
+const requireDocument = computed(() => {
+  return !['b2b', 'web'].includes(form.agent_category)
 })
 
-const webAgentsList = computed(() => {
-  return agentsList.value.map(a => ({ ...a, label: `${a.label} - WEB` }))
+const requirePhone = computed(() => {
+  return form.agent_category !== 'b2b'
 })
 
 function resolveAgentId () {
   const cat = form.agent_category
-  if (cat === 'sa') return null
-  if (cat === 'we') return null
-  return Number(form.seller_agent_id) || null
+  if (['sa', 'we'].includes(cat)) return null
+  const val = form.seller_agent_id
+  if (typeof val === 'string') return null
+  return Number(val) || null
+}
+
+function resolveAgentCode () {
+  const val = form.seller_agent_id
+  return typeof val === 'string' && val ? val : null
+}
+
+function resolveAgentOrigin () {
+  const cat = form.agent_category
+  if (cat === 'b2b') return 'B2B'
+  if (cat === 'web') return 'WEB'
+  if (cat === 'we') return 'WE'
+  if (cat === 'sa') return 'SA'
+  return null
+}
+
+function buildObservationsWithAgentCode () {
+  const parts = []
+  if (form.observations?.trim()) parts.push(form.observations.trim())
+  const code = resolveAgentCode()
+  if (code) parts.push(`[Asesor: ${code}]`)
+  return parts.length ? parts.join(' — ') : null
 }
 
 const installmentRemainder = computed(() => {
@@ -709,21 +795,26 @@ function addInstallment () {
 }
 
 function validate () {
-  if (!form.document_number.trim()) { toast.error('Ingresa el numero de documento.'); return false }
-  if (docConfig.value.isNumeric && form.document_number.length !== docConfig.value.maxLength) {
-    toast.error(`El documento debe tener exactamente ${docConfig.value.maxLength} digitos.`); return false
+  if (!form.agent_category) { toast.error('Selecciona una categoria de asesor.'); return false }
+  if (form.agent_category === 'comercial' && !form.seller_agent_id) {
+    toast.error('Selecciona un asesor comercial.'); return false
+  }
+  if (form.agent_category === 'we' && !form.seller_agent_id) {
+    toast.error('Selecciona el area WE (TWE/FWE).'); return false
+  }
+  if (requireDocument.value) {
+    if (!form.document_number.trim()) { toast.error('Ingresa el numero de documento.'); return false }
+    if (docConfig.value.isNumeric && form.document_number.length !== docConfig.value.maxLength) {
+      toast.error(`El documento debe tener exactamente ${docConfig.value.maxLength} digitos.`); return false
+    }
   }
   if (!form.first_name.trim()) { toast.error('Ingresa los nombres.'); return false }
   if (!form.last_name.trim()) { toast.error('Ingresa los apellidos.'); return false }
   if (!form.email.trim()) { toast.error('Ingresa el correo.'); return false }
-  if (!form.phone.trim()) { toast.error('Ingresa el telefono.'); return false }
+  if (requirePhone.value && !form.phone.trim()) { toast.error('Ingresa el telefono.'); return false }
   if (!form.program_version_id) { toast.error('Selecciona un programa.'); return false }
   if (!form.client_profile) { toast.error('Selecciona un perfil (Profesional/Estudiante).'); return false }
-  if (!form.agent_category) { toast.error('Selecciona una categoria de asesor.'); return false }
-  if (['comercial', 'b2b', 'web'].includes(form.agent_category) && !form.seller_agent_id) {
-    toast.error('Selecciona un asesor.'); return false
-  }
-  if (isInstallment.value && installments.value.length > 0 && !installmentValid.value) {
+  if (!isB2BDocumental.value && !form.is_scholarship && isInstallment.value && installments.value.length > 0 && !installmentValid.value) {
     toast.error('El total de cuotas no coincide con el saldo a financiar.'); return false
   }
   return true
@@ -737,12 +828,12 @@ async function handleSave () {
     const payload = {
       user_id: currentUser.user_id || currentUser.id || null,
       inscription: {
-        document_number: form.document_number.trim(),
-        cat_type_document: form.cat_type_document,
+        document_number: form.document_number?.trim() || null,
+        cat_type_document: form.document_number?.trim() ? form.cat_type_document : null,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim(),
+        phone: form.phone?.trim() || null,
         cat_country: form.cat_country,
         program_version_id: form.program_version_id,
         program_edition_id: form.program_edition_id,
@@ -754,13 +845,17 @@ async function handleSave () {
         total_amount: form.total_amount || 0,
         saved_money: form.saved_money || 0,
         seller_agent_id: resolveAgentId(),
+        agent_origin: resolveAgentOrigin(),
+        client_profile: form.client_profile || null,
         is_scholarship: form.is_scholarship || false,
-        cat_payment_medium: form.is_scholarship ? null : form.cat_payment_medium,
+        cat_b2b_doctype: isB2BDocumental.value ? form.cat_b2b_doctype : null,
+        cat_payment_medium: (form.is_scholarship || isB2BDocumental.value) ? null : form.cat_payment_medium,
         cat_business_entity: form.cat_business_entity,
         bank_account_id: form.bank_account_id,
         transaction_code: form.transaction_code || null,
+        payment_date: form.payment_date || null,
         ticket_payment_urls: form.ticket_payment_urls.length > 0 ? form.ticket_payment_urls : null,
-        observations: form.observations || null,
+        observations: buildObservationsWithAgentCode(),
         installment_plan: isInstallment.value && installments.value.length > 0
           ? installments.value.map((c, i) => ({ installment_number: i + 1, amount: c.amount, due_date: c.due_date }))
           : null
@@ -788,7 +883,7 @@ function resetForm () {
     document_number: '', first_name: '', last_name: '', email: '', phone: '',
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
     cat_insc_modality: null, cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
-    cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '',
+    cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
     client_profile: '', agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: ''
   })
   installments.value = []
@@ -976,6 +1071,33 @@ function goBack () { router.back() }
 .ef-req {
   color: #DC2626;
   font-weight: 700;
+}
+
+.ef-optional {
+  color: #A3A3A3;
+  font-weight: 400;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+.ef-b2b-note {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  color: #1E40AF;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ef-b2b-note i {
+  color: #2563EB;
+  font-size: 13px;
 }
 
 .ef-cuotas-table {

@@ -74,8 +74,15 @@
         </div>
         <div class="cc-grid cols-3 cc-amounts-row">
           <div class="cc-field">
-            <label>Precio lista nuevo</label>
+            <label>
+              Precio lista nuevo
+              <span class="cc-profile-tag">{{ ccIsStudent ? 'Estudiante' : 'Profesional' }}</span>
+            </label>
             <div class="cc-amount">{{ fmt.formatMoney(ccEditionListPrice) }}</div>
+            <div v-if="ccDescuentosAplicados > 0" class="cc-price-breakdown">
+              <span>Lista: {{ fmt.formatMoney(ccEditionListPriceBase) }}</span>
+              <span class="cc-price-breakdown__discount">- {{ fmt.formatMoney(ccDescuentosAplicados) }} (descuentos)</span>
+            </div>
           </div>
           <div class="cc-field">
             <label>Diferencia</label>
@@ -221,10 +228,24 @@ const ccTotalAmount = ref(0)
 const ccJustificacion = ref('')
 const ccProgramsList = ref([])
 const ccEditionsList = ref([])
-const ccEditionListPrice = ref(0)
+const ccEditionListPrice = ref(0)        // precio final (base - descuentos)
+const ccEditionListPriceBase = ref(0)    // precio bruto del programa segun perfil
+const ccDescuentosAplicados = ref(0)     // suma de descuentos heredados de la inscripcion actual
 const ccLoadingEditions = ref(false)
 const ccPriceData = ref(null)
 const saving = ref(false)
+
+// Detecta si el alumno actual tiene perfil estudiante.
+// Prioriza cat_profile_id (3087 = we_profile_student) sobre occupation_label.
+const ccIsStudent = computed(() => {
+  const e = props.enrollment
+  const d = props.detail
+  const profId = d?.cat_profile_id ?? e?.cat_profile_id
+  if (profId === 3087) return true
+  if (profId === 3086 || profId === 3200) return false
+  // Fallback a occupation_label cuando no llega cat_profile_id
+  return (e?.occupation_label || '').toUpperCase() === 'E'
+})
 
 const ccForm = reactive({
   cat_currency: null,
@@ -282,16 +303,16 @@ async function onProgramChange() {
   ccEditionId.value = null
   ccEditionsList.value = []
   ccEditionListPrice.value = 0
+  ccEditionListPriceBase.value = 0
+  ccDescuentosAplicados.value = 0
   ccTotalAmount.value = 0
   if (!ccProgramVersionId.value) return
   ccLoadingEditions.value = true
   try {
-    console.log('[CC] onProgramChange programVersionId:', ccProgramVersionId.value)
     const [items, priceData] = await Promise.all([
       editionService.editionCaller({ program_version_id: ccProgramVersionId.value }),
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
-    console.log('[CC] editions:', items?.length, 'priceData:', JSON.stringify(priceData))
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     ccEditionsList.value = (items || [])
@@ -301,12 +322,13 @@ async function onProgramChange() {
         id: e.edition_num_id || e.id,
         label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
       }))
-    console.log('[CC] priceData:', priceData)
     if (priceData) {
       ccPriceData.value = priceData
-      const occ = props.enrollment?.occupation_label
-      const isStudent = occ === 'E'
-      ccEditionListPrice.value = Number(isStudent ? priceData.price_student_soles : priceData.price_profesional_soles) || 0
+      const precioBase = Number(ccIsStudent.value ? priceData.price_student_soles : priceData.price_profesional_soles) || 0
+      const descuentosHeredados = Number(props.enrollment?.total_discounted ?? props.detail?.discount_amount ?? 0) || 0
+      ccEditionListPriceBase.value = precioBase
+      ccDescuentosAplicados.value = descuentosHeredados
+      ccEditionListPrice.value = Math.max(0, precioBase - descuentosHeredados)
       ccTotalAmount.value = Math.max(0, ccEditionListPrice.value - ccPagado.value)
     }
   } catch (err) {
@@ -460,6 +482,32 @@ async function handleCourseChange() {
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed #e5e7eb;
+}
+.cc-profile-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+}
+.cc-price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+.cc-price-breakdown__discount {
+  color: #dc2626;
+  font-weight: 500;
 }
 
 /* Inputs */

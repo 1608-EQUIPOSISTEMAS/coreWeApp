@@ -86,6 +86,7 @@
             @reject-enrollment="handleRejectEnrollment"
             @toggle-validation="handleToggleValidation"
             @change-edition="handleChangeEdition"
+            @open-reschedule="rescheduleVisible = true"
           />
 
           <EnrollmentActions
@@ -112,12 +113,24 @@
       </main>
     </div>
 
+    <RescheduleInstallmentsModal
+      v-model:visible="rescheduleVisible"
+      :enrollment="enrollment"
+      :installments="modalInstallments"
+      :edition-end-date="editionEndDate"
+      @completed="handleRescheduleCompleted"
+    />
+
     <!-- Redirect overlay -->
     <Teleport to="body">
       <div v-if="redirecting" class="edv-redirect-overlay">
         <div class="edv-redirect-card">
           <i class="fa-solid fa-check-circle"></i>
-          <span>Redirigiendo al listado...</span>
+          <span v-if="nextPending">
+            Avanzando al siguiente pendiente con misma fecha de pago...
+            <small class="edv-redirect-sub">{{ nextPending.student_full_name }} — {{ nextPending.program_name }}</small>
+          </span>
+          <span v-else>Redirigiendo al listado...</span>
           <button class="edv-redirect-cancel" @click="cancelRedirect">Cancelar</button>
         </div>
       </div>
@@ -137,6 +150,7 @@ import EnrollmentOdoo from './EnrollmentOdoo.vue'
 import EnrollmentFinancials from './EnrollmentFinancials.vue'
 import EnrollmentActions from './EnrollmentActions.vue'
 import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
+import RescheduleInstallmentsModal from './RescheduleInstallmentsModal.vue'
 
 const props = defineProps({
   id: { type: [String, Number], required: true }
@@ -175,13 +189,22 @@ const ficoForm = reactive({
   cat_payment_medium: null,
   cat_business_entity: null,
   bank_account_id: null,
-  transaction_code: ''
+  transaction_code: '',
+  payment_date: ''
 })
 
 
 // Validations
 const validations = ref([])
 const programChildrenList = ref([])
+
+// Reschedule installments
+const rescheduleVisible = ref(false)
+const editionEndDate = computed(() =>
+  enrollment.value?.edition_end_date
+  || detail.value?.edition_end_date
+  || null
+)
 
 // Redirect
 const redirecting = ref(false)
@@ -280,8 +303,12 @@ function resolveInstallmentStatus (i) {
 function buildInstallments () {
   const inst = detail.value?.installments || []
   const payments = detail.value?.payment_history || []
+  const commercialDate = detail.value?.commercial_pay_date
+    ? String(detail.value.commercial_pay_date).slice(0, 10)
+    : ''
   modalInstallments.value = inst.map(i => {
     const pay = payments.find(p => p.installment_id === i.installment_id)
+    const isInicial = i.installment_number === 0 || i.is_reserva
     return {
       ...i,
       status: resolveInstallmentStatus(i),
@@ -291,6 +318,9 @@ function buildInstallments () {
       _bank_account_id: pay?.bank_account_id || i.bank_account_id || null,
       _transaction_code: pay?.transaction_code || i.transaction_code || '',
       _voucher_url: pay?.evidence_url || i.evidence_url || null,
+      _payment_date: pay?.payment_date
+        ? String(pay.payment_date).slice(0, 10)
+        : (isInicial ? commercialDate : ''),
       _isNew: false
     }
   })
@@ -309,6 +339,7 @@ function addCuota () {
     _bank_account_id: null,
     _transaction_code: '',
     _voucher_url: null,
+    _payment_date: '',
     _isNew: true
   })
 }
@@ -326,6 +357,7 @@ function resetFicoForm () {
   ficoForm.cat_business_entity = null
   ficoForm.bank_account_id = null
   ficoForm.transaction_code = ''
+  ficoForm.payment_date = ''
 }
 
 function startEditing () {
@@ -335,6 +367,7 @@ function startEditing () {
   ficoForm.cat_business_entity = p?.cat_business_entity_id || null
   ficoForm.bank_account_id = p?.bank_account_id || null
   ficoForm.transaction_code = p?.transaction_code || ''
+  ficoForm.payment_date = p?.payment_date ? String(p.payment_date).slice(0, 10) : ''
   isEditing.value = true
 }
 
@@ -372,19 +405,28 @@ async function handleConfirmPayment () {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
-    await ficoService.confirmPayment({
+    const resp = await ficoService.confirmPayment({
       enrollment_id: eid,
       action: 'confirm_contado',
       cat_currency: ficoForm.cat_currency,
       cat_payment_medium: ficoForm.cat_payment_medium,
       cat_business_entity: ficoForm.cat_business_entity,
       bank_account_id: ficoForm.bank_account_id,
-      transaction_code: ficoForm.transaction_code
+      transaction_code: ficoForm.transaction_code,
+      payment_date: ficoForm.payment_date || null
     })
+    if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
+      const list = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
+      toast.error(`No se puede confirmar el pago.\n${list}`, { timeout: 8000 })
+      savingFinancials.value = false
+      return
+    }
     toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+    } else {
+      toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
     startRedirect()
   } catch (err) {
@@ -412,7 +454,7 @@ async function handleConfirmPlan () {
       bank_account_id: c._bank_account_id || null,
       transaction_code: c._transaction_code || ''
     }))
-    await ficoService.confirmPayment({
+    const resp = await ficoService.confirmPayment({
       enrollment_id: eid,
       action: 'confirm_plan',
       installments: keepInstallments,
@@ -420,12 +462,21 @@ async function handleConfirmPlan () {
       cat_payment_medium: inicial?._cat_payment_medium || null,
       cat_business_entity: inicial?._cat_business_entity || null,
       bank_account_id: inicial?._bank_account_id || null,
-      transaction_code: inicial?._transaction_code || ''
+      transaction_code: inicial?._transaction_code || '',
+      payment_date: inicial?._payment_date || null
     })
+    if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
+      const list = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
+      toast.error(`No se puede confirmar el plan.\n${list}`, { timeout: 8000 })
+      savingFinancials.value = false
+      return
+    }
     toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+    } else {
+      toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
     startRedirect()
   } catch (err) {
@@ -446,7 +497,8 @@ async function handleConfirmCuota (cuota) {
       cat_business_entity: cuota._cat_business_entity,
       bank_account_id: cuota._bank_account_id,
       transaction_code: cuota._transaction_code,
-      voucher_url: cuota._voucher_url
+      voucher_url: cuota._voucher_url,
+      payment_date: cuota._payment_date || null
     })
     toast.success(`Cuota ${cuota.installment_number} confirmada.`)
     await refreshDetail()
@@ -512,15 +564,51 @@ function handleActionCompleted () {
   startRedirect()
 }
 
-function startRedirect () {
+function handleRescheduleCompleted () {
+  refreshDetail()
+}
+
+// Busca la siguiente inscripcion pendiente con la misma fecha de pago.
+// Usado para encadenar confirmaciones del mismo dia sin volver al datatable cada vez.
+async function findNextPendingSamePayDate () {
+  const currentPayDate = enrollment.value?.pay_date
+  if (!currentPayDate) return null
+  try {
+    const result = await ficoService.enrollmentList({
+      confirmations: ['Pendiente Revisar', 'Pendiente'],
+      size: 200,
+      page: 1
+    })
+    const items = result?.items || []
+    return items.find(i =>
+      i.pay_date === currentPayDate &&
+      Number(i.enrollment_id) !== enrollmentId.value
+    ) || null
+  } catch (err) {
+    console.error('[findNextPendingSamePayDate]', err)
+    return null
+  }
+}
+
+const nextPending = ref(null)
+
+async function startRedirect () {
   redirecting.value = true
+  // Buscar siguiente pendiente con misma fecha de pago.
+  // Si existe, se navegara a su detalle. Si no, vuelve al datatable.
+  nextPending.value = await findNextPendingSamePayDate()
   redirectTimer = setTimeout(() => {
-    router.push({ name: 'enrollment' })
+    if (nextPending.value?.enrollment_id) {
+      router.push({ name: 'enrollmentDetail', params: { id: String(nextPending.value.enrollment_id) } })
+    } else {
+      router.push({ name: 'enrollment' })
+    }
   }, 2000)
 }
 
 function cancelRedirect () {
   redirecting.value = false
+  nextPending.value = null
   if (redirectTimer) {
     clearTimeout(redirectTimer)
     redirectTimer = null
@@ -540,6 +628,11 @@ async function refreshDetail () {
     if (match) enrollment.value = match
     buildInstallments()
     refreshAuditLog()
+
+    if (!ficoForm.payment_date && !lastPayment.value?.payment_date) {
+      const commercialDate = detail.value?.commercial_pay_date
+      if (commercialDate) ficoForm.payment_date = String(commercialDate).slice(0, 10)
+    }
   } catch (err) {
     console.error(err)
   }
@@ -599,8 +692,9 @@ async function loadEnrollment () {
 
 function loadValidationData () {
   const pvId = studentFlags.value?.program_version_id || enrollment.value?.program_version_id
+  const parentEditionId = detail.value?.program_edition_id || enrollment.value?.program_edition_id || null
   if (pvId) {
-    ficoService.getProgramChildren(pvId).then(children => {
+    ficoService.getProgramChildren(pvId, parentEditionId).then(children => {
       programChildrenList.value = children || []
     }).catch(() => { programChildrenList.value = [] })
   }
@@ -630,13 +724,30 @@ async function handleToggleValidation (childVersionId) {
 }
 
 async function handleChangeEdition ({ childVersionId, editionId }) {
+  // Cambio de edicion sobre un modulo a INSCRIBIR (no convalidar).
+  // - Si el modulo ya estaba en validations como convalidado (cross/same_edition),
+  //   actualizar su custom_edition_id manteniendo ese tipo.
+  // - Si NO estaba, registrarlo con validation_type='edition_override' para que
+  //   isValidated lo IGNORE pero se persista la edicion preferida.
+  // - Si el usuario vuelve a "Misma edicion" (editionId null) sobre un override,
+  //   eliminamos el registro para no dejar basura.
   const current = [...validations.value]
   const idx = current.findIndex(v => v.child_version_id === childVersionId)
+
   if (idx >= 0) {
-    current[idx] = { ...current[idx], custom_edition_id: editionId || null, validation_type: editionId ? 'cross_edition' : 'same_edition' }
-  } else {
-    current.push({ child_version_id: childVersionId, custom_edition_id: editionId || null, validation_type: editionId ? 'cross_edition' : 'same_edition' })
+    const prev = current[idx]
+    const wasOverride = prev.validation_type === 'edition_override'
+    if (wasOverride && !editionId) {
+      current.splice(idx, 1)
+    } else if (wasOverride) {
+      current[idx] = { ...prev, custom_edition_id: editionId, validation_type: 'edition_override' }
+    } else {
+      current[idx] = { ...prev, custom_edition_id: editionId || null, validation_type: editionId ? 'cross_edition' : 'same_edition' }
+    }
+  } else if (editionId) {
+    current.push({ child_version_id: childVersionId, custom_edition_id: editionId, validation_type: 'edition_override' })
   }
+
   try {
     await ficoService.saveValidations({ enrollment_id: enrollmentId.value, validations: current })
     validations.value = current
@@ -850,6 +961,8 @@ onMounted(() => {
 }
 
 .edv-redirect-card i { color: #34D399; font-size: 16px; }
+.edv-redirect-card span { display: flex; flex-direction: column; gap: 2px; }
+.edv-redirect-sub { font-size: 11px; opacity: 0.7; font-weight: 400; }
 
 .edv-redirect-cancel {
   background: rgba(255,255,255,.12);

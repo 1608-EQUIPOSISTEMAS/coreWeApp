@@ -102,6 +102,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async rescheduleInstallments(payload) {
+    const response = (await api.post('/fico/rescheduleinstallments', payload)).data;
+    return response.data;
+  }
+
   async enrollmentUpdate(payload) {
     const response = (await api.post('/fico/enrollmentupdate', payload)).data;
     return response.data;
@@ -127,8 +132,11 @@ export default class FicoService {
     return response.data;
   }
 
-  async getProgramChildren(programVersionId) {
-    const response = (await api.get(`/fico/programchildren/${programVersionId}`)).data;
+  async getProgramChildren(programVersionId, parentEditionId = null) {
+    const url = parentEditionId
+      ? `/fico/programchildren/${programVersionId}?parent_edition_id=${parentEditionId}`
+      : `/fico/programchildren/${programVersionId}`
+    const response = (await api.get(url)).data;
     return response.data;
   }
 
@@ -169,6 +177,16 @@ export default class FicoService {
 
   async tokenDelete(id) {
     const response = (await api.delete(`/token/delete/${id}`)).data;
+    return response.data;
+  }
+
+  async tokenGetById(id) {
+    const response = (await api.get(`/token/${id}`)).data;
+    return response.data;
+  }
+
+  async tokenEditInscription(payload) {
+    const response = (await api.put('/token/edit-inscription', payload)).data;
     return response.data;
   }
 }
