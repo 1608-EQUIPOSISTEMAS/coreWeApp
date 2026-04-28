@@ -126,7 +126,11 @@
       <div v-if="redirecting" class="edv-redirect-overlay">
         <div class="edv-redirect-card">
           <i class="fa-solid fa-check-circle"></i>
-          <span>Redirigiendo al listado...</span>
+          <span v-if="nextPending">
+            Avanzando al siguiente pendiente con misma fecha de pago...
+            <small class="edv-redirect-sub">{{ nextPending.student_full_name }} — {{ nextPending.program_name }}</small>
+          </span>
+          <span v-else>Redirigiendo al listado...</span>
           <button class="edv-redirect-cancel" @click="cancelRedirect">Cancelar</button>
         </div>
       </div>
@@ -564,15 +568,47 @@ function handleRescheduleCompleted () {
   refreshDetail()
 }
 
-function startRedirect () {
+// Busca la siguiente inscripcion pendiente con la misma fecha de pago.
+// Usado para encadenar confirmaciones del mismo dia sin volver al datatable cada vez.
+async function findNextPendingSamePayDate () {
+  const currentPayDate = enrollment.value?.pay_date
+  if (!currentPayDate) return null
+  try {
+    const result = await ficoService.enrollmentList({
+      confirmations: ['Pendiente Revisar', 'Pendiente'],
+      size: 200,
+      page: 1
+    })
+    const items = result?.items || []
+    return items.find(i =>
+      i.pay_date === currentPayDate &&
+      Number(i.enrollment_id) !== enrollmentId.value
+    ) || null
+  } catch (err) {
+    console.error('[findNextPendingSamePayDate]', err)
+    return null
+  }
+}
+
+const nextPending = ref(null)
+
+async function startRedirect () {
   redirecting.value = true
+  // Buscar siguiente pendiente con misma fecha de pago.
+  // Si existe, se navegara a su detalle. Si no, vuelve al datatable.
+  nextPending.value = await findNextPendingSamePayDate()
   redirectTimer = setTimeout(() => {
-    router.push({ name: 'enrollment' })
+    if (nextPending.value?.enrollment_id) {
+      router.push({ name: 'enrollmentDetail', params: { id: String(nextPending.value.enrollment_id) } })
+    } else {
+      router.push({ name: 'enrollment' })
+    }
   }, 2000)
 }
 
 function cancelRedirect () {
   redirecting.value = false
+  nextPending.value = null
   if (redirectTimer) {
     clearTimeout(redirectTimer)
     redirectTimer = null
@@ -925,6 +961,8 @@ onMounted(() => {
 }
 
 .edv-redirect-card i { color: #34D399; font-size: 16px; }
+.edv-redirect-card span { display: flex; flex-direction: column; gap: 2px; }
+.edv-redirect-sub { font-size: 11px; opacity: 0.7; font-weight: 400; }
 
 .edv-redirect-cancel {
   background: rgba(255,255,255,.12);
