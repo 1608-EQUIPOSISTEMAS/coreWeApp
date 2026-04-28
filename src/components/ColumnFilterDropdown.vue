@@ -641,5 +641,67 @@ function selectNone() {
 .footer-actions {
   display: flex;
   gap: 8px;
-}   
+}
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .filter-trigger-btn { color: #A0A099; }
+[data-coreui-theme="dark"] .filter-trigger-btn:hover {
+  background: #2A2A22;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .filter-trigger-btn.has-filters {
+  background: rgba(16,185,129,0.16);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+[data-coreui-theme="dark"] .filter-badge { background: #10B981; }
+[data-coreui-theme="dark"] .filter-dropdown-panel {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 12px 32px -12px rgba(0,0,0,0.6);
+}
+[data-coreui-theme="dark"] .filter-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .filter-search-input {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .filter-search-input::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .filter-search-input:focus {
+  border-color: #34D399;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+}
+[data-coreui-theme="dark"] .quick-action-btn {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .quick-action-btn:hover:not(:disabled) {
+  background: #2A2A22;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .filter-option-item:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .option-label { color: #D4D4CC; }
+[data-coreui-theme="dark"] .option-count { color: #6F6F66; }
+[data-coreui-theme="dark"] .no-results { color: #6F6F66; }
+[data-coreui-theme="dark"] .filter-footer {
+  background: #1F1F1A;
+  border-top-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .btn-cancel {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .btn-cancel:hover {
+  background: #2A2A22;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .filter-options-list::-webkit-scrollbar-track { background: #1F1F1A; }
+[data-coreui-theme="dark"] .filter-options-list::-webkit-scrollbar-thumb { background: #3A3A33; }
 </style>

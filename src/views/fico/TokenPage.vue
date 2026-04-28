@@ -9,17 +9,6 @@
     </header>
 
     <section class="ep-section">
-      <div class="ep-section-head">
-        <h2 class="ep-section-title">Cola de trabajo</h2>
-        <span class="ep-section-meta">
-          <i class="fa-solid fa-clock"></i>
-          {{ statsTimestamp }}
-          <button class="ep-refresh-btn" :disabled="stats.loading" @click="fetchStats" title="Actualizar">
-            <i class="fa-solid" :class="stats.loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
-          </button>
-        </span>
-      </div>
-
       <div class="ep-kpis">
         <article v-for="k in kpiCards" :key="k.key" class="ep-kpi" :class="`ep-kpi-${k.color}`">
           <div class="ep-kpi-head">
@@ -37,7 +26,7 @@
       </div>
     </section>
 
-    <section class="ep-section">
+    <section class="ep-section ep-filter-bar">
       <nav class="ep-tabs" aria-label="Estados de tokens">
         <button
           v-for="tab in statusTabs"
@@ -50,15 +39,6 @@
       </nav>
 
       <div class="ep-toolbar">
-        <div class="tp-search-wrap">
-          <i class="fa-solid fa-magnifying-glass tp-search-icon"></i>
-          <input
-            v-model="searchQuery"
-            class="tp-search"
-            placeholder="Buscar alumno, documento..."
-            @input="debounceSearch"
-          />
-        </div>
         <span v-if="selectionMode" class="tp-selhint">
           <i class="fa-solid fa-object-group"></i>
           Modo seleccion — elige tus tokens compatibles
@@ -66,7 +46,11 @@
             <i class="fa-solid fa-xmark"></i>
           </button>
         </span>
-        <BasePagination v-model="pagination" :hide-filters="true" @change="fetchTokens" />
+        <BasePagination
+          v-model="pagination"
+          @change="fetchTokens"
+          @open-filters="onOpenFilters"
+        />
       </div>
     </section>
 
@@ -78,14 +62,66 @@
             <th style="width:90px">Creado</th>
             <th>Alumno / Contacto</th>
             <th>Programa / Edicion</th>
-            <th class="tc" style="width:80px">Tipo</th>
-            <th class="tc" style="width:100px">Proveedor</th>
+            <th class="tc" style="width:100px">
+              <div class="th-flex">
+                <span>Tipo</span>
+                <ColumnFilterDropdown
+                  column-label="Tipo"
+                  :all-items="tokens"
+                  :value-extractor="t => t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'"
+                  v-model="colFilters.tipo"
+                />
+              </div>
+            </th>
+            <th class="tc" style="width:120px">
+              <div class="th-flex">
+                <span>Proveedor</span>
+                <ColumnFilterDropdown
+                  column-label="Proveedor"
+                  :all-items="tokens"
+                  :value-extractor="t => t.provider_name || '(Sin proveedor)'"
+                  v-model="colFilters.proveedor"
+                />
+              </div>
+            </th>
             <th class="tr" style="width:100px">Monto</th>
             <th class="tc" style="width:110px">Estado</th>
             <th style="width:170px">Link</th>
-            <th style="width:110px">Asesor</th>
+            <th style="width:130px">
+              <div class="th-flex">
+                <span>Asesor</span>
+                <ColumnFilterDropdown
+                  column-label="Asesor"
+                  :all-items="tokens"
+                  :value-extractor="t => t.requested_by_name || t.created_by_name || '(Sin asesor)'"
+                  v-model="colFilters.asesor"
+                />
+              </div>
+            </th>
             <th style="width:90px">Fecha pago</th>
             <th class="tc" style="width:170px">Acciones</th>
+          </tr>
+          <tr class="ect-filters">
+            <td v-if="selectionMode"></td>
+            <td></td>
+            <td>
+              <input v-model="colFilters.alumno" class="filter-input" placeholder="Buscar..." />
+            </td>
+            <td>
+              <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
+            </td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="tc">
+              <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
+                <i class="fa-solid fa-eraser"></i>
+              </button>
+            </td>
           </tr>
         </thead>
         <tbody>
@@ -112,7 +148,7 @@
           </template>
           <template v-else>
             <tr
-              v-for="t in tokens"
+              v-for="t in filteredTokens"
               :key="t.token_id"
               class="ect-row"
               :class="{
@@ -372,6 +408,7 @@ import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import BasePagination from '@/components/BasePagination.vue'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import { confirmAction } from '@/composables/useConfirm'
 
 const toast = useToast()
@@ -422,6 +459,51 @@ const isLoading = ref(false)
 const filterStatus = ref('')
 const searchQuery = ref('')
 const pagination = ref({ page: 1, size: 25, total: 0 })
+
+const colFilters = ref({
+  alumno: '',
+  programa: '',
+  tipo: [],
+  proveedor: [],
+  asesor: []
+})
+
+function clearColFilters () {
+  colFilters.value = { alumno: '', programa: '', tipo: [], proveedor: [], asesor: [] }
+}
+
+const filteredTokens = computed(() => {
+  const cf = colFilters.value
+  return tokens.value.filter(t => {
+    if (cf.alumno) {
+      const q = cf.alumno.toLowerCase()
+      const blob = `${t.student_name || ''} ${t.student_phone || ''} ${t.student_email || ''}`.toLowerCase()
+      if (!blob.includes(q)) return false
+    }
+    if (cf.programa) {
+      const q = cf.programa.toLowerCase()
+      const blob = `${t.program_name || ''} ${t.edition_code || ''}`.toLowerCase()
+      if (!blob.includes(q)) return false
+    }
+    if (cf.tipo.length) {
+      const tipo = t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'
+      if (!cf.tipo.includes(tipo)) return false
+    }
+    if (cf.proveedor.length) {
+      const prov = t.provider_name || '(Sin proveedor)'
+      if (!cf.proveedor.includes(prov)) return false
+    }
+    if (cf.asesor.length) {
+      const ases = t.requested_by_name || t.created_by_name || '(Sin asesor)'
+      if (!cf.asesor.includes(ases)) return false
+    }
+    return true
+  })
+})
+
+function onOpenFilters () {
+  toast.info('Usa los filtros por columna del datatable. Pronto agregamos filtros avanzados aqui.', { timeout: 3500 })
+}
 
 const selectionMode    = ref(false)
 const selectedTokenIds = ref(new Set())
@@ -533,11 +615,6 @@ const stats = reactive({
   amountUsd: 0,
   loading: false,
   loadedAt: null
-})
-
-const statsTimestamp = computed(() => {
-  if (!stats.loadedAt) return stats.loading ? 'Cargando...' : 'Sin datos'
-  return `Actualizado ${stats.loadedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
 })
 
 const kpiCards = computed(() => [
@@ -806,20 +883,19 @@ onUnmounted(() => {
 <style scoped>
 .token-page {
   --e-bg: #FFFFFF;
-  --e-bg-subtle: #FAFAFA;
-  --e-border: #EFEFEF;
-  --e-border-strong: #E5E5E5;
-  --e-text: #1A1A1A;
-  --e-text-secondary: #737373;
-  --e-text-muted: #A3A3A3;
-  --e-accent: #0D9488;
-  --e-accent-soft: #F0FDFA;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
 
-  background: #FAFAFA;
-  padding: 28px 32px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
-  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .ep-masthead {
@@ -837,30 +913,51 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .ep-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
   color: var(--e-text);
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .ep-subtitle {
-  font-size: 12.5px;
-  color: var(--e-text-muted);
-  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--e-text-secondary);
+  font-weight: 400;
   margin-top: 2px;
 }
 
 .ep-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 14px;
+}
+.ep-section.ep-filter-bar {
   background: #fff;
   border: 1px solid var(--e-border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ep-section.ep-filter-bar .ep-tabs {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  flex: 0 1 auto;
+}
+.ep-section.ep-filter-bar .ep-toolbar {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  margin: 0;
 }
 .ep-section-head {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .ep-section-title {
   font-size: 13px; font-weight: 700; margin: 0;
@@ -930,12 +1027,12 @@ onUnmounted(() => {
   gap: 8px;
 }
 .ep-kpi-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 600;
   color: var(--e-text);
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.1;
 }
 .ep-kpi-foot {
   font-size: 11px; color: var(--e-text-muted);
@@ -1551,7 +1648,6 @@ onUnmounted(() => {
 .req { color: #DC2626; }
 
 @media (max-width: 768px) {
-  .token-page { padding: 16px; }
   .ep-toolbar { flex-direction: column; align-items: stretch; }
   .tp-search-wrap { width: 100%; }
   .tp-search { width: 100%; }
@@ -1559,5 +1655,119 @@ onUnmounted(() => {
   .tp-modal-sm { width: 95vw; }
   .ep-kpis { grid-template-columns: 1fr; }
   .tp-selbar { left: 16px; right: 16px; transform: none; flex-direction: column; align-items: stretch; }
+}
+
+/* ---- header flex (label + filter trigger) ---- */
+.th-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.tc .th-flex { justify-content: center; }
+.tc .th-flex > span { flex: 1; text-align: center; }
+
+/* ---- column filter row ---- */
+.ect-filters { background: var(--e-bg-subtle); }
+.ect-filters td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--e-border);
+}
+.filter-input,
+.filter-select {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--e-border-strong);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--e-text);
+  background: #fff;
+  transition: all .2s ease;
+  font-family: inherit;
+}
+.filter-select { padding: 0 8px; cursor: pointer; appearance: auto; }
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--e-accent);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+}
+.filter-input::placeholder { color: var(--e-text-muted); }
+.filter-clear {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--e-border-strong);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--e-text-muted);
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s ease;
+}
+.filter-clear:hover {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #EF4444;
+}
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .token-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16,185,129,0.16);
+}
+[data-coreui-theme="dark"] .token-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .token-page .ep-kpi { background: #1A1A14; }
+[data-coreui-theme="dark"] .token-page .ep-kpi:hover {
+  border-color: #3A3A33;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.35);
+}
+[data-coreui-theme="dark"] .token-page .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .token-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .token-page .tp-search { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .token-page .tp-search::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .token-page .ect-wrap { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .token-page .ect-head th { background: #1F1F1A; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .token-page .ect-row td { border-color: #2A2A22; color: #D4D4CC; }
+[data-coreui-theme="dark"] .token-page .ect-row:hover td { background: #1F1F1A; }
+[data-coreui-theme="dark"] .token-page .ect-filters,
+[data-coreui-theme="dark"] .token-page .ect-filters td { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .token-page .filter-input,
+[data-coreui-theme="dark"] .token-page .filter-select {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .token-page .filter-input::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .token-page .filter-input:focus,
+[data-coreui-theme="dark"] .token-page .filter-select:focus {
+  border-color: #34D399;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+}
+[data-coreui-theme="dark"] .token-page .filter-clear {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #6F6F66;
+}
+[data-coreui-theme="dark"] .token-page .filter-clear:hover {
+  background: rgba(239,68,68,0.16);
+  border-color: rgba(239,68,68,0.4);
+  color: #F87171;
+}
+[data-coreui-theme="dark"] .token-page .cell-main { color: #F4F4F0; }
+[data-coreui-theme="dark"] .token-page .cell-sub { color: #A0A099; }
+[data-coreui-theme="dark"] .token-page .ep-refresh-btn {
+  background: #1A1A14;
 }
 </style>

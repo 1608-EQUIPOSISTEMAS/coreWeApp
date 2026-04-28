@@ -126,7 +126,11 @@
       <div v-if="redirecting" class="edv-redirect-overlay">
         <div class="edv-redirect-card">
           <i class="fa-solid fa-check-circle"></i>
-          <span v-if="nextPending">
+          <span v-if="nextPending?._fromQueue">
+            Procesando cola...
+            <small class="edv-redirect-sub">Siguiente en lote · {{ nextPending._remaining }} restantes</small>
+          </span>
+          <span v-else-if="nextPending">
             Avanzando al siguiente pendiente con misma fecha de pago...
             <small class="edv-redirect-sub">{{ nextPending.student_full_name }} — {{ nextPending.program_name }}</small>
           </span>
@@ -145,6 +149,7 @@ import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { useEnrollmentCatalogs } from '@/composables/useEnrollmentCatalogs'
 import { useToast } from 'vue-toastification'
+import { useToastWithAction } from '@/composables/useToastWithAction'
 import EnrollmentHeader from './EnrollmentHeader.vue'
 import EnrollmentOdoo from './EnrollmentOdoo.vue'
 import EnrollmentFinancials from './EnrollmentFinancials.vue'
@@ -161,6 +166,7 @@ const route = useRoute()
 const ficoService = inject(ServiceKeys.Fico)
 const catalogService = inject('catalog', null)
 const toast = useToast()
+const toastWA = useToastWithAction()
 const fmt = useEnrollmentFormatters()
 const catalogs = useEnrollmentCatalogs()
 
@@ -416,8 +422,16 @@ async function handleConfirmPayment () {
       payment_date: ficoForm.payment_date || null
     })
     if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
-      const list = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
-      toast.error(`No se puede confirmar el pago.\n${list}`, { timeout: 8000 })
+      const lines = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
+      toastWA.errorWithAction({
+        title: 'No se puede confirmar el pago',
+        message: `Faltan acciones previas:\n${lines}`,
+        actionLabel: 'Ir a Convalidaciones',
+        onAction: () => {
+          const el = document.querySelector('[data-section="convalidacion"]') || document.querySelector('.ef-validation-warn, .ef-edition-warn')
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      })
       savingFinancials.value = false
       return
     }
@@ -466,8 +480,16 @@ async function handleConfirmPlan () {
       payment_date: inicial?._payment_date || null
     })
     if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
-      const list = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
-      toast.error(`No se puede confirmar el plan.\n${list}`, { timeout: 8000 })
+      const lines = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
+      toastWA.errorWithAction({
+        title: 'No se puede confirmar el plan',
+        message: `Faltan acciones previas:\n${lines}`,
+        actionLabel: 'Ir a Convalidaciones',
+        onAction: () => {
+          const el = document.querySelector('[data-section="convalidacion"]') || document.querySelector('.ef-validation-warn, .ef-edition-warn')
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      })
       savingFinancials.value = false
       return
     }
@@ -568,9 +590,32 @@ function handleRescheduleCompleted () {
   refreshDetail()
 }
 
-// Busca la siguiente inscripcion pendiente con la misma fecha de pago.
-// Usado para encadenar confirmaciones del mismo dia sin volver al datatable cada vez.
-async function findNextPendingSamePayDate () {
+// Busca el siguiente enrollment a procesar.
+// Prioridad:
+// 1. Cola explicita "fico_processing_queue" (creada por bulk action "Procesar en cola")
+// 2. Otra inscripcion pendiente con la misma pay_date
+// 3. null -> vuelve al listado
+async function findNextEnrollmentToProcess () {
+  // 1. Cola del bulk action
+  try {
+    const queueRaw = localStorage.getItem('fico_processing_queue')
+    if (queueRaw) {
+      const queue = JSON.parse(queueRaw) || []
+      // Quitar el actual y devolver el siguiente disponible
+      const remaining = queue.filter(id => Number(id) !== enrollmentId.value)
+      if (remaining.length > 0) {
+        // Persistir cola actualizada (sin el actual ni los previos)
+        localStorage.setItem('fico_processing_queue', JSON.stringify(remaining))
+        // Devolver objeto minimo con enrollment_id; el detalle se cargara al navegar
+        return { enrollment_id: remaining[0], _fromQueue: true, _remaining: remaining.length - 1 }
+      } else {
+        // Cola vacia, limpiar
+        localStorage.removeItem('fico_processing_queue')
+      }
+    }
+  } catch (e) { /* ignore */ }
+
+  // 2. Siguiente con misma fecha de pago
   const currentPayDate = enrollment.value?.pay_date
   if (!currentPayDate) return null
   try {
@@ -585,7 +630,7 @@ async function findNextPendingSamePayDate () {
       Number(i.enrollment_id) !== enrollmentId.value
     ) || null
   } catch (err) {
-    console.error('[findNextPendingSamePayDate]', err)
+    console.error('[findNextEnrollmentToProcess]', err)
     return null
   }
 }
@@ -594,9 +639,7 @@ const nextPending = ref(null)
 
 async function startRedirect () {
   redirecting.value = true
-  // Buscar siguiente pendiente con misma fecha de pago.
-  // Si existe, se navegara a su detalle. Si no, vuelve al datatable.
-  nextPending.value = await findNextPendingSamePayDate()
+  nextPending.value = await findNextEnrollmentToProcess()
   redirectTimer = setTimeout(() => {
     if (nextPending.value?.enrollment_id) {
       router.push({ name: 'enrollmentDetail', params: { id: String(nextPending.value.enrollment_id) } })

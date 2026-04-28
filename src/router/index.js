@@ -534,6 +534,12 @@ const routes = [
     // ACADEMICA
     // =====================
     {
+      path: 'academica/aulas',
+      name: 'AcademicaAulas',
+      component: () => import('@/views/academica/Aulas.vue'),
+      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),

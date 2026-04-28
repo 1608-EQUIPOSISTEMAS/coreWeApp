@@ -7,9 +7,17 @@ export default class IntegrationService {
     return (await api.post('/integration/syncleadstosheet', payload)).data;
   }
 
-   
+
   async updateEnrollmentBase(payload) {
     return (await api.post('/integration/syncEnrollmentToSheet', payload)).data;
+  }
+
+  async syncFicoSalesToSheet() {
+    return (await api.post('/integration/syncFicoSalesToSheet')).data;
+  }
+
+  async syncFicoToSheets() {
+    return (await api.post('/integration/syncFicoToSheets')).data;
   }
 
   async syncScheduleToSheet(payload) {

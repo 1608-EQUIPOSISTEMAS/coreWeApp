@@ -37,17 +37,24 @@ export function useEnrollmentList () {
 
   const { saveState } = useTablePersistence('fico_enrollments_state_v3', filters, pagin)
 
-  const colFilters = reactive({ alumno: '', programa: '', agente: null, fPago: '', tipoPago: null, estado: null })
+  const colFilters = reactive({
+    alumno: '',
+    programa: '',
+    fPago: '',
+    agente: [],
+    tipoPago: [],
+    estado: []
+  })
   let _colDebounce = null
 
   function clearColFilters () {
-    Object.assign(colFilters, { alumno: '', programa: '', agente: null, fPago: '', tipoPago: null, estado: null })
+    Object.assign(colFilters, { alumno: '', programa: '', fPago: '', agente: [], tipoPago: [], estado: [] })
     filters.q = ''
     pagin.value.page = 1
     fetchEnrollments()
   }
 
-  watch([() => colFilters.alumno, () => colFilters.programa, () => colFilters.fPago], () => {
+  watch([() => colFilters.alumno, () => colFilters.programa], () => {
     clearTimeout(_colDebounce)
     _colDebounce = setTimeout(() => {
       const parts = []
@@ -64,16 +71,18 @@ export function useEnrollmentList () {
 
   const filteredEnrollments = computed(() => {
     let list = enrollments.value
-    if (colFilters.agente) list = list.filter(e => (e.seller_agent_name || '') === colFilters.agente)
+    if (colFilters.agente.length) list = list.filter(e => colFilters.agente.includes(e.seller_agent_name || '(Vacío)'))
     if (colFilters.fPago?.trim()) {
       const q = colFilters.fPago.trim().toLowerCase()
       list = list.filter(e => (e.pay_date || '').toLowerCase().includes(q))
     }
-    if (colFilters.tipoPago) {
-      const isContado = colFilters.tipoPago === 'Al contado'
-      list = list.filter(e => (e.payment_type === 'PT') === isContado)
+    if (colFilters.tipoPago.length) {
+      list = list.filter(e => {
+        const tipo = (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'
+        return colFilters.tipoPago.includes(tipo)
+      })
     }
-    if (colFilters.estado) list = list.filter(e => (e.confirmation || 'Pendiente') === colFilters.estado)
+    if (colFilters.estado.length) list = list.filter(e => colFilters.estado.includes(e.confirmation || 'Pendiente'))
     return list
   })
 
@@ -274,10 +283,10 @@ export function useEnrollmentList () {
     const today = isoDate(new Date())
     const weekAgo = isoDate(new Date(Date.now() - 6 * 86400000))
     return [
-      { key: 'all',      label: 'Todos',        icon: 'fa-list',           filters: {} },
+      { key: 'all',      label: 'Todos',        icon: 'fa-list',           filters: {}, highlight: true },
       { key: 'pending',  label: 'Por revisar',  icon: 'fa-hourglass-half', filters: { confirmations: [{ description: 'Pendiente Revisar' }] } },
       { key: 'approved', label: 'Aprobadas',    icon: 'fa-circle-check',   filters: { confirmations: [{ description: 'Aprobado' }] } },
-      { key: 'today',    label: 'Hoy',          icon: 'fa-calendar-day',   filters: { date_from: today, date_to: today, created_range_string: today } },
+      { key: 'today',    label: 'Hoy (todo)',   icon: 'fa-calendar-day',   filters: { date_from: today, date_to: today, created_range_string: today } },
       { key: 'week',     label: 'Esta semana',  icon: 'fa-calendar-week',  filters: { date_from: weekAgo, date_to: today, created_range_string: `${weekAgo} to ${today}` } }
     ]
   })
