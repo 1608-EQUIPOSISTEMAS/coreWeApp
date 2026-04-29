@@ -47,21 +47,31 @@
     </section>
 
     <!-- Saved Views + Toolbar -->
-    <section class="ep-section ep-filter-bar">
-      <nav class="ep-tabs" aria-label="Vistas rapidas">
-        <button
-          v-for="v in list.savedViews.value"
-          :key="v.key"
-          :class="['ep-tab', { 'is-active': list.activeViewKey.value === v.key, 'is-highlight': v.highlight }]"
-          @click="list.applySavedView(v.key)"
-        >
-          <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
-        </button>
-      </nav>
+    <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': list.activeFilterChips.value.length > 0 }">
+      <div class="ep-filter-bar-main">
+        <nav class="ep-tabs" aria-label="Vistas rapidas">
+          <button
+            v-for="v in list.savedViews.value"
+            :key="v.key"
+            :class="['ep-tab', { 'is-active': list.activeViewKey.value === v.key, 'is-highlight': v.highlight }]"
+            @click="list.applySavedView(v.key)"
+          >
+            <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+          </button>
+        </nav>
 
-      <div class="ep-toolbar">
+        <div class="ep-toolbar">
+          <BasePagination v-model="list.pagin.value" @open-filters="list.openFilterModal" @change="list.handlePaginationChange" />
+        </div>
+      </div>
+
+      <div v-if="list.activeFilterChips.value.length > 0" class="ep-filter-strip">
+        <span class="ep-filter-strip-badge">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+          Filtros activos
+          <span class="ep-filter-strip-count">{{ list.activeFilterChips.value.length }}</span>
+        </span>
         <BaseFilterChips :items="list.activeFilterChips.value" @remove="onChipRemove" @clear-all="onClearAll" />
-        <BasePagination v-model="list.pagin.value" @open-filters="list.openFilterModal" @change="list.handlePaginationChange" />
       </div>
     </section>
 
@@ -446,12 +456,23 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   background: #fff;
   border: 1px solid var(--e-border);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 10px 14px;
 }
 .ep-section.ep-filter-bar .ep-tabs {
   margin-bottom: 0;
@@ -462,6 +483,52 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 .ep-section.ep-filter-bar .ep-toolbar {
   flex: 1 1 auto;
   justify-content: flex-end;
+}
+
+/* Strip de filtros activos: aparece debajo de la fila principal cuando hay chips.
+   Tinte verde sutil para reforzar el estado "modo filtrado". */
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* La barra de chips dentro del strip ya no necesita su margin-bottom ni el
+   label "Filtros:" propio (lo reemplaza el badge). */
+.ep-filter-strip :deep(.active-filters) {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+}
+.ep-filter-strip :deep(.active-filters .label) {
+  display: none;
 }
 .ep-section-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -731,6 +798,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   --e-accent-soft: rgba(16,185,129,0.16);
 }
 [data-coreui-theme="dark"] .enrollment-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .enrollment-page .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-filter-strip-badge { color: #34D399; }
 [data-coreui-theme="dark"] .enrollment-page .ep-kpi { background: #1A1A14; }
 [data-coreui-theme="dark"] .enrollment-page .ep-kpi:hover {
   border-color: #3A3A33;

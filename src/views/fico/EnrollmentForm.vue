@@ -558,7 +558,11 @@ async function onProgramChange () {
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,
-        label: `${e.global_code || e.edition_code || ''} — ${e.start_date ? new Date(e.start_date).toLocaleDateString('es-PE') : ''}`
+        // Usamos start_date_label tal cual viene del SP. Es texto plano armado
+        // en Postgres con su sesion TZ — no lo pasamos por new Date() porque
+        // eso aplicaria conversion del browser y restaria 1 dia en zonas con
+        // offset negativo (Lima UTC-5).
+        label: `${e.global_code || e.edition_code || ''} — ${e.start_date_label || ''}`
       }))
   } catch (e) { console.error('[EnrollmentForm] editionCaller error:', e) }
   finally { loadingEditions.value = false }

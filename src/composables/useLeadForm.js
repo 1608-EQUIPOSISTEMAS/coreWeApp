@@ -891,6 +891,9 @@ export function useLeadForm(options = {}) {
     const hoy      = new Date()
     const desde    = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1); desde.setHours(0, 0, 0, 0)
     const hasta    = new Date(hoy.getFullYear(), 11, 31); hasta.setHours(23, 59, 59, 999)
+    // El listado usa start_date_label directo (texto del SP, sin conversion JS).
+    // Solo filtramos/ordenamos por start_date — esos new Date() se quedan en JS
+    // como momentos comparables, no se renderizan al usuario.
     return (response || [])
       .filter(e => { if (!e.start_date) return true; const f = new Date(e.start_date); return f >= desde && f <= hasta })
       .sort((a, b) => { if (!a.start_date && !b.start_date) return 0; if (!a.start_date) return 1; if (!b.start_date) return -1; return new Date(a.start_date) - new Date(b.start_date) })
