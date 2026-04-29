@@ -3280,11 +3280,21 @@ async function confirmarToken() {
     const enrollmentPayload = buildEnrollmentPayload()
     enrollmentPayload.inscription.lead_id = resolvedLeadId
 
+    // Monto del token: link de pago = lo que el alumno paga AHORA por el link.
+    // Si la inscripcion es por cuotas, ese monto es solo el inicial (saved_money).
+    // Si es al contado, es el total. Antes mandabamos siempre total_amount, lo que
+    // hacia que en cuotas el datatable mostrara S/300 cuando el alumno solo iba
+    // a pagar S/150 por el link.
+    const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
+    const tokenAmount = isInstallments
+      ? (Number(insc.saved_money) || 0)
+      : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
+
     const tokenPayload = {
       lead_id: resolvedLeadId,
       cat_provider: null,
       payment_type: insc.token_payment_type || null,
-      amount: Number(insc.total_amount) || Number(insc.montoOriginal) || 0,
+      amount: tokenAmount,
       currency: insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
       notes: `Link para ${form.full_name || '---'}`,
       advisor_observation: insc.observacions || null,
@@ -3484,10 +3494,16 @@ async function confirmarEdicionToken () {
   savingInsc.value = true
   try {
     const enrollmentPayload = buildEnrollmentPayload()
+    // Mismo razonamiento que tokenCreate: el monto del token = lo que se paga
+    // por el link. Cuotas -> saved_money (inicial). Contado -> total_amount.
+    const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
+    const tokenAmountEdit = isInstallments
+      ? (Number(insc.saved_money) || 0)
+      : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
     const resp = await ficoService.tokenEditInscription({
       token_id:    editTokenId.value,
       inscription: enrollmentPayload.inscription,
-      amount:       Number(insc.total_amount) || Number(insc.montoOriginal) || 0,
+      amount:       tokenAmountEdit,
       currency:     insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
       payment_type: insc.token_payment_type || null,
       cat_payment_channel: insc.cat_payment_channel || null,

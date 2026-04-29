@@ -436,16 +436,23 @@ async function handleConfirmPayment () {
       return
     }
     toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
-    const emailResult = await ficoService.sendConfirmationEmail(eid)
-    if (emailResult?.success) {
-      toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
-    } else {
-      toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
+    try {
+      const emailResult = await ficoService.sendConfirmationEmail(eid)
+      if (emailResult?.success) {
+        toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+      } else {
+        toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
+      }
+    } catch (emailErr) {
+      console.error('[sendConfirmationEmail]', emailErr)
+      const msg = emailErr?.response?.data?.error || emailErr?.message || 'fallo desconocido'
+      toast.error(`Error al enviar correo: ${msg}`, { timeout: 7000 })
     }
     startRedirect()
   } catch (err) {
-    console.error(err)
-    toast.error('Error al confirmar el pago.')
+    console.error('[confirmPayment]', err)
+    const msg = err?.response?.data?.error || err?.message || 'error desconocido'
+    toast.error(`Error al confirmar el pago: ${msg}`, { timeout: 7000 })
   } finally {
     savingFinancials.value = false
   }
@@ -799,6 +806,21 @@ async function handleChangeEdition ({ childVersionId, editionId }) {
 
 onMounted(() => {
   catalogs.loadCatalogs()
+  loadEnrollment()
+})
+
+// Vue Router reusa la instancia del componente al navegar entre /inscripciones/:id
+// con distintos ids (mismo route name). Sin este watch, props.id cambia pero los
+// datos en pantalla quedan del inscripto anterior y el overlay "Redirigiendo..."
+// se queda colgado.
+watch(enrollmentId, (newId, oldId) => {
+  if (newId === oldId || !newId) return
+  redirecting.value = false
+  nextPending.value = null
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+    redirectTimer = null
+  }
   loadEnrollment()
 })
 </script>

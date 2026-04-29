@@ -3,14 +3,6 @@
     <table class="ect">
       <thead>
         <tr class="ect-head">
-          <th class="tc" style="width:32px">
-            <label class="ect-check-wrap" title="Seleccionar todo">
-              <input type="checkbox"
-                :checked="allSelected"
-                :indeterminate.prop="someSelected && !allSelected"
-                @change="$emit('toggle-select-all', $event.target.checked)" />
-            </label>
-          </th>
           <th class="tc" style="width:42px"></th>
           <th style="width:120px">F. Registro</th>
           <th>Alumno / Documento</th>
@@ -55,7 +47,6 @@
           </th>
         </tr>
         <tr class="ect-filters">
-          <td></td>
           <td class="tc">
             <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
               <i class="fa-solid fa-eraser"></i>
@@ -83,7 +74,6 @@
       <tbody>
         <template v-if="isLoading">
           <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
-            <td class="tc"><div class="sk-cell" style="width:30px;height:30px;border-radius:8px;margin:0 auto"></div></td>
             <td><div class="sk-cell" style="width:90px"></div></td>
             <td>
               <div class="sk-cell" style="width:140px"></div>
@@ -108,16 +98,9 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'is-checked': selectedIds.has(Number(e.enrollment_id)) }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0 }]"
           @click="onRowClick(e, $event)"
         >
-          <td class="tc">
-            <label class="ect-check-wrap" @click.stop>
-              <input type="checkbox"
-                :checked="selectedIds.has(Number(e.enrollment_id))"
-                @change="$emit('toggle-select', e.enrollment_id)" />
-            </label>
-          </td>
           <td class="tc">
             <button class="act-btn act-teal" title="Abrir detalle completo" @click.stop="openDetail(e)">
               <i class="fa-solid fa-clipboard-check"></i>
@@ -174,7 +157,7 @@
           </td>
         </tr>
         <tr v-if="!enrollments.length">
-          <td colspan="13" class="empty-row">
+          <td colspan="12" class="empty-row">
             <div class="empty-state">
               <div class="empty-icon">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -399,9 +382,7 @@ function clearColFilters () {
 }
 
 /* ---- row status indicator ---- */
-.ect-row.row-green td:first-child { box-shadow: inset 3px 0 0 #10b981; }
-.ect-row.row-amber td:first-child { box-shadow: inset 3px 0 0 #f59e0b; }
-.ect-row.row-red td:first-child   { box-shadow: inset 3px 0 0 #ef4444; }
+/* Barras de color removidas — ya no marcamos las filas con borde lateral. */
 
 /* ---- action button ---- */
 .act-btn {

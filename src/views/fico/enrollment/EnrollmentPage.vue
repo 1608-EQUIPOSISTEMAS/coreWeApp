@@ -322,13 +322,31 @@ onMounted(async () => {
   // Prioridad de carga:
   // 1. URL query params (si hay) -> contexto compartido por link
   // 2. localStorage (manejado por useTablePersistence dentro del composable)
-  // Default: "Todos" sin filtros aplicados.
+  // 3. Default segun viewMode actual: compact aplica filtro Activo, expanded
+  //    no aplica filtro de student_status (muestra todos).
   const hasUrlParams = !!(route.query.view || route.query.q || route.query.page)
   if (hasUrlParams) {
     applyFromUrl()
+  } else if (list.viewMode.value === 'compact') {
+    list.applyCompactViewFilter()
+  } else if (list.viewMode.value === 'expanded') {
+    list.applyExpandedViewFilter()
   }
   await list.fetchEnrollments()
   list.fetchKpisDaily()
+})
+
+// Switch de vista: re-aplica el filtro de student_status correspondiente y refetch.
+// Compact = solo Activos. Expanded = todos los estados.
+watch(() => list.viewMode.value, (newMode, oldMode) => {
+  if (!oldMode || newMode === oldMode) return
+  if (newMode === 'compact') {
+    list.applyCompactViewFilter()
+  } else if (newMode === 'expanded') {
+    list.applyExpandedViewFilter()
+  }
+  list.pagin.value.page = 1
+  list.fetchEnrollments()
 })
 
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))

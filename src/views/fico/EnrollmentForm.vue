@@ -866,6 +866,12 @@ async function handleSave () {
 
     if (resp?.result === 1) {
       toast.success(resp.message || 'Inscripcion registrada correctamente.')
+      // Feedback adicional sobre el envio del correo (membresias o cursos)
+      if (resp.email_sent === true) {
+        toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+      } else if (resp.email_sent === false) {
+        toast.warning(`Inscripcion creada pero el correo no se envio: ${resp.email_error || 'fallo desconocido'}`, { timeout: 7000 })
+      }
       router.push({ name: 'enrollment' })
     } else {
       toast.error(resp?.message || resp?.error || 'Error al registrar la inscripcion.')

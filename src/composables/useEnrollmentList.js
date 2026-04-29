@@ -28,6 +28,32 @@ export function useEnrollmentList () {
   })
 
   const filtroStatus = ref(catalog.options('we_enrollment_status') || [])
+
+  // Filtro view-aware:
+  //  - Compact (vista operativa de FICO): solo alumnos en estado Activo.
+  //  - Expanded (vista de reporte): todos los estados (Activo, SEG, R, etc.).
+  //
+  // Mando multiples variantes de capitalizacion porque el view de Postgres
+  // ('vw_enrollment_report_system' / columna "ESTADO ALUMNO") ha tenido en distintas
+  // versiones 'Activo', 'ACTIVO', y 'activo'. El IN del SP matchea string exacto,
+  // asi que mandar las 3 cubre cualquier caso. Si solo una corresponde, las otras
+  // simplemente no aportan filas pero tampoco rompen.
+  function applyCompactViewFilter () {
+    filters.enrollment_status_ids = [
+      { id: null, description: 'Activo' },
+      { id: null, description: 'ACTIVO' },
+      { id: null, description: 'activo' }
+    ]
+  }
+
+  function applyExpandedViewFilter () {
+    filters.enrollment_status_ids = []
+  }
+
+  function applyDefaultActiveOnly () {
+    if (filters.enrollment_status_ids.length > 0) return
+    applyCompactViewFilter()
+  }
   const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
   const filtroModalidad = ref(catalog.options('we_modality') || [])
   const filtroPaymentChannel = ref(catalog.options('we_payment_channel') || [])
@@ -317,6 +343,7 @@ export function useEnrollmentList () {
     fetchEnrollments, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,
-    kpisDaily, fetchKpisDaily, savedViews, activeViewKey, applySavedView
+    kpisDaily, fetchKpisDaily, savedViews, activeViewKey, applySavedView,
+    applyDefaultActiveOnly, applyCompactViewFilter, applyExpandedViewFilter
   }
 }

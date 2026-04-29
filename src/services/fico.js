@@ -1,9 +1,14 @@
 import api from './api';
 
+// Endpoints que llaman a Odoo en serie sobre 50+ canales online (memberships) o
+// crean un sale.order con cuotas. El timeout default de 30s se queda corto.
+// 120s deja margen para Odoo lento + email + audit logs en la misma transaccion.
+const SLOW_ENDPOINT_TIMEOUT = 120000
+
 export default class FicoService {
 
   async enrollmentRegister(payload) {
-    const response = (await api.post('/fico/enrollmentregister', payload)).data;
+    const response = (await api.post('/fico/enrollmentregister', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
@@ -23,32 +28,32 @@ export default class FicoService {
   }
 
   async enrollInOdoo(enrollment_id) {
-    const response = (await api.post('/fico/enrollinodoo', { enrollment_id })).data;
+    const response = (await api.post('/fico/enrollinodoo', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async confirmPayment(payload) {
-    const response = (await api.post('/fico/confirmpayment', payload)).data;
+    const response = (await api.post('/fico/confirmpayment', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async confirmInstallment(payload) {
-    const response = (await api.post('/fico/confirminstallment', payload)).data;
+    const response = (await api.post('/fico/confirminstallment', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async sendConfirmationEmail(enrollment_id) {
-    const response = (await api.post('/fico/sendconfirmationemail', { enrollment_id })).data;
+    const response = (await api.post('/fico/sendconfirmationemail', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async sendPaymentConfirmationEmail(enrollment_id) {
-    const response = (await api.post('/fico/sendpaymentconfirmationemail', { enrollment_id })).data;
+    const response = (await api.post('/fico/sendpaymentconfirmationemail', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async syncInstallmentPayment(enrollment_id) {
-    const response = (await api.post('/fico/syncinstallmentpayment', { enrollment_id })).data;
+    const response = (await api.post('/fico/syncinstallmentpayment', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
@@ -93,12 +98,12 @@ export default class FicoService {
   }
 
   async courseChange(payload) {
-    const response = (await api.post('/fico/coursechange', payload)).data;
+    const response = (await api.post('/fico/coursechange', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
   async reprogramEdition(payload) {
-    const response = (await api.post('/fico/reprogramedition', payload)).data;
+    const response = (await api.post('/fico/reprogramedition', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 
