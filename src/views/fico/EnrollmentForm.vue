@@ -555,11 +555,17 @@ async function onProgramChange () {
         if (!b.start_date) return -1
         return new Date(a.start_date) - new Date(b.start_date)
       })
-      .map(e => ({
-        ...e,
-        id: e.edition_num_id || e.id,
-        label: `${e.global_code || e.edition_code || ''} — ${e.start_date ? new Date(e.start_date).toLocaleDateString('es-PE') : ''}`
-      }))
+      .map(e => {
+        // Parseo TZ-safe: trato YYYY-MM-DD como calendar-date para que en prod
+        // (server UTC) no retroceda 1 dia frente a local (server Lima).
+        const m = e.start_date ? String(e.start_date).match(/^(\d{4})-(\d{2})-(\d{2})/) : null
+        const dateText = m ? `${+m[3]}/${+m[2]}/${m[1]}` : ''
+        return {
+          ...e,
+          id: e.edition_num_id || e.id,
+          label: `${e.global_code || e.edition_code || ''} — ${dateText}`
+        }
+      })
   } catch (e) { console.error('[EnrollmentForm] editionCaller error:', e) }
   finally { loadingEditions.value = false }
 }

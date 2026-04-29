@@ -26,33 +26,57 @@
       </div>
     </section>
 
-    <section class="ep-section ep-filter-bar">
-      <nav class="ep-tabs" aria-label="Estados de tokens">
-        <button
-          v-for="tab in statusTabs"
-          :key="tab.value"
-          :class="['ep-tab', { 'is-active': filterStatus === tab.value }]"
-          @click="setStatusFilter(tab.value)"
-        >
-          <i class="fa-solid" :class="tab.icon"></i> {{ tab.label }}
-        </button>
-      </nav>
-
-      <div class="ep-toolbar">
-        <span v-if="selectionMode" class="tp-selhint">
-          <i class="fa-solid fa-object-group"></i>
-          Modo seleccion — elige tus tokens compatibles
-          <button class="tp-selhint-cancel" @click="cancelGrouping" title="Salir (Esc)">
-            <i class="fa-solid fa-xmark"></i>
+    <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
+      <div class="ep-filter-bar-main">
+        <nav class="ep-tabs" aria-label="Estados de tokens">
+          <button
+            v-for="tab in statusTabs"
+            :key="tab.value"
+            :class="['ep-tab', { 'is-active': filterStatus === tab.value && !filters.status_in.length }]"
+            @click="setStatusFilter(tab.value)"
+          >
+            <i class="fa-solid" :class="tab.icon"></i> {{ tab.label }}
           </button>
+        </nav>
+
+        <div class="ep-toolbar">
+          <span v-if="selectionMode" class="tp-selhint">
+            <i class="fa-solid fa-object-group"></i>
+            Modo seleccion — elige tus tokens compatibles
+            <button class="tp-selhint-cancel" @click="cancelGrouping" title="Salir (Esc)">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </span>
+          <BasePagination
+            v-model="pagination"
+            @change="fetchTokens"
+            @open-filters="onOpenFilters"
+          />
+        </div>
+      </div>
+
+      <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
+        <span class="ep-filter-strip-badge">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+          Filtros activos
+          <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
         </span>
-        <BasePagination
-          v-model="pagination"
-          @change="fetchTokens"
-          @open-filters="onOpenFilters"
-        />
+        <BaseFilterChips :items="activeFilterChips" @remove="clearFilter" @clear-all="clearAdvancedFilters" />
       </div>
     </section>
+
+    <TokenFilterModal
+      :visible="showFilterModal"
+      @update:visible="v => showFilterModal = v"
+      :filters="filters"
+      :filtro-status="filtroStatus"
+      :filtro-owners="filtroOwners"
+      :filtro-provider="providerCatalog"
+      :filtro-payment-type="filtroPaymentType"
+      @apply="applyFilters"
+      @clear="clearAdvancedFilters"
+      @date-change="handleDateChange"
+    />
 
     <div class="ect-wrap">
       <table class="ect">
@@ -408,12 +432,16 @@ import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import BasePagination from '@/components/BasePagination.vue'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import TokenFilterModal from './TokenFilterModal.vue'
 import { confirmAction } from '@/composables/useConfirm'
+import { ServiceKeys } from '@/services'
 
 const toast = useToast()
 const router = useRouter()
 const catalog = inject('catalog')
+const authService = inject(ServiceKeys.Auth)
 
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
@@ -472,6 +500,123 @@ function clearColFilters () {
   colFilters.value = { alumno: '', programa: '', tipo: [], proveedor: [], asesor: [] }
 }
 
+// === Filtros avanzados (modal) ===
+// Estos viajan al backend en cada fetchTokens. Los col-filters de arriba siguen
+// siendo client-side sobre la pagina cargada — son complementarios.
+const filters = reactive({
+  q: '',
+  status_in: [],
+  payment_type_in: [],
+  providers_in: [],
+  requested_by_in: [],
+  installment_only: '',
+  currency: '',
+  date_from: null,
+  date_to: null,
+  created_range_string: null
+})
+const showFilterModal = ref(false)
+const activeFilterChips = ref([])
+const filtroOwners = ref([])
+
+const filtroStatus = [
+  { id: 'pending',   description: 'Pendiente' },
+  { id: 'link_sent', description: 'Link Enviado' },
+  { id: 'paid',      description: 'Pagado' },
+  { id: 'confirmed', description: 'Confirmado' }
+]
+const filtroPaymentType = [
+  { id: 'credito', description: 'Credito' },
+  { id: 'debito',  description: 'Debito' }
+]
+
+async function loadOwners () {
+  if (!authService) return
+  try {
+    const arr = await authService.userList({})
+    filtroOwners.value = arr.map(u => {
+      const f = (u.first_name || '').trim()
+      const l = (u.last_name || '').trim()
+      let n = f; if (l) n += ` ${l.charAt(0)}.`
+      return { id: u.user_id, description: n.trim() || `Usuario ${u.user_id}` }
+    })
+  } catch (e) { console.error('[TokenPage] loadOwners:', e) }
+}
+
+function rebuildChips () {
+  const chips = []
+  const labelById = (items, id) => {
+    const m = items.find(x => String(x.id) === String(id?.id ?? id))
+    return m?.description || (id?.description || String(id?.id ?? id))
+  }
+  const mc = (key, lbl, items, source) => {
+    if (!items?.length) return
+    const ls = items.map(i => source ? labelById(source, i) : (i.description || i.label || String(i)))
+    chips.push({
+      key,
+      label: ls.length === 1 ? `${lbl}: ${ls[0]}` : `${lbl}: ${ls.length} sel.`,
+      text: `${lbl}: ${ls.join(', ')}`,
+      details: ls
+    })
+  }
+
+  if (filters.q) chips.push({ key: 'q', label: `Busqueda: ${filters.q}`, text: `Busqueda: ${filters.q}` })
+  mc('status_in', 'Estado', filters.status_in, filtroStatus)
+  mc('payment_type_in', 'Tipo', filters.payment_type_in, filtroPaymentType)
+  mc('providers_in', 'Proveedor', filters.providers_in, providerCatalog)
+  mc('requested_by_in', 'Asesor', filters.requested_by_in, filtroOwners.value)
+  if (filters.installment_only === 'true')  chips.push({ key: 'installment_only', label: 'Tipo: Cuotas',  text: 'Solo cuotas' })
+  if (filters.installment_only === 'false') chips.push({ key: 'installment_only', label: 'Tipo: Contado', text: 'Solo contado' })
+  if (filters.currency) chips.push({ key: 'currency', label: `Moneda: ${filters.currency}`, text: `Moneda: ${filters.currency}` })
+  if (filters.created_range_string) chips.push({ key: 'created_range', label: `Creado: ${filters.created_range_string}`, text: `Creado: ${filters.created_range_string}` })
+
+  activeFilterChips.value = chips
+}
+
+function handleDateChange (rangeStr) {
+  if (!rangeStr) { filters.date_from = null; filters.date_to = null; return }
+  const p = rangeStr.split(' to ')
+  filters.date_from = p[0] || null
+  filters.date_to   = p[1] || p[0] || null
+}
+
+function applyFilters () {
+  // Modal y tabs comparten el concepto "estado". Si el usuario eligio estados
+  // en el modal, las tabs dejan de mandar — evita doble filtro contradictorio.
+  if (filters.status_in?.length) filterStatus.value = ''
+  showFilterModal.value = false
+  pagination.value.page = 1
+  rebuildChips()
+  fetchTokens()
+}
+
+function clearFilter (key) {
+  if (key === 'q') filters.q = ''
+  else if (key === 'created_range') {
+    filters.date_from = null; filters.date_to = null; filters.created_range_string = null
+  }
+  else if (key === 'installment_only') filters.installment_only = ''
+  else if (key === 'currency') filters.currency = ''
+  else if (['status_in', 'payment_type_in', 'providers_in', 'requested_by_in'].includes(key)) {
+    filters[key] = []
+  }
+  pagination.value.page = 1
+  rebuildChips()
+  fetchTokens()
+}
+
+function clearAdvancedFilters () {
+  Object.assign(filters, {
+    q: '', status_in: [], payment_type_in: [], providers_in: [], requested_by_in: [],
+    installment_only: '', currency: '',
+    date_from: null, date_to: null, created_range_string: null
+  })
+  showFilterModal.value = false
+  pagination.value.page = 1
+  rebuildChips()
+  fetchTokens()
+}
+
 const filteredTokens = computed(() => {
   const cf = colFilters.value
   return tokens.value.filter(t => {
@@ -502,7 +647,7 @@ const filteredTokens = computed(() => {
 })
 
 function onOpenFilters () {
-  toast.info('Usa los filtros por columna del datatable. Pronto agregamos filtros avanzados aqui.', { timeout: 3500 })
+  showFilterModal.value = true
 }
 
 const selectionMode    = ref(false)
@@ -661,20 +806,38 @@ function debounceSearch () {
 
 function setStatusFilter (value) {
   filterStatus.value = value
+  // Las tabs son "single-select". Si habia un multi-status del modal, limpiarlo
+  // para que ambos no se contradigan.
+  if (filters.status_in.length) {
+    filters.status_in = []
+    rebuildChips()
+  }
   pagination.value.page = 1
   fetchTokens()
+}
+
+function buildListParams () {
+  const ids = arr => arr.map(i => i?.id ?? i).filter(v => v !== null && v !== undefined && v !== '')
+  return {
+    status:           filterStatus.value || undefined,
+    status_in:        ids(filters.status_in),
+    payment_type_in:  ids(filters.payment_type_in),
+    providers_in:     ids(filters.providers_in),
+    requested_by_in:  ids(filters.requested_by_in),
+    installment_only: filters.installment_only || undefined,
+    currency:         filters.currency || undefined,
+    date_from:        filters.date_from || undefined,
+    date_to:          filters.date_to   || undefined,
+    q:                filters.q || undefined,
+    page:             pagination.value.page,
+    size:             pagination.value.size
+  }
 }
 
 async function fetchTokens () {
   isLoading.value = true
   try {
-    const params = {
-      status: filterStatus.value,
-      q: searchQuery.value,
-      page: pagination.value.page,
-      size: pagination.value.size
-    }
-    const res = (await api.get('/token/list', { params })).data
+    const res = (await api.get('/token/list', { params: buildListParams() })).data
     tokens.value = res.data?.items || []
     pagination.value.total = res.data?.total || 0
   } catch {
@@ -868,6 +1031,7 @@ function onGlobalKeyDown (e) {
 }
 
 onMounted(() => {
+  loadOwners()
   fetchTokens()
   fetchStats()
   window.addEventListener('click', onGlobalClick)
@@ -937,12 +1101,23 @@ onUnmounted(() => {
   background: #fff;
   border: 1px solid var(--e-border);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 10px 14px;
 }
 .ep-section.ep-filter-bar .ep-tabs {
   margin-bottom: 0;
@@ -954,6 +1129,48 @@ onUnmounted(() => {
   flex: 1 1 auto;
   justify-content: flex-end;
   margin: 0;
+}
+
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ep-filter-strip :deep(.active-filters) {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+}
+.ep-filter-strip :deep(.active-filters .label) {
+  display: none;
 }
 .ep-section-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -1728,6 +1945,15 @@ onUnmounted(() => {
   --e-accent-soft: rgba(16,185,129,0.16);
 }
 [data-coreui-theme="dark"] .token-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .token-page .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .token-page .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .token-page .ep-filter-strip-badge { color: #34D399; }
 [data-coreui-theme="dark"] .token-page .ep-kpi { background: #1A1A14; }
 [data-coreui-theme="dark"] .token-page .ep-kpi:hover {
   border-color: #3A3A33;

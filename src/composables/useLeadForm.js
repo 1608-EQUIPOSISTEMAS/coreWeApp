@@ -884,6 +884,18 @@ export function useLeadForm(options = {}) {
     }
   }
 
+  // El SP a veces devuelve `start_date_label` con la fecha corrida -1 dia cuando
+  // la sesion de Postgres esta en UTC en lugar de Lima. En vez de depender de la
+  // configuracion del server, reescribimos el tramo de fecha del label parseando
+  // `start_date` como calendar-date (ignorando TZ).
+  const reformatLabelDateLima = (label, isoDate) => {
+    if (!label || !isoDate) return label
+    const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!m) return label
+    const safe = `${+m[3]}/${+m[2]}/${m[1]}`
+    return label.replace(/(\d{1,2}\/\d{1,2}\/\d{4})\s*$/, safe)
+  }
+
   const searchEditionsFiltered = async (q) => {
     const month    = new Date().getMonth() + 1
     const year     = new Date().getFullYear()
@@ -894,6 +906,7 @@ export function useLeadForm(options = {}) {
     return (response || [])
       .filter(e => { if (!e.start_date) return true; const f = new Date(e.start_date); return f >= desde && f <= hasta })
       .sort((a, b) => { if (!a.start_date && !b.start_date) return 0; if (!a.start_date) return 1; if (!b.start_date) return -1; return new Date(a.start_date) - new Date(b.start_date) })
+      .map(e => ({ ...e, start_date_label: reformatLabelDateLima(e.start_date_label, e.start_date) }))
   }
 
   async function openProgramVersionDetail() {
