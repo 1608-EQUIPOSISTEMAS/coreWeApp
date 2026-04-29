@@ -885,14 +885,30 @@ export function useLeadForm(options = {}) {
   }
 
   // El SP a veces devuelve `start_date_label` con la fecha corrida -1 dia cuando
-  // la sesion de Postgres esta en UTC en lugar de Lima. En vez de depender de la
-  // configuracion del server, reescribimos el tramo de fecha del label parseando
-  // `start_date` como calendar-date (ignorando TZ).
-  const reformatLabelDateLima = (label, isoDate) => {
-    if (!label || !isoDate) return label
-    const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (!m) return label
-    const safe = `${+m[3]}/${+m[2]}/${m[1]}`
+  // la sesion de Postgres esta en UTC en lugar de Lima. Reescribimos el tramo
+  // de fecha del label leyendo `start_date` directo, blindando los 3 formatos
+  // que puede entregar pg-node:
+  //   1) string ISO "YYYY-MM-DD" (columna DATE en pg moderno)
+  //   2) string ISO completo "YYYY-MM-DDTHH:mm:ss.sssZ"
+  //   3) Date object (pg parseo automatico). En este caso usamos getters UTC
+  //      porque pg interpreta DATE como UTC medianoche; si usaramos getDate()
+  //      el browser shiftea segun la TZ del cliente.
+  const tzSafeCalendarDate = v => {
+    if (!v) return ''
+    if (typeof v === 'string') {
+      const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/)
+      return m ? `${+m[3]}/${+m[2]}/${m[1]}` : ''
+    }
+    if (v instanceof Date && !isNaN(v)) {
+      return `${v.getUTCDate()}/${v.getUTCMonth() + 1}/${v.getUTCFullYear()}`
+    }
+    return ''
+  }
+
+  const reformatLabelDateLima = (label, rawDate) => {
+    const safe = tzSafeCalendarDate(rawDate)
+    if (!safe) return label
+    if (!label) return safe
     return label.replace(/(\d{1,2}\/\d{1,2}\/\d{4})\s*$/, safe)
   }
 

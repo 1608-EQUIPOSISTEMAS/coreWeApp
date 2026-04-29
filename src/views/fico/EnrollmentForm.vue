@@ -556,10 +556,17 @@ async function onProgramChange () {
         return new Date(a.start_date) - new Date(b.start_date)
       })
       .map(e => {
-        // Parseo TZ-safe: trato YYYY-MM-DD como calendar-date para que en prod
-        // (server UTC) no retroceda 1 dia frente a local (server Lima).
-        const m = e.start_date ? String(e.start_date).match(/^(\d{4})-(\d{2})-(\d{2})/) : null
-        const dateText = m ? `${+m[3]}/${+m[2]}/${m[1]}` : ''
+        // Parseo TZ-safe del start_date. Cubre los 3 formatos que el driver pg
+        // puede entregar: string YYYY-MM-DD, ISO completo, o Date object (en este
+        // ultimo caso usamos getters UTC, que es como pg representa DATE).
+        const v = e.start_date
+        let dateText = ''
+        if (typeof v === 'string') {
+          const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/)
+          if (m) dateText = `${+m[3]}/${+m[2]}/${m[1]}`
+        } else if (v instanceof Date && !isNaN(v)) {
+          dateText = `${v.getUTCDate()}/${v.getUTCMonth() + 1}/${v.getUTCFullYear()}`
+        }
         return {
           ...e,
           id: e.edition_num_id || e.id,
