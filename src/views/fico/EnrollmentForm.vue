@@ -555,24 +555,15 @@ async function onProgramChange () {
         if (!b.start_date) return -1
         return new Date(a.start_date) - new Date(b.start_date)
       })
-      .map(e => {
-        // Parseo TZ-safe del start_date. Cubre los 3 formatos que el driver pg
-        // puede entregar: string YYYY-MM-DD, ISO completo, o Date object (en este
-        // ultimo caso usamos getters UTC, que es como pg representa DATE).
-        const v = e.start_date
-        let dateText = ''
-        if (typeof v === 'string') {
-          const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/)
-          if (m) dateText = `${+m[3]}/${+m[2]}/${m[1]}`
-        } else if (v instanceof Date && !isNaN(v)) {
-          dateText = `${v.getUTCDate()}/${v.getUTCMonth() + 1}/${v.getUTCFullYear()}`
-        }
-        return {
-          ...e,
-          id: e.edition_num_id || e.id,
-          label: `${e.global_code || e.edition_code || ''} — ${dateText}`
-        }
-      })
+      .map(e => ({
+        ...e,
+        id: e.edition_num_id || e.id,
+        // Usamos start_date_label tal cual viene del SP. Es texto plano armado
+        // en Postgres con su sesion TZ — no lo pasamos por new Date() porque
+        // eso aplicaria conversion del browser y restaria 1 dia en zonas con
+        // offset negativo (Lima UTC-5).
+        label: `${e.global_code || e.edition_code || ''} — ${e.start_date_label || ''}`
+      }))
   } catch (e) { console.error('[EnrollmentForm] editionCaller error:', e) }
   finally { loadingEditions.value = false }
 }

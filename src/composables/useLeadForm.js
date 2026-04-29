@@ -884,34 +884,6 @@ export function useLeadForm(options = {}) {
     }
   }
 
-  // El SP a veces devuelve `start_date_label` con la fecha corrida -1 dia cuando
-  // la sesion de Postgres esta en UTC en lugar de Lima. Reescribimos el tramo
-  // de fecha del label leyendo `start_date` directo, blindando los 3 formatos
-  // que puede entregar pg-node:
-  //   1) string ISO "YYYY-MM-DD" (columna DATE en pg moderno)
-  //   2) string ISO completo "YYYY-MM-DDTHH:mm:ss.sssZ"
-  //   3) Date object (pg parseo automatico). En este caso usamos getters UTC
-  //      porque pg interpreta DATE como UTC medianoche; si usaramos getDate()
-  //      el browser shiftea segun la TZ del cliente.
-  const tzSafeCalendarDate = v => {
-    if (!v) return ''
-    if (typeof v === 'string') {
-      const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/)
-      return m ? `${+m[3]}/${+m[2]}/${m[1]}` : ''
-    }
-    if (v instanceof Date && !isNaN(v)) {
-      return `${v.getUTCDate()}/${v.getUTCMonth() + 1}/${v.getUTCFullYear()}`
-    }
-    return ''
-  }
-
-  const reformatLabelDateLima = (label, rawDate) => {
-    const safe = tzSafeCalendarDate(rawDate)
-    if (!safe) return label
-    if (!label) return safe
-    return label.replace(/(\d{1,2}\/\d{1,2}\/\d{4})\s*$/, safe)
-  }
-
   const searchEditionsFiltered = async (q) => {
     const month    = new Date().getMonth() + 1
     const year     = new Date().getFullYear()
@@ -919,10 +891,12 @@ export function useLeadForm(options = {}) {
     const hoy      = new Date()
     const desde    = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1); desde.setHours(0, 0, 0, 0)
     const hasta    = new Date(hoy.getFullYear(), 11, 31); hasta.setHours(23, 59, 59, 999)
+    // El listado usa start_date_label directo (texto del SP, sin conversion JS).
+    // Solo filtramos/ordenamos por start_date — esos new Date() se quedan en JS
+    // como momentos comparables, no se renderizan al usuario.
     return (response || [])
       .filter(e => { if (!e.start_date) return true; const f = new Date(e.start_date); return f >= desde && f <= hasta })
       .sort((a, b) => { if (!a.start_date && !b.start_date) return 0; if (!a.start_date) return 1; if (!b.start_date) return -1; return new Date(a.start_date) - new Date(b.start_date) })
-      .map(e => ({ ...e, start_date_label: reformatLabelDateLima(e.start_date_label, e.start_date) }))
   }
 
   async function openProgramVersionDetail() {
