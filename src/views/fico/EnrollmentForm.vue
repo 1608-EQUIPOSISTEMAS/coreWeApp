@@ -105,6 +105,49 @@
           <SearchSelect v-model="form.client_profile" :items="clientProfileOptions" label-field="label" value-field="id" placeholder="Profesional / Estudiante..." />
         </div>
       </div>
+
+      <!-- COPIA (CC) DEL CORREO DE CONFIRMACION -->
+      <div class="ef-cc-row">
+        <button
+          v-if="!showCcField"
+          type="button"
+          class="ef-cc-toggle"
+          @click="showCcField = true"
+        >
+          <i class="fa-solid fa-plus"></i> Agregar copia (CC) al correo
+        </button>
+        <div v-else class="ef-cc-panel">
+          <div class="ef-cc-header">
+            <label>
+              <i class="fa-regular fa-envelope-open"></i>
+              Correo en copia
+              <span class="ef-optional">(opcional)</span>
+              <span v-if="form.agent_category === 'b2b'" class="ef-cc-hint-b2b">
+                Util para copiar al supervisor del alumno B2B
+              </span>
+            </label>
+            <button type="button" class="ef-cc-clear" @click="clearCcField" title="Quitar copia">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <input
+            v-model="form.email_cc"
+            type="text"
+            class="ef-cc-input"
+            placeholder="supervisor@empresa.com, rrhh@empresa.com"
+          />
+          <div v-if="ccPreview.length > 0" class="ef-cc-preview">
+            <span v-for="email in ccPreview" :key="email" class="ef-cc-chip">
+              <i class="fa-solid fa-check"></i> {{ email }}
+            </span>
+          </div>
+          <div v-if="ccInvalidCount > 0" class="ef-cc-warn">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ ccInvalidCount }} correo(s) con formato invalido seran ignorados.
+          </div>
+          <small class="ef-cc-help">Separa multiples correos con coma. El alumno recibe el correo principal; los CC reciben copia.</small>
+        </div>
+      </div>
     </div>
 
     <!-- PROGRAMA Y EDICION -->
@@ -161,6 +204,67 @@
             <input type="checkbox" v-model="form.is_scholarship" @change="onScholarshipToggle" />
             <span>Beca (sin pago)</span>
           </label>
+        </div>
+      </div>
+
+      <div class="ef-grid-3" style="margin-top:16px" v-if="!form.is_scholarship">
+        <div class="ef-field">
+          <label>
+            Descuento <span class="ef-optional">(opcional)</span>
+            <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
+          </label>
+          <SearchSelect
+            :key="`fico-dsct-pct-${discountResetKey}`"
+            v-model="form.dsct_porcent_id"
+            mode="remote"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_percentage'), cat_currency: currencyAlias })"
+            label-field="full_label"
+            value-field="id"
+            placeholder="DESCUENTO (%)"
+            :minChars="0"
+            :cache="false"
+            :disabled="!form.list_price"
+            :model-label="form.dsct_porcent_label"
+            @change="onChangeDescuentoPorcentual"
+          />
+        </div>
+        <div class="ef-field">
+          <label>
+            Promocion <span class="ef-optional">(opcional)</span>
+            <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
+          </label>
+          <SearchSelect
+            :key="`fico-dsct-stick-${discountResetKey}`"
+            v-model="form.dsct_stick_id"
+            mode="remote"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_fixed'), cat_currency: currencyAlias })"
+            label-field="full_label"
+            value-field="id"
+            placeholder="PROMOCION (S/)"
+            :minChars="0"
+            :cache="false"
+            :disabled="!form.list_price"
+            :model-label="form.dsct_stick_label"
+            @change="onChangeDescuentoFijo"
+          />
+        </div>
+        <div class="ef-field">
+          <label>
+            Beneficios <span class="ef-optional">(opcional)</span>
+            <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
+          </label>
+          <MultiSelect
+            :key="`fico-dsct-benefit-${discountResetKey}`"
+            v-model="form.dsct_benefit_ids"
+            mode="remote"
+            :debounce-ms="400"
+            :disabled="!form.list_price"
+            label-key="full_label"
+            value-key="id"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_benefit'), cat_currency: currencyAlias })"
+            placeholder="BENEFICIOS..."
+            @change="onChangeBeneficios"
+          />
         </div>
       </div>
     </div>
@@ -288,6 +392,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import SearchSelect from '@/components/SearchSelect.vue'
+import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 
@@ -297,6 +402,7 @@ const catalog = inject('catalog')
 const programService = inject(ServiceKeys.Program)
 const editionService = inject(ServiceKeys.Edition)
 const ficoService = inject(ServiceKeys.Fico)
+const discountService = inject(ServiceKeys.Discount)
 
 const authService = inject(ServiceKeys.Auth)
 const customerService = inject(ServiceKeys.Customer)
@@ -336,6 +442,10 @@ const catProgramType = catalog.options('we_program_type')
 const catPaymentMedium = catalog.options('we_payment_medium')
 const catBusinessEntity = catalog.options('we_business_entity')
 const catB2BDoctype = catalog.options('we_enrollment_b2b_doctype')
+const catDiscountType = catalog.options('we_discount_type')
+
+const discountTypeId = (alias) => catDiscountType.find(c => c.alias === alias)?.id || null
+const discountResetKey = ref(0)
 
 const channelGeneral = computed(() => catPaymentChannel.find(c => c.alias === 'we_channel_general'))
 
@@ -367,8 +477,42 @@ const form = reactive({
   seller_agent_id: null,
   cat_b2b_doctype: null,
   ticket_payment_urls: [],
-  observations: ''
+  observations: '',
+  email_cc: '',
+  dsct_porcent_id: null,
+  dsct_porcent_label: null,
+  val_porcentaje: 0,
+  dsct_stick_id: null,
+  dsct_stick_label: null,
+  val_fijo: 0,
+  dsct_benefit_ids: [],
+  val_beneficios: []
 })
+
+// Toggle del panel CC. Se auto-abre cuando seleccionan B2B porque ese es el
+// caso de uso primario (copiar al supervisor de la empresa). El operador igual
+// puede cerrarlo si no necesita CC en ese B2B especifico.
+const showCcField = ref(false)
+watch(() => form.agent_category, (cat) => {
+  if (cat === 'b2b') showCcField.value = true
+})
+
+// Regex basico de email: estructura X@X.X. Suficiente para detectar errores
+// tipograficos comunes; el SMTP es el validador definitivo. No usar regex
+// "RFC-perfecto" — son enormes y rechazan emails validos pero raros.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const ccTokens = computed(() => {
+  if (!form.email_cc) return []
+  return String(form.email_cc).split(/[,;]/).map(s => s.trim()).filter(Boolean)
+})
+const ccPreview = computed(() => ccTokens.value.filter(e => EMAIL_REGEX.test(e)))
+const ccInvalidCount = computed(() => ccTokens.value.length - ccPreview.value.length)
+
+function clearCcField () {
+  form.email_cc = ''
+  showCcField.value = false
+}
 
 const isB2BDocumental = computed(() => {
   return form.agent_category === 'b2b' && !form.seller_agent_id && !!form.cat_b2b_doctype
@@ -440,9 +584,70 @@ const calculatedBasePrice = computed(() => {
 watch(calculatedBasePrice, (price) => {
   if (price > 0) {
     form.list_price = price
-    form.total_amount = price
   }
 })
+
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100
+
+// Recalcula total_amount aplicando los 3 canales de descuento sobre list_price.
+// Misma logica que comercial (useLeadForm.js): porcentaje primero, luego promo
+// (precio target), luego beneficios (suma fija). Si los descuentos suman mas
+// que el precio base se resetean para evitar montos negativos.
+watch(
+  () => [form.list_price, form.val_porcentaje, form.val_fijo, form.val_beneficios, form.dsct_porcent_id, form.dsct_stick_id],
+  () => {
+    if (form.is_scholarship || isB2BDocumental.value) return
+    const base = Number(form.list_price) || 0
+    const montoPorcentaje = round2((base * (form.val_porcentaje || 0)) / 100)
+    const subtotalAfterPct = round2(base - montoPorcentaje)
+    const promoTarget = round2(Number(form.val_fijo) || 0)
+    let montoFijo = 0
+    if (form.dsct_stick_id && promoTarget > 0) {
+      montoFijo = round2(subtotalAfterPct - promoTarget)
+      if (montoFijo < 0) montoFijo = 0
+    }
+    const subtotalAfterStick = (form.dsct_stick_id && promoTarget > 0) ? promoTarget : subtotalAfterPct
+    const montoBeneficio = round2((form.val_beneficios || []).reduce((acc, v) => acc + (Number(v) || 0), 0))
+    const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficio)
+    if (base > 0 && totalDescuentos > base) {
+      toast.warning('Los descuentos superan el Precio Lista. Se resetearon.')
+      form.val_porcentaje = 0; form.dsct_porcent_id = null; form.dsct_porcent_label = null
+      form.val_fijo = 0; form.dsct_stick_id = null; form.dsct_stick_label = null
+      form.val_beneficios = []; form.dsct_benefit_ids = []
+      discountResetKey.value++
+      form.total_amount = base
+      return
+    }
+    const final = round2(subtotalAfterStick - montoBeneficio)
+    form.total_amount = final > 0 ? final : 0
+  },
+  { deep: true, immediate: true }
+)
+
+function onChangeDescuentoPorcentual (opt) {
+  if (!opt) {
+    form.val_porcentaje = 0
+    form.dsct_porcent_label = null
+    return
+  }
+  form.val_porcentaje = Number(opt.value) || 0
+  form.dsct_porcent_label = opt.full_label || opt.label || null
+}
+
+function onChangeDescuentoFijo (opt) {
+  if (!opt) {
+    form.val_fijo = 0
+    form.dsct_stick_label = null
+    return
+  }
+  form.val_fijo = Number(opt.value) || 0
+  form.dsct_stick_label = opt.full_label || opt.label || null
+}
+
+function onChangeBeneficios (selectedItems) {
+  form.dsct_benefit_ids = selectedItems || []
+  form.val_beneficios = (selectedItems || []).map(i => Number(i.raw?.value || i.value || 0))
+}
 
 const autoNumCuotas = computed(() => {
   const type = programTypeAlias.value
@@ -649,6 +854,10 @@ function onScholarshipToggle () {
     form.transaction_code = ''
     form.ticket_payment_urls = []
     installments.value = []
+    form.dsct_porcent_id = null; form.dsct_porcent_label = null; form.val_porcentaje = 0
+    form.dsct_stick_id = null; form.dsct_stick_label = null; form.val_fijo = 0
+    form.dsct_benefit_ids = []; form.val_beneficios = []
+    discountResetKey.value++
   } else if (calculatedBasePrice.value > 0) {
     form.total_amount = calculatedBasePrice.value
     form.list_price = calculatedBasePrice.value
@@ -862,7 +1071,8 @@ async function handleSave () {
         observations: buildObservationsWithAgentCode(),
         installment_plan: isInstallment.value && installments.value.length > 0
           ? installments.value.map((c, i) => ({ installment_number: i + 1, amount: c.amount, due_date: c.due_date }))
-          : null
+          : null,
+        email_cc: ccPreview.value.length > 0 ? ccPreview.value.join(',') : null
       }
     }
 
@@ -894,10 +1104,16 @@ function resetForm () {
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
     cat_insc_modality: null, cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
     cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
-    client_profile: '', agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: ''
+    client_profile: '', agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
+    email_cc: '',
+    dsct_porcent_id: null, dsct_porcent_label: null, val_porcentaje: 0,
+    dsct_stick_id: null, dsct_stick_label: null, val_fijo: 0,
+    dsct_benefit_ids: [], val_beneficios: []
   })
   installments.value = []
   editionsList.value = []
+  showCcField.value = false
+  discountResetKey.value++
 }
 
 function goBack () { router.back() }
@@ -1092,6 +1308,16 @@ function goBack () { router.back() }
   margin-left: 4px;
 }
 
+.ef-disc-hint {
+  color: #A3A3A3;
+  font-weight: 400;
+  font-size: 9px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+  font-style: italic;
+}
+
 .ef-b2b-note {
   margin-top: 16px;
   padding: 10px 14px;
@@ -1108,6 +1334,122 @@ function goBack () { router.back() }
 .ef-b2b-note i {
   color: #2563EB;
   font-size: 13px;
+}
+
+.ef-cc-row {
+  margin-top: 16px;
+}
+.ef-cc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px dashed #D4D4D4;
+  border-radius: 8px;
+  color: #525252;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ef-cc-toggle:hover {
+  border-color: #6366F1;
+  color: #4F46E5;
+  background: #EEF2FF;
+}
+.ef-cc-toggle i { font-size: 11px; }
+
+.ef-cc-panel {
+  background: #FAFAFA;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ef-cc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ef-cc-header label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #404040;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.ef-cc-header label i { color: #6366F1; font-size: 13px; }
+.ef-cc-hint-b2b {
+  margin-left: 6px;
+  font-weight: 400;
+  font-style: italic;
+  color: #6366F1;
+  font-size: 11px;
+}
+.ef-cc-clear {
+  background: transparent;
+  border: none;
+  color: #A3A3A3;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.ef-cc-clear:hover { color: #DC2626; background: #FEF2F2; }
+
+.ef-cc-input {
+  width: 100%;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #1A1A1A;
+  background: #FFFFFF;
+}
+.ef-cc-input:focus {
+  outline: none;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.ef-cc-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ef-cc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.ef-cc-chip i { font-size: 9px; }
+
+.ef-cc-warn {
+  font-size: 11.5px;
+  color: #B45309;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ef-cc-warn i { color: #D97706; }
+
+.ef-cc-help {
+  font-size: 11px;
+  color: #737373;
+  font-style: italic;
 }
 
 .ef-cuotas-table {
@@ -1428,6 +1770,40 @@ function goBack () { router.back() }
   color: #93C5FD;
 }
 [data-coreui-theme="dark"] .ef-b2b-note i { color: #93C5FD; }
+
+[data-coreui-theme="dark"] .ef-cc-toggle {
+  background: transparent;
+  border-color: #2A2A22;
+  color: #A3A399;
+}
+[data-coreui-theme="dark"] .ef-cc-toggle:hover {
+  border-color: #6366F1;
+  color: #A5B4FC;
+  background: rgba(99,102,241,0.12);
+}
+[data-coreui-theme="dark"] .ef-cc-panel {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ef-cc-header label { color: #D4D4CC; }
+[data-coreui-theme="dark"] .ef-cc-hint-b2b { color: #A5B4FC; }
+[data-coreui-theme="dark"] .ef-cc-input {
+  background: #0F0F0A;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-cc-input:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.20);
+}
+[data-coreui-theme="dark"] .ef-cc-chip {
+  background: rgba(16,185,129,0.14);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+[data-coreui-theme="dark"] .ef-cc-warn { color: #FBBF24; }
+[data-coreui-theme="dark"] .ef-cc-warn i { color: #FBBF24; }
+[data-coreui-theme="dark"] .ef-cc-help { color: #6F6F66; }
 
 [data-coreui-theme="dark"] .ef-checkbox-label {
   background: rgba(245,158,11,0.14);

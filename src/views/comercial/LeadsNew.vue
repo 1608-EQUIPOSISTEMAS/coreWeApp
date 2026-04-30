@@ -1310,9 +1310,41 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </template>
 
           <template v-if="isChannelWeb">
+            <div class="col-md-2">
+              <label class="exec-label">Moneda <span class="c-red">*</span></label>
+              <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+            </div>
+            <div class="col-md-3">
+              <label class="exec-label">
+                Modalidad de pago <span class="c-red">*</span>
+              </label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_type_payment"
+                required
+                :items="isOnlineProgram
+                  ? inscPaymentModes.filter(e => e.alias === 'we_payment_way_single')
+                  : inscPaymentModes"
+                placeholder="M. PAGO"
+                label-field="description"
+                value-field="alias"
+                class="exec-select-light w-100"
+                :disabled="isOnlineProgram"
+              />
+            </div>
+            <div class="col-md-3" v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+              <label class="exec-label">Pago por pasarela (Adelanto) <span class="c-red">*</span></label>
+              <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
+            </div>
             <div class="col-md-12 mt-1">
               <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
-                <i class="fa-solid fa-globe me-2"></i> El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
+                <i class="fa-solid fa-globe me-2"></i>
+                <template v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+                  El alumno pagó el <strong>adelanto</strong> por la pasarela web. Las cuotas restantes se cobrarán por otro canal. Se notificará al canal de <strong>Slack</strong> apenas envies.
+                </template>
+                <template v-else>
+                  El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
+                </template>
               </div>
             </div>
           </template>
@@ -3076,7 +3108,7 @@ function buildEnrollmentPayload() {
 cat_certificate_status,
       // Canal y pago
       cat_payment_channel:  insc.cat_payment_channel,
-      cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
+      cat_type_payment: (isChannelGeneral.value || isChannelToken.value || isChannelWeb.value) ? cat_type_payment : null,
       cat_currency,
       cat_method_payment,
       cat_token_provider:   insc.cat_token_provider,
@@ -3620,8 +3652,14 @@ function validateInscriptionPaymentInfo() {
     return true
   }
 
-  // Canal Web: solo necesita el canal seleccionado
-  if (isChannelWeb.value) return true
+  // Canal Web: requiere modalidad de pago. Si eligio cuotas, requiere adelanto
+  // (= monto cobrado por la pasarela) ademas del total. La pasarela web cobra
+  // SIEMPRE un solo monto, asi que cuando es cuotas, ese monto es la reserva.
+  if (isChannelWeb.value) {
+    if (!insc.cat_type_payment) return false
+    if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
+    return true
+  }
 
   // Sin canal: no pasa
   return false
@@ -3811,8 +3849,11 @@ watch(calculatedBasePrice, (newPrice) => {
 const fmt2 = (val) => (Number(val) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 
+// Cuotas habilitadas para todos los canales (general/token/web). En WEB el
+// adelanto cobrado por la pasarela se mapea a saved_money, igual que en los
+// otros canales. La regla "programa Online = solo contado" sigue aplicando
+// (filtrada en el selector de modalidad y validada en el SP).
 const isInstallmentMode = computed(() =>
-  !isChannelWeb.value &&
   !!insc.cat_payment_channel &&
   insc.cat_type_payment === 'we_payment_way_installments' &&
   Number(insc.montoOriginal) > 0
