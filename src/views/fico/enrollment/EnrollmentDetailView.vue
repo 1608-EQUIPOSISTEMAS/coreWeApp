@@ -44,7 +44,6 @@
             <i class="fa-solid fa-file-invoice-dollar"></i> Finanzas
           </button>
           <button
-            v-if="modalMode === 'view'"
             :class="['edv-tab', { active: activeTab === 'acciones' }]"
             @click="activeTab = 'acciones'"
           >
@@ -90,7 +89,6 @@
           />
 
           <EnrollmentActions
-            v-if="modalMode === 'view'"
             v-show="activeTab === 'acciones'"
             :enrollment="enrollment"
             :detail="detail"
@@ -394,6 +392,7 @@ async function handleSaveEdit (justificacion) {
     fields.bank_account_id = ini ? ini._bank_account_id : ficoForm.bank_account_id
     fields.transaction_code = ini ? ini._transaction_code : ficoForm.transaction_code
     fields.cat_currency = ini ? ini._cat_currency : ficoForm.cat_currency
+    fields.payment_date = ini ? ini._payment_date : ficoForm.payment_date
     fields.notes = detail.value?.notes || null
     await ficoService.enrollmentUpdate({ enrollment_id: eid, justificacion: justificacion.trim(), fields })
     toast.success('Cambios guardados correctamente.')

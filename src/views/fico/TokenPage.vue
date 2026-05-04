@@ -277,8 +277,18 @@
                       </button>
                     </template>
                     <template v-else-if="canConfirmEnrollment">
-                      <button class="tp-btn-confirm" title="Crear inscripcion" @click="confirmToken(t)">
-                        <i class="fa-solid fa-graduation-cap"></i> Inscribir
+                      <button
+                        class="tp-btn-confirm"
+                        :title="confirmingTokens.has(t.token_id) ? 'Inscribiendo...' : 'Crear inscripcion'"
+                        :disabled="confirmingTokens.has(t.token_id)"
+                        @click="confirmToken(t)"
+                      >
+                        <template v-if="confirmingTokens.has(t.token_id)">
+                          <i class="fa-solid fa-spinner fa-spin"></i> Inscribiendo...
+                        </template>
+                        <template v-else>
+                          <i class="fa-solid fa-graduation-cap"></i> Inscribir
+                        </template>
                       </button>
                     </template>
                     <button
@@ -484,6 +494,7 @@ const statusTabs = [
 
 const tokens = ref([])
 const isLoading = ref(false)
+const confirmingTokens = ref(new Set())
 const filterStatus = ref('')
 const searchQuery = ref('')
 const pagination = ref({ page: 1, size: 25, total: 0 })
@@ -910,6 +921,12 @@ async function submitLink () {
 }
 
 async function confirmToken (t) {
+  // Guard contra doble click. La operacion es idempotente en backend (verifica si
+  // existe enrollment para el lead), pero deshabilitar el boton evita reintentos
+  // visuales y race conditions cuando la red esta lenta.
+  if (confirmingTokens.value.has(t.token_id)) return
+  confirmingTokens.value.add(t.token_id)
+  confirmingTokens.value = new Set(confirmingTokens.value)
   try {
     const res = await api.post('/token/confirm', {
       token_id: t.token_id,
@@ -924,6 +941,9 @@ async function confirmToken (t) {
     }
   } catch (err) {
     toast.error(err?.response?.data?.error || 'Error al inscribir')
+  } finally {
+    confirmingTokens.value.delete(t.token_id)
+    confirmingTokens.value = new Set(confirmingTokens.value)
   }
 }
 
