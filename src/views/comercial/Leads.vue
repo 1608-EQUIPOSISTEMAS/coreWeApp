@@ -2212,6 +2212,57 @@ const saldoPendienteDisplay = computed(() => {
 [data-coreui-theme="dark"] .leads-page .thead-filter .tf { background: #1F1F1A; border-bottom-color: #34D399; }
 [data-coreui-theme="dark"] .leads-page .table-shell { background: #1A1A14; border-color: #2A2A22; }
 
+/* Dark mode — table body rows */
+[data-coreui-theme="dark"] .leads-page .tbody-row td {
+  color: #E4E4DD;
+  border-bottom-color: #2A2A22;
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .leads-page .tbody-row:hover td { background: #232319; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-dark,
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted {
+  color: #E4E4DD !important;
+}
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .accent-text { color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pay-date-cell { color: #34D399; }
+
+/* Status row backgrounds (override the light pastel backgrounds) */
+[data-coreui-theme="dark"] .leads-page .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-blue > td     { background: rgba(59, 130, 246, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-emerald > td  { background: rgba(13, 148, 136, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-yellow > td   { background: rgba(245, 158, 11, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-gray > td     { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .row-red > td      { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
+
+/* Hover override for colored rows */
+[data-coreui-theme="dark"] .leads-page .row-inscrito:hover > td { background: rgba(16, 185, 129, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-blue:hover > td     { background: rgba(59, 130, 246, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-emerald:hover > td  { background: rgba(13, 148, 136, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-yellow:hover > td   { background: rgba(245, 158, 11, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-gray:hover > td     { background: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .row-red:hover > td      { background: rgba(239, 68, 68, 0.18); }
+
+/* Compact-mode collapsed-group hint cells */
+[data-coreui-theme="dark"] .leads-page .tg-hint-programa { background: rgba(37, 99, 235, 0.15); color: #60a5fa; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-cliente  { background: rgba(5, 150, 105, 0.15);  color: #34d399; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-lead     { background: rgba(217, 119, 6, 0.15);  color: #fbbf24; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-asesor   { background: rgba(124, 58, 237, 0.15); color: #a78bfa; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-main { color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-strong { color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-muted { color: #A0A099; }
+
+/* Pills inside rows */
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+
+/* Action icon buttons in rows */
+[data-coreui-theme="dark"] .leads-page .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
+
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
 .btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
