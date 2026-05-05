@@ -19,6 +19,9 @@
           <i class="fa-solid" :class="syncingSheet ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'"></i>
           {{ syncingSheet ? 'Sincronizando...' : 'Sincronizar ventas' }}
         </button>
+        <button class="ep-btn-export" @click="showExportModal = true" title="Descargar alumnos en aula por curso y edición">
+          <i class="fa-solid fa-file-arrow-down"></i> Exportar aula
+        </button>
         <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nueva inscripcion</button>
       </div>
     </header>
@@ -86,10 +89,7 @@
           :unique-estados="list.uniqueEstados.value"
           :is-loading="list.isLoading.value"
           :selected-id="list.selectedEnrollment.value?.enrollment_id"
-          :selected-ids="bulkSelected"
           @select-row="list.selectEnrollment"
-          @toggle-select="toggleSelectOne"
-          @toggle-select-all="toggleSelectAll"
         />
 
         <EnrollmentExpandedTable
@@ -109,24 +109,6 @@
       </transition>
     </div>
 
-    <!-- Barra flotante de acciones en lote -->
-    <Transition name="ep-bulk-fade">
-      <div v-if="bulkSelected.size > 0" class="ep-bulk-bar">
-        <div class="ep-bulk-info">
-          <i class="fa-solid fa-check-double"></i>
-          <strong>{{ bulkSelected.size }}</strong> {{ bulkSelected.size === 1 ? 'inscripcion seleccionada' : 'inscripciones seleccionadas' }}
-        </div>
-        <div class="ep-bulk-actions">
-          <button class="ep-bulk-btn ep-bulk-btn-secondary" @click="clearBulkSelection">
-            <i class="fa-solid fa-xmark"></i> Limpiar
-          </button>
-          <button class="ep-bulk-btn ep-bulk-btn-primary" @click="processSelectionInQueue">
-            <i class="fa-solid fa-list-check"></i> Procesar en cola
-          </button>
-        </div>
-      </div>
-    </Transition>
-
     <EnrollmentFilterModal
       :visible="list.showFilterModal.value"
       @update:visible="v => list.showFilterModal.value = v"
@@ -140,6 +122,11 @@
       @apply="onModalApply"
       @clear="onClearAll"
       @date-change="list.handleDateChange"
+    />
+
+    <ClassroomExportModal
+      :visible="showExportModal"
+      @update:visible="v => showExportModal = v"
     />
   </div>
 </template>
@@ -156,12 +143,16 @@ import EnrollmentCompactTable from './EnrollmentCompactTable.vue'
 import EnrollmentExpandedTable from './EnrollmentExpandedTable.vue'
 import EnrollmentFilterModal from './EnrollmentFilterModal.vue'
 import EnrollmentSidePanel from './EnrollmentSidePanel.vue'
+import ClassroomExportModal from './ClassroomExportModal.vue'
 
 const list = useEnrollmentList()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const integrationService = inject(ServiceKeys.Integration)
+
+// === Modal exportar aula ===
+const showExportModal = ref(false)
 
 // === Sync ventas a Google Sheets ===
 const syncingSheet = ref(false)
@@ -219,45 +210,6 @@ function applyFromUrl () {
 watch(() => list.activeViewKey.value, syncFiltersToUrl)
 watch(() => list.filters.q, syncFiltersToUrl)
 watch(() => list.pagin.value.page, syncFiltersToUrl)
-
-// === Bulk selection ===
-// Set de enrollment_id seleccionados. Se usa en la columna checkbox del listado
-// y en la barra flotante de acciones.
-const bulkSelected = ref(new Set())
-
-function toggleSelectOne (enrollmentId) {
-  const id = Number(enrollmentId)
-  const next = new Set(bulkSelected.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  bulkSelected.value = next
-}
-
-function toggleSelectAll (checked) {
-  if (!checked) {
-    bulkSelected.value = new Set()
-    return
-  }
-  const next = new Set()
-  list.filteredEnrollments.value.forEach(e => next.add(Number(e.enrollment_id)))
-  bulkSelected.value = next
-}
-
-function clearBulkSelection () {
-  bulkSelected.value = new Set()
-}
-
-// "Procesar en cola": guarda los IDs en localStorage y navega al primero.
-// EnrollmentDetailView lee la cola en startRedirect y avanza al siguiente al confirmar.
-function processSelectionInQueue () {
-  const ids = Array.from(bulkSelected.value)
-  if (ids.length === 0) return
-  try {
-    localStorage.setItem('fico_processing_queue', JSON.stringify(ids))
-  } catch (e) { /* ignore */ }
-  clearBulkSelection()
-  router.push({ name: 'enrollmentDetail', params: { id: String(ids[0]) } })
-}
 
 // Build KPI cards. When data is partial (DB couldn't return full sample),
 // breakdown KPIs come back null — show '—' instead of fake zeros.
@@ -444,6 +396,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 .ep-btn-sheet:hover:not(:disabled) { border-color: #34A853; color: #1E7E34; background: #F0FDF4; }
 .ep-btn-sheet:disabled { opacity: 0.6; cursor: not-allowed; }
 .ep-btn-sheet i { font-size: 11px; }
+
+.ep-btn-export {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-export:hover { border-color: #6366F1; color: #4F46E5; background: #EEF2FF; }
+.ep-btn-export i { font-size: 11px; }
 
 /* === Section wrapper (transparent by default — Aulas style) === */
 .ep-section {
@@ -688,60 +650,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   vertical-align: middle;
 }
 
-/* === Bulk action bar === */
-.ep-bulk-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 18px;
-  background: #1A1A1A;
-  color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0,0,0,.20);
-  z-index: 1000;
-  font-size: 13px;
-}
-.ep-bulk-info { display: flex; align-items: center; gap: 8px; }
-.ep-bulk-info i { color: #34D399; }
-.ep-bulk-info strong { font-size: 14px; }
-.ep-bulk-actions { display: flex; gap: 8px; }
-.ep-bulk-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all .15s;
-}
-.ep-bulk-btn-secondary {
-  background: rgba(255,255,255,.10);
-  color: rgba(255,255,255,.85);
-}
-.ep-bulk-btn-secondary:hover { background: rgba(255,255,255,.18); }
-.ep-bulk-btn-primary {
-  background: #0D9488;
-  color: #fff;
-}
-.ep-bulk-btn-primary:hover { background: #0F766E; }
-
-.ep-bulk-fade-enter-active,
-.ep-bulk-fade-leave-active {
-  transition: opacity .2s, transform .2s;
-}
-.ep-bulk-fade-enter-from,
-.ep-bulk-fade-leave-to {
-  opacity: 0;
-  transform: translate(-50%, 10px);
-}
-
 /* === Toolbar === */
 .ep-toolbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -816,6 +724,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 [data-coreui-theme="dark"] .enrollment-page .ep-toggle-btn.is-active { background: #2A2A22; }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-sheet {
   background: #1A1A14;
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-btn-export {
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .enrollment-page .ep-btn-export:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818CF8;
 }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-new:hover { background: #E4E4DD; }
