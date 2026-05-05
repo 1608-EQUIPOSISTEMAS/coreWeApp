@@ -69,7 +69,7 @@
               @change="toggleOption(option.value)"
             />
             <span class="option-label">{{ option.label }}</span>
-            <span class="option-count">({{ option.count }})</span>
+            <span v-if="option.count != null" class="option-count">({{ option.count }})</span>
           </label>
 
           <div v-if="filteredOptions.length === 0" class="no-results">
@@ -126,6 +126,10 @@ const props = defineProps({
   modelValue: {
     type: Array,
     default: () => []
+  },
+  fixedOptions: {
+    type: Array,
+    default: null
   }
 })
 
@@ -141,12 +145,29 @@ const dropdownStyle = ref({})
 
 // Valores únicos de la columna
 const uniqueOptions = computed(() => {
+  // Si vino una lista fija de opciones (modo server-side), usarla y no contar
+  // ocurrencias en la página visible.
+  if (Array.isArray(props.fixedOptions) && props.fixedOptions.length > 0) {
+    return props.fixedOptions
+      .map(opt => typeof opt === 'string'
+        ? { value: opt, label: opt, count: null }
+        : { value: opt.value, label: opt.label || opt.value, count: opt.count ?? null }
+      )
+      .sort((a, b) => {
+        const aSelected = tempSelected.value.includes(a.value)
+        const bSelected = tempSelected.value.includes(b.value)
+        if (aSelected && !bSelected) return -1
+        if (!aSelected && bSelected) return 1
+        return a.label.localeCompare(b.label)
+      })
+  }
+
   const countMap = new Map()
-  
+
   props.allItems.forEach(item => {
     const value = props.valueExtractor(item)
     const stringValue = value === null || value === undefined ? '(Vacío)' : String(value).trim()
-    
+
     if (countMap.has(stringValue)) {
       countMap.set(stringValue, countMap.get(stringValue) + 1)
     } else {
@@ -164,7 +185,7 @@ const uniqueOptions = computed(() => {
       // Ordenar: primero los seleccionados, luego alfabéticamente
       const aSelected = tempSelected.value.includes(a.value)
       const bSelected = tempSelected.value.includes(b.value)
-      
+
       if (aSelected && !bSelected) return -1
       if (!aSelected && bSelected) return 1
       return a.label.localeCompare(b.label)

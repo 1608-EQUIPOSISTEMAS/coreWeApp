@@ -194,4 +194,16 @@ export default class FicoService {
     const response = (await api.put('/token/edit-inscription', payload)).data;
     return response.data;
   }
+
+  async getClassroomExportOptions() {
+    const response = (await api.get('/fico/classroomexport/options')).data;
+    return response.data;
+  }
+
+  async downloadClassroomExport(programVersionId, editionNumId) {
+    return await api.get('/fico/classroomexport', {
+      params: { programVersionId, editionNumId },
+      responseType: 'blob'
+    });
+  }
 }

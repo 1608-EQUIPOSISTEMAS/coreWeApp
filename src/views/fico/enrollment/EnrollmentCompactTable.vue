@@ -41,6 +41,7 @@
                 column-label="Estado FICO"
                 :all-items="enrollments"
                 :value-extractor="e => e.confirmation || 'Pendiente'"
+                :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']"
                 v-model="colFilters.estado"
               />
             </div>
@@ -174,7 +175,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
@@ -185,24 +185,15 @@ const props = defineProps({
   uniqueAgents:  { type: Array, default: () => [] },
   uniqueEstados: { type: Array, default: () => [] },
   isLoading:   { type: Boolean, default: false },
-  selectedId:  { type: [Number, String], default: null },
-  selectedIds: { type: Set, default: () => new Set() }
+  selectedId:  { type: [Number, String], default: null }
 })
-const emit = defineEmits(['select-row', 'toggle-select', 'toggle-select-all'])
-
-const allSelected = computed(() => {
-  if (!props.enrollments.length) return false
-  return props.enrollments.every(e => props.selectedIds.has(Number(e.enrollment_id)))
-})
-const someSelected = computed(() => {
-  return props.enrollments.some(e => props.selectedIds.has(Number(e.enrollment_id)))
-})
+const emit = defineEmits(['select-row'])
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
 
 function onRowClick (e, evt) {
-  if (evt.target.closest('button, input, select, a')) return
+  if (evt.target.closest('button, input, select, a, label')) return
   emit('select-row', e)
 }
 
@@ -497,27 +488,6 @@ function clearColFilters () {
 .ect-chip-red    { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
 .ect-chip-amber  { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
 .ect-chip-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
-
-/* Checkbox de seleccion en lote */
-.ect-check-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 4px;
-}
-.ect-check-wrap input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: #0D9488;
-}
-.ect-row.is-checked {
-  background: rgba(13, 148, 136, 0.05);
-}
-.ect-row.is-checked.is-selected {
-  background: rgba(13, 148, 136, 0.10);
-}
 
 /* Badge especifico de convalidacion: distintivo + clickeable */
 .pill-validation {

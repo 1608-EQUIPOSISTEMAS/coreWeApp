@@ -92,6 +92,18 @@ export function useEnrollmentList () {
     }, 400)
   })
 
+  // Filtro de columna ESTADO FICO: server-side (todas las paginas).
+  // Sincroniza colFilters.estado -> filters.confirmations y refetch. El guard
+  // evita doble fetch cuando applySavedView ya seteo confirmations en paralelo.
+  watch(() => [...colFilters.estado], (newVal) => {
+    const current = (filters.confirmations || []).map(c => c?.description || c)
+    const same = newVal.length === current.length && newVal.every(v => current.includes(v))
+    if (same) return
+    filters.confirmations = newVal.map(d => ({ description: d }))
+    pagin.value.page = 1
+    fetchEnrollments()
+  })
+
   const uniqueAgents = computed(() => [...new Set(enrollments.value.map(e => e.seller_agent_name).filter(Boolean))].sort())
   const uniqueEstados = computed(() => [...new Set(enrollments.value.map(e => e.confirmation || 'Pendiente').filter(Boolean))].sort())
 
@@ -108,7 +120,7 @@ export function useEnrollmentList () {
         return colFilters.tipoPago.includes(tipo)
       })
     }
-    if (colFilters.estado.length) list = list.filter(e => colFilters.estado.includes(e.confirmation || 'Pendiente'))
+    // colFilters.estado ya no filtra aqui — es server-side via filters.confirmations
     return list
   })
 
@@ -189,11 +201,13 @@ export function useEnrollmentList () {
     else if (key === 'created_range') { filters.date_from = null; filters.date_to = null; filters.created_range_string = null }
     else if (key === 'edition_range') { filters.edition_start_from = null; filters.edition_start_to = null; filters.edition_range_string = null }
     else if (ak.includes(key)) filters[key] = []
+    if (key === 'confirmations') colFilters.estado = []
     applyFilters()
   }
 
   function clearFilters () {
     Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null })
+    colFilters.estado = []
     pagin.value.page = 1; saveState(); fetchEnrollments()
   }
 
@@ -330,6 +344,9 @@ export function useEnrollmentList () {
       edition_start_from: null, edition_start_to: null, edition_range_string: null
     })
     Object.assign(filters, view.filters)
+    // Mantener el badge del funnel ESTADO FICO sincronizado con la saved view.
+    // El watch de colFilters.estado ve que ya estan iguales y no dispara refetch.
+    colFilters.estado = (filters.confirmations || []).map(c => c?.description || c)
     pagin.value.page = 1
     saveState()
     fetchEnrollments()
