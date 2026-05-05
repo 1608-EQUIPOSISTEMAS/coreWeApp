@@ -34,7 +34,7 @@
           <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
           <div class="row g-3">
 
-<div class="col-md-3">
+<div class="col-md-5">
               <label class="exec-label">Fecha contacto inicial <span class="c-red">*</span></label>
               <DateTime12
                 :onlyHours="true"
@@ -44,9 +44,21 @@
                 clearable />
             </div>
 
-            <div class="col-md-5"></div>
-
             <div class="col-6 col-md-4">
+              <label class="exec-label">Celular de origen <span class="c-red">*</span></label>
+              <SearchSelect
+                v-model="form.origin_seller_phone"
+                :items="sellerPhoneOptions"
+                label-field="label"
+                value-field="value"
+                :disabled="sellerPhoneLocked"
+                required
+                placeholder="Selecciona celular…"
+                class="exec-select-light w-100"
+              />
+            </div>
+
+            <div class="col-6 col-md-3">
               <label class="exec-label">T. Consulta</label>
               <SearchSelect
                 v-model="form.query_alias"
@@ -1849,6 +1861,25 @@ import FileUploader from '@/components/FileUploader.vue'
 
 const storedUserStr = localStorage.getItem('user')
 const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
+
+const sellerPhones = computed(() =>
+  Array.isArray(storedUser?.phones)
+    ? storedUser.phones.filter(p => p != null && String(p).trim() !== '').map(p => ({ value: String(p), label: String(p) }))
+    : []
+)
+
+const sellerPhoneOptions = computed(() => {
+  const base = sellerPhones.value
+  let current = null
+  try { current = form?.origin_seller_phone } catch { current = null }
+  if (current && !base.some(p => p.value === String(current))) {
+    return [{ value: String(current), label: String(current) }, ...base]
+  }
+  return base
+})
+
+const sellerPhoneLocked = computed(() => sellerPhoneOptions.value.length <= 1)
+
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 const pastDateConfig = {
@@ -1940,6 +1971,7 @@ const formatDuration = (seconds) => {
     program_modality_alias: null,
 
   fechaContactoInicial: currentHourIso(),
+    origin_seller_phone: sellerPhones.value[0]?.value ?? null,
     web: false,
     program_link: null,
   count_children: 0,
@@ -2339,6 +2371,7 @@ function normalizeDateTime(v) {
       edition_id: l.program_edition_id ?? l.edition_id ?? null,
       full_name: l.full_name ?? l.full_name_label ?? '',
       telefono:  l.origin_phone ?? l.phone ?? '',
+      origin_seller_phone: l.origin_seller_phone ?? sellerPhones.value[0]?.value ?? null,
       count_children: Number(l.count_children || 0),
       status_alias:   l.status_alias,
       country_alias:  l.country_alias,
@@ -2989,6 +3022,7 @@ function formatDateTime(isoString) {
         cat_client_moment: cat_client_category,
         membership_moment_id: form.membership_moment_id,
         origin_phone: (form.telefono || '').trim() || null,
+        origin_seller_phone: (form.origin_seller_phone || '').trim() || null,
         origin_email: null,
 
         message_init_conversation: form.mensajeChat?.trim() || null,
@@ -3589,7 +3623,7 @@ watch(() => form.program_version_id, () => {
 })
 
   function validateLeadInfo() {
-    const required = ['fechaContactoInicial']
+    const required = ['fechaContactoInicial', 'origin_seller_phone']
     for (const field of required) {
       if (field === 'edition_id') {
         if(route.query.clone_from)return true
