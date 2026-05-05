@@ -1,76 +1,59 @@
 <template>
-  <div class="exec-shell list-shell">
-<header class="exec-masthead" :class="{ 'masthead--compact': toolbarCollapsed }">
-  <div class="masthead-inner">
-    <div class="masthead-brand">
-      <div class="brand-rule" :class="{ 'brand-rule--sm': toolbarCollapsed }"></div>
-      <div class="brand-text">
-        <span class="brand-eyebrow" v-show="!toolbarCollapsed">Gestión Comercial</span>
-        <h1 class="brand-title">
-          <span v-if="!toolbarCollapsed">Listado de Leads</span>
-          <span v-else class="brand-title--inline">
-            <span class="brand-eyebrow--inline">CRM</span>
-            Leads
+  <div class="leads-page">
+    <header class="ep-masthead">
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">COMERCIAL</span>
+        <h1 class="ep-title">Listado de Leads</h1>
+        <span class="ep-subtitle">Gestión de leads y oportunidades</span>
+      </div>
+      <div class="ep-masthead-actions">
+        <div class="ep-view-toggle">
+          <button :class="['ep-toggle-btn', { 'is-active': !isCompact }]" @click="isCompact = false">
+            <i class="fa-solid fa-table-columns"></i> Expandida
+          </button>
+          <button :class="['ep-toggle-btn', { 'is-active': isCompact }]" @click="isCompact = true">
+            <i class="fa-solid fa-list"></i> Compacta
+          </button>
+        </div>
+        <button
+          class="ep-btn-control"
+          :class="hasActiveRestrictions ? 'ep-btn-danger' : ''"
+          @click="openControlModal"
+          :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
+        >
+          <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i>
+          <span>{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
+        </button>
+        <button class="ep-btn-new" @click="goNew" v-if="!hasActiveRestrictions">
+          <i class="fa-solid fa-plus"></i> Nuevo Lead
+        </button>
+      </div>
+    </header>
+    <main class="ep-body">
+
+      <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
+        <div class="ep-filter-bar-main">
+          <div class="ep-toolbar">
+            <BasePagination
+              v-model="pagin"
+              @open-filters="openFilterModal"
+              @change="handlePaginationChange"
+            />
+          </div>
+        </div>
+        <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
+          <span class="ep-filter-strip-badge">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            Filtros activos
+            <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
           </span>
-        </h1>
-      </div>
-    </div>
-
-    <button
-      class="focus-toggle-btn"
-      :class="{ 'focus-toggle-btn--active': toolbarCollapsed }"
-      @click="toolbarCollapsed = !toolbarCollapsed"
-      :title="toolbarCollapsed ? 'Expandir barra' : 'Modo enfocado'"
-    >
-      <i class="fa-solid" :class="toolbarCollapsed ? 'fa-maximize' : 'fa-minimize'"></i>
-      <span v-show="!toolbarCollapsed">Enfocar</span>
-    </button>
-  </div>
-</header>
-    <main class="exec-body">
-
-<div class="toolbar-chips mb-2" v-show="!toolbarCollapsed">
-        <BaseFilterChips
-          :items="activeFilterChips"
-          @remove="clearFilter"
-          @clear-all="clearFilters"
-        />
-      </div>
-
-<div class="exec-toolbar" v-show="!toolbarCollapsed">
-        <div class="toolbar-pagination">
-          <BasePagination
-            v-model="pagin"
-            @open-filters="openFilterModal"
-            @change="handlePaginationChange"
+          <BaseFilterChips
+            :items="activeFilterChips"
+            @remove="clearFilter"
+            @clear-all="clearFilters"
           />
         </div>
-        <div class="toolbar-actions">
-          <button
-            class="btn-exec"
-            :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'"
-            @click="openControlModal"
-            :title="isComercial ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
-          >
-            <i class="fa-solid" :class="isComercial ? 'fa-user-lock' : 'fa-shield-halved'"></i>
-            <span>{{ isComercial ? 'Mis Permisos' : 'Control' }}</span>
-          </button>
-
-          <button
-            class="btn-exec"
-            :class="isCompact ? 'btn-exec-active' : 'btn-exec-ghost'"
-            @click="isCompact = !isCompact"
-            title="Alternar entre vista agrupada y vista detallada por columnas"
-          >
-            <i class="fa-solid" :class="isCompact ? 'fa-list' : 'fa-table-columns'"></i>
-            <span>Compactado</span>
-          </button>
-
-          <button class="btn-exec btn-exec-primary" @click="goNew" v-if="!hasActiveRestrictions">
-            <i class="fa-solid fa-plus"></i> Nuevo Lead
-          </button>
-        </div>
-      </div>
+      </section>
 
       <div class="table-shell">
         <div class="table-responsive-custom">
@@ -93,9 +76,6 @@
 <tr v-if="!isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
     <div class="hf-actions-group">
-      <button v-if="toolbarCollapsed && !hasActiveRestrictions" class="hf-new-btn" @click="goNew" title="Nuevo Lead">
-        <i class="fa-solid fa-plus"></i>
-      </button>
       <button v-if="activeFilterChips.length" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -244,9 +224,6 @@
 <tr v-if="isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
     <div class="hf-actions-group">
-      <button v-if="toolbarCollapsed && !hasActiveRestrictions" class="hf-new-btn" @click="goNew" title="Nuevo Lead">
-        <i class="fa-solid fa-plus"></i>
-      </button>
       <button v-if="activeFilterChips.length" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -351,10 +328,8 @@
                 v-for="l in leadsRaw"
                 :key="l.id"
                 class="tbody-row"
-                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                @mousedown.left="startPress(l)"
-                @mouseup="cancelPress"
-                @mouseleave="cancelPress"
+                :class="rowClassForStatus(l.cat_status_alias)"
+                @click="openFollowModal(l)"
               >
                 <td class="td-a text-center nowrap"> 
                     <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
@@ -439,10 +414,8 @@
     v-for="l in leadsRaw"
     :key="l.id"
     class="tbody-row"
-    :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-    @mousedown.left="startPress(l)"
-    @mouseup="cancelPress"
-    @mouseleave="cancelPress"
+    :class="rowClassForStatus(l.cat_status_alias)"
+    @click="openFollowModal(l)"
   >
     <!-- Acciones (siempre visible) -->
     <td class="td-a text-center nowrap"> 
@@ -538,118 +511,131 @@
   </div>
 
 
-  <BaseModal v-model="showFollowModal" title="Gestión de Seguimiento" size="xl">
-    <div v-if="selectedFollowLead" class="exec-modal-body">
-      <div class="modal-lead-strip">
-        <div class="d-flex align-items-center gap-3">
-          <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
-          <div>
-            <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-            <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
-              <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
-              
-              <div class="d-flex align-items-center">
-                <i class="fa-solid fa-bullseye me-2"></i>
-                <SearchSelect
-                  v-model="selectedFollowLead.cat_status_alias"
-                  :items="filtroPipeline"
-                  label-field="description"
-                  value-field="alias"
-                  placeholder="Cambiar estado..."
-                  class="exec-select-light"
-                  style="min-width: 160px; height: 32px;"
-                />
+  <Teleport to="body">
+    <Transition name="downbar">
+      <div v-if="showFollowModal" class="downbar-overlay" @click.self="showFollowModal = false">
+        <div class="downbar-panel" role="dialog" aria-modal="true">
+          <header class="downbar-header">
+            <div class="downbar-grabber" aria-hidden="true"></div>
+            <h5 class="downbar-title">Gestión de Seguimiento</h5>
+            <button class="downbar-close" @click="showFollowModal = false" title="Cerrar">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </header>
+
+          <div class="downbar-body" v-if="selectedFollowLead">
+            <div class="modal-lead-strip">
+              <div class="d-flex align-items-center gap-3">
+                <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
+                <div>
+                  <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+                  <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
+                    <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
+
+                    <div class="d-flex align-items-center">
+                      <i class="fa-solid fa-bullseye me-2"></i>
+                      <SearchSelect
+                        v-model="selectedFollowLead.cat_status_alias"
+                        :items="filtroPipeline"
+                        label-field="description"
+                        value-field="alias"
+                        placeholder="Cambiar estado..."
+                        class="exec-select-light"
+                        style="min-width: 160px; height: 32px;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
+                <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
+              </button>
+            </div>
+            <div v-if="isLoadingFollow" class="exec-loader py-4">
+              <div class="loader-ring"></div>
+              <p class="text-muted small mt-2 fw-600">Cargando historial...</p>
+            </div>
+            <div v-else class="p-3 scroll-area">
+              <div v-if="editableHistory.length > 0" class="table-shell" style="overflow-x: auto;">
+                <table class="exec-table" style="min-width: 1100px;">
+                  <thead>
+                    <tr class="thead-sub">
+                      <th class="ts ts-c text-center" style="width: 46px;">#</th>
+                      <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
+                      <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
+                      <th class="ts ts-c" style="min-width: 280px;">Fecha / Hora</th>
+                      <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
+                      <th class="ts ts-c" style="min-width: 190px;">Observación</th>
+                      <th class="ts ts-c" style="min-width: 150px;">Registrado por</th>
+                      <th class="ts ts-c" style="min-width: 150px;">Modificado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{ 'row-highlight': !attempt.id }">
+                      <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ attempt.attempt_number ?? '—' }}</td>
+                      <td class="td-a align-top pt-2" style="min-width: 230px;">
+                        <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required @update:model-value="(val) => handleTypeChange(attempt, val)" />
+                        <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
+                          <span class="pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
+                            <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
+                            {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
+                          </span>
+                        </div>
+                        <div v-else class="mt-2 text-truncate text-center" style="font-size: 10px;">
+                          <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2" style="min-width: 230px;">
+                        <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
+                        <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
+                          <i class="fa-regular fa-paper-plane me-2"></i>
+                          <span>Mensaje / Gestión</span>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}" />
+                      </td>
+                      <td class="td-a align-top text-center pt-2">
+                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
+                          <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="toggleTimer(attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
+                            <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
+                          </button>
+                          <div class="text-mono fw-700 timer-display" :class="attempt.timerActive ? 'timer-display--active' : ''">{{ formatDuration(attempt.contact_duration) }}</div>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
+                        <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">{{ attempt.user_modification_label }}</div>
+                        <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="empty-state">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <p>No hay historial previo. Agrega el primer intento.</p>
               </div>
             </div>
           </div>
-        </div>
-        <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
-          <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
-        </button>
-      </div>
-      <div v-if="isLoadingFollow" class="exec-loader py-4">
-        <div class="loader-ring"></div>
-        <p class="text-muted small mt-2 fw-600">Cargando historial...</p>
-      </div>
-      <div v-else class="p-3 scroll-area">
-        <div v-if="editableHistory.length > 0" class="table-shell" style="overflow-x: auto;">
-          <table class="exec-table" style="min-width: 1100px;">
-            <thead>
-              <tr class="thead-sub">
-                <th class="ts ts-c text-center" style="width: 46px;">#</th>
-                <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
-                <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
-                <th class="ts ts-c" style="min-width: 280px;">Fecha / Hora</th>
-                <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
-                <th class="ts ts-c" style="min-width: 190px;">Observación</th>
-                <th class="ts ts-c" style="min-width: 150px;">Registrado por</th>
-                <th class="ts ts-c" style="min-width: 150px;">Modificado por</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{ 'row-highlight': !attempt.id }">
-                <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ attempt.attempt_number ?? '—' }}</td>
-                <td class="td-a align-top pt-2" style="min-width: 230px;">
-                  <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required @update:model-value="(val) => handleTypeChange(attempt, val)" />
-                  <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
-                    <span class="pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
-                      <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
-                      {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
-                    </span>
-                  </div>
-                  <div v-else class="mt-2 text-truncate text-center" style="font-size: 10px;">
-                    <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2" style="min-width: 230px;">
-                  <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
-                  <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
-                    <i class="fa-regular fa-paper-plane me-2"></i>
-                    <span>Mensaje / Gestión</span>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}" />
-                </td>
-                <td class="td-a align-top text-center pt-2">
-                  <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
-                    <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="toggleTimer(attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
-                      <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
-                    </button>
-                    <div class="text-mono fw-700 timer-display" :class="attempt.timerActive ? 'timer-display--active' : ''">{{ formatDuration(attempt.contact_duration) }}</div>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
-                  <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">{{ attempt.user_modification_label }}</div>
-                  <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="empty-state">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <p>No hay historial previo. Agrega el primer intento.</p>
+
+          <footer class="downbar-footer">
+            <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
+            <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
+              <i class="fa-solid fa-save me-1"></i>
+              {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
+            </button>
+          </footer>
         </div>
       </div>
-    </div>
-    <template #footer>
-      <div class="d-flex justify-content-between w-100">
-        <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
-        <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
-          <i class="fa-solid fa-save me-1"></i>
-          {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
-        </button>
-      </div>
-    </template>
-  </BaseModal>
+    </Transition>
+  </Teleport>
 
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="xl">
@@ -1139,9 +1125,6 @@ const filtroOwners = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
 
 // === LONG PRESS ===
-const pressingRowId = ref(null)
-let pressTimer = null
-
 // === PERMISOS ===
 const storedUserStr = localStorage.getItem('user')
 const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
@@ -1798,15 +1781,6 @@ async function handleResubmitFromModal () {
   }
 }
 
-// === EVENTOS UI ===
-function startPress(lead) {
-  pressingRowId.value = lead.id
-  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 1000)
-}
-function cancelPress() {
-  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
-  pressingRowId.value = null
-}
 
 function clearFilters(reload = true) {
   Object.assign(filters, {
@@ -1949,8 +1923,6 @@ let inlineFilterTimer = null
 function triggerInlineFilter() { pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function debouncedInlineFilter() { clearTimeout(inlineFilterTimer); inlineFilterTimer = setTimeout(() => triggerInlineFilter(), 400) }
 
-const toolbarCollapsed = ref(localStorage.getItem('crm_leads_toolbar_collapsed') === 'true')
-watch(toolbarCollapsed, (val) => { localStorage.setItem('crm_leads_toolbar_collapsed', val) })
 
 const filteredCallingByType = (catTypeAttempt) => {
   if (catTypeAttempt === 'we_attempt_call') return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
@@ -2028,33 +2000,217 @@ const saldoPendienteDisplay = computed(() => {
 
 
 <style scoped>
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
+/* ═══════════════════════════════════════════════════
+   LAYOUT — diseño basado en EnrollmentPage
+   ═══════════════════════════════════════════════════ */
+.leads-page {
+  --e-bg: #FFFFFF;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--e-text);
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  font-size: 13px;
+}
+
+/* === Masthead === */
+.ep-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
+.ep-breadcrumb {
+  font-size: 11px;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.ep-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--e-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.ep-subtitle {
+  font-size: 13.5px;
+  color: var(--e-text-secondary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
+
+/* View toggle */
+.ep-view-toggle { display: flex; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
+.ep-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+  color: var(--e-text-secondary); background: transparent;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-toggle-btn.is-active { background: var(--e-bg-subtle); color: var(--e-text); font-weight: 600; }
+.ep-toggle-btn:not(.is-active):hover { color: var(--e-text); }
+
+/* Control button */
+.ep-btn-control {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-control:hover { border-color: var(--e-border-strong); background: var(--e-bg-subtle); }
+.ep-btn-control.ep-btn-danger {
+  background: rgba(220, 38, 38, 0.06);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+  animation: pulseRed 2s infinite;
+}
+.ep-btn-control i { font-size: 11px; }
+
+/* New button */
+.ep-btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--e-text);
+  border: none; border-radius: 8px; cursor: pointer;
+  transition: background .2s ease; font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.ep-btn-new:hover { background: #333; }
+.ep-btn-new i { font-size: 11px; }
+
+/* === Body === */
+.ep-body { padding: 0; }
+
+/* === Filter bar section === */
+.ep-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 14px;
+}
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  font-size: 13px;
-  color: var(--text-primary, #0f172a);
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
-
-.exec-masthead {
-  background: var(--navy-900, #0f172a);
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.ep-toolbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 16px; flex-wrap: wrap;
+  flex: 1 1 auto;
+}
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
   color: #fff;
-  border-bottom: 1px solid var(--navy-700, #334155);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  transition: padding .2s ease;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; transition: padding .2s ease; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; transition: height .2s ease, width .2s ease; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: #fff; transition: font-size .2s ease; }
+.ep-filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
+.ep-filter-strip :deep(.active-filters .label) { display: none; }
 
-.exec-body { flex: 1; padding: 20px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
-.toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* === Dark mode === */
+[data-coreui-theme="dark"] .leads-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16, 185, 129, 0.16);
+}
+[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .leads-page .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .leads-page .ep-filter-strip-badge { color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .ep-view-toggle { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .ep-toggle-btn.is-active { background: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-control { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-new:hover { background: #E4E4DD; }
+
+/* Dark mode — compact group headers */
+[data-coreui-theme="dark"] .leads-page .thead-colgroup { background: #1F1F1A; }
+[data-coreui-theme="dark"] .leads-page .tg-fixed { background: #1F1F1A; border-right-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .tg-header { background: #1A1A14; border-right-color: #2A2A22; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .tg-header:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .leads-page .tg-programa { color: #60a5fa; }
+[data-coreui-theme="dark"] .leads-page .tg-cliente  { color: #34d399; }
+[data-coreui-theme="dark"] .leads-page .tg-lead     { color: #fbbf24; }
+[data-coreui-theme="dark"] .leads-page .tg-asesor   { color: #a78bfa; }
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-programa,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-cliente,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-lead,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-asesor { background: #1A1A14; }
+[data-coreui-theme="dark"] .leads-page .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .thead-filter .tf { background: #1F1F1A; border-bottom-color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .table-shell { background: #1A1A14; border-color: #2A2A22; }
 
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
@@ -2071,73 +2227,60 @@ const saldoPendienteDisplay = computed(() => {
 .btn-exec-outline { background: #fff; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
 .btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); border-color: var(--slate-400, #94a3b8); }
 
-.table-shell { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.04); overflow: visible; }
-.table-responsive-custom { width: 100%; overflow-x: auto; border-radius: 6px; }
+.table-shell { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+.table-responsive-custom { width: 100%; overflow-x: auto; overflow-y: visible; border-radius: 8px; }
 .exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); text-align: left; background: #fafbfc; color: var(--text-secondary, #475569); white-space: nowrap; }
+.thead-sub .ts { padding: 5px 10px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #E5E7EB; text-align: left; background: #FAFAFA; color: #6B7280; white-space: nowrap; }
 .thead-sub .ts.text-center { text-align: center; }
 
 /* ═══════════════════════════════════════════════════════════════
-   GRUPOS DE COLUMNAS COLAPSABLES
+   GRUPOS DE COLUMNAS COLAPSABLES — estilo EnrollmentExpandedTable
    ═══════════════════════════════════════════════════════════════ */
 .thead-colgroup {
-  background: #0f172a;
+  background: #FAFAFA;
 }
 
 .tg-fixed {
   width: 80px;
   min-width: 80px;
-  background: #0f172a;
-  border-right: 1px solid #1e293b;
+  background: #FAFAFA;
+  border-right: 1px solid #E5E7EB;
 }
 
 .tg-header {
   padding: 0;
   cursor: pointer;
   user-select: none;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid #E5E7EB;
+  border-bottom: 1px solid #E5E7EB;
+  background: #fff;
   transition: background 0.15s;
   white-space: nowrap;
 }
 
+.tg-header:hover { background: #F9FAFB; }
+
 .tg-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 14px;
-  font-size: 10px;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.tg-icon { font-size: 9px; opacity: 0.8; }
-.tg-text { flex: 1; text-align: center; }
-.tg-chevron { font-size: 8px; opacity: 0.7; transition: transform 0.2s; }
+.tg-icon { font-size: 9px; opacity: 0.7; }
+.tg-text { }
+.tg-chevron { font-size: 8px; transition: transform 0.2s; opacity: 0.55; }
 
-/* Colores por grupo */
-.tg-programa {
-  background: #1e3a5f;
-  color: #93c5fd;
-  border-bottom: 2px solid #3b82f6;
-}
-.tg-programa:hover { background: #1d4ed8; color: #dbeafe; }
-
-.tg-cliente {
-  background: #1a3a2a;
-  color: #86efac;
-  border-bottom: 2px solid #22c55e;
-}
-.tg-cliente:hover { background: #166534; color: #dcfce7; }
-
-.tg-lead {
-  background: #3b2a1a;
-  color: #fcd34d;
-  border-bottom: 2px solid #f59e0b;
-}
-.tg-lead:hover { background: #92400e; color: #fef3c7; }
+/* Colores por grupo — borde izquierdo de acento */
+.tg-programa { border-left: 2px solid #2563eb; color: #1e40af; }
+.tg-cliente  { border-left: 2px solid #059669; color: #065f46; }
+.tg-lead     { border-left: 2px solid #d97706; color: #92400e; }
+.tg-asesor   { border-left: 2px solid #7c3aed; color: #5b21b6; }
 
 /* Estado colapsado */
 .tg-collapsed {
@@ -2149,7 +2292,7 @@ const saldoPendienteDisplay = computed(() => {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   font-size: 9px;
-  max-height: 80px;
+  max-height: 60px;
   overflow: hidden;
 }
 .tg-collapsed .tg-label {
@@ -2157,9 +2300,10 @@ const saldoPendienteDisplay = computed(() => {
   padding: 8px 4px;
   gap: 4px;
 }
-.tg-collapsed.tg-programa { background: #1e3a5f; }
-.tg-collapsed.tg-cliente  { background: #1a3a2a; }
-.tg-collapsed.tg-lead     { background: #3b2a1a; }
+.tg-collapsed.tg-programa,
+.tg-collapsed.tg-cliente,
+.tg-collapsed.tg-lead,
+.tg-collapsed.tg-asesor { background: #fff; }
 
 /* Celda placeholder cuando grupo está colapsado */
 .tg-placeholder-cell {
@@ -2180,9 +2324,9 @@ const saldoPendienteDisplay = computed(() => {
   width: 100%;
 }
 
-.tg-hint-programa { color: #3b82f6; background: #eff6ff; }
-.tg-hint-cliente  { color: #22c55e; background: #f0fdf4; }
-.tg-hint-lead     { color: #f59e0b; background: #fffbeb; }
+.tg-hint-programa { color: #2563eb; background: #eff6ff; }
+.tg-hint-cliente  { color: #059669; background: #f0fdf4; }
+.tg-hint-lead     { color: #d97706; background: #fffbeb; }
 /* ═══════════════════════════════════════════════════════════════ */
 
 .thead-group .th-cat { background: var(--navy-900, #0f172a); color: var(--slate-300, #cbd5e1); padding: 10px 14px; border-right: 2px solid #334155; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; }
@@ -2204,9 +2348,6 @@ const saldoPendienteDisplay = computed(() => {
 .row-gray     { border-left: 3px solid #94a3b8; } .row-gray > td      { background: var(--slate-50, #f8fafc); color: var(--text-secondary, #475569); }
 .row-red      { border-left: 3px solid #ef4444; } .row-red > td       { background: #fef2f2; }
 .row-highlight > td { background: #eff6ff !important; }
-
-.tbody-row::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background: rgba(20,184,166,.13); transition: width .3s ease-out; pointer-events: none; z-index: 5; }
-.row-pressing::after { width: 100%; transition: width 1s linear; }
 
 .td-a { border-left: 1px solid transparent; }
 .td-b { border-left: 1px solid transparent; }
@@ -2325,7 +2466,7 @@ const saldoPendienteDisplay = computed(() => {
 /* ═══════════════════════════════════════════════════════════════ */
 
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
-.thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }
+.thead-filter .tf { padding: 5px 6px; background: #FAFAFA; border-bottom: 2px solid #0D9488; vertical-align: middle; position: relative; }
 .hf-input { width: 100%; height: 28px; padding: 3px 8px; font-size: 11px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
 .hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20, 184, 166, .15); }
 .hf-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 10.5px; }
@@ -2384,34 +2525,21 @@ const saldoPendienteDisplay = computed(() => {
   border-color: var(--teal-500, #14b8a6) !important;
   box-shadow: 0 0 0 2px rgba(20, 184, 166, .15) !important;
 }
-.thead-sub .ts { border-bottom: 1px solid var(--border, #e2e8f0); }
+.thead-sub .ts { border-bottom: 1px solid #E5E7EB; }
 /* ═══════════════════════════════════════════════════════════════ */
 
-/* ══ FOCUS MODE TOGGLE ════════════════════════════════════════ */
-.focus-toggle-btn { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.07); color: var(--slate-300, #cbd5e1); transition: all 0.15s; white-space: nowrap; }
-.focus-toggle-btn:hover { background: rgba(255, 255, 255, 0.13); color: #fff; border-color: rgba(255, 255, 255, 0.25); }
-.exec-toolbar, .toolbar-chips { transition: opacity 0.2s ease; }
+/* ══ HEADER FILTER ACTIONS ════════════════════════════════════ */
 .tf-actions-cell { text-align: center; }
 .hf-actions-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.hf-new-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 auto; border: 1px solid #bbf7d0; border-radius: 4px; background: #f0fdf4; color: #15803d; cursor: pointer; font-size: 11px; font-weight: 700; transition: all 0.15s; }
-.hf-new-btn:hover { background: #dcfce7; border-color: #86efac; color: #166534; }
-
-/* ══ MASTHEAD COMPACT ═════════════════════════════════════════ */
-.masthead--compact .masthead-inner { padding: 6px 28px; }
-.brand-rule--sm { height: 24px !important; width: 3px !important; }
-.masthead--compact .brand-title { font-size: 14px; letter-spacing: .01em; }
-.brand-eyebrow--inline { font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--teal-500, #14b8a6); margin-right: 6px; vertical-align: middle; }
-.focus-toggle-btn--active { background: var(--teal-500, #14b8a6) !important; color: #fff !important; border-color: var(--teal-500, #14b8a6) !important; padding: 5px 10px; font-size: 11px; }
 /* ═════════════════════════════════════════════════════════════ */
 
 /* Últimas celdas del thead-filter — dropdown abre a la izquierda */
 .thead-filter .tf:nth-last-child(-n+3) :deep(.multiselect-dropdown) { left: auto !important; right: 0 !important; }
 
 @media (max-width: 768px) {
-  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px 16px; }
-  .exec-toolbar { flex-direction: column-reverse; align-items: stretch; }
-  .toolbar-actions { justify-content: flex-end; }
-  .exec-body { padding: 16px 12px; }
+  .leads-page { padding: 16px 12px; }
+  .ep-masthead { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .ep-masthead-actions { flex-wrap: wrap; }
 }
 
 
@@ -2434,17 +2562,7 @@ const saldoPendienteDisplay = computed(() => {
 .tg-hint-lead     { background: #fffbeb; }
 .tg-hint-asesor   { background: #f5f3ff; }
 
-/* AÑADIR colores del grupo D. ASESOR */
-.tg-asesor {
-  background: #2e1a47;
-  color: #c4b5fd;
-  border-bottom: 2px solid #8b5cf6;
-}
-.tg-asesor:hover { background: #5b21b6; color: #ede9fe; }
-
-.tg-collapsed.tg-asesor { background: #2e1a47; }
-
-.tg-hint-asesor { color: #6d28d9; }
+.tg-hint-asesor { color: #7c3aed; background: #f5f3ff; }
 
 .obs-enroll-banner {
   display: flex; align-items: center; gap: 16px;
@@ -2463,5 +2581,135 @@ const saldoPendienteDisplay = computed(() => {
 }
 .obs-enroll-btn:hover { opacity: .9; }
 .obs-enroll-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════
+   DOWNBAR — bottom sheet (slides up from bottom)
+   ═══════════════════════════════════════════════════ */
+.downbar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1055;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.downbar-panel {
+  background: #fff;
+  width: 100%;
+  max-width: 1400px;
+  max-height: 88vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.downbar-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid #F0F0F0;
+  flex-shrink: 0;
+}
+
+.downbar-grabber {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 4px;
+  background: #E5E7EB;
+  border-radius: 999px;
+}
+
+.downbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.downbar-close {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid #E8E8E8;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #737373;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+}
+.downbar-close:hover {
+  background: #FAFAFA;
+  border-color: #D4D4D4;
+  color: #1A1A1A;
+}
+
+.downbar-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.downbar-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #F0F0F0;
+  background: #FAFAFA;
+  flex-shrink: 0;
+}
+
+/* Slide-up animation */
+.downbar-enter-active,
+.downbar-leave-active {
+  transition: opacity 0.25s ease;
+}
+.downbar-enter-active .downbar-panel,
+.downbar-leave-active .downbar-panel {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.downbar-enter-from,
+.downbar-leave-to {
+  opacity: 0;
+}
+.downbar-enter-from .downbar-panel,
+.downbar-leave-to .downbar-panel {
+  transform: translateY(100%);
+}
+
+/* Dark mode */
+[data-coreui-theme="dark"] .downbar-overlay { background: rgba(0, 0, 0, 0.6); }
+[data-coreui-theme="dark"] .downbar-panel { background: #1A1A14; box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5); }
+[data-coreui-theme="dark"] .downbar-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .downbar-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .downbar-grabber { background: #2A2A22; }
+[data-coreui-theme="dark"] .downbar-close { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .downbar-close:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .downbar-footer { background: #1F1F1A; border-top-color: #2A2A22; }
+
+@media (max-width: 768px) {
+  .downbar-panel { max-height: 92vh; border-radius: 14px 14px 0 0; }
+  .downbar-header { padding: 16px 16px 12px; }
+  .downbar-footer { padding: 12px 16px; }
+}
 
 </style>

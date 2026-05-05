@@ -1,78 +1,20 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div class="ef-page form-shell">
 
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text d-flex align-items-center gap-3">
-            <div>
-              <span class="brand-eyebrow">CRM Comercial</span>
-              <h1 class="brand-title">Formulario Comercial</h1>
-            </div>
-          </div>
-        </div>
-        <div class="masthead-actions">
-          <button
-  :title="
-    form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id
-      ? 'Debe seleccionar una edición para programas EN VIVO'
-      : 'Inscribir alumno'
-  "
-  type="button"
-  v-if="
-    !form.enrollment_id &&
-    form.status_alias == 'we_lead_status_bought' &&
-    form.pay_date &&
-    form.client_status == 'we_client_person' &&
-    form.program_version_id
-  "
-  class="btn-exec btn-exec-warning"
-  :disabled="
-    !!form.enrollment_id ||
-    (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)
-  "
-  @click="openInscription()"
->
-  <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
-</button>
-<button
-  type="button"
-  v-if="
-    !form.enrollment_id &&
-    form.status_alias == 'we_lead_status_will_pay' &&
-    form.client_status == 'we_client_person' &&
-    form.program_version_id
-  "
-  class="btn-exec btn-exec-warning"
-  style="background: #6366F1;"
-  :disabled="
-    !!form.enrollment_id ||
-    (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)
-  "
-  @click="openTokenInscription()"
->
-  <i class="fa-solid fa-link"></i> INSCRIPCION TOKEN
-</button>
-          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
-            <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
-          </button>
-<button
-  v-if="!form.enrollment_id"
-  type="button"
-  class="btn-exec btn-exec-primary px-4"
-  @click="guardar"
-  :disabled="saving || form.enrollment_id || (!isEdit && !!saveBlockReason)"
-  :title="!isEdit && saveBlockReason ? saveBlockReason : 'Guardar lead'"
->
-  <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-  {{ saving ? 'Guardando...' : 'Guardar lead' }}
-</button>
-        </div>
+    <div class="ef-page-header">
+      <div class="ef-page-header-left">
+        <span class="ef-breadcrumb">CRM Comercial</span>
+        <h1 class="ef-page-title">Formulario Comercial</h1>
       </div>
-    </header>
-<main class="exec-body pb-5" v-if="loaded">
-      <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
+      <div class="ef-header-actions">
+        <button type="button" class="ef-btn-outline" @click="cancelar">
+          <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
+        </button>
+      </div>
+    </div>
+
+    <main class="ef-body" v-if="loaded">
+      <div class="ef-form-wrapper">
 
         <!-- Banner de inscripcion observada -->
         <div v-if="observedData" class="obs-banner mb-4">
@@ -642,23 +584,63 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       </div>
       <!-- BANNER: Estado Eliminado -->
-<Transition name="delete-warn">
-  <div v-if="isDeleteStatus" class="delete-status-banner">
-    <div class="delete-banner-icon">
-      <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
-    </div>
-    <div class="delete-banner-body">
-      <strong>¡Atención! Este lead será marcado como ELIMINADO.</strong>
-      <span>Al guardar, desaparecerá del listado comercial y no será visible para el equipo.</span>
-    </div>
-    <div class="delete-banner-label">
-      <span class="pill pill-red border">ELIMINADO</span>
-    </div>
-  </div>
-</Transition>
+      <Transition name="delete-warn">
+        <div v-if="isDeleteStatus" class="delete-status-banner">
+          <div class="delete-banner-icon">
+            <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
+          </div>
+          <div class="delete-banner-body">
+            <strong>¡Atención! Este lead será marcado como ELIMINADO.</strong>
+            <span>Al guardar, desaparecerá del listado comercial y no será visible para el equipo.</span>
+          </div>
+          <div class="delete-banner-label">
+            <span class="pill pill-red border">ELIMINADO</span>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- FOOTER ACTIONS -->
+      <div class="ef-footer-actions">
+        <button type="button" class="ef-btn-outline" @click="cancelar">
+          {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
+        </button>
+
+        <button
+          type="button"
+          v-if="!form.enrollment_id && form.status_alias == 'we_lead_status_will_pay' && form.client_status == 'we_client_person' && form.program_version_id"
+          class="ef-btn-token"
+          :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
+          @click="openTokenInscription()"
+        >
+          <i class="fa-solid fa-link"></i> INSCRIPCION TOKEN
+        </button>
+
+        <button
+          type="button"
+          v-if="!form.enrollment_id && form.status_alias == 'we_lead_status_bought' && form.pay_date && form.client_status == 'we_client_person' && form.program_version_id"
+          class="ef-btn-warning"
+          :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
+          :title="form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id ? 'Debe seleccionar una edición para programas EN VIVO' : 'Inscribir alumno'"
+          @click="openInscription()"
+        >
+          <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
+        </button>
+
+        <button
+          v-if="!form.enrollment_id"
+          type="button"
+          class="ef-btn-primary"
+          @click="guardar"
+          :disabled="saving || form.enrollment_id || (!isEdit && !!saveBlockReason)"
+          :title="!isEdit && saveBlockReason ? saveBlockReason : 'Guardar lead'"
+        >
+          <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+          {{ saving ? 'Guardando...' : 'Guardar lead' }}
+        </button>
+      </div>
     </main>
 
-    <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height:50vh;">
+    <main class="ef-body ef-loading" v-else>
       <div class="text-center">
         <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
         <p class="text-muted fw-600">Cargando formulario...</p>
@@ -4199,206 +4181,285 @@ function toggleReschedule(contacto) {
 </script>
 
 <style scoped>
-/* ── CONTENEDORES PRINCIPALES (Solución de scroll único) ── */
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
+/* ═══════════════════════════════════════════════════
+   PAGE LAYOUT — diseño basado en EnrollmentForm
+   ═══════════════════════════════════════════════════ */
+.ef-page {
+  background: #FFFFFF;
+  padding: 32px 32px 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1A1A1A;
   min-height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.exec-masthead {
-  background: var(--navy-900, #0f172a);
-  color: #fff;
-  border-bottom: 1px solid var(--navy-700, #334155);
-  position: sticky;
-  top: 60px; /* IMPORTANTE: Ajusta este valor si tu barra superior blanca es más alta o más baja. Si tu barra superior no es fija, pon esto en 0 */
-  z-index: 100;
-}
-
-.exec-body {
-  flex: 1;
-  padding: 32px 28px;
-}
-
-/* ── RESTO DE TUS ESTILOS ── */
-.masthead-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 28px;
-}
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; }
-.brand-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--slate-400, #94a3b8);
-  font-weight: 500;
-  display: block;
-  margin-bottom: 3px;
-}
-.brand-title {
-  font-size: 19px;
-  font-weight: 700;
-  margin: 0;
-  color: #fff;
-}
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-
-.exec-form-wrapper {
-  background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 8px;
-  padding: 32px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-.exec-fieldset {
-  background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 6px;
-  padding: 20px 24px;
-  margin-bottom: 24px;
+.ef-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
 }
-.fieldset-title {
+
+.ef-page-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ef-breadcrumb {
   font-size: 11px;
+  color: #A3A3A3;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary, #475569);
-  font-weight: 700;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--slate-100, #f1f5f9);
-  padding-bottom: 10px;
+  font-weight: 500;
 }
-.exec-label {
-  font-size: 10.5px;
+
+.ef-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ef-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ef-body {
+  padding: 0;
+}
+.ef-body.ef-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.ef-form-wrapper {
+  width: 100%;
+}
+
+/* ── BUTTONS (ef-style) ─────────────────────────── */
+.ef-btn-primary,
+.ef-btn-outline,
+.ef-btn-warning,
+.ef-btn-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #475569);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s ease;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+}
+.ef-btn-primary:disabled,
+.ef-btn-outline:disabled,
+.ef-btn-warning:disabled,
+.ef-btn-token:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ef-btn-primary { color: #fff; background: #1A1A1A; border-color: #1A1A1A; }
+.ef-btn-primary:hover:not(:disabled) { background: #333; }
+
+.ef-btn-outline { color: #737373; background: #fff; border: 1px solid #E8E8E8; }
+.ef-btn-outline:hover:not(:disabled) { border-color: #D4D4D4; color: #1A1A1A; }
+
+.ef-btn-warning { color: #fff; background: #F59E0B; border-color: #F59E0B; }
+.ef-btn-warning:hover:not(:disabled) { background: #D97706; }
+
+.ef-btn-token { color: #fff; background: #6366F1; border-color: #6366F1; }
+.ef-btn-token:hover:not(:disabled) { background: #4F46E5; }
+
+.ef-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0 8px;
+  border-top: 1px solid #F0F0F0;
+  margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════════════════
+   FIELDSETS / CARDS — restyle exec-* to ef-card look
+   ═══════════════════════════════════════════════════ */
+.exec-fieldset {
+  background: #fff;
+  border: 1px solid #F0F0F0;
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: none;
+}
+
+.fieldset-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8C8C8C;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  margin: 0 0 20px 0;
+  padding: 0 0 0 12px;
+  border-left: 3px solid #1A1A1A;
+  border-bottom: none;
+  line-height: 1.4;
+}
+.fieldset-title i {
+  margin-right: 6px;
+  font-size: 11px;
+}
+
+.exec-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #737373;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   display: block;
   margin-bottom: 6px;
 }
-.c-red { color: var(--red-600, #dc2626); font-weight: 600; margin-left: .15rem; }
 
+.c-red { color: #DC2626; font-weight: 700; margin-left: .15rem; }
+
+/* ── INPUTS / SELECTS / TEXTAREA ──────────────────── */
 .exec-input-light,
 .exec-select-light {
   background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 4px;
-  padding: 8px 12px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
+  padding: 0 12px;
   font-size: 13px;
   font-family: inherit;
-  color: var(--text-primary, #0f172a);
-  transition: all 0.15s;
+  color: #1A1A1A;
+  transition: border-color .2s ease;
   height: 38px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 .exec-input-light:focus,
 .exec-select-light:focus {
   outline: none;
-  border-color: var(--teal-500, #14b8a6);
-  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
+  border-color: #A3A3A3;
+  box-shadow: none;
 }
 .exec-input-light:disabled,
 .exec-select-light:disabled {
-  background-color: var(--slate-50, #f8fafc);
-  color: var(--slate-400, #94a3b8);
+  background-color: #FAFAFA;
+  color: #A3A3A3;
   cursor: not-allowed;
   opacity: 1;
 }
 .exec-input-light.input-valid {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34,197,94,.1);
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5,150,105,.1);
 }
 
 .exec-textarea {
   background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 4px;
-  padding: 8px 12px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
+  padding: 10px 12px;
   font-size: 13px;
   font-family: inherit;
-  color: var(--text-primary, #0f172a);
-  transition: border-color .15s, box-shadow .15s;
+  color: #1A1A1A;
+  transition: border-color .2s ease;
   resize: vertical;
-  min-height: 80px;
+  min-height: 72px;
   display: block;
+  outline: none;
 }
 .exec-textarea:focus {
   outline: none;
-  border-color: var(--teal-500, #14b8a6);
-  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
+  border-color: #A3A3A3;
+  box-shadow: none;
 }
 .exec-textarea:disabled {
-  background-color: var(--slate-50, #f8fafc);
-  color: var(--slate-400, #94a3b8);
+  background-color: #FAFAFA;
+  color: #A3A3A3;
   cursor: not-allowed;
 }
 
+/* ═══════════════════════════════════════════════════
+   BUTTONS — exec-btn flavors restyled to ef look
+   ═══════════════════════════════════════════════════ */
 .btn-exec {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 5px;
+  border-radius: 8px;
   font-size: 12.5px;
   font-weight: 600;
   padding: 8px 14px;
   cursor: pointer;
-  transition: all .15s;
+  transition: all .2s ease;
   border: 1px solid transparent;
   white-space: nowrap;
   text-decoration: none;
   line-height: 1.2;
+  font-family: inherit;
 }
 .btn-exec:disabled { opacity: .5; cursor: default; }
 
 .btn-exec-primary {
-  background: var(--navy-900, #0f172a);
+  background: #1A1A1A;
   color: #fff;
-  border-color: var(--navy-900, #0f172a);
+  border-color: #1A1A1A;
 }
-.btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
+.btn-exec-primary:hover:not(:disabled) { background: #333; }
 
 .btn-exec-ghost {
   background: transparent;
-  color: var(--slate-300, #cbd5e1);
-  border-color: var(--slate-600, #475569);
+  color: #737373;
+  border-color: #E8E8E8;
 }
 .btn-exec-ghost:hover:not(:disabled) {
-  background: rgba(255,255,255,.06);
-  color: #fff;
-  border-color: var(--slate-400, #94a3b8);
+  background: #FAFAFA;
+  color: #1A1A1A;
+  border-color: #D4D4D4;
 }
 
 .btn-exec-outline {
   background: #fff;
-  color: var(--text-secondary, #475569);
-  border-color: var(--border, #e2e8f0);
+  color: #737373;
+  border-color: #E8E8E8;
 }
 .btn-exec-outline:hover:not(:disabled) {
-  background: var(--slate-50, #f8fafc);
-  border-color: var(--slate-400, #94a3b8);
+  background: #FAFAFA;
+  border-color: #D4D4D4;
+  color: #1A1A1A;
 }
 
 .btn-exec-warning {
-  background: #f59e0b;
+  background: #F59E0B;
   color: #fff;
-  border-color: #f59e0b;
+  border-color: #F59E0B;
 }
-.btn-exec-warning:hover:not(:disabled) { background: #d97706; }
+.btn-exec-warning:hover:not(:disabled) { background: #D97706; }
+
+.btn-exec-active {
+  background: #1A1A1A;
+  color: #fff;
+  border-color: #1A1A1A;
+}
 
 .btn-exec-danger-ghost {
   background: transparent;
-  border-color: #fca5a5;
-  color: #b91c1c;
+  border-color: #FCA5A5;
+  color: #B91C1C;
 }
 .btn-exec-danger-ghost:hover:not(:disabled) {
-  background: #fef2f2;
-  border-color: #f87171;
+  background: #FEF2F2;
+  border-color: #F87171;
 }
 
 .btn-exec-sm { padding: 5px 10px; font-size: 11.5px; }
@@ -4799,11 +4860,11 @@ function toggleReschedule(contacto) {
 }
 
 @media (max-width: 768px) {
-  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 14px 16px; }
-  .masthead-actions { width: 100%; justify-content: flex-end; }
-  .exec-body { padding: 16px 12px; }
-  .exec-form-wrapper { padding: 16px; }
-  .exec-fieldset { padding: 14px 16px; }
+  .ef-page { padding: 20px 16px; }
+  .ef-page-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .ef-header-actions { width: 100%; justify-content: flex-end; }
+  .ef-footer-actions { flex-wrap: wrap; gap: 8px; }
+  .exec-fieldset { padding: 16px; }
 }
 
 @media (max-width: 576px) {
@@ -5280,4 +5341,66 @@ function toggleReschedule(contacto) {
   cursor: pointer;
 }
 .validation-radio input[type="radio"] { accent-color: #0D9488; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ef-page {
+  background: #0E0E0A;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ef-breadcrumb { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-page-title { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .exec-fieldset {
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .fieldset-title {
+  color: #A0A099;
+  border-left-color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+
+[data-coreui-theme="dark"] .exec-input-light,
+[data-coreui-theme="dark"] .exec-select-light,
+[data-coreui-theme="dark"] .exec-textarea {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .exec-input-light::placeholder,
+[data-coreui-theme="dark"] .exec-textarea::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .exec-input-light:focus,
+[data-coreui-theme="dark"] .exec-select-light:focus,
+[data-coreui-theme="dark"] .exec-textarea:focus { border-color: #6F6F66; }
+[data-coreui-theme="dark"] .exec-input-light:disabled,
+[data-coreui-theme="dark"] .exec-select-light:disabled,
+[data-coreui-theme="dark"] .exec-textarea:disabled {
+  background: #1F1F1A;
+  color: #6F6F66;
+}
+
+[data-coreui-theme="dark"] .ef-btn-primary,
+[data-coreui-theme="dark"] .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .ef-btn-primary:hover:not(:disabled),
+[data-coreui-theme="dark"] .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
+
+[data-coreui-theme="dark"] .ef-btn-outline,
+[data-coreui-theme="dark"] .btn-exec-outline,
+[data-coreui-theme="dark"] .btn-exec-ghost {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .ef-btn-outline:hover:not(:disabled),
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled),
+[data-coreui-theme="dark"] .btn-exec-ghost:hover:not(:disabled) {
+  background: #2A2A22;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+
+[data-coreui-theme="dark"] .ef-footer-actions { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
 </style>
