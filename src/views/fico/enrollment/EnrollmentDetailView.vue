@@ -44,6 +44,7 @@
             <i class="fa-solid fa-file-invoice-dollar"></i> Finanzas
           </button>
           <button
+            v-if="modalMode === 'view'"
             :class="['edv-tab', { active: activeTab === 'acciones' }]"
             @click="activeTab = 'acciones'"
           >
@@ -89,6 +90,7 @@
           />
 
           <EnrollmentActions
+            v-if="modalMode === 'view'"
             v-show="activeTab === 'acciones'"
             :enrollment="enrollment"
             :detail="detail"
