@@ -126,11 +126,7 @@
       <div v-if="redirecting" class="edv-redirect-overlay">
         <div class="edv-redirect-card">
           <i class="fa-solid fa-check-circle"></i>
-          <span v-if="nextPending?._fromQueue">
-            Procesando cola...
-            <small class="edv-redirect-sub">Siguiente en lote · {{ nextPending._remaining }} restantes</small>
-          </span>
-          <span v-else-if="nextPending">
+          <span v-if="nextPending">
             Avanzando al siguiente pendiente con misma fecha de pago...
             <small class="edv-redirect-sub">{{ nextPending.student_full_name }} — {{ nextPending.program_name }}</small>
           </span>
@@ -598,32 +594,8 @@ function handleRescheduleCompleted () {
   refreshDetail()
 }
 
-// Busca el siguiente enrollment a procesar.
-// Prioridad:
-// 1. Cola explicita "fico_processing_queue" (creada por bulk action "Procesar en cola")
-// 2. Otra inscripcion pendiente con la misma pay_date
-// 3. null -> vuelve al listado
+// Busca otra inscripcion pendiente con la misma pay_date para procesar a continuacion.
 async function findNextEnrollmentToProcess () {
-  // 1. Cola del bulk action
-  try {
-    const queueRaw = localStorage.getItem('fico_processing_queue')
-    if (queueRaw) {
-      const queue = JSON.parse(queueRaw) || []
-      // Quitar el actual y devolver el siguiente disponible
-      const remaining = queue.filter(id => Number(id) !== enrollmentId.value)
-      if (remaining.length > 0) {
-        // Persistir cola actualizada (sin el actual ni los previos)
-        localStorage.setItem('fico_processing_queue', JSON.stringify(remaining))
-        // Devolver objeto minimo con enrollment_id; el detalle se cargara al navegar
-        return { enrollment_id: remaining[0], _fromQueue: true, _remaining: remaining.length - 1 }
-      } else {
-        // Cola vacia, limpiar
-        localStorage.removeItem('fico_processing_queue')
-      }
-    }
-  } catch (e) { /* ignore */ }
-
-  // 2. Siguiente con misma fecha de pago
   const currentPayDate = enrollment.value?.pay_date
   if (!currentPayDate) return null
   try {
