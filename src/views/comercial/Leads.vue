@@ -33,6 +33,31 @@
 
       <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
         <div class="ep-filter-bar-main">
+          <div class="ep-quick-row">
+            <nav class="ep-tabs" aria-label="Vistas rapidas">
+              <button
+                v-for="v in quickViews"
+                :key="v.key"
+                :class="['ep-tab', { 'is-active': activeQuickView === v.key, 'is-highlight': v.highlight }]"
+                :title="v.title"
+                @click="applyQuickView(v.key)"
+              >
+                <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+              </button>
+            </nav>
+            <div class="ep-quick-order" title="Ordenar resultados">
+              <i class="fa-solid fa-arrow-down-wide-short ep-quick-order-icon"></i>
+              <SearchSelect
+                v-model="filters.order_by"
+                :items="filtroOrden"
+                label-field="description"
+                value-field="value"
+                placeholder="Ordenar..."
+                class="ss-quick"
+                @update:model-value="onOrderChange"
+              />
+            </div>
+          </div>
           <div class="ep-toolbar">
             <BasePagination
               v-model="pagin"
@@ -70,6 +95,7 @@
   <th class="ts ts-c">F. Pago</th>
   <th class="ts ts-c">Nivel Interés</th>
   <th class="ts ts-c">Registro</th>
+  <th class="ts ts-c">Cel. Origen</th>
   <th class="ts ts-c">Canal Pago</th>
   <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
@@ -108,6 +134,9 @@
   <th class="tf">
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
     <span v-else class="text-muted" style="font-size:10px;">—</span>
+  </th>
+  <th class="tf">
+    <input v-model="filters.origin_seller_phone" type="text" class="hf-input" placeholder="Cel. origen..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" />
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -154,7 +183,7 @@
 
   <!-- D. LEAD -->
   <th
-    :colspan="colGroups.lead ? 7 : 1"
+    :colspan="colGroups.lead ? 8 : 1"
     class="tg-header tg-lead"
     :class="{ 'tg-collapsed': !colGroups.lead }"
     @click="colGroups.lead = !colGroups.lead"
@@ -168,7 +197,7 @@
   </th>
 
 <th
-  :colspan="colGroups.asesor ? 4 : 1"
+  :colspan="colGroups.asesor ? 5 : 1"
   class="tg-header tg-asesor"
   :class="{ 'tg-collapsed': !colGroups.asesor }"
   @click="colGroups.asesor = !colGroups.asesor"
@@ -202,7 +231,7 @@
   <th v-show="colGroups.cliente" class="ts ts-c">E. Cliente</th>
   <th v-show="colGroups.cliente" class="ts ts-c">Member</th>
   <th v-if="!colGroups.cliente" class="ts ts-c tg-placeholder-cell"></th>
-  <!-- D. LEAD (7 cols) -->
+  <!-- D. LEAD (8 cols) -->
   <th v-show="colGroups.lead" class="ts ts-c">Status</th>
   <th v-show="colGroups.lead" class="ts ts-c">F. Pago</th>
   <th v-show="colGroups.lead" class="ts ts-c">Interés</th>
@@ -210,11 +239,13 @@
   <th v-show="colGroups.lead" class="ts ts-c">Medio</th>
   <th v-show="colGroups.lead" class="ts ts-c">Palabra MKT</th>
   <th v-show="colGroups.lead" class="ts ts-c">Estrategia</th>
+  <th v-show="colGroups.lead" class="ts ts-c">Observaciones</th>
   <th v-if="!colGroups.lead" class="ts ts-c tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR (4 cols) -->
+  <!-- D. ASESOR (5 cols) -->
   <th v-show="colGroups.asesor" class="ts ts-c">Asesor/Usuario</th>
   <th v-show="colGroups.asesor" class="ts ts-c">F. Registro</th>
+  <th v-show="colGroups.asesor" class="ts ts-c">Cel. Origen</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Canal Pago</th>
   <th v-show="colGroups.asesor" class="ts ts-c text-center">Seguimiento</th>
   <th v-if="!colGroups.asesor" class="ts ts-c tg-placeholder-cell"></th>
@@ -267,7 +298,7 @@
   </th>
   <th v-if="!colGroups.cliente" class="tf tg-placeholder-cell"></th>
 
-   <!-- D. LEAD filtros (7 cols) -->
+   <!-- D. LEAD filtros (8 cols) -->
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -287,14 +318,18 @@
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+  <th v-show="colGroups.lead" class="tf"></th><!-- Observaciones (texto libre, sin filtro inline) -->
   <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR filtros (4 cols) -->
+  <!-- D. ASESOR filtros (5 cols) -->
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="F. Registro..." @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }" />
+  </th>
+  <th v-show="colGroups.asesor" class="tf">
+    <input v-model="filters.origin_seller_phone" type="text" class="hf-input" placeholder="Cel. origen..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -319,6 +354,7 @@
                   <td><div class="sk-cell" style="width:60px"></div></td>
                   <td><div class="sk-cell" style="width:55px"></div></td>
                   <td><div class="sk-cell" style="width:90px"></div></td>
+                  <td><div class="sk-cell" style="width:80px"></div></td>
                   <td><div class="sk-cell" style="width:70px"></div></td>
                   <td><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
                 </tr>
@@ -376,6 +412,7 @@
                     <div class="text-muted x-small">{{ l.system_registration_date }}</div>
                   </div>
                 </td>
+                <td class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.description || '—' }}</td>
                 <td class="td-a text-center" style="min-width:140px">
                   <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
@@ -386,7 +423,7 @@
                 </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="12" class="empty-state">
+                <td colspan="13" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -403,9 +440,9 @@
       <td v-if="!colGroups.programa"></td>
       <td v-show="colGroups.cliente" v-for="c in 5" :key="'cl'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.cliente"></td>
-      <td v-show="colGroups.lead" v-for="c in 7" :key="'l'+c"><div class="sk-cell"></div></td>
+      <td v-show="colGroups.lead" v-for="c in 8" :key="'l'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.lead"></td>
-      <td v-show="colGroups.asesor" v-for="c in 4" :key="'a'+c"><div class="sk-cell"></div></td>
+      <td v-show="colGroups.asesor" v-for="c in 5" :key="'a'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.asesor"></td>
     </tr>
   </template>
@@ -473,6 +510,7 @@
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
+    <td v-show="colGroups.lead" class="td-a small text-muted obs-cell" :title="l.observations || ''">{{ l.observations || '—' }}</td>
     <td v-if="!colGroups.lead" class="td-a tg-placeholder-cell">
       <div class="tg-collapsed-hint tg-hint-lead">
         <span class="tg-hint-line tg-hint-main">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
@@ -483,6 +521,7 @@
     <!-- ── D. ASESOR ── -->
     <td v-show="colGroups.asesor" class="td-a small">{{ l.user_registration_label }}</td>
     <td v-show="colGroups.asesor" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
       <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
@@ -1123,6 +1162,17 @@ const leadsRaw = ref([])
 const isTableLoading = ref(false)
 const filtroOwners = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
+const activeQuickView = ref(null)
+
+// Vistas rapidas: atajos a combinaciones frecuentes de filtros. La fecha se
+// recalcula en cada click (no se memoiza) para que "Alta Prioridad" y
+// "Prox. inicio" siempre usen "hoy" real, no la hora en que se cargo la pagina.
+const quickViews = [
+  { key: 'all',        label: 'Todos',          icon: 'fa-list',         highlight: true, title: 'Limpiar todos los filtros' },
+  { key: 'priority',   label: 'Alta Prioridad', icon: 'fa-bolt',         title: 'Edicion proxima (14d), interes bajo, estados activos' },
+  { key: 'follow',     label: 'Seguimiento',    icon: 'fa-phone',        title: 'Pendientes de contacto' },
+  { key: 'will_pay',   label: 'Pagara',         icon: 'fa-coins',        title: 'Leads que comprometieron pago' }
+]
 
 // === LONG PRESS ===
 // === PERMISOS ===
@@ -1167,6 +1217,7 @@ watch(colGroups, (val) => {
 // === FILTROS ===
 const filters = reactive({
   q: '',
+  origin_seller_phone: '',
   program_text: '',
   estado: null,
   web: null,
@@ -1232,9 +1283,10 @@ const filtroPaises = ref(catalog.options('we_country') || [])
 const filtroFicoStatus = ref(catalog.options('we_enrollment_status'))
 const filtroProfile = ref(catalog.options('we_profile') || [])
 const filtroOrden = [
-  { value: 0, description: 'Fecha de Registro (Más recientes)' },
-  { value: 1, description: 'Fecha Inicio Edición (Próximos)' },
-  { value: 2, description: 'Fecha de Pago (Próximos)' }
+  { value: 0, description: 'Fecha de Registro' },
+  { value: 1, description: 'Fecha Inicio Edición' },
+  { value: 2, description: 'Fecha de Pago' },
+  { value: 4, description: 'Fecha de Contacto' }
 ]
 const filtroCurrency = ref(
   catalog.options('we_currency', {
@@ -1303,6 +1355,7 @@ async function parseQueryAndApply() {
   if (!hasQueryParams) return false
   clearFilters(false)
   if (q.q)              filters.q            = q.q
+  if (q.origin_seller_phone) filters.origin_seller_phone = q.origin_seller_phone
   if (q.program_text)   filters.program_text  = q.program_text
   if (q.web)            filters.web           = q.web
   if (q.b2b)            filters.b2b           = q.b2b
@@ -1630,6 +1683,7 @@ function rebuildChips() {
     chips.push({ key, label: labels.length === 1 ? `${labelPrefix}: ${labels[0]}` : `${labelPrefix}: ${labels.length} sel.`, text: `${labelPrefix}: ${labels.join(', ')}`, details: labels })
   }
   if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
+  if (filters.origin_seller_phone) chips.push({ key: 'origin_seller_phone', label: `Cel. Origen: "${filters.origin_seller_phone}"` })
   if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
   if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
   if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
@@ -1678,6 +1732,7 @@ async function fetchLeads() {
     }
     const { items, total: t } = await comercialService.leadList({
       q:                   filters.q             || null,
+      origin_seller_phone: filters.origin_seller_phone?.trim() || null,
       page:                pagin.value.page,
       size:                pagin.value.size,
       program_text:        filters.program_text  || null,
@@ -1784,7 +1839,7 @@ async function handleResubmitFromModal () {
 
 function clearFilters(reload = true) {
   Object.assign(filters, {
-    q: '', program_text: '', estado: null, web: null, b2b: null,
+    q: '', origin_seller_phone: '', program_text: '', estado: null, web: null, b2b: null,
     owner_user_ids: [], status_lead_ids: [], last_follow_ids: [], order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
@@ -1793,7 +1848,7 @@ function clearFilters(reload = true) {
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
     created_range_string: null, updated_range_string: null, attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
-    pay_date_from: '', pay_date_to: '', pay_date_range_string: null,
+    pay_date_from: '', pay_date_to: '', pay_date_range_string: null, order_by: 0,
     fico_status_ids: [], profile_ids: [], currency_ids: [],membership_moment_ids: [],
     inscription_modality_ids: [], installment_status_ids: [], program_version_ids: [],
     first_contact_range_string: null, first_contact_from: '', first_contact_to: '',
@@ -1801,11 +1856,67 @@ function clearFilters(reload = true) {
   })
   if (isComercial && currentUserId) filters.owner_user_ids = [currentUserId]
   if (reload === true || typeof reload !== 'boolean') {
+    activeQuickView.value = null
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_filter_state_v1')
     rebuildChips()
     fetchLeads()
   }
+}
+
+// Vistas rapidas: resuelven IDs de catalogo por alias (no se hardcodean numeros)
+// y entregan al filtro el shape `{ value, label }` que rebuildChips/fetchLeads esperan.
+function isoDayOffset(days = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function resolveByAlias(catalogRef, aliases) {
+  const items = catalogRef.value || []
+  return aliases
+    .map(a => items.find(i => i.alias === a))
+    .filter(Boolean)
+    .map(i => ({ value: i.id, label: i.description }))
+}
+
+function applyQuickView(key) {
+  // clearFilters(false) deja owner_user_ids = [currentUserId] si es comercial,
+  // por lo que las vistas rapidas tambien respetan la restriccion del asesor.
+  clearFilters(false)
+  activeQuickView.value = key
+
+  if (key === 'priority') {
+    const from = isoDayOffset(0)
+    const to   = isoDayOffset(14)
+    filters.edition_start_from = from
+    filters.edition_start_to   = to
+    filters.edition_range_string = `${from} a ${to}`
+    filters.interest_level_ids = resolveByAlias(filtroInterest, ['we_lead_interest_low'])
+    filters.status_lead_ids = resolveByAlias(filtroPipeline, [
+      'we_lead_status_atendido',
+      'we_lead_status_interesado',
+      'we_lead_status_unique',
+      'we_lead_status_will_pay',
+      'we_lead_status_proximo'
+    ])
+  } else if (key === 'follow') {
+    filters.last_follow_ids = resolveByAlias(filtroFollow, ['we_calling_pending'])
+  } else if (key === 'will_pay') {
+    filters.status_lead_ids = resolveByAlias(filtroPipeline, ['we_lead_status_will_pay'])
+  } else if (key === 'next_start') {
+    const from = isoDayOffset(0)
+    const to   = isoDayOffset(7)
+    filters.edition_start_from = from
+    filters.edition_start_to   = to
+    filters.edition_range_string = `${from} a ${to}`
+  }
+  // 'all' no aplica filtros adicionales — clearFilters ya limpio todo.
+
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchLeads()
 }
 
 async function loadOwners() {
@@ -1823,13 +1934,15 @@ async function loadOwners() {
 }
 
 function openFilterModal() { showFilterModal.value = true }
-function applyFilters() { showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
+function applyFilters() { activeQuickView.value = null; showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function clearFilter(key) {
+  activeQuickView.value = null
   if (key === 'rangoFechas') { filters.rangoFechas = { start: '', end: '' }; filters.created_range_string = null }
   else if (key === 'pay_date') { filters.pay_date_from = ''; filters.pay_date_to = ''; filters.pay_date_range_string = null }
   else if (key === 'order_by') { filters.order_by = 0 }
   else if (key === 'edition_start') { filters.edition_start_from = ''; filters.edition_start_to = ''; filters.edition_range_string = null }
   else if (key === 'first_contact') { filters.first_contact_from = ''; filters.first_contact_to = ''; filters.first_contact_range_string = null }
+  else if (key === 'origin_seller_phone') { filters.origin_seller_phone = '' }
   else if (Array.isArray(filters[key])) { filters[key] = [] }
   else { filters[key] = null }
   applyFilters()
@@ -1920,8 +2033,17 @@ onMounted(async () => {
 })
 
 let inlineFilterTimer = null
-function triggerInlineFilter() { pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
+function triggerInlineFilter() { activeQuickView.value = null; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function debouncedInlineFilter() { clearTimeout(inlineFilterTimer); inlineFilterTimer = setTimeout(() => triggerInlineFilter(), 400) }
+
+// Orden: cambia presentacion, no "que" se filtra. Por eso NO reseteamos
+// activeQuickView — el usuario sigue viendo la misma vista, solo reordenada.
+function onOrderChange() {
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchLeads()
+}
 
 
 const filteredCallingByType = (catTypeAttempt) => {
@@ -2121,7 +2243,7 @@ const saldoPendienteDisplay = computed(() => {
 .ep-filter-bar-main {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
   padding: 10px 14px;
@@ -2130,6 +2252,79 @@ const saldoPendienteDisplay = computed(() => {
   display: flex; align-items: center; justify-content: flex-end;
   gap: 16px; flex-wrap: wrap;
   flex: 1 1 auto;
+}
+
+/* ── Vistas rapidas ───────────────────────────────────────────── */
+.ep-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.ep-quick-order {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.ep-quick-order-icon {
+  font-size: 11px;
+  color: var(--e-text-secondary);
+}
+.ss-quick {
+  width: 230px;
+}
+.ss-quick :deep(.searchselect-control) {
+  min-height: 32px;
+  padding: 0.15rem 2.25rem 0.15rem 0.6rem;
+  border-radius: 8px;
+}
+.ss-quick :deep(.searchselect-input),
+.ss-quick :deep(.ss-locked-label) {
+  font-size: 12.5px;
+}
+.ep-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.ep-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--e-text-secondary);
+  background: var(--e-bg-subtle);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ep-tab i { font-size: 11px; opacity: 0.7; }
+.ep-tab:hover {
+  color: var(--e-text);
+  background: #F5F5F5;
+}
+.ep-tab.is-active {
+  color: var(--e-accent);
+  background: var(--e-accent-soft);
+  border-color: rgba(16, 185, 129, 0.25);
+  font-weight: 600;
+}
+.ep-tab.is-active i { opacity: 1; }
+.ep-tab.is-highlight i { opacity: 1; }
+.ep-tab.is-highlight::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--e-accent);
+  margin-right: 6px;
+  vertical-align: middle;
 }
 .ep-filter-strip {
   display: flex;
@@ -2187,6 +2382,13 @@ const saldoPendienteDisplay = computed(() => {
 [data-coreui-theme="dark"] .leads-page .ep-filter-strip {
   border-top-color: #2A2A22;
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .leads-page .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .ep-tab.is-active {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.32);
 }
 [data-coreui-theme="dark"] .leads-page .ep-filter-strip-badge { color: #34D399; }
 [data-coreui-theme="dark"] .leads-page .ep-view-toggle { background: #1A1A14; border-color: #2A2A22; }
@@ -2432,6 +2634,15 @@ const saldoPendienteDisplay = computed(() => {
 .compact-table .ts { padding: 6px 10px; font-size: 10px; }
 .compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 .compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
+.compact-table .obs-cell {
+  min-width: 180px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+  cursor: help;
+}
 
 .exec-fieldset { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
 .fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
