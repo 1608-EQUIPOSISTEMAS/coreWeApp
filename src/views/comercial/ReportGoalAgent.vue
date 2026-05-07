@@ -1,817 +1,678 @@
 <template>
-  <div class="exec-shell">
-    <!-- ══════════════ MASTHEAD ══════════════ -->
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">
-              {{ effectivePersonalView
-                ? 'Mi Desempeño · ' + (myData?.asesor || '')
-                : 'Desempeño Comercial · Equipo de Ventas' }}
-            </span>
-            <h1 class="brand-title">
-              {{ effectivePersonalView ? 'Mi Tablero de Objetivos' : 'Tablero de Asesor y Objetivos' }}
-            </h1>
-          </div>
-        </div>
-        <div class="masthead-actions">
-          <!-- Botón "Ver como Asesor" exclusivo para LIDER_COMERCIAL -->
-          <button v-if="isLiderComercial" @click="toggleAdvisorView"
-            class="btn-exec" :class="viewAsAdvisor ? 'btn-exec-advisor-active' : 'btn-exec-ghost'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            {{ viewAsAdvisor ? 'Salir · Vista Asesor' : 'Ver como Asesor' }}
-          </button>
+  <div class="rg-page">
 
-          <button v-if="!effectivePersonalView" @click="toggleView" class="btn-exec btn-exec-ghost">
-            <svg v-if="!isDashboard" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><rect x="14" y="14" width="8" height="8"/></svg>
-            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-            {{ isDashboard ? 'Vista Tabular' : 'Vista Gráfica' }}
-          </button>
-          <button class="btn-exec btn-exec-primary" @click="fetchData" :disabled="loading">
-            <svg :class="{ 'spin': loading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            {{ loading ? 'Actualizando…' : 'Actualizar Datos' }}
-          </button>
-        </div>
+    <!-- ═══════════════ MASTHEAD ═══════════════ -->
+    <header class="ep-masthead">
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">COMERCIAL</span>
+        <h1 class="ep-title">
+          {{ effectivePersonalView ? 'Mi Tablero de Objetivos' : 'Tablero de Asesor y Objetivos' }}
+        </h1>
+        <span class="ep-subtitle">
+          {{ effectivePersonalView
+            ? 'Mi desempeño · ' + (myData?.asesor || loggedAdvisorName || 'Asesor')
+            : 'Desempeño comercial · Equipo de ventas' }}
+        </span>
       </div>
+      <div class="ep-masthead-actions">
+        <button v-if="isLiderComercial" class="ep-btn-export" :class="{ 'is-active': viewAsAdvisor }" @click="toggleAdvisorView">
+          <i class="fa-solid fa-eye"></i>
+          {{ viewAsAdvisor ? 'Salir · Vista Asesor' : 'Ver como Asesor' }}
+        </button>
+        <div v-if="!effectivePersonalView" class="ep-view-toggle">
+          <button :class="['ep-toggle-btn', { 'is-active': !isDashboard }]" @click="isDashboard = false">
+            <i class="fa-solid fa-table"></i> Tabular
+          </button>
+          <button :class="['ep-toggle-btn', { 'is-active': isDashboard }]" @click="isDashboard = true">
+            <i class="fa-solid fa-chart-column"></i> Gráfica
+          </button>
+        </div>
+        <button class="ep-btn-export" :disabled="loading" @click="fetchData">
+          <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin' : 'fa-rotate-right'"></i>
+          {{ loading ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
 
-      <!-- Franja de filtros -->
-      <div class="masthead-filters">
+    <!-- ═══════════════ FILTROS ═══════════════ -->
+    <section class="ep-section ep-filter-bar">
+      <div class="ep-filter-bar-main">
+        <div class="rg-filters">
 
-        <!-- Selector de asesor a impersonar (solo visible cuando líder activa el modo) -->
-        <transition name="slide-fade">
-          <div v-if="isLiderComercial && viewAsAdvisor" class="filter-group filter-group-advisor-pick">
-            <label class="filter-label" style="color:#fbbf24;">👁 VIENDO COMO</label>
-            <select class="exec-select exec-select-advisor" v-model="selectedViewAdvisorId">
-              <option v-for="adv in tableData" :key="adv.cod" :value="adv.cod">{{ adv.asesor }}</option>
+          <transition name="rg-fade">
+            <div v-if="isLiderComercial && viewAsAdvisor" class="rg-filter-chip is-impersonate">
+              <span class="rg-filter-label"><i class="fa-solid fa-eye"></i> VIENDO COMO</span>
+              <select class="rg-filter-select" v-model="selectedViewAdvisorId">
+                <option v-for="adv in tableData" :key="adv.cod" :value="adv.cod">{{ adv.asesor }}</option>
+              </select>
+            </div>
+          </transition>
+
+          <div class="rg-filter-chip rg-filter-toggle">
+            <span class="rg-filter-label">TIPO OBJETIVO</span>
+            <div class="rg-modality">
+              <button class="rg-mod-btn" :class="{ 'is-active': filters.modality === 'NO_ONLINE' }"
+                @click="filters.modality = 'NO_ONLINE'; loadWeeks()">
+                <i class="fa-solid fa-display"></i> EN VIVO
+              </button>
+              <button class="rg-mod-btn" :class="{ 'is-active': filters.modality === 'ONLINE' }" disabled
+                @click="filters.modality = 'ONLINE'; loadWeeks()">
+                <i class="fa-solid fa-wifi"></i> ONLINE
+              </button>
+              <button class="rg-mod-btn" :class="{ 'is-active': filters.modality === 'CONGRESO' }" disabled
+                @click="filters.modality = 'CONGRESO'; loadWeeks()">
+                <i class="fa-solid fa-people-group"></i> CONGRESO
+              </button>
+            </div>
+          </div>
+
+          <div class="rg-filter-chip">
+            <span class="rg-filter-label">Año</span>
+            <select class="rg-filter-select" v-model="filters.year" @change="loadWeeks">
+              <option :value="2026">2026</option>
+              <option :value="2025">2025</option>
             </select>
           </div>
-        </transition>
 
-        <div v-if="isLiderComercial && viewAsAdvisor" class="filter-sep"></div>
-
-        <div class="filter-group">
-          <label class="filter-label">TIPO OBJETIVO</label>
-          <div class="modality-toggle">
-            <button class="mod-btn" :class="{ active: filters.modality === 'NO_ONLINE' }"
-              @click="filters.modality = 'NO_ONLINE'; loadWeeks()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-              EN VIVO
-            </button>
-            <button class="mod-btn" :class="{ active: filters.modality === 'ONLINE' }" disabled
-              @click="filters.modality = 'ONLINE'; loadWeeks()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-                <circle cx="12" cy="20" r="1"/>
-              </svg>
-              ONLINE
-            </button>
-            <!-- ── NUEVO ── -->
-            <button class="mod-btn" :class="{ active: filters.modality === 'CONGRESO' }" disabled
-              @click="filters.modality = 'CONGRESO'; loadWeeks()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              CONGRESO
-            </button>
+          <div class="rg-filter-chip">
+            <span class="rg-filter-label">Semana</span>
+            <select class="rg-filter-select" v-model="selectedWeek" style="min-width: 200px;">
+              <option :value="null">Acumulado (MTD)</option>
+              <option v-for="w in availableWeeks" :key="w.value + w.month" :value="w">{{ w.label }}</option>
+            </select>
           </div>
+
         </div>
 
-        <div class="filter-sep"></div>
-
-        <!-- Reemplaza los grupos de AÑO + MES + PERÍODO -->
-<div class="filter-group">
-  <label class="filter-label">AÑO</label>
-  <select class="exec-select" v-model="filters.year" @change="loadWeeks">
-    <option :value="2026">2026</option>
-    <option :value="2025">2025</option>
-  </select>
-</div>
-
-<div class="filter-sep"></div>
-
-<div class="filter-group">
-  <label class="filter-label">SEMANA</label>
-  <select class="exec-select" v-model="selectedWeek" style="min-width: 200px;">
-    <option :value="null">Acumulado (MTD)</option>
-    <option v-for="w in availableWeeks" :key="w.value + w.month" :value="w">
-      {{ w.label }}
-    </option>
-  </select>
-</div> 
-
-        <div class="filter-spacer"></div>
-
-        <transition name="slide-fade">
-          <div class="masthead-kpis" v-if="!loading">
-            <div class="inline-kpi" @click="drillDown({ type: 'sales' })" style="cursor:pointer" title="Ver ventas">
-              <span class="inline-kpi-label">VENTA TOTAL</span>
-              <span class="inline-kpi-value accent">{{ formatCurrency(totals.ven_monto) }}</span>
+        <transition name="rg-fade">
+          <div class="rg-inline-kpis" v-if="!loading">
+            <div class="rg-mini-kpi" @click="drillDown({ type: 'sales' })" title="Ver ventas">
+              <span class="rg-mini-kpi-l">Venta total</span>
+              <span class="rg-mini-kpi-v c-accent">{{ formatCurrency(totals.ven_monto) }}</span>
             </div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">TICKET PROM.</span>
-              <span class="inline-kpi-value">{{ formatCurrency(totals.ticketProm) }}</span>
+            <div class="rg-mini-kpi-divider"></div>
+            <div class="rg-mini-kpi">
+              <span class="rg-mini-kpi-l">Ticket prom.</span>
+              <span class="rg-mini-kpi-v">{{ formatCurrency(totals.ticketProm) }}</span>
             </div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">% META S/.</span>
-              <span class="inline-kpi-value" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
+            <div class="rg-mini-kpi-divider"></div>
+            <div class="rg-mini-kpi">
+              <span class="rg-mini-kpi-l">% Meta S/.</span>
+              <span class="rg-mini-kpi-v" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
                 {{ totals.pctMetaMonto }}%
               </span>
             </div>
           </div>
         </transition>
-
       </div>
-    </header>
+    </section>
 
-    <!-- ══════════════ CUERPO ══════════════ -->
-    <main class="exec-body">
+    <!-- ═══════════════ LOADER ═══════════════ -->
+    <div v-if="loading" class="rg-loader">
+      <div class="rg-loader-ring"></div>
+      <span>Cargando métricas{{ effectivePersonalView ? ' del asesor' : ' del equipo' }}…</span>
+    </div>
 
-      <div v-if="loading" class="exec-loader">
-        <div class="loader-ring"></div>
-        <p class="loader-text">Cargando métricas{{ effectivePersonalView ? ' del asesor' : ' del equipo' }}…</p>
+    <!-- ═══════════════ VISTA PERSONAL ═══════════════ -->
+    <div v-else-if="effectivePersonalView" class="rg-fadein">
+
+      <div v-if="isLiderComercial && viewAsAdvisor" class="rg-impersonation-banner">
+        <i class="fa-solid fa-eye"></i>
+        <span>Estás viendo el tablero de <strong>{{ myData?.asesor || '—' }}</strong> tal como lo ve el asesor. Solo lectura.</span>
+        <button class="rg-banner-exit" @click="toggleAdvisorView">
+          <i class="fa-solid fa-xmark"></i> Salir
+        </button>
       </div>
 
-      <!-- ═══════════════════════════════════════════
-           VISTA PERSONAL (asesor simple ó líder en modo asesor)
-      ════════════════════════════════════════════ -->
-      <div v-else-if="effectivePersonalView" class="view-personal">
-
-        <!-- Banner informativo cuando el líder está en modo impersonación -->
-        <div v-if="isLiderComercial && viewAsAdvisor" class="advisor-impersonation-banner">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-          <span>Estás viendo el tablero de <strong>{{ myData?.asesor || '—' }}</strong> tal como lo ve el asesor. Los datos son de solo lectura.</span>
-          <button class="banner-exit-btn" @click="toggleAdvisorView">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            Salir
-          </button>
-        </div>
-
-        <!-- Hero Card -->
-        <div class="personal-hero" :class="heroStatusClass">
-          <div class="hero-left">
-            <div class="hero-avatar">
-              {{ avatarInitials }}
-            </div>
-            <div class="hero-info">
-              <div class="hero-name">{{ myData?.asesor || '—' }}</div>
-              <div class="hero-period">
-                {{ filters.month }} {{ filters.year }} ·
-                <span>{{ selectedWeek ? selectedWeek.label : 'Acumulado mensual' }}</span> ·
-                <span>{{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : 'Online' }}</span>
+      <!-- Hero -->
+      <section class="ep-section">
+        <article class="rg-hero" :class="heroStatusClass">
+          <div class="rg-hero-left">
+            <div class="rg-hero-avatar">{{ avatarInitials }}</div>
+            <div class="rg-hero-info">
+              <div class="rg-hero-name">{{ myData?.asesor || '—' }}</div>
+              <div class="rg-hero-period">
+                {{ filters.year }}
+                <span class="rg-hero-sep">·</span>
+                <span>{{ selectedWeek ? selectedWeek.label : 'Acumulado mensual' }}</span>
+                <span class="rg-hero-sep">·</span>
+                <span>{{ filters.modality === 'NO_ONLINE' ? 'En vivo' : filters.modality === 'ONLINE' ? 'Online' : 'Congreso' }}</span>
               </div>
             </div>
           </div>
 
-          <div class="hero-center">
-            <div class="hero-gauge">
-              <svg class="gauge-svg" viewBox="0 0 120 70">
-                <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10" stroke-linecap="round"/>
-                <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="10" stroke-linecap="round"
+          <div class="rg-hero-center">
+            <div class="rg-gauge">
+              <svg class="rg-gauge-svg" viewBox="0 0 120 70">
+                <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="10" stroke-linecap="round"/>
+                <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="10" stroke-linecap="round"
                   :stroke-dasharray="`${gaugeProgress * 1.57} 157`" stroke-dashoffset="0"/>
-                <text x="60" y="60" text-anchor="middle" fill="white" font-size="18" font-weight="700" font-family="'IBM Plex Sans', sans-serif">{{ pctMetaUnidades }}%</text>
+                <text x="60" y="60" text-anchor="middle" fill="white" font-size="18" font-weight="700" font-family="'Inter', sans-serif">{{ pctMetaUnidades }}%</text>
               </svg>
-              <div class="gauge-label" :class="{'label-semanal-destacada': filters.period !== 'ALL'}">
-                {{ filters.period !== 'ALL' ? '⭐ META SEMANAL QUE SE BUSCA ⭐' : 'META UNIDADES' }}
+              <div class="rg-gauge-label" :class="{ 'is-weekly': filters.period !== 'ALL' }">
+                {{ filters.period !== 'ALL' ? 'META SEMANAL' : 'META UNIDADES' }}
               </div>
             </div>
           </div>
 
-          <div class="hero-right">
-            <div class="hero-stat-row">
-              <span class="hero-stat-label">Ventas realizadas</span>
-              <span class="hero-stat-val hero-stat-big">{{ myData?.ven || 0 }}</span>
+          <div class="rg-hero-right">
+            <div class="rg-hero-row">
+              <span class="rg-hero-l">Ventas realizadas</span>
+              <span class="rg-hero-v rg-hero-v-big">{{ myData?.ven || 0 }}</span>
             </div>
-            <div class="hero-divider"></div>
-            <div class="hero-stat-row">
-              <span class="hero-stat-label">Objetivo del período</span>
-              <span class="hero-stat-val">{{ myData?.obj || 0 }}</span>
+            <div class="rg-hero-divider"></div>
+            <div class="rg-hero-row">
+              <span class="rg-hero-l">Objetivo del período</span>
+              <span class="rg-hero-v">{{ myData?.obj || 0 }}</span>
             </div>
-            <div class="hero-stat-row">
-              <span class="hero-stat-label">Por cerrar</span>
-              <span class="hero-stat-val" :class="(myData?.falta || 0) > 0 ? 'hero-stat-gap' : 'hero-stat-ok'">
+            <div class="rg-hero-row">
+              <span class="rg-hero-l">Por cerrar</span>
+              <span class="rg-hero-v" :class="(myData?.falta || 0) > 0 ? 'rg-hero-gap' : 'rg-hero-ok'">
                 {{ (myData?.falta || 0) > 0 ? '−' + myData.falta : '✓ Meta cumplida' }}
               </span>
             </div>
           </div>
-        </div>
+        </article>
+      </section>
 
-        <div class="action-cards-row" v-if="selectedWeek !== null">
-          <div class="action-card hot-leads-card actionable-card" @click="drillDown({ type: 'interestPriority', valueName: 'Caliente' })">
-            <div class="ac-icon text-danger"><i class="fa-solid fa-fire text-danger"></i></div>
-            <div class="ac-info">
-              <span class="ac-title">Leads Calientes (Próximos a inicio)</span>
-              <span class="ac-desc">Interés registrado sin cerrar (14 días)</span>
-            </div>
-            <div class="ac-value">{{ myData?.high_interest_count || 0 }}</div>
+      <!-- Action cards -->
+      <div class="rg-action-cards" v-if="selectedWeek !== null">
+        <article class="rg-action-card is-hot" @click="drillDown({ type: 'interestPriority', valueName: 'Caliente' })">
+          <div class="rg-action-icon"><i class="fa-solid fa-fire"></i></div>
+          <div class="rg-action-info">
+            <span class="rg-action-title">Leads calientes (próximos a inicio)</span>
+            <span class="rg-action-desc">Interés registrado sin cerrar (14 días)</span>
           </div>
+          <div class="rg-action-value">{{ myData?.high_interest_count || 0 }}</div>
+        </article>
 
-          <div class="action-card follow-up-card actionable-card" @click="drillDown({ type: 'follow', valueName: 'we_calling_pending' })">
-            <div class="ac-icon text-info"><i class="fa-solid fa-phone-volume"></i></div>
-            <div class="ac-info">
-              <span class="ac-title">Seguimientos de Contacto</span>
-              <span class="ac-desc">Llamadas pendientes de gestionar</span>
-            </div>
-            <div class="ac-value">{{ myData?.follow_up_pending || 0 }}</div>
+        <article class="rg-action-card is-followup" @click="drillDown({ type: 'follow', valueName: 'we_calling_pending' })">
+          <div class="rg-action-icon"><i class="fa-solid fa-phone-volume"></i></div>
+          <div class="rg-action-info">
+            <span class="rg-action-title">Seguimientos de contacto</span>
+            <span class="rg-action-desc">Llamadas pendientes de gestionar</span>
           </div>
-        </div>
+          <div class="rg-action-value">{{ myData?.follow_up_pending || 0 }}</div>
+        </article>
+      </div>
 
-        <!-- KPI Strip personal -->
-        <div class="kpi-strip">
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">% META S/.</span>
-              <div class="kpi-indicator" :class="totals.pctMetaMonto >= 80 ? 'ind-green' : totals.pctMetaMonto >= 50 ? 'ind-amber' : 'ind-red'"></div>
-            </div>
-            <div class="kpi-card-value" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
-              {{ totals.pctMetaMonto }}%
-            </div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'fill-green' : totals.pctMetaMonto >= 50 ? 'fill-amber' : 'fill-red'"
+      <!-- KPI strip personal -->
+      <section class="ep-section">
+        <div class="ep-kpis ep-kpis-4">
+          <article class="ep-kpi" :class="totals.pctMetaMonto >= 80 ? 'ep-kpi-green' : totals.pctMetaMonto >= 50 ? 'ep-kpi-amber' : 'ep-kpi-red'">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta S/.</span><i class="fa-solid fa-bullseye ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
+            <div class="rg-kpi-progress">
+              <div class="rg-kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'is-green' : totals.pctMetaMonto >= 50 ? 'is-amber' : 'is-red'"
                 :style="`width:${Math.min(100, totals.pctMetaMonto)}%`"></div>
             </div>
-            <div class="kpi-card-sub">{{ formatCurrency(totals.ven_monto) }} de {{ formatCurrency(totals.obj_monto) }}</div>
-          </div>
+            <span class="ep-kpi-foot"><strong>{{ formatCurrency(totals.ven_monto) }}</strong> de {{ formatCurrency(totals.obj_monto) }}</span>
+          </article>
 
-          <div class="kpi-card" @click="drillDown({ type: 'leads' })" style="cursor:pointer">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">MIS LEADS</span>
-              <div class="kpi-indicator ind-blue"></div>
+          <article class="ep-kpi ep-kpi-teal rg-clickable" @click="drillDown({ type: 'leads' })">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">Mis leads</span><i class="fa-solid fa-users ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ myData?.contactos || 0 }}</span></div>
+            <div class="rg-kpi-progress">
+              <div class="rg-kpi-progress-fill is-blue" :style="`width:${Math.min(100, myData?.pct_gestion || 0)}%`"></div>
             </div>
-            <div class="kpi-card-value accent-text">{{ myData?.contactos || 0 }}</div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill fill-blue" :style="`width:${Math.min(100, myData?.pct_gestion || 0)}%`"></div>
-            </div>
-            <div class="kpi-card-sub">{{ myData?.activos || 0 }} activos · {{ myData?.pct_gestion || 0 }}% gestionados</div>
-          </div>
+            <span class="ep-kpi-foot"><strong>{{ myData?.activos || 0 }}</strong> activos · {{ myData?.pct_gestion || 0 }}% gestionados</span>
+          </article>
 
-          <div class="kpi-card" :class="(myData?.ratio || 0) === 0 ? 'card-ratio-zero' : ''">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label" :style="(myData?.ratio || 0) === 0 ? 'color: #dc2626;' : ''">RATIO LEADS→VENTA</span>
-              <div class="kpi-indicator" :class="getRatioBgClass(myData?.ratio || 0)"></div>
-            </div>
-            <div class="kpi-card-value" :class="getRatioColorClass(myData?.ratio || 0)">
-              {{ myData?.ratio || 0 }}%
-            </div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill" :class="getRatioBgClass(myData?.ratio || 0)"
+          <article class="ep-kpi" :class="(myData?.ratio || 0) === 0 ? 'ep-kpi-red is-alert' : (myData?.ratio || 0) >= 15 ? 'ep-kpi-green' : 'ep-kpi-amber'">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">Ratio leads → venta</span><i class="fa-solid fa-arrow-trend-up ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ myData?.ratio || 0 }}%</span></div>
+            <div class="rg-kpi-progress">
+              <div class="rg-kpi-progress-fill" :class="(myData?.ratio || 0) === 0 ? 'is-red' : (myData?.ratio || 0) >= 15 ? 'is-green' : 'is-amber'"
                 :style="`width:${Math.min(100, (myData?.ratio || 0) * 3)}%`"></div>
             </div>
-            <div class="kpi-card-sub" :style="(myData?.ratio || 0) === 0 ? 'color: #ef4444; font-weight: bold;' : ''">
-              {{ (myData?.ratio || 0) === 0 ? '¡ALERTA! Sin conversiones' : 'Referencia saludable: ≥ 15%' }}
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">TICKET PROMEDIO</span>
-              <div class="kpi-indicator ind-blue"></div>
-            </div>
-            <div class="kpi-card-value accent-text">{{ formatCurrency(myData?.ven > 0 ? myData.ven_monto / myData.ven : 0) }}</div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill fill-blue" style="width:60%"></div>
-            </div>
-            <div class="kpi-card-sub">Conv. cohorte: <strong>{{ myData?.conv || 0 }}%</strong></div>
-          </div>
+            <span class="ep-kpi-foot">{{ (myData?.ratio || 0) === 0 ? '¡Alerta! Sin conversiones' : 'Saludable: ≥ 15%' }}</span>
+          </article>
+
+          <article class="ep-kpi ep-kpi-indigo">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">Ticket promedio</span><i class="fa-solid fa-receipt ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ formatCurrency(myData?.ven > 0 ? myData.ven_monto / myData.ven : 0) }}</span></div>
+            <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-blue" style="width:60%"></div></div>
+            <span class="ep-kpi-foot">Conv. cohorte: <strong>{{ myData?.conv || 0 }}%</strong></span>
+          </article>
         </div>
+      </section>
 
-        <!-- Fila: Evolución + Embudo personal -->
-        <div class="personal-chart-row">
-          <div class="chart-panel chart-panel-grow">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Mi Evolución vs Meta</div>
-                <div class="chart-panel-sub">Ventas acumuladas vs ritmo ideal para alcanzar el objetivo</div>
-              </div>
+      <!-- Evolución + Embudo -->
+      <div class="rg-two-col rg-two-col-3-2">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Evolución</span>
+              <h2 class="rg-card-title">Mi evolución vs meta</h2>
+              <p class="rg-card-sub">Ventas acumuladas vs ritmo ideal para alcanzar el objetivo.</p>
             </div>
-            <div class="chart-area chart-area-lg">
-              <Line :data="trendChartData" :options="lineOptions" />
+          </header>
+          <div class="rg-chart rg-chart-lg"><Line :data="trendChartData" :options="lineOptions" /></div>
+        </section>
+
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Pipeline</span>
+              <h2 class="rg-card-title">Mi embudo</h2>
+            </div>
+          </header>
+          <div class="rg-funnel">
+            <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'leads' })">
+              <div class="rg-funnel-row"><span class="rg-funnel-l">Leads totales</span><span class="rg-funnel-v">{{ myData?.contactos || 0 }}</span></div>
+              <div class="rg-funnel-bar"><div class="rg-funnel-fill is-slate" style="width:100%"></div></div>
+            </div>
+            <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'active_leads' })">
+              <div class="rg-funnel-row"><span class="rg-funnel-l c-amber">Activos</span><span class="rg-funnel-v c-amber">{{ myData?.activos || 0 }}</span></div>
+              <div class="rg-funnel-bar"><div class="rg-funnel-fill is-amber" :style="`width:${myData?.pct_gestion || 0}%`"></div></div>
+            </div>
+            <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'sales' })">
+              <div class="rg-funnel-row"><span class="rg-funnel-l c-green">Ventas del período</span><span class="rg-funnel-v c-green">{{ myData?.ven || 0 }}</span></div>
+              <div class="rg-funnel-bar"><div class="rg-funnel-fill is-green" :style="`width:${myData?.ratio || 0}%`"></div></div>
+            </div>
+            <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'cohort_sales' })">
+              <div class="rg-funnel-row"><span class="rg-funnel-l c-blue">Ventas cohorte</span><span class="rg-funnel-v c-blue">{{ myData?.acum_ventas_cohorte || 0 }}</span></div>
+              <div class="rg-funnel-bar"><div class="rg-funnel-fill is-blue" :style="`width:${myData?.conv || 0}%`"></div></div>
+            </div>
+            <div class="rg-funnel-foot">
+              <span>Conv. global</span>
+              <span class="fw-700" :class="convClass(myData?.conv || 0)">{{ myData?.conv || 0 }}%</span>
             </div>
           </div>
-
-          <div class="chart-panel personal-funnel-panel">
-            <div class="chart-panel-header">
-              <div class="chart-panel-title">Mi Embudo</div>
-            </div>
-            <div class="funnel-body">
-              <div class="funnel-step" @click="drillDown({ type: 'leads' })">
-                <div class="funnel-step-header">
-                  <span class="funnel-label">Leads totales</span>
-                  <span class="funnel-value">{{ myData?.contactos || 0 }}</span>
-                </div>
-                <div class="funnel-bar"><div class="funnel-fill fill-slate" style="width:100%"></div></div>
-              </div>
-              <div class="funnel-step" @click="drillDown({ type: 'active_leads' })">
-                <div class="funnel-step-header">
-                  <span class="funnel-label funnel-label-amber">Activos</span>
-                  <span class="funnel-value c-amber">{{ myData?.activos || 0 }}</span>
-                </div>
-                <div class="funnel-bar"><div class="funnel-fill fill-amber" :style="`width:${myData?.pct_gestion || 0}%`"></div></div>
-              </div>
-              <div class="funnel-step" @click="drillDown({ type: 'sales' })">
-                <div class="funnel-step-header">
-                  <span class="funnel-label funnel-label-green">Ventas del período</span>
-                  <span class="funnel-value c-green">{{ myData?.ven || 0 }}</span>
-                </div>
-                <div class="funnel-bar"><div class="funnel-fill fill-green" :style="`width:${myData?.ratio || 0}%`"></div></div>
-              </div>
-              <div class="funnel-step" @click="drillDown({ type: 'cohort_sales' })">
-                <div class="funnel-step-header">
-                  <span class="funnel-label" style="color:#2563eb">Ventas cohorte</span>
-                  <span class="funnel-value" style="color:#2563eb">{{ myData?.acum_ventas_cohorte || 0 }}</span>
-                </div>
-                <div class="funnel-bar"><div class="funnel-fill" style="background:#3b82f6;" :style="`width:${myData?.conv || 0}%`"></div></div>
-              </div>
-              <div class="funnel-footer">
-                <span class="funnel-footer-label">Conv. Global</span>
-                <span class="fw-700" :class="convClass(myData?.conv || 0)">{{ myData?.conv || 0 }}%</span>
-              </div>
-            </div>
-
-            <!-- Mini tabla resumen financiero -->
-            <div class="personal-finance-summary">
-              <div class="pfs-row">
-                <span class="pfs-label">Meta S/.</span>
-                <span class="pfs-val text-muted">{{ formatCurrency(myData?.obj_monto || 0) }}</span>
-              </div>
-              <div class="pfs-row">
-                <span class="pfs-label">Venta S/.</span>
-                <span class="pfs-val c-green fw-600">{{ formatCurrency(myData?.ven_monto || 0) }}</span>
-              </div>
-              <div class="pfs-row">
-                <span class="pfs-label">% Logrado</span>
-                <span class="pfs-val fw-700" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
-                  {{ totals.pctMetaMonto }}%
-                </span>
-              </div>
-            </div>
+          <div class="rg-finance-summary">
+            <div class="rg-fs-row"><span>Meta S/.</span><span class="text-muted">{{ formatCurrency(myData?.obj_monto || 0) }}</span></div>
+            <div class="rg-fs-row"><span>Venta S/.</span><span class="c-green fw-600">{{ formatCurrency(myData?.ven_monto || 0) }}</span></div>
+            <div class="rg-fs-row"><span>% Logrado</span><span class="fw-700" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">{{ totals.pctMetaMonto }}%</span></div>
           </div>
-        </div>
-
-        <div class="split-panel-row" style="margin-bottom: 18px;">
-          <div class="chart-panel split-panel-main">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Composición de Mis Leads por Estado</div>
-                <div class="chart-panel-sub">Evolución de la gestión de mis contactos en el tiempo</div>
-              </div>
-            </div>
-            <div class="chart-area chart-area-lg">
-              <Bar :data="myLeadsStackedChartData" :options="stackedBarOptions" />
-            </div>
-          </div>
-
-          <div class="chart-panel split-panel-side">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ventas por Programa</div>
-                <div class="chart-panel-sub">Distribución de mis ventas en el período</div>
-              </div>
-            </div>
-            <div class="chart-area chart-area-donut">
-              <Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Micro-gestión (sin selector de asesor) -->
-        <div class="micro-panel">
-          <div class="micro-panel-header">
-            <div class="micro-panel-title-block">
-              <div class="micro-panel-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                Mi Desglose por Período
-              </div>
-              <p class="micro-panel-sub">Haga clic en los números para ver el detalle de registros</p>
-            </div>
-          </div>
-
-          <div class="days-grid">
-            <div v-for="(day, i) in currentDailyStats" :key="i" class="day-card" :class="{ 'day-card-active': day.ven > 0 }">
-              <div class="day-card-header" :class="day.ven > 0 ? 'dh-active' : 'dh-empty'">
-                <span class="day-name">{{ day.name }}</span>
-              </div>
-              <div class="day-card-body">
-                <div class="day-metric">
-                  <span class="day-metric-label">Leads</span>
-                  <span class="day-metric-val actionable" @click="drillDown({ date: day.date || day.name, type: 'leads' })">{{ day.con }}</span>
-                </div>
-                <div class="day-metric day-metric-accent">
-                  <span class="day-metric-label">Ventas</span>
-                  <div class="day-metric-group">
-                    <span class="day-metric-val accent-text actionable" @click="drillDown({ date: day.date || day.name, type: 'sales' })">{{ day.ven }}</span>
-                    <span class="day-metric-sub">{{ day.ratio_dia }}%</span>
-                  </div>
-                </div>
-                <div class="day-metric">
-                  <span class="day-metric-label">Conv.</span>
-                  <div class="day-metric-group">
-                    <span class="day-metric-val c-green actionable" @click="drillDown({ date: day.date || day.name, type: 'cohort_sales' })">{{ day.ven_coh }}</span>
-                    <span class="day-metric-sub">{{ day.conv_dia }}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        </section>
       </div>
-      <!-- ═══════════════════════════════════════════
-           VISTA EQUIPO (lider / admin)
-      ════════════════════════════════════════════ -->
 
-      <!-- ── VISTA TABLA ── -->
-      <div v-else-if="!isDashboard" class="view-table">
+      <!-- Composición + Programa -->
+      <div class="rg-two-col rg-two-col-2-1">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Distribución</span>
+              <h2 class="rg-card-title">Composición de mis leads por estado</h2>
+              <p class="rg-card-sub">Evolución de la gestión de mis contactos en el tiempo.</p>
+            </div>
+          </header>
+          <div class="rg-chart rg-chart-lg"><Bar :data="myLeadsStackedChartData" :options="stackedBarOptions" /></div>
+        </section>
 
-        <div class="table-shell">
-          <table class="exec-table">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Programas</span>
+              <h2 class="rg-card-title">Ventas por programa</h2>
+              <p class="rg-card-sub">Distribución de mis ventas en el período.</p>
+            </div>
+          </header>
+          <div class="rg-chart rg-chart-donut"><Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" /></div>
+        </section>
+      </div>
+
+      <!-- Mi desglose por período -->
+      <section class="ep-section rg-card">
+        <header class="rg-card-head">
+          <div class="rg-card-head-left">
+            <span class="rg-eyebrow">Granular</span>
+            <h2 class="rg-card-title"><i class="fa-solid fa-table-cells"></i> Mi desglose por período</h2>
+            <p class="rg-card-sub">Click en los números para ver el detalle de registros.</p>
+          </div>
+        </header>
+        <div class="rg-days-grid">
+          <article v-for="(day, i) in currentDailyStats" :key="i" class="rg-day" :class="{ 'is-active': day.ven > 0 }">
+            <div class="rg-day-head"><span class="rg-day-name">{{ day.name }}</span></div>
+            <div class="rg-day-body">
+              <div class="rg-day-metric">
+                <span class="rg-day-l">Leads</span>
+                <span class="rg-day-v rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'leads' })">{{ day.con }}</span>
+              </div>
+              <div class="rg-day-metric is-accent">
+                <span class="rg-day-l">Ventas</span>
+                <div class="rg-day-group">
+                  <span class="rg-day-v c-accent rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'sales' })">{{ day.ven }}</span>
+                  <span class="rg-day-sub">{{ day.ratio_dia }}%</span>
+                </div>
+              </div>
+              <div class="rg-day-metric">
+                <span class="rg-day-l">Conv.</span>
+                <div class="rg-day-group">
+                  <span class="rg-day-v c-green rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'cohort_sales' })">{{ day.ven_coh }}</span>
+                  <span class="rg-day-sub">{{ day.conv_dia }}%</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ═══════════════ VISTA TABULAR (EQUIPO) ═══════════════ -->
+    <div v-else-if="!isDashboard" class="rg-fadein">
+      <section class="ep-section rg-card">
+        <header class="rg-card-head">
+          <div class="rg-card-head-left">
+            <span class="rg-eyebrow">Equipo</span>
+            <h2 class="rg-card-title">Tablero de objetivos por asesor</h2>
+            <p class="rg-card-sub">Click en los números para abrir la lista de leads filtrada.</p>
+          </div>
+        </header>
+
+        <div class="rg-table-wrap">
+          <table class="exec-table rg-table">
             <thead>
-              <tr class="thead-group">
-                <th class="th-cat" rowspan="2">ASESOR</th>
-                <th colspan="3" class="th-group th-group-a">OBJETIVOS (VACANTES)</th>
-                <th colspan="3" class="th-group th-group-b">FINANCIERO (S/.)</th>
-                <th colspan="3" class="th-group th-group-c">RESULTADOS</th>
-                <th colspan="4" class="th-group th-group-d">LOGROS</th>
+              <tr class="rg-thead-group">
+                <th class="rg-th-cat" rowspan="2">Asesor</th>
+                <th colspan="3" class="rg-th-group rg-grp-a">Objetivos (vacantes)</th>
+                <th colspan="3" class="rg-th-group rg-grp-b">Financiero (S/.)</th>
+                <th colspan="3" class="rg-th-group rg-grp-c">Resultados</th>
+                <th colspan="4" class="rg-th-group rg-grp-d">Logros</th>
               </tr>
-              <tr class="thead-sub">
-                <th class="ts ts-a text-center">META #</th>
-                <th class="ts ts-a text-center">REAL #</th>
-                <th class="ts ts-a text-center">GAP</th>
-                <th class="ts ts-b text-right">META S/.</th>
-                <th class="ts ts-b text-right">VENTA S/.</th>
-                <th class="ts ts-b text-right">TICKET</th>
-                <th class="ts ts-c text-center">LEADS</th>
-                <th class="ts ts-c text-center">ACTIVOS</th>
-                <th class="ts ts-c text-center">% GEST</th>
-                <th class="ts ts-d text-center">RATIO</th>
-                <th class="ts ts-d text-center">CONV. #</th>
-                <th class="ts ts-d text-center">% CONV</th>
-                <th class="ts ts-d text-center">STATUS</th>
+              <tr class="rg-thead-sub">
+                <th class="ts ts-a text-center">Meta #</th>
+                <th class="ts ts-a text-center">Real #</th>
+                <th class="ts ts-a text-center">Gap</th>
+                <th class="ts ts-b text-end">Meta S/.</th>
+                <th class="ts ts-b text-end">Venta S/.</th>
+                <th class="ts ts-b text-end">Ticket</th>
+                <th class="ts ts-c text-center">Leads</th>
+                <th class="ts ts-c text-center">Activos</th>
+                <th class="ts ts-c text-center">% Gest.</th>
+                <th class="ts ts-d text-center">Ratio</th>
+                <th class="ts ts-d text-center">Conv. #</th>
+                <th class="ts ts-d text-center">% Conv.</th>
+                <th class="ts ts-d text-center">Status</th>
               </tr>
             </thead>
-
             <tbody>
               <tr v-if="tableData.length === 0">
-                <td colspan="14" class="empty-row">No hay datos para este período</td>
+                <td colspan="14" class="rg-empty-row">No hay datos para este período.</td>
               </tr>
-              <tr v-for="(row, index) in tableData" :key="index" class="tbody-row" :class="{ 'row-alt': index % 2 === 0 }">
-                <!-- Nombre del asesor clickeable para entrar en su vista personal -->
-                <td class="td-asesor">
-                  <div class="td-asesor-inner">
+              <tr v-for="(row, index) in tableData" :key="index" class="rg-tbody-row" :class="{ 'is-alt': index % 2 === 0 }">
+                <td class="td-a rg-td-asesor">
+                  <div class="rg-td-asesor-inner">
+                    <div class="rg-avatar-mini">{{ initialsFromName(row.asesor) }}</div>
                     <span>{{ row.asesor }}</span>
-                    <button v-if="isLiderComercial" class="btn-view-as" @click.stop="quickViewAsAdvisor(row.cod)" title="Ver tablero de este asesor">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
+                    <button v-if="isLiderComercial" class="rg-btn-view-as" @click.stop="quickViewAsAdvisor(row.cod)" title="Ver tablero de este asesor">
+                      <i class="fa-solid fa-eye"></i>
                     </button>
                   </div>
                 </td>
-
                 <td class="td-a text-center">{{ row.obj }}</td>
-                <td class="td-a text-center fw-600 actionable" @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">{{ row.ven }}</td>
+                <td class="td-a text-center fw-600 rg-clickable" @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">{{ row.ven }}</td>
                 <td class="td-a text-center">
-                  <span :class="row.falta > 0 ? 'gap-neg' : 'gap-pos'">{{ row.falta > 0 ? '−' + row.falta : '✓' }}</span>
+                  <span :class="row.falta > 0 ? 'rg-gap-neg' : 'rg-gap-pos'">{{ row.falta > 0 ? '−' + row.falta : '✓' }}</span>
                 </td>
-
-                <td class="td-b text-right text-muted small">{{ formatCurrency(row.obj_monto) }}</td>
-                <td class="td-b text-right fw-600 actionable" @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">{{ formatCurrency(row.ven_monto) }}</td>
-                <td class="td-b text-right small text-muted">{{ formatCurrency(row.ven_monto / (row.ven || 1)) }}</td>
-
-                <td class="td-c text-center actionable" @click.stop="drillDown({ advisor: row.cod, type: 'leads' })">{{ row.contactos }}</td>
-                <td class="td-c text-center text-muted actionable" @click.stop="drillDown({ advisor: row.cod, type: 'active_leads' })">{{ row.activos }}</td>
-                <td class="td-c text-center small">{{ row.pct_gestion }}%</td>
-
-                <td class="td-d text-center fw-700 accent-text">{{ row.ratio }}%</td>
-                <td class="td-d text-center fw-600 actionable" @click.stop="drillDown({ advisor: row.cod, type: 'cohort_sales' })">{{ row.acum_ventas_cohorte }}</td>
-                <td class="td-d text-center">
-                  <span :class="convClass(row.conv)">{{ row.conv }}%</span>
-                </td>
-                <td class="td-d text-center">
-                  <span class="status-pill" :class="row.ratio >= 15 ? 'status-ok' : 'status-low'">
-                    {{ row.ratio >= 15 ? 'OK' : 'BAJO' }}
-                  </span>
+                <td class="td-a text-end text-muted small">{{ formatCurrency(row.obj_monto) }}</td>
+                <td class="td-a text-end fw-600 rg-clickable" @click.stop="drillDown({ advisor: row.cod, type: 'sales' })">{{ formatCurrency(row.ven_monto) }}</td>
+                <td class="td-a text-end small text-muted">{{ formatCurrency(row.ven_monto / (row.ven || 1)) }}</td>
+                <td class="td-a text-center rg-clickable" @click.stop="drillDown({ advisor: row.cod, type: 'leads' })">{{ row.contactos }}</td>
+                <td class="td-a text-center text-muted rg-clickable" @click.stop="drillDown({ advisor: row.cod, type: 'active_leads' })">{{ row.activos }}</td>
+                <td class="td-a text-center small">{{ row.pct_gestion }}%</td>
+                <td class="td-a text-center fw-700 c-accent">{{ row.ratio }}%</td>
+                <td class="td-a text-center fw-600 rg-clickable" @click.stop="drillDown({ advisor: row.cod, type: 'cohort_sales' })">{{ row.acum_ventas_cohorte }}</td>
+                <td class="td-a text-center"><span :class="convClass(row.conv)">{{ row.conv }}%</span></td>
+                <td class="td-a text-center">
+                  <span class="rg-status-pill" :class="row.ratio >= 15 ? 'is-ok' : 'is-low'">{{ row.ratio >= 15 ? 'OK' : 'BAJO' }}</span>
                 </td>
               </tr>
             </tbody>
-
             <tfoot>
-              <tr class="tfoot-row">
-                <td class="tfoot-label">TOTAL EQUIPO</td>
+              <tr class="rg-tfoot-row">
+                <td class="rg-tfoot-label">Total equipo</td>
                 <td class="text-center fw-600">{{ totals.obj }}</td>
-                <td class="text-center fw-600 actionable accent-text" @click="drillDown({ type: 'sales' })">{{ totals.ven }}</td>
+                <td class="text-center fw-600 rg-clickable c-accent" @click="drillDown({ type: 'sales' })">{{ totals.ven }}</td>
                 <td class="text-center c-red fw-600">−{{ totals.falta }}</td>
-                <td class="text-right fw-600 text-muted">{{ formatCurrency(totals.obj_monto) }}</td>
-                <td class="text-right fw-700 accent-text actionable" @click="drillDown({ type: 'sales' })">{{ formatCurrency(totals.ven_monto) }}</td>
-                <td class="text-right fw-600 text-muted">{{ formatCurrency(totals.ticketProm) }}</td>
-                <td class="text-center fw-600 actionable" @click="drillDown({ type: 'leads' })">{{ totals.contactos }}</td>
-                <td class="text-center text-muted actionable" @click="drillDown({ type: 'active_leads' })">{{ totals.activos }}</td>
+                <td class="text-end fw-600 text-muted">{{ formatCurrency(totals.obj_monto) }}</td>
+                <td class="text-end fw-700 c-accent rg-clickable" @click="drillDown({ type: 'sales' })">{{ formatCurrency(totals.ven_monto) }}</td>
+                <td class="text-end fw-600 text-muted">{{ formatCurrency(totals.ticketProm) }}</td>
+                <td class="text-center fw-600 rg-clickable" @click="drillDown({ type: 'leads' })">{{ totals.contactos }}</td>
+                <td class="text-center text-muted rg-clickable" @click="drillDown({ type: 'active_leads' })">{{ totals.activos }}</td>
                 <td class="text-center text-muted">{{ totals.avgGestion }}%</td>
-                <td class="text-center fw-700 accent-text">{{ totals.avgRatio }}%</td>
-                <td class="text-center fw-600 actionable" @click="drillDown({ type: 'cohort_sales' })">{{ totals.acum_ventas_cohorte_total }}</td>
+                <td class="text-center fw-700 c-accent">{{ totals.avgRatio }}%</td>
+                <td class="text-center fw-600 rg-clickable" @click="drillDown({ type: 'cohort_sales' })">{{ totals.acum_ventas_cohorte_total }}</td>
                 <td class="text-center fw-600">{{ totals.avgConv }}%</td>
                 <td class="text-center">
-                  <span class="status-pill" :class="totals.pctMetaMonto >= 80 ? 'status-ok' : 'status-low'">{{ totals.pctMetaMonto }}% $$</span>
+                  <span class="rg-status-pill" :class="totals.pctMetaMonto >= 80 ? 'is-ok' : 'is-low'">{{ totals.pctMetaMonto }}% S/.</span>
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
+      </section>
 
-        <!-- Micro-gestión -->
-        <div class="micro-panel">
-          <div class="micro-panel-header">
-            <div class="micro-panel-title-block">
-              <div class="micro-panel-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                Micro-Gestión: Desglose por Período
-              </div>
-              <p class="micro-panel-sub">Haga clic en los números para ver el detalle de registros</p>
-            </div>
-            <div class="micro-filter">
-              <label class="filter-label-dark">ASESOR</label>
-              <select v-model="selectedAdvisorCode" class="exec-select-dark">
-                <option value="ALL">Total Equipo (Consolidado)</option>
-                <option v-for="adv in tableData" :key="adv.cod" :value="adv.cod">{{ adv.asesor }}</option>
-              </select>
-            </div>
+      <!-- Micro-gestión -->
+      <section class="ep-section rg-card">
+        <header class="rg-card-head">
+          <div class="rg-card-head-left">
+            <span class="rg-eyebrow">Granular</span>
+            <h2 class="rg-card-title"><i class="fa-solid fa-table-cells"></i> Micro-gestión: desglose por período</h2>
+            <p class="rg-card-sub">Click en los números para ver el detalle de registros.</p>
           </div>
-
-          <div class="days-grid">
-            <div v-for="(day, i) in currentDailyStats" :key="i" class="day-card" :class="{ 'day-card-active': day.ven > 0 }">
-              <div class="day-card-header" :class="day.ven > 0 ? 'dh-active' : 'dh-empty'">
-                <span class="day-name">{{ day.name }}</span>
+          <div class="rg-filter-chip">
+            <span class="rg-filter-label">Asesor</span>
+            <select v-model="selectedAdvisorCode" class="rg-filter-select">
+              <option value="ALL">Total equipo (consolidado)</option>
+              <option v-for="adv in tableData" :key="adv.cod" :value="adv.cod">{{ adv.asesor }}</option>
+            </select>
+          </div>
+        </header>
+        <div class="rg-days-grid">
+          <article v-for="(day, i) in currentDailyStats" :key="i" class="rg-day" :class="{ 'is-active': day.ven > 0 }">
+            <div class="rg-day-head"><span class="rg-day-name">{{ day.name }}</span></div>
+            <div class="rg-day-body">
+              <div class="rg-day-metric">
+                <span class="rg-day-l">Leads</span>
+                <span class="rg-day-v rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'leads', advisor: selectedAdvisorCode })">{{ day.con }}</span>
               </div>
-              <div class="day-card-body">
-                <div class="day-metric">
-                  <span class="day-metric-label">Leads</span>
-                  <span class="day-metric-val actionable" @click="drillDown({ date: day.date || day.name, type: 'leads', advisor: selectedAdvisorCode })">{{ day.con }}</span>
+              <div class="rg-day-metric is-accent">
+                <span class="rg-day-l">Ventas</span>
+                <div class="rg-day-group">
+                  <span class="rg-day-v c-accent rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'sales', advisor: selectedAdvisorCode })">{{ day.ven }}</span>
+                  <span class="rg-day-sub">{{ day.ratio_dia }}%</span>
                 </div>
-                <div class="day-metric day-metric-accent">
-                  <span class="day-metric-label">Ventas</span>
-                  <div class="day-metric-group">
-                    <span class="day-metric-val accent-text actionable" @click="drillDown({ date: day.date || day.name, type: 'sales', advisor: selectedAdvisorCode })">{{ day.ven }}</span>
-                    <span class="day-metric-sub">{{ day.ratio_dia }}%</span>
-                  </div>
-                </div>
-                <div class="day-metric">
-                  <span class="day-metric-label">Conv.</span>
-                  <div class="day-metric-group">
-                    <span class="day-metric-val c-green actionable" @click="drillDown({ date: day.date || day.name, type: 'cohort_sales', advisor: selectedAdvisorCode })">{{ day.ven_coh }}</span>
-                    <span class="day-metric-sub">{{ day.conv_dia }}%</span>
-                  </div>
+              </div>
+              <div class="rg-day-metric">
+                <span class="rg-day-l">Conv.</span>
+                <div class="rg-day-group">
+                  <span class="rg-day-v c-green rg-clickable" @click="drillDown({ date: day.date || day.name, type: 'cohort_sales', advisor: selectedAdvisorCode })">{{ day.ven_coh }}</span>
+                  <span class="rg-day-sub">{{ day.conv_dia }}%</span>
                 </div>
               </div>
             </div>
-          </div>
+          </article>
         </div>
+      </section>
+    </div>
 
-      </div>
+    <!-- ═══════════════ VISTA DASHBOARD (EQUIPO) ═══════════════ -->
+    <div v-else class="rg-fadein">
 
-      <!-- ── VISTA DASHBOARD (equipo) ── -->
-      <div v-else class="view-dashboard">
-
-        <!-- KPI Strip -->
-        <div class="kpi-strip">
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">% META UNIDADES</span>
-              <div class="kpi-indicator" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'ind-green' : 'ind-red'"></div>
-            </div>
-            <div class="kpi-card-value" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'c-green' : 'c-red'">
-              {{ totals.obj > 0 ? Math.round((totals.ven / totals.obj) * 100) : 0 }}%
-            </div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'fill-green' : 'fill-red'"
+      <!-- KPI strip -->
+      <section class="ep-section">
+        <div class="ep-kpis ep-kpis-4">
+          <article class="ep-kpi" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'ep-kpi-green' : 'ep-kpi-red'">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta unidades</span><i class="fa-solid fa-bullseye ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.obj > 0 ? Math.round((totals.ven / totals.obj) * 100) : 0 }}%</span></div>
+            <div class="rg-kpi-progress">
+              <div class="rg-kpi-progress-fill" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'is-green' : 'is-red'"
                 :style="`width:${Math.min(100, totals.obj > 0 ? Math.round((totals.ven/totals.obj)*100) : 0)}%`"></div>
             </div>
-            <div class="kpi-card-sub">{{ totals.ven }} de {{ totals.obj }} ventas realizadas</div>
-          </div>
+            <span class="ep-kpi-foot"><strong>{{ totals.ven }}</strong> de {{ totals.obj }} ventas realizadas</span>
+          </article>
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">% META S/.</span>
-              <div class="kpi-indicator" :class="totals.pctMetaMonto >= 80 ? 'ind-green' : 'ind-amber'"></div>
+          <article class="ep-kpi" :class="totals.pctMetaMonto >= 80 ? 'ep-kpi-green' : totals.pctMetaMonto >= 50 ? 'ep-kpi-amber' : 'ep-kpi-red'">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta S/.</span><i class="fa-solid fa-coins ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
+            <div class="rg-kpi-progress">
+              <div class="rg-kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'is-green' : 'is-amber'" :style="`width:${Math.min(100, totals.pctMetaMonto)}%`"></div>
             </div>
-            <div class="kpi-card-value" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
-              {{ totals.pctMetaMonto }}%
-            </div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'fill-green' : 'fill-amber'"
-                :style="`width:${Math.min(100, totals.pctMetaMonto)}%`"></div>
-            </div>
-            <div class="kpi-card-sub">{{ formatCurrency(totals.ven_monto) }} de {{ formatCurrency(totals.obj_monto) }}</div>
-          </div>
+            <span class="ep-kpi-foot"><strong>{{ formatCurrency(totals.ven_monto) }}</strong> de {{ formatCurrency(totals.obj_monto) }}</span>
+          </article>
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">RATIO LEADS → VENTA</span>
-              <div class="kpi-indicator ind-blue"></div>
-            </div>
-            <div class="kpi-card-value accent-text">{{ totals.avgRatio }}%</div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill fill-blue" :style="`width:${Math.min(100, totals.avgRatio * 3)}%`"></div>
-            </div>
-            <div class="kpi-card-sub">Eficiencia de contacto del período</div>
-          </div>
+          <article class="ep-kpi ep-kpi-teal">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">Ratio leads → venta</span><i class="fa-solid fa-arrow-trend-up ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.avgRatio }}%</span></div>
+            <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-blue" :style="`width:${Math.min(100, totals.avgRatio * 3)}%`"></div></div>
+            <span class="ep-kpi-foot">Eficiencia de contacto del período</span>
+          </article>
 
-          <div class="kpi-card">
-            <div class="kpi-card-header">
-              <span class="kpi-card-label">LEADS ACTIVOS</span>
-              <div class="kpi-indicator ind-amber"></div>
-            </div>
-            <div class="kpi-card-value" style="color:#b45309;">{{ totals.activos }}</div>
-            <div class="kpi-progress">
-              <div class="kpi-progress-fill fill-amber" :style="`width:${Math.min(100, totals.avgGestion)}%`"></div>
-            </div>
-            <div class="kpi-card-sub">{{ totals.avgGestion }}% gestionados del total</div>
-          </div>
+          <article class="ep-kpi ep-kpi-amber">
+            <div class="ep-kpi-head"><span class="ep-kpi-label">Leads activos</span><i class="fa-solid fa-fire ep-kpi-icon"></i></div>
+            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.activos }}</span></div>
+            <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-amber" :style="`width:${Math.min(100, totals.avgGestion)}%`"></div></div>
+            <span class="ep-kpi-foot"><strong>{{ totals.avgGestion }}%</strong> gestionados del total</span>
+          </article>
         </div>
+      </section>
 
-        <!-- Evolución + Proyección (full width) -->
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Evolución de Ventas vs Proyección de Meta</div>
-              <div class="chart-panel-sub">Acumulado real vs ritmo ideal para cumplir la meta del período</div>
-            </div>
-            <div class="chart-legend-inline">
-              <span class="legend-line" style="background:#0f172a;"></span><span>Acumulado Real</span>
-              <span class="legend-dashed"></span><span>Meta Proyectada</span>
-              <span class="legend-dot-sq" style="background:rgba(59,130,246,0.75)"></span><span>Ventas</span>
-              <span class="legend-dot-sq" style="background:#e2e8f0"></span><span>Leads</span>
-            </div>
+      <!-- Evolución + Proyección -->
+      <section class="ep-section rg-card">
+        <header class="rg-card-head">
+          <div class="rg-card-head-left">
+            <span class="rg-eyebrow">Tendencia</span>
+            <h2 class="rg-card-title">Evolución de ventas vs proyección de meta</h2>
+            <p class="rg-card-sub">Acumulado real vs ritmo ideal para cumplir la meta.</p>
           </div>
-          <div class="chart-area chart-area-lg">
-            <Line :data="trendChartData" :options="lineOptions" />
+          <div class="rg-chart-legend">
+            <span class="rg-legend"><span class="rg-legend-line" style="background:#14140F;"></span> Acumulado real</span>
+            <span class="rg-legend"><span class="rg-legend-dashed"></span> Meta proyectada</span>
+            <span class="rg-legend"><span class="rg-legend-dot" style="background:rgba(59,130,246,0.75)"></span> Ventas</span>
+            <span class="rg-legend"><span class="rg-legend-dot" style="background:#cbd5e1"></span> Leads</span>
           </div>
-        </div>
+        </header>
+        <div class="rg-chart rg-chart-lg"><Line :data="trendChartData" :options="lineOptions" /></div>
+      </section>
 
-        <!-- Fila 2 -->
-        <div class="chart-grid-2">
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ranking — % Cumplimiento de Meta</div>
-                <div class="chart-panel-sub">Ventas reales vs objetivo por asesor</div>
-              </div>
+      <!-- Ranking + Conversión -->
+      <div class="rg-two-col">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Ranking</span>
+              <h2 class="rg-card-title">% Cumplimiento de meta</h2>
+              <p class="rg-card-sub">Ventas reales vs objetivo por asesor.</p>
             </div>
-            <div class="chart-area"><Bar :data="rankingChartData" :options="rankingBarOptions" /></div>
-          </div>
+          </header>
+          <div class="rg-chart"><Bar :data="rankingChartData" :options="rankingBarOptions" /></div>
+        </section>
 
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ratio vs Conversión por Asesor</div>
-                <div class="chart-panel-sub">Ratio = Ventas/Leads período · Conversión = Ventas cohorte/Leads</div>
-              </div>
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Eficiencia</span>
+              <h2 class="rg-card-title">Ratio vs conversión por asesor</h2>
+              <p class="rg-card-sub">Ratio = ventas/leads · Conversión = ventas cohorte/leads.</p>
             </div>
-            <div class="chart-area"><Bar :data="conversionChartData" :options="convBarOptions" /></div>
-          </div>
-        </div>
-
-        <!-- Fila 3: Pipeline + Revenue + Embudo/Share -->
-        <div class="chart-grid-pipeline">
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Pipeline de Leads por Asesor</div>
-                <div class="chart-panel-sub">Leads totales, activos y convertidos</div>
-              </div>
-            </div>
-            <div class="chart-area"><Bar :data="pipelineChartData" :options="pipelineBarOptions" /></div>
-          </div>
-
-          <div class="chart-panel">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Cumplimiento de Meta (S/.)</div>
-                <div class="chart-panel-sub">Meta vs real financiero por asesor</div>
-              </div>
-            </div>
-            <div class="chart-area"><Bar :data="revenueChartData" :options="groupedBarOptions" /></div>
-          </div>
-
-          <!-- Columna derecha: Embudo + Share apilados -->
-          <div class="chart-col-right">
-            <div class="chart-panel">
-              <div class="chart-panel-header">
-                <div class="chart-panel-title">Embudo del Equipo</div>
-              </div>
-              <div class="funnel-body">
-                <div class="funnel-step" @click="drillDown({ type: 'leads' })">
-                  <div class="funnel-step-header">
-                    <span class="funnel-label">Leads</span>
-                    <span class="funnel-value">{{ totals.contactos }}</span>
-                  </div>
-                  <div class="funnel-bar"><div class="funnel-fill fill-slate" style="width:100%"></div></div>
-                </div>
-                <div class="funnel-step" @click="drillDown({ type: 'active_leads' })">
-                  <div class="funnel-step-header">
-                    <span class="funnel-label funnel-label-amber">Activos</span>
-                    <span class="funnel-value c-amber">{{ totals.activos }}</span>
-                  </div>
-                  <div class="funnel-bar"><div class="funnel-fill fill-amber" :style="`width:${totals.avgGestion}%`"></div></div>
-                </div>
-                <div class="funnel-step" @click="drillDown({ type: 'sales' })">
-                  <div class="funnel-step-header">
-                    <span class="funnel-label funnel-label-green">Ventas</span>
-                    <span class="funnel-value c-green">{{ totals.ven }}</span>
-                  </div>
-                  <div class="funnel-bar"><div class="funnel-fill fill-green" :style="`width:${totals.avgConv}%`"></div></div>
-                </div>
-                <div class="funnel-footer">
-                  <span class="funnel-footer-label">Conv. Global</span>
-                  <span class="fw-700" :class="convClass(totals.avgConv)">{{ totals.avgConv }}%</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="chart-panel">
-              <div class="chart-panel-header">
-                <div class="chart-panel-title">Participación (Share)</div>
-              </div>
-              <div class="chart-area chart-area-donut">
-                <Doughnut :data="shareChartData" :options="doughnutOptions" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="split-panel-row" style="margin-top: 16px;">
-          <div class="chart-panel split-panel-main">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Composición de Leads por Estado</div>
-                <div class="chart-panel-sub">Distribución de estados de gestión por cada asesor</div>
-              </div>
-            </div>
-            <div class="chart-area chart-area-lg">
-              <Bar :data="leadsStackedChartData" :options="stackedBarOptions" />
-            </div>
-          </div>
-
-          <div class="chart-panel split-panel-side">
-            <div class="chart-panel-header">
-              <div>
-                <div class="chart-panel-title">Ventas por Programa</div>
-                <div class="chart-panel-sub">Distribución de ventas del equipo en el período</div>
-              </div>
-            </div>
-            <div class="chart-area chart-area-donut">
-              <Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Fila 4: Ticket + Volumen -->
-        <div class="chart-panel">
-          <div class="chart-panel-header">
-            <div>
-              <div class="chart-panel-title">Ticket Promedio y Volumen de Ventas por Asesor</div>
-              <div class="chart-panel-sub">Monto promedio por venta (eje izq.) vs número de ventas (eje der.)</div>
-            </div>
-          </div>
-          <div class="chart-area"><Bar :data="ticketChartData" :options="ticketBarOptions" /></div>
-        </div>
-
+          </header>
+          <div class="rg-chart"><Bar :data="conversionChartData" :options="convBarOptions" /></div>
+        </section>
       </div>
-    </main>
 
-    <!-- ══════════════ FOOTER ══════════════ -->
-    <footer class="exec-footer">
-      <span>Vista: <strong>{{ selectedWeek ? selectedWeek.label : 'Acumulado (MTD)' }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span>Año: <strong>{{ filters.year }}</strong></span>
-      <span class="footer-sep">·</span>
-      <span>Tipo Objetivo: <strong>
-        {{ filters.modality === 'NO_ONLINE' ? 'En Vivo' : filters.modality === 'ONLINE' ? 'Online' : 'Congreso' }}
-      </strong></span>
-      <span v-if="isLiderComercial && viewAsAdvisor" class="footer-sep">·</span>
-      <span v-if="isLiderComercial && viewAsAdvisor" style="color:#f59e0b;font-weight:600;">
-        👁 Vista de: {{ myData?.asesor || '—' }}
-      </span>
-      <span class="footer-spacer"></span>
-      <span class="footer-status">
-        <span class="status-dot" :class="loading ? 'dot-loading' : 'dot-ok'"></span>
-        {{ loading ? 'Actualizando datos…' : 'Datos sincronizados' }}
-      </span>
-    </footer>
+      <!-- Pipeline + Revenue + Embudo/Share -->
+      <div class="rg-three-col">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Pipeline</span>
+              <h2 class="rg-card-title">Pipeline de leads</h2>
+              <p class="rg-card-sub">Leads totales, activos y convertidos.</p>
+            </div>
+          </header>
+          <div class="rg-chart"><Bar :data="pipelineChartData" :options="pipelineBarOptions" /></div>
+        </section>
 
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Financiero</span>
+              <h2 class="rg-card-title">Cumplimiento de meta (S/.)</h2>
+              <p class="rg-card-sub">Meta vs real financiero por asesor.</p>
+            </div>
+          </header>
+          <div class="rg-chart"><Bar :data="revenueChartData" :options="groupedBarOptions" /></div>
+        </section>
+
+        <div class="rg-col-stack">
+          <section class="ep-section rg-card">
+            <header class="rg-card-head">
+              <div class="rg-card-head-left">
+                <span class="rg-eyebrow">Pipeline</span>
+                <h2 class="rg-card-title">Embudo del equipo</h2>
+              </div>
+            </header>
+            <div class="rg-funnel rg-funnel-compact">
+              <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'leads' })">
+                <div class="rg-funnel-row"><span class="rg-funnel-l">Leads</span><span class="rg-funnel-v">{{ totals.contactos }}</span></div>
+                <div class="rg-funnel-bar"><div class="rg-funnel-fill is-slate" style="width:100%"></div></div>
+              </div>
+              <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'active_leads' })">
+                <div class="rg-funnel-row"><span class="rg-funnel-l c-amber">Activos</span><span class="rg-funnel-v c-amber">{{ totals.activos }}</span></div>
+                <div class="rg-funnel-bar"><div class="rg-funnel-fill is-amber" :style="`width:${totals.avgGestion}%`"></div></div>
+              </div>
+              <div class="rg-funnel-step rg-clickable" @click="drillDown({ type: 'sales' })">
+                <div class="rg-funnel-row"><span class="rg-funnel-l c-green">Ventas</span><span class="rg-funnel-v c-green">{{ totals.ven }}</span></div>
+                <div class="rg-funnel-bar"><div class="rg-funnel-fill is-green" :style="`width:${totals.avgConv}%`"></div></div>
+              </div>
+              <div class="rg-funnel-foot">
+                <span>Conv. global</span>
+                <span class="fw-700" :class="convClass(totals.avgConv)">{{ totals.avgConv }}%</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="ep-section rg-card">
+            <header class="rg-card-head">
+              <div class="rg-card-head-left">
+                <span class="rg-eyebrow">Distribución</span>
+                <h2 class="rg-card-title">Participación (share)</h2>
+              </div>
+            </header>
+            <div class="rg-chart rg-chart-donut"><Doughnut :data="shareChartData" :options="doughnutOptions" /></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Composición leads + Ventas por programa -->
+      <div class="rg-two-col rg-two-col-2-1">
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Distribución</span>
+              <h2 class="rg-card-title">Composición de leads por estado</h2>
+              <p class="rg-card-sub">Distribución de estados de gestión por cada asesor.</p>
+            </div>
+          </header>
+          <div class="rg-chart rg-chart-lg"><Bar :data="leadsStackedChartData" :options="stackedBarOptions" /></div>
+        </section>
+
+        <section class="ep-section rg-card">
+          <header class="rg-card-head">
+            <div class="rg-card-head-left">
+              <span class="rg-eyebrow">Programas</span>
+              <h2 class="rg-card-title">Ventas por programa</h2>
+              <p class="rg-card-sub">Distribución de ventas del equipo en el período.</p>
+            </div>
+          </header>
+          <div class="rg-chart rg-chart-donut"><Doughnut :data="programSalesChartData" :options="programSalesDoughnutOptions" /></div>
+        </section>
+      </div>
+
+      <!-- Ticket -->
+      <section class="ep-section rg-card">
+        <header class="rg-card-head">
+          <div class="rg-card-head-left">
+            <span class="rg-eyebrow">Volumen vs valor</span>
+            <h2 class="rg-card-title">Ticket promedio y volumen de ventas</h2>
+            <p class="rg-card-sub">Monto promedio por venta (eje izq.) vs número de ventas (eje der.).</p>
+          </div>
+        </header>
+        <div class="rg-chart"><Bar :data="ticketChartData" :options="ticketBarOptions" /></div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -939,7 +800,7 @@ const avatarInitials = computed(() => {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?'
 })
 
-const currentPeriodOptions = computed(() => PERIODS_CONFIG[filters.month] || []) 
+const currentPeriodOptions = computed(() => PERIODS_CONFIG[filters.month] || [])
 
 onMounted(async () => {
   applyRoleRestrictions()
@@ -947,16 +808,16 @@ onMounted(async () => {
     const users = await authService.userList({})
     usersMap.value = users
   } catch(e) { console.error('Error users', e) }
-  
+
   await loadWeeks()   // primero carga semanas (setea selectedWeek)
   await fetchData()   // luego fetch con la semana ya seteada
 })
 
 
 async function loadWeeks() {
-  const weeks = await dashboardService.getAvailableWeeks({ 
-    year: filters.year, 
-    modality: filters.modality 
+  const weeks = await dashboardService.getAvailableWeeks({
+    year: filters.year,
+    modality: filters.modality
   })
   availableWeeks.value = weeks
   const today = new Date().toISOString().split('T')[0]
@@ -1232,7 +1093,12 @@ if (validProgramTypes.length) query.type_program_ids = encodeFilter(validProgram
   window.open(routeData.href, '_blank')
 }
 const convClass = (val) =>
-  val > 20 ? 'c-green fw-700' : val >= 10 ? 'accent-text fw-700' : 'text-muted'
+  val > 20 ? 'c-green fw-700' : val >= 10 ? 'c-accent fw-700' : 'text-muted'
+
+const initialsFromName = (name) => {
+  if (!name) return '?'
+  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
 
 const totals = computed(() => {
   // En modo vista-asesor del líder, los totales deben reflejar SOLO el asesor seleccionado
@@ -1492,369 +1358,600 @@ const myLeadsStackedChartData = computed(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* ════════════════════════════════════════════════════════════
+   DESIGN TOKENS — alineados con Leads.vue / EnrollmentPage
+   ════════════════════════════════════════════════════════════ */
+.rg-page {
+  --e-bg: #FFFFFF;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
 
-.exec-shell { font-family: 'IBM Plex Sans', system-ui, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; color: #0f172a; font-size: 13px; line-height: 1.4; }
-.exec-masthead { background: #0f172a; color: #fff; border-bottom: 1px solid #1e293b; }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
-.masthead-brand { display: flex; align-items: center; gap: 14px; }
-.brand-rule { width: 3px; height: 42px; background: #2e3e91; border-radius: 2px; flex-shrink: 0; }
-.brand-eyebrow { display: block; font-size: 9.5px; letter-spacing: 0.15em; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 3px; }
-.brand-title { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; color: #fff; }
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 7px 15px; border-radius: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; cursor: pointer; border: none; font-family: inherit; transition: background 0.15s, opacity 0.15s; }
-.btn-exec-ghost { background: rgba(255,255,255,0.07); color: #94a3b8; border: 1px solid rgba(255,255,255,0.12); }
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.12); color: #fff; }
-.btn-exec-primary { background: #0d9488; color: #fff; }
-.btn-exec-primary:hover:not(:disabled) { background: #14b8a6; }
-.btn-exec-primary:disabled { opacity: 0.5; cursor: default; }
-
-/* ── NUEVO: botón "Ver como Asesor" para líder ── */
-.btn-exec-advisor-active {
-  background: rgba(251,191,36,0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(251,191,36,0.4);
-}
-.btn-exec-advisor-active:hover { background: rgba(251,191,36,0.28); }
-
-.masthead-filters { display: flex; align-items: center; padding: 0 28px; min-height: 52px; flex-wrap: wrap; gap: 2px; }
-.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 10px 20px 10px 0; }
-
-/* ── NUEVO: grupo resaltado para el selector de asesor impersonado ── */
-.filter-group-advisor-pick {
-  background: rgba(251,191,36,0.08);
-  border: 1px solid rgba(251,191,36,0.25);
-  border-radius: 4px;
-  padding: 6px 14px;
-  margin-right: 6px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--e-text);
+  max-width: 1600px;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.exec-select-advisor {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(251,191,36,0.5);
-  color: #fbbf24 !important;
-  font-weight: 700;
+/* ── Masthead ─────────────────────────────────────────────── */
+.ep-masthead {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 20px; gap: 14px; flex-wrap: wrap;
+}
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
+.ep-breadcrumb {
+  font-size: 11px; color: var(--e-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+}
+.ep-title {
+  font-size: 26px; font-weight: 600; color: var(--e-text);
+  margin: 0; letter-spacing: -0.02em; line-height: 1.1;
+}
+.ep-subtitle { font-size: 13.5px; color: var(--e-text-secondary); font-weight: 400; margin-top: 2px; }
+.ep-masthead-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ep-view-toggle { display: flex; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
+.ep-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+  color: var(--e-text-secondary); background: transparent;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-toggle-btn.is-active { background: var(--e-bg-subtle); color: var(--e-text); font-weight: 600; }
+.ep-toggle-btn:not(.is-active):hover { color: var(--e-text); }
+.ep-btn-export {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-export:hover:not(:disabled) { border-color: var(--e-accent); color: var(--e-accent); background: var(--e-accent-soft); }
+.ep-btn-export:disabled { opacity: .55; cursor: not-allowed; }
+.ep-btn-export.is-active { border-color: #F59E0B; color: #B45309; background: #FFFBEB; }
+.ep-btn-export i { font-size: 11px; }
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.ep-section { margin-bottom: 14px; }
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  padding: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.ep-filter-bar-main {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; padding: 10px 14px;
 }
 
-.filter-label { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #64748b; font-weight: 700; cursor: default; }
-.exec-select { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.16); color: #fff; font-family: 'IBM Plex Sans', inherit; font-size: 12.5px; font-weight: 500; padding: 3px 0; outline: none; cursor: pointer; min-width: 100px; appearance: auto; }
-.exec-select option { color: #0f172a; background: #fff; }
-.filter-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.09); margin: 0 20px 0 0; }
-.filter-spacer { flex: 1; }
-.modality-toggle { display: flex; }
-.mod-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; cursor: pointer; background: rgba(255,255,255,0.05); color: #64748b; border: 1px solid rgba(255,255,255,0.1); font-family: inherit; transition: all 0.15s; text-transform: uppercase; }
-.mod-btn:first-child { border-radius: 3px 0 0 3px; }
-.mod-btn:last-child  { border-radius: 0 3px 3px 0; border-left: none; }
-.mod-btn.active { background: rgba(20,184,166,0.18); color: #14b8a6; border-color: rgba(20,184,166,0.4); }
-.masthead-kpis { display: flex; gap: 28px; align-items: center; }
-.inline-kpi { text-align: right; }
-.inline-kpi-label { display: block; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 2px; }
-.inline-kpi-value { font-size: 14px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.inline-kpi-value.accent { color: #14b8a6; }
-.exec-body { flex: 1; padding: 22px 28px; }
-.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; gap: 14px; }
-.loader-ring { width: 38px; height: 38px; border: 3px solid #e2e8f0; border-top-color: #0d9488; border-radius: 50%; animation: spin 0.8s linear infinite; }
-.loader-text { font-size: 13px; color: #64748b; font-weight: 500; letter-spacing: 0.02em; }
-
-/* ── NUEVO: Banner de impersonación ── */
-.advisor-impersonation-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  background: rgba(251,191,36,0.1);
-  border: 1px solid rgba(251,191,36,0.35);
-  border-radius: 6px;
-  color: #92400e;
-  font-size: 12.5px;
-  font-weight: 500;
-  margin-bottom: 4px;
+.rg-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rg-filter-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--e-bg-subtle);
+  border: 1px solid var(--e-border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  transition: border-color .15s ease;
 }
-.advisor-impersonation-banner strong { color: #78350f; }
-.banner-exit-btn {
+.rg-filter-chip:focus-within { border-color: var(--e-accent); box-shadow: 0 0 0 3px var(--e-accent-soft); }
+.rg-filter-chip.is-impersonate { background: #FFFBEB; border-color: #FDE68A; }
+.rg-filter-chip.is-impersonate .rg-filter-label { color: #B45309; }
+.rg-filter-toggle { padding: 3px 5px; }
+.rg-filter-label {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 700; color: var(--e-text-muted);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.rg-filter-label i { font-size: 9px; }
+.rg-filter-select {
+  background: transparent; border: none; outline: none; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--e-text); padding: 2px 0; min-width: 110px;
+}
+.rg-modality { display: inline-flex; gap: 2px; padding: 2px; background: #fff; border-radius: 6px; border: 1px solid var(--e-border); }
+.rg-mod-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; font-size: 10.5px; font-weight: 700;
+  color: var(--e-text-secondary); background: transparent;
+  border: none; border-radius: 4px; cursor: pointer; font-family: inherit;
+  letter-spacing: 0.04em; transition: all .12s;
+}
+.rg-mod-btn i { font-size: 9px; opacity: 0.7; }
+.rg-mod-btn:hover:not(.is-active):not(:disabled) { color: var(--e-text); }
+.rg-mod-btn.is-active {
+  background: var(--e-accent-soft); color: #047857;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.rg-mod-btn.is-active i { opacity: 1; }
+.rg-mod-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Inline KPIs en filter bar */
+.rg-inline-kpis {
+  display: inline-flex; align-items: stretch;
+  background: var(--e-bg-subtle);
+  border: 1px solid var(--e-border);
+  border-radius: 10px; overflow: hidden;
+}
+.rg-mini-kpi {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 5px 14px;
+}
+.rg-mini-kpi[onclick], .rg-mini-kpi[title] { cursor: pointer; }
+.rg-mini-kpi:hover { background: rgba(16, 185, 129, 0.04); }
+.rg-mini-kpi-l { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--e-text-muted); }
+.rg-mini-kpi-v { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--e-text); }
+.rg-mini-kpi-divider { width: 1px; background: var(--e-border); }
+
+/* ── Loader ─────────────────────────────────────────────── */
+.rg-loader {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  min-height: 380px; color: var(--e-text-secondary); font-size: 13px;
+  background: #fff; border: 1px solid var(--e-border); border-radius: 10px;
+}
+.rg-loader-ring {
+  width: 32px; height: 32px;
+  border: 3px solid var(--e-border);
+  border-top-color: var(--e-accent);
+  border-radius: 50%;
+  animation: rg-spin .8s linear infinite;
+}
+.rg-fadein { animation: rg-fade .3s ease; }
+
+/* ── Banner impersonación ──────────────────────────────── */
+.rg-impersonation-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: #FFFBEB; border: 1px solid #FDE68A;
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  font-size: 12.5px; color: #92400E;
+}
+.rg-impersonation-banner i { color: #F59E0B; }
+.rg-impersonation-banner strong { color: #78350F; font-weight: 700; }
+.rg-banner-exit {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  background: rgba(251,191,36,0.2);
-  border: 1px solid rgba(251,191,36,0.4);
-  border-radius: 4px;
-  color: #92400e;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; font-size: 11.5px; font-weight: 600;
+  background: transparent; color: #92400E;
+  border: 1px solid #FDE68A; border-radius: 6px; cursor: pointer; font-family: inherit;
+  transition: all .15s;
 }
-.banner-exit-btn:hover { background: rgba(251,191,36,0.35); }
+.rg-banner-exit:hover { background: #FEF3C7; }
 
-/* ── NUEVO: botón ojo en celda de asesor ── */
-.td-asesor-inner { display: flex; align-items: center; gap: 8px; }
-.btn-view-as {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px; height: 22px;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.15s;
+/* ── Hero personal ─────────────────────────────────────── */
+.rg-hero {
+  display: flex; align-items: stretch;
+  gap: 22px;
+  padding: 22px 26px;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #14140F 0%, #1F1F1A 100%);
+  position: relative;
+  overflow: hidden;
+}
+.rg-hero::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 5px;
+}
+.rg-hero.hero-excellent { background: linear-gradient(135deg, #047857 0%, #065F46 100%); }
+.rg-hero.hero-excellent::before { background: #10B981; }
+.rg-hero.hero-good      { background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%); }
+.rg-hero.hero-good::before      { background: #3B82F6; }
+.rg-hero.hero-warning   { background: linear-gradient(135deg, #B45309 0%, #92400E 100%); }
+.rg-hero.hero-warning::before   { background: #F59E0B; }
+.rg-hero.hero-danger    { background: linear-gradient(135deg, #B91C1C 0%, #991B1B 100%); }
+.rg-hero.hero-danger::before    { background: #EF4444; }
+
+.rg-hero-left { display: flex; align-items: center; gap: 14px; flex: 1 1 220px; min-width: 0; }
+.rg-hero-avatar {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
   flex-shrink: 0;
-  opacity: 0;
 }
-.tbody-row:hover .btn-view-as { opacity: 1; }
-.btn-view-as:hover { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+.rg-hero-info { min-width: 0; }
+.rg-hero-name { font-size: 19px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rg-hero-period { font-size: 11.5px; opacity: 0.85; }
+.rg-hero-period span { white-space: nowrap; }
+.rg-hero-sep { opacity: 0.4; margin: 0 4px; }
 
-/* ═══════════════════════════════════════════════
-   VISTA PERSONAL (asesor simple)
-═══════════════════════════════════════════════ */
-.view-personal { display: flex; flex-direction: column; gap: 18px; }
-
-.personal-hero {
-  border-radius: 8px; padding: 24px 28px;
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; gap: 24px;
-  border: 1px solid transparent;
-  transition: all 0.4s ease;
+.rg-hero-center { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rg-gauge { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rg-gauge-svg { width: 130px; height: 70px; }
+.rg-gauge-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(255,255,255,0.85);
 }
-.hero-excellent { background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); border-color: #10b981; }
-.hero-good      { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); border-color: #3b82f6; }
-.hero-warning   { background: linear-gradient(135deg, #0f172a 0%, #44270a 50%, #78350f 100%); border-color: #f59e0b; }
-.hero-danger    { background: linear-gradient(135deg, #0f172a 0%, #3b0a0a 50%, #7f1d1d 100%); border-color: #ef4444; }
+.rg-gauge-label.is-weekly {
+  background: rgba(255,255,255,0.18);
+  padding: 2px 8px; border-radius: 8px;
+  color: #fff;
+}
 
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-avatar { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; letter-spacing: -0.02em; }
-.hero-info { display: flex; flex-direction: column; gap: 4px; }
-.hero-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
-.hero-period { font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 500; }
-.hero-center { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.gauge-svg { width: 130px; height: 78px; }
-.gauge-label { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); text-align: center; margin-top: -4px; width: 100%; display: flex; justify-content: center; }
-.hero-right { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-.hero-stat-row { display: flex; align-items: baseline; gap: 10px; }
-.hero-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 500; }
-.hero-stat-val { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.9); font-variant-numeric: tabular-nums; }
-.hero-stat-big { font-size: 28px; color: #fff; }
-.hero-stat-gap { color: #fca5a5 !important; }
-.hero-stat-ok  { color: #6ee7b7 !important; }
-.hero-divider  { width: 100%; height: 1px; background: rgba(255,255,255,0.1); }
+.rg-hero-right { display: flex; flex-direction: column; gap: 6px; min-width: 240px; flex: 1 1 240px; }
+.rg-hero-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rg-hero-l { font-size: 11.5px; opacity: 0.85; }
+.rg-hero-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rg-hero-v-big { font-size: 22px; }
+.rg-hero-divider { height: 1px; background: rgba(255,255,255,0.15); margin: 2px 0; }
+.rg-hero-gap { color: #FCA5A5; }
+.rg-hero-ok  { color: #6EE7B7; }
 
-.personal-chart-row { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
-.chart-panel-grow { flex: 1; }
-.personal-funnel-panel { display: flex; flex-direction: column; }
-.personal-finance-summary { border-top: 1px solid #f1f5f9; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
-.pfs-row { display: flex; justify-content: space-between; align-items: center; }
-.pfs-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
-.pfs-val { font-size: 13px; font-variant-numeric: tabular-nums; }
+/* ── Action cards ──────────────────────────────────────── */
+.rg-action-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.rg-action-card {
+  display: flex; align-items: center; gap: 14px;
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.rg-action-card:hover { border-color: var(--e-border-strong); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+.rg-action-icon {
+  width: 38px; height: 38px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.rg-action-card.is-hot .rg-action-icon      { background: #FEF2F2; color: #DC2626; }
+.rg-action-card.is-followup .rg-action-icon { background: #EFF6FF; color: #2563EB; }
+.rg-action-info { flex: 1; min-width: 0; }
+.rg-action-title { display: block; font-size: 13px; font-weight: 600; color: var(--e-text); }
+.rg-action-desc { display: block; font-size: 11.5px; color: var(--e-text-muted); margin-top: 2px; }
+.rg-action-value {
+  font-size: 28px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--e-text);
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+.rg-action-card.is-hot .rg-action-value      { color: #DC2626; }
+.rg-action-card.is-followup .rg-action-value { color: #2563EB; }
 
-/* ═══════════════════════════════════════════════
-   VISTA TABLA EQUIPO
-═══════════════════════════════════════════════ */
-.view-table { display: flex; flex-direction: column; gap: 18px; }
-.table-shell { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 1100px; }
-.thead-group th { padding: 7px 10px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
-.th-cat   { background: #0f172a; color: #64748b; padding-left: 14px; border-right: 2px solid #1e293b; min-width: 120px; vertical-align: middle; }
-.th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; text-align: center; }
-.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; text-align: center; }
-.th-group-c { background: #f8fafc; color: #475569; border-left: 2px solid #e2e8f0; text-align: center; }
-.th-group-d { background: #1e293b; color: #14b8a6; border-left: 2px solid #334155; text-align: center; }
-.thead-sub .ts { padding: 6px 10px; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-.ts-a { background: #f0f7ff; color: #2563eb; border-left: 1px solid #dbeafe; }
-.ts-b { background: #f0fdf4; color: #16a34a; border-left: 1px solid #d1fae5; }
-.ts-c { background: #f8fafc; color: #475569; border-left: 1px solid #e2e8f0; }
-.ts-d { background: #1e293b; color: #0d9488; border-left: 1px solid #334155; }
-.tbody-row td { padding: 8px 10px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-.tbody-row:last-child td { border-bottom: none; }
-.row-alt { background: #fafbfc; }
-.tbody-row:hover td { background: #f0f9ff !important; transition: background 0.1s; }
-.td-asesor { padding-left: 14px; font-weight: 700; color: #0f172a; background: #fff; border-right: 2px solid #e2e8f0; white-space: nowrap; }
-.td-a { background: #f8fbff; border-left: 1px solid #e0eeff; }
-.td-b { background: #f7fdf9; border-left: 1px solid #d5f5e0; }
-.td-c { background: #f8fafc; border-left: 1px solid #e2e8f0; color: #475569; }
-.td-d { background: #1a2744; color: #e2e8f0; border-left: 1px solid #2d3f5f; }
-.tfoot-row td { padding: 9px 10px; background: #0f172a; color: #fff; font-size: 12px; font-weight: 600; border-top: 2px solid #1e293b; }
-.tfoot-label { padding-left: 14px; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: #64748b; }
-.empty-row { padding: 40px; text-align: center; color: #94a3b8; font-style: italic; }
-.gap-neg { color: #b91c1c; font-weight: 700; }
-.gap-pos { color: #15803d; font-weight: 700; }
-.actionable { text-decoration: underline dotted #94a3b8; cursor: pointer; transition: color 0.12s; }
-.actionable:hover { color: #0d9488 !important; text-decoration-color: #0d9488; }
-.status-pill { display: inline-block; padding: 2px 9px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
-.status-ok  { background: #dcfce7; color: #15803d; }
-.status-low { background: #fee2e2; color: #b91c1c; }
+/* ── KPI cards ─────────────────────────────────────────── */
+.ep-kpis { display: grid; gap: 12px; }
+.ep-kpis-4 { grid-template-columns: repeat(4, 1fr); }
+.ep-kpis-5 { grid-template-columns: repeat(5, 1fr); }
+.ep-kpi {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-kpi:hover { border-color: var(--e-border-strong); box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.04); }
+.ep-kpi::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: currentColor;
+}
+.ep-kpi.rg-clickable { cursor: pointer; }
+.ep-kpi-head { display: flex; justify-content: space-between; align-items: center; }
+.ep-kpi-label {
+  font-size: 11px; font-weight: 600; color: var(--e-text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ep-kpi-icon { font-size: 12px; color: currentColor; opacity: 0.65; }
+.ep-kpi-main { display: flex; align-items: baseline; gap: 8px; }
+.ep-kpi-value {
+  font-size: 28px; font-weight: 600; color: var(--e-text);
+  letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.ep-kpi-foot {
+  font-size: 11px; color: var(--e-text-muted);
+  border-top: 1px solid var(--e-border);
+  padding-top: 8px; margin-top: 2px;
+}
+.ep-kpi-foot strong { color: var(--e-text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ep-kpi-teal   { color: #0D9488; }
+.ep-kpi-green  { color: #10B981; }
+.ep-kpi-amber  { color: #D97706; }
+.ep-kpi-red    { color: #DC2626; }
+.ep-kpi-indigo { color: #6366F1; }
+.ep-kpi.is-alert { background: linear-gradient(180deg, #fff 0%, #FEF2F2 100%); }
 
-/* ═══════════════════════════════════════════════
-   MICRO-GESTIÓN
-═══════════════════════════════════════════════ */
-.micro-panel { background: #fff; border: 1px solid #e2e8f0; border-top: 3px solid #0f172a; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.micro-panel-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
-.micro-panel-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #0f172a; }
-.micro-panel-sub { font-size: 11px; color: #94a3b8; margin: 3px 0 0 22px; }
-.micro-filter { display: flex; flex-direction: column; gap: 3px; }
-.filter-label-dark { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
-.exec-select-dark { background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; color: #0f172a; font-family: 'IBM Plex Sans', inherit; font-size: 12.5px; font-weight: 500; padding: 5px 10px; outline: none; cursor: pointer; min-width: 220px; }
-.exec-select-dark:focus { border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.15); }
-.days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; padding: 16px 20px; }
-.day-card { border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; background: #fafbfc; transition: transform 0.15s, box-shadow 0.15s; }
-.day-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.07); }
-.day-card-active { border-color: #0d9488; background: #fff; }
-.day-card-header { padding: 5px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; }
-.dh-active { background: rgba(13,148,136,0.08); }
-.dh-empty  { background: #f1f5f9; }
-.day-name  { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
-.day-card-active .day-name { color: #0d9488; }
-.day-card-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-.day-metric { display: flex; justify-content: space-between; align-items: center; padding-bottom: 5px; border-bottom: 1px solid #f1f5f9; }
-.day-metric:last-child { border-bottom: none; padding-bottom: 0; }
-.day-metric-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
-.day-metric-val   { font-size: 13px; font-weight: 700; color: #0f172a; cursor: pointer; }
-.day-metric-val:hover { color: #0d9488; }
-.day-metric-group { display: flex; flex-direction: column; align-items: flex-end; }
-.day-metric-sub   { font-size: 9.5px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+.rg-kpi-progress {
+  width: 100%; height: 5px;
+  background: var(--e-bg-subtle);
+  border-radius: 3px; overflow: hidden;
+}
+.rg-kpi-progress-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+.rg-kpi-progress-fill.is-green { background: #10B981; }
+.rg-kpi-progress-fill.is-amber { background: #F59E0B; }
+.rg-kpi-progress-fill.is-red   { background: #DC2626; }
+.rg-kpi-progress-fill.is-blue  { background: #3B82F6; }
 
-/* ═══════════════════════════════════════════════
-   DASHBOARD
-═══════════════════════════════════════════════ */
-.view-dashboard { display: flex; flex-direction: column; gap: 18px; }
-.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.15s, transform 0.15s; }
-.kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-.kpi-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.kpi-card-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: #94a3b8; }
-.kpi-indicator { width: 7px; height: 7px; border-radius: 50%; }
-.ind-green { background: #22c55e; }
-.ind-red   { background: #ef4444; }
-.ind-amber { background: #f59e0b; }
-.ind-blue  { background: #3b82f6; }
-.kpi-card-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-bottom: 7px; color: #0f172a; }
-.kpi-progress { height: 3px; background: #f1f5f9; border-radius: 2px; margin-bottom: 7px; overflow: hidden; }
-.kpi-progress-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
-.fill-green { background: #22c55e; }
-.fill-amber { background: #f59e0b; }
-.fill-red   { background: #ef4444; }
-.fill-blue  { background: #3b82f6; }
-.fill-slate { background: #94a3b8; }
-.kpi-card-sub { font-size: 11px; color: #94a3b8; font-variant-numeric: tabular-nums; }
-.chart-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.chart-panel-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 18px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px; }
-.chart-panel-title { font-size: 13px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; }
-.chart-panel-sub   { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-.chart-area        { padding: 14px 18px; height: 290px; }
-.chart-area-lg     { height: 330px; }
-.chart-area-donut  { height: 190px; }
-.chart-legend-inline { display: flex; gap: 14px; align-items: center; font-size: 11px; color: #64748b; font-weight: 500; flex-shrink: 0; }
-.legend-line { display: inline-block; width: 22px; height: 2.5px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
-.legend-dashed { display: inline-block; width: 22px; height: 0; border-top: 2px dashed #ef4444; margin-right: 4px; vertical-align: middle; }
-.legend-dot-sq { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
-.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.chart-grid-pipeline { display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: start; }
-.chart-col-right { display: flex; flex-direction: column; gap: 16px; min-width: 240px; }
-.funnel-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
-.funnel-step { cursor: pointer; }
-.funnel-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.funnel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
-.funnel-label-amber { color: #b45309; }
-.funnel-label-green { color: #15803d; }
-.funnel-value { font-size: 15px; font-weight: 700; color: #0f172a; }
-.funnel-bar   { height: 10px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
-.funnel-fill  { height: 100%; border-radius: 3px; transition: width 0.7s ease; }
-.funnel-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f1f5f9; }
-.funnel-footer-label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+/* ── Cards (sección con borde) ─────────────────────────── */
+.rg-card {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.rg-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--e-border);
+  background: linear-gradient(180deg, #fff, var(--e-bg-subtle));
+}
+.rg-card-head-left { display: flex; flex-direction: column; gap: 2px; }
+.rg-eyebrow {
+  font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--e-text-muted); font-weight: 600;
+}
+.rg-card-title {
+  font-size: 15px; font-weight: 600; color: var(--e-text);
+  letter-spacing: -0.015em; margin: 0;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.rg-card-title i { font-size: 13px; opacity: 0.7; }
+.rg-card-sub { font-size: 12px; color: var(--e-text-secondary); margin: 0; }
 
-/* ═══════════════════════════════════════════════
-   FOOTER
-═══════════════════════════════════════════════ */
-.exec-footer { display: flex; align-items: center; gap: 10px; padding: 9px 28px; background: #fff; border-top: 1px solid #e2e8f0; font-size: 11.5px; color: #94a3b8; font-weight: 500; }
-.exec-footer strong { color: #475569; }
-.footer-sep { color: #e2e8f0; }
-.footer-spacer { flex: 1; }
-.footer-status { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-ok      { background: #22c55e; }
-.dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
+/* ── Layout ───────────────────────────────────────────── */
+.rg-two-col {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px; margin-bottom: 14px;
+}
+.rg-two-col-3-2 { grid-template-columns: 3fr 2fr; }
+.rg-two-col-2-1 { grid-template-columns: 2fr 1fr; }
+.rg-three-col {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px; margin-bottom: 14px;
+}
+.rg-col-stack { display: flex; flex-direction: column; gap: 14px; }
+.rg-col-stack > .ep-section { margin-bottom: 0; }
 
-/* ═══════════════════════════════════════════════
-   UTILIDADES
-═══════════════════════════════════════════════ */
+/* ── Funnel ───────────────────────────────────────────── */
+.rg-funnel { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.rg-funnel-compact { padding: 12px 16px; gap: 8px; }
+.rg-funnel-step { display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+.rg-funnel-step:hover .rg-funnel-fill { filter: brightness(1.05); }
+.rg-funnel-row { display: flex; justify-content: space-between; align-items: center; }
+.rg-funnel-l { font-size: 12px; font-weight: 600; color: var(--e-text-secondary); }
+.rg-funnel-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--e-text); }
+.rg-funnel-bar {
+  width: 100%; height: 8px;
+  background: var(--e-bg-subtle); border-radius: 4px; overflow: hidden;
+}
+.rg-funnel-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.rg-funnel-fill.is-slate { background: #94A3B8; }
+.rg-funnel-fill.is-amber { background: #F59E0B; }
+.rg-funnel-fill.is-green { background: #10B981; }
+.rg-funnel-fill.is-blue  { background: #3B82F6; }
+.rg-funnel-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 4px; padding-top: 10px;
+  border-top: 1px solid var(--e-border);
+  font-size: 12px; color: var(--e-text-secondary);
+}
+
+.rg-finance-summary {
+  border-top: 1px solid var(--e-border);
+  padding: 12px 18px;
+  background: var(--e-bg-subtle);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rg-fs-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.rg-fs-row > span:first-child { color: var(--e-text-secondary); font-weight: 500; }
+
+/* ── Charts ───────────────────────────────────────────── */
+.rg-chart { padding: 14px 18px; height: 230px; position: relative; }
+.rg-chart-lg { height: 280px; }
+.rg-chart-donut { height: 240px; }
+.rg-chart-legend {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  font-size: 11px; color: var(--e-text-secondary); font-weight: 500;
+  align-self: center;
+}
+.rg-legend { display: inline-flex; align-items: center; gap: 5px; }
+.rg-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.rg-legend-line { display: inline-block; width: 16px; height: 2px; }
+.rg-legend-dashed {
+  display: inline-block; width: 16px; border-top: 2px dashed #EF4444;
+}
+
+/* ── Tabla equipo ─────────────────────────────────────── */
+.rg-table-wrap { overflow-x: auto; }
+.exec-table.rg-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12.5px; min-width: 1100px;
+}
+.rg-thead-group th { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 8px; }
+.rg-th-cat {
+  background: var(--e-bg-subtle); color: var(--e-text);
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--e-border);
+  text-align: left; white-space: nowrap;
+}
+.rg-th-group { font-weight: 700; color: #fff; padding: 6px 10px; text-align: center; }
+.rg-grp-a { background: #1F1F1A; }
+.rg-grp-b { background: #047857; }
+.rg-grp-c { background: #1E40AF; }
+.rg-grp-d { background: #6366F1; }
+.rg-thead-sub th.ts {
+  font-size: 9.5px; letter-spacing: 0.06em;
+  font-weight: 700; text-transform: uppercase;
+  color: var(--e-text-muted);
+  padding: 7px 10px;
+  background: var(--e-bg-subtle);
+  border-bottom: 1px solid var(--e-border);
+  white-space: nowrap;
+}
+.rg-thead-sub th.text-end { text-align: right; }
+.rg-thead-sub th.text-center { text-align: center; }
+.rg-thead-sub th.ts-a { color: #14140F; }
+.rg-thead-sub th.ts-b { color: #047857; }
+.rg-thead-sub th.ts-c { color: #1E40AF; }
+.rg-thead-sub th.ts-d { color: #6366F1; }
+.rg-table td.td-a { padding: 9px 10px; border-bottom: 1px solid var(--e-border); color: var(--e-text); white-space: nowrap; }
+.rg-table .text-end { text-align: right; }
+.rg-table .text-center { text-align: center; }
+.rg-table .small { font-size: 11.5px; }
+.rg-tbody-row.is-alt td { background: rgba(232, 232, 227, 0.18); }
+.rg-tbody-row:hover td { background: var(--e-accent-soft); }
+
+.rg-td-asesor { padding: 8px 14px !important; }
+.rg-td-asesor-inner { display: inline-flex; align-items: center; gap: 8px; }
+.rg-avatar-mini {
+  width: 24px; height: 24px;
+  background: var(--e-bg-subtle);
+  color: var(--e-text);
+  border-radius: 50%;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--e-border);
+}
+.rg-btn-view-as {
+  background: transparent; border: 1px solid var(--e-border);
+  color: var(--e-text-secondary);
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 10px;
+  transition: all .15s ease;
+}
+.rg-btn-view-as:hover { border-color: #F59E0B; color: #B45309; background: #FFFBEB; }
+.rg-empty-row { text-align: center; padding: 32px; color: var(--e-text-muted); }
+.rg-gap-neg { color: #DC2626; font-weight: 700; }
+.rg-gap-pos { color: #047857; font-weight: 700; }
+.rg-status-pill {
+  display: inline-block;
+  padding: 2px 9px; font-size: 10.5px; font-weight: 700;
+  border-radius: 9px;
+  letter-spacing: 0.04em;
+}
+.rg-status-pill.is-ok  { background: var(--e-accent-soft); color: #047857; border: 1px solid #BBF7D0; }
+.rg-status-pill.is-low { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+.rg-tfoot-row td {
+  background: var(--e-bg-subtle) !important;
+  font-weight: 700;
+  border-top: 2px solid var(--e-border);
+  border-bottom: none;
+  padding: 11px 10px !important;
+  font-size: 12.5px;
+}
+.rg-tfoot-label {
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 11px; color: var(--e-text);
+  text-align: left; padding-left: 14px !important;
+}
+
+/* ── Days grid ────────────────────────────────────────── */
+.rg-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; padding: 14px 18px;
+}
+.rg-day {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all .15s ease;
+}
+.rg-day.is-active { border-color: rgba(16, 185, 129, 0.32); box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.06); }
+.rg-day-head {
+  background: var(--e-bg-subtle);
+  padding: 6px 11px;
+  border-bottom: 1px solid var(--e-border);
+}
+.rg-day.is-active .rg-day-head { background: var(--e-accent-soft); border-bottom-color: rgba(16, 185, 129, 0.25); }
+.rg-day-name { font-size: 11px; font-weight: 700; color: var(--e-text); text-transform: capitalize; letter-spacing: 0.02em; }
+.rg-day-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+.rg-day-metric { display: flex; align-items: center; justify-content: space-between; }
+.rg-day-metric.is-accent {
+  background: var(--e-accent-soft);
+  border-radius: 6px;
+  padding: 4px 8px; margin: 0 -2px;
+}
+.rg-day-l { font-size: 10.5px; color: var(--e-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.rg-day-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--e-text); }
+.rg-day-group { display: inline-flex; align-items: baseline; gap: 5px; }
+.rg-day-sub { font-size: 10.5px; color: var(--e-text-muted); font-weight: 600; }
+
+/* ── Clickable & colors ───────────────────────────────── */
+.rg-clickable { cursor: pointer; transition: opacity .15s; }
+.rg-clickable:hover { opacity: 0.7; }
+.c-green   { color: #047857; }
+.c-amber   { color: #B45309; }
+.c-red     { color: #B91C1C; }
+.c-blue    { color: #2563EB; }
+.c-indigo  { color: #4338CA; }
+.c-accent  { color: #0D9488; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.text-end { text-align: right; }
 .text-center { text-align: center; }
-.text-right  { text-align: right; }
-.text-muted  { color: #94a3b8; }
-.small       { font-size: 11.5px; }
-.fw-600      { font-weight: 600; }
-.fw-700      { font-weight: 700; }
-.accent-text { color: #0d9488; }
-.c-green     { color: #15803d; }
-.c-amber     { color: #b45309; }
-.c-red       { color: #b91c1c; }
+.text-muted { color: var(--e-text-muted); }
+.small { font-size: 11.5px; }
 
-@keyframes spin  { to { transform: rotate(360deg); } }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-.spin { animation: spin 0.8s linear infinite; }
-.slide-fade-enter-active { transition: all 0.2s ease; }
-.slide-fade-leave-active { transition: all 0.15s ease; }
-.slide-fade-enter-from   { opacity: 0; transform: translateX(12px); }
-.slide-fade-leave-to     { opacity: 0; transform: translateX(-8px); }
+/* ── Animations ───────────────────────────────────────── */
+@keyframes rg-spin { to { transform: rotate(360deg); } }
+@keyframes rg-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.rg-fade-enter-active, .rg-fade-leave-active { transition: all .25s ease; }
+.rg-fade-enter-from, .rg-fade-leave-to { opacity: 0; transform: translateY(-4px); }
 
-/* ── COLORES EXTREMOS PARA RATIO ── */
-.text-ratio-zero { color: #dc2626 !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(220, 38, 38, 0.2); }
-.bg-ratio-zero { background-color: #dc2626 !important; }
-.card-ratio-zero { border: 2px solid #ef4444 !important; background: linear-gradient(135deg, #fff 0%, #fef2f2 100%) !important; animation: pulse-danger 2s infinite ease-in-out; }
-@keyframes pulse-danger { 0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); } 50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); transform: scale(1.01); } 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); } }
-.text-ratio-low { color: #ea580c !important; font-weight: 700 !important; }
-.bg-ratio-low { background-color: #ea580c !important; }
-.text-ratio-good { color: #16a34a !important; font-weight: 700 !important; }
-.bg-ratio-good { background-color: #16a34a !important; }
-.text-ratio-super { color: #15803d !important; font-weight: 900 !important; font-size: 24px; text-shadow: 0 1px 2px rgba(21, 128, 61, 0.3); }
-.bg-ratio-super { background-color: #15803d !important; }
-
-/* ── RESALTE DE META SEMANAL ── */
-.gauge-label { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); text-align: center; margin-top: -4px; width: 100%; display: flex; justify-content: center; }
-.label-semanal-destacada { color: #fbbf24 !important; font-size: 10px !important; letter-spacing: 0.05em !important; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); white-space: nowrap; }
-
-/* ── TARJETAS DE OPORTUNIDADES ── */
-.action-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 4px; }
-.action-card { display: flex; align-items: center; padding: 18px 22px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.03); gap: 16px; transition: transform 0.2s, box-shadow 0.2s; }
-.actionable-card { cursor: pointer; }
-.actionable-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-.hot-leads-card { border-left: 4px solid #ef4444; }
-.hot-leads-card:hover { border-color: #dc2626; background: #fef2f2; }
-.follow-up-card { border-left: 4px solid #3b82f6; }
-.follow-up-card:hover { border-color: #2563eb; background: #eff6ff; }
-.ac-icon { font-size: 28px; line-height: 1; }
-.ac-info { display: flex; flex-direction: column; flex: 1; gap: 3px; }
-.ac-title { font-size: 13px; font-weight: 700; color: #0f172a; }
-.ac-desc { font-size: 11px; color: #64748b; }
-.ac-value { font-size: 26px; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
-
+/* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 1280px) {
-  .chart-grid-pipeline { grid-template-columns: 1fr 1fr; }
-  .chart-col-right { flex-direction: row; min-width: unset; grid-column: 1 / -1; }
-  .personal-chart-row { grid-template-columns: 1fr; }
+  .rg-three-col { grid-template-columns: 1fr 1fr; }
+  .rg-three-col .rg-col-stack { grid-column: span 2; flex-direction: row; }
+  .rg-three-col .rg-col-stack > .ep-section { flex: 1; }
 }
 @media (max-width: 1024px) {
-  .days-grid { grid-template-columns: repeat(4, 1fr); }
-  .kpi-strip { grid-template-columns: 1fr 1fr; }
-  .chart-grid-2 { grid-template-columns: 1fr; }
-  .personal-hero { grid-template-columns: 1fr; text-align: center; }
-  .hero-right { align-items: center; }
+  .rg-two-col, .rg-two-col-3-2, .rg-two-col-2-1, .rg-three-col { grid-template-columns: 1fr; }
+  .rg-three-col .rg-col-stack { flex-direction: column; }
+  .ep-kpis-4 { grid-template-columns: 1fr 1fr; }
+  .rg-action-cards { grid-template-columns: 1fr; }
+  .rg-hero { flex-direction: column; gap: 18px; padding: 18px; }
+  .rg-hero-right { width: 100%; }
 }
 @media (max-width: 640px) {
-  .days-grid { grid-template-columns: repeat(2, 1fr); }
-  .kpi-strip { grid-template-columns: 1fr; }
-  .exec-body { padding: 14px; }
-  .masthead-inner { padding: 14px; flex-direction: column; gap: 12px; align-items: flex-start; }
-  .masthead-filters { flex-wrap: wrap; gap: 4px; }
-  .action-cards-row { grid-template-columns: 1fr; }
-  .split-panel-row { flex-direction: column; }
-  .split-panel-main, .split-panel-side { width: 100%; }
+  .ep-title { font-size: 22px; }
+  .rg-hero-name { font-size: 17px; }
+  .rg-action-value { font-size: 22px; }
+  .rg-days-grid { grid-template-columns: 1fr 1fr; }
 }
-/* ── Split panel row (Composición + Ventas por Programa) ── */
-.split-panel-row { display: flex; gap: 16px; align-items: stretch; }
-.split-panel-main { flex: 0 0 65%; min-width: 0; }
-.split-panel-side { flex: 0 0 calc(35% - 16px); min-width: 0; }
+
+/* ── Dark mode ───────────────────────────────────────── */
+[data-coreui-theme="dark"] .rg-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16, 185, 129, 0.16);
+}
+[data-coreui-theme="dark"] .rg-card,
+[data-coreui-theme="dark"] .ep-kpi,
+[data-coreui-theme="dark"] .ep-section.ep-filter-bar,
+[data-coreui-theme="dark"] .rg-loader,
+[data-coreui-theme="dark"] .rg-action-card,
+[data-coreui-theme="dark"] .rg-day { background: #1A1A14; }
+[data-coreui-theme="dark"] .rg-card-head { background: linear-gradient(180deg, #1A1A14, #1F1F1A); }
+[data-coreui-theme="dark"] .ep-kpi.is-alert { background: linear-gradient(180deg, #1A1A14 0%, rgba(220, 38, 38, 0.10) 100%); }
+[data-coreui-theme="dark"] .rg-tbody-row.is-alt td { background: rgba(255, 255, 255, 0.02); }
+[data-coreui-theme="dark"] .rg-tfoot-row td { background: #1F1F1A !important; }
+[data-coreui-theme="dark"] .rg-impersonation-banner { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.30); color: #FCD34D; }
+[data-coreui-theme="dark"] .rg-impersonation-banner strong { color: #FDE68A; }
 </style>
