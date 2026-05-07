@@ -19,6 +19,9 @@
       <button class="eact-btn" @click="startAction('editStudent')">
         <i class="fa-solid fa-user-pen"></i> Editar Alumno
       </button>
+      <button v-if="canEditAgent" class="eact-btn" @click="startAction('editSellerAgent')">
+        <i class="fa-solid fa-user-tie"></i> Editar Asesor
+      </button>
       <div class="eact-sep"></div>
       <button class="eact-btn eact-btn-danger" @click="startAction('retire')">
         <i class="fa-solid fa-user-slash"></i> Retirar Alumno
@@ -289,6 +292,51 @@
         </template>
       </ActionStepper>
 
+      <!-- EDITAR ASESOR -->
+      <ActionStepper
+        v-if="activeAction === 'editSellerAgent'"
+        v-model="stepperStep"
+        :steps="['Editar Asesor']"
+        :can-advance="canAdvanceEditAgent"
+        :loading="saving"
+        confirm-label="Confirmar"
+        confirm-icon="fa-check"
+        @cancel="cancelAction"
+        @confirm="handleEditSellerAgent"
+      >
+        <template #step-0>
+          <div class="eact-form">
+            <div class="eact-grid-2">
+              <div class="eact-field">
+                <label>Canal</label>
+                <div class="eact-readonly">{{ enrollment?.agent_origin || '(sin canal)' }}</div>
+              </div>
+              <div class="eact-field">
+                <label>Asesor actual</label>
+                <div class="eact-readonly">{{ enrollment?.seller_agent_alias || '(sin asesor)' }}</div>
+              </div>
+            </div>
+            <div class="eact-field">
+              <label>Nuevo asesor <span class="eact-req">*</span></label>
+              <SearchSelect
+                v-model="newSellerAgentId"
+                :items="agentOptions"
+                label-field="label"
+                value-field="user_id"
+                placeholder="Buscar asesor por alias o nombre..."
+              />
+              <small v-if="agentPreview" class="eact-price-hint">
+                <i class="fa-solid fa-eye"></i> Asesor quedara como: <strong>{{ agentPreview }}</strong>
+              </small>
+            </div>
+            <div class="eact-field">
+              <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
+              <textarea v-model="editAgentJustificacion" class="eact-textarea" rows="2" placeholder="Motivo del cambio de asesor..."></textarea>
+            </div>
+          </div>
+        </template>
+      </ActionStepper>
+
       <!-- RETIRAR ALUMNO -->
       <ActionStepper
         v-if="activeAction === 'retire'"
@@ -352,7 +400,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, inject } from 'vue'
+import { ref, reactive, computed, watch, inject, getCurrentInstance } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { useToast } from 'vue-toastification'
@@ -379,8 +427,13 @@ const emit = defineEmits(['action-completed'])
 const ficoService = inject(ServiceKeys.Fico)
 const programService = inject(ServiceKeys.Program)
 const editionService = inject(ServiceKeys.Edition)
+const authService = inject(ServiceKeys.Auth)
 const toast = useToast()
 const fmt = useEnrollmentFormatters()
+
+const instance = getCurrentInstance()
+const $hasRole = instance?.appContext?.config?.globalProperties?.$hasRole || (() => false)
+const canEditAgent = computed(() => $hasRole(['ADMIN', 'FICO', 'LIDER_FICO']))
 
 const enrollmentId = computed(() => Number(props.enrollment?.enrollment_id))
 const activeAction = ref(null)
@@ -395,6 +448,7 @@ function startAction (action) {
   if (action === 'rp') loadRPEditions()
   if (action === 'cc') loadCCPrograms()
   if (action === 'editStudent') initEditStudent()
+  if (action === 'editSellerAgent') loadAgentOptions()
 }
 
 function cancelAction () {
@@ -418,6 +472,8 @@ function resetAllForms () {
   modalityJustificacion.value = ''
   Object.assign(editStudentForm, { first_name: '', last_name: '', document_number: '', origin_email: '', odoo_email: '', origin_phone: '', cat_profile_id: null })
   editStudentJustificacion.value = ''
+  newSellerAgentId.value = null
+  editAgentJustificacion.value = ''
   retireReason.value = ''
   retireHasRefund.value = false
   retireRefundAmount.value = 0
@@ -674,6 +730,74 @@ async function handleEditStudent () {
   } catch (err) {
     console.error(err)
     toast.error(err?.response?.data?.error || 'Error al editar alumno.')
+  } finally {
+    saving.value = false
+  }
+}
+
+// ── EDITAR ASESOR ──
+// Caso: la inscripcion entro como WEB (sin asesor real). Comercial despues
+// confirma que un asesor concreto guio al cliente al pago. FICO actualiza el
+// seller_agent_id; el canal (agent_origin) sigue siendo WEB. Resultado en
+// listados: 'WEB - AE30'.
+const newSellerAgentId = ref(null)
+const editAgentJustificacion = ref('')
+const agentOptions = ref([])
+const loadingAgents = ref(false)
+
+const canAdvanceEditAgent = computed(() =>
+  !!newSellerAgentId.value &&
+  Number(newSellerAgentId.value) !== Number(props.enrollment?.seller_agent_id) &&
+  !!editAgentJustificacion.value.trim()
+)
+
+const agentPreview = computed(() => {
+  const id = Number(newSellerAgentId.value)
+  if (!id) return ''
+  const u = agentOptions.value.find(a => Number(a.user_id) === id)
+  if (!u) return ''
+  const origin = props.enrollment?.agent_origin
+  return origin ? `${origin} - ${u.alias}` : u.alias
+})
+
+async function loadAgentOptions () {
+  if (agentOptions.value.length > 0) return
+  loadingAgents.value = true
+  try {
+    const arr = await authService.userList({})
+    agentOptions.value = (arr || [])
+      .filter(u => u.alias && u.active)
+      .map(u => {
+        const name = u.full_name
+          || [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+        return {
+          user_id: u.user_id,
+          alias: u.alias,
+          label: name ? `${u.alias} — ${name}` : u.alias
+        }
+      })
+      .sort((a, b) => a.alias.localeCompare(b.alias))
+  } catch (err) {
+    console.error('[loadAgentOptions]', err)
+    toast.error('No se pudieron cargar los asesores.')
+  } finally {
+    loadingAgents.value = false
+  }
+}
+
+async function handleEditSellerAgent () {
+  saving.value = true
+  try {
+    await ficoService.editSellerAgent({
+      enrollment_id: enrollmentId.value,
+      new_seller_agent_id: newSellerAgentId.value,
+      justificacion: editAgentJustificacion.value.trim()
+    })
+    toast.success('Asesor actualizado correctamente.')
+    emit('action-completed')
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al actualizar asesor.')
   } finally {
     saving.value = false
   }
