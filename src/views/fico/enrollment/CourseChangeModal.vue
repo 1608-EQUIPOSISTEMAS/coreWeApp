@@ -222,6 +222,16 @@ const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 const fmt = useEnrollmentFormatters()
 
+// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift.
+function isFutureOrToday (startDate) {
+  const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return false
+  const ed = new Date(+m[1], +m[2] - 1, +m[3])
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return ed >= today
+}
+
 const ccProgramVersionId = ref(null)
 const ccEditionId = ref(null)
 const ccTotalAmount = ref(0)
@@ -313,14 +323,12 @@ async function onProgramChange() {
       editionService.editionCaller({ program_version_id: ccProgramVersionId.value }),
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     ccEditionsList.value = (items || [])
-      .filter(e => e.start_date && new Date(e.start_date) >= today)
+      .filter(e => e.start_date && isFutureOrToday(e.start_date))
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,
-        label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
+        label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
     if (priceData) {
       ccPriceData.value = priceData

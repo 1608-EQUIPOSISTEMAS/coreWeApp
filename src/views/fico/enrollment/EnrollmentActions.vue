@@ -79,7 +79,7 @@
           </div>
         </template>
         <template #step-1>
-          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" ref="emailPreviewRef" />
+          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="rpEditionId" ref="emailPreviewRef" />
         </template>
       </ActionStepper>
 
@@ -198,7 +198,7 @@
           </div>
         </template>
         <template #step-1>
-          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" ref="emailPreviewRef" />
+          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="ccEditionId" ref="emailPreviewRef" />
         </template>
       </ActionStepper>
 
@@ -497,19 +497,29 @@ async function loadRPEditions () {
   loadingEditions.value = true
   try {
     const items = await ficoService.getAvailableEditions(enrollmentId.value)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     rpEditions.value = (items || [])
-      .filter(e => e.start_date && new Date(e.start_date) >= today)
+      .filter(e => e.start_date && isFutureOrToday(e.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
-        label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
+        label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
   } catch (err) {
     console.error('Error cargando ediciones:', err)
   } finally {
     loadingEditions.value = false
   }
+}
+
+// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift:
+// si el server Node corre en UTC, el ISO viene como '2026-05-09T00:00:00.000Z',
+// que `new Date()` interpreta como 2026-05-08 19:00 Lima — falsea el filtro.
+function isFutureOrToday (startDate) {
+  const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return false
+  const ed = new Date(+m[1], +m[2] - 1, +m[3])
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return ed >= today
 }
 
 async function handleReprogramConfirm () {
@@ -599,14 +609,12 @@ async function onCCProgramChange () {
       editionService.editionCaller({ program_version_id: ccProgramVersionId.value }),
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     ccEditionsList.value = (items || [])
-      .filter(e => e.start_date && new Date(e.start_date) >= today)
+      .filter(e => e.start_date && isFutureOrToday(e.start_date))
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,
-        label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
+        label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
     if (priceData) {
       const isStudent   = props.enrollment?.occupation_label === 'E'
@@ -745,18 +753,33 @@ const editAgentJustificacion = ref('')
 const agentOptions = ref([])
 const loadingAgents = ref(false)
 
-const canAdvanceEditAgent = computed(() =>
-  !!newSellerAgentId.value &&
-  Number(newSellerAgentId.value) !== Number(props.enrollment?.seller_agent_id) &&
-  !!editAgentJustificacion.value.trim()
-)
+// Sentinel: user_id = 0 representa "Sin Asesor (S/A)" en el SearchSelect.
+// Lo mapeamos a null antes de enviar al backend.
+const SA_SENTINEL = 0
+
+const canAdvanceEditAgent = computed(() => {
+  if (newSellerAgentId.value === null || newSellerAgentId.value === undefined) return false
+  if (!editAgentJustificacion.value.trim()) return false
+
+  const currentId = props.enrollment?.seller_agent_id
+  const currentIsSA = props.enrollment?.agent_origin === 'SA' && currentId == null
+
+  if (Number(newSellerAgentId.value) === SA_SENTINEL) {
+    return !currentIsSA  // pasar a S/A solo si no era ya S/A
+  }
+  return Number(newSellerAgentId.value) !== Number(currentId)
+})
 
 const agentPreview = computed(() => {
   const id = Number(newSellerAgentId.value)
+  if (id === SA_SENTINEL) return 'SA'
   if (!id) return ''
   const u = agentOptions.value.find(a => Number(a.user_id) === id)
   if (!u) return ''
   const origin = props.enrollment?.agent_origin
+  // Si el asesor actual era S/A (agent_origin='SA'), al asignar uno real
+  // el canal se limpia (deja de ser SA porque ahora SI hay asesor).
+  if (origin === 'SA') return u.alias
   return origin ? `${origin} - ${u.alias}` : u.alias
 })
 
@@ -765,7 +788,7 @@ async function loadAgentOptions () {
   loadingAgents.value = true
   try {
     const arr = await authService.userList({})
-    agentOptions.value = (arr || [])
+    const users = (arr || [])
       .filter(u => u.alias && u.active)
       .map(u => {
         const name = u.full_name
@@ -777,6 +800,12 @@ async function loadAgentOptions () {
         }
       })
       .sort((a, b) => a.alias.localeCompare(b.alias))
+
+    // Prepend la opcion S/A para que aparezca primero en el dropdown.
+    agentOptions.value = [
+      { user_id: SA_SENTINEL, alias: 'SA', label: 'Sin Asesor (S/A)' },
+      ...users
+    ]
   } catch (err) {
     console.error('[loadAgentOptions]', err)
     toast.error('No se pudieron cargar los asesores.')
@@ -788,9 +817,11 @@ async function loadAgentOptions () {
 async function handleEditSellerAgent () {
   saving.value = true
   try {
+    // Sentinel 0 = "Sin Asesor (S/A)" — el backend lo entiende como null.
+    const newId = Number(newSellerAgentId.value) === SA_SENTINEL ? null : Number(newSellerAgentId.value)
     await ficoService.editSellerAgent({
       enrollment_id: enrollmentId.value,
-      new_seller_agent_id: newSellerAgentId.value,
+      new_seller_agent_id: newId,
       justificacion: editAgentJustificacion.value.trim()
     })
     toast.success('Asesor actualizado correctamente.')
