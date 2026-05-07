@@ -97,6 +97,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async editSellerAgent(payload) {
+    const response = (await api.post('/fico/editselleragent', payload)).data;
+    return response.data;
+  }
+
   async courseChange(payload) {
     const response = (await api.post('/fico/coursechange', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
