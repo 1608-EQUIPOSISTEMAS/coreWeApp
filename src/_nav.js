@@ -23,6 +23,12 @@ export default [
         to: '/fico/tokens',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Cobranzas',
+        to: '/fico/cobranzas',
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
+      },
     ],
   },
   {

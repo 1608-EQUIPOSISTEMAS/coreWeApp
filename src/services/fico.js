@@ -102,6 +102,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async getCollections(payload) {
+    const response = (await api.post('/fico/collections', payload)).data;
+    return response.data;
+  }
+
   async courseChange(payload) {
     const response = (await api.post('/fico/coursechange', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
