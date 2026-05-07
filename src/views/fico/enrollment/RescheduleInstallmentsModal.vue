@@ -184,6 +184,10 @@ function toISO (d) {
 
 function formatDate (d) {
   if (!d) return '—'
+  if (typeof d === 'string') {
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`
+  }
   const date = d instanceof Date ? d : new Date(d)
   if (isNaN(date.getTime())) return '—'
   return date.toLocaleDateString('es-PE')

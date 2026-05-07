@@ -67,8 +67,10 @@ export default class FicoService {
     return response.data;
   }
 
-  async previewEmail(enrollment_id) {
-    const response = (await api.post('/fico/previewemail', { enrollment_id })).data;
+  async previewEmail(enrollment_id, override_edition_id = null) {
+    const payload = { enrollment_id }
+    if (override_edition_id) payload.override_edition_id = override_edition_id
+    const response = (await api.post('/fico/previewemail', payload)).data;
     return response.data;
   }
 

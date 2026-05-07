@@ -32,7 +32,8 @@ import { useToast } from 'vue-toastification'
 
 const props = defineProps({
   enrollmentId: { type: Number, required: true },
-  active: { type: Boolean, default: false }
+  active: { type: Boolean, default: false },
+  overrideEditionId: { type: Number, default: null }
 })
 
 const ficoService = inject(ServiceKeys.Fico)
@@ -41,18 +42,26 @@ const toast = useToast()
 const loading = ref(false)
 const previewData = ref(null)
 
-watch(() => props.active, async (v) => {
-  if (!v || previewData.value) return
+async function loadPreview () {
   loading.value = true
   try {
-    previewData.value = await ficoService.previewEmail(props.enrollmentId)
+    previewData.value = await ficoService.previewEmail(props.enrollmentId, props.overrideEditionId)
   } catch (err) {
     console.error(err)
     toast.error('Error cargando preview del correo')
   } finally {
     loading.value = false
   }
+}
+
+watch(() => props.active, (v) => {
+  if (!v) return
+  loadPreview()
 }, { immediate: true })
+
+watch(() => props.overrideEditionId, () => {
+  if (props.active) loadPreview()
+})
 
 defineExpose({ previewData })
 </script>

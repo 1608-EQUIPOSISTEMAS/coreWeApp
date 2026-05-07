@@ -114,13 +114,11 @@ watch(() => props.visible, async (v) => {
   loadingEditions.value = true
   try {
     const items = await ficoService.getAvailableEditions(Number(props.enrollment.enrollment_id))
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     reprogramEditions.value = (items || [])
-      .filter(e => e.start_date && new Date(e.start_date) >= today)
+      .filter(e => e.start_date && isFutureOrToday(e.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
-        label: `${new Date(e.start_date).toLocaleDateString('es-PE')} — ${e.global_code || e.edition_code || ''}`
+        label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
   } catch (err) {
     console.error('Error cargando ediciones:', err)
@@ -128,6 +126,16 @@ watch(() => props.visible, async (v) => {
     loadingEditions.value = false
   }
 })
+
+// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift.
+function isFutureOrToday (startDate) {
+  const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return false
+  const ed = new Date(+m[1], +m[2] - 1, +m[3])
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return ed >= today
+}
 
 async function handleReprogram () {
   if (!canConfirm.value) return

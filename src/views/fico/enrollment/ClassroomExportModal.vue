@@ -129,9 +129,10 @@ function onProgramChange () {
 }
 
 function formatEditionLabel (ed) {
-  const date = ed.start_date
-    ? new Date(ed.start_date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : 'Sin fecha'
+  // Formateo por componentes de la cadena calendario YYYY-MM-DD para evitar el
+  // TZ shift de new Date().toLocaleDateString cuando el server Node corre en UTC.
+  const m = ed.start_date ? String(ed.start_date).match(/^(\d{4})-(\d{2})-(\d{2})/) : null
+  const date = m ? `${m[3]}/${m[2]}/${m[1]}` : 'Sin fecha'
   return `${date} · ${ed.students_count} alumno${ed.students_count === 1 ? '' : 's'}`
 }
 

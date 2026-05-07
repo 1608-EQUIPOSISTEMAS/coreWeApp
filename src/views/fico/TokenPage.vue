@@ -204,7 +204,7 @@
               </td>
               <td>
                 <div class="cell-main cell-clip">{{ t.program_name }}</div>
-                <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ t.edition_start_date ? `(${new Date(t.edition_start_date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})` : '' }}</span>
+                <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ formatEditionShortDate(t.edition_start_date) }}</span>
                 <span v-if="hasValidations(t)" class="pill pill-sm pill-amber" style="margin-left:4px">Convalida</span>
               </td>
               <td class="tc">
@@ -1016,8 +1016,23 @@ function formatMoneyInt (v) {
 
 function formatDate (d) {
   if (!d) return '--'
+  // Formateo por componentes de la cadena calendario YYYY-MM-DD para evitar
+  // TZ shift cuando el server Node corre en UTC.
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) {
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    return `${m[3]} ${meses[+m[2] - 1]} ${m[1]}`
+  }
   const dt = new Date(d)
-  return dt.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  return isNaN(dt) ? '--' : dt.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Etiqueta corta DD/MM para el chip de edicion. Misma logica TZ-safe.
+function formatEditionShortDate (d) {
+  if (!d) return ''
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return ''
+  return `(${m[3]}/${m[2]})`
 }
 
 function truncateUrl (url) {

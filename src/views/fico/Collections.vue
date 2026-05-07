@@ -17,6 +17,13 @@
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
+        <div class="cob-day-pick">
+          <i class="fa-solid fa-calendar-day cob-day-icon"></i>
+          <select v-model="daySelected" class="cob-day-select" @change="loadCollections">
+            <option :value="null">Todos los dias</option>
+            <option v-for="d in daysInMonth" :key="d" :value="d">Dia {{ d }}</option>
+          </select>
+        </div>
       </div>
     </header>
 
@@ -166,6 +173,7 @@ const authService = inject(ServiceKeys.Auth)
 
 const today = new Date()
 const monthValue = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
+const daySelected = ref(null)
 const searchInput = ref('')
 const searchQuery = ref('')
 const stateFilter = ref('all')
@@ -185,6 +193,19 @@ const yearMonth = computed(() => {
   const [y, m] = monthValue.value.split('-').map(Number)
   return { year: y, month: m }
 })
+
+// Cantidad de dias en el mes seleccionado. new Date(y, m, 0) devuelve el ultimo
+// dia del mes anterior; pasandole m (1-indexed pasado a Date como 0-indexed)
+// se obtiene el ultimo dia del mes seleccionado.
+const daysInMonth = computed(() => {
+  const { year, month } = yearMonth.value
+  const last = new Date(year, month, 0).getDate()
+  return Array.from({ length: last }, (_, i) => i + 1)
+})
+
+// Si cambia el mes, el dia seleccionado pierde sentido (31 marzo no existe en
+// abril). Lo reseteamos a "Todos los dias".
+watch(monthValue, () => { daySelected.value = null })
 
 function shiftMonth (delta) {
   const [y, m] = monthValue.value.split('-').map(Number)
@@ -214,6 +235,7 @@ async function loadCollections () {
     const { year, month } = yearMonth.value
     const r = await ficoService.getCollections({
       year, month,
+      day: daySelected.value || null,
       q: searchQuery.value || null,
       state: stateFilter.value,
       advisor_ids: advisorIds.value.map(Number).filter(Number.isFinite)
@@ -253,11 +275,19 @@ function fmtMoney (n) {
   return v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// due_date llega como cadena calendario YYYY-MM-DD (es una etiqueta, no un instante).
+// new Date('YYYY-MM-DD') la parsea como UTC midnight y luego toLocaleDateString('es-PE')
+// la corre 5h hacia atras → muestra el dia anterior. Aqui formateamos por componentes
+// para preservar la fecha tal cual la define el negocio.
 function fmtDate (d) {
   if (!d) return '—'
+  if (typeof d === 'string') {
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`
+  }
   const dt = new Date(d)
   if (isNaN(dt)) return '—'
-  return dt.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return dt.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Lima' })
 }
 
 function stateBadgeClass (s) {
@@ -308,6 +338,19 @@ onMounted(() => {
 .cob-month-input {
   border: none; outline: none; padding: 6px 10px; font-size: 13px; font-weight: 500; color: #14140F;
   font-family: inherit; background: transparent; min-width: 140px;
+}
+
+.cob-day-pick {
+  display: inline-flex; align-items: center; gap: 8px; background: #fff;
+  border: 1px solid #E8E8E3; border-radius: 10px; padding: 4px 10px 4px 12px;
+}
+.cob-day-icon { font-size: 12px; color: #6F6F66; }
+.cob-day-select {
+  border: none; outline: none; padding: 6px 4px; font-size: 13px; font-weight: 500;
+  color: #14140F; font-family: inherit; background: transparent; cursor: pointer; min-width: 130px;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%236F6F66' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat; background-position: right 0 center; padding-right: 16px;
 }
 
 /* Section */

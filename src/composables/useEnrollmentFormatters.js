@@ -2,6 +2,10 @@ export function useEnrollmentFormatters () {
 
   const formatMoney = v => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
 
+  // Formateo TZ-safe para cadenas calendario (DATE de BD). Captura primero
+  // YYYY-MM-DD aunque venga embebido en un ISO con hora (p.ej. '2026-05-09T05:00:00.000Z')
+  // y formatea por componentes \u2014 evita que toLocaleDateString corra el dia
+  // cuando el server Node corre en UTC y el navegador en Lima.
   const formatDate = v => {
     if (!v) return '\u2014'
     const s = String(v)
