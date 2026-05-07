@@ -64,6 +64,12 @@ const routes = [
             component: () => import('@/views/fico/TokenPage.vue'),
             meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
           },
+          {
+            path: 'cobranzas',
+            name: 'ficoCollections',
+            component: () => import('@/views/fico/Collections.vue'),
+            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+          },
           // {
           //   path: 'reportes',
           //   name: 'FicoReportes',
