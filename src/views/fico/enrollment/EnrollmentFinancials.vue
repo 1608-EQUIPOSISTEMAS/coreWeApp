@@ -2,6 +2,15 @@
   <section class="ef-section">
     <h3 class="ef-title"><i class="fa-solid fa-file-invoice-dollar"></i> Finanzas</h3>
 
+    <!-- Badge de promo: el alumno debe traer laptop como beneficio de la inscripcion -->
+    <div v-if="hasLaptopPromo" class="ef-laptop-banner">
+      <i class="fa-solid fa-laptop"></i>
+      <div class="ef-laptop-banner-text">
+        <strong>Traera laptop</strong>
+        <span>Inscripcion con promo LAPTOP — confirmar que el alumno trae su equipo</span>
+      </div>
+    </div>
+
     <!-- Financial summary bar -->
     <div class="ef-bar">
       <div class="ef-bar-item">
@@ -581,6 +590,8 @@ const discountLines = computed(() => {
   return lines
 })
 
+const hasLaptopPromo = computed(() => fmt.hasLaptopPromo(props.enrollment))
+
 const inicial = computed(() => props.installments.find(i => i.installment_number === 0 || i.is_reserva) || null)
 const cuotas = computed(() => props.installments.filter(i => i.installment_number !== 0 && !i.is_reserva))
 const cuotasTotal = computed(() => cuotas.value.reduce((sum, c) => sum + (Number(c.amount) || 0), 0))
@@ -692,6 +703,49 @@ function needsEditionDecision (child) {
 .ef-title {
   display: none;
 }
+
+/* Laptop promo banner: indica que el alumno traera laptop como beneficio */
+.ef-laptop-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ECFEFF 0%, #F0F9FF 100%);
+  border: 1px solid #A5F3FC;
+  border-left: 3px solid #0891B2;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.ef-laptop-banner > i {
+  font-size: 18px;
+  color: #0891B2;
+  flex-shrink: 0;
+}
+.ef-laptop-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.35;
+}
+.ef-laptop-banner-text strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #155E75;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.ef-laptop-banner-text span {
+  font-size: 11.5px;
+  color: #0E7490;
+}
+[data-coreui-theme="dark"] .ef-laptop-banner {
+  background: rgba(8,145,178,0.12);
+  border-color: rgba(8,145,178,0.4);
+  border-left-color: #22D3EE;
+}
+[data-coreui-theme="dark"] .ef-laptop-banner > i { color: #22D3EE; }
+[data-coreui-theme="dark"] .ef-laptop-banner-text strong { color: #67E8F9; }
+[data-coreui-theme="dark"] .ef-laptop-banner-text span { color: #A5F3FC; }
 
 /* Financial bar */
 .ef-bar {
