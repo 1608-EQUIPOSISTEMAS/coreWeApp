@@ -43,6 +43,15 @@ export function useEnrollmentFormatters () {
 
   const isContado = e => e.payment_type === 'PT'
 
+  // Detecta si la inscripcion incluye una promo "LAPTOP" — el alumno traera laptop
+  // como parte del beneficio. El SP retorna los descuentos como texto concatenado
+  // (main_discount / additional_discounts), p.ej. "50.00 - LAPTOP PROMO".
+  const hasLaptopPromo = e => {
+    if (!e) return false
+    const haystack = `${e.main_discount || ''} ${e.additional_discounts || ''}`.toUpperCase()
+    return /\bLAPTOP\b/.test(haystack)
+  }
+
   const getReserva = e => Number(e.reservation_amount) || 0
 
   const getPagado = e => {
@@ -108,7 +117,7 @@ export function useEnrollmentFormatters () {
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, isPendiente, isContado, hasLaptopPromo, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel,
     auditIcon, auditLabel
   }

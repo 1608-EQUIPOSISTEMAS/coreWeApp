@@ -23,6 +23,13 @@
         <span class="esp-pill esp-pill-soft">
           {{ fmt.isContado(enrollment) ? 'Al contado' : 'Cuotas' }}
         </span>
+        <span
+          v-if="fmt.hasLaptopPromo(enrollment)"
+          class="esp-pill esp-pill-laptop"
+          title="Esta inscripcion incluye laptop como beneficio"
+        >
+          <i class="fa-solid fa-laptop"></i> Traera laptop
+        </span>
       </div>
 
       <div class="esp-highlights">
@@ -290,6 +297,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-weight: 600;
 }
 .esp-pill-soft { background: #F5F5F5; color: #737373; }
+.esp-pill-laptop {
+  background: #ECFEFF;
+  color: #155E75;
+  border: 1px solid #A5F3FC;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.esp-pill-laptop i { font-size: 10px; color: #0891B2; }
 
 /* Highlights */
 .esp-highlights {
@@ -479,6 +495,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 }
 
 [data-coreui-theme="dark"] .esp-pill-soft { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .esp-pill-laptop {
+  background: rgba(8,145,178,0.16);
+  color: #67E8F9;
+  border-color: rgba(8,145,178,0.4);
+}
+[data-coreui-theme="dark"] .esp-pill-laptop i { color: #22D3EE; }
 [data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
 [data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
