@@ -1,20 +1,29 @@
 <template>
-  <div class="px-4 py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h4 class="fw-700 text-dark mb-1">Métricas de Atención Automatizada</h4>
-        <p class="text-muted small mb-0">Rendimiento del bot y volumen de solicitudes</p>
+  <div class="bot-tab">
+    <!-- Filter bar tipo Leads (ep-filter-bar) -->
+    <section class="ep-section ep-filter-bar">
+      <div class="ep-filter-bar-main">
+        <div class="ep-quick-row">
+          <span class="ep-section-eyebrow">
+            <i class="fa-solid fa-chart-pie"></i>
+            Métricas de Atención Automatizada
+          </span>
+          <span class="ep-section-hint">Rendimiento del bot y volumen de solicitudes</span>
+        </div>
+        <div class="ep-toolbar">
+          <div class="filter-date-wrap">
+            <i class="fa-regular fa-calendar filter-icon"></i>
+            <BaseDatePicker
+              v-model="dateRange"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              class="filter-input"
+              placeholder="Filtrar por fechas..."
+              @on-change="handleDateChange"
+            />
+          </div>
+        </div>
       </div>
-      <div style="width: 250px;">
-        <BaseDatePicker 
-          v-model="dateRange" 
-          :config="{ mode: 'range', dateFormat: 'Y-m-d' }" 
-          class="exec-input-light w-100" 
-          placeholder="Filtrar por fechas..." 
-          @on-change="handleDateChange" 
-        />
-      </div>
-    </div>
+    </section>
 
     <div v-if="isLoading" class="exec-loader py-5">
       <div class="loader-ring"></div>
@@ -24,7 +33,7 @@
     <div v-else-if="metrics">
       <div class="row g-3 mb-4">
         <div class="col-md-3">
-          <div class="kpi-card shadow-sm">
+          <div class="kpi-card">
             <div class="kpi-icon bg-blue-light text-blue"><i class="fa-solid fa-ticket"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Total Solicitudes</span>
@@ -33,7 +42,7 @@
           </div>
         </div>
         <div class="col-md-3">
-          <div class="kpi-card shadow-sm">
+          <div class="kpi-card">
             <div class="kpi-icon bg-amber-light text-amber"><i class="fa-solid fa-clock"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Pendientes de Acción</span>
@@ -42,7 +51,7 @@
           </div>
         </div>
         <div class="col-md-3">
-          <div class="kpi-card shadow-sm">
+          <div class="kpi-card">
             <div class="kpi-icon bg-teal-light text-teal"><i class="fa-solid fa-check-double"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Tickets Solucionados</span>
@@ -51,7 +60,7 @@
           </div>
         </div>
         <div class="col-md-3">
-          <div class="kpi-card shadow-sm">
+          <div class="kpi-card">
             <div class="kpi-icon bg-yellow-light text-yellow"><i class="fa-solid fa-star"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">CSAT Promedio</span>
@@ -63,14 +72,14 @@
 
       <div class="row g-4">
         <div class="col-md-8">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Volumen de Solicitudes por Día</h6>
             <apexchart type="area" height="300" :options="chartEvolucionOptions" :series="chartEvolucionSeries"></apexchart>
           </div>
         </div>
 
         <div class="col-md-4">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Distribución por Tipo</h6>
             <apexchart type="donut" height="300" :options="chartTiposOptions" :series="chartTiposSeries"></apexchart>
           </div>
@@ -81,13 +90,13 @@
       <h5 class="section-title mt-5 mb-3">Rendimiento del Bot vs Asesor Humano</h5>
       <div class="row g-4">
         <div class="col-md-8">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">CSAT Promedio — Bot vs Asesor</h6>
             <apexchart type="bar" height="170" :options="chartBotHumanOptions" :series="chartBotHumanSeries"></apexchart>
           </div>
         </div>
         <div class="col-md-4 d-flex flex-column gap-3">
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-teal-light text-teal"><i class="fa-solid fa-robot"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">% Resuelto por Bot</span>
@@ -95,7 +104,7 @@
               <span class="small text-muted mt-1">{{ botVsHuman.bot_count || 0 }} conversaciones</span>
             </div>
           </div>
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-slate-light text-slate"><i class="fa-solid fa-user-tie"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">% Escalado a Asesor</span>
@@ -110,20 +119,20 @@
       <h5 class="section-title mt-5 mb-3">Distribución de Calificaciones (CSAT)</h5>
       <div class="row g-4">
         <div class="col-md-8">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Cantidad de Respuestas por Rating</h6>
             <apexchart type="bar" height="200" :options="chartCsatDistOptions" :series="chartCsatDistSeries"></apexchart>
           </div>
         </div>
         <div class="col-md-4 d-flex flex-column gap-3">
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-emerald-light text-emerald"><i class="fa-solid fa-thumbs-up"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">% Promotores (4-5⭐)</span>
               <span class="kpi-value">{{ pctPromoters }}<span class="small fw-500 text-muted">%</span></span>
             </div>
           </div>
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-red-light text-red"><i class="fa-solid fa-thumbs-down"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">% Detractores (1-2⭐)</span>
@@ -137,7 +146,7 @@
       <h5 class="section-title mt-5 mb-3">Consumo por Tipo de Membresía</h5>
       <div class="row g-4">
         <div class="col-md-4">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Distribución de Consultas</h6>
             <apexchart
               v-if="chartMembershipSeries.length"
@@ -153,7 +162,7 @@
           </div>
         </div>
         <div class="col-md-8">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Detalle por Membresía</h6>
             <div class="table-responsive-custom">
               <table class="exec-table">
@@ -196,13 +205,13 @@
       <h5 class="section-title mt-5 mb-3">Estado de los Tickets</h5>
       <div class="row g-4 mb-4">
         <div class="col-md-8">
-          <div class="chart-card shadow-sm h-100">
+          <div class="chart-card h-100">
             <h6 class="fieldset-title mb-3">Embudo de Estados</h6>
             <apexchart type="bar" height="170" :options="chartFunnelOptions" :series="chartFunnelSeries"></apexchart>
           </div>
         </div>
         <div class="col-md-4 d-flex flex-column gap-3">
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-red-light text-red"><i class="fa-solid fa-arrow-trend-down"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Tasa de Abandono</span>
@@ -210,7 +219,7 @@
               <span class="small text-muted mt-1">{{ ticketFunnel.abandonados || 0 }} tickets</span>
             </div>
           </div>
-          <div class="kpi-card shadow-sm flex-fill">
+          <div class="kpi-card flex-fill">
             <div class="kpi-icon bg-amber-light text-amber"><i class="fa-solid fa-hourglass-half"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Pendientes</span>
@@ -277,7 +286,7 @@ const chartEvolucionOptions = computed(() => {
   const categories = metrics.value?.tickets_por_fecha?.map(item => item.fecha) || []
   return {
     chart: { type: 'area', toolbar: { show: false }, fontFamily: 'inherit' },
-    colors: ['#0ea5e9'],
+    colors: ['#10b981'],
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth', width: 2 },
@@ -297,7 +306,7 @@ const chartTiposOptions = computed(() => {
   return {
     chart: { type: 'donut', fontFamily: 'inherit' },
     labels: labels,
-    colors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'],
+    colors: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'],
     plotOptions: {
       pie: { donut: { size: '70%', labels: { show: true, name: { show: true }, value: { show: true } } } }
     },
@@ -333,7 +342,7 @@ const chartBotHumanSeries = computed(() => [{
 const chartBotHumanOptions = computed(() => ({
   chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit', sparkline: { enabled: false } },
   plotOptions: { bar: { borderRadius: 4, distributed: true, horizontal: true, barHeight: '55%' } },
-  colors: ['#14b8a6', '#64748b'],
+  colors: ['#10b981', '#64748b'],
   dataLabels: {
     enabled: true,
     formatter: (val) => `${Number(val).toFixed(2)} ⭐`,
@@ -490,68 +499,139 @@ onActivated(() => {
 </script>
 
 <style scoped>
+.bot-tab { display: flex; flex-direction: column; gap: 0; }
+
+/* === Filter bar (estilo Leads) === */
+.ep-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 14px;
+}
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border, #E8E8E3);
+  border-radius: 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ep-filter-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.ep-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ep-toolbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 12px; flex-wrap: wrap;
+  flex: 1 1 auto;
+}
+.ep-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--e-text, #14140F);
+}
+.ep-section-eyebrow i { color: var(--e-accent, #10B981); font-size: 12px; }
+.ep-section-hint {
+  font-size: 11.5px;
+  color: var(--e-text-secondary, #6F6F66);
+  font-weight: 500;
+}
+
+/* === Filtro de fecha === */
+.filter-date-wrap { position: relative; display: flex; align-items: center; }
+.filter-icon { position: absolute; left: 9px; color: var(--e-text-muted, #A0A099); font-size: 11px; pointer-events: none; z-index: 1; }
+.filter-input { height: 34px; padding: 0 10px 0 28px; border: 1px solid var(--e-border, #E8E8E3); border-radius: 8px; background: #fff; font-size: 12px; font-family: inherit; color: var(--e-text, #14140F); outline: none; transition: border-color .15s, box-shadow .15s; min-width: 230px; }
+.filter-input:focus { border-color: var(--e-accent, #10B981); box-shadow: 0 0 0 3px rgba(16,185,129,.1); }
+.filter-input::placeholder { color: var(--e-text-muted, #A0A099); font-size: 11.5px; }
+
+/* === KPI cards === */
 .kpi-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 18px;
   display: flex;
   align-items: center;
   gap: 16px;
-  border: 1px solid var(--slate-200, #e2e8f0);
+  border: 1px solid var(--e-border, #E8E8E3);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04), 0 1px 2px rgba(15, 23, 42, .03);
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.kpi-card:hover {
+  border-color: var(--e-border-strong, #D4D4CC);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, .06), 0 2px 4px rgba(15, 23, 42, .04);
+  transform: translateY(-1px);
 }
 .kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 .bg-blue-light { background: #eff6ff; } .text-blue { color: #2563eb; }
 .bg-amber-light { background: #fffbeb; } .text-amber { color: #d97706; }
-.bg-teal-light { background: #f0fdf4; } .text-teal { color: #15803d; }
+.bg-teal-light { background: #ecfdf4; } .text-teal { color: #047857; }
 .bg-yellow-light { background: #fefce8; } .text-yellow { color: #eab308; }
 .bg-emerald-light { background: #ecfdf5; } .text-emerald { color: #059669; }
 .bg-slate-light { background: #f1f5f9; } .text-slate { color: #475569; }
 .bg-red-light { background: #fef2f2; } .text-red { color: #dc2626; }
 
 .kpi-info { display: flex; flex-direction: column; }
-.kpi-label { font-size: 12px; color: var(--slate-500, #64748b); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.kpi-value { font-size: 24px; font-weight: 700; color: var(--navy-900, #0f172a); line-height: 1.2; margin-top: 4px; }
+.kpi-label { font-size: 10.5px; color: var(--e-text-secondary, #6F6F66); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.kpi-value { font-size: 22px; font-weight: 700; color: var(--e-text, #14140F); line-height: 1.2; margin-top: 4px; letter-spacing: -0.01em; }
 
+/* === Chart card === */
 .chart-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid var(--slate-200, #e2e8f0);
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid var(--e-border, #E8E8E3);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04), 0 1px 2px rgba(15, 23, 42, .03);
 }
 .fieldset-title {
-  font-size: 11.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--text-secondary, #475569);
+  letter-spacing: .06em;
+  color: var(--e-text-secondary, #6F6F66);
   font-weight: 700;
+  margin: 0;
 }
 
+/* === Loader === */
 .exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
-.loader-ring { width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: #0d9488; border-radius: 50%; animation: spin .8s linear infinite; }
+.loader-ring { width: 32px; height: 32px; border: 3px solid var(--e-border, #E8E8E3); border-top-color: var(--e-accent, #10B981); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ══ SECCIONES Y TIER PILLS ═════════════════════════════════════ */
+/* === Section titles === */
 .section-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--navy-900, #0f172a);
+  color: var(--e-text, #14140F);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   padding-bottom: 8px;
-  border-bottom: 2px solid var(--slate-200, #e2e8f0);
+  border-bottom: 1px solid var(--e-border, #E8E8E3);
+  margin: 0;
 }
 
-.kpi-info .small { font-size: 10.5px; }
-
+/* === Tier pills === */
 .tier-pill {
   display: inline-flex;
   align-items: center;
@@ -568,20 +648,28 @@ onActivated(() => {
 .tier-black { background: #1e293b; color: #f1f5f9; }
 .tier-none  { background: #f1f5f9; color: #64748b; }
 
-/* Tabla embebida en chart-card */
+/* === Tabla embebida === */
 .chart-card .table-responsive-custom { width: 100%; overflow-x: auto; }
 .chart-card .exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.chart-card .thead-sub .ts { padding: 10px 12px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); background: #fafbfc; color: var(--text-secondary, #475569); white-space: nowrap; text-align: left; }
+.chart-card .thead-sub .ts {
+  padding: 8px 12px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  font-weight: 600; border-bottom: 1px solid var(--e-border, #E8E8E3);
+  background: var(--e-bg-subtle, #FAFAF8); color: var(--e-text-secondary, #6F6F66);
+  white-space: nowrap; text-align: left;
+}
 .chart-card .thead-sub .ts.text-center { text-align: center; }
-.chart-card .tbody-row td { padding: 10px 12px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; color: var(--text-primary, #0f172a); }
+.chart-card .tbody-row td {
+  padding: 9px 12px; border-bottom: 1px solid var(--e-border, #E8E8E3);
+  vertical-align: middle; color: var(--e-text, #14140F);
+}
 .chart-card .tbody-row:last-child td { border-bottom: none; }
-.chart-card .tbody-row:hover td { background: #f8fafc; }
+.chart-card .tbody-row:hover td { background: var(--e-bg-subtle, #FAFAF8); }
 .chart-card .td-a { border-left: 1px solid transparent; }
 
 .empty-state-sm {
   padding: 24px;
   text-align: center;
-  color: var(--slate-400, #94a3b8);
+  color: var(--e-text-muted, #A0A099);
   font-size: 12px;
   font-weight: 500;
 }
@@ -592,8 +680,8 @@ onActivated(() => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 300px;
-  color: var(--slate-300, #cbd5e1);
+  min-height: 220px;
+  color: var(--e-text-muted, #A0A099);
   font-size: 13px;
   font-weight: 500;
 }
@@ -603,9 +691,21 @@ onActivated(() => {
 .text-success { color: #059669 !important; }
 .text-warning { color: #d97706 !important; }
 .text-danger  { color: #dc2626 !important; }
-.text-muted   { color: #94a3b8 !important; }
+.text-muted   { color: var(--e-text-muted, #A0A099) !important; }
 .fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
 .text-center { text-align: center; }
 .small { font-size: 11.5px; }
 .mt-1 { margin-top: 4px; }
+
+/* === Dark mode === */
+[data-coreui-theme="dark"] .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .ep-section-eyebrow { color: #F4F4F0; }
+[data-coreui-theme="dark"] .filter-input { background: #1A1A14; color: #F4F4F0; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-card,
+[data-coreui-theme="dark"] .chart-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-value,
+[data-coreui-theme="dark"] .section-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .chart-card .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .chart-card .tbody-row td { color: #E4E4DD; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .chart-card .tbody-row:hover td { background: #232319; }
 </style>
