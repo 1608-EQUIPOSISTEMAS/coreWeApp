@@ -118,11 +118,66 @@
         </div>
       </div>
 
+      <div v-if="isAdmin" class="esp-section esp-danger">
+        <h4 class="esp-section-title esp-danger-title">Zona de administrador</h4>
+        <button class="esp-danger-btn" @click="openDeleteModal">
+          <i class="fa-solid fa-trash-can"></i>
+          Eliminar inscripcion
+        </button>
+        <p class="esp-danger-hint">Borra esta inscripcion y sus modulos hijos. No afecta Odoo.</p>
+      </div>
+
       <footer class="esp-footer">
         <button class="esp-btn-primary" @click="$emit('view-full', enrollment)">
           <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver detalle completo
         </button>
       </footer>
+    </div>
+
+    <div v-if="showDeleteModal" class="esp-modal-backdrop" @click.self="closeDeleteModal">
+      <div class="esp-modal" role="dialog" aria-modal="true">
+        <header class="esp-modal-head">
+          <span class="esp-modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <h3>Eliminar inscripcion</h3>
+        </header>
+        <div class="esp-modal-body">
+          <p class="esp-modal-lead">
+            Estas a punto de <strong>borrar permanentemente</strong> la inscripcion de
+            <strong>{{ enrollment.student_full_name }}</strong> en
+            <strong>{{ enrollment.program_name }}</strong> ({{ enrollment.edition_code || '---' }}).
+          </p>
+          <ul class="esp-modal-list">
+            <li>Se eliminan cuotas, pagos, validaciones, adjuntos, tokens, emails y auditoria.</li>
+            <li>Los modulos hijos asociados tambien se eliminan en cascada.</li>
+            <li>El lead asociado se conserva como consulta activa.</li>
+            <li>La sale.order y la matricula en Odoo <strong>no</strong> se tocan.</li>
+            <li><strong>Esta accion es irreversible.</strong></li>
+          </ul>
+          <label class="esp-modal-field">
+            Escribe <code>ELIMINAR</code> para confirmar
+            <input
+              v-model="deleteConfirmText"
+              class="esp-modal-input"
+              placeholder="ELIMINAR"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+        </div>
+        <footer class="esp-modal-foot">
+          <button class="esp-modal-btn esp-modal-btn-ghost" :disabled="deleting" @click="closeDeleteModal">
+            Cancelar
+          </button>
+          <button
+            class="esp-modal-btn esp-modal-btn-danger"
+            :disabled="!canConfirmDelete || deleting"
+            @click="confirmDelete"
+          >
+            <i class="fa-solid" :class="deleting ? 'fa-spinner fa-spin' : 'fa-trash-can'"></i>
+            {{ deleting ? 'Eliminando...' : 'Eliminar definitivamente' }}
+          </button>
+        </footer>
+      </div>
     </div>
   </aside>
 </template>
@@ -136,11 +191,55 @@ import { ServiceKeys } from '@/services'
 const props = defineProps({
   enrollment: { type: Object, default: null }
 })
-const emit = defineEmits(['close', 'view-full'])
+const emit = defineEmits(['close', 'view-full', 'deleted'])
 
 const fmt = useEnrollmentFormatters()
 const toast = useToast()
 const ficoService = inject(ServiceKeys.Fico)
+
+const isAdmin = computed(() => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return Array.isArray(user.roles) && user.roles.includes('ADMIN')
+  } catch {
+    return false
+  }
+})
+
+const showDeleteModal = ref(false)
+const deleteConfirmText = ref('')
+const deleting = ref(false)
+const canConfirmDelete = computed(() => deleteConfirmText.value.trim().toUpperCase() === 'ELIMINAR')
+
+function openDeleteModal () {
+  deleteConfirmText.value = ''
+  showDeleteModal.value = true
+}
+function closeDeleteModal () {
+  if (deleting.value) return
+  showDeleteModal.value = false
+}
+async function confirmDelete () {
+  if (!canConfirmDelete.value || deleting.value) return
+  const id = props.enrollment?.enrollment_id
+  if (!id) return
+  deleting.value = true
+  try {
+    const result = await ficoService.deleteEnrollment(id)
+    if (result?.result === 1) {
+      toast.success('Inscripcion eliminada permanentemente')
+      showDeleteModal.value = false
+      emit('deleted', id)
+    } else {
+      toast.error(result?.message || 'No se pudo eliminar la inscripcion')
+    }
+  } catch (err) {
+    const msg = err?.response?.data?.error || err?.message || 'Error al eliminar'
+    toast.error(`No se pudo eliminar: ${msg}`)
+  } finally {
+    deleting.value = false
+  }
+}
 
 const initials = computed(() => {
   const name = props.enrollment?.student_full_name || ''
@@ -436,6 +535,188 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 }
 .esp-action-btn:disabled { opacity: 0.55; cursor: wait; }
 
+/* Danger zone */
+.esp-danger {
+  border-top: 1px dashed #FECACA;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+.esp-danger-title { color: #B91C1C; }
+.esp-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B91C1C;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.esp-danger-btn i { font-size: 12px; }
+.esp-danger-btn:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #991B1B;
+}
+.esp-danger-hint {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  color: #A3A3A3;
+  line-height: 1.4;
+}
+
+/* Delete confirmation modal */
+.esp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: esp-backdrop-in 0.18s ease-out;
+}
+.esp-modal {
+  animation: esp-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes esp-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes esp-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.esp-modal {
+  background: #fff;
+  border-radius: 14px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.esp-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #FEF2F2;
+  border-bottom: 1px solid #FECACA;
+}
+.esp-modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #991B1B;
+  letter-spacing: -0.01em;
+}
+.esp-modal-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: #B91C1C;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.esp-modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.esp-modal-lead {
+  margin: 0;
+  font-size: 13px;
+  color: #1A1A1A;
+  line-height: 1.5;
+}
+.esp-modal-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: #525252;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.esp-modal-list strong { color: #1A1A1A; }
+.esp-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #525252;
+  font-weight: 500;
+}
+.esp-modal-field code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: #F5F5F5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #B91C1C;
+  font-weight: 700;
+}
+.esp-modal-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.esp-modal-input:focus { border-color: #B91C1C; }
+.esp-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #F5F5F5;
+}
+.esp-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  transition: all 0.15s ease;
+}
+.esp-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.esp-modal-btn-ghost {
+  background: #fff;
+  color: #525252;
+  border-color: #E5E5E5;
+}
+.esp-modal-btn-ghost:hover:not(:disabled) { background: #FAFAFA; color: #1A1A1A; }
+.esp-modal-btn-danger {
+  background: #B91C1C;
+  color: #fff;
+}
+.esp-modal-btn-danger:hover:not(:disabled) { background: #991B1B; }
+
 /* Footer */
 .esp-footer {
   margin-top: auto;
@@ -538,6 +819,47 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   background: rgba(16,185,129,0.12);
   border-color: rgba(16,185,129,0.4);
   color: #34D399;
+}
+
+[data-coreui-theme="dark"] .esp-danger { border-top-color: rgba(239,68,68,0.35); }
+[data-coreui-theme="dark"] .esp-danger-title { color: #F87171; }
+[data-coreui-theme="dark"] .esp-danger-btn {
+  background: rgba(239,68,68,0.12);
+  border-color: rgba(239,68,68,0.4);
+  color: #F87171;
+}
+[data-coreui-theme="dark"] .esp-danger-btn:hover {
+  background: rgba(239,68,68,0.2);
+  border-color: rgba(239,68,68,0.6);
+  color: #FCA5A5;
+}
+[data-coreui-theme="dark"] .esp-danger-hint { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-modal { background: #1A1A14; }
+[data-coreui-theme="dark"] .esp-modal-head {
+  background: rgba(239,68,68,0.12);
+  border-bottom-color: rgba(239,68,68,0.35);
+}
+[data-coreui-theme="dark"] .esp-modal-head h3 { color: #FCA5A5; }
+[data-coreui-theme="dark"] .esp-modal-lead { color: #F4F4F0; }
+[data-coreui-theme="dark"] .esp-modal-list { color: #D4D4CC; }
+[data-coreui-theme="dark"] .esp-modal-list strong { color: #F4F4F0; }
+[data-coreui-theme="dark"] .esp-modal-field { color: #D4D4CC; }
+[data-coreui-theme="dark"] .esp-modal-field code { background: #2A2A22; color: #FCA5A5; }
+[data-coreui-theme="dark"] .esp-modal-input {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .esp-modal-input:focus { border-color: #F87171; }
+[data-coreui-theme="dark"] .esp-modal-foot { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .esp-modal-btn-ghost {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #D4D4CC;
+}
+[data-coreui-theme="dark"] .esp-modal-btn-ghost:hover:not(:disabled) {
+  background: #2A2A22;
+  color: #F4F4F0;
 }
 
 [data-coreui-theme="dark"] .esp-footer { border-top-color: #2A2A22; }

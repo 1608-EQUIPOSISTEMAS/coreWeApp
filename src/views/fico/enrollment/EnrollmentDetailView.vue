@@ -87,6 +87,7 @@
             @toggle-validation="handleToggleValidation"
             @change-edition="handleChangeEdition"
             @open-reschedule="rescheduleVisible = true"
+            @edit-cuota-amount="openEditAmount"
           />
 
           <EnrollmentActions
@@ -121,6 +122,20 @@
       @completed="handleRescheduleCompleted"
     />
 
+    <EditInstallmentAmountModal
+      v-model:visible="editAmountVisible"
+      :installment="editAmountTarget"
+      :saving="savingEditAmount"
+      @submit="handleEditAmountSubmit"
+    />
+
+    <AddInstallmentModal
+      v-model:visible="addInstallmentVisible"
+      :next-number="nextInstallmentNumber"
+      :saving="savingAddInstallment"
+      @submit="handleAddInstallmentSubmit"
+    />
+
     <!-- Redirect overlay -->
     <Teleport to="body">
       <div v-if="redirecting" class="edv-redirect-overlay">
@@ -152,6 +167,8 @@ import EnrollmentFinancials from './EnrollmentFinancials.vue'
 import EnrollmentActions from './EnrollmentActions.vue'
 import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
 import RescheduleInstallmentsModal from './RescheduleInstallmentsModal.vue'
+import EditInstallmentAmountModal from './EditInstallmentAmountModal.vue'
+import AddInstallmentModal from './AddInstallmentModal.vue'
 
 const props = defineProps({
   id: { type: [String, Number], required: true }
@@ -202,6 +219,17 @@ const programChildrenList = ref([])
 
 // Reschedule installments
 const rescheduleVisible = ref(false)
+const editAmountVisible = ref(false)
+const editAmountTarget = ref(null)
+const savingEditAmount = ref(false)
+const addInstallmentVisible = ref(false)
+const savingAddInstallment = ref(false)
+const nextInstallmentNumber = computed(() => {
+  const existing = (modalInstallments.value || [])
+    .filter(i => i.installment_number > 0 && !i.is_reserva)
+    .map(i => Number(i.installment_number) || 0)
+  return existing.length ? Math.max(...existing) + 1 : 1
+})
 const editionEndDate = computed(() =>
   enrollment.value?.edition_end_date
   || detail.value?.edition_end_date
@@ -329,6 +357,17 @@ function buildInstallments () {
 }
 
 function addCuota () {
+  // En modo view sobre un plan ya pendiente, agregar una cuota es una accion
+  // auditada -> modal con justificacion. En el flujo de armado inicial (mode
+  // 'confirm' o plan en borrador) seguimos con la fila inline original.
+  const planPendiente = modalInstallments.value.some(i => i.installment_number > 0 && !i.is_reserva)
+  if (modalMode.value === 'view' && planPendiente) {
+    // Limpia cualquier fila inline huerfana de un click previo antes de abrir el modal.
+    modalInstallments.value = modalInstallments.value.filter(i => !i._isNew)
+    addInstallmentVisible.value = true
+    return
+  }
+
   const cuotas = modalInstallments.value.filter(i => i.installment_number !== 0 && !i.is_reserva)
   modalInstallments.value.push({
     installment_number: cuotas.length + 1,
@@ -344,6 +383,26 @@ function addCuota () {
     _payment_date: '',
     _isNew: true
   })
+}
+
+async function handleAddInstallmentSubmit (payload) {
+  savingAddInstallment.value = true
+  try {
+    await ficoService.addInstallment({
+      enrollment_id: enrollmentId.value,
+      amount: payload.amount,
+      due_date: payload.due_date,
+      justificacion: payload.justificacion
+    })
+    toast.success('Cuota agregada al plan.')
+    addInstallmentVisible.value = false
+    await refreshDetail()
+  } catch (err) {
+    console.error('[addInstallment]', err)
+    toast.error(err?.response?.data?.error || 'No se pudo agregar la cuota.')
+  } finally {
+    savingAddInstallment.value = false
+  }
 }
 
 function removeCuota (idx) {
@@ -592,6 +651,33 @@ function handleActionCompleted () {
 
 function handleRescheduleCompleted () {
   refreshDetail()
+}
+
+function openEditAmount (cuota) {
+  if (!cuota?.installment_id) return
+  editAmountTarget.value = cuota
+  editAmountVisible.value = true
+}
+
+async function handleEditAmountSubmit (payload) {
+  savingEditAmount.value = true
+  try {
+    await ficoService.editInstallmentAmount({
+      enrollment_id: enrollmentId.value,
+      installment_id: payload.installment_id,
+      new_amount: payload.new_amount,
+      justificacion: payload.justificacion
+    })
+    toast.success('Monto de cuota actualizado.')
+    editAmountVisible.value = false
+    editAmountTarget.value = null
+    await refreshDetail()
+  } catch (err) {
+    console.error('[editInstallmentAmount]', err)
+    toast.error(err?.response?.data?.error || 'No se pudo editar el monto.')
+  } finally {
+    savingEditAmount.value = false
+  }
 }
 
 // Busca otra inscripcion pendiente con la misma pay_date para procesar a continuacion.

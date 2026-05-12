@@ -27,6 +27,14 @@
         <div class="flt-grid cols-2">
           <div class="flt-field"><label>Tipo Programa</label><MultiSelect v-model="filters.type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="flt-field"><label>Modalidad Programa</label><MultiSelect v-model="filters.model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="flt-field">
+            <label>Programa / Curso</label>
+            <MultiSelect v-model="filters.program_version_ids" :items="filtroProgramas" label-key="description" value-key="id" :placeholder="filtroProgramas.length === 0 ? 'Cargando...' : 'Todos los cursos...'" />
+          </div>
+          <div class="flt-field">
+            <label>Edicion</label>
+            <MultiSelect v-model="filters.edition_num_ids" :items="filtroEdiciones" label-key="description" value-key="id" :placeholder="filtroEdiciones.length === 0 ? 'Selecciona un programa primero...' : 'Todas las ediciones...'" :disabled="filtroEdiciones.length === 0" />
+          </div>
         </div>
       </fieldset>
       <fieldset class="flt-fieldset flt-last">
@@ -63,6 +71,8 @@ defineProps({
   filtroPaymentChannel: { type: Array, default: () => [] },
   filtroTiposPrograma: { type: Array, default: () => [] },
   filtroModalidad: { type: Array, default: () => [] },
+  filtroProgramas: { type: Array, default: () => [] },
+  filtroEdiciones: { type: Array, default: () => [] },
   filtroOrden: { type: Array, default: () => [] }
 })
 

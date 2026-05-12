@@ -21,6 +21,7 @@ export function useEnrollmentList () {
     q: '', order_by: 0,
     enrollment_status_ids: [], seller_agent_ids: [],
     type_program_ids: [], model_modality_ids: [],
+    program_version_ids: [], edition_num_ids: [],
     payment_channel_ids: [],
     confirmations: [],
     date_from: null, date_to: null, created_range_string: null,
@@ -60,6 +61,82 @@ export function useEnrollmentList () {
   const filtroOwners = ref([])
   const activeFilterChips = ref([])
   const filtroOrden = ref([{ value: 0, description: 'Mas recientes' }, { value: 1, description: 'Inicio de Edicion' }])
+
+  // Catalogos de Programa y Edicion para la cascada Tipo -> Modalidad -> Programa -> Edicion.
+  // Se cargan una sola vez (lazy, al abrir el modal de filtros) y se filtran client-side.
+  const allProgramVersions = ref([])
+  const allEditions = ref([])
+  const catalogsLoaded = ref(false)
+  const programService = inject(ServiceKeys.Program)
+  const editionService = inject(ServiceKeys.Edition)
+
+  // Formatea ISO 'YYYY-MM-DD...' -> 'DD/MM/YYYY' por componentes para evitar TZ shift.
+  function fmtStartDate (iso) {
+    if (!iso) return 'Sin fecha'
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso)
+  }
+
+  async function ensureFilterCatalogs () {
+    if (catalogsLoaded.value) return
+    try {
+      // programVersionCaller es publico (sin role gate); programVersionList requiere
+      // ALL_PRODUCTO/ALL_COMERCIAL y rompe para usuarios FICO puros.
+      const [pvItems, ed] = await Promise.all([
+        programService.programVersionCaller({ active: 'Y' }),
+        editionService.editionList({ active: 'Y', size: 5000 })
+      ])
+      allProgramVersions.value = (pvItems || []).map(p => ({
+        id: p.program_version_id,
+        description: `${p.version_code} - ${p.abbreviation || p.program_name || ''}`.trim(),
+        cat_type_program: p.cat_type_program,
+        cat_model_modality: p.cat_model_modality
+      }))
+      allEditions.value = (ed?.items || []).map(e => ({
+        id: e.edition_num_id,
+        description: `${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`,
+        program_version_id: e.program_version_id
+      }))
+      catalogsLoaded.value = true
+    } catch (err) {
+      console.error('[useEnrollmentList] Error cargando catalogos de programa/edicion:', err)
+    }
+  }
+
+  // MultiSelect emite items en shape { value, label, raw }, donde `value` es el
+  // id que mapeamos. Para comparar contra catalogos en cascada usamos `.value`.
+  const idsFrom = (arr) => (arr || []).map(x => x?.value ?? x?.id).filter(v => v !== undefined && v !== null)
+
+  // filtroProgramas en cascada: si hay tipos/modalidades elegidos, recortar.
+  // Si no hay nada elegido, mostrar todos los cursos activos.
+  const filtroProgramas = computed(() => {
+    const typeIds = idsFrom(filters.type_program_ids)
+    const modIds = idsFrom(filters.model_modality_ids)
+    return allProgramVersions.value.filter(p => {
+      if (typeIds.length && !typeIds.includes(p.cat_type_program)) return false
+      if (modIds.length && !modIds.includes(p.cat_model_modality)) return false
+      return true
+    })
+  })
+
+  // filtroEdiciones depende de los programas elegidos. Sin programa, sin opciones.
+  const filtroEdiciones = computed(() => {
+    const pvIds = idsFrom(filters.program_version_ids)
+    if (pvIds.length === 0) return []
+    return allEditions.value.filter(e => pvIds.includes(e.program_version_id))
+  })
+
+  // Cascada de purga: cuando un filtro padre cambia, retiramos del hijo cualquier
+  // seleccion que ya no este en su nueva lista de opciones. Sin esto, el usuario
+  // veria chips colgados con valores que no aplican al estado actual.
+  watch([() => filters.type_program_ids, () => filters.model_modality_ids], () => {
+    const validIds = new Set(filtroProgramas.value.map(p => p.id))
+    filters.program_version_ids = (filters.program_version_ids || []).filter(p => validIds.has(p?.value ?? p?.id))
+  })
+  watch(() => filters.program_version_ids, () => {
+    const validIds = new Set(filtroEdiciones.value.map(e => e.id))
+    filters.edition_num_ids = (filters.edition_num_ids || []).filter(e => validIds.has(e?.value ?? e?.id))
+  })
 
   const { saveState } = useTablePersistence('fico_enrollments_state_v3', filters, pagin)
 
@@ -148,6 +225,12 @@ export function useEnrollmentList () {
       tf(filters.type_program_ids, 'program_types')
       tf(filters.model_modality_ids, 'modalities')
       tf(filters.payment_channel_ids, 'payment_channels')
+      // IDs numericos para Programa/Edicion: el SP filtra por PK, no por label.
+      // MultiSelect emite { value, label, raw } -> idsFrom() extrae el value.
+      const pvIds = idsFrom(filters.program_version_ids)
+      if (pvIds.length) params.program_version_ids = pvIds
+      const edIds = idsFrom(filters.edition_num_ids)
+      if (edIds.length) params.edition_num_ids = edIds
 
       const { items, total } = await ficoService.enrollmentList(params)
       enrollments.value = items || []
@@ -162,7 +245,7 @@ export function useEnrollmentList () {
   }
 
   function handlePaginationChange () { saveState(); fetchEnrollments() }
-  function openFilterModal () { showFilterModal.value = true }
+  function openFilterModal () { showFilterModal.value = true; ensureFilterCatalogs() }
   function applyFilters () { showFilterModal.value = false; pagin.value.page = 1; saveState(); fetchEnrollments() }
 
   function handleDateChange (dateStr, type) {
@@ -189,6 +272,8 @@ export function useEnrollmentList () {
     mc('seller_agent_ids', 'Asesor', filters.seller_agent_ids)
     mc('type_program_ids', 'Tipo', filters.type_program_ids)
     mc('model_modality_ids', 'Modalidad', filters.model_modality_ids)
+    mc('program_version_ids', 'Programa', filters.program_version_ids)
+    mc('edition_num_ids', 'Edicion', filters.edition_num_ids)
     mc('payment_channel_ids', 'Canal', filters.payment_channel_ids)
     if (filters.created_range_string) chips.push({ key: 'created_range', text: `Registro: ${filters.created_range_string}`, label: `Registro: ${filters.created_range_string}` })
     if (filters.edition_range_string) chips.push({ key: 'edition_range', text: `Inicio: ${filters.edition_range_string}`, label: `Inicio: ${filters.edition_range_string}` })
@@ -196,7 +281,7 @@ export function useEnrollmentList () {
   }
 
   function clearFilter (key) {
-    const ak = ['enrollment_status_ids', 'seller_agent_ids', 'type_program_ids', 'model_modality_ids', 'payment_channel_ids', 'confirmations']
+    const ak = ['enrollment_status_ids', 'seller_agent_ids', 'type_program_ids', 'model_modality_ids', 'program_version_ids', 'edition_num_ids', 'payment_channel_ids', 'confirmations']
     if (key === 'q') filters.q = ''
     else if (key === 'created_range') { filters.date_from = null; filters.date_to = null; filters.created_range_string = null }
     else if (key === 'edition_range') { filters.edition_start_from = null; filters.edition_start_to = null; filters.edition_range_string = null }
@@ -206,7 +291,7 @@ export function useEnrollmentList () {
   }
 
   function clearFilters () {
-    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null })
+    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], program_version_ids: [], edition_num_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null })
     colFilters.estado = []
     pagin.value.page = 1; saveState(); fetchEnrollments()
   }
@@ -338,7 +423,9 @@ export function useEnrollmentList () {
     Object.assign(filters, {
       q: '', order_by: 0,
       enrollment_status_ids: [], seller_agent_ids: [],
-      type_program_ids: [], model_modality_ids: [], payment_channel_ids: [],
+      type_program_ids: [], model_modality_ids: [],
+      program_version_ids: [], edition_num_ids: [],
+      payment_channel_ids: [],
       confirmations: [],
       date_from: null, date_to: null, created_range_string: null,
       edition_start_from: null, edition_start_to: null, edition_range_string: null
@@ -355,6 +442,7 @@ export function useEnrollmentList () {
   return {
     enrollments, isLoading, viewMode, showFilterModal, pagin, filters,
     filtroStatus, filtroTiposPrograma, filtroModalidad, filtroPaymentChannel,
+    filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
     colFilters, clearColFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
     fetchEnrollments, handlePaginationChange, openFilterModal, applyFilters,

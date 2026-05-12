@@ -105,6 +105,7 @@
           :enrollment="list.selectedEnrollment.value"
           @close="list.clearSelection"
           @view-full="goToFullDetail"
+          @deleted="onEnrollmentDeleted"
         />
       </transition>
     </div>
@@ -118,6 +119,8 @@
       :filtro-payment-channel="list.filtroPaymentChannel.value"
       :filtro-tipos-programa="list.filtroTiposPrograma.value"
       :filtro-modalidad="list.filtroModalidad.value"
+      :filtro-programas="list.filtroProgramas.value"
+      :filtro-ediciones="list.filtroEdiciones.value"
       :filtro-orden="list.filtroOrden.value"
       @apply="onModalApply"
       @clear="onClearAll"
@@ -261,6 +264,11 @@ function goToFullDetail (e) {
     params: { id: e.enrollment_id },
     state: { enrollment: JSON.parse(JSON.stringify(e)) }
   })
+}
+
+function onEnrollmentDeleted () {
+  list.clearSelection()
+  list.fetchEnrollments()
 }
 
 function onChipRemove (key) { list.activeViewKey.value = null; list.clearFilter(key) }

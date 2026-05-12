@@ -79,6 +79,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async deleteEnrollment(enrollment_id) {
+    const response = (await api.post('/fico/deleteenrollment', { enrollment_id })).data;
+    return response.data;
+  }
+
   async getEnrollmentFlags(enrollment_id) {
     const response = (await api.post('/fico/enrollmentflags', { enrollment_id })).data;
     return response.data;
@@ -91,6 +96,16 @@ export default class FicoService {
 
   async editStudent(payload) {
     const response = (await api.post('/fico/editstudent', payload)).data;
+    return response.data;
+  }
+
+  async editInstallmentAmount(payload) {
+    const response = (await api.post('/fico/editinstallmentamount', payload)).data;
+    return response.data;
+  }
+
+  async addInstallment(payload) {
+    const response = (await api.post('/fico/addinstallment', payload)).data;
     return response.data;
   }
 

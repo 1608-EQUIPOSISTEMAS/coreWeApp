@@ -324,7 +324,15 @@
             <tr v-for="(c, idx) in cuotas" :key="idx" :class="fmt.cuotaRowClass(c)">
               <td class="fw700 tc">{{ c.installment_number || (idx + 1) }}</td>
               <td v-if="c._isNew"><input v-model.number="c.amount" type="number" step="0.01" class="ef-input tr mono" placeholder="0.00" /></td>
-              <td v-else class="tr mono fw700">S/. {{ fmt.formatMoney(c.amount) }}</td>
+              <td v-else class="tr mono fw700 ef-amount-cell">
+                <span>S/. {{ fmt.formatMoney(c.amount) }}</span>
+                <button
+                  v-if="canEditAmount(c)"
+                  class="ef-amount-edit"
+                  @click="$emit('edit-cuota-amount', c)"
+                  title="Editar monto"
+                ><i class="fa-solid fa-pen"></i></button>
+              </td>
               <td v-if="c._isNew"><BaseDatePicker v-model="c.due_date" placeholder="dd/mm/aaaa" class="ef-datepicker" /></td>
               <td v-else :class="{ 'c-red fw700': fmt.isOverdue(c.due_date) && c.status !== 'paid' }">{{ fmt.formatDate(c.due_date) }}</td>
               <td class="tc"><span class="ef-pill" :class="fmt.cuotaStatusPill(c, planStatus)">{{ fmt.cuotaStatusLabel(c, planStatus) }}</span></td>
@@ -552,8 +560,18 @@ defineEmits([
   'toggle-validation',
   'change-edition',
   'confirm-cuota',
-  'open-reschedule'
+  'open-reschedule',
+  'edit-cuota-amount'
 ])
+
+// Habilita la edicion del monto de una cuota cuando: ya existe en BD (no _isNew),
+// no esta paga, y el plan ya paso de borrador (esta en gestion FICO).
+function canEditAmount (c) {
+  if (!c || c._isNew) return false
+  if (c.status === 'paid') return false
+  if (props.planStatus === 'borrador') return false
+  return true
+}
 
 const fmt = useEnrollmentFormatters()
 const toast = useToast()
@@ -875,6 +893,32 @@ function needsEditionDecision (child) {
   margin-right: 4px;
 }
 .ef-btn-confirm-cuota:hover { background: #059669; color: #fff; }
+
+/* Celda de monto con lapiz inline para editar */
+.ef-amount-cell {
+  position: relative;
+  white-space: nowrap;
+}
+.ef-amount-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  border: none;
+  background: transparent;
+  color: #A0A099;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  vertical-align: middle;
+}
+.ef-amount-edit:hover {
+  color: #6366F1;
+  background: rgba(99, 102, 241, 0.08);
+}
 
 /* Form rows */
 .ef-form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
