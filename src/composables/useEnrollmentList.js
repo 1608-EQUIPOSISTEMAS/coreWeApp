@@ -5,7 +5,6 @@ import { useTablePersistence } from '@/composables/useTablePersistence'
 
 export function useEnrollmentList () {
   const ficoService = inject(ServiceKeys.Fico)
-  const authService = inject(ServiceKeys.Auth)
   const catalog = inject('catalog')
   const router = useRouter()
 
@@ -296,14 +295,15 @@ export function useEnrollmentList () {
     pagin.value.page = 1; saveState(); fetchEnrollments()
   }
 
+  // Carga el catalogo de "Asesor" desde el endpoint dedicado que devuelve los
+  // nombres distintos tal y como aparecen en la columna "Asesor" del listado:
+  // canales (B2B, WEB, SA), asesores solos (AE30) y combinaciones (B2B - AE30).
+  // Cargar userList aqui pierde los canales sin user_id y deja al filtro mostrando
+  // un formato distinto al de la columna; el SP no matchearia nada al filtrar.
   async function loadOwners () {
     try {
-      const arr = await authService.userList({})
-      filtroOwners.value = arr.map(u => {
-        const f = (u.first_name || '').trim(), l = (u.last_name || '').trim()
-        let n = f; if (l) n += ` ${l.charAt(0)}.`
-        return { id: u.user_id, description: n.trim() || `Usuario ${u.user_id}` }
-      })
+      const arr = await ficoService.enrollmentAdvisorsList()
+      filtroOwners.value = (arr || []).map(name => ({ id: name, description: name }))
     } catch (e) { console.error(e) }
   }
 

@@ -1,75 +1,150 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import { ServiceKeys } from '@/services'
 
-// TODO: reemplazar por servicio real (academica.service.js)
-// Cada "aula" representa un CURSO (no programa padre).
-// El alumno se inscribe a un programa padre con su codigo SEG y luego es
-// asignado a uno o varios cursos. Aqui solo mostramos el agregado por curso.
-const COURSES = ref([
-  {
-    id: 'PC-EZ-02', code: 'PC-EZ-02', name: 'Esp. Power Apps y Aut.',
-    edition: 'EDICION 14', modality: 'Virtual', agent: 'TM41',
-    teacher: 'Carlos Mendoza Rivas', teacherInitials: 'CM',
-    students: 24, sessions: 16, sessionsCompleted: 11,
-    startDate: '10/03/2026', endDate: '26/06/2026', schedule: 'Mar/Jue 7:00 - 10:00 PM',
-    attendance: 92, average: 16.4, atRisk: 2, status: 'Activo',
-    color: '#10B981',
-  },
-  {
-    id: 'PC-EX-01', code: 'PC-EX-01', name: 'Excel Avanzado para Negocios',
-    edition: 'EDICION 22', modality: 'Presencial', agent: 'TM12',
-    teacher: 'Lucia Paredes Quispe', teacherInitials: 'LP',
-    students: 32, sessions: 14, sessionsCompleted: 8,
-    startDate: '18/03/2026', endDate: '30/05/2026', schedule: 'Lun/Mie 6:30 - 9:30 PM',
-    attendance: 88, average: 15.7, atRisk: 4, status: 'Activo',
-    color: '#F59E0B',
-  },
-  {
-    id: 'PC-PB-03', code: 'PC-PB-03', name: 'Power BI Analitica de Datos',
-    edition: 'EDICION 09', modality: 'Virtual', agent: 'TM41',
-    teacher: 'Renato Avila Soto', teacherInitials: 'RA',
-    students: 28, sessions: 12, sessionsCompleted: 12,
-    startDate: '05/01/2026', endDate: '20/03/2026', schedule: 'Sab 9:00 - 1:00 PM',
-    attendance: 95, average: 17.1, atRisk: 0, status: 'Finalizado',
-    color: '#6366F1',
-  },
-  {
-    id: 'PC-SQ-04', code: 'PC-SQ-04', name: 'SQL Server para Reporteria',
-    edition: 'EDICION 07', modality: 'Virtual', agent: 'TM33',
-    teacher: 'Diana Salcedo Vega', teacherInitials: 'DS',
-    students: 19, sessions: 14, sessionsCompleted: 4,
-    startDate: '12/04/2026', endDate: '28/06/2026', schedule: 'Mar/Jue 6:00 - 9:00 PM',
-    attendance: 90, average: 14.9, atRisk: 3, status: 'Activo',
-    color: '#EC4899',
-  },
-  {
-    id: 'PC-PY-05', code: 'PC-PY-05', name: 'Python para Analisis de Datos',
-    edition: 'EDICION 11', modality: 'Hibrido', agent: 'TM12',
-    teacher: 'Manuel Trujillo Ramos', teacherInitials: 'MT',
-    students: 26, sessions: 18, sessionsCompleted: 0,
-    startDate: '05/05/2026', endDate: '30/08/2026', schedule: 'Lun/Mie 7:00 - 10:00 PM',
-    attendance: 0, average: 0, atRisk: 0, status: 'Proximo',
-    color: '#0EA5E9',
-  },
-  {
-    id: 'PC-AC-06', code: 'PC-AC-06', name: 'Access Bases de Datos',
-    edition: 'EDICION 05', modality: 'Presencial', agent: 'TM41',
-    teacher: 'Alessandra Gomez Reyes', teacherInitials: 'AG',
-    students: 21, sessions: 12, sessionsCompleted: 6,
-    startDate: '22/03/2026', endDate: '30/05/2026', schedule: 'Sab 2:00 - 6:00 PM',
-    attendance: 86, average: 15.2, atRisk: 2, status: 'Activo',
-    color: '#14B8A6',
-  },
-  {
-    id: 'PC-VB-07', code: 'PC-VB-07', name: 'VBA Macros Profesional',
-    edition: 'EDICION 13', modality: 'Virtual', agent: 'TM33',
-    teacher: 'Paolo Mendieta Cardenas', teacherInitials: 'PM',
-    students: 17, sessions: 14, sessionsCompleted: 9,
-    startDate: '28/03/2026', endDate: '12/06/2026', schedule: 'Mar/Jue 8:00 - 11:00 PM',
-    attendance: 91, average: 16.8, atRisk: 1, status: 'Activo',
-    color: '#8B5CF6',
-  },
-])
+const editionService = inject(ServiceKeys.Edition)
+const catalog = inject('catalog')
+const toast = useToast()
+const router = useRouter()
+
+function openAula(id) {
+  if (!id) return
+  router.push({ name: 'AcademicaAulaDetail', params: { id } })
+}
+
+const SEGMENT_COLORS = {
+  A1: '#2563EB',
+  A2: '#F59E0B',
+  A3: '#EAB308',
+  A4: '#84CC16',
+  A5: '#EF4444',
+  A6: '#8B5CF6',
+}
+const FALLBACK_COLOR = '#6366F1'
+
+function initials(name) {
+  if (!name) return '--'
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase()
+}
+
+function formatDate(iso) {
+  if (!iso) return '--'
+  const s = String(iso).slice(0, 10)
+  const [y, m, d] = s.split('-')
+  if (!y || !m || !d) return '--'
+  return `${d}/${m}/${y}`
+}
+
+function todayLima() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function deriveStatus(row) {
+  if (row.active === 'N') return 'Finalizado'
+  const today = todayLima()
+  const start = row.start_date ? String(row.start_date).slice(0, 10) : null
+  const end = row.end_date ? String(row.end_date).slice(0, 10) : null
+  if (!start) return 'Proximo'
+  if (start > today) return 'Proximo'
+  if (end && end < today) return 'Finalizado'
+  return 'Activo'
+}
+
+function buildSchedule(row) {
+  if (!Array.isArray(row.schedules) || !row.schedules.length) return '--'
+  const s = row.schedules[0]
+  const parts = [s.day_combination_label, s.hour_combination_label].filter(Boolean)
+  return parts.length ? parts.join(' ') : '--'
+}
+
+// Defaults para metricas que aun no tienen SP propio.
+// `students` se sobrescribe con el conteo real (FICO aprobadas) en loadCourses.
+function getCourseMetrics() {
+  return {
+    students: null,
+    attendance: null,
+    average: null,
+    atRisk: 0,
+  }
+}
+
+function mapRow(row) {
+  const metrics = getCourseMetrics(row)
+  return {
+    id: row.edition_num_id ?? row.global_code,
+    code: row.global_code || row.version_code || '--',
+    name: row.program_abreviature || 'Sin nombre',
+    edition: row.specific_code || '',
+    modality: row.cat_model_modality_label || '--',
+    agent: row.cat_segment || '',
+    teacher: row.instructor || '--',
+    teacherInitials: initials(row.instructor),
+    sessions: Number(row.program_sessions) || 0,
+    startDate: formatDate(row.start_date),
+    endDate: formatDate(row.end_date),
+    schedule: buildSchedule(row),
+    status: deriveStatus(row),
+    color: SEGMENT_COLORS[row.cat_segment] || FALLBACK_COLOR,
+    ...metrics,
+  }
+}
+
+const COURSES = ref([])
+const isLoading = ref(false)
+
+async function loadCourses() {
+  isLoading.value = true
+  try {
+    const courseTypeId = (catalog?.options?.('we_program_type') || [])
+      .find((o) => o.alias === 'we_program_type_course')?.id
+    const payload = {
+      active: 'Y',
+      page: 1,
+      size: 500,
+      type_program_ids: courseTypeId ? [{ value: courseTypeId }] : [],
+    }
+    const { items } = await editionService.editionList(payload)
+    const baseRows = Array.isArray(items) ? items.map(mapRow) : []
+
+    const editionIds = baseRows.map((c) => c.id).filter((id) => Number.isFinite(id))
+    const metricsById = await fetchMetricsByEdition(editionIds)
+
+    COURSES.value = baseRows.map((c) => ({ ...c, ...(metricsById[c.id] || {}) }))
+  } catch (err) {
+    console.error('Error cargando aulas:', err)
+    toast.error('Error al cargar aulas')
+    COURSES.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function fetchMetricsByEdition(editionIds) {
+  if (!editionIds.length) return {}
+  try {
+    const rows = await editionService.classroomMetricsList({ edition_ids: editionIds })
+    const map = {}
+    for (const r of rows || []) {
+      map[r.edition_num_id] = {
+        students: Number(r.students) || 0,
+      }
+    }
+    return map
+  } catch (err) {
+    console.warn('No se pudo obtener metricas de aulas:', err?.message || err)
+    return {}
+  }
+}
+
+onMounted(loadCourses)
 
 const layout = ref('grid')
 const filter = ref('Activo')
@@ -92,11 +167,18 @@ const filtered = computed(() =>
 
 const activeCourses = computed(() => COURSES.value.filter((c) => c.status === 'Activo'))
 const totalActive = computed(() => activeCourses.value.length)
-const totalStudents = computed(() => activeCourses.value.reduce((a, c) => a + c.students, 0))
-const totalAtRisk = computed(() => activeCourses.value.reduce((a, c) => a + c.atRisk, 0))
+
+const totalStudents = computed(() => {
+  const list = activeCourses.value.filter((c) => Number.isFinite(c.students))
+  return list.length ? list.reduce((a, c) => a + c.students, 0) : null
+})
+const totalAtRisk = computed(() => {
+  const list = activeCourses.value.filter((c) => Number.isFinite(c.atRisk))
+  return list.length ? list.reduce((a, c) => a + c.atRisk, 0) : null
+})
 const avgAttendance = computed(() => {
-  const list = activeCourses.value
-  if (!list.length) return 0
+  const list = activeCourses.value.filter((c) => Number.isFinite(c.attendance))
+  if (!list.length) return null
   return Math.round(list.reduce((a, c) => a + c.attendance, 0) / list.length)
 })
 
@@ -104,13 +186,8 @@ const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
 const countByStatus = (s) =>
   s === 'Todos' ? COURSES.value.length : COURSES.value.filter((c) => c.status === s).length
 
-const modalityIcon = (m) =>
-  m === 'Virtual' ? 'fa-video' : m === 'Hibrido' ? 'fa-arrows-rotate' : 'fa-building'
-
 const statusPillClass = (s) =>
   s === 'Activo' ? 'ok' : s === 'Finalizado' ? 'neutral' : 'info'
-
-const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
 </script>
 
 <template>
@@ -127,8 +204,8 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
         <button class="btn">
           <i class="fa-solid fa-download"></i> Exportar
         </button>
-        <button class="btn">
-          <i class="fa-solid fa-arrows-rotate"></i> Sincronizar
+        <button class="btn" :disabled="isLoading" @click="loadCourses">
+          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
         </button>
         <button class="btn primary">
           <i class="fa-solid fa-plus"></i> Nueva aula
@@ -145,7 +222,6 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
         <div class="k-value">{{ totalActive }}</div>
         <div class="k-foot">
           <span>de {{ COURSES.length }} totales</span>
-          <span class="k-delta up">+2 este mes</span>
         </div>
       </div>
       <div class="kpi" style="--bar: #2563EB">
@@ -153,10 +229,9 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
           <span>Alumnos en curso</span>
           <i class="fa-solid fa-users k-icon"></i>
         </div>
-        <div class="k-value">{{ totalStudents }}</div>
+        <div class="k-value">{{ totalStudents ?? '--' }}</div>
         <div class="k-foot">
           <span>matriculados</span>
-          <span class="k-delta up">+12 vs ed. anterior</span>
         </div>
       </div>
       <div class="kpi" style="--bar: #F59E0B">
@@ -164,10 +239,9 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
           <span>Asistencia promedio</span>
           <i class="fa-solid fa-arrow-trend-up k-icon"></i>
         </div>
-        <div class="k-value">{{ avgAttendance }}%</div>
+        <div class="k-value">{{ avgAttendance == null ? '--' : avgAttendance + '%' }}</div>
         <div class="k-foot">
           <span>en aulas activas</span>
-          <span class="k-delta up">+3 pts</span>
         </div>
       </div>
       <div class="kpi" style="--bar: #EF4444">
@@ -175,10 +249,9 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
           <span>Alumnos en riesgo</span>
           <i class="fa-solid fa-triangle-exclamation k-icon"></i>
         </div>
-        <div class="k-value">{{ totalAtRisk }}</div>
+        <div class="k-value">{{ totalAtRisk ?? '--' }}</div>
         <div class="k-foot">
           <span>requieren seguimiento</span>
-          <span class="k-delta down">+1 esta semana</span>
         </div>
       </div>
     </div>
@@ -221,6 +294,7 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
         :key="c.id"
         class="course-card"
         :style="{ '--cbar': c.color }"
+        @click="openAula(c.id)"
       >
         <div class="c-bar"></div>
         <div class="c-head">
@@ -247,11 +321,11 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
         </div>
         <div class="c-meta">
           <div class="m">
-            <i class="fa-solid" :class="modalityIcon(c.modality)"></i>
-            <strong>{{ c.modality }}</strong>
+            <i class="fa-solid fa-graduation-cap"></i>
+            <strong>{{ c.sessions || '--' }}</strong> {{ c.sessions === 1 ? 'sesion' : 'sesiones' }}
           </div>
           <div class="m">
-            <i class="fa-solid fa-users"></i> <strong>{{ c.students }}</strong> alumnos
+            <i class="fa-solid fa-users"></i> <strong>{{ c.students ?? '--' }}</strong> alumnos
           </div>
           <div class="m">
             <i class="fa-regular fa-calendar"></i> {{ c.startDate }} -> {{ c.endDate }}
@@ -259,13 +333,6 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
           <div class="m">
             <i class="fa-regular fa-clock"></i> {{ c.schedule }}
           </div>
-        </div>
-        <div class="c-progress">
-          <span class="mono">{{ c.sessionsCompleted }}/{{ c.sessions }}</span>
-          <div class="track">
-            <div class="fill" :style="{ width: progressPct(c) + '%' }"></div>
-          </div>
-          <span class="mono">{{ progressPct(c) }}%</span>
         </div>
         <div class="c-stats">
           <div class="s">
@@ -275,7 +342,7 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
             <b>{{ c.average || '-' }}</b>Prom. nota
           </div>
           <div class="spacer"></div>
-          <button class="btn sm">
+          <button class="btn sm" @click.stop="openAula(c.id)">
             Ver aula <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -290,7 +357,6 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
           <th>Docente</th>
           <th>Modalidad</th>
           <th class="center">Alumnos</th>
-          <th class="center">Progreso</th>
           <th class="center">Asist.</th>
           <th class="center">Prom.</th>
           <th>Riesgo</th>
@@ -299,7 +365,7 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="c in filtered" :key="c.id">
+        <tr v-for="c in filtered" :key="c.id" @click="openAula(c.id)">
           <td class="mono">{{ c.code }}</td>
           <td class="ct-name">
             {{ c.name }}<div class="sub">{{ c.edition }}</div>
@@ -311,18 +377,7 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
             </div>
           </td>
           <td>{{ c.modality }}</td>
-          <td class="center mono">{{ c.students }}</td>
-          <td class="center">
-            <div class="t-progress">
-              <span class="mono small">{{ c.sessionsCompleted }}/{{ c.sessions }}</span>
-              <div class="t-track">
-                <div
-                  class="t-fill"
-                  :style="{ width: progressPct(c) + '%', background: c.color }"
-                ></div>
-              </div>
-            </div>
-          </td>
+          <td class="center mono">{{ c.students ?? '--' }}</td>
           <td class="center mono">{{ c.attendance ? c.attendance + '%' : '-' }}</td>
           <td class="center mono bold">{{ c.average || '-' }}</td>
           <td>
@@ -590,19 +645,6 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
 }
 .course-card .c-meta .m i { font-size: 11px; }
 .course-card .c-meta .m strong { color: var(--ink); font-weight: 500; }
-.course-card .c-progress {
-  margin-top: 12px;
-  display: flex; align-items: center; gap: 10px;
-  font-size: 11.5px; color: var(--ink-3);
-}
-.course-card .c-progress .track {
-  flex: 1; height: 4px; background: var(--line-soft);
-  border-radius: 999px; overflow: hidden;
-}
-.course-card .c-progress .fill {
-  height: 100%; background: var(--cbar, var(--green));
-  border-radius: 999px;
-}
 .course-card .c-stats {
   display: flex; align-items: center; gap: 14px;
   margin-top: 12px; padding-top: 12px;
@@ -640,15 +682,6 @@ const progressPct = (c) => Math.round((c.sessionsCompleted / c.sessions) * 100)
   width: 22px; height: 22px; border-radius: 999px; color: white;
   display: grid; place-items: center; font-size: 9.5px; font-weight: 700;
 }
-.t-progress {
-  display: inline-flex; align-items: center; gap: 8px; min-width: 110px;
-}
-.t-progress .t-track {
-  flex: 1; height: 4px; background: var(--line-soft);
-  border-radius: 999px; overflow: hidden;
-}
-.t-progress .t-fill { height: 100%; border-radius: 999px; }
-
 .row-action {
   width: 24px; height: 24px; border-radius: 6px;
   background: transparent; border: none;

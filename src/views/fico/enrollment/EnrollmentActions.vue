@@ -2,8 +2,25 @@
   <section class="eact-section">
     <h3 class="eact-title"><i class="fa-solid fa-bolt"></i> Acciones</h3>
 
+    <!-- Banner trazabilidad: inscripcion proveniente de migracion A5 -->
+    <div v-if="replacesEnrollmentId" class="eact-migration-banner">
+      <i class="fa-solid fa-arrow-right-arrow-left"></i>
+      <div class="eact-mb-text">
+        <strong>Inscripcion creada por migracion A5</strong>
+        <p>Reemplaza a la inscripcion <a href="#" @click.prevent="$emit('open-related', replacesEnrollmentId)">#{{ replacesEnrollmentId }}</a> (edicion cancelada). Los pagos viven en la original hasta que se apruebe la migracion.</p>
+      </div>
+    </div>
+
     <!-- Action buttons (when no action is active) -->
     <div v-if="!activeAction" class="eact-buttons">
+      <button
+        v-if="isPendingReview"
+        class="eact-btn eact-btn-approve"
+        @click="startAction('approveMigration')"
+      >
+        <i class="fa-solid fa-circle-check"></i> Aprobar Migracion
+        <span class="eact-tag eact-tag-approve">PR</span>
+      </button>
       <button class="eact-btn" @click="startAction('rp')">
         <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion
         <span class="eact-tag">RP</span>
@@ -367,6 +384,34 @@
         </template>
       </ActionStepper>
 
+      <!-- APROBAR MIGRACION A5 -->
+      <ActionStepper
+        v-if="activeAction === 'approveMigration'"
+        v-model="stepperStep"
+        :steps="['Aprobar Migracion']"
+        :can-advance="true"
+        :loading="saving"
+        confirm-label="Confirmar Aprobacion"
+        confirm-icon="fa-circle-check"
+        @cancel="cancelAction"
+        @confirm="handleApproveMigration"
+      >
+        <template #step-0>
+          <div class="eact-form">
+            <div class="eact-observe-banner">
+              <i class="fa-solid fa-circle-info"></i>
+              <div>
+                <strong>Aprobar inscripcion migrada</strong>
+                <p>Esto transferira las cuotas pendientes desde la inscripcion origen <strong>#{{ replacesEnrollmentId }}</strong>, inscribira al alumno en Odoo (si aplica) y enviara el correo de confirmacion con la nueva edicion.</p>
+              </div>
+            </div>
+            <div class="eact-readonly" style="margin-top:8px">
+              Edicion destino: <strong>{{ props.enrollment?.edition_code || props.detail?.edition_code || '---' }}</strong>
+            </div>
+          </div>
+        </template>
+      </ActionStepper>
+
       <!-- OBSERVAR INSCRIPCION -->
       <ActionStepper
         v-if="activeAction === 'observe'"
@@ -422,7 +467,7 @@ const props = defineProps({
   studentFlags: { type: Object, default: null }
 })
 
-const emit = defineEmits(['action-completed'])
+const emit = defineEmits(['action-completed', 'open-related'])
 
 const ficoService = inject(ServiceKeys.Fico)
 const programService = inject(ServiceKeys.Program)
@@ -441,6 +486,21 @@ const stepperStep = ref(0)
 const saving = ref(false)
 const hasEmailStep = ref(true)
 const emailPreviewRef = ref(null)
+
+// Identificacion de inscripcion proveniente de migracion A5.
+// replaces_enrollment_id: vinculo trazable hacia la inscripcion original (RP).
+// isPendingReview: estado intermedio antes de aprobar/confirmar la migracion.
+const replacesEnrollmentId = computed(() => {
+  return props.enrollment?.replaces_enrollment_id
+    || props.detail?.replaces_enrollment_id
+    || null
+})
+const isPendingReview = computed(() => {
+  const alias = props.enrollment?.cat_type_status_alias
+    || props.detail?.cat_type_status_alias
+    || props.enrollment?.type_status_alias
+  return alias === 'we_enrollment_status_pending_review'
+})
 
 function startAction (action) {
   activeAction.value = action
@@ -854,6 +914,21 @@ async function handleObserve () {
   }
 }
 
+// ── APROBAR MIGRACION A5 ──
+async function handleApproveMigration () {
+  saving.value = true
+  try {
+    await ficoService.approvePendingReview(enrollmentId.value)
+    toast.success('Migracion aprobada. Cuotas transferidas y notificaciones enviadas.')
+    emit('action-completed')
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al aprobar la migracion.')
+  } finally {
+    saving.value = false
+  }
+}
+
 // ── RETIRAR ALUMNO ──
 const retireReason = ref('')
 const retireHasRefund = ref(false)
@@ -925,6 +1000,30 @@ async function handleRetire () {
 .eact-btn-warn:hover { border-color: #FDE68A; background: #FFFDF5; }
 .eact-btn-warn i { color: #D4B783; }
 .eact-btn-warn:hover i { color: #D97706; }
+
+.eact-btn-approve { border-color: #BBF7D0; color: #047857; background: #F0FDF4; }
+.eact-btn-approve:hover { border-color: #34D399; background: #ECFDF5; }
+.eact-btn-approve i { color: #10B981; }
+.eact-btn-approve:hover i { color: #047857; }
+.eact-tag-approve { background: #DCFCE7; color: #047857; }
+
+.eact-migration-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #78350F;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.eact-migration-banner i { font-size: 15px; color: #D97706; margin-top: 2px; flex-shrink: 0; }
+.eact-migration-banner strong { display: block; font-size: 13px; margin-bottom: 2px; color: #78350F; }
+.eact-migration-banner p { margin: 0; color: #92400E; }
+.eact-migration-banner a { color: #B45309; text-decoration: underline; font-weight: 600; }
 
 .eact-tag {
   padding: 2px 7px;

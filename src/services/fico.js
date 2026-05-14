@@ -17,6 +17,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async enrollmentAdvisorsList() {
+    const response = (await api.get('/fico/enrollmentadvisors')).data;
+    return response.data;
+  }
+
   async getPaymentDetail(enrollment_id) {
     const response = (await api.post('/fico/paymentdetailget', { enrollment_id })).data;
     return response.data;
@@ -131,6 +136,11 @@ export default class FicoService {
 
   async reprogramEdition(payload) {
     const response = (await api.post('/fico/reprogramedition', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+    return response.data;
+  }
+
+  async approvePendingReview(enrollmentId) {
+    const response = (await api.post('/fico/approvependingreview', { enrollment_id: enrollmentId }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 

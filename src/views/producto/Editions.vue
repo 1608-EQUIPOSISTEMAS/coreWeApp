@@ -1529,6 +1529,13 @@
     </div>
   </div>
 </BaseModal>
+
+<A5MigrationModal
+  v-model:visible="showA5MigrationModal"
+  :origin="a5MigrationOrigin"
+  :a5-segment-id="getA5SegmentId()"
+  @completed="handleA5Completed"
+/>
   </div>
 </template>
 
@@ -2445,6 +2452,7 @@ const columnFilters = reactive({
 
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
+import A5MigrationModal from './A5MigrationModal.vue'
 
 
 const showAuditModal = ref(false)
@@ -2453,6 +2461,13 @@ const loadingAudit = ref(false)
 const auditPage = ref(0)
 const auditHasMore = ref(true)
 const AUDIT_PAGE_SIZE = 20
+
+// Migracion A5: intercepta el guardado cuando el operador cambia el segmento
+// a A5 sobre una edicion existente. Mueve inscripciones vigentes a otra
+// edicion del mismo programa, dejando RP en origen + pendiente a revisar en destino.
+const showA5MigrationModal = ref(false)
+const a5MigrationOrigin = ref(null)
+const previousSegmentId = ref(null)
 
 // --- INYECCIONES ---
 const programService = inject(ServiceKeys.Program)
@@ -3573,6 +3588,7 @@ function cleanFormModal(){
 async function openEditModal(edition) {
   currentEdition.value = edition || null
   resetModalForm()
+  previousSegmentId.value = null
 
   // NUEVA
   if (!edition) {
@@ -3603,6 +3619,7 @@ async function openEditModal(edition) {
     modalForm.vacant = data.vacant
 
     modalForm.cat_segment_id = data.cat_segment_id
+    previousSegmentId.value = data.cat_segment_id
     modalForm.global_code = data.global_code
     modalForm.specific_code = data.specific_code
 
@@ -3644,12 +3661,57 @@ async function openEditModal(edition) {
   }
 }
 
+function getA5SegmentId() {
+  const list = catalogs.value?.catSegments || []
+  return list.find(s => (s.description || '').trim().toUpperCase() === 'A5')?.id || null
+}
+
+function isCancellingToA5() {
+  if (!currentEdition.value?.edition_num_id) return false
+  const a5Id = getA5SegmentId()
+  if (!a5Id) return false
+  if (modalForm.cat_segment_id !== a5Id) return false
+  return previousSegmentId.value !== a5Id
+}
+
+function openA5Migration() {
+  a5MigrationOrigin.value = {
+    edition_num_id: currentEdition.value.edition_num_id,
+    program_version_id: modalForm.program_version_id,
+    global_code: modalForm.global_code || currentEdition.value.global_code,
+    program_name: modalForm.abbreviation || currentEdition.value.abbreviation,
+    start_date: modalForm.start_date || currentEdition.value.start_date
+  }
+  showA5MigrationModal.value = true
+}
+
+async function handleA5Completed({ migrated, applyA5 }) {
+  // Si applyA5=true (caso sin alumnos) el modal pide que ejecutemos el update
+  // normal para cambiar el segmento. Si migrated>0 el SP ya cambio el cat_segment.
+  if (applyA5) {
+    await persistEditionUpdate()
+  } else {
+    toast.success(`Migracion completada: ${migrated} inscripcion(es) movidas`)
+  }
+  showFormModal.value = false
+  fetchSchedule()
+}
+
 async function applyModalForm() {
   if (!isModalValid.value) {
     toast.warning('Complete los campos requeridos')
     return
   }
 
+  if (isCancellingToA5()) {
+    openA5Migration()
+    return
+  }
+
+  await persistEditionUpdate()
+}
+
+async function persistEditionUpdate() {
   let response = null
 
   try {

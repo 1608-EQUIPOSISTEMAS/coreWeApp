@@ -39,6 +39,51 @@ export default class EditionService {
     return (await api.post('/edition/editionupdate', payload)).data;
   }
   
+  async classroomMetricsList(payload) {
+    const response = (await api.post('/edition/classroommetricslist', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  async classroomStudentsList(payload) {
+    const response = (await api.post('/edition/classroomstudentslist', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  async classroomAuditGet(payload) {
+    const response = (await api.post('/edition/classroomauditget', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  async classroomAuditSave(payload) {
+    const response = (await api.post('/edition/classroomauditsave', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response
+  }
+
+  async classroomAuditRunAi({ edition_id, session_number, transcript_text, syllabus_image }) {
+    const fd = new FormData()
+    fd.append('edition_id', String(edition_id))
+    fd.append('session_number', String(session_number))
+    fd.append('transcript_text', transcript_text)
+    fd.append('syllabus_image', syllabus_image)
+    // Timeout amplio (10 min): Gemini con AFC puede iterar hasta 10 veces
+    // internamente para auto-corregir el output contra el schema. Cada
+    // iteracion son ~30-60s con thinking, asi que el peor caso real ronda
+    // los 8 min. Cortar antes desperdicia tokens ya gastados.
+    const response = (await api.post('/edition/classroomauditrunai', fd, {
+      headers: { 'Content-Type': undefined },
+      timeout: 600000,
+    })).data
+    return response
+  }
+
   //editionCaller
   async editionCaller(payload) {
     const response = (await api.post('/edition/editioncaller', payload,{
@@ -75,6 +120,18 @@ export default class EditionService {
   async bulkUpdateWhatsapp(items) {
     const response = (await api.post('/edition/bulkupdatewhatsapp', { items })).data;
     return response.data;
+  }
+
+  async a5PendingEnrollments(editionNumId) {
+    const response = (await api.post('/edition/a5pendingenrollments', { edition_num_id: editionNumId })).data;
+    return response.items || [];
+  }
+
+  async a5MigrationExecute(payload) {
+    const response = (await api.post('/edition/a5migrationexecute', payload, {
+      timeout: 60000
+    })).data;
+    return response;
   }
 
   async downloadSchedulePdf(parentEditionId, childEditionId) {
