@@ -190,6 +190,12 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Reporte Académico',
+        to: '/academica/reporte',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Bot Académico',
         to: '/academica/bot',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],

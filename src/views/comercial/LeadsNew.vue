@@ -1354,7 +1354,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :key="`porcent-${discountResetKey}`"
                 v-model="insc.dsct_porcent_id"
                 mode="remote"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: selectedCurrencyAlias })"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_percentage').id, cat_currency: idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value) })"
                 label-field="full_label" value-field="id" :viewOpen="6"
                 placeholder="DESCUENTO (%)" :minChars="0" :cache="false"
                 class="exec-select-light w-100"
@@ -1374,7 +1374,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :key="`stick-${discountResetKey}`"
                 v-model="insc.dsct_stick_id"
                 mode="remote" :viewOpen="6"
-                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: selectedCurrency.alias })"
+                :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountCatalog.find(e=>e.alias=='we_discount_type_fixed').id, cat_currency: idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value) })"
                 label-field="full_label" value-field="id"
                 placeholder="DESCUENTO (S/)" :minChars="0" :cache="false"
                 class="exec-select-light w-100"
@@ -1399,7 +1399,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :fetcher="q => discountService.discountCaller({
                   q,
                   cat_discount_type: discountCatalog.find(e => e.alias === 'we_discount_type_benefit').id,
-                  cat_currency: selectedCurrency.alias
+                  cat_currency: idByAlias(insc.selectedCurrencyAlias, currencyCatalog.value)
                 })"
                 placeholder="BENEFICIOS..."
                 @change="onChangeBeneficios"
@@ -3343,7 +3343,7 @@ async function confirmarToken() {
       cat_provider: null,
       payment_type: insc.token_payment_type || null,
       amount: tokenAmount,
-      currency: insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
+      currency: insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
       notes: `Link para ${form.full_name || '---'}`,
       advisor_observation: insc.observacions || null,
       cat_payment_channel: insc.cat_payment_channel || null,
@@ -3552,7 +3552,7 @@ async function confirmarEdicionToken () {
       token_id:    editTokenId.value,
       inscription: enrollmentPayload.inscription,
       amount:       tokenAmountEdit,
-      currency:     insc.selectedCurrencyAlias === 'we_currency_dolares' ? 'USD' : 'PEN',
+      currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
       payment_type: insc.token_payment_type || null,
       cat_payment_channel: insc.cat_payment_channel || null,
       advisor_observation: insc.observacions || null

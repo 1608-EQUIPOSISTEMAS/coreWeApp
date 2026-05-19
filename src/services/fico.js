@@ -22,6 +22,17 @@ export default class FicoService {
     return response.data;
   }
 
+  async getKpisDaily(today, yesterday) {
+    const response = (await api.get('/fico/kpisdaily', { params: { today, yesterday } })).data;
+    return response.data;
+  }
+
+  async getJobStatus(enrollmentId, jobType = null) {
+    const params = jobType ? { jobType } : undefined;
+    const response = (await api.get(`/fico/job-status/${enrollmentId}`, { params })).data;
+    return response.data;
+  }
+
   async getPaymentDetail(enrollment_id) {
     const response = (await api.post('/fico/paymentdetailget', { enrollment_id })).data;
     return response.data;

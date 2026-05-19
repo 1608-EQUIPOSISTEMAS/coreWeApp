@@ -10,6 +10,17 @@
         <span class="edv-topbar-program">{{ detail.program_name || enrollment?.program_name || '' }}</span>
         <span class="edv-topbar-pill" :class="statusPillClass">{{ statusLabel }}</span>
       </div>
+      <div v-if="totalNav > 0" class="edv-topbar-nav" :title="`Pendientes del ${fmt.formatDate(enrollment?.pay_date)}`">
+        <span class="edv-nav-counter">
+          {{ currentNavIndex >= 0 ? currentNavIndex + 1 : '—' }} / {{ totalNav }}
+        </span>
+        <button class="edv-nav-btn" :disabled="!prevNavTarget" @click="goToPrevPending" :title="prevNavTarget ? `Anterior: ${prevNavTarget.student_full_name}` : 'No hay anterior'">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button class="edv-nav-btn" :disabled="!nextNavTarget" @click="goToNextPending" :title="nextNavTarget ? `Siguiente: ${nextNavTarget.student_full_name}` : 'No hay siguiente'">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -135,21 +146,6 @@
       :saving="savingAddInstallment"
       @submit="handleAddInstallmentSubmit"
     />
-
-    <!-- Redirect overlay -->
-    <Teleport to="body">
-      <div v-if="redirecting" class="edv-redirect-overlay">
-        <div class="edv-redirect-card">
-          <i class="fa-solid fa-check-circle"></i>
-          <span v-if="nextPending">
-            Avanzando al siguiente pendiente con misma fecha de pago...
-            <small class="edv-redirect-sub">{{ nextPending.student_full_name }} — {{ nextPending.program_name }}</small>
-          </span>
-          <span v-else>Redirigiendo al listado...</span>
-          <button class="edv-redirect-cancel" @click="cancelRedirect">Cancelar</button>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -236,9 +232,8 @@ const editionEndDate = computed(() =>
   || null
 )
 
-// Redirect
-const redirecting = ref(false)
-let redirectTimer = null
+// Navegacion entre pendientes del mismo dia de pago
+const sameDayPending = ref([])
 
 const enrollmentId = computed(() => Number(props.id))
 
@@ -504,7 +499,7 @@ async function handleConfirmPayment () {
       const msg = emailErr?.response?.data?.error || emailErr?.message || 'fallo desconocido'
       toast.error(`Error al enviar correo: ${msg}`, { timeout: 7000 })
     }
-    startRedirect()
+    await refreshDetail()
   } catch (err) {
     console.error('[confirmPayment]', err)
     const msg = err?.response?.data?.error || err?.message || 'error desconocido'
@@ -563,7 +558,7 @@ async function handleConfirmPlan () {
     } else {
       toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
-    startRedirect()
+    await refreshDetail()
   } catch (err) {
     console.error(err)
     toast.error('Error al confirmar el plan.')
@@ -638,15 +633,11 @@ async function handleRejectEnrollment (reason) {
       reason: reason.trim()
     })
     toast.success('Inscripcion observada. Se notifico al asesor.')
-    startRedirect()
+    await refreshDetail()
   } catch (err) {
     console.error(err)
     toast.error(err?.response?.data?.error || 'Error al observar inscripcion.')
   }
-}
-
-function handleActionCompleted () {
-  startRedirect()
 }
 
 function handleRescheduleCompleted () {
@@ -680,48 +671,55 @@ async function handleEditAmountSubmit (payload) {
   }
 }
 
-// Busca otra inscripcion pendiente con la misma pay_date para procesar a continuacion.
-async function findNextEnrollmentToProcess () {
+// Carga la cola de pendientes con la misma fecha de pago para navegar entre
+// ellos con las flechas del topbar. Se invoca al montar y queda fija durante
+// la sesion de revision (no se re-llama tras confirmar — el operador navega
+// manualmente al siguiente).
+async function loadSameDayPending () {
   const currentPayDate = enrollment.value?.pay_date
-  if (!currentPayDate) return null
+  if (!currentPayDate) {
+    sameDayPending.value = []
+    return
+  }
   try {
     const result = await ficoService.enrollmentList({
       confirmations: ['Pendiente Revisar', 'Pendiente'],
-      size: 200,
+      size: 500,
       page: 1
     })
     const items = result?.items || []
-    return items.find(i =>
-      i.pay_date === currentPayDate &&
-      Number(i.enrollment_id) !== enrollmentId.value
-    ) || null
+    sameDayPending.value = items.filter(i => i.pay_date === currentPayDate)
   } catch (err) {
-    console.error('[findNextEnrollmentToProcess]', err)
-    return null
+    console.error('[loadSameDayPending]', err)
+    sameDayPending.value = []
   }
 }
 
-const nextPending = ref(null)
+const currentNavIndex = computed(() =>
+  sameDayPending.value.findIndex(i => Number(i.enrollment_id) === enrollmentId.value)
+)
+const totalNav        = computed(() => sameDayPending.value.length)
+const prevNavTarget   = computed(() => {
+  const idx = currentNavIndex.value
+  return idx > 0 ? sameDayPending.value[idx - 1] : null
+})
+const nextNavTarget   = computed(() => {
+  const idx = currentNavIndex.value
+  return idx >= 0 && idx < sameDayPending.value.length - 1 ? sameDayPending.value[idx + 1] : null
+})
 
-async function startRedirect () {
-  redirecting.value = true
-  nextPending.value = await findNextEnrollmentToProcess()
-  redirectTimer = setTimeout(() => {
-    if (nextPending.value?.enrollment_id) {
-      router.push({ name: 'enrollmentDetail', params: { id: String(nextPending.value.enrollment_id) } })
-    } else {
-      router.push({ name: 'enrollment' })
-    }
-  }, 2000)
+function goToPrevPending () {
+  if (prevNavTarget.value) {
+    router.push({ name: 'enrollmentDetail', params: { id: String(prevNavTarget.value.enrollment_id) } })
+  }
+}
+function goToNextPending () {
+  if (nextNavTarget.value) {
+    router.push({ name: 'enrollmentDetail', params: { id: String(nextNavTarget.value.enrollment_id) } })
+  }
 }
 
-function cancelRedirect () {
-  redirecting.value = false
-  nextPending.value = null
-  if (redirectTimer) {
-    clearTimeout(redirectTimer)
-    redirectTimer = null
-  }
+function handleActionCompleted () {
   refreshDetail()
 }
 
@@ -797,6 +795,7 @@ async function loadEnrollment () {
   }).catch(() => { loadValidationData() })
 
   refreshAuditLog()
+  loadSameDayPending()
 }
 
 function loadValidationData () {
@@ -870,16 +869,9 @@ onMounted(() => {
 
 // Vue Router reusa la instancia del componente al navegar entre /inscripciones/:id
 // con distintos ids (mismo route name). Sin este watch, props.id cambia pero los
-// datos en pantalla quedan del inscripto anterior y el overlay "Redirigiendo..."
-// se queda colgado.
+// datos en pantalla quedan del inscripto anterior.
 watch(enrollmentId, (newId, oldId) => {
   if (newId === oldId || !newId) return
-  redirecting.value = false
-  nextPending.value = null
-  if (redirectTimer) {
-    clearTimeout(redirectTimer)
-    redirectTimer = null
-  }
   loadEnrollment()
 })
 </script>
@@ -956,6 +948,40 @@ watch(enrollmentId, (newId, oldId) => {
 .edv-topbar-pill.pill-green { background: #ECFDF5; color: #065F46; }
 .edv-topbar-pill.pill-amber { background: #FFF8EB; color: #92400E; }
 .edv-topbar-pill.pill-red   { background: #FEF2F2; color: #991B1B; }
+
+.edv-topbar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 8px;
+  background: #FAFAFA;
+  border: 1px solid #F0F0F0;
+  margin-left: auto;
+}
+.edv-nav-counter {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1A1A1A;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.edv-nav-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: #fff;
+  color: #1A1A1A;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.edv-nav-btn:hover:not(:disabled) { background: #F0F0F0; }
+.edv-nav-btn:disabled { color: #C4C4C4; cursor: not-allowed; }
 
 /* Loading */
 .edv-loading {
@@ -1126,6 +1152,18 @@ watch(enrollmentId, (newId, oldId) => {
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+
+[data-coreui-theme="dark"] .edv-topbar-nav {
+  background: #14140F;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .edv-nav-counter { color: #F4F4F0; }
+[data-coreui-theme="dark"] .edv-nav-btn {
+  background: #1F1F1A;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .edv-nav-btn:hover:not(:disabled) { background: #2A2A22; }
+[data-coreui-theme="dark"] .edv-nav-btn:disabled { color: #6F6F66; }
 
 [data-coreui-theme="dark"] .edv-loading { color: #6F6F66; }
 [data-coreui-theme="dark"] .edv-spinner {

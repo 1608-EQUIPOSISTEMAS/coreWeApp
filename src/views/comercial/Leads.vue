@@ -136,7 +136,7 @@
     <span v-else class="text-muted" style="font-size:10px;">—</span>
   </th>
   <th class="tf">
-    <input v-model="filters.origin_seller_phone" type="text" class="hf-input" placeholder="Cel. origen..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" />
+    <MultiSelect v-model="filters.origin_seller_phones" :items="originPhoneOptions" label-key="description" value-key="id" placeholder="Cel. origen..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -329,7 +329,7 @@
     <BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="F. Registro..." @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
-    <input v-model="filters.origin_seller_phone" type="text" class="hf-input" placeholder="Cel. origen..." @input="debouncedInlineFilter" @keyup.enter="triggerInlineFilter" />
+    <MultiSelect v-model="filters.origin_seller_phones" :items="originPhoneOptions" label-key="description" value-key="id" placeholder="Cel. origen..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -1218,6 +1218,7 @@ watch(colGroups, (val) => {
 const filters = reactive({
   q: '',
   origin_seller_phone: '',
+  origin_seller_phones: [],
   program_text: '',
   estado: null,
   web: null,
@@ -1265,6 +1266,20 @@ const filters = reactive({
 // === CATÁLOGOS ===
 const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroPaymentChannel = ref(catalog.options('we_payment_channel') || [])
+// Teléfonos únicos del cel.origen, extraidos de la pagina actual. Sirve como
+// datalist para que FICO/comercial elija el numero en vez de tipearlo (un asesor
+// puede operar con varios numeros).
+const originPhoneOptions = computed(() => {
+  const seen = new Map()
+  for (const l of leadsRaw.value) {
+    const phone = (l?.origin_seller_phone || '').toString().trim()
+    if (!phone || seen.has(phone)) continue
+    const owner = (l?.user_registration_label || '').toString().trim()
+    seen.set(phone, owner ? `${phone} — ${owner}` : phone)
+  }
+  return Array.from(seen, ([id, description]) => ({ id, description }))
+    .sort((a, b) => a.description.localeCompare(b.description))
+})
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
@@ -1344,7 +1359,7 @@ const decodeFilter = (jsonStr) => {
 const formatMoney = (symbolOrAlias, amount) => {
   let symbol = symbolOrAlias;
   if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
-  if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
+  if (symbolOrAlias === 'we_currency_usd' || symbolOrAlias === 'USD') symbol = '$';
   const val = Number(amount) || 0;
   return `${symbol} ${val.toFixed(2)}`;
 }
@@ -1684,6 +1699,15 @@ function rebuildChips() {
   }
   if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
   if (filters.origin_seller_phone) chips.push({ key: 'origin_seller_phone', label: `Cel. Origen: "${filters.origin_seller_phone}"` })
+  if (Array.isArray(filters.origin_seller_phones) && filters.origin_seller_phones.length > 0) {
+    const phones = filters.origin_seller_phones.map(p => p?.label || p?.value || p).filter(Boolean)
+    chips.push({
+      key: 'origin_seller_phones',
+      label: phones.length === 1 ? `Cel. Origen: ${phones[0]}` : `Cel. Origen: ${phones.length} sel.`,
+      text: `Cel. Origen: ${phones.join(', ')}`,
+      details: phones
+    })
+  }
   if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
   if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
   if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
@@ -1730,9 +1754,15 @@ async function fetchLeads() {
       if (!Array.isArray(arr)) return []
       return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
     }
+    // El SP actual filtra por una sola string. Si hay multiples telefonos
+    // seleccionados, aplicamos el primero (degraded mode). Para filtro real
+    // multi-phone hay que extender el SP con array support.
+    const phonesArr = getIds(filters.origin_seller_phones)
+    const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
+    const phoneFromInput = filters.origin_seller_phone?.trim() || null
     const { items, total: t } = await comercialService.leadList({
       q:                   filters.q             || null,
-      origin_seller_phone: filters.origin_seller_phone?.trim() || null,
+      origin_seller_phone: phoneFromMulti || phoneFromInput,
       page:                pagin.value.page,
       size:                pagin.value.size,
       program_text:        filters.program_text  || null,
@@ -1839,7 +1869,7 @@ async function handleResubmitFromModal () {
 
 function clearFilters(reload = true) {
   Object.assign(filters, {
-    q: '', origin_seller_phone: '', program_text: '', estado: null, web: null, b2b: null,
+    q: '', origin_seller_phone: '', origin_seller_phones: [], program_text: '', estado: null, web: null, b2b: null,
     owner_user_ids: [], status_lead_ids: [], last_follow_ids: [], order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
@@ -1943,6 +1973,7 @@ function clearFilter(key) {
   else if (key === 'edition_start') { filters.edition_start_from = ''; filters.edition_start_to = ''; filters.edition_range_string = null }
   else if (key === 'first_contact') { filters.first_contact_from = ''; filters.first_contact_to = ''; filters.first_contact_range_string = null }
   else if (key === 'origin_seller_phone') { filters.origin_seller_phone = '' }
+  else if (key === 'origin_seller_phones') { filters.origin_seller_phones = [] }
   else if (Array.isArray(filters[key])) { filters[key] = [] }
   else { filters[key] = null }
   applyFilters()

@@ -217,7 +217,7 @@
             :key="`fico-dsct-pct-${discountResetKey}`"
             v-model="form.dsct_porcent_id"
             mode="remote"
-            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_percentage'), cat_currency: currencyAlias })"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_percentage'), cat_currency: form.cat_currency })"
             label-field="full_label"
             value-field="id"
             placeholder="DESCUENTO (%)"
@@ -237,7 +237,7 @@
             :key="`fico-dsct-stick-${discountResetKey}`"
             v-model="form.dsct_stick_id"
             mode="remote"
-            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_fixed'), cat_currency: currencyAlias })"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_fixed'), cat_currency: form.cat_currency })"
             label-field="full_label"
             value-field="id"
             placeholder="PROMOCION (S/)"
@@ -261,7 +261,7 @@
             :disabled="!form.list_price"
             label-key="full_label"
             value-key="id"
-            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_benefit'), cat_currency: currencyAlias })"
+            :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_benefit'), cat_currency: form.cat_currency })"
             placeholder="BENEFICIOS..."
             @change="onChangeBeneficios"
           />
@@ -390,6 +390,7 @@
 import { ref, reactive, computed, inject, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { useToastWithAction } from '@/composables/useToastWithAction'
 import { ServiceKeys } from '@/services'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
@@ -398,6 +399,7 @@ import MultiFileUploader from '@/components/MultiFileUploader.vue'
 
 const router = useRouter()
 const toast = useToast()
+const toastWA = useToastWithAction()
 const catalog = inject('catalog')
 const programService = inject(ServiceKeys.Program)
 const editionService = inject(ServiceKeys.Edition)
@@ -408,6 +410,43 @@ const authService = inject(ServiceKeys.Auth)
 const customerService = inject(ServiceKeys.Customer)
 
 const saving = ref(false)
+
+// Polling de estado del job 'register_followup' post-registro. Polea cada 3s
+// hasta que el job termina (done|failed) o pasa el timeout maximo (3 min).
+// Vive fuera del componente: si el operador navega, el polling sigue corriendo
+// y el toast aparece donde sea que este en la app cuando el job termine.
+async function pollRegisterFollowupStatus (enrollmentId, _jobId) {
+  const MAX_MS = 3 * 60 * 1000
+  const INTERVAL_MS = 3000
+  const STEP_LABELS = { children: 'modulos hijos', odoo: 'Odoo', email: 'correo de confirmacion' }
+  const start = Date.now()
+
+  while (Date.now() - start < MAX_MS) {
+    await new Promise(r => setTimeout(r, INTERVAL_MS))
+    let job
+    try {
+      job = await ficoService.getJobStatus(enrollmentId, 'register_followup')
+    } catch (err) {
+      console.warn('[pollRegisterFollowup] getJobStatus fallo, reintentando:', err?.message)
+      continue
+    }
+    if (!job) {
+      console.warn('[pollRegisterFollowup] no encontrado job para enrollment', enrollmentId)
+      return
+    }
+    if (job.status === 'done') {
+      toast.success('Procesamiento completado: hijos, Odoo y correo OK.', { timeout: 5000 })
+      return
+    }
+    if (job.status === 'failed') {
+      const stepLabel = STEP_LABELS[job.error_step] || job.error_step || 'paso desconocido'
+      toast.error(`Inscripcion creada pero fallo en ${stepLabel}: ${job.error_message || 'sin detalle'}. Reintenta desde el detalle.`, { timeout: 12000 })
+      return
+    }
+    // pending / in_progress: continua loopeando
+  }
+  toast.warning('El procesamiento en segundo plano esta tardando mas de lo esperado. Revisa el detalle de la inscripcion para ver el estado.', { timeout: 10000 })
+}
 const searchingCustomer = ref(false)
 const loadingPrograms = ref(false)
 const loadingEditions = ref(false)
@@ -689,6 +728,17 @@ watch(() => form.cat_payment_way, () => {
 
 watch(() => form.total_amount, () => {
   if (isInstallment.value && form.total_amount > 0) autoGenerateInstallments()
+})
+
+// Cuando el asesor cambia la moneda, los descuentos seleccionados antes ya no
+// aplican (el SP filtra por currency). Reseteamos la seleccion y forzamos
+// re-mount de los SearchSelect para que vuelvan a buscar con el nuevo alias.
+watch(() => form.cat_currency, (newVal, oldVal) => {
+  if (oldVal == null || newVal === oldVal) return
+  form.dsct_porcent_id = null; form.dsct_porcent_label = null; form.val_porcentaje = 0
+  form.dsct_stick_id = null; form.dsct_stick_label = null; form.val_fijo = 0
+  form.dsct_benefit_ids = []; form.val_beneficios = []
+  discountResetKey.value++
 })
 
 onMounted(async () => {
@@ -1072,7 +1122,18 @@ async function handleSave () {
         installment_plan: isInstallment.value && installments.value.length > 0
           ? installments.value.map((c, i) => ({ installment_number: i + 1, amount: c.amount, due_date: c.due_date }))
           : null,
-        email_cc: ccPreview.value.length > 0 ? ccPreview.value.join(',') : null
+        email_cc: ccPreview.value.length > 0 ? ccPreview.value.join(',') : null,
+        // Descuentos seleccionados. El SP los procesa en cascada (porcentaje
+        // -> promocion stick -> beneficios) y los persiste en enrollment_discounts.
+        // Si no se envian, el SP respeta el total_amount y discount_amount queda en 0.
+        dsct_porcent_id: form.dsct_porcent_id || null,
+        dsct_porcent_label: form.dsct_porcent_label || null,
+        dsct_stick_id: form.dsct_stick_id || null,
+        dsct_stick_label: form.dsct_stick_label || null,
+        dsct_benefit_ids: (form.dsct_benefit_ids || []).map(b => ({
+          value: b.value ?? b.id ?? b,
+          label: b.label ?? b.full_label ?? null
+        }))
       }
     }
 
@@ -1080,13 +1141,37 @@ async function handleSave () {
 
     if (resp?.result === 1) {
       toast.success(resp.message || 'Inscripcion registrada correctamente.')
-      // Feedback adicional sobre el envio del correo (membresias o cursos)
-      if (resp.email_sent === true) {
+      // Nuevo flow asincrono: el SP responde apenas crea la inscripcion (~3s) y
+      // encola los pasos post-registro (hijos, Odoo, email). Mostramos toast de
+      // procesamiento y polleamos en background. Toast aparece tambien despues
+      // de navegar (vue-toastification es global a la app).
+      if (resp.email_pending && resp.enrollment_id) {
+        toast.info('Inscripcion creada. Procesando hijos, Odoo y correo en segundo plano...', { timeout: 5000 })
+        pollRegisterFollowupStatus(resp.enrollment_id, resp.job_id)
+      } else if (resp.email_sent === true) {
+        // Backward compat: si por algun motivo el backend respondio sincrono.
         toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
       } else if (resp.email_sent === false) {
         toast.warning(`Inscripcion creada pero el correo no se envio: ${resp.email_error || 'fallo desconocido'}`, { timeout: 7000 })
       }
       router.push({ name: 'enrollment' })
+    } else if (resp?.result === 2 && resp?.duplicate_info) {
+      // Inscripcion duplicada detectada: misma persona ya inscrita en la misma
+      // edicion. Mostramos un toast con boton para abrir el detalle existente.
+      const dup = resp.duplicate_info
+      const fechaFmt = dup.registration_date
+        ? new Date(dup.registration_date).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })
+        : '---'
+      toastWA.errorWithAction({
+        title: 'Inscripcion duplicada',
+        message:
+          `${dup.student_name || 'El alumno'} ya esta inscrito en ${dup.program_name || 'este programa'} ${dup.edition_code || ''}.\n` +
+          `Registrado por ${dup.registered_by || '---'} el ${fechaFmt}.\n` +
+          `Si fue un error, retira la inscripcion existente antes de volver a registrar.`,
+        actionLabel: 'Ver inscripcion existente',
+        onAction: () => router.push({ name: 'enrollmentDetail', params: { id: String(dup.enrollment_id) } }),
+        timeout: 12000
+      })
     } else {
       toast.error(resp?.message || resp?.error || 'Error al registrar la inscripcion.')
     }

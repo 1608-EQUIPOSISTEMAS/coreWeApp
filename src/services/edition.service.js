@@ -60,6 +60,13 @@ export default class EditionService {
     return response.data || []
   }
 
+  async classroomAuditSummaryList(payload) {
+    const response = (await api.post('/edition/classroomauditsummarylist', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
   async classroomAuditSave(payload) {
     const response = (await api.post('/edition/classroomauditsave', payload, {
       meta: { skipLoader: true }

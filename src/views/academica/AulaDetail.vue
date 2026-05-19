@@ -1,7 +1,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted, inject, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import apexchart from 'vue3-apexcharts'
 import { ServiceKeys } from '@/services'
 
 const props = defineProps({
@@ -11,6 +12,7 @@ const props = defineProps({
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 const router = useRouter()
+const route = useRoute()
 
 const editionId = computed(() => Number(props.id))
 const currentUserId = computed(() => {
@@ -29,7 +31,41 @@ const isLoadingAula = ref(false)
 async function loadAula() {
   isLoadingAula.value = true
   try {
-    aula.value = await editionService.editionGet({ id: editionId.value })
+    const detail = await editionService.editionGet({ id: editionId.value })
+    aula.value = detail || null
+
+    // editionGet (sp_edition_tree_get) devuelve la estructura padre/hijos +
+    // schedules + sesiones, pero NO trae program_abreviature ni instructor
+    // (esos los expone sp_edition_list a traves de joins distintos). Si
+    // alguno falta, hacemos una segunda llamada al list filtrando por el
+    // codigo global y mergeamos. Es la misma fuente de datos que usa la
+    // pagina /academica/aulas, asi que los valores son consistentes.
+    if (detail && (!detail.program_abreviature || !detail.instructor)) {
+      try {
+        const code = detail.global_code
+        if (code) {
+          const { items } = await editionService.editionList({
+            active: null,
+            q: code,
+            page: 1,
+            size: 50,
+          })
+          const match = (items || []).find(
+            (r) => Number(r.edition_num_id) === editionId.value,
+          )
+          if (match) {
+            aula.value = {
+              ...detail,
+              program_abreviature: detail.program_abreviature || match.program_abreviature,
+              instructor: detail.instructor || match.instructor,
+              cat_segment: detail.cat_segment || match.cat_segment,
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo enriquecer aula con editionList:', err?.message || err)
+      }
+    }
   } catch (err) {
     console.error('Error cargando aula:', err)
     toast.error('No se pudo cargar el aula')
@@ -71,13 +107,22 @@ const teacherInitials = computed(() => {
 const TABS = [
   { id: 'asistencia', label: 'Asistencia', icon: 'fa-clipboard-user' },
   { id: 'auditoria', label: 'Auditoria', icon: 'fa-clipboard-check' },
+  { id: 'general', label: 'General', icon: 'fa-chart-line' },
 ]
-const activeTab = ref('asistencia')
+
+// Permite preseleccionar el tab via query (?tab=general). Lo usa el Reporte
+// Academico para que el drill-down caiga directo en la vista consolidada.
+const TAB_IDS = TABS.map((t) => t.id)
+const initialTab = TAB_IDS.includes(route?.query?.tab) ? route.query.tab : 'asistencia'
+const activeTab = ref(initialTab)
 
 function switchTab(id) {
   activeTab.value = id
   if (id === 'asistencia' && !students.value.length) loadStudents()
   if (id === 'auditoria' && !auditMap.value) loadAudit()
+  // El tab General consume `auditMap` igual que Auditoria, asi que
+  // disparamos el mismo fetch para no requerir entrar antes a Auditoria.
+  if (id === 'general' && !auditMap.value) loadAudit()
 }
 
 // =====================================================================
@@ -496,6 +541,252 @@ function aiScoreClass(score) {
   return 'aisc-bad'
 }
 
+// Convierte la puntuacion global IA (escala interna 1-5) a la escala academica
+// peruana 0-20 que ve el usuario. Devuelve '--' si no hay valor o no es numerico.
+function toScore20(score1to5) {
+  const n = Number(score1to5)
+  if (!Number.isFinite(n)) return '--'
+  return (n * 4).toFixed(1)
+}
+
+// Nota numerica (Number | null) en escala /20, lista para promediar/comparar.
+// null si el dato no esta disponible (no rompe los reduce).
+function toScore20Num(score1to5) {
+  const n = Number(score1to5)
+  return Number.isFinite(n) ? n * 4 : null
+}
+
+// Convierte el % de rubrica manual (0-100) a la escala /20.
+function manualPctToScore20(pct) {
+  const n = Number(pct)
+  return Number.isFinite(n) ? (n / 100) * 20 : null
+}
+
+// Formula consolidada IA-dominante: la IA es exhaustiva y reproducible
+// (analiza transcript + syllabus con 9 criterios), la rubrica manual valida.
+// Si solo hay una fuente, se usa esa (ver consolidatedScore).
+const CONSOLIDATED_WEIGHT_IA = 0.7
+const CONSOLIDATED_WEIGHT_MANUAL = 0.3
+function consolidatedScore(noteIa20, noteManual20) {
+  const ia = Number.isFinite(noteIa20) ? noteIa20 : null
+  const man = Number.isFinite(noteManual20) ? noteManual20 : null
+  if (ia == null && man == null) return null
+  if (ia == null) return man
+  if (man == null) return ia
+  return ia * CONSOLIDATED_WEIGHT_IA + man * CONSOLIDATED_WEIGHT_MANUAL
+}
+
+function countCriteriaTrue(criteria) {
+  if (!criteria || typeof criteria !== 'object') return 0
+  return Object.values(criteria).filter(Boolean).length
+}
+
+// Fila por sesion para el reporte consolidado. Cada elemento incluye:
+//   - n: numero de sesion
+//   - manualMarked / manualTotal / manualPct
+//   - aiScore20 (Number|null)
+//   - manualScore20 (Number|null)
+//   - consolidated20 (Number|null) — segun la formula configurable arriba
+const generalRows = computed(() => {
+  const total = sessionsTotal.value || 0
+  const rows = []
+  for (let n = 1; n <= total; n++) {
+    const row = auditMap.value?.[n] || null
+    const marked = countCriteriaTrue(row?.criteria)
+    const manualPct = RUBRIC_TOTAL_ITEMS
+      ? Math.round((marked / RUBRIC_TOTAL_ITEMS) * 100) : 0
+    const manualScore20 = row?.criteria
+      ? manualPctToScore20(manualPct) : null
+    const aiScore20 = toScore20Num(row?.ai_report?.metricas_rapidas?.puntuacion_global)
+    rows.push({
+      n,
+      manualMarked: marked,
+      manualTotal: RUBRIC_TOTAL_ITEMS,
+      manualPct,
+      manualScore20,
+      aiScore20,
+      hasManual: !!row?.criteria && marked > 0,
+      hasAi: !!row?.ai_report,
+      consolidated20: consolidatedScore(aiScore20, manualScore20),
+    })
+  }
+  return rows
+})
+
+function avg(nums) {
+  const valid = nums.filter((v) => Number.isFinite(v))
+  if (!valid.length) return null
+  return valid.reduce((a, b) => a + b, 0) / valid.length
+}
+
+const generalAulaAverages = computed(() => {
+  const rows = generalRows.value
+  return {
+    ai20:           avg(rows.map((r) => r.aiScore20)),
+    manual20:       avg(rows.map((r) => r.manualScore20)),
+    consolidated20: avg(rows.map((r) => r.consolidated20)),
+    aiSessions:     rows.filter((r) => r.hasAi).length,
+    manualSessions: rows.filter((r) => r.hasManual).length,
+  }
+})
+
+// =====================================================================
+// EVOLUCION POR SESION (chart) + COBERTURA DE MUESTRA
+// =====================================================================
+// Las sesiones sin data se envian como `null` para que ApexCharts las dibuje
+// como huecos en la linea. Pasarlas como 0 mentiria visualmente: una sesion
+// no evaluada no es lo mismo que una sesion en la que el aula saco 0.
+const generalChartSeries = computed(() => {
+  const rows = generalRows.value
+  return [
+    {
+      name: 'Consolidada',
+      data: rows.map((r) =>
+        Number.isFinite(r.consolidated20) ? +r.consolidated20.toFixed(1) : null,
+      ),
+    },
+    {
+      name: 'IA',
+      data: rows.map((r) =>
+        r.hasAi && Number.isFinite(r.aiScore20) ? +r.aiScore20.toFixed(1) : null,
+      ),
+    },
+    {
+      name: 'Rubrica manual',
+      data: rows.map((r) =>
+        r.hasManual && Number.isFinite(r.manualScore20) ? +r.manualScore20.toFixed(1) : null,
+      ),
+    },
+  ]
+})
+
+const generalChartOptions = computed(() => ({
+  chart: {
+    type: 'line',
+    height: 320,
+    toolbar: { show: false },
+    fontFamily: 'inherit',
+    animations: { enabled: true, speed: 400 },
+    zoom: { enabled: false },
+  },
+  colors: ['#6366f1', '#94a3b8', '#f59e0b'],
+  stroke: {
+    curve: 'smooth',
+    width: [3, 2, 2],
+    dashArray: [0, 5, 5],
+  },
+  markers: {
+    size: [6, 4, 4],
+    strokeWidth: 2,
+    strokeColors: '#fff',
+    hover: { sizeOffset: 2 },
+  },
+  dataLabels: { enabled: false },
+  legend: {
+    position: 'top',
+    horizontalAlign: 'right',
+    fontSize: '11px',
+    fontWeight: 600,
+    markers: { width: 8, height: 8, radius: 8 },
+    itemMargin: { horizontal: 10, vertical: 0 },
+  },
+  grid: {
+    borderColor: 'rgba(0,0,0,.06)',
+    strokeDashArray: 4,
+    padding: { top: 6, right: 24, bottom: 0, left: 8 },
+  },
+  xaxis: {
+    categories: generalRows.value.map((r) => `S${r.n}`),
+    labels: { style: { fontSize: '11px', colors: '#64748b' } },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    tooltip: { enabled: false },
+  },
+  yaxis: {
+    min: 0,
+    max: 20,
+    tickAmount: 4,
+    labels: {
+      style: { fontSize: '11px', colors: '#64748b' },
+      formatter: (v) => Number(v).toFixed(0),
+    },
+  },
+  annotations: {
+    yaxis: [
+      {
+        y: 17,
+        borderColor: '#047857',
+        strokeDashArray: 3,
+        label: {
+          text: 'EXCELENTE', position: 'right', offsetX: -6,
+          style: { color: '#047857', background: 'rgba(4,120,87,.08)',
+            fontSize: '9.5px', fontWeight: 700 },
+        },
+      },
+      {
+        y: 14,
+        borderColor: '#1D4ED8',
+        strokeDashArray: 3,
+        label: {
+          text: 'SOLIDO', position: 'right', offsetX: -6,
+          style: { color: '#1D4ED8', background: 'rgba(29,78,216,.08)',
+            fontSize: '9.5px', fontWeight: 700 },
+        },
+      },
+      {
+        y: 10,
+        borderColor: '#B45309',
+        strokeDashArray: 3,
+        label: {
+          text: 'OBSERVADO', position: 'right', offsetX: -6,
+          style: { color: '#B45309', background: 'rgba(180,83,9,.08)',
+            fontSize: '9.5px', fontWeight: 700 },
+        },
+      },
+    ],
+  },
+  tooltip: {
+    shared: true,
+    intersect: false,
+    y: { formatter: (v) => (v == null ? 'sin data' : `${v} / 20`) },
+  },
+}))
+
+const generalCoverage = computed(() => {
+  const rows = generalRows.value
+  const total = rows.length || 0
+  const ai = rows.filter((r) => r.hasAi).length
+  const man = rows.filter((r) => r.hasManual).length
+  return {
+    total,
+    ai,
+    manual: man,
+    aiPct: total ? Math.round((ai / total) * 100) : 0,
+    manualPct: total ? Math.round((man / total) * 100) : 0,
+    full: total > 0 && ai === total && man === total,
+  }
+})
+
+function fmt20(n) {
+  return Number.isFinite(n) ? n.toFixed(1) : '--'
+}
+
+function score20Class(n) {
+  if (!Number.isFinite(n)) return 'sg-empty'
+  if (n >= 17) return 'sg-good'
+  if (n >= 14) return 'sg-ok'
+  if (n >= 10) return 'sg-warn'
+  return 'sg-bad'
+}
+
+function score20Label(n) {
+  if (!Number.isFinite(n)) return '--'
+  if (n >= 17) return 'EXCELENTE'
+  if (n >= 14) return 'SOLIDO'
+  if (n >= 10) return 'OBSERVADO'
+  return 'CRITICO'
+}
+
 function formatDateTime(iso) {
   if (!iso) return '--'
   const d = new Date(iso)
@@ -518,6 +809,11 @@ watch(auditMap, (v) => {
 onMounted(async () => {
   await loadAula()
   loadStudents()
+  // Si el deeplink trae ?tab=general o ?tab=auditoria, precargamos el audit
+  // para que la vista no quede vacia esperando al primer click.
+  if (activeTab.value === 'auditoria' || activeTab.value === 'general') {
+    loadAudit()
+  }
 })
 </script>
 
@@ -768,14 +1064,11 @@ onMounted(async () => {
               <span v-if="currentAiGeneratedAt" class="ai-when muted small">
                 · Generado {{ formatDateTime(currentAiGeneratedAt) }}
               </span>
-              <span v-if="currentAiMeta?.estimated_cost_usd" class="ai-when muted small">
-                · ${{ currentAiMeta.estimated_cost_usd }} USD
-              </span>
             </div>
             <div class="ai-summary">
               <div class="ai-summary-item">
-                <span class="muted">Puntuacion global</span>
-                <strong class="mono">{{ currentAiReport.metricas_rapidas?.puntuacion_global ?? '--' }}</strong>
+                <span class="muted">Nota global</span>
+                <strong class="mono">{{ toScore20(currentAiReport.metricas_rapidas?.puntuacion_global) }} / 20</strong>
               </div>
               <div class="ai-summary-item">
                 <span class="muted">Practica / Teoria</span>
@@ -851,6 +1144,162 @@ onMounted(async () => {
             </ul>
           </section>
         </div>
+      </template>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- GENERAL: consolidado IA + rubrica manual                     -->
+    <!-- ============================================================ -->
+    <section v-else-if="activeTab === 'general'" class="tab-body">
+      <div v-if="!sessionsTotal" class="state-msg muted">
+        <i class="fa-regular fa-folder-open"></i> El aula no tiene sesiones definidas.
+      </div>
+      <template v-else>
+        <div class="gen-summary">
+          <div class="gen-summary-card">
+            <span class="gen-label">Promedio IA</span>
+            <strong class="mono" :class="score20Class(generalAulaAverages.ai20)">
+              {{ fmt20(generalAulaAverages.ai20) }} / 20
+            </strong>
+            <span class="muted small">
+              {{ generalAulaAverages.aiSessions }} / {{ sessionsTotal }} sesiones analizadas
+            </span>
+          </div>
+          <div class="gen-summary-card">
+            <span class="gen-label">Promedio Rubrica Manual</span>
+            <strong class="mono" :class="score20Class(generalAulaAverages.manual20)">
+              {{ fmt20(generalAulaAverages.manual20) }} / 20
+            </strong>
+            <span class="muted small">
+              {{ generalAulaAverages.manualSessions }} / {{ sessionsTotal }} sesiones evaluadas
+            </span>
+          </div>
+          <div class="gen-summary-card gen-summary-card-main">
+            <span class="gen-label">Nota Consolidada del Aula</span>
+            <strong class="mono" :class="score20Class(generalAulaAverages.consolidated20)">
+              {{ fmt20(generalAulaAverages.consolidated20) }} / 20
+            </strong>
+            <span class="muted small">
+              {{ score20Label(generalAulaAverages.consolidated20) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="gen-trend-card">
+          <div class="gen-trend-head">
+            <div>
+              <span class="gen-label">Evolucion del aula</span>
+              <p class="gen-trend-hint muted small">
+                Linea solida: nota consolidada. Punteadas: IA y rubrica manual.
+                Los huecos indican sesiones aun no evaluadas.
+              </p>
+            </div>
+          </div>
+          <apexchart
+            type="line"
+            height="320"
+            :options="generalChartOptions"
+            :series="generalChartSeries"
+          />
+
+          <div class="gen-coverage">
+            <span class="gen-label">Cobertura del aula</span>
+            <div class="gen-coverage-row">
+              <div class="gen-coverage-item">
+                <div class="gcv-head">
+                  <span class="gcv-name">
+                    <span class="gcv-dot gcv-dot-ai"></span> Analisis IA
+                  </span>
+                  <span class="gcv-count mono">
+                    {{ generalCoverage.ai }} / {{ generalCoverage.total }}
+                    <span class="muted small">&middot; {{ generalCoverage.aiPct }}%</span>
+                  </span>
+                </div>
+                <div class="gcv-bar">
+                  <span
+                    class="gcv-fill gcv-fill-ai"
+                    :style="{ width: generalCoverage.aiPct + '%' }"
+                  ></span>
+                </div>
+              </div>
+              <div class="gen-coverage-item">
+                <div class="gcv-head">
+                  <span class="gcv-name">
+                    <span class="gcv-dot gcv-dot-manual"></span> Evaluacion manual
+                  </span>
+                  <span class="gcv-count mono">
+                    {{ generalCoverage.manual }} / {{ generalCoverage.total }}
+                    <span class="muted small">&middot; {{ generalCoverage.manualPct }}%</span>
+                  </span>
+                </div>
+                <div class="gcv-bar">
+                  <span
+                    class="gcv-fill gcv-fill-manual"
+                    :style="{ width: generalCoverage.manualPct + '%' }"
+                  ></span>
+                </div>
+              </div>
+            </div>
+            <p v-if="!generalCoverage.full" class="gen-coverage-warn">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              Muestra incompleta. El veredicto del aula puede cambiar conforme
+              se evaluen mas sesiones.
+            </p>
+          </div>
+        </div>
+
+        <div class="gen-table-wrap">
+          <table class="gen-table">
+            <thead>
+              <tr>
+                <th class="th-session">Sesion</th>
+                <th>Rubrica manual</th>
+                <th>Nota IA</th>
+                <th>Nota manual</th>
+                <th>Consolidada</th>
+                <th>Veredicto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in generalRows" :key="r.n">
+                <td class="td-session mono">S{{ r.n }}</td>
+                <td>
+                  <span class="mono">{{ r.manualMarked }} / {{ r.manualTotal }}</span>
+                  <span class="muted small"> &middot; {{ r.manualPct }}%</span>
+                </td>
+                <td>
+                  <span v-if="r.hasAi" class="mono" :class="score20Class(r.aiScore20)">
+                    {{ fmt20(r.aiScore20) }} / 20
+                  </span>
+                  <span v-else class="muted small">sin analisis</span>
+                </td>
+                <td>
+                  <span v-if="r.hasManual" class="mono" :class="score20Class(r.manualScore20)">
+                    {{ fmt20(r.manualScore20) }} / 20
+                  </span>
+                  <span v-else class="muted small">sin evaluar</span>
+                </td>
+                <td>
+                  <strong class="mono" :class="score20Class(r.consolidated20)">
+                    {{ fmt20(r.consolidated20) }} / 20
+                  </strong>
+                </td>
+                <td>
+                  <span class="gen-verdict" :class="score20Class(r.consolidated20)">
+                    {{ score20Label(r.consolidated20) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="footer-note">
+          <i class="fa-solid fa-circle-info"></i>
+          La nota consolidada combina IA y rubrica manual con pesos
+          {{ Math.round(CONSOLIDATED_WEIGHT_IA * 100) }}% / {{ Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100) }}%.
+          Si solo hay una fuente disponible, se usa esa.
+        </p>
       </template>
     </section>
 
@@ -1272,6 +1721,102 @@ onMounted(async () => {
 .aisc-ok   { background: var(--blue-soft); color: var(--blue-ink); }
 .aisc-warn { background: var(--amber-soft); color: var(--amber-ink); }
 .aisc-bad  { background: var(--red-soft); color: var(--red-ink); }
+
+.sg-good  { color: var(--green-ink); }
+.sg-ok    { color: var(--blue-ink); }
+.sg-warn  { color: var(--amber-ink); }
+.sg-bad   { color: var(--red-ink); }
+.sg-empty { color: var(--ink-3); }
+
+.gen-summary {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin-bottom: 16px;
+}
+.gen-summary-card {
+  background: white; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.gen-summary-card-main {
+  border-color: var(--indigo, #6366f1);
+  background: linear-gradient(180deg, rgba(99,102,241,.04) 0%, white 60%);
+}
+.gen-summary-card .gen-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-3); font-weight: 600;
+}
+.gen-summary-card strong { font-size: 26px; font-weight: 700; line-height: 1; }
+
+.gen-table-wrap {
+  background: white; border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden;
+}
+.gen-table { width: 100%; border-collapse: collapse; }
+.gen-table th, .gen-table td {
+  padding: 10px 14px; font-size: 12px; text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+.gen-table thead th {
+  background: var(--bg-soft, #fafafa); font-weight: 600; color: var(--ink-2);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
+}
+.gen-table tbody tr:last-child td { border-bottom: none; }
+.gen-table .td-session { font-weight: 700; }
+.gen-verdict {
+  display: inline-block; padding: 2px 8px; border-radius: 5px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+  background: var(--slate-soft);
+}
+.gen-verdict.sg-good { background: var(--green-soft); }
+.gen-verdict.sg-ok   { background: var(--blue-soft); }
+.gen-verdict.sg-warn { background: var(--amber-soft); }
+.gen-verdict.sg-bad  { background: var(--red-soft); }
+
+.gen-trend-card {
+  background: white; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; margin-bottom: 16px;
+}
+.gen-trend-head { margin-bottom: 6px; }
+.gen-trend-hint { margin: 4px 0 0; }
+
+.gen-coverage {
+  margin-top: 12px; padding-top: 14px;
+  border-top: 1px dashed var(--line-soft);
+}
+.gen-coverage-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+  margin-top: 10px;
+}
+.gen-coverage-item { display: flex; flex-direction: column; gap: 6px; }
+.gcv-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.gcv-name {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-2); font-weight: 600;
+}
+.gcv-count { font-size: 12px; color: var(--ink-2); }
+.gcv-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+}
+.gcv-dot-ai     { background: #6366f1; }
+.gcv-dot-manual { background: #f59e0b; }
+.gcv-bar {
+  position: relative; height: 6px;
+  background: var(--bg-soft, #f1f5f9);
+  border-radius: 999px; overflow: hidden;
+}
+.gcv-fill {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  border-radius: inherit;
+  transition: width .3s ease;
+}
+.gcv-fill-ai     { background: #6366f1; }
+.gcv-fill-manual { background: #f59e0b; }
+.gen-coverage-warn {
+  display: flex; align-items: center; gap: 6px;
+  margin: 12px 0 0; font-size: 11.5px;
+  color: var(--amber-ink);
+}
 .ai-crit-comment { font-size: 11.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 6px; }
 .ai-stamps { display: flex; flex-wrap: wrap; gap: 4px; }
 .ai-stamp {

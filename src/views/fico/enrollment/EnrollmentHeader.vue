@@ -29,8 +29,12 @@
     <div class="eh-ic">
       <span class="eh-ic-icon ic-purple"><i class="fa-solid fa-layer-group"></i></span>
       <div>
-        <span class="eh-ic-label">Codigo</span>
-        <span class="eh-ic-value">{{ detail.edition_code || enrollment?.edition_code || '---' }}</span>
+        <span class="eh-ic-label">Edicion</span>
+        <span class="eh-ic-value">
+          {{ detail.edition_code || enrollment?.edition_code || '---' }}<span
+            v-if="editionStartDate" class="eh-ic-date"
+          > &middot; {{ fmt.formatDate(editionStartDate) }}</span>
+        </span>
       </div>
     </div>
     <div class="eh-ic">
@@ -71,6 +75,9 @@ const fmt = useEnrollmentFormatters()
 const email = computed(() => props.enrollment?.email || props.detail?.email || '')
 const phone = computed(() => props.enrollment?.phone || props.detail?.phone || '')
 const additionalInfo = computed(() => props.enrollment?.additional_info || null)
+const editionStartDate = computed(() =>
+  props.detail?.edition_start_date || props.enrollment?.edition_start_date || null
+)
 </script>
 
 <style scoped>
@@ -194,6 +201,12 @@ const additionalInfo = computed(() => props.enrollment?.additional_info || null)
   line-height: 1.3;
   word-break: break-word;
 }
+.eh-ic-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: #737373;
+  letter-spacing: 0;
+}
 
 .eh-additional {
   display: flex;
@@ -240,6 +253,7 @@ const additionalInfo = computed(() => props.enrollment?.additional_info || null)
 
 [data-coreui-theme="dark"] .eh-ic-label { color: #6F6F66; }
 [data-coreui-theme="dark"] .eh-ic-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eh-ic-date { color: #A0A099; }
 
 [data-coreui-theme="dark"] .eh-additional {
   background: rgba(13,148,136,0.14);

@@ -78,28 +78,40 @@ export function useEnrollmentList () {
 
   async function ensureFilterCatalogs () {
     if (catalogsLoaded.value) return
-    try {
-      // programVersionCaller es publico (sin role gate); programVersionList requiere
-      // ALL_PRODUCTO/ALL_COMERCIAL y rompe para usuarios FICO puros.
-      const [pvItems, ed] = await Promise.all([
-        programService.programVersionCaller({ active: 'Y' }),
-        editionService.editionList({ active: 'Y', size: 5000 })
-      ])
-      allProgramVersions.value = (pvItems || []).map(p => ({
+    // programVersionCaller es publico (sin role gate); programVersionList requiere
+    // ALL_PRODUCTO/ALL_COMERCIAL y rompe para usuarios FICO puros. Cada catalogo
+    // se carga de forma independiente para que el fallo de uno no anule el otro.
+    const [pvRes, edRes] = await Promise.allSettled([
+      programService.programVersionCaller({ active: 'Y' }),
+      editionService.editionList({ active: 'Y', size: 5000 })
+    ])
+
+    if (pvRes.status === 'fulfilled') {
+      const pvItems = pvRes.value || []
+      allProgramVersions.value = pvItems.map(p => ({
         id: p.program_version_id,
         description: `${p.version_code} - ${p.abbreviation || p.program_name || ''}`.trim(),
         cat_type_program: p.cat_type_program,
         cat_model_modality: p.cat_model_modality
       }))
+    } else {
+      console.error('[useEnrollmentList] Error cargando program versions:', pvRes.reason)
+    }
+
+    if (edRes.status === 'fulfilled') {
+      const ed = edRes.value
       allEditions.value = (ed?.items || []).map(e => ({
         id: e.edition_num_id,
         description: `${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`,
         program_version_id: e.program_version_id
       }))
-      catalogsLoaded.value = true
-    } catch (err) {
-      console.error('[useEnrollmentList] Error cargando catalogos de programa/edicion:', err)
+    } else {
+      console.error('[useEnrollmentList] Error cargando editions:', edRes.reason)
     }
+
+    // Marcamos como cargado incluso si uno fallo: el usuario ve los catalogos
+    // disponibles, evitamos reintentar en loop y el log queda con el error real.
+    catalogsLoaded.value = true
   }
 
   // MultiSelect emite items en shape { value, label, raw }, donde `value` es el
@@ -316,41 +328,14 @@ export function useEnrollmentList () {
   function clearSelection () { selectedEnrollment.value = null }
 
   // === Daily KPIs (today vs yesterday — separate from page data) ===
-  // Confirmada = el sistema marco la inscripcion como aprobada/confirmada.
-  // Cubre los textos reales que vienen de BD: "Aprobado", "Confirmado", etc.
-  // Esta misma logica se usa en useEnrollmentFormatters.statusPill para el pill verde.
-  const isConfirmed = e => {
-    const s = (e.confirmation || '').toLowerCase()
-    return s.includes('confirm') || s.includes('aprob')
-  }
-  // Pendiente = no esta confirmada y/o tiene "Pendiente" en el texto.
-  // Excluye explicitamente las confirmadas para evitar doble-conteo si "Pendiente Revisar"
-  // y otra variante extrana convivieran.
-  const isPending = e => {
-    if (isConfirmed(e)) return false
-    const s = (e.confirmation || '').toLowerCase()
-    return !s || s.includes('pendiente')
-  }
-
-  function computeKpis (items, total, hasFullSample) {
-    const t = total != null ? total : items.length
-    if (!hasFullSample) {
-      return { total: t, pending: null, confirmed: null, amount: null, partial: true }
-    }
-    return {
-      total: t,
-      pending: items.filter(isPending).length,
-      confirmed: items.filter(isConfirmed).length,
-      // Monto neto: total comprometido a cobrar hoy (incluye confirmadas + pendientes).
-      // No filtra por confirmacion porque "neto" se interpreta como total facturado.
-      amount: items.reduce((s, e) => s + Number(e.total_to_pay || 0), 0),
-      partial: false
-    }
-  }
-
+  // El backend agrega con COUNT FILTER en sp_fico_kpis_daily (~250ms vs los
+  // ~13s que tardaba antes reusando enrollmentList(size=200) x2). El SP define
+  // confirmed = cat_fico_status alias 'we_enrollment_status_checked' y
+  // pending = 'we_enrollment_status_pending' o cat_fico_status NULL — misma
+  // semantica que la columna "CONFIRMACION" del listado.
   const kpisDaily = ref({
-    today: { total: 0, pending: 0, confirmed: 0, amount: 0, partial: false },
-    yesterday: { total: 0, pending: 0, confirmed: 0, amount: 0, partial: false },
+    today: { total: 0, pending: 0, confirmed: 0, amount: 0 },
+    yesterday: { total: 0, pending: 0, confirmed: 0, amount: 0 },
     loading: false,
     loadedAt: null,
     error: null
@@ -362,41 +347,31 @@ export function useEnrollmentList () {
     return new Date(ms).toISOString().slice(0, 10)
   }
 
-  // Degrade size on timeout so we never block the UI on a slow stored proc.
-  async function safeFetchForDate (date) {
-    for (const size of [200, 50, 1]) {
-      try {
-        const r = await ficoService.enrollmentList({ date_from: date, date_to: date, page: 1, size })
-        return { items: r.items || [], total: r.total || 0, hasFullSample: size > 1 }
-      } catch (err) {
-        if (size === 1) {
-          console.warn('[KPIs] all fallback sizes failed for', date, err?.message)
-          return { items: [], total: 0, hasFullSample: false }
-        }
-      }
-    }
-  }
-
   async function fetchKpisDaily () {
     kpisDaily.value.loading = true
     kpisDaily.value.error = null
     try {
       const today = isoDate(new Date())
       const yesterday = isoDate(new Date(Date.now() - 86400000))
-      // Sequential: avoid hammering the DB pool while the main fetch is also alive.
-      const t = await safeFetchForDate(today)
-      const y = await safeFetchForDate(yesterday)
+      const data = await ficoService.getKpisDaily(today, yesterday)
       kpisDaily.value = {
-        today: computeKpis(t.items, t.total, t.hasFullSample),
-        yesterday: computeKpis(y.items, y.total, y.hasFullSample),
+        today: data?.today || { total: 0, pending: 0, confirmed: 0, amount: 0 },
+        yesterday: data?.yesterday || { total: 0, pending: 0, confirmed: 0, amount: 0 },
         loading: false,
         loadedAt: new Date(),
         error: null
       }
     } catch (e) {
       console.error('KPIs diarios fallaron', e)
-      kpisDaily.value.loading = false
-      kpisDaily.value.error = e?.message || 'error'
+      // Marcamos los buckets con null para que el UI muestre "—" (isMissing) en
+      // vez de "0" — un cero seria indistinguible de "0 inscripciones reales".
+      kpisDaily.value = {
+        today: { total: null, pending: null, confirmed: null, amount: null },
+        yesterday: { total: null, pending: null, confirmed: null, amount: null },
+        loading: false,
+        loadedAt: null,
+        error: e?.message || 'error'
+      }
     }
   }
 

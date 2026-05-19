@@ -112,7 +112,13 @@ async function loadCourses() {
       type_program_ids: courseTypeId ? [{ value: courseTypeId }] : [],
     }
     const { items } = await editionService.editionList(payload)
-    const baseRows = Array.isArray(items) ? items.map(mapRow) : []
+    // Excluimos cat_segment === 'A5' porque representa cursos cancelados:
+    // la vista academica no los considera (ni en conteos, ni en tarjetas, ni
+    // en KPIs). El filtro ocurre aca y no en `filtered` para que el numero
+    // "X aulas en el periodo" tampoco los cuente.
+    const baseRows = (Array.isArray(items) ? items : [])
+      .filter((row) => String(row?.cat_segment || '').toUpperCase() !== 'A5')
+      .map(mapRow)
 
     const editionIds = baseRows.map((c) => c.id).filter((id) => Number.isFinite(id))
     const metricsById = await fetchMetricsByEdition(editionIds)
@@ -316,7 +322,7 @@ const statusPillClass = (s) =>
           <div class="av" :style="{ background: c.color }">{{ c.teacherInitials }}</div>
           <div>
             <div class="tn">{{ c.teacher }}</div>
-            <div class="tr">Docente - agente {{ c.agent }}</div>
+            <div class="tr">Docente</div>
           </div>
         </div>
         <div class="c-meta">

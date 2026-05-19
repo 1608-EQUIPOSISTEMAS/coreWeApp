@@ -1261,7 +1261,7 @@ const decodeFilter = (jsonStr) => {
 const formatMoney = (symbolOrAlias, amount) => {
   let symbol = symbolOrAlias;
   if (symbolOrAlias === 'we_currency_soles' || symbolOrAlias === 'PEN') symbol = 'S/';
-  if (symbolOrAlias === 'we_currency_dollars' || symbolOrAlias === 'USD') symbol = '$';
+  if (symbolOrAlias === 'we_currency_usd' || symbolOrAlias === 'USD') symbol = '$';
   const val = Number(amount) || 0;
   return `${symbol} ${val.toFixed(2)}`;
 }

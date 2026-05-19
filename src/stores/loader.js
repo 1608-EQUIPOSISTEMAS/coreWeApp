@@ -11,9 +11,10 @@ const isLoading = computed(() => state.show)
 
 function start() {
   state.active++
-  // muestra tras un pequeño delay (evita blink en requests muy rápidos)
+  // Muestra tras un breve delay para evitar parpadeo en requests <250ms.
+  // El timer previo se cancela porque solo nos importa el ultimo start.
   clearTimeout(state.delayTimer)
-  state.delayTimer = setTimeout(() => { state.show = true }, 5000)
+  state.delayTimer = setTimeout(() => { state.show = true }, 250)
 }
 
 function stop() {

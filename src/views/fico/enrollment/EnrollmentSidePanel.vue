@@ -70,6 +70,45 @@
       </div>
 
       <div class="esp-section">
+        <h4 class="esp-section-title">Correos</h4>
+        <ul class="esp-emails">
+          <li class="esp-email">
+            <div class="esp-email-info">
+              <span class="esp-email-label">Personal</span>
+              <span class="esp-email-value" :class="{ 'esp-email-empty': !enrollment.email }">
+                {{ enrollment.email || 'Sin correo registrado' }}
+              </span>
+            </div>
+            <button
+              v-if="enrollment.email"
+              class="esp-email-copy"
+              :title="copiedKey === 'personal' ? 'Copiado' : 'Copiar al portapapeles'"
+              @click="copyEmail(enrollment.email, 'personal')"
+            >
+              <i :class="copiedKey === 'personal' ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
+            </button>
+          </li>
+          <li class="esp-email">
+            <div class="esp-email-info">
+              <span class="esp-email-label">Campus Virtual</span>
+              <span class="esp-email-value" :class="{ 'esp-email-empty': !odooEmail && !loadingOdooEmail }">
+                <template v-if="loadingOdooEmail">Cargando...</template>
+                <template v-else>{{ odooEmail || 'Sin acceso registrado' }}</template>
+              </span>
+            </div>
+            <button
+              v-if="odooEmail"
+              class="esp-email-copy"
+              :title="copiedKey === 'campus' ? 'Copiado' : 'Copiar al portapapeles'"
+              @click="copyEmail(odooEmail, 'campus')"
+            >
+              <i :class="copiedKey === 'campus' ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="esp-section">
         <h4 class="esp-section-title">Pago</h4>
         <dl class="esp-dl">
           <div class="esp-dl-row">
@@ -183,7 +222,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { ServiceKeys } from '@/services'
@@ -249,6 +288,35 @@ const initials = computed(() => {
 
 const saldo = computed(() => fmt.calcSaldo(props.enrollment || {}))
 const isApproved = computed(() => /aprobado|confirm/i.test(props.enrollment?.confirmation || ''))
+
+const odooEmail = ref(null)
+const loadingOdooEmail = ref(false)
+const copiedKey = ref(null)
+
+watch(() => props.enrollment?.enrollment_id, async id => {
+  odooEmail.value = null
+  if (!id) return
+  loadingOdooEmail.value = true
+  try {
+    const flags = await ficoService.getEnrollmentFlags(id)
+    odooEmail.value = flags?.odoo_email || null
+  } catch {
+    odooEmail.value = null
+  } finally {
+    loadingOdooEmail.value = false
+  }
+}, { immediate: true })
+
+async function copyEmail (value, key) {
+  if (!value) return
+  try {
+    await navigator.clipboard.writeText(value)
+    copiedKey.value = key
+    setTimeout(() => { if (copiedKey.value === key) copiedKey.value = null }, 1400)
+  } catch {
+    toast.error('No se pudo copiar al portapapeles')
+  }
+}
 
 const busy = ref(null)
 const actionMap = {
@@ -504,6 +572,67 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: #1A1A1A;
+}
+
+/* Emails */
+.esp-emails {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.esp-email {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #FAFAFA;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.esp-email-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.esp-email-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #A3A3A3;
+  font-weight: 600;
+}
+.esp-email-value {
+  font-size: 12px;
+  color: #1A1A1A;
+  font-weight: 500;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.esp-email-empty { color: #C4C4C4; font-style: italic; font-weight: 400; }
+.esp-email-copy {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #EFEFEF;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #737373;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.esp-email-copy:hover {
+  background: #F0FDFA;
+  border-color: #99F6E4;
+  color: #0F766E;
 }
 
 /* Quick actions */
@@ -803,6 +932,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 [data-coreui-theme="dark"] .esp-dl-row { border-bottom-color: #1F1F1A; }
 [data-coreui-theme="dark"] .esp-dl-row dt { color: #6F6F66; }
 [data-coreui-theme="dark"] .esp-dl-row dd { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .esp-email { background: #1F1F1A; }
+[data-coreui-theme="dark"] .esp-email-label { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-email-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .esp-email-empty { color: #6F6F66; }
+[data-coreui-theme="dark"] .esp-email-copy {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #A0A099;
+}
+[data-coreui-theme="dark"] .esp-email-copy:hover {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
 
 [data-coreui-theme="dark"] .esp-cuota { background: #1F1F1A; }
 [data-coreui-theme="dark"] .esp-cuota-num { color: #34D399; }
