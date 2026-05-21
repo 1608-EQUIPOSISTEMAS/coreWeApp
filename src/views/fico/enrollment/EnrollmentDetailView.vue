@@ -198,6 +198,9 @@ const activeModalityId = ref(null)
 const isEditing = ref(false)
 const savingFinancials = ref(false)
 const modalInstallments = ref([])
+// Snapshot por installment_id de los valores al entrar en modo edicion;
+// se usa para diff y para auditar solo cuotas pagadas realmente modificadas.
+const paidCuotaSnapshot = ref(new Map())
 
 const ficoForm = reactive({
   cat_currency: null,
@@ -346,9 +349,25 @@ function buildInstallments () {
       _payment_date: pay?.payment_date
         ? String(pay.payment_date).slice(0, 10)
         : (isInicial ? commercialDate : ''),
+      _payment_id: pay?.payment_id || null,
       _isNew: false
     }
   })
+}
+
+// Toma el estado actual de una cuota pagada para detectar diff al guardar.
+function snapshotPaidCuota (c) {
+  return {
+    amount: Number(c.amount) || 0,
+    due_date: c.due_date ? String(c.due_date).slice(0, 10) : null,
+    cat_currency: c._cat_currency || null,
+    cat_payment_medium: c._cat_payment_medium || null,
+    cat_business_entity: c._cat_business_entity || null,
+    bank_account_id: c._bank_account_id || null,
+    transaction_code: c._transaction_code || '',
+    payment_date: c._payment_date ? String(c._payment_date).slice(0, 10) : '',
+    payment_id: c._payment_id || null
+  }
 }
 
 function addCuota () {
@@ -424,12 +443,41 @@ function startEditing () {
   ficoForm.bank_account_id = p?.bank_account_id || null
   ficoForm.transaction_code = p?.transaction_code || ''
   ficoForm.payment_date = p?.payment_date ? String(p.payment_date).slice(0, 10) : ''
+  paidCuotaSnapshot.value = new Map(
+    modalInstallments.value
+      .filter(c => c.status === 'paid' && c.installment_id && !(c.installment_number === 0 || c.is_reserva))
+      .map(c => [c.installment_id, snapshotPaidCuota(c)])
+  )
   isEditing.value = true
 }
 
 function cancelEditing () {
   isEditing.value = false
+  paidCuotaSnapshot.value = new Map()
   resetFicoForm()
+}
+
+// Compara cada cuota pagada con su snapshot inicial y devuelve solo las modificadas.
+// Excluye la cuota inicial (ya viaja en el bloque `fields` principal del inicial).
+function collectPaidCuotaDiffs () {
+  const out = []
+  for (const c of modalInstallments.value) {
+    if (c.status !== 'paid' || !c.installment_id) continue
+    if (c.installment_number === 0 || c.is_reserva) continue
+    const before = paidCuotaSnapshot.value.get(c.installment_id)
+    if (!before) continue
+    const after = snapshotPaidCuota(c)
+    const dirty = Object.keys(after).some(k => (after[k] ?? null) !== (before[k] ?? null))
+    if (!dirty) continue
+    out.push({
+      installment_id: c.installment_id,
+      installment_number: c.installment_number,
+      payment_id: before.payment_id,
+      before,
+      after
+    })
+  }
+  return out
 }
 
 async function handleSaveEdit (justificacion) {
@@ -446,9 +494,14 @@ async function handleSaveEdit (justificacion) {
     fields.cat_currency = ini ? ini._cat_currency : ficoForm.cat_currency
     fields.payment_date = ini ? ini._payment_date : ficoForm.payment_date
     fields.notes = detail.value?.notes || null
+
+    const paidDiffs = collectPaidCuotaDiffs()
+    if (paidDiffs.length) fields.paid_installments = paidDiffs
+
     await ficoService.enrollmentUpdate({ enrollment_id: eid, justificacion: justificacion.trim(), fields })
     toast.success('Cambios guardados correctamente.')
     isEditing.value = false
+    paidCuotaSnapshot.value = new Map()
     await refreshDetail()
   } catch (err) {
     console.error(err)

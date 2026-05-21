@@ -323,7 +323,9 @@
           <tbody>
             <tr v-for="(c, idx) in cuotas" :key="idx" :class="fmt.cuotaRowClass(c)">
               <td class="fw700 tc">{{ c.installment_number || (idx + 1) }}</td>
-              <td v-if="c._isNew"><input v-model.number="c.amount" type="number" step="0.01" class="ef-input tr mono" placeholder="0.00" /></td>
+              <td v-if="c._isNew || (c.status === 'paid' && isEditing)">
+                <input v-model.number="c.amount" type="number" step="0.01" class="ef-input tr mono" placeholder="0.00" />
+              </td>
               <td v-else class="tr mono fw700 ef-amount-cell">
                 <span>S/. {{ fmt.formatMoney(c.amount) }}</span>
                 <button
@@ -333,38 +335,40 @@
                   title="Editar monto"
                 ><i class="fa-solid fa-pen"></i></button>
               </td>
-              <td v-if="c._isNew"><BaseDatePicker v-model="c.due_date" placeholder="dd/mm/aaaa" class="ef-datepicker" /></td>
+              <td v-if="c._isNew || (c.status === 'paid' && isEditing)">
+                <BaseDatePicker v-model="c.due_date" placeholder="dd/mm/aaaa" class="ef-datepicker" />
+              </td>
               <td v-else :class="{ 'c-red fw700': fmt.isOverdue(c.due_date) && c.status !== 'paid' }">{{ fmt.formatDate(c.due_date) }}</td>
               <td class="tc"><span class="ef-pill" :class="fmt.cuotaStatusPill(c, planStatus)">{{ fmt.cuotaStatusLabel(c, planStatus) }}</span></td>
               <td>
-                <select v-model="c._cat_currency" class="ef-select-sm" :disabled="c.status === 'paid' || planStatus === 'borrador'">
+                <select v-model="c._cat_currency" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="cur in catalogs.catCurrency" :key="cur.id" :value="cur.id">{{ cur.abbreviation || cur.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_payment_medium" class="ef-select-sm" :disabled="c.status === 'paid' || planStatus === 'borrador'">
+                <select v-model="c._cat_payment_medium" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_business_entity" class="ef-select-sm" :disabled="c.status === 'paid' || planStatus === 'borrador'">
+                <select v-model="c._cat_business_entity" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._bank_account_id" class="ef-select-sm" :disabled="c.status === 'paid' || planStatus === 'borrador' || !c._cat_business_entity">
+                <select v-model="c._bank_account_id" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador' || !c._cat_business_entity">
                   <option :value="null">---</option>
                   <option v-for="a in filteredAccounts(c._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }}</option>
                 </select>
               </td>
               <td>
-                <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="c.status === 'paid' || planStatus === 'borrador'" />
+                <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
               </td>
               <td>
-                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="c.status === 'paid' || planStatus === 'borrador'" />
+                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
               </td>
               <td class="tc">
                 <a v-if="c._voucher_url" :href="c._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher"><i class="fa-solid fa-image"></i></a>

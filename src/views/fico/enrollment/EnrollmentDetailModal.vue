@@ -661,6 +661,9 @@ const isEditing = ref(false)
 const justificacion = ref('')
 const savingEdit = ref(false)
 const confirmingPayment = ref(false)
+// Snapshot por installment_id de los valores al entrar en modo edicion;
+// se usa para diff y para auditar solo cuotas pagadas realmente modificadas.
+const paidCuotaSnapshot = ref(new Map())
 
 const isChangingModality = ref(false)
 const newModalityId = ref(null)
@@ -960,6 +963,7 @@ function buildInstallments () {
   const payments = selectedDetail.value?.payment_history || []
   modalInstallments.value = inst.map(i => {
     const pay = payments.find(p => p.installment_id === i.installment_id)
+    const payDateIso = pay?.payment_date ? String(pay.payment_date).slice(0, 10) : ''
     return {
       ...i,
       status: resolveInstallmentStatus(i),
@@ -968,6 +972,8 @@ function buildInstallments () {
       _cat_business_entity: pay?.cat_business_entity_id || i.cat_business_entity || null,
       _bank_account_id: pay?.bank_account_id || i.bank_account_id || null,
       _transaction_code: pay?.transaction_code || i.transaction_code || '',
+      _payment_date: payDateIso,
+      _payment_id: pay?.payment_id || null,
       _voucher_url: pay?.evidence_url || i.evidence_url || null,
       _isNew: false
     }
@@ -1018,7 +1024,26 @@ function startEditing () {
   ficoForm.cat_business_entity = p?.cat_business_entity_id || null
   ficoForm.bank_account_id = p?.bank_account_id || null
   ficoForm.transaction_code = p?.transaction_code || ''
+  paidCuotaSnapshot.value = new Map(
+    modalInstallments.value
+      .filter(c => c.status === 'paid' && c.installment_id)
+      .map(c => [c.installment_id, snapshotPaidCuota(c)])
+  )
   isEditing.value = true
+}
+
+function snapshotPaidCuota (c) {
+  return {
+    amount: Number(c.amount) || 0,
+    due_date: c.due_date ? String(c.due_date).slice(0, 10) : null,
+    cat_currency: c._cat_currency || null,
+    cat_payment_medium: c._cat_payment_medium || null,
+    cat_business_entity: c._cat_business_entity || null,
+    bank_account_id: c._bank_account_id || null,
+    transaction_code: c._transaction_code || '',
+    payment_date: c._payment_date ? String(c._payment_date).slice(0, 10) : '',
+    payment_id: c._payment_id || null
+  }
 }
 
 async function handleConfirmPayment () {
@@ -1149,6 +1174,9 @@ async function handleSaveEdit () {
     if (ficoForm.cat_currency) fields.cat_currency = ficoForm.cat_currency
     fields.notes = selectedDetail.value?.notes || null
 
+    const paidDiffs = collectPaidCuotaDiffs()
+    if (paidDiffs.length) fields.paid_installments = paidDiffs
+
     await ficoService.enrollmentUpdate({
       enrollment_id: eid,
       justificacion: justificacion.value.trim(),
@@ -1157,14 +1185,38 @@ async function handleSaveEdit () {
     toast.success('Cambios guardados correctamente.')
     isEditing.value = false
     justificacion.value = ''
+    paidCuotaSnapshot.value = new Map()
     const response = await ficoService.getPaymentDetail(eid)
     selectedDetail.value = response || { installments: [], payment_history: [] }
+    buildInstallments()
     ficoService.getAuditLog(eid).then(r => { auditLog.value = r || [] }).catch(() => {})
     emit('saved')
   } catch (err) {
     console.error(err)
     toast.error('Error al guardar cambios.')
   } finally { savingEdit.value = false }
+}
+
+// Compara los valores actuales con el snapshot tomado al iniciar edicion.
+// Devuelve solo cuotas pagadas con al menos un campo modificado.
+function collectPaidCuotaDiffs () {
+  const out = []
+  for (const c of modalInstallments.value) {
+    if (c.status !== 'paid' || !c.installment_id) continue
+    const before = paidCuotaSnapshot.value.get(c.installment_id)
+    if (!before) continue
+    const after = snapshotPaidCuota(c)
+    const dirty = Object.keys(after).some(k => (after[k] ?? null) !== (before[k] ?? null))
+    if (!dirty) continue
+    out.push({
+      installment_id: c.installment_id,
+      installment_number: c.installment_number,
+      payment_id: before.payment_id,
+      before,
+      after
+    })
+  }
+  return out
 }
 
 watch(() => props.enrollment, async (e) => {

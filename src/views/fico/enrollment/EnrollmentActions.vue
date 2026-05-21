@@ -325,27 +325,37 @@
           <div class="eact-form">
             <div class="eact-grid-2">
               <div class="eact-field">
-                <label>Canal</label>
-                <div class="eact-readonly">{{ enrollment?.agent_origin || '(sin canal)' }}</div>
+                <label>Asesor actual</label>
+                <div class="eact-readonly">{{ currentAgentLabel }}</div>
               </div>
               <div class="eact-field">
-                <label>Asesor actual</label>
-                <div class="eact-readonly">{{ enrollment?.seller_agent_alias || '(sin asesor)' }}</div>
+                <label>Canal <span class="eact-req">*</span></label>
+                <SearchSelect
+                  v-model="newAgentCategory"
+                  :items="agentCategoryOptions"
+                  label-field="label"
+                  value-field="id"
+                  placeholder="Seleccionar canal..."
+                  @update:modelValue="onAgentCategoryChange"
+                />
               </div>
             </div>
-            <div class="eact-field">
-              <label>Nuevo asesor <span class="eact-req">*</span></label>
+            <div class="eact-field" v-if="newAgentCategory && newAgentCategory !== 'we'">
+              <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="eact-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
               <SearchSelect
                 v-model="newSellerAgentId"
-                :items="agentOptions"
+                :items="filteredAgentOptions"
                 label-field="label"
                 value-field="user_id"
                 placeholder="Buscar asesor por alias o nombre..."
               />
-              <small v-if="agentPreview" class="eact-price-hint">
-                <i class="fa-solid fa-eye"></i> Asesor quedara como: <strong>{{ agentPreview }}</strong>
-              </small>
             </div>
+            <div v-if="newAgentCategory === 'we'" class="eact-readonly" style="font-size:12px;color:#666">
+              <i class="fa-solid fa-circle-info"></i> Canal WE no lleva asesor individual asignado.
+            </div>
+            <small v-if="agentPreview" class="eact-price-hint">
+              <i class="fa-solid fa-eye"></i> Asesor quedara como: <strong>{{ agentPreview }}</strong>
+            </small>
             <div class="eact-field">
               <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
               <textarea v-model="editAgentJustificacion" class="eact-textarea" rows="2" placeholder="Motivo del cambio de asesor..."></textarea>
@@ -508,7 +518,13 @@ function startAction (action) {
   if (action === 'rp') loadRPEditions()
   if (action === 'cc') loadCCPrograms()
   if (action === 'editStudent') initEditStudent()
-  if (action === 'editSellerAgent') loadAgentOptions()
+  if (action === 'editSellerAgent') {
+    // Inicializa la categoria con el canal actual para que el operador vea de
+    // entrada como esta clasificada la inscripcion y solo cambie lo necesario.
+    newAgentCategory.value = categoryFromOrigin(props.enrollment?.agent_origin)
+    newSellerAgentId.value = props.enrollment?.seller_agent_id || null
+    loadAgentOptions()
+  }
 }
 
 function cancelAction () {
@@ -533,6 +549,7 @@ function resetAllForms () {
   Object.assign(editStudentForm, { first_name: '', last_name: '', document_number: '', origin_email: '', odoo_email: '', origin_phone: '', cat_profile_id: null })
   editStudentJustificacion.value = ''
   newSellerAgentId.value = null
+  newAgentCategory.value = null
   editAgentJustificacion.value = ''
   retireReason.value = ''
   retireHasRefund.value = false
@@ -804,44 +821,112 @@ async function handleEditStudent () {
 }
 
 // ── EDITAR ASESOR ──
-// Caso: la inscripcion entro como WEB (sin asesor real). Comercial despues
-// confirma que un asesor concreto guio al cliente al pago. FICO actualiza el
-// seller_agent_id; el canal (agent_origin) sigue siendo WEB. Resultado en
-// listados: 'WEB - AE30'.
+// Permite re-categorizar la inscripcion eligiendo canal + asesor. Replica la
+// logica del modulo de inscripcion (EnrollmentForm.vue): 5 categorias (comercial,
+// b2b, web, we, sa) que mapean a agent_origin; los asesores se filtran segun la
+// categoria seleccionada. Resultado en listados: 'B2B - AE30', 'WEB - CA36',
+// 'SA', 'WE', o solo 'AE30' (comercial sin canal).
+const newAgentCategory = ref(null)
 const newSellerAgentId = ref(null)
 const editAgentJustificacion = ref('')
 const agentOptions = ref([])
 const loadingAgents = ref(false)
 
-// Sentinel: user_id = 0 representa "Sin Asesor (S/A)" en el SearchSelect.
-// Lo mapeamos a null antes de enviar al backend.
-const SA_SENTINEL = 0
+// Espejo de agentCategoryOptions en EnrollmentForm.vue: misma identidad y orden.
+const agentCategoryOptions = [
+  { id: 'comercial', label: 'Comercial (sin canal)' },
+  { id: 'b2b',       label: 'B2B' },
+  { id: 'web',       label: 'WEB' },
+  { id: 'we',        label: 'WE' },
+  { id: 'sa',        label: 'S/A (Sin Asesor)' }
+]
+
+// Mapeo inverso: agent_origin almacenado -> categoria UI.
+function categoryFromOrigin (origin) {
+  if (origin === 'B2B') return 'b2b'
+  if (origin === 'WEB') return 'web'
+  if (origin === 'WE')  return 'we'
+  if (origin === 'SA')  return 'sa'
+  return 'comercial'
+}
+
+// agent_origin a persistir desde la categoria seleccionada.
+function originFromCategory (cat) {
+  if (cat === 'b2b') return 'B2B'
+  if (cat === 'web') return 'WEB'
+  if (cat === 'we')  return 'WE'
+  if (cat === 'sa')  return 'SA'
+  return null
+}
+
+const currentAgentLabel = computed(() => {
+  const e = props.enrollment
+  if (!e) return '(sin asesor)'
+  const alias = e.seller_agent_alias
+  const origin = e.agent_origin
+  if (alias && origin) return `${origin} - ${alias}`
+  if (alias) return alias
+  if (origin) return origin
+  return '(sin asesor)'
+})
+
+// Filtra y reetiqueta el universo de asesores segun la categoria activa.
+// b2b -> 'ALIAS — B2B', web -> 'ALIAS — WEB', resto -> 'ALIAS — Nombre' (default).
+// we no usa este dropdown (no hay user_id valido para WE).
+const filteredAgentOptions = computed(() => {
+  const cat = newAgentCategory.value
+  if (cat === 'we') return []
+  if (cat === 'b2b') {
+    return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — B2B` }))
+  }
+  if (cat === 'web') {
+    return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — WEB` }))
+  }
+  return agentOptions.value
+})
 
 const canAdvanceEditAgent = computed(() => {
-  if (newSellerAgentId.value === null || newSellerAgentId.value === undefined) return false
+  if (!newAgentCategory.value) return false
   if (!editAgentJustificacion.value.trim()) return false
 
-  const currentId = props.enrollment?.seller_agent_id
-  const currentIsSA = props.enrollment?.agent_origin === 'SA' && currentId == null
+  const cat = newAgentCategory.value
+  const newId = Number(newSellerAgentId.value) || null
 
-  if (Number(newSellerAgentId.value) === SA_SENTINEL) {
-    return !currentIsSA  // pasar a S/A solo si no era ya S/A
-  }
-  return Number(newSellerAgentId.value) !== Number(currentId)
+  // we: no requiere asesor (siempre se persiste seller_agent_id=null).
+  // sa: asesor opcional (decision: permitir combinacion 'SA + asesor').
+  // comercial/b2b/web: asesor requerido.
+  if (cat !== 'we' && cat !== 'sa' && !newId) return false
+
+  const oldOrigin = props.enrollment?.agent_origin || null
+  const oldId    = props.enrollment?.seller_agent_id || null
+  const newOrigin = originFromCategory(cat)
+  const newIdFinal = (cat === 'we') ? null : newId
+
+  // Algo debe haber cambiado (canal o asesor) para que tenga sentido guardar.
+  return Number(oldId) !== Number(newIdFinal) || oldOrigin !== newOrigin
 })
 
 const agentPreview = computed(() => {
+  const cat = newAgentCategory.value
+  if (!cat) return ''
+  if (cat === 'we') return 'WE'
+
   const id = Number(newSellerAgentId.value)
-  if (id === SA_SENTINEL) return 'SA'
-  if (!id) return ''
-  const u = agentOptions.value.find(a => Number(a.user_id) === id)
-  if (!u) return ''
-  const origin = props.enrollment?.agent_origin
-  // Si el asesor actual era S/A (agent_origin='SA'), al asignar uno real
-  // el canal se limpia (deja de ser SA porque ahora SI hay asesor).
-  if (origin === 'SA') return u.alias
+  const u = id ? agentOptions.value.find(a => Number(a.user_id) === id) : null
+  const origin = originFromCategory(cat)
+
+  if (!u) {
+    // Sin asesor + canal: muestra solo el canal (SA o nada).
+    return origin || ''
+  }
   return origin ? `${origin} - ${u.alias}` : u.alias
 })
+
+function onAgentCategoryChange () {
+  // Al cambiar canal, descarta la seleccion previa para forzar al usuario a
+  // elegir un asesor del nuevo universo. Evita combinaciones residuales.
+  newSellerAgentId.value = null
+}
 
 async function loadAgentOptions () {
   if (agentOptions.value.length > 0) return
@@ -860,12 +945,7 @@ async function loadAgentOptions () {
         }
       })
       .sort((a, b) => a.alias.localeCompare(b.alias))
-
-    // Prepend la opcion S/A para que aparezca primero en el dropdown.
-    agentOptions.value = [
-      { user_id: SA_SENTINEL, alias: 'SA', label: 'Sin Asesor (S/A)' },
-      ...users
-    ]
+    agentOptions.value = users
   } catch (err) {
     console.error('[loadAgentOptions]', err)
     toast.error('No se pudieron cargar los asesores.')
@@ -877,11 +957,12 @@ async function loadAgentOptions () {
 async function handleEditSellerAgent () {
   saving.value = true
   try {
-    // Sentinel 0 = "Sin Asesor (S/A)" — el backend lo entiende como null.
-    const newId = Number(newSellerAgentId.value) === SA_SENTINEL ? null : Number(newSellerAgentId.value)
+    const cat = newAgentCategory.value
+    const newId = (cat === 'we') ? null : (Number(newSellerAgentId.value) || null)
     await ficoService.editSellerAgent({
       enrollment_id: enrollmentId.value,
       new_seller_agent_id: newId,
+      new_agent_origin: originFromCategory(cat),
       justificacion: editAgentJustificacion.value.trim()
     })
     toast.success('Asesor actualizado correctamente.')
