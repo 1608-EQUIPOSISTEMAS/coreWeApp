@@ -65,18 +65,18 @@ function consolidatedScore(noteIa20, noteManual20) {
 
 function score20Class(n) {
   if (!Number.isFinite(n)) return 'sg-empty'
-  if (n >= 17) return 'sg-good'
-  if (n >= 14) return 'sg-ok'
-  if (n >= 10) return 'sg-warn'
+  if (n >= 19) return 'sg-good'
+  if (n >= 17) return 'sg-ok'
+  if (n >= 15) return 'sg-warn'
   return 'sg-bad'
 }
 
 function score20Label(n) {
   if (!Number.isFinite(n)) return 'SIN EVALUAR'
-  if (n >= 17) return 'EXCELENTE'
-  if (n >= 14) return 'SOLIDO'
-  if (n >= 10) return 'OBSERVADO'
-  return 'CRITICO'
+  if (n >= 19) return 'EXCELENTE'
+  if (n >= 17) return 'BUENO'
+  if (n >= 15) return 'EN PROCESO'
+  return 'DEFICIENTE'
 }
 
 function fmt20(n) {
@@ -210,7 +210,7 @@ const filterVerdict = ref('Todos')
 const query = ref('')
 
 const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
-const verdictFilters = ['Todos', 'CRITICO', 'OBSERVADO', 'SOLIDO', 'EXCELENTE', 'SIN EVALUAR']
+const verdictFilters = ['Todos', 'DEFICIENTE', 'EN PROCESO', 'BUENO', 'EXCELENTE', 'SIN EVALUAR']
 
 // La tabla parte del universo del periodo, no de aulas.value. El periodo
 // es la fuente de verdad — los chips de estado/veredicto/busqueda son
@@ -234,7 +234,7 @@ const filtered = computed(() => {
 // aulas en riesgo, no celebrar las que ya estan bien.
 const sorted = computed(() => {
   const verdictPriority = {
-    CRITICO: 0, OBSERVADO: 1, 'SIN EVALUAR': 2, SOLIDO: 3, EXCELENTE: 4,
+    DEFICIENTE: 0, 'EN PROCESO': 1, 'SIN EVALUAR': 2, BUENO: 3, EXCELENTE: 4,
   }
   return [...filtered.value].sort((a, b) => {
     const pa = verdictPriority[a.verdict] ?? 99
@@ -274,9 +274,9 @@ function buildKpis(list) {
   const total = list.length
   const evaluated = list.filter((a) => a.hasAudit).length
   const atRisk = list.filter((a) =>
-    a.verdict === 'CRITICO' || a.verdict === 'OBSERVADO').length
+    a.verdict === 'DEFICIENTE' || a.verdict === 'EN PROCESO').length
   const good = list.filter((a) =>
-    a.verdict === 'SOLIDO' || a.verdict === 'EXCELENTE').length
+    a.verdict === 'BUENO' || a.verdict === 'EXCELENTE').length
   const validScores = list.map((a) => a.consolidated20).filter((n) => Number.isFinite(n))
   const avg = validScores.length
     ? validScores.reduce((a, b) => a + b, 0) / validScores.length
@@ -327,12 +327,12 @@ const kpiDeltas = computed(() => {
 })
 
 // Distribucion para el donut. Las aulas SIN EVALUAR se cuentan aparte
-// — meterlas en CRITICO seria injusto (no es lo mismo "mal evaluada" que
+// — meterlas en DEFICIENTE seria injusto (no es lo mismo "mal evaluada" que
 // "no medida todavia").
 const verdictDistribution = computed(() => {
   const list = periodAulas.value
   const counts = {
-    EXCELENTE: 0, SOLIDO: 0, OBSERVADO: 0, CRITICO: 0, 'SIN EVALUAR': 0,
+    EXCELENTE: 0, BUENO: 0, 'EN PROCESO': 0, DEFICIENTE: 0, 'SIN EVALUAR': 0,
   }
   for (const a of list) {
     counts[a.verdict] = (counts[a.verdict] || 0) + 1
@@ -342,7 +342,7 @@ const verdictDistribution = computed(() => {
 
 const donutSeries = computed(() => {
   const c = verdictDistribution.value
-  return [c.EXCELENTE, c.SOLIDO, c.OBSERVADO, c.CRITICO, c['SIN EVALUAR']]
+  return [c.EXCELENTE, c.BUENO, c['EN PROCESO'], c.DEFICIENTE, c['SIN EVALUAR']]
 })
 
 const donutOptions = computed(() => ({
@@ -351,7 +351,7 @@ const donutOptions = computed(() => ({
     fontFamily: 'inherit',
     toolbar: { show: false },
   },
-  labels: ['Excelente', 'Solido', 'Observado', 'Critico', 'Sin evaluar'],
+  labels: ['Excelente', 'Bueno', 'En proceso', 'Deficiente', 'Sin evaluar'],
   colors: ['#047857', '#1D4ED8', '#B45309', '#B91C1C', '#A0A099'],
   stroke: { width: 2, colors: ['#fff'] },
   legend: {
@@ -488,7 +488,7 @@ function openAula(id) {
         </div>
         <div class="k-value">{{ kpis.atRisk }}</div>
         <div class="k-foot">
-          <span>CRITICO + OBSERVADO</span>
+          <span>DEFICIENTE + EN PROCESO</span>
           <span v-if="kpiDeltas?.atRisk" class="k-delta" :class="kpiDeltas.atRisk.class">
             {{ kpiDeltas.atRisk.arrow }} {{ Math.abs(kpiDeltas.atRisk.value) }}
           </span>
@@ -501,7 +501,7 @@ function openAula(id) {
         </div>
         <div class="k-value">{{ kpis.good }}</div>
         <div class="k-foot">
-          <span>SOLIDO + EXCELENTE</span>
+          <span>BUENO + EXCELENTE</span>
           <span v-if="kpiDeltas?.good" class="k-delta" :class="kpiDeltas.good.class">
             {{ kpiDeltas.good.arrow }} {{ Math.abs(kpiDeltas.good.value) }}
           </span>

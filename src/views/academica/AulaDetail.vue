@@ -714,7 +714,7 @@ const generalChartOptions = computed(() => ({
   annotations: {
     yaxis: [
       {
-        y: 17,
+        y: 19,
         borderColor: '#047857',
         strokeDashArray: 3,
         label: {
@@ -724,21 +724,21 @@ const generalChartOptions = computed(() => ({
         },
       },
       {
-        y: 14,
+        y: 17,
         borderColor: '#1D4ED8',
         strokeDashArray: 3,
         label: {
-          text: 'SOLIDO', position: 'right', offsetX: -6,
+          text: 'BUENO', position: 'right', offsetX: -6,
           style: { color: '#1D4ED8', background: 'rgba(29,78,216,.08)',
             fontSize: '9.5px', fontWeight: 700 },
         },
       },
       {
-        y: 10,
+        y: 15,
         borderColor: '#B45309',
         strokeDashArray: 3,
         label: {
-          text: 'OBSERVADO', position: 'right', offsetX: -6,
+          text: 'EN PROCESO', position: 'right', offsetX: -6,
           style: { color: '#B45309', background: 'rgba(180,83,9,.08)',
             fontSize: '9.5px', fontWeight: 700 },
         },
@@ -773,18 +773,18 @@ function fmt20(n) {
 
 function score20Class(n) {
   if (!Number.isFinite(n)) return 'sg-empty'
-  if (n >= 17) return 'sg-good'
-  if (n >= 14) return 'sg-ok'
-  if (n >= 10) return 'sg-warn'
+  if (n >= 19) return 'sg-good'
+  if (n >= 17) return 'sg-ok'
+  if (n >= 15) return 'sg-warn'
   return 'sg-bad'
 }
 
 function score20Label(n) {
   if (!Number.isFinite(n)) return '--'
-  if (n >= 17) return 'EXCELENTE'
-  if (n >= 14) return 'SOLIDO'
-  if (n >= 10) return 'OBSERVADO'
-  return 'CRITICO'
+  if (n >= 19) return 'EXCELENTE'
+  if (n >= 17) return 'BUENO'
+  if (n >= 15) return 'EN PROCESO'
+  return 'DEFICIENTE'
 }
 
 function formatDateTime(iso) {
