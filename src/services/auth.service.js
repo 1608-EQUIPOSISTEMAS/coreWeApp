@@ -11,7 +11,17 @@ export default class AuthService {
     console.log(response)
     return response.data;
   }
-    
+
+  // Lista users filtrados por alias de rol (ej. 'B2B', 'COMERCIAL').
+  // Usado en formularios donde el catalogo de asesores depende del canal.
+  async userListByRole(roleAlias) {
+    const response = (await api.post('/auth/userlist-by-role', { role_alias: roleAlias }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+
   // src/services/AuthService.js (Vue)
   async login(credentials) {
     const response = await api.post('/auth/login', credentials);

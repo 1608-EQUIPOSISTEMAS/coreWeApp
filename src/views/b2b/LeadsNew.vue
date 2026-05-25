@@ -295,7 +295,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               />
             </div>
 
-            <div v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'" class="col-12 col-md-6">
+            <div v-if="['we_prospect_situation_corporate','we_prospect_situation_convenios'].includes(form.ocupacion_alias)" class="col-12 col-md-6">
               <label class="exec-label">Empresa vinculada</label>
               <SearchSelect
                 v-model="form.company_id"
@@ -1007,7 +1007,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <!-- B2B -->
     <div
-      v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'"
+      v-if="['we_prospect_situation_corporate','we_prospect_situation_convenios'].includes(form.ocupacion_alias)"
       class="profile-badge is-b2b"
     >
       <i class="fa-solid fa-handshake"></i>
@@ -1018,7 +1018,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 </div>
 
 <!-- Convenio Corporativo -->
-<div v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'" class="insc-section insc-section--agreement mb-3">
+<div v-if="['we_prospect_situation_corporate','we_prospect_situation_convenios'].includes(form.ocupacion_alias)" class="insc-section insc-section--agreement mb-3">
   <div class="insc-section-title">
     <i class="fa-solid fa-handshake me-2 text-primary"></i>
     Convenio / Trato Corporativo

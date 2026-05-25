@@ -1039,7 +1039,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <!-- B2B -->
     <div
-      v-if="form.ocupacion_alias === 'we_prospect_situation_corporate'"
+      v-if="['we_prospect_situation_corporate','we_prospect_situation_convenios'].includes(form.ocupacion_alias)"
       class="profile-badge is-b2b"
     >
       <i class="fa-solid fa-handshake"></i>

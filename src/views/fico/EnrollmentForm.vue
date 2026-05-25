@@ -454,6 +454,7 @@ const programsList = ref([])
 const editionsList = ref([])
 const installments = ref([])
 const agentsList = ref([])
+const b2bAgentsListRef = ref([])
 const numCuotas = ref(1)
 const editionStartDate = ref(null)
 const programSessions = ref(0)
@@ -742,7 +743,7 @@ watch(() => form.cat_currency, (newVal, oldVal) => {
 })
 
 onMounted(async () => {
-  await Promise.all([loadAgents(), loadBankAccounts()])
+  await Promise.all([loadAgents(), loadB2BAgents(), loadBankAccounts()])
   const pen = catCurrency.find(c => c.alias === 'we_currency_soles' || c.description?.toLowerCase().includes('pen'))
   if (pen) form.cat_currency = pen.id
   const dni = catDocTypes.find(c => c.alias?.toLowerCase().includes('dni'))
@@ -853,6 +854,17 @@ async function loadAgents () {
   } catch (e) { console.error(e) }
 }
 
+async function loadB2BAgents () {
+  try {
+    const users = await authService.userListByRole('B2B')
+    b2bAgentsListRef.value = (users || []).map(u => ({
+      id: u.user_id,
+      alias: u.alias || '',
+      label: `${u.alias || ''} - B2B`
+    }))
+  } catch (e) { console.error(e) }
+}
+
 const agentCategoryOptions = [
   { id: 'comercial', label: 'Comercial' },
   { id: 'b2b', label: 'B2B' },
@@ -871,25 +883,24 @@ const clientProfileOptions = [
   { id: 'estudiante', label: 'Estudiante' }
 ]
 
-const B2B_HARDCODED_AGENTS = [
-  { id: 'NY12-B2B', label: 'NY12 - B2B', isHardcoded: true },
-  { id: 'MC40-B2B', label: 'MC40 - B2B', isHardcoded: true },
-  { id: 'JF39-B2B', label: 'JF39 - B2B', isHardcoded: true }
-]
-
+// Asesores asignables a una inscripcion B2B: los users con rol B2B (externos)
+// + cualquier asesor comercial que pueda cerrar venta B2B (ej. AE30 → "B2B - AE30").
+// Dedup por user_id por si un comercial tambien tiene rol B2B.
 const b2bAgentsList = computed(() => {
-  const hardcodedAliases = new Set(B2B_HARDCODED_AGENTS.map(h => h.id.split('-')[0].toUpperCase()))
-  const reales = agentsList.value
-    .filter(a => !hardcodedAliases.has((a.alias || '').toUpperCase()))
-    .map(a => ({ id: a.id, label: `${a.alias || ''} - B2B`, isHardcoded: false }))
-  return [...reales, ...B2B_HARDCODED_AGENTS]
+  const out = [...b2bAgentsListRef.value]
+  const seen = new Set(out.map(u => u.id))
+  for (const a of agentsList.value) {
+    if (seen.has(a.id)) continue
+    out.push({ id: a.id, label: `${a.alias || ''} - B2B` })
+    seen.add(a.id)
+  }
+  return out
 })
 
 const webAgentsList = computed(() => {
   return agentsList.value.map(a => ({
     id: a.id,
-    label: `${a.alias || ''} - WEB`,
-    isHardcoded: false
+    label: `${a.alias || ''} - WEB`
   }))
 })
 
@@ -986,14 +997,7 @@ const requirePhone = computed(() => {
 function resolveAgentId () {
   const cat = form.agent_category
   if (['sa', 'we'].includes(cat)) return null
-  const val = form.seller_agent_id
-  if (typeof val === 'string') return null
-  return Number(val) || null
-}
-
-function resolveAgentCode () {
-  const val = form.seller_agent_id
-  return typeof val === 'string' && val ? val : null
+  return Number(form.seller_agent_id) || null
 }
 
 function resolveAgentOrigin () {
@@ -1003,14 +1007,6 @@ function resolveAgentOrigin () {
   if (cat === 'we') return 'WE'
   if (cat === 'sa') return 'SA'
   return null
-}
-
-function buildObservationsWithAgentCode () {
-  const parts = []
-  if (form.observations?.trim()) parts.push(form.observations.trim())
-  const code = resolveAgentCode()
-  if (code) parts.push(`[Asesor: ${code}]`)
-  return parts.length ? parts.join(' — ') : null
 }
 
 const installmentRemainder = computed(() => {
@@ -1118,7 +1114,7 @@ async function handleSave () {
         transaction_code: form.transaction_code || null,
         payment_date: form.payment_date || null,
         ticket_payment_urls: form.ticket_payment_urls.length > 0 ? form.ticket_payment_urls : null,
-        observations: buildObservationsWithAgentCode(),
+        observations: form.observations?.trim() || null,
         installment_plan: isInstallment.value && installments.value.length > 0
           ? installments.value.map((c, i) => ({ installment_number: i + 1, amount: c.amount, due_date: c.due_date }))
           : null,
