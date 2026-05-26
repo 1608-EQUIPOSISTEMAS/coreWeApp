@@ -2564,15 +2564,15 @@ watch(() => insc.cat_type_document, (newVal) => {
   }
 
   async function handleResubmit () {
+    // Subsanación: persiste los datos corregidos y reenvía a FICO en un solo paso.
+    // Reutiliza confirmarInscripcion() -> enrollmentRegister, que ahora re-registra
+    // sobre la inscripción observada: el SP reconstruye el plan de pago (incluida
+    // la conversión contado <-> cuotas) y devuelve el estado a Pendiente.
+    // Antes esto solo llamaba a resubmitEnrollment, que cambiaba el estado y
+    // descartaba la corrección — por eso el cambio "no se guardaba".
     resubmitting.value = true
     try {
-      await ficoService.resubmitEnrollment({ enrollment_id: Number(form.enrollment_id) })
-      toast.success('Inscripcion reenviada a FICO correctamente.')
-      observedData.value = null
-      router.push({ name: 'ComercialListado' })
-    } catch (err) {
-      console.error(err)
-      toast.error(err?.response?.data?.error || 'Error al reenviar inscripcion.')
+      await confirmarInscripcion()
     } finally {
       resubmitting.value = false
     }

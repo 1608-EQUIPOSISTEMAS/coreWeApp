@@ -255,6 +255,20 @@ export function useEnrollmentList () {
     }
   }
 
+  // Recarga forzada (botón "Recargar"): pide al backend regenerar la vista
+  // materializada y ESPERA a que termine, luego refetch. Así el listado muestra
+  // todo actualizado de una, sin depender del cron de 2 min ni de la MV vieja.
+  async function forceRefresh () {
+    isLoading.value = true
+    try {
+      await ficoService.refreshEnrollmentList()
+    } catch (err) {
+      console.error('[forceRefresh] No se pudo regenerar la vista materializada:', err)
+    } finally {
+      await fetchEnrollments() // reconcilia y apaga isLoading al terminar
+    }
+  }
+
   function handlePaginationChange () { saveState(); fetchEnrollments() }
   function openFilterModal () { showFilterModal.value = true; ensureFilterCatalogs() }
   function applyFilters () { showFilterModal.value = false; pagin.value.page = 1; saveState(); fetchEnrollments() }
@@ -420,7 +434,7 @@ export function useEnrollmentList () {
     filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
     colFilters, clearColFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
-    fetchEnrollments, handlePaginationChange, openFilterModal, applyFilters,
+    fetchEnrollments, forceRefresh, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,
     kpisDaily, fetchKpisDaily, savedViews, activeViewKey, applySavedView,

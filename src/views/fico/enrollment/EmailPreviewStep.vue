@@ -33,7 +33,11 @@ import { useToast } from 'vue-toastification'
 const props = defineProps({
   enrollmentId: { type: Number, required: true },
   active: { type: Boolean, default: false },
-  overrideEditionId: { type: Number, default: null }
+  overrideEditionId: { type: Number, default: null },
+  // Solo para membresias: la fecha que el usuario eligio en el datepicker.
+  // El preview la usa como override sobre la fecha persistida (que aun no
+  // existe en este punto del flujo — el confirm la persiste despues).
+  activationDate: { type: String, default: null }
 })
 
 const ficoService = inject(ServiceKeys.Fico)
@@ -45,7 +49,11 @@ const previewData = ref(null)
 async function loadPreview () {
   loading.value = true
   try {
-    previewData.value = await ficoService.previewEmail(props.enrollmentId, props.overrideEditionId)
+    previewData.value = await ficoService.previewEmail(
+      props.enrollmentId,
+      props.overrideEditionId,
+      props.activationDate
+    )
   } catch (err) {
     console.error(err)
     toast.error('Error cargando preview del correo')
@@ -60,6 +68,12 @@ watch(() => props.active, (v) => {
 }, { immediate: true })
 
 watch(() => props.overrideEditionId, () => {
+  if (props.active) loadPreview()
+})
+
+// Si el usuario cambia la fecha entre el step 0 y el step 1, recargamos el
+// preview para que refleje la nueva fecha sin necesidad de retroceder.
+watch(() => props.activationDate, () => {
   if (props.active) loadPreview()
 })
 

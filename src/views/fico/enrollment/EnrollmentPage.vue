@@ -64,7 +64,7 @@
         </nav>
 
         <div class="ep-toolbar">
-          <BasePagination v-model="list.pagin.value" @open-filters="list.openFilterModal" @change="list.handlePaginationChange" />
+          <BasePagination v-model="list.pagin.value" :emit-refresh="true" @open-filters="list.openFilterModal" @change="list.handlePaginationChange" @refresh="list.forceRefresh" />
         </div>
       </div>
 
@@ -266,9 +266,18 @@ function goToFullDetail (e) {
   })
 }
 
-function onEnrollmentDeleted () {
+function onEnrollmentDeleted (id) {
   list.clearSelection()
-  list.fetchEnrollments()
+  // Sensación inmediata: quitamos la fila del listado al instante en vez de
+  // esperar al refetch. El listado lee de una vista materializada que el backend
+  // refresca tras el borrado (~4s), así que un refetch inmediato aún podría
+  // traer la fila eliminada de vuelta (parpadeo). Quitamos local y reconciliamos
+  // contra el servidor una vez asentada la MV.
+  if (id != null) {
+    list.enrollments.value = list.enrollments.value.filter(e => e.enrollment_id !== id)
+    if (list.pagin.value.total > 0) list.pagin.value.total -= 1
+  }
+  setTimeout(() => list.fetchEnrollments(), 5000)
 }
 
 function onChipRemove (key) { list.activeViewKey.value = null; list.clearFilter(key) }

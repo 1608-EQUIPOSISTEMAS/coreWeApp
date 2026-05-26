@@ -71,6 +71,83 @@
         </div>
 
         <div class="edv-tab-content">
+          <!-- Membresia: fecha de activacion en modo confirm -->
+          <div
+            v-if="activeTab === 'finanzas' && modalMode === 'confirm' && isMembershipEnrollment"
+            class="edv-activation-block"
+          >
+            <div class="edv-activation-head">
+              <i class="fa-solid fa-calendar-day"></i>
+              <span class="edv-activation-title">Activacion de Membresia</span>
+            </div>
+            <div class="edv-activation-body">
+              <div class="edv-field">
+                <label>Fecha de activacion</label>
+                <input
+                  type="date"
+                  v-model="activationDate"
+                  :min="todayIso"
+                  :max="maxActivationDate"
+                  class="edv-input"
+                />
+              </div>
+              <p v-if="isActivationDeferred" class="edv-hint-deferred">
+                <i class="fa-solid fa-clock"></i>
+                <span>El correo de bienvenida y acceso Odoo se enviaran el <strong>{{ fmt.formatDate(activationDate) }}</strong> a las 9am (Lima).</span>
+              </p>
+              <p v-else class="edv-hint-immediate">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Activacion inmediata al confirmar el pago.</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Membresia: activacion ya programada (modo view) -->
+          <div
+            v-if="activeTab === 'finanzas' && modalMode === 'view' && hasFutureScheduledActivation"
+            class="edv-activation-block edv-activation-scheduled"
+          >
+            <div class="edv-activation-head">
+              <i class="fa-solid fa-clock"></i>
+              <span class="edv-activation-title">Activacion programada</span>
+            </div>
+            <div class="edv-activation-body">
+              <p class="edv-activation-info">
+                Esta membresia se activara el <strong>{{ fmt.formatDate(scheduledActivationDate) }}</strong> (9am Lima). El correo de bienvenida y la inscripcion en Odoo se ejecutaran automaticamente.
+              </p>
+              <div v-if="!isReschedulingActivation">
+                <button class="edv-btn-primary" @click="isReschedulingActivation = true; newActivationDate = todayIso">
+                  <i class="fa-solid fa-calendar-pen"></i> Reprogramar fecha
+                </button>
+              </div>
+              <div v-else class="edv-reschedule-form">
+                <div class="edv-field">
+                  <label>Nueva fecha</label>
+                  <input
+                    type="date"
+                    v-model="newActivationDate"
+                    :min="todayIso"
+                    :max="maxActivationDate"
+                    class="edv-input"
+                  />
+                </div>
+                <div class="edv-reschedule-actions">
+                  <button class="edv-btn-ghost" :disabled="savingReschedule" @click="isReschedulingActivation = false; newActivationDate = ''">
+                    Cancelar
+                  </button>
+                  <button
+                    class="edv-btn-primary"
+                    :disabled="!newActivationDate || savingReschedule || newActivationDate <= todayIso"
+                    @click="handleRescheduleActivation"
+                  >
+                    <i class="fa-solid" :class="savingReschedule ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                    {{ savingReschedule ? 'Guardando...' : 'Confirmar reprogramacion' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <EnrollmentFinancials
             v-show="activeTab === 'finanzas'"
             :enrollment="enrollment"
@@ -85,6 +162,7 @@
             :enrollment-id="enrollmentId"
             :validations="validations"
             :program-children="programChildrenList"
+            :activation-date="isMembershipEnrollment ? activationDate : null"
             @start-edit="startEditing"
             @cancel-edit="cancelEditing"
             @save-edit="handleSaveEdit"
@@ -193,6 +271,61 @@ const studentFlags = ref(null)
 // Profile & Modality
 const activeProfileId = ref(null)
 const activeModalityId = ref(null)
+
+// Membresia: misma logica que EnrollmentDetailModal (heuristica por nombre,
+// backend re-valida con programs.is_membership). El datepicker solo aparece
+// cuando isMembershipEnrollment=true; el resto del flujo es identico al regular.
+const isMembershipEnrollment = computed(() => {
+  const name = (detail.value?.program_name || enrollment.value?.program_name || '').toUpperCase()
+  return /MEMB|GOLD|PLAT|PLUS|BLACK/.test(name)
+})
+
+// A5 pending review: el SP de confirmacion regular no maneja este estado.
+// Enrutamos a approvePendingReview cuando se detecta (handleConfirmPayment/Plan).
+const isPendingReview = computed(() => {
+  const alias = detail.value?.cat_type_status_alias
+    || enrollment.value?.cat_type_status_alias
+    || enrollment.value?.type_status_alias
+  return alias === 'we_enrollment_status_pending_review'
+})
+function toIsoDate (d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const todayIso = computed(() => toIsoDate(new Date()))
+const maxActivationDate = computed(() => {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 6)
+  return toIsoDate(d)
+})
+const activationDate = ref('')
+const isActivationDeferred = computed(() => {
+  return isMembershipEnrollment.value && activationDate.value && activationDate.value > todayIso.value
+})
+const scheduledActivationDate = computed(() => detail.value?.membership_activation_date || null)
+const hasFutureScheduledActivation = computed(() => {
+  if (!isMembershipEnrollment.value || !scheduledActivationDate.value) return false
+  return String(scheduledActivationDate.value).slice(0, 10) > todayIso.value
+})
+const isReschedulingActivation = ref(false)
+const newActivationDate = ref('')
+const savingReschedule = ref(false)
+async function handleRescheduleActivation () {
+  if (!newActivationDate.value || savingReschedule.value) return
+  savingReschedule.value = true
+  try {
+    await ficoService.updateMembershipActivationDate(
+      Number(enrollmentId.value),
+      newActivationDate.value
+    )
+    toast.success(`Activacion reprogramada para ${fmt.formatDate(newActivationDate.value)}.`)
+    isReschedulingActivation.value = false
+    newActivationDate.value = ''
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.message || 'No se pudo reprogramar la fecha.')
+  } finally { savingReschedule.value = false }
+}
 
 // Financials
 const isEditing = ref(false)
@@ -515,7 +648,32 @@ async function handleConfirmPayment () {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
-    const resp = await ficoService.confirmPayment({
+
+    // A5 pending review: enrutar a approvePendingReview (sp_fico_confirm_payment
+    // no maneja este estado y dejaria la inscripcion en limbo).
+    if (isPendingReview.value) {
+      const activationArg = isMembershipEnrollment.value && activationDate.value
+        ? activationDate.value
+        : null
+      const a5Resp = await ficoService.approvePendingReview(eid, activationArg)
+      if (a5Resp?.result !== 1) {
+        toast.error(a5Resp?.message || 'No se pudo aprobar la migracion A5.', { timeout: 7000 })
+        savingFinancials.value = false
+        return
+      }
+      if (a5Resp?.membership_deferred) {
+        toast.success(
+          `Migracion aprobada. Activacion programada para ${fmt.formatDate(a5Resp.activation_date)} (9am).`,
+          { timeout: 6000 }
+        )
+      } else {
+        toast.success('Migracion aprobada. Cuotas transferidas y notificaciones enviadas.', { timeout: 5000 })
+      }
+      goBack()
+      return
+    }
+
+    const payload = {
       enrollment_id: eid,
       action: 'confirm_contado',
       cat_currency: ficoForm.cat_currency,
@@ -524,7 +682,11 @@ async function handleConfirmPayment () {
       bank_account_id: ficoForm.bank_account_id,
       transaction_code: ficoForm.transaction_code,
       payment_date: ficoForm.payment_date || null
-    })
+    }
+    if (isMembershipEnrollment.value && activationDate.value) {
+      payload.activation_date = activationDate.value
+    }
+    const resp = await ficoService.confirmPayment(payload)
     if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
       const lines = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
       toastWA.errorWithAction({
@@ -537,6 +699,20 @@ async function handleConfirmPayment () {
         }
       })
       savingFinancials.value = false
+      return
+    }
+    if (resp?.result !== 1) {
+      toast.error(resp?.message || 'No se pudo confirmar el pago.', { timeout: 7000 })
+      savingFinancials.value = false
+      return
+    }
+    // Membresia diferida: el backend encolo el job, NO disparamos correo aqui.
+    if (resp?.membership_deferred) {
+      toast.success(
+        `Pago confirmado. Activacion programada para ${fmt.formatDate(resp.activation_date)} (9am).`,
+        { timeout: 6000 }
+      )
+      goBack()
       return
     }
     toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
@@ -552,7 +728,7 @@ async function handleConfirmPayment () {
       const msg = emailErr?.response?.data?.error || emailErr?.message || 'fallo desconocido'
       toast.error(`Error al enviar correo: ${msg}`, { timeout: 7000 })
     }
-    await refreshDetail()
+    goBack()
   } catch (err) {
     console.error('[confirmPayment]', err)
     const msg = err?.response?.data?.error || err?.message || 'error desconocido'
@@ -579,7 +755,31 @@ async function handleConfirmPlan () {
       bank_account_id: c._bank_account_id || null,
       transaction_code: c._transaction_code || ''
     }))
-    const resp = await ficoService.confirmPayment({
+    // A5 pending review: enrutar a approvePendingReview (mismo motivo que en
+    // handleConfirmPayment).
+    if (isPendingReview.value) {
+      const activationArg = isMembershipEnrollment.value && activationDate.value
+        ? activationDate.value
+        : null
+      const a5Resp = await ficoService.approvePendingReview(eid, activationArg)
+      if (a5Resp?.result !== 1) {
+        toast.error(a5Resp?.message || 'No se pudo aprobar la migracion A5.', { timeout: 7000 })
+        savingFinancials.value = false
+        return
+      }
+      if (a5Resp?.membership_deferred) {
+        toast.success(
+          `Migracion aprobada. Activacion programada para ${fmt.formatDate(a5Resp.activation_date)} (9am).`,
+          { timeout: 6000 }
+        )
+      } else {
+        toast.success('Migracion aprobada. Cuotas transferidas y notificaciones enviadas.', { timeout: 5000 })
+      }
+      goBack()
+      return
+    }
+
+    const planPayload = {
       enrollment_id: eid,
       action: 'confirm_plan',
       installments: keepInstallments,
@@ -589,7 +789,11 @@ async function handleConfirmPlan () {
       bank_account_id: inicial?._bank_account_id || null,
       transaction_code: inicial?._transaction_code || '',
       payment_date: inicial?._payment_date || null
-    })
+    }
+    if (isMembershipEnrollment.value && activationDate.value) {
+      planPayload.activation_date = activationDate.value
+    }
+    const resp = await ficoService.confirmPayment(planPayload)
     if (resp?.result === 2 && Array.isArray(resp.validation_errors) && resp.validation_errors.length > 0) {
       const lines = resp.validation_errors.map(e => `• ${e.message}`).join('\n')
       toastWA.errorWithAction({
@@ -604,6 +808,19 @@ async function handleConfirmPlan () {
       savingFinancials.value = false
       return
     }
+    if (resp?.result !== 1) {
+      toast.error(resp?.message || 'No se pudo confirmar el plan.', { timeout: 7000 })
+      savingFinancials.value = false
+      return
+    }
+    if (resp?.membership_deferred) {
+      toast.success(
+        `Plan confirmado. Activacion programada para ${fmt.formatDate(resp.activation_date)} (9am).`,
+        { timeout: 6000 }
+      )
+      goBack()
+      return
+    }
     toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid)
     if (emailResult?.success) {
@@ -611,7 +828,7 @@ async function handleConfirmPlan () {
     } else {
       toast.error(`Error al enviar correo: ${emailResult?.error || 'fallo desconocido'}`, { timeout: 6000 })
     }
-    await refreshDetail()
+    goBack()
   } catch (err) {
     console.error(err)
     toast.error('Error al confirmar el plan.')
@@ -797,6 +1014,13 @@ async function refreshDetail () {
     if (!ficoForm.payment_date && !lastPayment.value?.payment_date) {
       const commercialDate = detail.value?.commercial_pay_date
       if (commercialDate) ficoForm.payment_date = String(commercialDate).slice(0, 10)
+    }
+
+    // Default fecha de activacion = hoy para membresias en modo confirm.
+    // Si el alumno la quiere futura, FICO la sube en el datepicker antes de
+    // confirmar; el default mantiene el comportamiento legacy (inmediato).
+    if (isMembershipEnrollment.value && !activationDate.value) {
+      activationDate.value = todayIso.value
     }
   } catch (err) {
     console.error(err)
@@ -1139,6 +1363,85 @@ watch(enrollmentId, (newId, oldId) => {
   flex: 1;
   overflow-y: auto;
   padding: 28px 32px;
+}
+
+.edv-activation-block {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  border-radius: 14px;
+}
+.edv-activation-block.edv-activation-scheduled {
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+}
+.edv-activation-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #92400E;
+}
+.edv-activation-scheduled .edv-activation-head { color: #3730A3; }
+.edv-activation-title { font-weight: 600; }
+.edv-activation-body { display: flex; flex-direction: column; gap: 12px; }
+.edv-activation-info { margin: 0; font-size: 13.5px; color: #1F2937; line-height: 1.5; }
+.edv-field { display: flex; flex-direction: column; gap: 6px; max-width: 220px; }
+.edv-field label { font-size: 12px; color: #374151; font-weight: 500; }
+.edv-input {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 13.5px;
+  background: #FFFFFF;
+  color: #111827;
+}
+.edv-input:focus { outline: none; border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+.edv-hint-deferred,
+.edv-hint-immediate {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.45;
+}
+.edv-hint-deferred { background: #FEF3C7; color: #92400E; }
+.edv-hint-immediate { background: #ECFDF5; color: #065F46; }
+.edv-reschedule-form { display: flex; flex-direction: column; gap: 12px; }
+.edv-reschedule-actions { display: flex; gap: 8px; }
+.edv-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: #6366F1;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.edv-btn-primary:disabled { background: #C7D2FE; cursor: not-allowed; }
+.edv-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: transparent;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 /* Redirect overlay */

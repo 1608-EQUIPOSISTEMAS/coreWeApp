@@ -17,6 +17,13 @@ export default class FicoService {
     return response.data;
   }
 
+  // Recarga forzada: el backend regenera la vista materializada (~4s) antes de
+  // responder, así el enrollmentList siguiente trae todo fresco.
+  async refreshEnrollmentList() {
+    const response = (await api.post('/fico/refreshlist', {}, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+    return response.data;
+  }
+
   async enrollmentAdvisorsList() {
     const response = (await api.get('/fico/enrollmentadvisors')).data;
     return response.data;
@@ -63,6 +70,12 @@ export default class FicoService {
     return response.data;
   }
 
+  async updateMembershipActivationDate(enrollment_id, activation_date) {
+    const response = (await api.patch('/fico/membershipactivationdate', { enrollment_id, activation_date })).data;
+    if (!response.ok) throw new Error(response.error || 'No se pudo actualizar la fecha de activacion');
+    return response.data;
+  }
+
   async sendPaymentConfirmationEmail(enrollment_id) {
     const response = (await api.post('/fico/sendpaymentconfirmationemail', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
@@ -83,9 +96,10 @@ export default class FicoService {
     return response.data;
   }
 
-  async previewEmail(enrollment_id, override_edition_id = null) {
+  async previewEmail(enrollment_id, override_edition_id = null, activation_date = null) {
     const payload = { enrollment_id }
     if (override_edition_id) payload.override_edition_id = override_edition_id
+    if (activation_date) payload.activation_date = activation_date
     const response = (await api.post('/fico/previewemail', payload)).data;
     return response.data;
   }
@@ -150,8 +164,10 @@ export default class FicoService {
     return response.data;
   }
 
-  async approvePendingReview(enrollmentId) {
-    const response = (await api.post('/fico/approvependingreview', { enrollment_id: enrollmentId }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+  async approvePendingReview(enrollmentId, activation_date = null) {
+    const body = { enrollment_id: enrollmentId };
+    if (activation_date) body.activation_date = activation_date;
+    const response = (await api.post('/fico/approvependingreview', body, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
 

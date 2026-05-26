@@ -14,7 +14,7 @@
 
       <button
         class="btn-exec btn-exec-outline"
-        @click="$emit('change')"
+        @click="onReload"
         title="Recargar tabla"
       >
         <i class="fa-solid fa-rotate-right"></i>
@@ -96,10 +96,22 @@ const props = defineProps({
   hideFilters: {
     type: Boolean,
     default: false
+  },
+  // Cuando es true, el botón "Recargar" emite 'refresh' (recarga especial, p. ej.
+  // el listado FICO que regenera su vista materializada) en vez de 'change'.
+  // Default false => comportamiento idéntico al actual en las demás vistas.
+  emitRefresh: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'change', 'open-filters'])
+const emit = defineEmits(['update:modelValue', 'change', 'open-filters', 'refresh'])
+
+function onReload () {
+  if (props.emitRefresh) emit('refresh')
+  else emit('change')
+}
 
 // --- Lógica Matemática ---
 

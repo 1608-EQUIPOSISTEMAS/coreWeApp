@@ -497,7 +497,7 @@
         </div>
       </template>
       <template #step-1>
-        <EmailPreviewStep :enrollment-id="enrollmentId" :active="confirmStep === 1" />
+        <EmailPreviewStep :enrollment-id="enrollmentId" :active="confirmStep === 1" :activation-date="activationDate" />
       </template>
     </ActionStepper>
 
@@ -554,7 +554,11 @@ const props = defineProps({
   lastPayment: { type: Object, default: null },
   enrollmentId: { type: Number, default: 0 },
   validations: { type: Array, default: () => [] },
-  programChildren: { type: Array, default: () => [] }
+  programChildren: { type: Array, default: () => [] },
+  // Solo para membresias: la fecha que el usuario eligio en el datepicker del
+  // parent. Se propaga al EmailPreviewStep para que el preview muestre las
+  // fechas correctas antes de persistir el confirm.
+  activationDate: { type: String, default: null }
 })
 
 defineEmits([
