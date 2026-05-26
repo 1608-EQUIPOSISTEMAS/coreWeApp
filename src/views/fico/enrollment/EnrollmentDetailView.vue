@@ -622,7 +622,7 @@ async function handleConfirmPlan () {
 
 async function handleConfirmCuota (cuota) {
   try {
-    await ficoService.confirmInstallment({
+    const res = await ficoService.confirmInstallment({
       installment_id: cuota.installment_id,
       enrollment_id: enrollmentId.value,
       cat_currency: cuota._cat_currency,
@@ -634,6 +634,11 @@ async function handleConfirmCuota (cuota) {
       payment_date: cuota._payment_date || null
     })
     toast.success(`Cuota ${cuota.installment_number} confirmada.`)
+    if (res?.data?.email_sent) {
+      toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
+    } else if (res?.data && res.data.email_sent === false) {
+      toast.warning('Cuota confirmada, pero el correo no pudo enviarse. Revisa el audit log.', { timeout: 6000 })
+    }
     await refreshDetail()
   } catch (err) {
     console.error(err)

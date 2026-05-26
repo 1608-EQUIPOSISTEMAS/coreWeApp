@@ -81,6 +81,13 @@ async searchPhoneGet(payload) {
     return response;
   }
 
+  // Devuelve todos los celulares de origen distintos (no solo los de la pagina
+  // visible). Alimenta el filtro de la columna Cel. Origen.
+  async sellerPhonesList() {
+    const response = (await api.get('/comercial/sellerphones')).data;
+    return response.data;
+  }
+
   async restrictionsList(payload = {}) {
     const response = (await api.post('/comercial/restrictionslist', payload)).data;
     return response.data; 

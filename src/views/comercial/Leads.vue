@@ -1266,20 +1266,11 @@ const filters = reactive({
 // === CATÁLOGOS ===
 const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroPaymentChannel = ref(catalog.options('we_payment_channel') || [])
-// Teléfonos únicos del cel.origen, extraidos de la pagina actual. Sirve como
-// datalist para que FICO/comercial elija el numero en vez de tipearlo (un asesor
-// puede operar con varios numeros).
-const originPhoneOptions = computed(() => {
-  const seen = new Map()
-  for (const l of leadsRaw.value) {
-    const phone = (l?.origin_seller_phone || '').toString().trim()
-    if (!phone || seen.has(phone)) continue
-    const owner = (l?.user_registration_label || '').toString().trim()
-    seen.set(phone, owner ? `${phone} — ${owner}` : phone)
-  }
-  return Array.from(seen, ([id, description]) => ({ id, description }))
-    .sort((a, b) => a.description.localeCompare(b.description))
-})
+// Telefonos unicos del cel.origen. Se carga una vez al montar el componente
+// desde el endpoint /comercial/sellerphones, que devuelve TODOS los celulares
+// historicos con su owner (no solo los de la pagina visible). Antes era un
+// computed sobre leadsRaw y un asesor con leads en otra pagina no aparecia.
+const originPhoneOptions = ref([])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
@@ -2058,10 +2049,20 @@ onMounted(async () => {
     checkMyRestrictions()
   }
   loadOwners()
+  loadOriginPhones()
   await parseQueryAndApply()
   rebuildChips()
   fetchLeads()
 })
+
+async function loadOriginPhones () {
+  try {
+    const list = await comercialService.sellerPhonesList()
+    originPhoneOptions.value = Array.isArray(list) ? list : []
+  } catch (err) {
+    console.error('[loadOriginPhones] No se pudo cargar el listado de celulares:', err)
+  }
+}
 
 let inlineFilterTimer = null
 function triggerInlineFilter() { activeQuickView.value = null; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
