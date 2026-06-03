@@ -285,7 +285,18 @@
   <!-- D. CLIENTE filtros -->
   <th v-show="colGroups.cliente" class="tf"></th><!-- Nombre -->
   <th v-show="colGroups.cliente" class="tf">
-    <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+    <div class="hf-phone-cell">
+      <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+      <button
+        class="hf-copy-btn"
+        type="button"
+        :disabled="isCopyingPhones"
+        title="Copiar telefonos de los leads filtrados"
+        @click.stop="copyFilteredPhones"
+      >
+        <i class="fa-solid" :class="isCopyingPhones ? 'fa-spinner fa-spin' : 'fa-copy'"></i>
+      </button>
+    </div>
   </th>
   <th v-show="colGroups.cliente" class="tf">
     <MultiSelect v-model="filters.prospect_situation_ids" :items="withNull(filtroProspectSituation)" label-key="variable_1" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -1738,63 +1749,72 @@ function rebuildChips() {
 }
 
 // === API ===
+// Traduce el estado reactivo de `filters` al payload que espera el SP.
+// Fuente unica de verdad: la tabla paginada y la exportacion/copia masiva
+// reusan este mismo objeto para garantizar que ambas ven el mismo universo.
+function buildLeadPayload() {
+  const getIds = (arr) => {
+    if (!Array.isArray(arr)) return []
+    return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
+  }
+  // El SP actual filtra por una sola string. Si hay multiples telefonos
+  // seleccionados, aplicamos el primero (degraded mode). Para filtro real
+  // multi-phone hay que extender el SP con array support.
+  const phonesArr = getIds(filters.origin_seller_phones)
+  const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
+  const phoneFromInput = filters.origin_seller_phone?.trim() || null
+  return {
+    q:                   filters.q             || null,
+    origin_seller_phone: phoneFromMulti || phoneFromInput,
+    program_text:        filters.program_text  || null,
+    web:                 filters.web           || null,
+    b2b:                 filters.b2b           || null,
+    order_by:            filters.order_by ?? 0,
+    payment_channel_ids: getIds(filters.payment_channel_ids),
+    from_date:           filters.rangoFechas?.start        || null,
+    membership_moment_ids: getIds(filters.membership_moment_ids),
+    to_date:             filters.rangoFechas?.end          || null,
+    updated_from:        filters.rangoModificacion?.start  || null,
+    updated_to:          filters.rangoModificacion?.end    || null,
+    pay_date_from:       filters.pay_date_from             || null,
+    pay_date_to:         filters.pay_date_to               || null,
+    edition_start_from:  filters.edition_start_from        || null,
+    edition_start_to:    filters.edition_start_to          || null,
+    fico_status_ids:            getIds(filters.fico_status_ids),
+    profile_ids:                getIds(filters.profile_ids),
+    currency_ids:               getIds(filters.currency_ids),
+    inscription_modality_ids:   getIds(filters.inscription_modality_ids),
+    installment_status_ids:     getIds(filters.installment_status_ids),
+    payment_method_ids:         getIds(filters.payment_method_ids),
+    first_contact_from: filters.first_contact_from || null,
+    first_contact_to:   filters.first_contact_to   || null,
+    settlement_status_ids:      getIds(filters.settlement_status_ids),
+    owner_user_ids:      getIds(filters.owner_user_ids),
+    status_lead_ids:     getIds(filters.status_lead_ids),
+    last_follow_ids:     getIds(filters.last_follow_ids),
+    program_version_ids: getIds(filters.program_version_ids),
+    prospect_situation_ids: getIds(filters.prospect_situation_ids),
+    interest_level_ids:  getIds(filters.interest_level_ids),
+    channel_ids:         getIds(filters.channel_ids),
+    query_ids:           getIds(filters.query_ids),
+    type_program_ids:    getIds(filters.type_program_ids),
+    attempt_origin_ids:  getIds(filters.attempt_origin_ids),
+    model_modality_ids:  getIds(filters.model_modality_ids),
+    strategy_ids:        getIds(filters.strategy_ids),
+    word_ids:            getIds(filters.word_ids),
+    medium_contact_ids:  getIds(filters.medium_contact_ids),
+    code_country_ids:    getIds(filters.code_country_ids),
+    moment_ids:          getIds(filters.moment_ids),
+  }
+}
+
 async function fetchLeads() {
   isTableLoading.value = true
   try {
-    const getIds = (arr) => {
-      if (!Array.isArray(arr)) return []
-      return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
-    }
-    // El SP actual filtra por una sola string. Si hay multiples telefonos
-    // seleccionados, aplicamos el primero (degraded mode). Para filtro real
-    // multi-phone hay que extender el SP con array support.
-    const phonesArr = getIds(filters.origin_seller_phones)
-    const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
-    const phoneFromInput = filters.origin_seller_phone?.trim() || null
     const { items, total: t } = await comercialService.leadList({
-      q:                   filters.q             || null,
-      origin_seller_phone: phoneFromMulti || phoneFromInput,
-      page:                pagin.value.page,
-      size:                pagin.value.size,
-      program_text:        filters.program_text  || null,
-      web:                 filters.web           || null,
-      b2b:                 filters.b2b           || null,
-      order_by:            filters.order_by ?? 0,
-      payment_channel_ids: getIds(filters.payment_channel_ids),
-      from_date:           filters.rangoFechas?.start        || null,
-      membership_moment_ids: getIds(filters.membership_moment_ids),
-      to_date:             filters.rangoFechas?.end          || null,
-      updated_from:        filters.rangoModificacion?.start  || null,
-      updated_to:          filters.rangoModificacion?.end    || null,
-      pay_date_from:       filters.pay_date_from             || null,
-      pay_date_to:         filters.pay_date_to               || null,
-      edition_start_from:  filters.edition_start_from        || null,
-      edition_start_to:    filters.edition_start_to          || null,
-      fico_status_ids:            getIds(filters.fico_status_ids),
-      profile_ids:                getIds(filters.profile_ids),
-      currency_ids:               getIds(filters.currency_ids),
-      inscription_modality_ids:   getIds(filters.inscription_modality_ids),
-      installment_status_ids:     getIds(filters.installment_status_ids),
-      payment_method_ids:         getIds(filters.payment_method_ids),
-      first_contact_from: filters.first_contact_from || null,
-      first_contact_to:   filters.first_contact_to   || null,
-      settlement_status_ids:      getIds(filters.settlement_status_ids),
-      owner_user_ids:      getIds(filters.owner_user_ids),
-      status_lead_ids:     getIds(filters.status_lead_ids),
-      last_follow_ids:     getIds(filters.last_follow_ids),
-      program_version_ids: getIds(filters.program_version_ids),
-      prospect_situation_ids: getIds(filters.prospect_situation_ids),
-      interest_level_ids:  getIds(filters.interest_level_ids),
-      channel_ids:         getIds(filters.channel_ids),
-      query_ids:           getIds(filters.query_ids),
-      type_program_ids:    getIds(filters.type_program_ids),
-      attempt_origin_ids:  getIds(filters.attempt_origin_ids),
-      model_modality_ids:  getIds(filters.model_modality_ids),
-      strategy_ids:        getIds(filters.strategy_ids),
-      word_ids:            getIds(filters.word_ids),
-      medium_contact_ids:  getIds(filters.medium_contact_ids),
-      code_country_ids:    getIds(filters.code_country_ids),
-      moment_ids:          getIds(filters.moment_ids),
+      ...buildLeadPayload(),
+      page: pagin.value.page,
+      size: pagin.value.size,
     })
     leadsRaw.value = items || []
     pagin.value.total = Number(t || 0)
@@ -1805,6 +1825,53 @@ async function fetchLeads() {
     pagin.value.total = 0
   } finally {
     isTableLoading.value = false
+  }
+}
+
+const isCopyingPhones = ref(false)
+
+// Copia al portapapeles los telefonos de TODOS los leads que cumplen los
+// filtros activos (no solo la pagina visible). Pedimos el universo completo
+// con size = total y normalizamos a solo digitos (51902218391) para que el
+// pegado en herramientas de envio masivo no arrastre prefijos ni formato.
+async function copyFilteredPhones() {
+  if (isCopyingPhones.value) return
+  isCopyingPhones.value = true
+  try {
+    const { items } = await comercialService.leadList({
+      ...buildLeadPayload(),
+      page: 1,
+      size: pagin.value.total || 10000,
+    })
+    const phones = [...new Set(
+      (items || [])
+        .map(l => String(l.origin_phone || '').replace(/\D/g, ''))
+        .filter(Boolean),
+    )]
+    if (!phones.length) {
+      toast.info('No hay telefonos para copiar con los filtros actuales.')
+      return
+    }
+    const text = phones.join('\n')
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback para contextos sin Clipboard API.
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    toast.success(`${phones.length} telefono${phones.length === 1 ? '' : 's'} copiado${phones.length === 1 ? '' : 's'} al portapapeles.`)
+  } catch (e) {
+    console.error('Error copiando telefonos:', e)
+    toast.error('No se pudieron copiar los telefonos.')
+  } finally {
+    isCopyingPhones.value = false
   }
 }
 
@@ -2764,6 +2831,20 @@ const saldoPendienteDisplay = computed(() => {
 .hf-input { width: 100%; height: 28px; padding: 3px 8px; font-size: 11px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
 .hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20, 184, 166, .15); }
 .hf-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 10.5px; }
+.hf-phone-cell { display: flex; align-items: center; gap: 4px; }
+.hf-phone-cell .hf-input { flex: 1; min-width: 0; }
+.hf-copy-btn {
+  flex-shrink: 0; width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border, #e2e8f0); border-radius: 4px;
+  background: #fff; color: var(--slate-400, #94a3b8); cursor: pointer;
+  font-size: 11px; transition: border-color .15s, color .15s, background .15s;
+}
+.hf-copy-btn:hover:not(:disabled) {
+  border-color: var(--teal-500, #14b8a6);
+  color: var(--teal-500, #14b8a6); background: #f0fdfa;
+}
+.hf-copy-btn:disabled { opacity: .55; cursor: not-allowed; }
 .hf-multiselect { font-size: 11px; }
 .thead-filter .hf-multiselect :deep(.ms-trigger) {
   min-height: 28px;
