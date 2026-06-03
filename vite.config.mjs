@@ -48,5 +48,14 @@ export default defineConfig(() => {
         usePolling: true // A veces necesario en Windows para que detecte cambios
       }
     },
+    // Vitest lee esta clave; Vite la ignora en build/dev. Comparte plugins y
+    // aliases con el resto de la config para que los tests resuelvan @/ igual.
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./tests/setup.js'],
+      include: ['tests/**/*.test.js', 'src/**/*.test.js'],
+      css: false
+    },
   }
 })

@@ -39,9 +39,10 @@
       </fieldset>
       <fieldset class="flt-fieldset flt-last">
         <legend class="flt-legend"><i class="fa-solid fa-calendar-days"></i> Rangos de Fecha</legend>
-        <div class="flt-grid cols-2">
+        <div class="flt-grid cols-3">
           <div class="flt-field"><label>Fecha de Registro</label><BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => $emit('date-change', s, 'created')" /></div>
           <div class="flt-field"><label>Fecha de Inicio</label><BaseDatePicker v-model="filters.edition_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => $emit('date-change', s, 'edition')" /></div>
+          <div class="flt-field"><label>Fecha de Pago</label><BaseDatePicker v-model="filters.payment_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => $emit('date-change', s, 'payment')" /></div>
         </div>
       </fieldset>
     </div>

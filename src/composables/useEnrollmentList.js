@@ -24,7 +24,8 @@ export function useEnrollmentList () {
     payment_channel_ids: [],
     confirmations: [],
     date_from: null, date_to: null, created_range_string: null,
-    edition_start_from: null, edition_start_to: null, edition_range_string: null
+    edition_start_from: null, edition_start_to: null, edition_range_string: null,
+    payment_from: null, payment_to: null, payment_range_string: null
   })
 
   const filtroStatus = ref(catalog.options('we_enrollment_status') || [])
@@ -228,6 +229,8 @@ export function useEnrollmentList () {
       if (filters.date_to) params.date_to = filters.date_to
       if (filters.edition_start_from) params.edition_start_from = filters.edition_start_from
       if (filters.edition_start_to) params.edition_start_to = filters.edition_start_to
+      if (filters.payment_from) params.payment_from = filters.payment_from
+      if (filters.payment_to) params.payment_to = filters.payment_to
 
       const tf = (arr, key) => { const labels = getLabels(arr); if (labels.length) params[key] = labels }
       tf(filters.enrollment_status_ids, 'student_statuses')
@@ -277,11 +280,15 @@ export function useEnrollmentList () {
     if (!dateStr) {
       if (type === 'created') { filters.date_from = null; filters.date_to = null }
       if (type === 'edition') { filters.edition_start_from = null; filters.edition_start_to = null }
+      if (type === 'payment') { filters.payment_from = null; filters.payment_to = null }
       return
     }
-    const p = dateStr.split(' to ')
+    // El locale Spanish de flatpickr usa ' a ' como rangeSeparator; el ingles
+    // usa ' to '. Un single-date no tiene separador. Aceptamos los tres casos.
+    const p = String(dateStr).split(/\s+(?:to|a)\s+/i)
     if (type === 'created') { filters.date_from = p[0] || null; filters.date_to = p[1] || p[0] || null }
     if (type === 'edition') { filters.edition_start_from = p[0] || null; filters.edition_start_to = p[1] || p[0] || null }
+    if (type === 'payment') { filters.payment_from = p[0] || null; filters.payment_to = p[1] || p[0] || null }
   }
 
   function rebuildChips () {
@@ -302,6 +309,7 @@ export function useEnrollmentList () {
     mc('payment_channel_ids', 'Canal', filters.payment_channel_ids)
     if (filters.created_range_string) chips.push({ key: 'created_range', text: `Registro: ${filters.created_range_string}`, label: `Registro: ${filters.created_range_string}` })
     if (filters.edition_range_string) chips.push({ key: 'edition_range', text: `Inicio: ${filters.edition_range_string}`, label: `Inicio: ${filters.edition_range_string}` })
+    if (filters.payment_range_string) chips.push({ key: 'payment_range', text: `F.Pago: ${filters.payment_range_string}`, label: `F.Pago: ${filters.payment_range_string}` })
     activeFilterChips.value = chips
   }
 
@@ -310,13 +318,14 @@ export function useEnrollmentList () {
     if (key === 'q') filters.q = ''
     else if (key === 'created_range') { filters.date_from = null; filters.date_to = null; filters.created_range_string = null }
     else if (key === 'edition_range') { filters.edition_start_from = null; filters.edition_start_to = null; filters.edition_range_string = null }
+    else if (key === 'payment_range') { filters.payment_from = null; filters.payment_to = null; filters.payment_range_string = null }
     else if (ak.includes(key)) filters[key] = []
     if (key === 'confirmations') colFilters.estado = []
     applyFilters()
   }
 
   function clearFilters () {
-    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], program_version_ids: [], edition_num_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null })
+    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], program_version_ids: [], edition_num_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null, payment_from: null, payment_to: null, payment_range_string: null })
     colFilters.estado = []
     pagin.value.page = 1; saveState(); fetchEnrollments()
   }
@@ -417,7 +426,8 @@ export function useEnrollmentList () {
       payment_channel_ids: [],
       confirmations: [],
       date_from: null, date_to: null, created_range_string: null,
-      edition_start_from: null, edition_start_to: null, edition_range_string: null
+      edition_start_from: null, edition_start_to: null, edition_range_string: null,
+      payment_from: null, payment_to: null, payment_range_string: null
     })
     Object.assign(filters, view.filters)
     // Mantener el badge del funnel ESTADO FICO sincronizado con la saved view.

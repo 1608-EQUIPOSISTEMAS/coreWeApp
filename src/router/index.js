@@ -360,19 +360,19 @@ const routes = [
         {
           path: 'leads',
           name: 'ComercialListado',
-          component: () => import('@/views/comercial/Leads.vue'),
+          component: () => import('@/views/comercial/Leads.vue'), // FSD re-revertido 2026-06-02: re-flip con CSS no cargaba datos en runtime. Diagnosticando pages/comercial/LeadsPage.vue
           meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'leads/new',
           name: 'ComercialLeadsNew',
-          component: () => import('@/views/comercial/LeadsNew.vue'),
+          component: () => import('@/views/comercial/LeadsNew.vue'), // FSD re-revertido 2026-06-02: ver arriba
           meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'leads/:id',
           name: 'ComercialLeadDetalle',
-          component: () => import('@/views/comercial/LeadsNew.vue'),
+          component: () => import('@/views/comercial/LeadsNew.vue'), // FSD re-revertido 2026-06-02: ver arriba
           meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
           props: true,
         },

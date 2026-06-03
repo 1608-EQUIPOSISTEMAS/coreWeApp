@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, computed, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import apexchart from 'vue3-apexcharts'
@@ -207,10 +207,22 @@ onMounted(loadReport)
 // =====================================================================
 const filterStatus = ref('Todos')
 const filterVerdict = ref('Todos')
+const filterDocente = ref('')
 const query = ref('')
 
 const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
 const verdictFilters = ['Todos', 'DEFICIENTE', 'EN PROCESO', 'BUENO', 'EXCELENTE', 'SIN EVALUAR']
+
+// Docentes presentes en el periodo, ordenados alfabeticamente. Se derivan del
+// universo del periodo (no del catalogo completo de instructores) para no
+// ofrecer docentes que no dictan ninguna aula en la ventana seleccionada.
+const docenteOptions = computed(() => {
+  const seen = new Set()
+  for (const a of periodAulas.value) {
+    if (a.teacher && a.teacher !== '--') seen.add(a.teacher)
+  }
+  return [...seen].sort((x, y) => x.localeCompare(y, 'es'))
+})
 
 // La tabla parte del universo del periodo, no de aulas.value. El periodo
 // es la fuente de verdad — los chips de estado/veredicto/busqueda son
@@ -219,6 +231,7 @@ const filtered = computed(() => {
   return periodAulas.value
     .filter((a) => filterStatus.value === 'Todos' || a.status === filterStatus.value)
     .filter((a) => filterVerdict.value === 'Todos' || a.verdict === filterVerdict.value)
+    .filter((a) => !filterDocente.value || a.teacher === filterDocente.value)
     .filter((a) => {
       if (!query.value) return true
       const q = query.value.toLowerCase()
@@ -262,6 +275,14 @@ const periodAulas = computed(() =>
     overlapsPeriod(a.startDate, a.endDate, period.value.start, period.value.end),
   ),
 )
+
+// Si el docente seleccionado deja de existir en el periodo (cambio de rango),
+// limpiamos el filtro para evitar un estado fantasma que oculta toda la tabla.
+watch(docenteOptions, (opts) => {
+  if (filterDocente.value && !opts.includes(filterDocente.value)) {
+    filterDocente.value = ''
+  }
+})
 
 const compareAulas = computed(() => {
   const c = period.value.compare
@@ -606,6 +627,17 @@ function openAula(id) {
           {{ v }}
         </button>
       </div>
+      <div class="divider"></div>
+      <div class="filter-group">
+        <span class="filter-title">Docente</span>
+        <div class="select">
+          <i class="fa-solid fa-chalkboard-user"></i>
+          <select v-model="filterDocente">
+            <option value="">Todos los docentes</option>
+            <option v-for="d in docenteOptions" :key="d" :value="d">{{ d }}</option>
+          </select>
+        </div>
+      </div>
       <div class="spacer"></div>
       <div class="input">
         <i class="fa-solid fa-magnifying-glass"></i>
@@ -918,6 +950,19 @@ function openAula(id) {
   flex: 1; background: transparent; color: var(--ink);
 }
 .input input::placeholder { color: var(--ink-4); }
+
+.select {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; background: white; font-size: 13px;
+  color: var(--ink-3);
+}
+.select i { font-size: 12px; }
+.select select {
+  border: none; outline: none; font-size: 13px;
+  background: transparent; color: var(--ink); cursor: pointer;
+  max-width: 200px;
+}
 
 .table-wrap {
   background: white; border: 1px solid var(--line);

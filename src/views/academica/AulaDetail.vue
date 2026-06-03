@@ -631,6 +631,233 @@ const generalAulaAverages = computed(() => {
 })
 
 // =====================================================================
+// AUDITORIA: rediseno visual (scorecard consolidado + subvistas)
+// =====================================================================
+// Subvista activa dentro del tab Auditoria y orden de los criterios IA.
+const auditView = ref('resumen') // 'resumen' | 'ia' | 'academica'
+const iaSort = ref('orden')      // 'orden' | 'bajo' | 'alto'
+
+// Nivel de color 1..5 segun una nota /20 (mismos cortes que el diseno).
+function notaLevel(n) {
+  if (!Number.isFinite(n)) return 3
+  const r = n / 20
+  if (r < 0.4) return 1
+  if (r < 0.55) return 2
+  if (r < 0.7) return 3
+  if (r < 0.85) return 4
+  return 5
+}
+// Nivel 1..5 directo del score IA de un criterio (1-5).
+function scoreLevel(s) {
+  return Math.max(1, Math.min(5, Math.round(Number(s) || 0)))
+}
+// Formatea una nota: entero sin decimales, resto con 1 decimal, '--' si no hay.
+function fmtNota(n) {
+  if (!Number.isFinite(n)) return '--'
+  return Number.isInteger(n) ? String(n) : n.toFixed(1)
+}
+
+// Geometria del anillo (r=40) y ancho de barras a partir de una nota /20.
+const RING_CIRC = 2 * Math.PI * 40
+function ringOffset(note20) {
+  const pct = Number.isFinite(note20) ? Math.max(0, Math.min(1, note20 / 20)) : 0
+  return RING_CIRC * (1 - pct)
+}
+function barWidth(note20) {
+  const pct = Number.isFinite(note20) ? Math.max(0, Math.min(1, note20 / 20)) * 100 : 0
+  return pct + '%'
+}
+
+// Notas de la sesion seleccionada. El Area Academica usa el draft en vivo
+// (totalScore) para que el scorecard reaccione al marcar checkboxes.
+const currentIaScore20 = computed(() =>
+  toScore20Num(currentAiReport.value?.metricas_rapidas?.puntuacion_global),
+)
+const currentAcScore20 = computed(() =>
+  RUBRIC_TOTAL_ITEMS ? (totalScore.value / RUBRIC_TOTAL_ITEMS) * 20 : null,
+)
+const currentConsolidated20 = computed(() =>
+  consolidatedScore(currentIaScore20.value, currentAcScore20.value),
+)
+// "Firme" cuando la rubrica del area academica esta completa al 100%.
+const currentFirm = computed(() => totalScore.value === RUBRIC_TOTAL_ITEMS)
+
+// Pesos mostrados en el scorecard (derivados de la formula consolidada).
+const PESO_IA_PCT = Math.round(CONSOLIDATED_WEIGHT_IA * 100)
+const PESO_MANUAL_PCT = Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100)
+
+// Nota consolidada persistida por sesion para la tira (reusa generalRows).
+function sessionConsolidatedNote(n) {
+  const row = generalRows.value.find((r) => r.n === n)
+  return row ? row.consolidated20 : null
+}
+
+// Criterios IA ordenados segun el control de orden.
+const sortedAiCriterios = computed(() => {
+  const list = [...(currentAiReport.value?.criterios || [])]
+  if (iaSort.value === 'bajo') list.sort((a, b) => (a.score || 0) - (b.score || 0))
+  if (iaSort.value === 'alto') list.sort((a, b) => (b.score || 0) - (a.score || 0))
+  return list
+})
+
+// Comparacion S1..N para el mini-grafico de la vista Resumen.
+const compareSessions = computed(() =>
+  generalRows.value.map((r) => ({
+    n: r.n,
+    ia20: Number.isFinite(r.aiScore20) ? r.aiScore20 : null,
+    ac20: Number.isFinite(r.manualScore20) ? r.manualScore20 : null,
+    hasIa: r.hasAi,
+  })),
+)
+
+const currentMetricas = computed(() => currentAiReport.value?.metricas_rapidas || {})
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+// Paleta de 5 niveles (valores claros, fijos para que el PDF no dependa del tema).
+const PDF_PALETTE = {
+  1: ['#fde8e6', '#c0362c'], 2: ['#fdeccb', '#a96208'], 3: ['#dde8fd', '#2256c9'],
+  4: ['#d9f3df', '#1d7a40'], 5: ['#cdf1e4', '#0a7a5c'],
+}
+
+// Exporta un reporte concreto de la sesion (para entregar al docente) abriendo
+// un documento imprimible autocontenido; el navegador lo guarda como PDF. Sin
+// dependencias: reutiliza los datos ya cargados del reporte IA y la rubrica.
+function exportSessionPdf() {
+  const report = currentAiReport.value
+  if (!report) {
+    toast.info('Genera primero el analisis IA para exportar el reporte.')
+    return
+  }
+  const a = aula.value || {}
+  const m = report.metricas_rapidas || {}
+  const programa = a.program_abreviature || a.program_name || a.program || 'Programa'
+  const edicion = a.global_code || a.edition_code || ''
+  const docente = a.instructor || '--'
+
+  const scoreBox = (label, note20, accent) => {
+    const lvl = notaLevel(note20)
+    const fg = accent ? '#3f3bd6' : PDF_PALETTE[lvl][1]
+    return `<div class="sbox"><div class="sl">${label}</div>
+      <div class="sv" style="color:${fg}">${fmtNota(note20)}<small>/ 20</small></div></div>`
+  }
+  const crits = (report.criterios || []).map((c) => {
+    const [bg, fg] = PDF_PALETTE[scoreLevel(c.score)]
+    const ts = (c.evidencia_timestamps || []).map((t) => `<span class="ts">${escapeHtml(t)}</span>`).join('')
+    return `<div class="crit">
+      <div class="crit-h"><b>#${c.id} ${escapeHtml(c.nombre)}</b>
+        <span class="cb" style="background:${bg};color:${fg}">${c.score}/5</span></div>
+      <p>${escapeHtml(c.comentario)}</p>${ts ? `<div class="tss">${ts}</div>` : ''}</div>`
+  }).join('')
+  const liList = (arr) => (arr || []).map(
+    (x) => `<li><b>${escapeHtml(x.titulo)}.</b> ${escapeHtml(x.detalle)}</li>`,
+  ).join('')
+  const rubric = RUBRIC.map((cat) => {
+    const done = cat.items.filter((it) => sessionDraft[it.key]).length
+    const items = cat.items.map((it) => {
+      const on = !!sessionDraft[it.key]
+      return `<div class="ri ${on ? 'on' : 'off'}"><span class="rb">${on ? '&#10003;' : ''}</span>${escapeHtml(it.label)}</div>`
+    }).join('')
+    return `<div class="rcat"><div class="rcat-h"><b>${escapeHtml(cat.label)}</b>
+      <span>${done}/${cat.items.length}</span></div>${items}</div>`
+  }).join('')
+
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Reporte Auditoria - ${escapeHtml(programa)} - Sesion ${selectedSession.value}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1b1917; margin: 0; padding: 32px 36px; font-size: 12px; }
+  .hd { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #6366f1; padding-bottom: 14px; margin-bottom: 18px; }
+  .hd .eyebrow { font-size: 10px; letter-spacing: .12em; color: #6366f1; font-weight: 700; }
+  .hd h1 { font-size: 20px; margin: 4px 0 6px; }
+  .hd .meta { font-size: 11px; color: #57534e; }
+  .hd .meta b { color: #1b1917; }
+  .hd .badge-we { font-size: 11px; font-weight: 800; color: #6366f1; text-align: right; }
+  .scores { display: flex; gap: 12px; margin-bottom: 18px; }
+  .sbox { flex: 1; border: 1px solid #e8e6e3; border-radius: 10px; padding: 12px 14px; }
+  .sbox.main { background: #f5f4ff; border-color: #d7d5fb; }
+  .sl { font-size: 10px; letter-spacing: .06em; color: #8d877f; font-weight: 700; }
+  .sv { font-size: 26px; font-weight: 800; margin-top: 2px; }
+  .sv small { font-size: 11px; color: #8d877f; font-weight: 600; margin-left: 3px; }
+  .row2 { display: flex; gap: 18px; font-size: 11px; color: #57534e; margin-bottom: 18px; }
+  .row2 b { color: #1b1917; }
+  h2 { font-size: 13px; margin: 22px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #e8e6e3; }
+  .crit { border: 1px solid #e8e6e3; border-radius: 9px; padding: 10px 12px; margin-bottom: 9px; break-inside: avoid; }
+  .crit-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .crit-h b { font-size: 12px; }
+  .cb { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
+  .crit p { margin: 0; font-size: 11px; line-height: 1.5; color: #44403c; }
+  .tss { margin-top: 6px; }
+  .ts { display: inline-block; font-size: 10px; background: #f1efed; border: 1px solid #e8e6e3; border-radius: 5px; padding: 1px 6px; margin: 2px 4px 0 0; color: #57534e; }
+  .fo { display: flex; gap: 16px; }
+  .fo > div { flex: 1; }
+  .fo h3 { font-size: 12px; margin: 0 0 6px; }
+  .fo ul { margin: 0; padding-left: 16px; }
+  .fo li { font-size: 11px; line-height: 1.5; margin-bottom: 5px; }
+  .rgrid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .rcat { flex: 1 1 46%; border: 1px solid #e8e6e3; border-radius: 9px; overflow: hidden; break-inside: avoid; }
+  .rcat-h { display: flex; justify-content: space-between; background: #faf9f8; padding: 7px 11px; font-size: 11px; border-bottom: 1px solid #e8e6e3; }
+  .ri { font-size: 10.5px; padding: 6px 11px; border-top: 1px solid #f1efed; display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+  .ri:first-of-type { border-top: none; }
+  .rb { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid #d8d4d0; flex: none; text-align: center; line-height: 12px; font-size: 10px; }
+  .ri.on .rb { background: #6366f1; border-color: #6366f1; color: #fff; }
+  .ri.off { color: #8d877f; }
+  .ft { margin-top: 22px; padding-top: 10px; border-top: 1px solid #e8e6e3; font-size: 10px; color: #8d877f; }
+  @page { margin: 14mm; }
+</style></head><body>
+  <div class="hd">
+    <div>
+      <div class="eyebrow">REPORTE DE AUDITORIA PEDAGOGICA</div>
+      <h1>${escapeHtml(programa)} &middot; Sesion ${selectedSession.value}</h1>
+      <div class="meta">Docente: <b>${escapeHtml(docente)}</b>${edicion ? ` &middot; Edicion: <b>${escapeHtml(edicion)}</b>` : ''}
+        ${currentAiGeneratedAt.value ? ` &middot; Analisis IA: <b>${escapeHtml(formatDateTime(currentAiGeneratedAt.value))}</b>` : ''}</div>
+    </div>
+    <div class="badge-we">WE Educacion<br>Ejecutiva</div>
+  </div>
+
+  <div class="scores">
+    <div class="sbox main">${scoreBox('NOTA CONSOLIDADA', currentConsolidated20.value, true)}</div>
+    ${scoreBox('AUDITORIA IA', currentIaScore20.value)}
+    ${scoreBox('AREA ACADEMICA', currentAcScore20.value)}
+  </div>
+  <div class="row2">
+    <span>Veredicto: <b>${escapeHtml(score20Label(currentConsolidated20.value))}</b></span>
+    <span>Balance practica/teoria: <b>${m.porcentaje_practica ?? '--'}% / ${m.porcentaje_teoria ?? '--'}%</b></span>
+    <span>Temas cubiertos: <b>${m.temas_cubiertos ?? '--'} / ${m.temas_totales ?? '--'}</b></span>
+    <span>Rubrica academica: <b>${totalScore.value} / ${RUBRIC_TOTAL_ITEMS}</b></span>
+  </div>
+
+  <h2>Criterios evaluados por IA</h2>
+  ${crits}
+
+  ${(report.fortalezas_top3?.length || report.oportunidades_top5?.length) ? `<h2>Fortalezas y oportunidades</h2>
+  <div class="fo">
+    <div><h3>Fortalezas</h3><ul>${liList(report.fortalezas_top3)}</ul></div>
+    <div><h3>Oportunidades</h3><ul>${liList(report.oportunidades_top5)}</ul></div>
+  </div>` : ''}
+
+  <h2>Evaluacion del area academica</h2>
+  <div class="rgrid">${rubric}</div>
+
+  <div class="ft">Generado el ${escapeHtml(formatDateTime(new Date().toISOString()))} &middot;
+    Nota consolidada = IA ${PESO_IA_PCT}% + Area academica ${PESO_MANUAL_PCT}%. Si solo hay una fuente, se usa esa.</div>
+</body></html>`
+
+  const w = window.open('', '_blank', 'width=920,height=1000')
+  if (!w) {
+    toast.error('Permite las ventanas emergentes para exportar el PDF.')
+    return
+  }
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  setTimeout(() => { try { w.print() } catch { /* el usuario puede imprimir manualmente */ } }, 400)
+}
+
+// =====================================================================
 // EVOLUCION POR SESION (chart) + COBERTURA DE MUESTRA
 // =====================================================================
 // Las sesiones sin data se envian como `null` para que ApexCharts las dibuje
@@ -766,18 +993,6 @@ const generalCoverage = computed(() => {
     full: total > 0 && ai === total && man === total,
   }
 })
-
-function fmt20(n) {
-  return Number.isFinite(n) ? n.toFixed(1) : '--'
-}
-
-function score20Class(n) {
-  if (!Number.isFinite(n)) return 'sg-empty'
-  if (n >= 19) return 'sg-good'
-  if (n >= 17) return 'sg-ok'
-  if (n >= 15) return 'sg-warn'
-  return 'sg-bad'
-}
 
 function score20Label(n) {
   if (!Number.isFinite(n)) return '--'
@@ -1011,140 +1226,279 @@ onMounted(async () => {
       <div v-if="!sessionsTotal" class="state-msg muted">
         <i class="fa-regular fa-folder-open"></i> El aula no tiene sesiones definidas.
       </div>
-      <template v-else>
-        <div class="session-strip">
-          <div class="session-strip-label">Sesion</div>
-          <div class="session-chips">
-            <button
-              v-for="n in sessionNumbers"
-              :key="n"
-              class="schip"
-              :class="{ active: selectedSession === n }"
-              @click="selectSession(n)"
-            >
-              <span class="sdot" :class="sessionDotCls(n)"></span>
-              S{{ n }}
-            </button>
+
+      <div v-else class="audit-rd">
+        <!-- Tira de sesiones con nota consolidada -->
+        <div class="ar-sess-strip">
+          <span class="ar-sess-lbl">Sesion</span>
+          <button
+            v-for="n in sessionNumbers"
+            :key="n"
+            class="ar-sess-pill"
+            :class="{ active: selectedSession === n }"
+            @click="selectSession(n)"
+          >
+            <span class="ar-dot" :class="sessionDotCls(n)"></span>
+            <span class="slabel">S{{ n }}</span>
+            <span class="note" :class="{ pend: sessionConsolidatedNote(n) == null }">
+              {{ sessionConsolidatedNote(n) == null ? '—' : '(' + fmtNota(sessionConsolidatedNote(n)) + ')' }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Scorecard consolidado -->
+        <div class="ar-scorecard">
+          <div class="sc-hero">
+            <div class="sc-ring" :class="'lvl-' + notaLevel(currentConsolidated20)">
+              <svg width="92" height="92" viewBox="0 0 92 92">
+                <circle cx="46" cy="46" r="40" class="ring-track" stroke-width="9" fill="none" />
+                <circle
+                  cx="46" cy="46" r="40" class="ring-prog" stroke-width="9" fill="none"
+                  stroke-linecap="round"
+                  :stroke-dasharray="RING_CIRC"
+                  :stroke-dashoffset="ringOffset(currentConsolidated20)"
+                />
+              </svg>
+              <div class="ring-num"><b>{{ fmtNota(currentConsolidated20) }}</b><span>/ 20</span></div>
+            </div>
+            <div>
+              <div class="label">NOTA CONSOLIDADA</div>
+              <div class="big">{{ currentConsolidated20 == null ? 'Sin datos' : 'Estabilizada' }}</div>
+              <div class="prov" :class="{ firm: currentFirm }">
+                <i class="fa-solid" :class="currentFirm ? 'fa-circle-check' : 'fa-clock'"></i>
+                {{ currentFirm ? 'Evaluacion completa' : 'Provisional · falta area academica' }}
+              </div>
+            </div>
+          </div>
+          <div class="sc-evals">
+            <div class="sc-eval">
+              <div class="head"><span class="badge-ia">IA</span><span class="tag">AUDITORIA AUTOMATICA</span></div>
+              <div class="score"><b>{{ fmtNota(currentIaScore20) }}</b><span>/ 20</span></div>
+              <div class="bar"><i :class="'fill-' + notaLevel(currentIaScore20)" :style="{ width: barWidth(currentIaScore20) }"></i></div>
+              <div class="weight">Peso {{ PESO_IA_PCT }}%</div>
+            </div>
+            <div class="sc-eval">
+              <div class="head"><span class="tag">AREA ACADEMICA</span></div>
+              <div class="score"><b>{{ fmtNota(currentAcScore20) }}</b><span>/ 20</span></div>
+              <div class="bar"><i class="fill-accent" :style="{ width: barWidth(currentAcScore20) }"></i></div>
+              <div class="weight">Peso {{ PESO_MANUAL_PCT }}% · {{ totalScore }}/{{ RUBRIC_TOTAL_ITEMS }} criterios marcados</div>
+            </div>
           </div>
         </div>
 
-        <div class="rubric-head">
-          <div>
-            <div class="rh-eyebrow">Rubrica de evaluacion al docente</div>
-            <h2 class="rh-title">Sesion {{ selectedSession }}</h2>
-            <div class="rh-meta">
-              <span>Criterios marcados: <strong class="mono">{{ totalScore }} / {{ RUBRIC_TOTAL_ITEMS }}</strong></span>
-              <span class="dot-sep">&middot;</span>
-              <span class="mono">{{ totalProgress }}%</span>
-              <span v-if="lastSavedAt" class="dot-sep">&middot;</span>
-              <span v-if="lastSavedAt" class="muted small">Guardado {{ formatDate(lastSavedAt) }}</span>
+        <!-- Control segmentado + accion IA -->
+        <div class="ar-toolbar">
+          <div class="ar-segmented">
+            <button :class="{ on: auditView === 'resumen' }" @click="auditView = 'resumen'">
+              <i class="fa-solid fa-chart-line"></i> Resumen
+            </button>
+            <button :class="{ on: auditView === 'ia' }" @click="auditView = 'ia'">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Auditoria IA
+            </button>
+            <button :class="{ on: auditView === 'academica' }" @click="auditView = 'academica'">
+              <i class="fa-solid fa-clipboard-check"></i> Evaluacion Academica
+            </button>
+          </div>
+          <div class="ar-grow"></div>
+          <button
+            v-if="!currentAiReport"
+            class="ar-btn"
+            title="Generar analisis con IA (consume creditos)"
+            @click="onAnalyzeClick"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            Analizar con IA
+          </button>
+          <button
+            v-else
+            class="ar-btn primary"
+            title="Exportar el reporte de la sesion en PDF para entregar al docente"
+            @click="exportSessionPdf"
+          >
+            <i class="fa-solid fa-file-pdf"></i>
+            Exportar PDF
+          </button>
+        </div>
+
+        <!-- ===================== RESUMEN ===================== -->
+        <div v-if="auditView === 'resumen'" class="ar-stack">
+          <div v-if="!currentAiReport" class="ar-empty">
+            <div class="big">Sesion {{ selectedSession }} sin analisis IA</div>
+            Genera la auditoria IA para ver el resumen, o registra la evaluacion academica.
+          </div>
+          <template v-else>
+            <div class="ar-metrics">
+              <div class="ar-metric">
+                <div class="lbl">NOTA IA</div>
+                <div class="big">{{ fmtNota(currentIaScore20) }} <span class="suf">/ 20</span></div>
+              </div>
+              <div class="ar-metric">
+                <div class="lbl">NOTA AREA ACADEMICA</div>
+                <div class="big">{{ fmtNota(currentAcScore20) }} <span class="suf">/ 20</span></div>
+              </div>
+              <div class="ar-metric">
+                <div class="lbl">TEMAS CUBIERTOS</div>
+                <div class="big">{{ currentMetricas.temas_cubiertos ?? '--' }} <span class="suf">/ {{ currentMetricas.temas_totales ?? '--' }}</span></div>
+              </div>
+              <div class="ar-metric">
+                <div class="lbl">BALANCE PRACTICA / TEORIA</div>
+                <div class="big sm">{{ currentMetricas.porcentaje_practica ?? '--' }}% · {{ currentMetricas.porcentaje_teoria ?? '--' }}%</div>
+                <div class="split-bar">
+                  <div class="p" :style="{ width: (currentMetricas.porcentaje_practica || 0) + '%' }"></div>
+                  <div class="t" :style="{ width: (currentMetricas.porcentaje_teoria || 0) + '%' }"></div>
+                </div>
+                <div class="split-legend"><span><i class="li-p"></i>Practica</span><span><i class="li-t"></i>Teoria</span></div>
+              </div>
+            </div>
+
+            <div class="ar-fo-grid">
+              <div class="ar-fo str" v-if="currentAiReport.fortalezas_top3?.length">
+                <div class="fo-head"><span class="ic"><i class="fa-solid fa-thumbs-up"></i></span>Fortalezas</div>
+                <div class="fo-item" v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i">
+                  <div class="t">{{ f.titulo }}</div><div class="d">{{ f.detalle }}</div>
+                </div>
+              </div>
+              <div class="ar-fo opp" v-if="currentAiReport.oportunidades_top5?.length">
+                <div class="fo-head"><span class="ic"><i class="fa-solid fa-bullseye"></i></span>Oportunidades</div>
+                <div class="fo-item" v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i">
+                  <div class="t">{{ o.titulo }}</div><div class="d">{{ o.detalle }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ar-card ar-compare-card">
+              <div class="ar-card-head">
+                <span class="ic"><i class="fa-solid fa-chart-column"></i></span>
+                <div>
+                  <div class="ar-eyebrow">EVOLUCION DEL DOCENTE</div>
+                  <h3 class="ar-card-title">Comparacion por sesion</h3>
+                </div>
+              </div>
+              <div class="ar-compare">
+                <div
+                  v-for="s in compareSessions"
+                  :key="s.n"
+                  class="cmp-col"
+                  :class="{ current: s.n === selectedSession }"
+                  @click="selectSession(s.n)"
+                >
+                  <div class="cmp-bars">
+                    <template v-if="s.hasIa">
+                      <div class="cmp-bar ia" :style="{ height: ((s.ia20 || 0) / 20 * 100) + '%' }"><span class="v">{{ fmtNota(s.ia20) }}</span></div>
+                      <div class="cmp-bar ac" :style="{ height: ((s.ac20 || 0) / 20 * 100) + '%' }"><span class="v">{{ s.ac20 ? fmtNota(s.ac20) : '·' }}</span></div>
+                    </template>
+                    <div v-else class="cmp-pend">pend.</div>
+                  </div>
+                  <div class="cmp-x">S{{ s.n }}</div>
+                </div>
+              </div>
+              <div class="split-legend center"><span><i class="li-ia"></i>Auditoria IA</span><span><i class="li-ac"></i>Area academica</span></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- ===================== AUDITORIA IA ===================== -->
+        <div v-else-if="auditView === 'ia'" class="ar-stack">
+          <div v-if="!currentAiReport" class="ar-empty">
+            <div class="big">Sesion {{ selectedSession }} sin analisis IA</div>
+            La auditoria IA se genera tras realizarse la sesion. Usa "Analizar con IA" para cargarla.
+          </div>
+          <template v-else>
+            <div class="ar-card ar-ia-toolbar">
+              <div>
+                <div class="ar-eyebrow accent">● ANALISIS IA</div>
+                <div class="ar-metaline" v-if="currentAiGeneratedAt">
+                  Generado <b>{{ formatDateTime(currentAiGeneratedAt) }}</b> · {{ currentAiReport.criterios?.length || 0 }} criterios evaluados
+                </div>
+              </div>
+              <div class="ar-grow"></div>
+              <div class="ar-sort">
+                <button :class="{ on: iaSort === 'orden' }" @click="iaSort = 'orden'">Orden</button>
+                <button :class="{ on: iaSort === 'bajo' }" @click="iaSort = 'bajo'">Puntaje ↑</button>
+                <button :class="{ on: iaSort === 'alto' }" @click="iaSort = 'alto'">Puntaje ↓</button>
+              </div>
+            </div>
+
+            <div class="ar-crit-grid">
+              <article v-for="c in sortedAiCriterios" :key="c.id" class="ar-crit" :class="'bc-' + scoreLevel(c.score)">
+                <div class="crit-top">
+                  <span class="num">#{{ c.id }}</span>
+                  <h4 class="crit-title">{{ c.nombre }}</h4>
+                  <span class="score-badge" :class="'sv-' + scoreLevel(c.score)">{{ c.score }}/5</span>
+                </div>
+                <div class="scorebar">
+                  <i v-for="i in 5" :key="i" :class="{ fill: i <= c.score }"></i>
+                </div>
+                <p class="crit-text">{{ c.comentario }}</p>
+                <div v-if="c.evidencia_timestamps?.length" class="stamps">
+                  <span v-for="t in c.evidencia_timestamps" :key="t" class="stamp">{{ t }}</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="ar-fo-grid">
+              <div class="ar-fo str" v-if="currentAiReport.fortalezas_top3?.length">
+                <div class="fo-head"><span class="ic"><i class="fa-solid fa-thumbs-up"></i></span>Fortalezas</div>
+                <div class="fo-item" v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i">
+                  <div class="t">{{ f.titulo }}</div><div class="d">{{ f.detalle }}</div>
+                </div>
+              </div>
+              <div class="ar-fo opp" v-if="currentAiReport.oportunidades_top5?.length">
+                <div class="fo-head"><span class="ic"><i class="fa-solid fa-bullseye"></i></span>Oportunidades</div>
+                <div class="fo-item" v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i">
+                  <div class="t">{{ o.titulo }}</div><div class="d">{{ o.detalle }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- ===================== EVALUACION ACADEMICA ===================== -->
+        <div v-else class="ar-stack">
+          <div class="ar-card ar-acad-head">
+            <div>
+              <div class="ar-eyebrow">RUBRICA DEL AREA ACADEMICA</div>
+              <div class="ar-metaline">Marca cada criterio cumplido durante la sesion {{ selectedSession }}.</div>
+            </div>
+            <div class="ar-grow"></div>
+            <div class="ar-acad-prog">
+              <div class="big">{{ totalScore }} / {{ RUBRIC_TOTAL_ITEMS }}</div>
+              <div class="ar-metaline">{{ totalProgress }}% completado</div>
             </div>
           </div>
-          <div class="rh-actions">
-            <button
-              class="btn ai-btn"
-              :title="currentAiReport ? 'El analisis ya esta guardado en BD; se muestra la version persistida' : 'Generar analisis con IA (consume creditos)'"
-              @click="onAnalyzeClick"
-            >
-              <i class="fa-solid" :class="currentAiReport ? 'fa-database' : 'fa-wand-magic-sparkles'"></i>
-              {{ currentAiReport ? 'Ver analisis guardado' : 'Analizar con IA' }}
-            </button>
-            <button class="btn primary" :disabled="isSavingSession" @click="saveSession">
+
+          <div class="ar-rub-grid">
+            <div v-for="cat in RUBRIC" :key="cat.key" class="ar-rub-cat">
+              <div class="rc-head">
+                <h3>{{ cat.label }}</h3>
+                <span class="rc-prog">{{ categoryScore(cat) }} / {{ cat.items.length }}</span>
+              </div>
+              <div class="rc-bar"><i :style="{ width: (categoryScore(cat) / cat.items.length * 100) + '%' }"></i></div>
+              <div
+                v-for="it in cat.items"
+                :key="it.key"
+                class="rub-row"
+                :class="{ on: sessionDraft[it.key] }"
+                @click="sessionDraft[it.key] = !sessionDraft[it.key]"
+              >
+                <span class="cbx"><i class="fa-solid fa-check"></i></span>
+                <span class="rtext">{{ it.label }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ar-savebar">
+            <span class="prog-text">Criterios marcados <b>{{ totalScore }} / {{ RUBRIC_TOTAL_ITEMS }}</b> · {{ totalProgress }}%</span>
+            <span v-if="lastSavedAt" class="ar-saved">Guardado {{ formatDate(lastSavedAt) }}</span>
+            <span class="ar-grow"></span>
+            <button class="ar-btn primary" :disabled="isSavingSession" @click="saveSession">
               <i v-if="isSavingSession" class="fa-solid fa-spinner fa-spin"></i>
               <i v-else class="fa-solid fa-save"></i>
               Guardar sesion
             </button>
           </div>
         </div>
-
-        <section v-if="currentAiReport" class="ai-panel">
-          <header class="ai-panel-head">
-            <div>
-              <span class="ai-eyebrow"><i class="fa-solid fa-sparkles"></i> Analisis IA</span>
-              <span v-if="currentAiGeneratedAt" class="ai-when muted small">
-                · Generado {{ formatDateTime(currentAiGeneratedAt) }}
-              </span>
-            </div>
-            <div class="ai-summary">
-              <div class="ai-summary-item">
-                <span class="muted">Nota global</span>
-                <strong class="mono">{{ toScore20(currentAiReport.metricas_rapidas?.puntuacion_global) }} / 20</strong>
-              </div>
-              <div class="ai-summary-item">
-                <span class="muted">Practica / Teoria</span>
-                <strong class="mono">
-                  {{ currentAiReport.metricas_rapidas?.porcentaje_practica ?? '--' }}% /
-                  {{ currentAiReport.metricas_rapidas?.porcentaje_teoria ?? '--' }}%
-                </strong>
-              </div>
-              <div class="ai-summary-item">
-                <span class="muted">Temas</span>
-                <strong class="mono">
-                  {{ currentAiReport.metricas_rapidas?.temas_cubiertos ?? '--' }} /
-                  {{ currentAiReport.metricas_rapidas?.temas_totales ?? '--' }}
-                </strong>
-              </div>
-            </div>
-          </header>
-
-          <div class="ai-crits">
-            <div v-for="c in currentAiReport.criterios" :key="c.id" class="ai-crit">
-              <div class="ai-crit-head">
-                <span class="ai-crit-id mono">#{{ c.id }}</span>
-                <span class="ai-crit-name">{{ c.nombre }}</span>
-                <span class="ai-score" :class="aiScoreClass(c.score)">{{ c.score }}/5</span>
-              </div>
-              <p class="ai-crit-comment">{{ c.comentario }}</p>
-              <div v-if="c.evidencia_timestamps?.length" class="ai-stamps">
-                <span v-for="t in c.evidencia_timestamps" :key="t" class="ai-stamp mono">{{ t }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="currentAiReport.fortalezas_top3?.length || currentAiReport.oportunidades_top5?.length" class="ai-insights">
-            <div v-if="currentAiReport.fortalezas_top3?.length" class="ai-insight-block">
-              <h4><i class="fa-solid fa-thumbs-up"></i> Fortalezas</h4>
-              <ul>
-                <li v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i">
-                  <strong>{{ f.titulo }}</strong>
-                  <span class="muted small">{{ f.detalle }}</span>
-                </li>
-              </ul>
-            </div>
-            <div v-if="currentAiReport.oportunidades_top5?.length" class="ai-insight-block">
-              <h4><i class="fa-solid fa-bullseye"></i> Oportunidades</h4>
-              <ul>
-                <li v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i">
-                  <strong>{{ o.titulo }}</strong>
-                  <span class="muted small">{{ o.detalle }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <div class="rubric-grid">
-          <section
-            v-for="cat in RUBRIC"
-            :key="cat.key"
-            class="rubric-cat"
-          >
-            <header class="rc-head">
-              <h3>{{ cat.label }}</h3>
-              <span class="rc-total mono">{{ categoryScore(cat) }} / {{ cat.items.length }}</span>
-            </header>
-            <ul class="rc-items">
-              <li v-for="it in cat.items" :key="it.key" class="rc-item">
-                <label class="rc-check">
-                  <input type="checkbox" v-model="sessionDraft[it.key]" />
-                  <span class="rc-box"><i class="fa-solid fa-check"></i></span>
-                  <span class="rc-text">{{ it.label }}</span>
-                </label>
-              </li>
-            </ul>
-          </section>
-        </div>
-      </template>
+      </div>
     </section>
 
     <!-- ============================================================ -->
@@ -1154,153 +1508,121 @@ onMounted(async () => {
       <div v-if="!sessionsTotal" class="state-msg muted">
         <i class="fa-regular fa-folder-open"></i> El aula no tiene sesiones definidas.
       </div>
-      <template v-else>
-        <div class="gen-summary">
-          <div class="gen-summary-card">
-            <span class="gen-label">Promedio IA</span>
-            <strong class="mono" :class="score20Class(generalAulaAverages.ai20)">
-              {{ fmt20(generalAulaAverages.ai20) }} / 20
-            </strong>
-            <span class="muted small">
-              {{ generalAulaAverages.aiSessions }} / {{ sessionsTotal }} sesiones analizadas
-            </span>
+      <div v-else class="audit-rd">
+        <!-- Hero consolidado del aula -->
+        <div class="ar-scorecard">
+          <div class="sc-hero">
+            <div class="sc-ring" :class="'lvl-' + notaLevel(generalAulaAverages.consolidated20)">
+              <svg width="92" height="92" viewBox="0 0 92 92">
+                <circle cx="46" cy="46" r="40" class="ring-track" stroke-width="9" fill="none" />
+                <circle
+                  cx="46" cy="46" r="40" class="ring-prog" stroke-width="9" fill="none" stroke-linecap="round"
+                  :stroke-dasharray="RING_CIRC" :stroke-dashoffset="ringOffset(generalAulaAverages.consolidated20)"
+                />
+              </svg>
+              <div class="ring-num"><b>{{ fmtNota(generalAulaAverages.consolidated20) }}</b><span>/ 20</span></div>
+            </div>
+            <div>
+              <div class="label">NOTA CONSOLIDADA DEL AULA</div>
+              <div class="big">{{ score20Label(generalAulaAverages.consolidated20) }}</div>
+              <div class="prov" :class="{ firm: generalCoverage.full }">
+                <i class="fa-solid" :class="generalCoverage.full ? 'fa-circle-check' : 'fa-clock'"></i>
+                {{ generalCoverage.full ? 'Muestra completa' : 'Muestra incompleta' }}
+              </div>
+            </div>
           </div>
-          <div class="gen-summary-card">
-            <span class="gen-label">Promedio Rubrica Manual</span>
-            <strong class="mono" :class="score20Class(generalAulaAverages.manual20)">
-              {{ fmt20(generalAulaAverages.manual20) }} / 20
-            </strong>
-            <span class="muted small">
-              {{ generalAulaAverages.manualSessions }} / {{ sessionsTotal }} sesiones evaluadas
-            </span>
-          </div>
-          <div class="gen-summary-card gen-summary-card-main">
-            <span class="gen-label">Nota Consolidada del Aula</span>
-            <strong class="mono" :class="score20Class(generalAulaAverages.consolidated20)">
-              {{ fmt20(generalAulaAverages.consolidated20) }} / 20
-            </strong>
-            <span class="muted small">
-              {{ score20Label(generalAulaAverages.consolidated20) }}
-            </span>
+          <div class="sc-evals">
+            <div class="sc-eval">
+              <div class="head"><span class="badge-ia">IA</span><span class="tag">PROMEDIO IA</span></div>
+              <div class="score"><b>{{ fmtNota(generalAulaAverages.ai20) }}</b><span>/ 20</span></div>
+              <div class="bar"><i :class="'fill-' + notaLevel(generalAulaAverages.ai20)" :style="{ width: barWidth(generalAulaAverages.ai20) }"></i></div>
+              <div class="weight">{{ generalAulaAverages.aiSessions }} / {{ sessionsTotal }} sesiones analizadas</div>
+            </div>
+            <div class="sc-eval">
+              <div class="head"><span class="tag">PROMEDIO RUBRICA MANUAL</span></div>
+              <div class="score"><b>{{ fmtNota(generalAulaAverages.manual20) }}</b><span>/ 20</span></div>
+              <div class="bar"><i class="fill-accent" :style="{ width: barWidth(generalAulaAverages.manual20) }"></i></div>
+              <div class="weight">{{ generalAulaAverages.manualSessions }} / {{ sessionsTotal }} sesiones evaluadas</div>
+            </div>
           </div>
         </div>
 
-        <div class="gen-trend-card">
-          <div class="gen-trend-head">
+        <!-- Evolucion del aula -->
+        <div class="ar-card">
+          <div class="ar-card-head">
+            <span class="ic"><i class="fa-solid fa-chart-line"></i></span>
             <div>
-              <span class="gen-label">Evolucion del aula</span>
-              <p class="gen-trend-hint muted small">
-                Linea solida: nota consolidada. Punteadas: IA y rubrica manual.
-                Los huecos indican sesiones aun no evaluadas.
+              <div class="ar-eyebrow">EVOLUCION DEL AULA</div>
+              <h3 class="ar-card-title">Nota por sesion</h3>
+              <p class="ar-metaline ar-chart-hint">
+                Linea solida: consolidada. Punteadas: IA y rubrica manual. Los huecos son sesiones sin evaluar.
               </p>
             </div>
           </div>
-          <apexchart
-            type="line"
-            height="320"
-            :options="generalChartOptions"
-            :series="generalChartSeries"
-          />
+          <apexchart type="line" height="300" :options="generalChartOptions" :series="generalChartSeries" />
 
-          <div class="gen-coverage">
-            <span class="gen-label">Cobertura del aula</span>
-            <div class="gen-coverage-row">
-              <div class="gen-coverage-item">
-                <div class="gcv-head">
-                  <span class="gcv-name">
-                    <span class="gcv-dot gcv-dot-ai"></span> Analisis IA
-                  </span>
-                  <span class="gcv-count mono">
-                    {{ generalCoverage.ai }} / {{ generalCoverage.total }}
-                    <span class="muted small">&middot; {{ generalCoverage.aiPct }}%</span>
-                  </span>
-                </div>
-                <div class="gcv-bar">
-                  <span
-                    class="gcv-fill gcv-fill-ai"
-                    :style="{ width: generalCoverage.aiPct + '%' }"
-                  ></span>
-                </div>
+          <div class="ar-coverage">
+            <div class="cov-item">
+              <div class="cov-head">
+                <span class="cov-name"><i class="cov-dot ia"></i>Analisis IA</span>
+                <span class="cov-count">{{ generalCoverage.ai }} / {{ generalCoverage.total }} · {{ generalCoverage.aiPct }}%</span>
               </div>
-              <div class="gen-coverage-item">
-                <div class="gcv-head">
-                  <span class="gcv-name">
-                    <span class="gcv-dot gcv-dot-manual"></span> Evaluacion manual
-                  </span>
-                  <span class="gcv-count mono">
-                    {{ generalCoverage.manual }} / {{ generalCoverage.total }}
-                    <span class="muted small">&middot; {{ generalCoverage.manualPct }}%</span>
-                  </span>
-                </div>
-                <div class="gcv-bar">
-                  <span
-                    class="gcv-fill gcv-fill-manual"
-                    :style="{ width: generalCoverage.manualPct + '%' }"
-                  ></span>
-                </div>
-              </div>
+              <div class="cov-bar"><i class="ia" :style="{ width: generalCoverage.aiPct + '%' }"></i></div>
             </div>
-            <p v-if="!generalCoverage.full" class="gen-coverage-warn">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              Muestra incompleta. El veredicto del aula puede cambiar conforme
-              se evaluen mas sesiones.
-            </p>
+            <div class="cov-item">
+              <div class="cov-head">
+                <span class="cov-name"><i class="cov-dot ac"></i>Evaluacion manual</span>
+                <span class="cov-count">{{ generalCoverage.manual }} / {{ generalCoverage.total }} · {{ generalCoverage.manualPct }}%</span>
+              </div>
+              <div class="cov-bar"><i class="ac" :style="{ width: generalCoverage.manualPct + '%' }"></i></div>
+            </div>
+          </div>
+          <p v-if="!generalCoverage.full" class="ar-warn">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Muestra incompleta. El veredicto del aula puede cambiar conforme se evaluen mas sesiones.
+          </p>
+        </div>
+
+        <!-- Detalle por sesion -->
+        <div class="ar-card ar-table-card">
+          <div class="ar-eyebrow">DETALLE POR SESION</div>
+          <div class="ar-table-scroll">
+            <table class="ar-table">
+              <thead>
+                <tr>
+                  <th>Sesion</th><th>Rubrica manual</th><th>Nota IA</th>
+                  <th>Nota manual</th><th>Consolidada</th><th>Veredicto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in generalRows" :key="r.n" :class="{ current: r.n === selectedSession }">
+                  <td class="td-s">S{{ r.n }}</td>
+                  <td><span class="num">{{ r.manualMarked }} / {{ r.manualTotal }}</span> <span class="ar-muted">· {{ r.manualPct }}%</span></td>
+                  <td>
+                    <span v-if="r.hasAi" class="score-badge" :class="'sv-' + notaLevel(r.aiScore20)">{{ fmtNota(r.aiScore20) }}</span>
+                    <span v-else class="ar-muted">sin analisis</span>
+                  </td>
+                  <td>
+                    <span v-if="r.hasManual" class="score-badge" :class="'sv-' + notaLevel(r.manualScore20)">{{ fmtNota(r.manualScore20) }}</span>
+                    <span v-else class="ar-muted">sin evaluar</span>
+                  </td>
+                  <td>
+                    <span v-if="r.consolidated20 != null" class="score-badge strong" :class="'sv-' + notaLevel(r.consolidated20)">{{ fmtNota(r.consolidated20) }}</span>
+                    <span v-else class="ar-muted">--</span>
+                  </td>
+                  <td><span class="ar-verdict" :class="'sv-' + notaLevel(r.consolidated20)">{{ score20Label(r.consolidated20) }}</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div class="gen-table-wrap">
-          <table class="gen-table">
-            <thead>
-              <tr>
-                <th class="th-session">Sesion</th>
-                <th>Rubrica manual</th>
-                <th>Nota IA</th>
-                <th>Nota manual</th>
-                <th>Consolidada</th>
-                <th>Veredicto</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="r in generalRows" :key="r.n">
-                <td class="td-session mono">S{{ r.n }}</td>
-                <td>
-                  <span class="mono">{{ r.manualMarked }} / {{ r.manualTotal }}</span>
-                  <span class="muted small"> &middot; {{ r.manualPct }}%</span>
-                </td>
-                <td>
-                  <span v-if="r.hasAi" class="mono" :class="score20Class(r.aiScore20)">
-                    {{ fmt20(r.aiScore20) }} / 20
-                  </span>
-                  <span v-else class="muted small">sin analisis</span>
-                </td>
-                <td>
-                  <span v-if="r.hasManual" class="mono" :class="score20Class(r.manualScore20)">
-                    {{ fmt20(r.manualScore20) }} / 20
-                  </span>
-                  <span v-else class="muted small">sin evaluar</span>
-                </td>
-                <td>
-                  <strong class="mono" :class="score20Class(r.consolidated20)">
-                    {{ fmt20(r.consolidated20) }} / 20
-                  </strong>
-                </td>
-                <td>
-                  <span class="gen-verdict" :class="score20Class(r.consolidated20)">
-                    {{ score20Label(r.consolidated20) }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p class="footer-note">
+        <p class="ar-footer-note">
           <i class="fa-solid fa-circle-info"></i>
-          La nota consolidada combina IA y rubrica manual con pesos
-          {{ Math.round(CONSOLIDATED_WEIGHT_IA * 100) }}% / {{ Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100) }}%.
+          La nota consolidada combina IA y rubrica manual con pesos {{ PESO_IA_PCT }}% / {{ PESO_MANUAL_PCT }}%.
           Si solo hay una fuente disponible, se usa esa.
         </p>
-      </template>
+      </div>
     </section>
 
     <!-- MODAL: ejecutar IA. Teleport a <body> para escapar de cualquier
@@ -1356,7 +1678,7 @@ onMounted(async () => {
             <button class="btn primary" @click="runAiAudit" :disabled="isRunningAi">
               <i v-if="isRunningAi" class="fa-solid fa-spinner fa-spin"></i>
               <i v-else class="fa-solid fa-play"></i>
-              {{ isRunningAi ? 'Analizando... (30-60s)' : 'Ejecutar analisis' }}
+              {{ isRunningAi ? 'Analizando...' : 'Ejecutar analisis' }}
             </button>
           </footer>
         </div>
@@ -1932,6 +2254,314 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .ai-panel-head { border-color: #3A3A55; }
 [data-coreui-theme="dark"] .aula-detail .ai-crit,
 [data-coreui-theme="dark"] .aula-detail .ai-insight-block { background: #1A1A14; border-color: #2A2A22; }
+
+/* ==================================================================== */
+/* AUDITORIA - REDISENO (portado del prototipo, namespaced .audit-rd)   */
+/* ==================================================================== */
+.audit-rd {
+  --ar-accent: #6366f1;
+  --ar-accent-ink: #ffffff;
+  --ar-surface: #ffffff;
+  --ar-surface-2: #faf9f8;
+  --ar-surface-3: #f1efed;
+  --ar-border: #e8e6e3;
+  --ar-border-strong: #d8d4d0;
+  --ar-ink: #1b1917;
+  --ar-ink-2: #57534e;
+  --ar-ink-3: #8d877f;
+  --ar-track: #ece9e6;
+  --ar-seg-on: #ffffff;
+  --ar-shadow: 0 1px 2px rgba(28, 25, 23, .05), 0 1px 1px rgba(28, 25, 23, .03);
+  --ar-shadow-lg: 0 10px 30px -12px rgba(28, 25, 23, .18);
+  --ar-s1-bg: #fde8e6; --ar-s1-fg: #c0362c;
+  --ar-s2-bg: #fdeccb; --ar-s2-fg: #a96208;
+  --ar-s3-bg: #dde8fd; --ar-s3-fg: #2256c9;
+  --ar-s4-bg: #d9f3df; --ar-s4-fg: #1d7a40;
+  --ar-s5-bg: #cdf1e4; --ar-s5-fg: #0a7a5c;
+  /* Misma fuente que el resto del ERP (no monospace, era incongruente).
+     tabular-nums mantiene los numeros alineados sin cambiar de familia. */
+  --ar-mono: inherit;
+  --ar-r-sm: 8px; --ar-r: 12px; --ar-r-lg: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  color: var(--ar-ink);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* tira de sesiones */
+.audit-rd .ar-sess-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.audit-rd .ar-sess-lbl { font-size: 11px; font-weight: 700; letter-spacing: .09em; color: var(--ar-ink-3); margin-right: 4px; }
+.audit-rd .ar-sess-pill {
+  display: inline-flex; flex-direction: row; align-items: center; gap: 7px;
+  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: 10px; padding: 8px 14px;
+  transition: .15s; cursor: pointer;
+}
+.audit-rd .ar-sess-pill:hover { border-color: var(--ar-border-strong); }
+.audit-rd .ar-sess-pill .slabel { font-size: 13.5px; font-weight: 700; color: var(--ar-ink-2); }
+.audit-rd .ar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ar-ink-3); flex: none; }
+.audit-rd .ar-dot.sdot-empty { background: var(--ar-ink-3); }
+.audit-rd .ar-dot.sdot-partial { background: var(--ar-accent); }
+.audit-rd .ar-dot.sdot-done { background: var(--ar-s4-fg); }
+.audit-rd .ar-sess-pill .note { font-size: 13px; font-weight: 700; color: var(--ar-ink); }
+.audit-rd .ar-sess-pill .note.pend { color: var(--ar-ink-3); font-weight: 600; }
+.audit-rd .ar-sess-pill.active { background: var(--ar-accent); border-color: var(--ar-accent); }
+.audit-rd .ar-sess-pill.active .slabel, .audit-rd .ar-sess-pill.active .note { color: var(--ar-accent-ink); }
+.audit-rd .ar-sess-pill.active .ar-dot { background: var(--ar-accent-ink) !important; }
+
+/* scorecard */
+.audit-rd .ar-scorecard {
+  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg);
+  box-shadow: var(--ar-shadow); display: flex; align-items: stretch; overflow: hidden; flex-wrap: wrap;
+}
+.audit-rd .sc-hero {
+  padding: 15px 18px; display: flex; gap: 14px; align-items: center;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--ar-accent) 9%, var(--ar-surface)), var(--ar-surface));
+  border-right: 1px solid var(--ar-border); min-width: 280px; flex: 1;
+}
+.audit-rd .sc-ring { position: relative; width: 68px; height: 68px; flex: none; }
+.audit-rd .sc-ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.audit-rd .sc-ring .ring-track { stroke: var(--ar-track); }
+.audit-rd .sc-ring .ring-prog { stroke: var(--ar-s3-fg); transition: stroke-dashoffset .6s cubic-bezier(.2, .8, .2, 1); }
+.audit-rd .sc-ring.lvl-1 .ring-prog { stroke: var(--ar-s1-fg); }
+.audit-rd .sc-ring.lvl-2 .ring-prog { stroke: var(--ar-s2-fg); }
+.audit-rd .sc-ring.lvl-3 .ring-prog { stroke: var(--ar-s3-fg); }
+.audit-rd .sc-ring.lvl-4 .ring-prog { stroke: var(--ar-s4-fg); }
+.audit-rd .sc-ring.lvl-5 .ring-prog { stroke: var(--ar-s5-fg); }
+.audit-rd .sc-ring .ring-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.audit-rd .sc-ring .ring-num b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.audit-rd .sc-ring .ring-num span { font-size: 9px; color: var(--ar-ink-3); font-weight: 700; }
+.audit-rd .sc-hero .label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--ar-ink-3); }
+.audit-rd .sc-hero .big { font-size: 16px; font-weight: 800; margin-top: 2px; }
+.audit-rd .sc-hero .prov {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 600;
+  color: var(--ar-s2-fg); background: var(--ar-s2-bg); border-radius: 20px; padding: 2px 9px;
+}
+.audit-rd .sc-hero .prov.firm { color: var(--ar-s4-fg); background: var(--ar-s4-bg); }
+.audit-rd .sc-evals { display: flex; flex: 2; min-width: 300px; }
+.audit-rd .sc-eval { flex: 1; padding: 14px 18px; border-right: 1px solid var(--ar-border); display: flex; flex-direction: column; gap: 8px; }
+.audit-rd .sc-eval:last-child { border-right: none; }
+.audit-rd .sc-eval .head { display: flex; align-items: center; gap: 8px; }
+.audit-rd .sc-eval .head .tag { font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--ar-ink-3); }
+.audit-rd .sc-eval .head .badge-ia {
+  font-size: 10px; font-weight: 800; letter-spacing: .04em; color: var(--ar-accent);
+  background: color-mix(in oklab, var(--ar-accent) 14%, transparent); border-radius: 5px; padding: 2px 7px;
+}
+.audit-rd .sc-eval .score { display: flex; align-items: baseline; gap: 4px; }
+.audit-rd .sc-eval .score b { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+.audit-rd .sc-eval .score span { font-size: 13px; color: var(--ar-ink-3); font-weight: 600; }
+.audit-rd .bar { height: 8px; border-radius: 20px; background: var(--ar-track); overflow: hidden; }
+.audit-rd .bar > i { display: block; height: 100%; border-radius: 20px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.audit-rd .bar > i.fill-1 { background: var(--ar-s1-fg); }
+.audit-rd .bar > i.fill-2 { background: var(--ar-s2-fg); }
+.audit-rd .bar > i.fill-3 { background: var(--ar-s3-fg); }
+.audit-rd .bar > i.fill-4 { background: var(--ar-s4-fg); }
+.audit-rd .bar > i.fill-5 { background: var(--ar-s5-fg); }
+.audit-rd .bar > i.fill-accent { background: var(--ar-accent); }
+.audit-rd .sc-eval .weight { font-size: 11px; color: var(--ar-ink-3); font-weight: 600; }
+
+/* toolbar + segmented */
+.audit-rd .ar-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.audit-rd .ar-grow { flex: 1; }
+.audit-rd .ar-segmented { display: inline-flex; background: var(--ar-surface-3); border-radius: 12px; padding: 4px; gap: 2px; }
+.audit-rd .ar-segmented button {
+  border: none; background: transparent; padding: 7px 13px; border-radius: 9px; font-size: 13px; font-weight: 600;
+  color: var(--ar-ink-2); display: flex; align-items: center; gap: 7px; transition: .15s; cursor: pointer;
+}
+.audit-rd .ar-segmented button.on { background: var(--ar-seg-on); color: var(--ar-ink); box-shadow: var(--ar-shadow); }
+.audit-rd .ar-segmented button .pip { font-size: 11px; font-family: var(--ar-mono); color: var(--ar-ink-3); }
+
+/* botones */
+.audit-rd .ar-btn {
+  border: 1px solid var(--ar-border-strong); background: var(--ar-surface); color: var(--ar-ink); border-radius: 9px;
+  padding: 8px 13px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px;
+  transition: .15s; cursor: pointer;
+}
+.audit-rd .ar-btn:hover { background: var(--ar-surface-3); }
+.audit-rd .ar-btn:disabled { opacity: .6; cursor: default; }
+.audit-rd .ar-btn.primary { background: var(--ar-accent); color: var(--ar-accent-ink); border-color: var(--ar-accent); }
+.audit-rd .ar-btn.primary:hover { filter: brightness(1.06); background: var(--ar-accent); }
+
+/* stacks / cards / generic */
+.audit-rd .ar-stack { display: flex; flex-direction: column; gap: 11px; }
+.audit-rd .ar-card { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg); box-shadow: var(--ar-shadow); padding: 15px 18px; }
+.audit-rd .ar-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; color: var(--ar-ink-3); }
+.audit-rd .ar-eyebrow.accent { color: var(--ar-accent); }
+.audit-rd .ar-card-title { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0 0; }
+.audit-rd .ar-card-head { display: flex; align-items: flex-start; gap: 11px; padding-bottom: 13px; margin-bottom: 18px; border-bottom: 1px solid var(--ar-border); }
+.audit-rd .ar-card-head .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; flex: none; background: color-mix(in oklab, var(--ar-accent) 12%, transparent); color: var(--ar-accent); }
+.audit-rd .ar-metaline { font-size: 12.5px; color: var(--ar-ink-3); }
+.audit-rd .ar-metaline b { color: var(--ar-ink-2); }
+.audit-rd .ar-empty { text-align: center; padding: 60px 20px; color: var(--ar-ink-3); background: var(--ar-surface); border: 1px dashed var(--ar-border); border-radius: var(--ar-r); }
+.audit-rd .ar-empty .big { font-size: 17px; font-weight: 700; color: var(--ar-ink-2); margin-bottom: 6px; }
+
+/* metrics */
+.audit-rd .ar-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 11px; }
+.audit-rd .ar-metric { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); padding: 14px 16px; box-shadow: var(--ar-shadow); }
+.audit-rd .ar-metric .lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--ar-ink-3); margin-bottom: 8px; }
+.audit-rd .ar-metric .big { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+.audit-rd .ar-metric .big.sm { font-size: 17px; }
+.audit-rd .ar-metric .big .suf { font-size: 14px; color: var(--ar-ink-3); font-weight: 600; }
+.audit-rd .split-bar { display: flex; height: 10px; border-radius: 20px; overflow: hidden; margin-top: 12px; background: var(--ar-track); }
+.audit-rd .split-bar .p { background: var(--ar-accent); }
+.audit-rd .split-bar .t { background: var(--ar-s2-fg); }
+.audit-rd .split-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--ar-ink-2); }
+.audit-rd .split-legend.center { justify-content: center; }
+.audit-rd .split-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 6px; }
+.audit-rd .split-legend .li-p, .audit-rd .split-legend .li-ac { background: var(--ar-accent); }
+.audit-rd .split-legend .li-t { background: var(--ar-s2-fg); }
+.audit-rd .split-legend .li-ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
+
+/* fortalezas / oportunidades */
+.audit-rd .ar-fo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; align-items: start; }
+.audit-rd .ar-fo { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg); box-shadow: var(--ar-shadow); padding: 15px 18px; }
+.audit-rd .ar-fo .fo-head { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+.audit-rd .ar-fo .fo-head .ic { width: 27px; height: 27px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; }
+.audit-rd .ar-fo.str .ic { background: var(--ar-s4-bg); color: var(--ar-s4-fg); }
+.audit-rd .ar-fo.opp .ic { background: var(--ar-s2-bg); color: var(--ar-s2-fg); }
+.audit-rd .ar-fo .fo-item { padding: 9px 0; border-top: 1px solid var(--ar-border); }
+.audit-rd .ar-fo .fo-item:first-of-type { border-top: none; }
+.audit-rd .ar-fo .fo-item .t { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.audit-rd .ar-fo .fo-item .d { font-size: 12.5px; line-height: 1.45; color: var(--ar-ink-2); }
+
+/* compare chart */
+.audit-rd .ar-ia-toolbar, .audit-rd .ar-acad-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.audit-rd .ar-sort { display: inline-flex; gap: 2px; background: var(--ar-surface-3); border-radius: 9px; padding: 3px; }
+.audit-rd .ar-sort button { border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ar-ink-2); padding: 6px 11px; border-radius: 7px; cursor: pointer; }
+.audit-rd .ar-sort button.on { background: var(--ar-seg-on); color: var(--ar-ink); box-shadow: var(--ar-shadow); }
+.audit-rd .ar-compare { display: flex; align-items: flex-end; gap: 16px; height: 150px; padding: 14px 6px 0; }
+.audit-rd .cmp-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; cursor: pointer; }
+.audit-rd .cmp-bars { display: flex; gap: 5px; align-items: flex-end; height: 100%; width: 100%; justify-content: center; }
+.audit-rd .cmp-bar { width: 26px; border-radius: 6px 6px 0 0; position: relative; transition: height .5s; min-height: 2px; }
+.audit-rd .cmp-bar.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
+.audit-rd .cmp-bar.ac { background: var(--ar-accent); }
+.audit-rd .cmp-bar .v { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; font-family: var(--ar-mono); color: var(--ar-ink-2); font-weight: 700; }
+.audit-rd .cmp-pend { align-self: flex-end; color: var(--ar-ink-3); font-size: 11px; font-family: var(--ar-mono); }
+.audit-rd .cmp-x { font-size: 12px; font-weight: 700; color: var(--ar-ink-2); }
+.audit-rd .cmp-col.current .cmp-x { color: var(--ar-accent); }
+
+/* IA criterion cards */
+.audit-rd .ar-crit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 11px; }
+.audit-rd .ar-crit {
+  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); padding: 13px 15px;
+  display: flex; flex-direction: column; gap: 8px; box-shadow: var(--ar-shadow); position: relative; overflow: hidden;
+}
+.audit-rd .ar-crit::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ar-edge, transparent); }
+.audit-rd .ar-crit.bc-1 { --ar-edge: var(--ar-s1-fg); --ar-barc: var(--ar-s1-fg); }
+.audit-rd .ar-crit.bc-2 { --ar-edge: var(--ar-s2-fg); --ar-barc: var(--ar-s2-fg); }
+.audit-rd .ar-crit.bc-3 { --ar-edge: var(--ar-s3-fg); --ar-barc: var(--ar-s3-fg); }
+.audit-rd .ar-crit.bc-4 { --ar-edge: var(--ar-s4-fg); --ar-barc: var(--ar-s4-fg); }
+.audit-rd .ar-crit.bc-5 { --ar-edge: var(--ar-s5-fg); --ar-barc: var(--ar-s5-fg); }
+.audit-rd .ar-crit .crit-top { display: flex; align-items: flex-start; gap: 10px; }
+.audit-rd .ar-crit .num { font-family: var(--ar-mono); font-size: 12px; color: var(--ar-ink-3); font-weight: 600; padding-top: 2px; }
+.audit-rd .ar-crit .crit-title { font-size: 13.5px; font-weight: 700; flex: 1; line-height: 1.25; margin: 0; }
+.audit-rd .ar-crit .score-badge { font-family: var(--ar-mono); font-size: 11.5px; font-weight: 700; border-radius: 7px; padding: 3px 9px; white-space: nowrap; }
+.audit-rd .score-badge.sv-1 { background: var(--ar-s1-bg); color: var(--ar-s1-fg); }
+.audit-rd .score-badge.sv-2 { background: var(--ar-s2-bg); color: var(--ar-s2-fg); }
+.audit-rd .score-badge.sv-3 { background: var(--ar-s3-bg); color: var(--ar-s3-fg); }
+.audit-rd .score-badge.sv-4 { background: var(--ar-s4-bg); color: var(--ar-s4-fg); }
+.audit-rd .score-badge.sv-5 { background: var(--ar-s5-bg); color: var(--ar-s5-fg); }
+.audit-rd .ar-crit .scorebar { display: flex; gap: 4px; }
+.audit-rd .ar-crit .scorebar i { height: 5px; flex: 1; border-radius: 20px; background: var(--ar-track); }
+.audit-rd .ar-crit .scorebar i.fill { background: var(--ar-barc); }
+.audit-rd .ar-crit .crit-text { font-size: 12.5px; line-height: 1.5; color: var(--ar-ink-2); margin: 0; }
+.audit-rd .ar-crit .stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.audit-rd .ar-crit .stamp { font-family: var(--ar-mono); font-size: 11px; color: var(--ar-ink-2); background: var(--ar-surface-3); border: 1px solid var(--ar-border); border-radius: 6px; padding: 2px 7px; }
+
+/* rubrica academica */
+.audit-rd .ar-acad-prog { text-align: right; }
+.audit-rd .ar-acad-prog .big { font-family: var(--ar-mono); font-size: 18px; font-weight: 800; }
+.audit-rd .ar-rub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; align-items: start; }
+.audit-rd .ar-rub-cat { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); box-shadow: var(--ar-shadow); overflow: hidden; }
+.audit-rd .ar-rub-cat .rc-head { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid var(--ar-border); }
+.audit-rd .ar-rub-cat .rc-head h3 { font-size: 13.5px; font-weight: 800; margin: 0; flex: 1; }
+.audit-rd .ar-rub-cat .rc-prog { font-family: var(--ar-mono); font-size: 12px; font-weight: 700; color: var(--ar-ink-2); }
+.audit-rd .ar-rub-cat .rc-bar { height: 4px; background: var(--ar-track); }
+.audit-rd .ar-rub-cat .rc-bar > i { display: block; height: 100%; background: var(--ar-accent); transition: width .4s; }
+.audit-rd .rub-row { display: flex; align-items: flex-start; gap: 11px; padding: 10px 15px; border-top: 1px solid var(--ar-border); cursor: pointer; transition: background .12s; user-select: none; }
+.audit-rd .rub-row:hover { background: var(--ar-surface-2); }
+.audit-rd .rub-row .cbx { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--ar-border-strong); flex: none; margin-top: 1px; display: grid; place-items: center; transition: .15s; color: transparent; font-size: 10px; }
+.audit-rd .rub-row.on .cbx { background: var(--ar-accent); border-color: var(--ar-accent); color: var(--ar-accent-ink); }
+.audit-rd .rub-row .rtext { font-size: 13px; line-height: 1.45; color: var(--ar-ink); }
+.audit-rd .rub-row.on .rtext { color: var(--ar-ink-2); }
+
+/* save bar */
+.audit-rd .ar-savebar {
+  position: sticky; bottom: 0; z-index: 5; margin-top: 2px;
+  background: color-mix(in oklab, var(--ar-surface) 88%, transparent); backdrop-filter: blur(10px);
+  border: 1px solid var(--ar-border); border-radius: var(--ar-r); box-shadow: var(--ar-shadow-lg);
+  display: flex; align-items: center; gap: 16px; padding: 12px 18px; flex-wrap: wrap;
+}
+.audit-rd .ar-savebar .prog-text { font-size: 14px; font-weight: 600; }
+.audit-rd .ar-savebar .prog-text b { font-family: var(--ar-mono); }
+.audit-rd .ar-savebar .ar-saved { font-size: 12px; color: var(--ar-ink-3); }
+
+/* ---- General: cobertura, tabla, veredicto ---- */
+.audit-rd .ar-chart-hint { margin: 4px 0 8px; }
+.audit-rd .ar-coverage { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--ar-border); }
+.audit-rd .cov-item { display: flex; flex-direction: column; gap: 7px; }
+.audit-rd .cov-head { display: flex; align-items: center; justify-content: space-between; }
+.audit-rd .cov-name { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ar-ink-2); }
+.audit-rd .cov-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.audit-rd .cov-dot.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
+.audit-rd .cov-dot.ac { background: var(--ar-accent); }
+.audit-rd .cov-count { font-size: 12.5px; font-weight: 700; color: var(--ar-ink-2); }
+.audit-rd .cov-bar { height: 8px; border-radius: 20px; background: var(--ar-track); overflow: hidden; }
+.audit-rd .cov-bar > i { display: block; height: 100%; border-radius: 20px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.audit-rd .cov-bar > i.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
+.audit-rd .cov-bar > i.ac { background: var(--ar-accent); }
+.audit-rd .ar-warn { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 12.5px; color: var(--ar-s2-fg); background: var(--ar-s2-bg); border-radius: 8px; padding: 9px 12px; }
+
+.audit-rd .ar-table-card { padding: 18px 0 6px; }
+.audit-rd .ar-table-card .ar-eyebrow { padding: 0 22px 12px; }
+.audit-rd .ar-table-scroll { overflow-x: auto; }
+.audit-rd .ar-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.audit-rd .ar-table thead th {
+  text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ar-ink-3);
+  padding: 8px 16px; border-bottom: 1px solid var(--ar-border); white-space: nowrap;
+}
+.audit-rd .ar-table tbody td { padding: 9px 14px; border-bottom: 1px solid var(--ar-border); color: var(--ar-ink-2); white-space: nowrap; }
+.audit-rd .ar-table tbody tr:last-child td { border-bottom: none; }
+.audit-rd .ar-table tbody tr.current { background: color-mix(in oklab, var(--ar-accent) 6%, transparent); }
+.audit-rd .ar-table .td-s { font-weight: 700; color: var(--ar-ink); }
+.audit-rd .ar-table .num { font-weight: 600; color: var(--ar-ink); }
+.audit-rd .ar-muted { color: var(--ar-ink-3); font-size: 12.5px; }
+.audit-rd .ar-table .score-badge { font-size: 12px; font-weight: 700; border-radius: 7px; padding: 3px 9px; }
+.audit-rd .ar-table .score-badge.strong { font-size: 13px; }
+.audit-rd .ar-verdict { font-size: 11px; font-weight: 800; letter-spacing: .05em; }
+.audit-rd .ar-verdict.sv-1 { color: var(--ar-s1-fg); }
+.audit-rd .ar-verdict.sv-2 { color: var(--ar-s2-fg); }
+.audit-rd .ar-verdict.sv-3 { color: var(--ar-s3-fg); }
+.audit-rd .ar-verdict.sv-4 { color: var(--ar-s4-fg); }
+.audit-rd .ar-verdict.sv-5 { color: var(--ar-s5-fg); }
+.audit-rd .ar-footer-note { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ar-ink-3); margin: 2px 0 0; }
+
+@media (max-width: 1100px) {
+  .audit-rd .ar-fo-grid, .audit-rd .ar-rub-grid { grid-template-columns: 1fr; }
+  .audit-rd .ar-coverage { grid-template-columns: 1fr; }
+}
+
+/* ---- DARK (CoreUI) ---- */
+[data-coreui-theme="dark"] .audit-rd {
+  --ar-surface: #1d1a17;
+  --ar-surface-2: #221e1b;
+  --ar-surface-3: #2a2521;
+  --ar-border: #2f2a26;
+  --ar-border-strong: #423b35;
+  --ar-ink: #f6f3ef;
+  --ar-ink-2: #b0a99f;
+  --ar-ink-3: #7d756b;
+  --ar-track: #2a2521;
+  --ar-seg-on: #3b342d;
+  --ar-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  --ar-shadow-lg: 0 14px 40px -14px rgba(0, 0, 0, .6);
+  --ar-s1-bg: #3a1c1a; --ar-s1-fg: #f0a39b;
+  --ar-s2-bg: #392713; --ar-s2-fg: #f2c179;
+  --ar-s3-bg: #1c2c4a; --ar-s3-fg: #9cc0f5;
+  --ar-s4-bg: #163020; --ar-s4-fg: #82dca0;
+  --ar-s5-bg: #0f2e26; --ar-s5-fg: #6fd9b6;
+}
 
 </style>
 
