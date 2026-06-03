@@ -40,7 +40,7 @@ const sidebar = useSidebarStore()
 
 @media (min-width: 992px) {
   .main-shell.is-shifted {
-    padding-left: 232px;
+    padding-left: 212px;
   }
 }
 

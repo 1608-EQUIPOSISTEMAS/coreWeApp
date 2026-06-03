@@ -11,6 +11,12 @@ import { ServiceKeys } from '@/services'
 import { inject } from 'vue'
 
 const { colorMode, setColorMode } = useColorModes('coreui-free-vue-admin-template-theme')
+
+// Un clic alterna directamente entre claro y oscuro (sin menú).
+// Si el modo es 'auto', el primer clic lo fija en 'dark'.
+function toggleTheme() {
+  setColorMode(colorMode.value === 'dark' ? 'light' : 'dark')
+}
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -70,6 +76,15 @@ const crumbs = computed(() => {
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const userName = user.name || user.alias || user.username || 'Usuario'
 const userAlias = user.alias
+const ROLE_LABELS = {
+  ADMIN: 'Administrador',
+  COMERCIAL: 'Comercial',
+  LIDER_COMERCIAL: 'Líder Comercial',
+  PRODUCTO: 'Producto',
+  'LIDER GERENCIA': 'Líder Gerencia',
+}
+const rawRole = (user.roles && user.roles[0]) || ''
+const userRole = ROLE_LABELS[rawRole] || rawRole || 'Usuario'
 const userInitials = computed(() => {
   const parts = String(userName).trim().split(/\s+/)
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'US'
@@ -167,27 +182,23 @@ function $hasRole(roles) {
     >
       <CIcon icon="cil-menu" size="sm" />
     </button>
-    <div class="crumbs">
-      <RouterLink to="/" class="c home">
-        <i class="fa-solid fa-house"></i>
-      </RouterLink>
-      <template v-for="(c, i) in crumbs" :key="c.path">
-        <span class="sep"><CIcon icon="cil-chevron-right" size="sm" /></span>
-        <RouterLink
-          v-if="!c.current"
-          :to="c.path"
-          class="c"
-        >{{ c.label }}</RouterLink>
-        <span v-else class="c current">{{ c.label }}</span>
-      </template>
-    </div>
+    <button type="button" class="search" disabled>
+      <CIcon icon="cil-magnifying-glass" size="sm" />
+      <span>Buscar en el sistema...</span>
+      <span class="kbd">⌘K</span>
+    </button>
 
     <div class="spacer"></div>
 
-    <button type="button" class="search" disabled>
-      <CIcon icon="cil-magnifying-glass" size="sm" />
-      <span>Buscar en todo el sistema...</span>
-      <span class="kbd">⌘K</span>
+    <button
+      type="button"
+      class="icon-btn"
+      :aria-label="colorMode === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+      :title="colorMode === 'dark' ? 'Modo claro' : 'Modo oscuro'"
+      @click="toggleTheme"
+    >
+      <CIcon v-if="colorMode === 'dark'" icon="cil-moon" size="sm" />
+      <CIcon v-else icon="cil-sun" size="sm" />
     </button>
 
     <CDropdown variant="nav-item" placement="bottom-end" @show="onOpenBell">
@@ -235,75 +246,56 @@ function $hasRole(roles) {
       </CDropdownMenu>
     </CDropdown>
 
-    <CDropdown variant="nav-item" placement="bottom-end">
-      <CDropdownToggle :caret="false" class="icon-btn">
-        <CIcon v-if="colorMode === 'dark'" icon="cil-moon" size="sm" />
-        <CIcon v-else-if="colorMode === 'light'" icon="cil-sun" size="sm" />
-        <CIcon v-else icon="cil-contrast" size="sm" />
-      </CDropdownToggle>
-      <CDropdownMenu>
-        <CDropdownItem
-          :active="colorMode === 'light'"
-          class="d-flex align-items-center"
-          component="button"
-          type="button"
-          @click="setColorMode('light')"
-        >
-          <CIcon class="me-2" icon="cil-sun" size="lg" /> Light
-        </CDropdownItem>
-        <CDropdownItem
-          :active="colorMode === 'dark'"
-          class="d-flex align-items-center"
-          component="button"
-          type="button"
-          @click="setColorMode('dark')"
-        >
-          <CIcon class="me-2" icon="cil-moon" size="lg" /> Dark
-        </CDropdownItem>
-        <CDropdownItem
-          :active="colorMode === 'auto'"
-          class="d-flex align-items-center"
-          component="button"
-          type="button"
-          @click="setColorMode('auto')"
-        >
-          <CIcon class="me-2" icon="cil-contrast" size="lg" /> Auto
-        </CDropdownItem>
-      </CDropdownMenu>
-    </CDropdown>
-
     <CDropdown placement="bottom-end" variant="nav-item">
-      <CDropdownToggle :caret="false" class="topbar-avatar-btn">
-        <span class="topbar-avatar">{{ userInitials }}</span>
+      <CDropdownToggle :caret="false" class="user-pill">
+        <span class="user-pill__avatar">{{ userInitials }}</span>
+        <span class="user-pill__info">
+          <span class="user-pill__name">{{ userName }}</span>
+          <span class="user-pill__role">{{ userRole }}</span>
+        </span>
+        <CIcon icon="cil-chevron-bottom" class="user-pill__chev" />
       </CDropdownToggle>
-      <CDropdownMenu class="pt-0 user-menu">
-        <CDropdownHeader
-          component="h6"
-          class="bg-body-secondary text-body-secondary fw-semibold mb-2 rounded-top"
+      <CDropdownMenu class="user-menu">
+        <CDropdownItem
+          v-if="$hasRole(['COMERCIAL'])"
+          class="um-item"
+          component="button"
+          type="button"
+          @click="updateBase()"
         >
-          Cuenta
-        </CDropdownHeader>
-        <CDropdownItem v-if="$hasRole(['COMERCIAL'])" @click="updateBase()">
-          <CIcon icon="cil-cloud-download" /> Actualizar {{ userAlias }}
+          <CIcon icon="cil-cloud-download" class="um-ic" />
+          <span class="um-txt">Actualizar {{ userAlias }}</span>
         </CDropdownItem>
-        <CDropdownItem v-if="$hasRole(['LIDER_COMERCIAL','ADMIN'])" @click="syncRprospectosToSheet()">
-          <CIcon icon="cil-cloud-download" /> Prospectos
-        </CDropdownItem>
-        <CDropdownItem v-if="$hasRole(['ADMIN','PRODUCTO','LIDER GERENCIA'])" @click="syncScheduleToSheet()">
-          <CIcon icon="cil-cloud-download" /> Planeamiento
-        </CDropdownItem>
-        <CDropdownHeader
-          component="h6"
-          class="bg-body-secondary text-body-secondary fw-semibold my-2"
+        <CDropdownItem
+          v-if="$hasRole(['LIDER_COMERCIAL','ADMIN'])"
+          class="um-item"
+          component="button"
+          type="button"
+          @click="syncRprospectosToSheet()"
         >
-          Configuración
-        </CDropdownHeader>
-        <CDropdownItem @click="syncCatalog">
-          <CIcon icon="cil-cloud-download" /> Actualizar Sistema
+          <CIcon icon="cil-spreadsheet" class="um-ic" />
+          <span class="um-txt">Prospectos</span>
         </CDropdownItem>
-        <CDropdownDivider />
-        <CDropdownItem @click="logout()">
-          <CIcon icon="cil-lock-locked" /> Cerrar Sesión
+        <CDropdownItem
+          v-if="$hasRole(['ADMIN','PRODUCTO','LIDER GERENCIA'])"
+          class="um-item"
+          component="button"
+          type="button"
+          @click="syncScheduleToSheet()"
+        >
+          <CIcon icon="cil-calendar" class="um-ic" />
+          <span class="um-txt">Planeamiento</span>
+        </CDropdownItem>
+        <CDropdownItem class="um-item" component="button" type="button" @click="syncCatalog">
+          <CIcon icon="cil-reload" class="um-ic" />
+          <span class="um-txt">Actualizar sistema</span>
+        </CDropdownItem>
+
+        <div class="um-divider"></div>
+
+        <CDropdownItem class="um-item um-item--danger" component="button" type="button" @click="logout()">
+          <CIcon icon="cil-account-logout" class="um-ic" />
+          <span class="um-txt">Cerrar sesión</span>
         </CDropdownItem>
       </CDropdownMenu>
     </CDropdown>
@@ -342,32 +334,6 @@ function $hasRole(roles) {
   transition: box-shadow 0.18s;
 }
 .topbar.is-sticky { box-shadow: 0 1px 2px rgba(20,20,15,0.06); }
-
-.crumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--ink-3);
-}
-.crumbs .c {
-  color: var(--ink-3);
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.crumbs .c:hover { color: var(--ink); }
-.crumbs .c.current {
-  color: var(--ink);
-  font-weight: 500;
-  cursor: default;
-}
-.crumbs .c.home {
-  display: inline-flex;
-  align-items: center;
-  font-size: 13px;
-}
-.crumbs .sep { color: var(--ink-4); display: inline-flex; }
 
 .spacer { flex: 1; }
 
@@ -443,22 +409,61 @@ function $hasRole(roles) {
   box-shadow: 0 0 0 2px var(--bg-elev);
 }
 
-.topbar-avatar-btn {
+.user-pill {
+  display: flex !important;
+  align-items: center;
+  gap: 9px;
   background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px;
+  padding: 4px 8px 4px 4px !important;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
-.topbar-avatar {
+.user-pill:hover {
+  background: var(--bg-soft) !important;
+  border-color: var(--line) !important;
+}
+.user-pill__avatar {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #FCD9B6, #F59E0B);
+  background: linear-gradient(140deg, #34D399 0%, #10B981 45%, #047857 100%);
   display: grid;
   place-items: center;
-  color: white;
-  font-weight: 600;
+  color: #FFFFFF;
+  font-weight: 700;
   font-size: 12px;
-  cursor: pointer;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px -2px rgba(16,185,129,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.user-pill__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  text-align: left;
+}
+.user-pill__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.user-pill__role {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.user-pill__chev {
+  color: var(--ink-4);
+  width: 11px;
+  height: 11px;
+  margin-left: 1px;
+}
+@media (max-width: 575px) {
+  .user-pill__info { display: none; }
 }
 
 /* Dropdowns shared styling */
@@ -558,7 +563,9 @@ function $hasRole(roles) {
 .notif-empty__title { font-size: 0.85rem; font-weight: 600; color: #3A3A33; }
 .notif-empty__hint { font-size: 0.75rem; color: #A0A099; margin-top: 2px; }
 
-.user-menu { min-width: 220px; }
+/* NOTE: estilos de .user-menu movidos al bloque <style> global de abajo,
+   porque CoreUI puede renderizar el dropdown por teleport fuera de este
+   componente y los selectores scoped ([data-v]) no lo alcanzarían. */
 
 /* ════════════════════════════════════════
    DARK MODE
@@ -614,4 +621,87 @@ function $hasRole(roles) {
 [data-coreui-theme="dark"] .notif-empty__icon { color: #3A3A33; }
 [data-coreui-theme="dark"] .notif-empty__title { color: #D4D4CC; }
 [data-coreui-theme="dark"] .notif-empty__hint { color: #6F6F66; }
+</style>
+
+<!-- Estilos GLOBALES del menú de usuario (no scoped): el dropdown de CoreUI
+     puede teletransportarse fuera del componente, así que usamos selectores
+     planos y valores literales para garantizar que siempre apliquen. -->
+<style>
+.user-menu {
+  min-width: 200px !important;
+  width: 200px !important;
+  padding: 5px !important;
+  border: 1px solid rgba(20,20,15,0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px -12px rgba(20,20,15,0.22), 0 2px 6px -3px rgba(20,20,15,0.08) !important;
+  background: #fff !important;
+  /* Solo opacity: NO animar transform, lo usa Popper para posicionar el menú
+     (animarlo provoca que el menú "salte" desde otra posición). */
+  animation: um-fade 0.13s ease;
+}
+@keyframes um-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.user-menu .um-item {
+  display: flex !important;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px !important;
+  border: 0;
+  border-radius: 8px;
+  background: transparent !important;
+  color: #3A3A33 !important;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.user-menu .um-item:hover,
+.user-menu .um-item:focus {
+  background: #FAFAF8 !important;
+  color: #14140F !important;
+}
+.user-menu .um-item .um-ic {
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 12px !important;
+  color: #6F6F66;
+  flex-shrink: 0;
+}
+.user-menu .um-item:hover .um-ic { color: #14140F; }
+.user-menu .um-txt { flex: 1; text-align: left; white-space: nowrap; }
+.user-menu .um-divider { height: 1px; background: rgba(20,20,15,0.08); margin: 4px 6px; }
+.user-menu .um-item--danger,
+.user-menu .um-item--danger .um-ic { color: #DC2626 !important; }
+.user-menu .um-item--danger:hover { background: rgba(220,38,38,0.08) !important; color: #B91C1C !important; }
+.user-menu .um-item--danger:hover .um-ic { color: #B91C1C !important; }
+
+/* Dark — usa el mismo negro cálido #1A1A14 del resto de la app */
+[data-coreui-theme="dark"] .user-menu {
+  --cui-dropdown-bg: #1A1A14;
+  --cui-dropdown-border-color: #2A2A22;
+  --cui-dropdown-link-color: #D4D4CC;
+  --cui-dropdown-link-hover-color: #F4F4F0;
+  --cui-dropdown-link-hover-bg: #2A2A22;
+  background: #1A1A14 !important;
+  border-color: #2A2A22 !important;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,0.7) !important;
+}
+[data-coreui-theme="dark"] .user-menu .um-item { color: #D4D4CC !important; }
+[data-coreui-theme="dark"] .user-menu .um-item:hover,
+[data-coreui-theme="dark"] .user-menu .um-item:focus {
+  background: #2A2A22 !important;
+  color: #F4F4F0 !important;
+}
+[data-coreui-theme="dark"] .user-menu .um-item .um-ic { color: #A0A099; }
+[data-coreui-theme="dark"] .user-menu .um-item:hover .um-ic { color: #F4F4F0; }
+[data-coreui-theme="dark"] .user-menu .um-divider { background: rgba(255,255,255,0.08); }
+[data-coreui-theme="dark"] .user-menu .um-item--danger,
+[data-coreui-theme="dark"] .user-menu .um-item--danger .um-ic { color: #F87171 !important; }
+[data-coreui-theme="dark"] .user-menu .um-item--danger:hover {
+  background: rgba(220,38,38,0.16) !important;
+  color: #FCA5A5 !important;
+}
+[data-coreui-theme="dark"] .user-menu .um-item--danger:hover .um-ic { color: #FCA5A5 !important; }
 </style>

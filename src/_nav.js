@@ -1,5 +1,12 @@
 export default [
   {
+    component: 'CNavItem',
+    name: 'Dashboard',
+    to: '/dashboard',
+    icon: 'cil-grid',
+    // Sin roles = siempre visible
+  },
+  {
     component: 'CNavTitle',
     name: 'Áreas',
     // Sin roles = siempre visible

@@ -209,6 +209,9 @@ const filterStatus = ref('Todos')
 const filterVerdict = ref('Todos')
 const filterDocente = ref('')
 const query = ref('')
+// Foco activo: senal accionable seleccionada desde la banda superior.
+// Compone con el resto de filtros (no los reemplaza).
+const activeFoco = ref(null)
 
 const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
 const verdictFilters = ['Todos', 'DEFICIENTE', 'EN PROCESO', 'BUENO', 'EXCELENTE', 'SIN EVALUAR']
@@ -232,6 +235,7 @@ const filtered = computed(() => {
     .filter((a) => filterStatus.value === 'Todos' || a.status === filterStatus.value)
     .filter((a) => filterVerdict.value === 'Todos' || a.verdict === filterVerdict.value)
     .filter((a) => !filterDocente.value || a.teacher === filterDocente.value)
+    .filter((a) => !activeFoco.value || focoPredicates[activeFoco.value](a))
     .filter((a) => {
       if (!query.value) return true
       const q = query.value.toLowerCase()
@@ -442,6 +446,193 @@ const globalCoverage = computed(() => {
 })
 
 // =====================================================================
+// FOCOS DE ATENCION  (senales accionables derivadas del cruce de datos)
+// =====================================================================
+// La idea: que el reporte responda "que tengo que mirar HOY" sin que el
+// director tenga que escanear toda la tabla. Cada foco es un predicado sobre
+// el universo del periodo; solo se muestran los que tienen >0 aulas.
+function daysSince(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d)) return null
+  return Math.floor((Date.now() - d.getTime()) / 86400000)
+}
+
+// Un aula activa que lleva mas de STALE_DAYS sin auditoria nueva esta
+// "enfriandose": se dicta pero nadie la mide hace rato.
+const STALE_DAYS = 14
+
+const focoPredicates = {
+  'activas-sin-evaluar': (a) => a.status === 'Activo' && !a.hasAudit,
+  'deficientes-activas': (a) => a.status === 'Activo' && a.verdict === 'DEFICIENTE',
+  'cobertura-incompleta': (a) =>
+    a.status === 'Activo' && a.hasAudit && a.sessionsTotal > 0 &&
+    (a.sessionsAi < a.sessionsTotal || a.sessionsManual < a.sessionsTotal),
+  'sin-actividad': (a) => {
+    if (a.status !== 'Activo' || !a.hasAudit) return false
+    const d = daysSince(a.lastActivityAt)
+    return d != null && d > STALE_DAYS
+  },
+}
+
+const FOCO_META = {
+  'activas-sin-evaluar': {
+    label: 'Activas sin evaluar', icon: 'fa-eye-slash', tone: 'red',
+    hint: 'En curso sin ningun control de calidad',
+  },
+  'deficientes-activas': {
+    label: 'Deficientes en curso', icon: 'fa-triangle-exclamation', tone: 'red',
+    hint: 'Nota deficiente y todavia dictandose',
+  },
+  'cobertura-incompleta': {
+    label: 'Cobertura incompleta', icon: 'fa-gauge-simple-high', tone: 'amber',
+    hint: 'Sesiones activas aun sin evaluar',
+  },
+  'sin-actividad': {
+    label: `Frias +${STALE_DAYS}d`, icon: 'fa-clock', tone: 'amber',
+    hint: 'Activas sin auditorias recientes',
+  },
+}
+
+const focos = computed(() =>
+  Object.keys(focoPredicates)
+    .map((key) => ({
+      key,
+      ...FOCO_META[key],
+      count: periodAulas.value.filter(focoPredicates[key]).length,
+    }))
+    .filter((f) => f.count > 0),
+)
+
+function toggleFoco(key) {
+  activeFoco.value = activeFoco.value === key ? null : key
+}
+
+// Si el foco activo se queda sin aulas (cambio de periodo/filtros), lo soltamos
+// para no dejar la tabla vacia con un estado invisible.
+watch([focos, periodAulas], () => {
+  if (activeFoco.value && !focos.value.some((f) => f.key === activeFoco.value)) {
+    activeFoco.value = null
+  }
+})
+
+// =====================================================================
+// RANKING DE DOCENTES
+// =====================================================================
+// Agregacion por docente sobre el universo del periodo. Decision de modelado:
+// usamos MEDIA SIMPLE de las notas consolidadas finitas (no ponderada por
+// sesiones) — la pregunta es "como ensena este docente", no "cuantas sesiones
+// acumulo". Un aula chica pesa igual que una grande.
+const DIST_ORDER = [
+  ['EXCELENTE', 'sg-good'],
+  ['BUENO', 'sg-ok'],
+  ['EN PROCESO', 'sg-warn'],
+  ['DEFICIENTE', 'sg-bad'],
+  ['SIN EVALUAR', 'sg-empty'],
+]
+
+const docenteSort = ref('risk') // 'risk' | 'avg' | 'aulas'
+const docenteSortOptions = [
+  { id: 'risk', label: 'En riesgo' },
+  { id: 'avg', label: 'Promedio' },
+  { id: 'aulas', label: 'N.º aulas' },
+]
+
+const docenteStats = computed(() => {
+  const map = new Map()
+  for (const a of periodAulas.value) {
+    const name = a.teacher && a.teacher !== '--' ? a.teacher : 'Sin docente'
+    let d = map.get(name)
+    if (!d) {
+      d = {
+        teacher: name, initials: initials(name),
+        total: 0, evaluated: 0, atRisk: 0, good: 0, scores: [],
+        dist: { EXCELENTE: 0, BUENO: 0, 'EN PROCESO': 0, DEFICIENTE: 0, 'SIN EVALUAR': 0 },
+      }
+      map.set(name, d)
+    }
+    d.total += 1
+    if (a.hasAudit) d.evaluated += 1
+    if (a.verdict === 'DEFICIENTE' || a.verdict === 'EN PROCESO') d.atRisk += 1
+    if (a.verdict === 'BUENO' || a.verdict === 'EXCELENTE') d.good += 1
+    if (Number.isFinite(a.consolidated20)) d.scores.push(a.consolidated20)
+    d.dist[a.verdict] = (d.dist[a.verdict] || 0) + 1
+  }
+
+  const rows = [...map.values()].map((d) => {
+    const avg = d.scores.length
+      ? d.scores.reduce((x, y) => x + y, 0) / d.scores.length
+      : null
+    return {
+      ...d,
+      avg20: avg,
+      avgClass: score20Class(avg),
+      evaluatedPct: d.total ? Math.round((d.evaluated / d.total) * 100) : 0,
+      riskPct: d.total ? Math.round((d.atRisk / d.total) * 100) : 0,
+      segments: DIST_ORDER
+        .map(([k, cls]) => ({ key: k, cls, pct: (d.dist[k] / d.total) * 100 }))
+        .filter((s) => s.pct > 0),
+    }
+  })
+
+  const sorters = {
+    risk: (a, b) =>
+      b.atRisk - a.atRisk ||
+      b.riskPct - a.riskPct ||
+      (a.avg20 ?? 99) - (b.avg20 ?? 99),
+    avg: (a, b) => (a.avg20 ?? 99) - (b.avg20 ?? 99),
+    aulas: (a, b) => b.total - a.total || (a.avg20 ?? 99) - (b.avg20 ?? 99),
+  }
+  return rows.sort(sorters[docenteSort.value] || sorters.risk)
+})
+
+// Click en una fila del ranking => enfoca la tabla en ese docente (toggle).
+function focusDocente(name) {
+  filterDocente.value = filterDocente.value === name ? '' : name
+}
+
+// =====================================================================
+// EXPORT CSV  (tabla filtrada — para llevar a reuniones)
+// =====================================================================
+function csvCell(v) {
+  const s = v == null ? '' : String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function exportCsv() {
+  const rows = sorted.value
+  if (!rows.length) {
+    toast.info('No hay aulas para exportar con los filtros actuales')
+    return
+  }
+  const header = [
+    'Codigo', 'Aula', 'Edicion', 'Docente', 'Estado',
+    'Sesiones', 'Cobertura IA', 'Cobertura manual',
+    'Nota IA', 'Nota manual', 'Consolidada', 'Veredicto', 'Ultima actividad',
+  ]
+  const lines = [header.join(',')]
+  for (const a of rows) {
+    lines.push([
+      a.code, a.name, a.edition, a.teacher, a.status,
+      a.sessionsTotal, `${a.sessionsAi}/${a.sessionsTotal}`, `${a.sessionsManual}/${a.sessionsTotal}`,
+      fmt20(a.aiAvg20), fmt20(a.manualAvg20), fmt20(a.consolidated20), a.verdict,
+      a.lastActivityAt || '',
+    ].map(csvCell).join(','))
+  }
+  // BOM + CRLF para que Excel respete acentos y saltos de linea.
+  const blob = new Blob(['﻿' + lines.join('\r\n')], {
+    type: 'text/csv;charset=utf-8;',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `reporte-academico_${period.value.start}_${period.value.end}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+  toast.success(`Exportadas ${rows.length} aulas`)
+}
+
+// =====================================================================
 // NAVEGACION
 // =====================================================================
 function openAula(id) {
@@ -466,12 +657,51 @@ function openAula(id) {
       </div>
       <div class="actions">
         <DateRangePicker v-model="period" />
+        <button
+          class="btn"
+          :disabled="isLoading || !sorted.length"
+          title="Exportar la tabla filtrada a CSV"
+          @click="exportCsv"
+        >
+          <i class="fa-solid fa-file-arrow-down"></i>
+          Exportar
+        </button>
         <button class="btn" :disabled="isLoading" @click="loadReport">
           <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i>
           Sincronizar
         </button>
       </div>
     </header>
+
+    <!-- Banda de focos: solo aparece cuando hay algo que accionar. Clic =
+         filtra la tabla por ese foco (toggle). -->
+    <transition name="focos-fade">
+      <div v-if="focos.length" class="focos-bar">
+        <div class="focos-lead">
+          <i class="fa-solid fa-bolt"></i>
+          <span>Requieren atencion</span>
+        </div>
+        <button
+          v-for="f in focos"
+          :key="f.key"
+          class="foco"
+          :class="[`foco-${f.tone}`, { active: activeFoco === f.key }]"
+          :title="f.hint"
+          @click="toggleFoco(f.key)"
+        >
+          <i class="fa-solid" :class="f.icon"></i>
+          <span class="foco-count">{{ f.count }}</span>
+          <span class="foco-label">{{ f.label }}</span>
+        </button>
+        <button
+          v-if="activeFoco"
+          class="foco-clear"
+          @click="activeFoco = null"
+        >
+          <i class="fa-solid fa-xmark"></i> Quitar filtro
+        </button>
+      </div>
+    </transition>
 
     <div class="kpi-grid">
       <div class="kpi" style="--bar: #6366f1">
@@ -530,8 +760,35 @@ function openAula(id) {
       </div>
     </div>
 
-    <div class="panels-row">
-      <div class="panel">
+    <!-- Cobertura como tira compacta: dos barras en linea, sin ocupar un panel
+         entero. La sumatoria detallada vive en el tooltip. -->
+    <div class="coverage-strip">
+      <span class="cs-title">Cobertura del periodo</span>
+      <div
+        class="cs-item"
+        :title="`IA: ${globalCoverage.aiSessions} de ${globalCoverage.totalSessions} sesiones`"
+      >
+        <span class="coverage-dot coverage-dot-ai"></span>
+        <span class="cs-label">IA</span>
+        <span class="cs-bar"><span class="coverage-fill coverage-fill-ai" :style="{ width: globalCoverage.aiPct + '%' }"></span></span>
+        <span class="cs-fig mono">{{ globalCoverage.aiPct }}%</span>
+      </div>
+      <div
+        class="cs-item"
+        :title="`Manual: ${globalCoverage.manualSessions} de ${globalCoverage.totalSessions} sesiones`"
+      >
+        <span class="coverage-dot coverage-dot-manual"></span>
+        <span class="cs-label">Manual</span>
+        <span class="cs-bar"><span class="coverage-fill coverage-fill-manual" :style="{ width: globalCoverage.manualPct + '%' }"></span></span>
+        <span class="cs-fig mono">{{ globalCoverage.manualPct }}%</span>
+      </div>
+      <span class="cs-meta muted small">
+        {{ globalCoverage.aulas }} aulas &middot; {{ globalCoverage.totalSessions }} sesiones
+      </span>
+    </div>
+
+    <div class="insights-row">
+      <div class="panel donut-panel">
         <header class="panel-head">
           <div>
             <span class="panel-eyebrow">Distribucion de veredictos</span>
@@ -545,58 +802,103 @@ function openAula(id) {
         <apexchart
           v-else
           type="donut"
-          height="280"
+          height="260"
           :options="donutOptions"
           :series="donutSeries"
         />
       </div>
 
-      <div class="panel">
-        <header class="panel-head">
-          <div>
-            <span class="panel-eyebrow">Cobertura global del periodo</span>
-            <h3>Cuanto se ha evaluado realmente</h3>
-          </div>
-        </header>
-        <div class="coverage-block">
-          <div class="coverage-stat">
-            <span class="coverage-label">
-              <span class="coverage-dot coverage-dot-ai"></span> Analisis IA
-            </span>
-            <span class="coverage-figure mono">
-              {{ globalCoverage.aiSessions }} / {{ globalCoverage.totalSessions }}
-              <span class="muted small">&middot; {{ globalCoverage.aiPct }}%</span>
-            </span>
-          </div>
-          <div class="coverage-bar">
-            <span
-              class="coverage-fill coverage-fill-ai"
-              :style="{ width: globalCoverage.aiPct + '%' }"
-            ></span>
-          </div>
-
-          <div class="coverage-stat">
-            <span class="coverage-label">
-              <span class="coverage-dot coverage-dot-manual"></span> Evaluacion manual
-            </span>
-            <span class="coverage-figure mono">
-              {{ globalCoverage.manualSessions }} / {{ globalCoverage.totalSessions }}
-              <span class="muted small">&middot; {{ globalCoverage.manualPct }}%</span>
-            </span>
-          </div>
-          <div class="coverage-bar">
-            <span
-              class="coverage-fill coverage-fill-manual"
-              :style="{ width: globalCoverage.manualPct + '%' }"
-            ></span>
-          </div>
-
-          <div class="coverage-foot">
-            <i class="fa-solid fa-circle-info"></i>
-            Sumatoria sobre {{ globalCoverage.aulas }} aulas en el periodo
-            ({{ globalCoverage.totalSessions }} sesiones programadas en total).
-          </div>
+      <div class="panel ranking-panel">
+        <header class="panel-head ranking-head">
+        <div>
+          <span class="panel-eyebrow">Ranking de docentes</span>
+          <h3>Quien necesita acompañamiento</h3>
         </div>
+        <div class="ranking-sort">
+          <span class="sort-label">Ordenar por</span>
+          <button
+            v-for="opt in docenteSortOptions"
+            :key="opt.id"
+            class="sort-chip"
+            :class="{ active: docenteSort === opt.id }"
+            @click="docenteSort = opt.id"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </header>
+
+      <div v-if="!docenteStats.length" class="panel-empty">
+        <i class="fa-regular fa-folder-open"></i>
+        No hay docentes con aulas en el periodo.
+      </div>
+
+      <div v-else class="ranking-scroll">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th class="rk-pos">#</th>
+            <th>Docente</th>
+            <th class="th-center">Aulas</th>
+            <th>Distribucion</th>
+            <th class="th-num">Promedio</th>
+            <th class="th-num">En riesgo</th>
+            <th class="th-num">Evaluadas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(d, i) in docenteStats"
+            :key="d.teacher"
+            class="rk-row"
+            :class="{ selected: filterDocente === d.teacher }"
+            @click="focusDocente(d.teacher)"
+          >
+            <td class="rk-pos">
+              <span class="rk-medal" :class="`rk-medal-${i + 1}`">{{ i + 1 }}</span>
+            </td>
+            <td>
+              <div class="teacher-cell">
+                <span class="avatar">{{ d.initials }}</span>
+                <span class="rk-name">{{ d.teacher }}</span>
+              </div>
+            </td>
+            <td class="td-center mono">{{ d.total }}</td>
+            <td>
+              <span class="dist-bar" :title="`${d.good} ok / ${d.atRisk} riesgo`">
+                <span
+                  v-for="seg in d.segments"
+                  :key="seg.key"
+                  class="dist-seg"
+                  :class="`${seg.cls}-bg`"
+                  :style="{ width: seg.pct + '%' }"
+                ></span>
+              </span>
+            </td>
+            <td class="td-num">
+              <span class="rk-avg mono" :class="d.avgClass">{{ fmt20(d.avg20) }}</span>
+            </td>
+            <td class="td-num">
+              <span class="rk-risk" :class="{ 'rk-risk-on': d.atRisk > 0 }">
+                {{ d.atRisk }}
+              </span>
+            </td>
+            <td class="td-num">
+              <div class="rk-cov">
+                <span class="rk-cov-bar">
+                  <span class="rk-cov-fill" :style="{ width: d.evaluatedPct + '%' }"></span>
+                </span>
+                <span class="muted small mono">{{ d.evaluatedPct }}%</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="ranking-foot">
+        <i class="fa-solid fa-circle-info"></i>
+        Promedio = media simple por aula. Clic en un docente filtra la tabla.
+      </div>
       </div>
     </div>
 
@@ -1035,5 +1337,187 @@ function openAula(id) {
 .footer-note {
   margin: 16px 0 0; font-size: 11.5px; color: var(--ink-3);
   display: flex; align-items: center; gap: 6px;
+}
+
+/* =================================================================
+   COBERTURA — tira compacta
+   ================================================================= */
+.coverage-strip {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: white; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 16px; margin-bottom: 14px;
+}
+.cs-title {
+  font-size: 10.5px; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.cs-item { display: inline-flex; align-items: center; gap: 8px; min-width: 200px; flex: 1; }
+.cs-label { font-size: 12px; color: var(--ink-2); font-weight: 600; width: 44px; }
+.cs-bar {
+  position: relative; flex: 1; height: 8px; min-width: 80px;
+  background: var(--bg-soft); border-radius: 999px; overflow: hidden;
+}
+.cs-fig { font-size: 12px; color: var(--ink-2); width: 36px; text-align: right; }
+.cs-meta { margin-left: auto; white-space: nowrap; }
+
+/* =================================================================
+   FILA DE INSIGHTS — donut + ranking lado a lado
+   ================================================================= */
+.insights-row {
+  display: grid; grid-template-columns: 2fr 3fr; gap: 14px;
+  margin-bottom: 18px; align-items: stretch;
+}
+/* Altura comun para ambos paneles. El donut se centra sin estirarse (si le
+   damos flex-grow al wrapper, ApexCharts se reescala y se infla). */
+.donut-panel, .ranking-panel { height: 380px; }
+.donut-panel { display: flex; flex-direction: column; }
+.donut-panel > .vue-apexcharts { margin: auto 0; }
+.ranking-panel { display: flex; flex-direction: column; min-height: 0; }
+.ranking-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.ranking-table thead th {
+  position: sticky; top: 0; z-index: 1; background: white;
+}
+@media (max-width: 1000px) {
+  .insights-row { grid-template-columns: 1fr; }
+  .coverage-strip { gap: 10px; }
+}
+
+/* =================================================================
+   BANDA DE FOCOS DE ATENCION
+   ================================================================= */
+.focos-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: white; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 14px; margin-bottom: 18px;
+}
+.focos-lead {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px;
+}
+.focos-lead i { color: var(--amber-ink); }
+.foco {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: white; cursor: pointer;
+  font-size: 12px; color: var(--ink-2);
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.foco:hover { background: var(--bg-soft); }
+.foco-count { font-weight: 800; font-variant-numeric: tabular-nums; }
+.foco-label { color: var(--ink-3); }
+.foco i { font-size: 11px; }
+.foco-red   i, .foco-red   .foco-count { color: var(--red-ink); }
+.foco-amber i, .foco-amber .foco-count { color: var(--amber-ink); }
+.foco-red.active {
+  background: var(--red-soft); border-color: #F3C9C9;
+  box-shadow: 0 0 0 3px rgba(185,28,28,.08);
+}
+.foco-red.active .foco-label { color: var(--red-ink); }
+.foco-amber.active {
+  background: var(--amber-soft); border-color: #F0DDB0;
+  box-shadow: 0 0 0 3px rgba(180,83,9,.08);
+}
+.foco-amber.active .foco-label { color: var(--amber-ink); }
+.foco-clear {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: auto; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: white; cursor: pointer;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.foco-clear:hover { background: var(--bg-soft); color: var(--ink); }
+.focos-fade-enter-active, .focos-fade-leave-active { transition: opacity .2s, transform .2s; }
+.focos-fade-enter-from, .focos-fade-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* =================================================================
+   RANKING DE DOCENTES
+   ================================================================= */
+.ranking-panel { margin-bottom: 18px; padding: 16px 18px; }
+.ranking-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.ranking-sort { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sort-label {
+  font-size: 10.5px; font-weight: 700; color: var(--ink-4);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-right: 2px;
+}
+.sort-chip {
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: white; cursor: pointer;
+  font-size: 11.5px; color: var(--ink-2); transition: background .15s;
+}
+.sort-chip:hover { background: var(--bg-soft); }
+.sort-chip.active { background: var(--ink); color: white; border-color: var(--ink); font-weight: 500; }
+
+.ranking-table { width: 100%; border-collapse: collapse; }
+.ranking-table th, .ranking-table td {
+  padding: 9px 12px; font-size: 12.5px; text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ranking-table thead th {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-3); font-weight: 600;
+}
+.ranking-table .th-center { text-align: center; }
+.ranking-table .th-num { text-align: right; }
+.ranking-table tbody tr:last-child td { border-bottom: none; }
+.ranking-table .td-center { text-align: center; }
+.ranking-table .td-num { text-align: right; }
+
+.rk-row { cursor: pointer; transition: background .15s; }
+.rk-row:hover { background: #FBFBF8; }
+.rk-row.selected { background: var(--blue-soft); }
+.rk-pos { width: 34px; text-align: center; }
+.rk-medal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 11px; font-weight: 800; color: var(--ink-3);
+  background: var(--bg-soft); font-variant-numeric: tabular-nums;
+}
+.rk-medal-1 { background: #FCEFC7; color: #92670A; }
+.rk-medal-2 { background: #EDEDE8; color: #5A5A52; }
+.rk-medal-3 { background: #F6E2CF; color: #93540F; }
+.rk-name { font-weight: 600; color: var(--ink); }
+
+.dist-bar {
+  display: inline-flex; width: 100%; max-width: 180px; height: 8px;
+  border-radius: 999px; overflow: hidden; background: var(--bg-soft);
+}
+.dist-seg { height: 100%; display: block; }
+.sg-good-bg  { background: #047857; }
+.sg-ok-bg    { background: #1D4ED8; }
+.sg-warn-bg  { background: #B45309; }
+.sg-bad-bg   { background: #B91C1C; }
+.sg-empty-bg { background: #D5D5CE; }
+
+.rk-avg {
+  display: inline-block; min-width: 38px; padding: 2px 8px;
+  border-radius: 6px; font-weight: 700; background: var(--bg-soft);
+}
+.rk-avg.sg-good  { background: var(--green-soft); }
+.rk-avg.sg-ok    { background: var(--blue-soft); }
+.rk-avg.sg-warn  { background: var(--amber-soft); }
+.rk-avg.sg-bad   { background: var(--red-soft); }
+.rk-risk { font-weight: 700; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.rk-risk-on { color: var(--red-ink); }
+
+.rk-cov { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.rk-cov-bar {
+  position: relative; width: 56px; height: 6px;
+  background: var(--bg-soft); border-radius: 999px; overflow: hidden;
+}
+.rk-cov-fill {
+  position: absolute; inset: 0 auto 0 0; background: var(--green-ink);
+  border-radius: inherit; transition: width .3s ease;
+}
+.ranking-foot {
+  margin-top: 12px; font-size: 11.5px; color: var(--ink-3);
+  display: flex; align-items: center; gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .ranking-table .dist-bar { max-width: 90px; }
+  .focos-bar { gap: 6px; }
 }
 </style>

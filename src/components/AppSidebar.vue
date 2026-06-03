@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import weLogo from '@/assets/brand/WE-EDUCACION-PRINCIPAL.png'
 import { useSidebarStore } from '@/stores/sidebar.js'
@@ -8,14 +8,6 @@ import { useFilteredNav } from '@/composables/useFilteredNav.js'
 const sidebar = useSidebarStore()
 const { filteredNav } = useFilteredNav()
 const route = useRoute()
-
-const user = JSON.parse(localStorage.getItem('user') || '{}')
-const userName = user.name || user.alias || user.username || 'Usuario'
-const userRole = (user.roles && user.roles[0]) || 'Sistema'
-const userInitials = computed(() => {
-  const parts = String(userName).trim().split(/\s+/)
-  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'US'
-})
 
 const expandedGroups = ref(new Set())
 
@@ -62,18 +54,24 @@ onMounted(() => {
 <template>
   <aside class="sidebar-shell" :class="{ 'is-hidden': !sidebar.visible }">
     <div class="brand">
-      <RouterLink to="/" class="brand-link">
-        <img :src="weLogo" alt="W|E" class="brand-logo-img" />
+      <RouterLink to="/" class="brand-box">
+        <span class="brand-mark">
+          <img :src="weLogo" alt="W|E" class="brand-mark-img" />
+        </span>
+        <span class="brand-words">
+          <span class="brand-words__main">W<span class="brand-words__bar">|</span>E</span>
+          <span class="brand-words__sub">EDUCACIÓN EJECUTIVA</span>
+        </span>
       </RouterLink>
     </div>
 
     <nav class="sidebar-nav">
       <template v-for="(item, idx) in filteredNav" :key="idx">
         <div
-          v-if="item.component === 'CNavTitle' && item.name !== 'Áreas'"
+          v-if="item.component === 'CNavTitle'"
           class="nav-section-label"
         >
-          {{ item.name }}
+          <span class="nav-section-label__text">{{ item.name }}</span>
         </div>
 
         <template v-else-if="item.component === 'CNavGroup'">
@@ -130,18 +128,11 @@ onMounted(() => {
             <span v-if="badgeText(item.badge) != null" class="badge">
               {{ badgeText(item.badge) }}
             </span>
+            <span v-else-if="isActive" class="active-dot" aria-hidden="true"></span>
           </button>
         </RouterLink>
       </template>
     </nav>
-
-    <div class="sidebar-foot">
-      <div class="avatar">{{ userInitials }}</div>
-      <div class="who">
-        <div class="n">{{ userName }}</div>
-        <div class="r">{{ userRole }}</div>
-      </div>
-    </div>
   </aside>
 </template>
 
@@ -160,15 +151,15 @@ onMounted(() => {
 
   position: fixed;
   top: 0; left: 0; bottom: 0;
-  width: 232px;
+  width: 212px;
   background: var(--bg-elev);
   border-right: 1px solid var(--line);
-  padding: 14px 12px;
+  padding: 12px 7px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--ink-2);
   z-index: 1000;
   -webkit-font-smoothing: antialiased;
@@ -181,24 +172,58 @@ onMounted(() => {
 }
 
 .brand {
+  padding: 2px 2px 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.brand-box {
   display: flex;
   align-items: center;
-  padding: 8px 10px 16px;
-  border-bottom: 1px solid var(--line-soft);
-  margin-bottom: 8px;
-}
-.brand-link {
-  display: inline-flex;
-  align-items: center;
+  gap: 10px;
   text-decoration: none;
+  padding: 4px 6px;
   transition: opacity 0.15s;
 }
-.brand-link:hover { opacity: 0.75; }
-.brand-logo-img {
-  height: 32px;
-  width: auto;
-  display: block;
+.brand-box:hover { opacity: 0.8; }
+.brand-mark {
+  width: 33px;
+  height: 33px;
+  border-radius: 8px;
+  background: #0E1B3D;
+  border: 1px solid #1E2E57;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.brand-mark-img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  padding: 5px;
+}
+.brand-words {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.brand-words__main {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.brand-words__bar {
+  color: var(--ink-4);
+  font-weight: 400;
+  margin: 0 1px;
+}
+.brand-words__sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  margin-top: 1px;
 }
 
 .sidebar-nav {
@@ -218,22 +243,35 @@ onMounted(() => {
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 
 .nav-section-label {
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 8px 5px;
+}
+.nav-section-label__text {
+  font-size: 9.5px;
   font-weight: 600;
   color: var(--ink-4);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 14px 10px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nav-section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: 8px;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 7px;
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 12.5px;
   cursor: pointer;
   user-select: none;
   border: none;
@@ -250,8 +288,8 @@ onMounted(() => {
   font-weight: 500;
 }
 .nav-item .icon {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
   opacity: 0.8;
   color: var(--ink-3);
@@ -267,6 +305,14 @@ onMounted(() => {
   border-radius: 999px;
 }
 .nav-item.active .badge { background: var(--green); }
+.nav-item .active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+  flex-shrink: 0;
+}
 
 .nav-group-toggle.expanded::after { transform: rotate(180deg) !important; }
 .nav-group-toggle::after { transition: transform 0.2s ease !important; }
@@ -277,50 +323,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding-left: 10px;
-  margin-left: 12px;
+  padding-left: 8px;
+  margin-left: 9px;
   border-left: 1px solid var(--line-soft);
   margin-top: 2px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
-.nav-children .nav-child { font-size: 13px; padding: 6px 10px; }
-.nav-children .nav-child .icon { opacity: 0.7; width: 14px; height: 14px; }
-
-.sidebar-foot {
-  margin-top: auto;
-  padding: 10px;
-  border-top: 1px solid var(--line-soft);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.sidebar-foot .avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #FCD9B6, #F59E0B);
-  display: grid;
-  place-items: center;
-  color: white;
-  font-weight: 600;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-.sidebar-foot .who {
-  line-height: 1.2;
-  flex: 1;
-  min-width: 0;
-}
-.sidebar-foot .who .n {
-  font-weight: 600;
-  font-size: 12.5px;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sidebar-foot .who .r { font-size: 11px; color: var(--ink-3); }
-.sidebar-foot .chev { color: var(--ink-3); }
+.nav-children .nav-child { font-size: 12px; padding: 5px 8px; }
+.nav-children .nav-child .icon { opacity: 0.7; width: 13px; height: 13px; }
 
 @media (max-width: 991px) {
   .sidebar-shell:not(.is-hidden) {

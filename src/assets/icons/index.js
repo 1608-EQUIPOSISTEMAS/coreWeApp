@@ -26,6 +26,7 @@ import {
 } from '@coreui/icons'
 import { cifUs, cifBr, cifIn, cifFr, cifEs, cifPl } from '@coreui/icons'
 import {
+  cilAccountLogout,
   cilArrowBottom,
   cilArrowRight,
   cilArrowTop,
@@ -69,10 +70,12 @@ import {
   cilPencil,
   cilPeople,
   cilPuzzle,
+  cilReload,
   cilSettings,
   cilShieldAlt,
   cilSpeech,
   cilSpeedometer,
+  cilSpreadsheet,
   cilStar,
   cilSun,
   cilTask,
@@ -85,6 +88,7 @@ import {
 export const iconsSet = Object.assign(
   {},
   {
+    cilAccountLogout,
     cilArrowBottom,
     cilArrowRight,
     cilArrowTop,
@@ -128,10 +132,12 @@ export const iconsSet = Object.assign(
     cilPencil,
     cilPeople,
     cilPuzzle,
+    cilReload,
     cilSettings,
     cilShieldAlt,
     cilSpeech,
     cilSpeedometer,
+    cilSpreadsheet,
     cilStar,
     cilSun,
     cilTask,
