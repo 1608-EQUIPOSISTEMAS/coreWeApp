@@ -146,7 +146,7 @@
       <div v-if="isApproved" class="esp-section">
         <h4 class="esp-section-title">Acciones rapidas</h4>
         <div class="esp-quick-actions">
-          <button class="esp-action-btn" :disabled="busy === 'confirm'" @click="run('confirm')">
+          <button class="esp-action-btn" :disabled="busy === 'confirm'" @click="onResendConfirm">
             <i class="fa-solid" :class="busy === 'confirm' ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
             Reenviar confirmacion
           </button>
@@ -171,6 +171,35 @@
           <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver detalle completo
         </button>
       </footer>
+    </div>
+
+    <div v-if="showSapModal" class="esp-modal-backdrop" @click.self="closeSapModal">
+      <div class="esp-modal" role="dialog" aria-modal="true">
+        <header class="esp-modal-head esp-modal-head-sap">
+          <span class="esp-modal-icon esp-modal-icon-sap"><i class="fa-solid fa-server"></i></span>
+          <h3>Credenciales SAP</h3>
+        </header>
+        <div class="esp-modal-body">
+          <p class="esp-modal-lead">
+            Este es un curso <strong>SAP online</strong>. Escribe el usuario y la contraseña del
+            servidor SAP que se enviarán a <strong>{{ enrollment.student_full_name }}</strong>.
+          </p>
+          <SapCredentialsFields v-model:username="sapUsername" v-model:password="sapPassword" />
+        </div>
+        <footer class="esp-modal-foot">
+          <button class="esp-modal-btn esp-modal-btn-ghost" :disabled="sendingSap" @click="closeSapModal">
+            Cancelar
+          </button>
+          <button
+            class="esp-modal-btn esp-modal-btn-exec"
+            :disabled="!sapValid || sendingSap"
+            @click="sendSapConfirmation"
+          >
+            <i class="fa-solid" :class="sendingSap ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+            {{ sendingSap ? 'Enviando...' : 'Enviar correo' }}
+          </button>
+        </footer>
+      </div>
     </div>
 
     <div v-if="showDeleteModal" class="esp-modal-backdrop" @click.self="closeDeleteModal">
@@ -226,6 +255,8 @@ import { computed, inject, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { ServiceKeys } from '@/services'
+import SapCredentialsFields from './SapCredentialsFields.vue'
+import { isSapCredentialsValid } from './sapCredentials.js'
 
 const props = defineProps({
   enrollment: { type: Object, default: null }
@@ -292,20 +323,71 @@ const isApproved = computed(() => /aprobado|confirm/i.test(props.enrollment?.con
 const odooEmail = ref(null)
 const loadingOdooEmail = ref(false)
 const copiedKey = ref(null)
+const isSapOnline = ref(false)
 
 watch(() => props.enrollment?.enrollment_id, async id => {
   odooEmail.value = null
+  isSapOnline.value = false
   if (!id) return
   loadingOdooEmail.value = true
   try {
     const flags = await ficoService.getEnrollmentFlags(id)
     odooEmail.value = flags?.odoo_email || null
+    isSapOnline.value = !!flags?.is_sap_online
   } catch {
     odooEmail.value = null
   } finally {
     loadingOdooEmail.value = false
   }
 }, { immediate: true })
+
+// Mini-modal de credenciales SAP para el reenvio rapido. Los cursos SAP online
+// ya no autogeneran usuario/contrasena: FICO los escribe aqui antes de reenviar.
+const showSapModal = ref(false)
+const sapUsername = ref('')
+const sapPassword = ref('')
+const sendingSap = ref(false)
+const sapValid = computed(() => isSapCredentialsValid(sapUsername.value, sapPassword.value))
+
+// Reenviar confirmacion: si es SAP online, primero pide credenciales; si no,
+// envia directo como siempre.
+function onResendConfirm () {
+  if (isSapOnline.value) {
+    sapUsername.value = ''
+    sapPassword.value = ''
+    showSapModal.value = true
+    return
+  }
+  run('confirm')
+}
+
+function closeSapModal () {
+  if (sendingSap.value) return
+  showSapModal.value = false
+}
+
+async function sendSapConfirmation () {
+  if (!sapValid.value || sendingSap.value) return
+  const id = props.enrollment?.enrollment_id
+  if (!id) return
+  sendingSap.value = true
+  try {
+    const result = await ficoService.sendConfirmationEmail(id, {
+      sapUsername: sapUsername.value,
+      sapPassword: sapPassword.value
+    })
+    if (result?.success === false) {
+      toast.error(`Error al enviar correo: ${result.error || 'No se pudo completar la accion'}`)
+    } else {
+      toast.success('Correo de confirmacion enviado')
+      showSapModal.value = false
+    }
+  } catch (err) {
+    toast.error(`Error al enviar correo: ${err?.response?.data?.error || err?.message || 'No se pudo completar la accion'}`)
+  } finally {
+    sendingSap.value = false
+  }
+}
 
 async function copyEmail (value, key) {
   if (!value) return
@@ -845,6 +927,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   color: #fff;
 }
 .esp-modal-btn-danger:hover:not(:disabled) { background: #991B1B; }
+.esp-modal-btn-exec {
+  background: #0284C7;
+  color: #fff;
+}
+.esp-modal-btn-exec:hover:not(:disabled) { background: #0369A1; }
+
+/* SAP modal: cabecera azul en vez de roja */
+.esp-modal-head-sap {
+  background: #F0F9FF;
+  border-bottom-color: #BAE6FD;
+}
+.esp-modal-head-sap h3 { color: #0c4a6e; }
+.esp-modal-icon-sap { background: #0284C7; }
 
 /* Footer */
 .esp-footer {

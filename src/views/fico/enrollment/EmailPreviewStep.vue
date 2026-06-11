@@ -14,6 +14,11 @@
         <span class="ep-attachment-label">Se adjuntará:</span>
         <span class="ep-attachment-file">{{ previewData.attachmentName }}</span>
       </div>
+      <SapCredentialsFields
+        v-if="showSapForm"
+        v-model:username="sapUsername"
+        v-model:password="sapPassword"
+      />
       <div class="ep-frame-wrap">
         <iframe class="ep-frame" :srcdoc="previewData.html"></iframe>
       </div>
@@ -26,25 +31,52 @@
 </template>
 
 <script setup>
-import { ref, watch, inject } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useToast } from 'vue-toastification'
+import SapCredentialsFields from './SapCredentialsFields.vue'
+import { isSapCredentialsValid } from './sapCredentials.js'
 
 const props = defineProps({
   enrollmentId: { type: Number, required: true },
   active: { type: Boolean, default: false },
   overrideEditionId: { type: Number, default: null },
+  // Cambio de curso: el preview debe pintar el programa DESTINO, no el del
+  // enrollment origen (el enrollment nuevo aun no existe en este paso).
+  overrideProgramVersionId: { type: Number, default: null },
   // Solo para membresias: la fecha que el usuario eligio en el datepicker.
   // El preview la usa como override sobre la fecha persistida (que aun no
   // existe en este punto del flujo — el confirm la persiste despues).
-  activationDate: { type: String, default: null }
+  activationDate: { type: String, default: null },
+  // Habilita el formulario de credenciales SAP cuando el curso es SAP online.
+  // Solo el flujo de confirmar+enviar lo activa; RP/CC lo dejan en false.
+  collectSapCredentials: { type: Boolean, default: false }
 })
+
+const emit = defineEmits(['update:sap'])
 
 const ficoService = inject(ServiceKeys.Fico)
 const toast = useToast()
 
 const loading = ref(false)
 const previewData = ref(null)
+const sapUsername = ref('')
+const sapPassword = ref('')
+
+const isSapOnline = computed(() => !!previewData.value?.isSapOnline)
+const showSapForm = computed(() => props.collectSapCredentials && isSapOnline.value)
+const sapValid = computed(() => isSapCredentialsValid(sapUsername.value, sapPassword.value))
+
+// El padre necesita estas senales para su "gate" de envio (can-advance) y para
+// armar el payload al confirmar.
+function emitSapState () {
+  emit('update:sap', {
+    isSapOnline: isSapOnline.value,
+    sapUsername: sapUsername.value,
+    sapPassword: sapPassword.value,
+    valid: !showSapForm.value || sapValid.value
+  })
+}
 
 async function loadPreview () {
   loading.value = true
@@ -52,13 +84,16 @@ async function loadPreview () {
     previewData.value = await ficoService.previewEmail(
       props.enrollmentId,
       props.overrideEditionId,
-      props.activationDate
+      props.activationDate,
+      { sapUsername: sapUsername.value, sapPassword: sapPassword.value },
+      props.overrideProgramVersionId
     )
   } catch (err) {
     console.error(err)
     toast.error('Error cargando preview del correo')
   } finally {
     loading.value = false
+    emitSapState()
   }
 }
 
@@ -71,13 +106,30 @@ watch(() => props.overrideEditionId, () => {
   if (props.active) loadPreview()
 })
 
+watch(() => props.overrideProgramVersionId, () => {
+  if (props.active) loadPreview()
+})
+
 // Si el usuario cambia la fecha entre el step 0 y el step 1, recargamos el
 // preview para que refleje la nueva fecha sin necesidad de retroceder.
 watch(() => props.activationDate, () => {
   if (props.active) loadPreview()
 })
 
-defineExpose({ previewData })
+// Al teclear credenciales: avisa al padre de inmediato (para el gate) y refresca
+// el preview con debounce para que el iframe muestre las credenciales escritas
+// sin pegarle al backend en cada tecla.
+let sapDebounce = null
+watch([sapUsername, sapPassword], () => {
+  emitSapState()
+  if (!showSapForm.value) return
+  clearTimeout(sapDebounce)
+  sapDebounce = setTimeout(() => {
+    if (props.active) loadPreview()
+  }, 600)
+})
+
+defineExpose({ previewData, sapUsername, sapPassword, isSapOnline, sapValid })
 </script>
 
 <style scoped>

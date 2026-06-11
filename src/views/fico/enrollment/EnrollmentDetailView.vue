@@ -644,7 +644,7 @@ async function handleSaveEdit (justificacion) {
   }
 }
 
-async function handleConfirmPayment () {
+async function handleConfirmPayment (sapCreds = {}) {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
@@ -717,7 +717,7 @@ async function handleConfirmPayment () {
     }
     toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
     try {
-      const emailResult = await ficoService.sendConfirmationEmail(eid)
+      const emailResult = await ficoService.sendConfirmationEmail(eid, sapCreds)
       if (emailResult?.success) {
         toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
       } else {
@@ -738,7 +738,7 @@ async function handleConfirmPayment () {
   }
 }
 
-async function handleConfirmPlan () {
+async function handleConfirmPlan (sapCreds = {}) {
   savingFinancials.value = true
   try {
     const eid = enrollmentId.value
@@ -822,7 +822,7 @@ async function handleConfirmPlan () {
       return
     }
     toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
-    const emailResult = await ficoService.sendConfirmationEmail(eid)
+    const emailResult = await ficoService.sendConfirmationEmail(eid, sapCreds)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })
     } else {

@@ -465,12 +465,12 @@
       v-if="showConfirmStepper"
       v-model="confirmStep"
       :steps="['Confirmar Inscripcion', 'Preview Correo']"
-      :can-advance="confirmStep === 0 ? true : true"
+      :can-advance="confirmStep === 0 ? true : sapState.valid"
       :loading="saving"
       confirm-label="Confirmar y Enviar"
       confirm-icon="fa-paper-plane"
       @cancel="showConfirmStepper = false; confirmStep = 0"
-      @confirm="$emit(isContado ? 'confirm-payment' : 'confirm-plan')"
+      @confirm="onConfirmSend"
     >
       <template #step-0>
         <div class="ef-confirm-summary">
@@ -497,7 +497,13 @@
         </div>
       </template>
       <template #step-1>
-        <EmailPreviewStep :enrollment-id="enrollmentId" :active="confirmStep === 1" :activation-date="activationDate" />
+        <EmailPreviewStep
+          :enrollment-id="enrollmentId"
+          :active="confirmStep === 1"
+          :activation-date="activationDate"
+          collect-sap-credentials
+          @update:sap="sapState = $event"
+        />
       </template>
     </ActionStepper>
 
@@ -561,7 +567,7 @@ const props = defineProps({
   activationDate: { type: String, default: null }
 })
 
-defineEmits([
+const emit = defineEmits([
   'start-edit', 'cancel-edit', 'save-edit',
   'confirm-payment', 'confirm-plan', 'save-cuotas',
   'add-cuota', 'remove-cuota', 'reject-enrollment',
@@ -571,6 +577,20 @@ defineEmits([
   'open-reschedule',
   'edit-cuota-amount'
 ])
+
+// Estado de credenciales SAP que emite el EmailPreviewStep. `valid` arranca en
+// true (cursos no-SAP no exigen nada); el preview lo pone en false si es SAP
+// online y faltan credenciales, bloqueando el boton "Confirmar y Enviar".
+const sapState = ref({ isSapOnline: false, sapUsername: '', sapPassword: '', valid: true })
+
+// Reenvia el evento de confirmacion al padre adjuntando las credenciales SAP
+// (el padre las pasa a sendConfirmationEmail). En cursos no-SAP van vacias.
+function onConfirmSend () {
+  const sapCreds = sapState.value.isSapOnline
+    ? { sapUsername: sapState.value.sapUsername, sapPassword: sapState.value.sapPassword }
+    : {}
+  emit(isContado.value ? 'confirm-payment' : 'confirm-plan', sapCreds)
+}
 
 // Habilita la edicion del monto de una cuota cuando: ya existe en BD (no _isNew),
 // no esta paga, y el plan ya paso de borrador (esta en gestion FICO).

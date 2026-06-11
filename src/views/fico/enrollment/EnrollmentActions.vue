@@ -215,7 +215,7 @@
           </div>
         </template>
         <template #step-1>
-          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="ccEditionId" ref="emailPreviewRef" />
+          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="ccEditionId" :override-program-version-id="ccProgramVersionId" ref="emailPreviewRef" />
         </template>
       </ActionStepper>
 
