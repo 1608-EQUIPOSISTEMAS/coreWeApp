@@ -14,6 +14,8 @@ import DashboardService from './dashboard.service'
 import NotificationService from './notificationService'
 import B2bService from './b2b.service'
 import BotService from './bot.service'
+import ConfigService from './config.service'
+import ImportService from './import.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -33,7 +35,9 @@ Notification: Symbol('NotificationService'),
   Fico: Symbol('FicoService'),
   Dashboard: Symbol('DashboardService'),
   B2b: Symbol('B2bService'),
-  Bot: Symbol('BotService')
+  Bot: Symbol('BotService'),
+  Config: Symbol('ConfigService'),
+  Import: Symbol('ImportService')
 }
 
 export function createServices() {
@@ -51,6 +55,8 @@ export function createServices() {
 [ServiceKeys.Notification]: new NotificationService(),
     [ServiceKeys.Dashboard]: new DashboardService(api),
     [ServiceKeys.B2b]: new B2bService(api),
-    [ServiceKeys.Bot]: new BotService(api)
+    [ServiceKeys.Bot]: new BotService(api),
+    [ServiceKeys.Config]: new ConfigService(api),
+    [ServiceKeys.Import]: new ImportService(api)
   }
 }

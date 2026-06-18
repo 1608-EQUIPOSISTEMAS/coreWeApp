@@ -153,10 +153,11 @@
               </div>
               <div class="eact-field">
                 <label>Nueva edicion</label>
-                <select v-model="ccEditionId" class="eact-select" :disabled="!ccProgramVersionId || ccLoadingEditions" @change="onCCEditionChange">
-                  <option :value="null" disabled>{{ ccLoadingEditions ? 'Cargando...' : 'Seleccionar edicion...' }}</option>
+                <select v-model="ccEditionId" class="eact-select" :disabled="!ccProgramVersionId || ccLoadingEditions || ccIsMembershipDest" @change="onCCEditionChange">
+                  <option :value="null" disabled>{{ ccLoadingEditions ? 'Cargando...' : (ccIsMembershipDest ? 'No aplica (membresia)' : 'Seleccionar edicion...') }}</option>
                   <option v-for="ed in ccEditionsList" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                 </select>
+                <small v-if="ccIsMembershipDest" class="eact-price-hint">Las membresias no tienen edicion; se activan por fecha de membresia.</small>
               </div>
             </div>
             <div class="eact-grid-3" style="margin-top:12px">
@@ -543,6 +544,7 @@ function resetAllForms () {
   ccJustificacion.value = ''
   ccEditionsList.value = []
   ccEditionListPrice.value = 0
+  ccIsMembershipDest.value = false
   Object.assign(ccForm, { cat_currency: null, cat_method_payment: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', ticket_payment_urls: [] })
   newModalityId.value = null
   modalityJustificacion.value = ''
@@ -626,6 +628,9 @@ const ccProgramsList = ref([])
 const ccEditionsList = ref([])
 const ccEditionListPrice = ref(0)
 const ccLoadingEditions = ref(false)
+// Las membresias (WE PLUS/GOLD/PLAT/BLACK) no tienen ediciones: cuando el
+// programa destino es membresia, la edicion no aplica y no debe bloquear el paso.
+const ccIsMembershipDest = ref(false)
 
 const ccForm = reactive({
   cat_currency: null,
@@ -659,7 +664,11 @@ const ccEditionFinalPrice = computed(() => {
 })
 
 const ccDiferencia = computed(() => Math.max(0, ccEditionFinalPrice.value - ccPagado.value))
-const canAdvanceCC = computed(() => !!ccProgramVersionId.value && !!ccEditionId.value && !!ccJustificacion.value.trim())
+const canAdvanceCC = computed(() =>
+  !!ccProgramVersionId.value &&
+  (ccIsMembershipDest.value || !!ccEditionId.value) &&
+  !!ccJustificacion.value.trim()
+)
 
 async function loadCCPrograms () {
   try {
@@ -679,6 +688,7 @@ async function onCCProgramChange () {
   ccEditionsList.value = []
   ccEditionListPrice.value = 0
   ccTotalAmount.value = 0
+  ccIsMembershipDest.value = false
   if (!ccProgramVersionId.value) return
   ccLoadingEditions.value = true
   try {
@@ -694,6 +704,9 @@ async function onCCProgramChange () {
         label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
     if (priceData) {
+      // Una membresia no tiene ediciones: se marca el destino para no exigir
+      // edicion en el paso y se manda program_edition_id null al backend.
+      ccIsMembershipDest.value = !!priceData.is_membership
       const isStudent   = props.enrollment?.occupation_label === 'E'
       const primary     = isStudent ? priceData.price_student_soles : priceData.price_profesional_soles
       const fallback    = isStudent ? priceData.price_profesional_soles : priceData.price_student_soles
@@ -717,7 +730,8 @@ async function handleCourseChangeConfirm () {
     await ficoService.courseChange({
       enrollment_id: enrollmentId.value,
       new_program_version_id: ccProgramVersionId.value,
-      new_edition_id: ccEditionId.value,
+      // Membresia: sin edicion (program_edition_id null en destino).
+      new_edition_id: ccIsMembershipDest.value ? null : ccEditionId.value,
       total_amount: ccTotalAmount.value,
       justificacion: ccJustificacion.value.trim(),
       cat_currency: ccForm.cat_currency,

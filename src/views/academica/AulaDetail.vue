@@ -105,20 +105,29 @@ const teacherInitials = computed(() => {
 // TABS
 // =====================================================================
 const TABS = [
-  { id: 'asistencia', label: 'Asistencia', icon: 'fa-clipboard-user' },
+  { id: 'notas', label: 'Notas', icon: 'fa-list-check' },
   { id: 'auditoria', label: 'Auditoria', icon: 'fa-clipboard-check' },
   { id: 'general', label: 'General', icon: 'fa-chart-line' },
 ]
 
 // Permite preseleccionar el tab via query (?tab=general). Lo usa el Reporte
 // Academico para que el drill-down caiga directo en la vista consolidada.
+// ?tab=asistencia (deeplinks antiguos) cae en Notas, que la reemplaza.
 const TAB_IDS = TABS.map((t) => t.id)
-const initialTab = TAB_IDS.includes(route?.query?.tab) ? route.query.tab : 'asistencia'
+const queryTab = route?.query?.tab === 'asistencia' ? 'notas' : route?.query?.tab
+const initialTab = TAB_IDS.includes(queryTab) ? queryTab : 'notas'
 const activeTab = ref(initialTab)
 
 function switchTab(id) {
+  if (
+    activeTab.value === 'notas' && id !== 'notas' && dirtyGrades.size &&
+    !window.confirm('Hay notas sin guardar. ¿Salir del tab y descartar el aviso de cambios?')
+  ) return
   activeTab.value = id
-  if (id === 'asistencia' && !students.value.length) loadStudents()
+  if (id === 'notas') {
+    if (!students.value.length) loadStudents()
+    if (gradesMap.value === null) loadGrades()
+  }
   if (id === 'auditoria' && !auditMap.value) loadAudit()
   // El tab General consume `auditMap` igual que Auditoria, asi que
   // disparamos el mismo fetch para no requerir entrar antes a Auditoria.
@@ -126,7 +135,7 @@ function switchTab(id) {
 }
 
 // =====================================================================
-// ASISTENCIA: alumnos + matriz
+// NOTAS: alumnos + Lista de Notas editable (formato area academica ISO 21001)
 // =====================================================================
 const students = ref([])
 const isLoadingStudents = ref(false)
@@ -135,15 +144,16 @@ const studentQuery = ref('')
 
 const FILTERS = [
   { id: 'todos', label: 'Todos' },
-  { id: 'en_curso', label: 'En curso' },
-  { id: 'en_riesgo', label: 'En riesgo' },
-  { id: 'bajo_rend', label: 'Bajo rend.' },
+  { id: 'aprobados', label: 'Aprobados' },
+  { id: 'desaprobados', label: 'Desaprobados' },
+  { id: 'seguimiento', label: 'Seguimiento' },
 ]
 
 async function loadStudents() {
   isLoadingStudents.value = true
   try {
     students.value = await editionService.classroomStudentsList({ edition_id: editionId.value })
+    hydrateGradesDraft()
   } catch (err) {
     console.error('Error cargando alumnos:', err)
     toast.error('Error cargando alumnos del aula')
@@ -153,6 +163,254 @@ async function loadStudents() {
   }
 }
 
+// Reglas de calculo (espejo de GRADE_RULES en Backend edition.entity.js; al
+// guardar, el backend recalcula los totales y es la fuente de verdad).
+const GRADE_RULES = {
+  TEST_MAX_PER_SESSION: 5,
+  TEST_MULTIPLIER: 4, // promedio(0-5) * 4 => /20
+  WEIGHT_TEST: 0.3,
+  WEIGHT_PARTIAL: 0.3,
+  WEIGHT_FINAL: 0.4,
+  PARTICIPATION_MAX: 2,
+  PASS_THRESHOLD: 12,
+  CAP_FINAL_AT_20: true,
+}
+const PARTIAL_CRITERIA = [
+  { key: '1', label: 'Identificacion del problema central', max: 8 },
+  { key: '2', label: 'Analisis del entorno y datos', max: 8 },
+  { key: '3', label: 'Claridad y estructura del documento', max: 4 },
+]
+const FINAL_CRITERIA = [
+  { key: '1', label: 'Pensamiento Estrategico', max: 5 },
+  { key: '2', label: 'Decision y Justificacion', max: 5 },
+  { key: '3', label: 'Presentacion Ejecutiva', max: 5 },
+  { key: '4', label: 'Comunicacion y Adaptacion', max: 5 },
+]
+
+// gradesMap: enrollment_id -> fila guardada en BD (null = aun no cargado).
+// gradesDraft: enrollment_id -> copia editable; dirtyGrades junta los ids
+// modificados para guardarlos en un solo bulk.
+const gradesMap = ref(null)
+const gradesDraft = reactive({})
+const dirtyGrades = reactive(new Set())
+const expandedRow = ref(null)
+const isSavingGrades = ref(false)
+
+function emptyGradeDraft() {
+  return {
+    tests: {},
+    participation: {},
+    partial_criteria: {},
+    final_criteria: {},
+    group_number: null,
+    observation: '',
+  }
+}
+
+async function loadGrades() {
+  try {
+    const rows = await editionService.classroomGradesGet({ edition_id: editionId.value })
+    const map = {}
+    for (const r of rows || []) map[r.enrollment_id] = r
+    gradesMap.value = map
+    hydrateGradesDraft()
+  } catch (err) {
+    console.error('Error cargando notas:', err)
+    toast.error('Error cargando la lista de notas')
+    gradesMap.value = {}
+  }
+}
+
+// Crea/refresca el draft de cada alumno desde la fila guardada (o vacio).
+// Se invoca al cargar alumnos y al cargar notas (cualquiera llega primero).
+function hydrateGradesDraft() {
+  for (const s of students.value) {
+    const saved = gradesMap.value?.[s.enrollment_id]
+    if (gradesDraft[s.enrollment_id] && !saved) continue
+    if (dirtyGrades.has(s.enrollment_id)) continue
+    gradesDraft[s.enrollment_id] = saved
+      ? {
+          tests: { ...(saved.tests || {}) },
+          participation: { ...(saved.participation || {}) },
+          partial_criteria: { ...(saved.partial_criteria || {}) },
+          final_criteria: { ...(saved.final_criteria || {}) },
+          group_number: saved.group_number ?? null,
+          observation: saved.observation || '',
+        }
+      : emptyGradeDraft()
+  }
+}
+
+function draftFor(s) {
+  if (!gradesDraft[s.enrollment_id]) gradesDraft[s.enrollment_id] = emptyGradeDraft()
+  return gradesDraft[s.enrollment_id]
+}
+
+function markDirty(eid) {
+  dirtyGrades.add(eid)
+}
+
+// --- Calculo en vivo (mismas formulas que el backend) -----------------
+const round2g = (n) => Math.round(n * 100) / 100
+const sumVals = (obj) =>
+  Object.values(obj || {}).reduce((a, v) => a + (Number.isFinite(Number(v)) ? Number(v) : 0), 0)
+
+function testScore(d) {
+  const n = sessionsTotal.value
+  return n ? round2g((sumVals(d.tests) / n) * GRADE_RULES.TEST_MULTIPLIER) : 0
+}
+function partScore(d) {
+  const n = sessionsTotal.value
+  if (!n) return 0
+  const checks = Object.values(d.participation || {}).filter((v) => v === true).length
+  return Math.min(Math.round((checks * GRADE_RULES.PARTICIPATION_MAX) / n), GRADE_RULES.PARTICIPATION_MAX)
+}
+function partialScore(d) {
+  return round2g(sumVals(d.partial_criteria))
+}
+function finalDelivScore(d) {
+  return round2g(sumVals(d.final_criteria))
+}
+function finalGrade(d) {
+  let g = round2g(
+    testScore(d) * GRADE_RULES.WEIGHT_TEST +
+    partialScore(d) * GRADE_RULES.WEIGHT_PARTIAL +
+    finalDelivScore(d) * GRADE_RULES.WEIGHT_FINAL +
+    partScore(d),
+  )
+  if (GRADE_RULES.CAP_FINAL_AT_20) g = Math.min(g, 20)
+  return g
+}
+// "Tiene notas" = al menos una celda ESCRITA. Un 0 tecleado cuenta como nota
+// (alumno evaluado con 0 -> DESAPROBADO); una celda vacia no.
+function hasAnyGrade(d) {
+  const hasNum = (obj) =>
+    Object.values(obj || {}).some((v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)))
+  return (
+    hasNum(d.tests) ||
+    Object.values(d.participation || {}).some((v) => v === true) ||
+    hasNum(d.partial_criteria) ||
+    hasNum(d.final_criteria)
+  )
+}
+const hasDebt = (s) => Number(s.fin_overdue) > 0
+const ocupLabel = (s) => (s.profile_alias === 'we_profile_student' ? 'E' : 'P')
+// B2B: el registro puede venir por doctype B2B (cat_b2b_doctype) o por el
+// origen del agente (agent_origin tipo "B2B", "JF39-B2B"). Etiqueta resultante:
+// "B2B", "JF39-B2B" o "B2B - JP39" segun el dato disponible.
+const isB2bStudent = (s) => s.is_b2b === true || /b2b/i.test(s.agent_origin || '')
+function b2bLabel(s) {
+  if (!isB2bStudent(s)) return null
+  const origin = (s.agent_origin || '').trim().toUpperCase()
+  if (!origin) return 'B2B'
+  return origin.includes('B2B') ? origin : `B2B - ${origin}`
+}
+
+async function saveGrades() {
+  if (isSavingGrades.value || !dirtyGrades.size) return
+  isSavingGrades.value = true
+  try {
+    const items = [...dirtyGrades]
+      .filter((eid) => gradesDraft[eid])
+      .map((eid) => {
+        const d = gradesDraft[eid]
+        // Solo numeros validos: v-model.number deja '' cuando se vacia un input.
+        const numMap = (obj) => {
+          const out = {}
+          for (const [k, v] of Object.entries(obj || {})) {
+            if (v === '' || v === null || v === undefined) continue
+            const n = Number(v)
+            if (Number.isFinite(n)) out[k] = n
+          }
+          return out
+        }
+        const boolMap = (obj) => {
+          const out = {}
+          for (const [k, v] of Object.entries(obj || {})) out[k] = v === true
+          return out
+        }
+        const groupNum = Number(d.group_number)
+        return {
+          enrollment_id: Number(eid),
+          tests: numMap(d.tests),
+          participation: boolMap(d.participation),
+          partial_criteria: numMap(d.partial_criteria),
+          final_criteria: numMap(d.final_criteria),
+          group_number: Number.isInteger(groupNum) && groupNum > 0 ? groupNum : null,
+          observation: (d.observation || '').trim() || null,
+        }
+      })
+    if (!items.length) return
+    const res = await editionService.classroomGradesSave({
+      edition_id: editionId.value,
+      items,
+      user_id: currentUserId.value,
+    })
+    if (res?.ok) {
+      const map = { ...(gradesMap.value || {}) }
+      for (const row of res.data || []) {
+        map[row.enrollment_id] = row
+        iaDraftObs.delete(row.enrollment_id)
+      }
+      gradesMap.value = map
+      dirtyGrades.clear()
+      toast.success(`Notas guardadas (${(res.data || []).length} alumnos)`, { timeout: 2000 })
+    } else {
+      toast.error(res?.message || 'No se pudieron guardar las notas')
+    }
+  } catch (err) {
+    console.error('Error guardando notas:', err)
+    toast.error('Error guardando la lista de notas')
+  } finally {
+    isSavingGrades.value = false
+  }
+}
+
+// --- Observaciones IA (Ollama local via tunel) -------------------------
+// El modelo solo produce BORRADORES: entran al draft como filas sucias y se
+// persisten con el boton Guardar, siempre tras revision humana.
+const isGeneratingObs = ref(false)
+const aulaSummaryIa = ref('')
+const iaDraftObs = reactive(new Set()) // observaciones IA aun no guardadas
+
+async function generateObservations(enrollmentIds = null) {
+  if (isGeneratingObs.value) return
+  isGeneratingObs.value = true
+  try {
+    const res = await editionService.classroomGradesObservations({
+      edition_id: editionId.value,
+      enrollment_ids: enrollmentIds,
+    })
+    if (res?.ok) {
+      for (const it of res.data?.items || []) {
+        if (!gradesDraft[it.enrollment_id]) gradesDraft[it.enrollment_id] = emptyGradeDraft()
+        gradesDraft[it.enrollment_id].observation = it.observation
+        dirtyGrades.add(it.enrollment_id)
+        iaDraftObs.add(it.enrollment_id)
+      }
+      if (res.data?.aula_summary) aulaSummaryIa.value = res.data.aula_summary
+      const nOk = (res.data?.items || []).length
+      const nErr = (res.data?.errors || []).length
+      toast.success(
+        `Observaciones generadas: ${nOk}${nErr ? ` (fallaron ${nErr})` : ''}. Revisa, edita y guarda.`,
+        { timeout: 4000 },
+      )
+    } else {
+      toast.error(res?.message || 'No se pudieron generar las observaciones')
+    }
+  } catch (err) {
+    console.error('Error generando observaciones:', err)
+    toast.error(err?.response?.data?.message || 'IA local no disponible. Verifica el tunel a Ollama.')
+  } finally {
+    isGeneratingObs.value = false
+  }
+}
+
+function copyAulaSummary() {
+  navigator.clipboard?.writeText(aulaSummaryIa.value)
+  toast.success('Resumen copiado', { timeout: 1200 })
+}
+
 const filteredStudents = computed(() => {
   const q = studentQuery.value.trim().toLowerCase()
   return students.value.filter((s) => {
@@ -160,40 +418,102 @@ const filteredStudents = computed(() => {
       const hay = `${s.full_name || ''} ${s.dni || ''}`.toLowerCase()
       if (!hay.includes(q)) return false
     }
+    if (studentFilter.value === 'todos') return true
+    const d = gradesDraft[s.enrollment_id]
+    const graded = d ? hasAnyGrade(d) : false
+    const final = d ? finalGrade(d) : 0
+    if (studentFilter.value === 'aprobados') return graded && final >= GRADE_RULES.PASS_THRESHOLD
+    if (studentFilter.value === 'desaprobados') return !graded || final < GRADE_RULES.PASS_THRESHOLD
+    if (studentFilter.value === 'seguimiento') return s.type_status_alias === 'we_enrollment_status_tracking'
     return true
   })
 })
 
-// TODO: enchufar SP de asistencia real (matriz alumno x sesion).
-// Devolver 'P' | 'T' | 'F' | null por (enrollment_id, session_number).
-function getAttendance(/* enrollmentId, sessionNumber */) {
-  return null
-}
+// --- Resumenes (formato del sheet oficial), sobre todos los alumnos ----
+const gradesSummary = computed(() => {
+  const total = students.value.length
+  const flex = students.value.filter((s) => s.modality_alias === 'we_insc_modality_flexible').length
+  const tracking = students.value.filter((s) => s.type_status_alias === 'we_enrollment_status_tracking').length
+  const certified = students.value.filter((s) => s.has_certificate === true).length
+  let approved = 0
+  for (const s of students.value) {
+    const d = gradesDraft[s.enrollment_id]
+    if (d && hasAnyGrade(d) && finalGrade(d) >= GRADE_RULES.PASS_THRESHOLD) approved += 1
+  }
+  const pct = (n) => (total ? Math.round((n / total) * 100) : 0)
+  return {
+    total,
+    regular: total - flex,
+    flex,
+    tracking,
+    certified,
+    approved,
+    failed: total - approved,
+    pct,
+  }
+})
 
-// TODO: enchufar SP de participacion (notas 1-5 por sesion por alumno).
-function getParticipation(/* enrollmentId, sessionNumber */) {
-  return null
-}
+// Por sesion: cuantos alumnos tienen puntos de test y cuantos participaron.
+const sessionStats = computed(() =>
+  sessionNumbers.value.map((n) => {
+    let withTest = 0
+    let participated = 0
+    for (const s of students.value) {
+      const d = gradesDraft[s.enrollment_id]
+      if (!d) continue
+      if (Number(d.tests?.[String(n)]) > 0) withTest += 1
+      if (d.participation?.[String(n)] === true) participated += 1
+    }
+    const total = students.value.length || 1
+    return {
+      session: n,
+      withTest,
+      withTestPct: Math.round((withTest / total) * 100),
+      participated,
+      participatedPct: Math.round((participated / total) * 100),
+    }
+  }),
+)
 
-const ATTENDANCE_CELL = {
-  P: { label: 'P', cls: 'att-p', title: 'Presente' },
-  T: { label: 'T', cls: 'att-t', title: 'Tarde' },
-  F: { label: 'F', cls: 'att-f', title: 'Falta' },
-}
-const attendanceCell = (v) => ATTENDANCE_CELL[v] || { label: '--', cls: 'att-empty', title: 'Sin registro' }
+// Primeros puestos: top 3 por nota final entre alumnos con alguna nota.
+const topStudents = computed(() => {
+  return students.value
+    .map((s) => {
+      const d = gradesDraft[s.enrollment_id]
+      return d && hasAnyGrade(d) ? { s, final: finalGrade(d) } : null
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.final - a.final)
+    .slice(0, 3)
+})
+
+// Promedio de nota final del aula (solo alumnos con alguna nota), para el KPI.
+const aulaGradeAverage = computed(() => {
+  const finals = students.value
+    .map((s) => {
+      const d = gradesDraft[s.enrollment_id]
+      return d && hasAnyGrade(d) ? finalGrade(d) : null
+    })
+    .filter((v) => v != null)
+  if (!finals.length) return null
+  return round2g(finals.reduce((a, b) => a + b, 0) / finals.length)
+})
+
+const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 13)
 
 const TYPE_STATUS_BADGE = {
   we_enrollment_status_tracking: { label: 'SEG', cls: 'tb-seg' },
   we_enrollment_status_reprogrammed: { label: 'RP', cls: 'tb-rp' },
   we_enrollment_status_course_changed: { label: 'CC', cls: 'tb-cc' },
   we_enrollment_status_observed: { label: 'OBS', cls: 'tb-obs' },
+  we_inscription_way_act: { label: 'ACT', cls: 'tb-act' },
 }
 const typeStatusBadge = (alias) => TYPE_STATUS_BADGE[alias]
 
 function modalityLabel(s) {
   const a = s.modality_alias
   if (a === 'we_insc_modality_flexible') return 'FLEX'
-  if (a === 'we_insc_modality_regular') return 'REGULAR'
+  if (a === 'we_insc_modality_regular' || a === 'we_insc_modality_normal') return 'REGULAR'
   return s.modality_label || '--'
 }
 
@@ -1024,6 +1344,7 @@ watch(auditMap, (v) => {
 onMounted(async () => {
   await loadAula()
   loadStudents()
+  loadGrades()
   // Si el deeplink trae ?tab=general o ?tab=auditoria, precargamos el audit
   // para que la vista no quede vacia esperando al primer click.
   if (activeTab.value === 'auditoria' || activeTab.value === 'general') {
@@ -1077,12 +1398,16 @@ onMounted(async () => {
           <div class="hk-value mono">{{ students.length || (isLoadingStudents ? '...' : 0) }}</div>
         </div>
         <div class="hk">
-          <div class="hk-label">Asistencia</div>
-          <div class="hk-value mono muted">--</div>
+          <div class="hk-label">Aprobados</div>
+          <div class="hk-value mono" :class="{ muted: !gradesSummary.approved }">
+            {{ gradesSummary.approved }}
+          </div>
         </div>
         <div class="hk">
           <div class="hk-label">Prom. final</div>
-          <div class="hk-value mono muted">--</div>
+          <div class="hk-value mono" :class="{ muted: aulaGradeAverage == null }">
+            {{ aulaGradeAverage == null ? '--' : fmtNota(aulaGradeAverage) }}
+          </div>
         </div>
       </div>
     </header>
@@ -1097,14 +1422,14 @@ onMounted(async () => {
       >
         <i class="fa-solid" :class="t.icon"></i>
         {{ t.label }}
-        <span v-if="t.id === 'asistencia'" class="tab-count">{{ students.length }}</span>
+        <span v-if="t.id === 'notas'" class="tab-count">{{ students.length }}</span>
       </button>
     </nav>
 
     <!-- ============================================================ -->
-    <!-- ASISTENCIA                                                   -->
+    <!-- NOTAS (Lista de Notas editable)                              -->
     <!-- ============================================================ -->
-    <section v-if="activeTab === 'asistencia'" class="tab-body">
+    <section v-if="activeTab === 'notas'" class="tab-body">
       <div class="toolbar">
         <div class="input">
           <i class="fa-solid fa-magnifying-glass"></i>
@@ -1123,19 +1448,25 @@ onMounted(async () => {
           </button>
         </div>
         <div class="legend">
-          <span class="lg"><span class="att-cell att-p">P</span> Presente</span>
-          <span class="lg"><span class="att-cell att-t">T</span> Tarde</span>
-          <span class="lg"><span class="att-cell att-f">F</span> Falta</span>
+          <span class="lg"><span class="debt-swatch"></span> Con deuda pendiente</span>
         </div>
         <div class="spacer"></div>
-        <button class="btn" disabled>
-          <i class="fa-regular fa-paper-plane"></i> Mensaje
+        <button
+          class="btn"
+          :disabled="isGeneratingObs || !students.length"
+          title="Genera borradores de observacion por alumno con la IA local"
+          @click="generateObservations()"
+        >
+          <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
+          {{ isGeneratingObs ? 'Generando...' : 'Generar observaciones (IA)' }}
         </button>
-        <button class="btn" disabled>
-          <i class="fa-solid fa-download"></i> Exportar
-        </button>
-        <button class="btn primary" disabled>
-          <i class="fa-solid fa-check"></i> Tomar asistencia
+        <button
+          class="btn primary"
+          :disabled="!dirtyGrades.size || isSavingGrades"
+          @click="saveGrades"
+        >
+          <i class="fa-solid" :class="isSavingGrades ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+          {{ isSavingGrades ? 'Guardando...' : 'Guardar cambios' + (dirtyGrades.size ? ` (${dirtyGrades.size})` : '') }}
         </button>
       </div>
 
@@ -1146,76 +1477,305 @@ onMounted(async () => {
         <i class="fa-regular fa-folder-open"></i> Sin alumnos matriculados en esta aula.
       </div>
       <div v-else class="att-matrix-scroll">
-        <table class="att-matrix">
+        <table class="att-matrix grades-table">
           <thead>
             <tr class="th-groups">
               <th class="sticky-c0" rowspan="2">N&deg;</th>
               <th class="sticky-c1" rowspan="2">Nombre y apellidos</th>
-              <th class="sticky-c2" rowspan="2">DNI</th>
-              <th rowspan="2">Contacto</th>
-              <th rowspan="2">Modalidad</th>
-              <th rowspan="2">Estado</th>
-              <th class="th-group-att" :colspan="sessionsTotal || 1">Asistencia</th>
-              <th class="th-group-part" :colspan="sessionsTotal || 1">Participacion</th>
-              <th rowspan="2" class="th-summary">% Asist.</th>
+              <th rowspan="2">Ocup.</th>
+              <th rowspan="2">Mod.</th>
+              <th rowspan="2">Seguimiento</th>
+              <th rowspan="2">B2B</th>
+              <th class="th-group-att" :colspan="(sessionsTotal || 1) + 1">Nota de tests &middot; 6/20</th>
+              <th class="th-group-part" :colspan="(sessionsTotal || 1) + 1">Participacion &middot; 2/20</th>
+              <th class="th-group-pi" colspan="3">Proyecto integrador &middot; 6+8/20</th>
+              <th rowspan="2" class="th-summary">Nota final</th>
+              <th rowspan="2">Resultado</th>
             </tr>
             <tr>
-              <th v-for="n in sessionNumbers" :key="'a' + n" class="th-session att">S{{ n }}</th>
+              <th v-for="n in sessionNumbers" :key="'t' + n" class="th-session att">S{{ n }}</th>
+              <th class="th-session att th-total">TEST</th>
               <th v-for="n in sessionNumbers" :key="'p' + n" class="th-session part">S{{ n }}</th>
+              <th class="th-session part th-total">PTS</th>
+              <th class="th-session pi th-total">PARCIAL</th>
+              <th class="th-session pi th-total">FINAL</th>
+              <th class="th-session pi"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
-              <td class="sticky-c0 mono small">{{ String(idx + 1).padStart(2, '0') }}</td>
-              <td class="sticky-c1">
-                <div class="student-name-cell">
-                  <span class="av-sm">{{ initialsOf(s.full_name) }}</span>
-                  <div>
-                    <div class="sn-name">{{ s.full_name }}</div>
-                    <div class="sn-handle">{{ handleOfName(s.full_name) }}</div>
+            <template v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
+              <tr :class="{ 'row-debt': hasDebt(s) }">
+                <td class="sticky-c0 mono small">{{ String(idx + 1).padStart(2, '0') }}</td>
+                <td class="sticky-c1">
+                  <div class="student-name-cell">
+                    <span class="av-sm">{{ initialsOf(s.full_name) }}</span>
+                    <div>
+                      <div class="sn-name" :title="s.full_name">
+                        {{ s.full_name }}
+                        <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
+                          <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
+                        </span>
+                      </div>
+                      <div class="sn-handle" :title="s.email || ''">
+                        {{ s.email || handleOfName(s.full_name) }}
+                      </div>
+                    </div>
+                    <i
+                      v-if="hasDebt(s)"
+                      class="fa-solid fa-circle-exclamation debt-ico"
+                      :title="`Deuda pendiente: ${s.fin_overdue} cuota(s) vencida(s)`"
+                    ></i>
                   </div>
-                </div>
-              </td>
-              <td class="sticky-c2 mono">{{ s.dni || '--' }}</td>
-              <td>
-                <div class="contact-cell">
-                  <div class="mono">{{ s.phone || '--' }}</div>
-                  <div class="muted small text-truncate" :title="s.email">{{ s.email || '--' }}</div>
-                </div>
-              </td>
-              <td>
-                <span v-if="modalityLabel(s) !== '--'" class="mod-pill" :class="modalityLabel(s).toLowerCase()">
-                  {{ modalityLabel(s) }}
-                </span>
-                <span v-else class="muted">--</span>
-              </td>
-              <td>
-                <span v-if="typeStatusBadge(s.type_status_alias)"
-                      class="type-badge"
-                      :class="typeStatusBadge(s.type_status_alias).cls">
-                  {{ typeStatusBadge(s.type_status_alias).label }}
-                </span>
-                <span v-else class="muted small">--</span>
-              </td>
-              <td v-for="n in sessionNumbers" :key="'a' + n" class="td-att">
-                <span
-                  class="att-cell"
-                  :class="attendanceCell(getAttendance(s.enrollment_id, n)).cls"
-                  :title="attendanceCell(getAttendance(s.enrollment_id, n)).title"
-                >{{ attendanceCell(getAttendance(s.enrollment_id, n)).label }}</span>
-              </td>
-              <td v-for="n in sessionNumbers" :key="'p' + n" class="td-part">
-                <span class="part-cell">{{ getParticipation(s.enrollment_id, n) ?? '--' }}</span>
-              </td>
-              <td class="td-summary mono muted">--</td>
-            </tr>
+                </td>
+                <td class="td-center">
+                  <span class="ocup-pill" :class="ocupLabel(s).toLowerCase()">{{ ocupLabel(s) }}</span>
+                </td>
+                <td>
+                  <span v-if="modalityLabel(s) !== '--'" class="mod-pill" :class="modalityLabel(s).toLowerCase()">
+                    {{ modalityLabel(s) }}
+                  </span>
+                  <span v-else class="muted">--</span>
+                </td>
+                <td>
+                  <span v-if="s.parent_code"
+                        class="type-badge tb-seg mono"
+                        :title="s.type_status_label || 'Programa padre'">
+                    {{ s.parent_code }}
+                  </span>
+                  <span v-else-if="typeStatusBadge(s.type_status_alias)"
+                        class="type-badge"
+                        :class="typeStatusBadge(s.type_status_alias).cls">
+                    {{ typeStatusBadge(s.type_status_alias).label }}
+                  </span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td>
+                  <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td v-for="n in sessionNumbers" :key="'t' + n" class="td-att">
+                  <input
+                    class="grade-input"
+                    type="number"
+                    min="0"
+                    :max="GRADE_RULES.TEST_MAX_PER_SESSION"
+                    step="1"
+                    :value="draftFor(s).tests[String(n)]"
+                    @input="draftFor(s).tests[String(n)] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                  />
+                </td>
+                <td class="td-total mono">{{ fmtNota(testScore(draftFor(s))) }}</td>
+                <td v-for="n in sessionNumbers" :key="'p' + n" class="td-part">
+                  <input
+                    type="checkbox"
+                    class="part-check"
+                    :checked="draftFor(s).participation[String(n)] === true"
+                    @change="draftFor(s).participation[String(n)] = $event.target.checked; markDirty(s.enrollment_id)"
+                  />
+                </td>
+                <td class="td-total mono">{{ partScore(draftFor(s)) }}</td>
+                <td class="td-total mono">{{ fmtNota(partialScore(draftFor(s))) }}</td>
+                <td class="td-total mono">{{ fmtNota(finalDelivScore(draftFor(s))) }}</td>
+                <td class="td-center">
+                  <button
+                    class="expand-btn"
+                    :title="expandedRow === s.enrollment_id ? 'Cerrar criterios' : 'Editar criterios de entregables'"
+                    @click="expandedRow = expandedRow === s.enrollment_id ? null : s.enrollment_id"
+                  >
+                    <i class="fa-solid" :class="expandedRow === s.enrollment_id ? 'fa-chevron-up' : 'fa-pen-to-square'"></i>
+                  </button>
+                </td>
+                <td class="td-summary">
+                  <span
+                    v-if="hasAnyGrade(draftFor(s))"
+                    class="score-badge strong"
+                    :class="'sv-' + notaLevel(finalGrade(draftFor(s)))"
+                  >{{ fmtNota(finalGrade(draftFor(s))) }}</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td>
+                  <span
+                    v-if="hasAnyGrade(draftFor(s))"
+                    class="result-pill"
+                    :class="finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'ok' : 'bad'"
+                  >{{ finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'APROBADO' : 'DESAPROBADO' }}</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+              </tr>
+              <tr v-if="expandedRow === s.enrollment_id" class="deliv-subrow">
+                <td :colspan="gradesColspan">
+                  <div class="deliv-grid">
+                    <div class="deliv-group">
+                      <div class="deliv-title">Entregable parcial <span class="muted">(suma /20 &middot; peso 6)</span></div>
+                      <label v-for="c in PARTIAL_CRITERIA" :key="'pc' + c.key" class="deliv-field">
+                        <span>{{ c.key }}. {{ c.label }} <b class="mono">/{{ c.max }}</b></span>
+                        <input
+                          class="grade-input wide"
+                          type="number"
+                          min="0"
+                          :max="c.max"
+                          step="0.5"
+                          :value="draftFor(s).partial_criteria[c.key]"
+                          @input="draftFor(s).partial_criteria[c.key] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                        />
+                      </label>
+                    </div>
+                    <div class="deliv-group">
+                      <div class="deliv-title">Entregable final <span class="muted">(suma /20 &middot; peso 8)</span></div>
+                      <label v-for="c in FINAL_CRITERIA" :key="'fc' + c.key" class="deliv-field">
+                        <span>{{ c.key }}. {{ c.label }} <b class="mono">/{{ c.max }}</b></span>
+                        <input
+                          class="grade-input wide"
+                          type="number"
+                          min="0"
+                          :max="c.max"
+                          step="0.5"
+                          :value="draftFor(s).final_criteria[c.key]"
+                          @input="draftFor(s).final_criteria[c.key] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                        />
+                      </label>
+                    </div>
+                    <div class="deliv-group">
+                      <div class="deliv-title">Datos del aula</div>
+                      <label class="deliv-field">
+                        <span>N&deg; de grupo</span>
+                        <input
+                          class="grade-input wide"
+                          type="number"
+                          min="1"
+                          step="1"
+                          :value="draftFor(s).group_number"
+                          @input="draftFor(s).group_number = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                        />
+                      </label>
+                      <label class="deliv-field">
+                        <span>Correo Odoo (certificacion)</span>
+                        <span class="mono small" :title="s.platform_user || s.email || ''">
+                          {{ s.platform_user || s.email || '--' }}
+                        </span>
+                      </label>
+                      <div class="deliv-flags">
+                        <span v-if="s.has_certificate" class="type-badge tb-seg"><i class="fa-solid fa-certificate"></i> Certificado</span>
+                        <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
+                        <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
+                          <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="deliv-group obs-group">
+                      <div class="deliv-title">
+                        Observacion (acta)
+                        <button
+                          class="btn btn-xs"
+                          :disabled="isGeneratingObs"
+                          title="Regenerar con IA solo para este alumno"
+                          @click="generateObservations([s.enrollment_id])"
+                        >
+                          <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
+                          Regenerar
+                        </button>
+                      </div>
+                      <textarea
+                        class="obs-textarea"
+                        :class="{ 'ia-draft': iaDraftObs.has(s.enrollment_id) }"
+                        rows="2"
+                        maxlength="2000"
+                        placeholder="Observacion del alumno para el acta de notas..."
+                        :value="draftFor(s).observation"
+                        @input="draftFor(s).observation = $event.target.value; markDirty(s.enrollment_id)"
+                      ></textarea>
+                      <div v-if="iaDraftObs.has(s.enrollment_id)" class="muted small">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Borrador IA sin guardar — revisa y guarda.
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
+
+      <!-- Resumenes del formato oficial -->
+      <div v-if="students.length" class="summary-grid">
+        <div class="summary-card">
+          <h3 class="sum-title"><i class="fa-solid fa-users"></i> Resumen de alumnos</h3>
+          <div class="sum-rows">
+            <div class="sum-row"><span>Total de alumnos inscritos</span><b class="mono">{{ gradesSummary.total }}</b></div>
+            <div class="sum-row"><span>Modalidad regular</span><b class="mono">{{ gradesSummary.regular }} &middot; {{ gradesSummary.pct(gradesSummary.regular) }}%</b></div>
+            <div class="sum-row"><span>Modalidad Flex</span><b class="mono">{{ gradesSummary.flex }} &middot; {{ gradesSummary.pct(gradesSummary.flex) }}%</b></div>
+            <div class="sum-row"><span>Alumnos de seguimiento</span><b class="mono">{{ gradesSummary.tracking }} &middot; {{ gradesSummary.pct(gradesSummary.tracking) }}%</b></div>
+            <div class="sum-row"><span>Certificados</span><b class="mono">{{ gradesSummary.certified }} &middot; {{ gradesSummary.pct(gradesSummary.certified) }}%</b></div>
+            <div class="sum-row"><span>Aprobados</span><b class="mono ok-ink">{{ gradesSummary.approved }} &middot; {{ gradesSummary.pct(gradesSummary.approved) }}%</b></div>
+            <div class="sum-row"><span>Desaprobados</span><b class="mono bad-ink">{{ gradesSummary.failed }} &middot; {{ gradesSummary.pct(gradesSummary.failed) }}%</b></div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <h3 class="sum-title"><i class="fa-solid fa-clipboard-question"></i> Test por sesion</h3>
+          <table class="sum-table">
+            <thead>
+              <tr><th></th><th v-for="st in sessionStats" :key="'h' + st.session">S{{ st.session }}</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Con puntos</td>
+                <td v-for="st in sessionStats" :key="'c' + st.session" class="mono">{{ st.withTest }}</td>
+              </tr>
+              <tr class="muted">
+                <td>%</td>
+                <td v-for="st in sessionStats" :key="'pc' + st.session" class="mono">{{ st.withTestPct }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="summary-card">
+          <h3 class="sum-title"><i class="fa-solid fa-hand"></i> Participaciones por sesion</h3>
+          <table class="sum-table">
+            <thead>
+              <tr><th></th><th v-for="st in sessionStats" :key="'h2' + st.session">S{{ st.session }}</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Participaciones</td>
+                <td v-for="st in sessionStats" :key="'c2' + st.session" class="mono">{{ st.participated }}</td>
+              </tr>
+              <tr class="muted">
+                <td>%</td>
+                <td v-for="st in sessionStats" :key="'pc2' + st.session" class="mono">{{ st.participatedPct }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="aulaSummaryIa" class="summary-card obs-summary-card">
+          <h3 class="sum-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Resumen del aula (IA)
+            <button class="btn btn-xs" title="Copiar al portapapeles" @click="copyAulaSummary">
+              <i class="fa-regular fa-copy"></i> Copiar
+            </button>
+          </h3>
+          <p class="obs-summary-text">{{ aulaSummaryIa }}</p>
+          <div class="muted small">Borrador generado por la IA local — verificar antes de usar en reportes.</div>
+        </div>
+        <div class="summary-card">
+          <h3 class="sum-title"><i class="fa-solid fa-trophy"></i> Primeros puestos</h3>
+          <div v-if="!topStudents.length" class="muted small">Sin notas registradas todavia.</div>
+          <div v-else class="sum-rows">
+            <div v-for="(t, i) in topStudents" :key="t.s.enrollment_id" class="sum-row top-row">
+              <span class="top-pos" :class="'pos-' + (i + 1)">{{ i + 1 }}&ordf;</span>
+              <span class="top-name">
+                <span class="sn-name">{{ t.s.full_name }}</span>
+                <span class="muted small">{{ t.s.email || '--' }} &middot; {{ t.s.phone || '--' }}</span>
+              </span>
+              <b class="mono">{{ fmtNota(t.final) }}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <p class="footer-note">
         <i class="fa-solid fa-circle-info"></i>
-        Asistencia y participacion mostraran datos cuando se habilite el registro por sesion.
-        Los filtros "En curso", "En riesgo" y "Bajo rend." se activaran al disponer de esas metricas.
+        Nota final = TEST &times; 30% + Entregable parcial &times; 30% + Entregable final &times; 40% + Participacion (0-2).
+        Aprobado desde {{ GRADE_RULES.PASS_THRESHOLD }}. Los totales definitivos se recalculan al guardar.
       </p>
     </section>
 
@@ -1898,15 +2458,22 @@ onMounted(async () => {
 .att-matrix tbody tr:hover .sticky-c1,
 .att-matrix tbody tr:hover .sticky-c2 { background: #FAFAF6; }
 
-.student-name-cell { display: flex; align-items: center; gap: 8px; }
+.student-name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.student-name-cell > div { flex: 1; min-width: 0; overflow: hidden; }
 .av-sm {
   width: 26px; height: 26px; border-radius: 999px;
   background: var(--slate-soft); color: var(--slate-ink);
   display: grid; place-items: center; font-size: 10px; font-weight: 700;
   flex-shrink: 0;
 }
-.sn-name { font-weight: 500; font-size: 12.5px; }
-.sn-handle { font-size: 10.5px; color: var(--ink-3); }
+.sn-name {
+  font-weight: 500; font-size: 12.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sn-handle {
+  font-size: 10.5px; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .contact-cell { font-size: 11.5px; line-height: 1.3; }
 .contact-cell .small { font-size: 10.5px; }
@@ -1927,28 +2494,134 @@ onMounted(async () => {
 .tb-rp  { background: #FCE4EC; color: #BE185D; }
 .tb-cc  { background: var(--blue-soft); color: var(--blue-ink); }
 .tb-obs { background: var(--slate-soft); color: var(--slate-ink); }
+.tb-act { background: #E5F5EC; color: #1D7A4D; }
+.tb-member { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+.tb-member i { margin-right: 2px; font-size: 9px; }
 
 .td-att { padding: 3px 4px !important; text-align: center; }
 .td-part { padding: 3px 4px !important; text-align: center; }
-.att-cell {
-  display: inline-grid; place-items: center;
-  width: 24px; height: 22px; border-radius: 5px;
-  font-size: 10.5px; font-weight: 700;
-  font-family: var(--font-mono);
-}
-.att-p { background: var(--green); color: white; }
-.att-t { background: #F59E0B; color: white; }
-.att-f { background: #EF4444; color: white; }
-.att-empty { background: var(--bg-soft); color: var(--ink-4); }
-.part-cell {
-  display: inline-grid; place-items: center;
-  width: 24px; height: 22px; border-radius: 5px;
-  font-size: 11px; font-weight: 600;
-  background: var(--amber-soft); color: var(--amber-ink);
-  font-family: var(--font-mono);
-}
 
 .td-summary { text-align: center; }
+
+/* LISTA DE NOTAS */
+.att-matrix .th-group-pi { background: #EEF2FB !important; color: var(--blue-ink); }
+.att-matrix .th-total { font-weight: 700; }
+.td-total { text-align: center; font-weight: 600; background: #FBFBF7; }
+.td-center { text-align: center; }
+.grade-input {
+  width: 40px; height: 24px; padding: 0 4px;
+  border: 1px solid var(--line); border-radius: 5px;
+  font-family: var(--font-mono); font-size: 11.5px; text-align: center;
+  background: white; color: var(--ink);
+}
+.grade-input:focus { outline: none; border-color: var(--green-ink); }
+.grade-input.wide { width: 64px; }
+.grade-input::-webkit-outer-spin-button,
+.grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.part-check { width: 15px; height: 15px; accent-color: var(--amber-ink); cursor: pointer; }
+.ocup-pill {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 20px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+}
+.ocup-pill.p { background: var(--slate-soft); color: var(--slate-ink); }
+.ocup-pill.e { background: var(--blue-soft); color: var(--blue-ink); }
+.row-debt td { background: #EAF2FD !important; }
+.row-debt .sticky-c0, .row-debt .sticky-c1 { background: #EAF2FD !important; }
+.debt-ico { color: var(--blue-ink); font-size: 12px; margin-left: 2px; flex-shrink: 0; }
+.grades-table .sticky-c1 { overflow: hidden; }
+.debt-swatch {
+  display: inline-block; width: 14px; height: 14px;
+  border-radius: 4px; background: #EAF2FD; border: 1px solid #C8DCF5;
+}
+.expand-btn {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 5px;
+  background: transparent; border: 1px solid var(--line);
+  color: var(--ink-3); cursor: pointer; font-size: 10.5px;
+}
+.expand-btn:hover { color: var(--green-ink); border-color: var(--green-ink); }
+.result-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
+}
+.result-pill.ok { background: #E5F5EC; color: #1D7A4D; }
+.result-pill.bad { background: #FDEAEA; color: #B43E3E; }
+
+.deliv-subrow > td { background: #FBFBF5; padding: 12px 16px; }
+.deliv-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px; max-width: 980px;
+}
+.deliv-title {
+  font-size: 11px; font-weight: 700; color: var(--ink);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
+}
+.deliv-field {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; font-size: 12px; color: var(--ink-2, var(--ink));
+  margin-bottom: 6px; white-space: normal;
+}
+.deliv-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+
+/* Observaciones IA */
+.obs-group { grid-column: 1 / -1; }
+.obs-group .deliv-title { display: flex; align-items: center; gap: 10px; }
+.btn-xs {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 5px; cursor: pointer;
+  background: white; border: 1px solid var(--line);
+  font-size: 10px; font-weight: 600; color: var(--ink-2, var(--ink));
+  text-transform: none; letter-spacing: normal;
+}
+.btn-xs:hover:not(:disabled) { border-color: var(--green-ink); color: var(--green-ink); }
+.btn-xs:disabled { opacity: 0.55; cursor: not-allowed; }
+.obs-textarea {
+  width: 100%; max-width: 880px; resize: vertical;
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 7px 9px; font-size: 12.5px; line-height: 1.45;
+  font-family: inherit; background: white; color: var(--ink);
+  white-space: normal;
+}
+.obs-textarea:focus { outline: none; border-color: var(--green-ink); }
+.obs-textarea.ia-draft { border-color: var(--amber-ink); background: #FFFDF4; }
+.obs-summary-card { grid-column: 1 / -1; }
+.obs-summary-text { font-size: 13px; line-height: 1.55; margin: 0 0 8px; white-space: pre-wrap; }
+
+.summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px; margin-top: 14px;
+}
+.summary-card {
+  background: white; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.sum-title {
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0 0 10px; display: flex; align-items: center; gap: 7px;
+}
+.sum-rows { display: flex; flex-direction: column; gap: 6px; }
+.sum-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; font-size: 12.5px;
+}
+.sum-row .ok-ink { color: #1D7A4D; }
+.sum-row .bad-ink { color: #B43E3E; }
+.sum-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sum-table th, .sum-table td { padding: 3px 6px; text-align: center; }
+.sum-table th { font-size: 10px; color: var(--ink-3); font-weight: 600; }
+.sum-table td:first-child, .sum-table th:first-child { text-align: left; }
+.top-row { align-items: flex-start; }
+.top-pos {
+  flex: 0 0 auto; display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+}
+.pos-1 { background: #FCF3D7; color: #9A7A1E; }
+.pos-2 { background: #EEF0F3; color: #5A6572; }
+.pos-3 { background: #F7E9DC; color: #9A6230; }
+.top-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .footer-note {
   font-size: 12px; color: var(--ink-3); margin: 12px 0 0;
@@ -2246,6 +2919,16 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c0,
 [data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c1,
 [data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c2 { background: #1F1F1A; }
+[data-coreui-theme="dark"] .aula-detail .grade-input { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
+[data-coreui-theme="dark"] .aula-detail .td-total { background: #1F1F1A; }
+[data-coreui-theme="dark"] .aula-detail .row-debt td,
+[data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c0,
+[data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c1 { background: #1B2536 !important; }
+[data-coreui-theme="dark"] .aula-detail .deliv-subrow > td { background: #1F1F1A; }
+[data-coreui-theme="dark"] .aula-detail .summary-card { background: #1A1A14; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .aula-detail .obs-textarea,
+[data-coreui-theme="dark"] .aula-detail .btn-xs { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
+[data-coreui-theme="dark"] .aula-detail .obs-textarea.ia-draft { background: #221F12; }
 [data-coreui-theme="dark"] .aula-detail .rc-box { background: #1A1A14; border-color: #3A3A33; }
 [data-coreui-theme="dark"] .aula-detail .ai-panel {
   background: linear-gradient(180deg, #1A1A24 0%, #1A1A14 60%);

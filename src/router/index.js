@@ -37,38 +37,38 @@ const routes = [
         name: 'FICO',
         component: RouterViewStub,
         redirect: { name: 'FicoInscripciones' },
-        meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
+        meta: { module: 'FICO', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
         children: [
           {
             path: 'inscripciones',
             name: 'enrollment',
             component: () => import('@/views/fico/Enrollment.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+            meta: { submodule: 'INSCRIPCIONES', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/new',
             name: 'enrollmentForm',
             component: () => import('@/views/fico/EnrollmentForm.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+            meta: { submodule: 'INSCRIPCIONES', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'inscripciones/:id',
             name: 'enrollmentDetail',
             component: () => import('@/views/fico/enrollment/EnrollmentDetailView.vue'),
             props: true,
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+            meta: { submodule: 'INSCRIPCIONES', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           {
             path: 'tokens',
             name: 'ficoTokens',
             component: () => import('@/views/fico/TokenPage.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
+            meta: { submodule: 'TOKENS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cobranzas',
             name: 'ficoCollections',
             component: () => import('@/views/fico/Collections.vue'),
-            meta: { roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+            meta: { submodule: 'COBRANZAS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
           // {
           //   path: 'reportes',
@@ -87,65 +87,65 @@ const routes = [
         name: 'Producto',
         component: RouterViewStub,
         redirect: { name: 'ProductoDashboard' },
-        meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+        meta: { module: 'PRODUCTO', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
         children: [
           {
             path: 'programas',
             name: 'program',
             component: () => import('@/views/producto/Programs.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'PROGRAMAS', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'programas/new',
             name: 'ProgramNew',
             component: () => import('@/views/producto/ProgramsForm.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'PROGRAMAS', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'programas/:id',
             name: 'ProgramEdit',
             component: () => import('@/views/producto/ProgramsForm.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'PROGRAMAS', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes',
             name: 'Instructor',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Instructors.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'DOCENTES', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes/new',
             name: 'InstructorNew',
             // creación de nuevo programa
             component: () => import('@/views/producto/InstructorsForm.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'DOCENTES', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'docentes/:id',
             name: 'InstructorEdit',
             // creación de nuevo programa
             component: () => import('@/views/producto/InstructorsForm.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'DOCENTES', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
           {
             path: 'cronograma',
             name: 'Edition',
             // catálogo maestro de programas
             component: () => import('@/views/producto/Editions.vue'),
-            meta: { roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA', 'ACADEMICA'] },
+            meta: { submodule: 'CRONOGRAMA', roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA', 'ACADEMICA'] },
           },
           {
             path: 'precios',
             name: 'Prices',
             component: () => import('@/views/producto/Prices.vue'),
-            meta: { roles: ['ADMIN', 'GERENCIA'] },
+            meta: { submodule: 'PRECIOS', roles: ['ADMIN', 'GERENCIA'] },
           },
           {
             path: 'links',
             name: 'BulkLinks',
             component: () => import('@/views/producto/BulkLinks.vue'),
-            meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+            meta: { submodule: 'LINKS', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
         ],
       },
@@ -192,79 +192,79 @@ const routes = [
         name: 'Business',
         component: RouterViewStub,
         redirect: { name: 'B2BCompanies' },
-        meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+        meta: { module: 'B2B', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
         children: [
           {
             path: 'companies',
             name: 'B2BCompanies',
             component: () => import('@/views/b2b/companies/Index.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'companies/new',
             name: 'B2BCompanyNew',
             component: () => import('@/views/b2b/companies/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'companies/:id',
             name: 'B2BCompanyEdit',
             component: () => import('@/views/b2b/companies/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'company-leads',
             name: 'B2BCompanyLeads',
             component: () => import('@/views/b2b/company-leads/Index.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'company-leads/new',
             name: 'B2BCompanyLeadNew',
             component: () => import('@/views/b2b/company-leads/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'company-leads/:id',
             name: 'B2BCompanyLeadEdit',
             component: () => import('@/views/b2b/company-leads/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'contracts',
             name: 'B2BContracts',
             component: () => import('@/views/b2b/contracts/Index.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONTRATOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'contracts/new',
             name: 'B2BContractNew',
             component: () => import('@/views/b2b/contracts/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONTRATOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'contracts/:id',
             name: 'B2BContractEdit',
             component: () => import('@/views/b2b/contracts/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONTRATOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreements',
             name: 'B2BAgreements',
             component: () => import('@/views/b2b/agreements/Index.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreements/new',
             name: 'B2BAgreementNew',
             component: () => import('@/views/b2b/agreements/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreements/:id',
             name: 'B2BAgreementEdit',
             component: () => import('@/views/b2b/agreements/Form.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'agreement',
@@ -298,14 +298,14 @@ const routes = [
         name: 'Marketing',
         component: RouterViewStub,
         redirect: { name: 'MarketingOverview' },
-        meta: { area: 'MARKETING' },
+        meta: { module: 'MARKETING', area: 'MARKETING' },
         children: [
           {
             path: 'overview',
             name: 'MarketingOverview',
             // panel general
             component: () => import('@/views/marketing/Overview.vue'),
-            meta: { area: 'MARKETING' },
+            meta: { submodule: 'OVERVIEW', area: 'MARKETING' },
           },
         ],
       },
@@ -324,25 +324,25 @@ const routes = [
             path: 'notificaciones',
             name: 'NotificationList',
             component: () => import('@/views/general/notification.vue'),
-            meta: { roles: ['ADMIN'] },
+            meta: { module: 'NOTIFICACIONES', roles: ['ADMIN'] },
           },
           {
             path: 'cliente',
             name: 'CustomerList',
             component: () => import('@/views/customer/customers.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+            meta: { module: 'CLIENTE', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/new',
             name: 'CustomerNew',
             component: () => import('@/views/customer/customerForm.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+            meta: { module: 'CLIENTE', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           {
             path: 'cliente/:id',
             name: 'CustomerEdit',
             component: () => import('@/views/customer/customerForm.vue'),
-            meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+            meta: { module: 'CLIENTE', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
           },
           
         ],
@@ -355,25 +355,25 @@ const routes = [
       name: 'Comercial',
       component: RouterViewStub,
       redirect: { name: 'ComercialOverview' },
-      meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] }, // + LIDER_COMERCIAL
+      meta: { module: 'COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] }, // + LIDER_COMERCIAL
       children: [
         {
           path: 'leads',
           name: 'ComercialListado',
           component: () => import('@/views/comercial/Leads.vue'), // FSD re-revertido 2026-06-02: re-flip con CSS no cargaba datos en runtime. Diagnosticando pages/comercial/LeadsPage.vue
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'leads/new',
           name: 'ComercialLeadsNew',
           component: () => import('@/views/comercial/LeadsNew.vue'), // FSD re-revertido 2026-06-02: ver arriba
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'leads/:id',
           name: 'ComercialLeadDetalle',
           component: () => import('@/views/comercial/LeadsNew.vue'), // FSD re-revertido 2026-06-02: ver arriba
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
           props: true,
         },
         {
@@ -386,13 +386,13 @@ const routes = [
           path: 'discount',
           name: 'Discount',
           component: () => import('@/views/comercial/Discounts.vue'),
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'DESCUENTOS', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'discount/new',
           name: 'DiscountNew',
           component: () => import('@/views/comercial/DiscountsNew.vue'),
-          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] }, // solo líderes crean
+          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] }, // solo líderes crean (sin submodule: exige rol)
         },
         {
           path: 'discount/:id',
@@ -405,26 +405,26 @@ const routes = [
           path: 'RptGoalAgent',
           name: 'ReportGoalAgent',
           component: () => import('@/views/comercial/ReportGoalAgent.vue'),
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'ASESOR_OBJETIVOS', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptGoalEdition',
           name: 'ReportGoalEdition',
           component: () => import('@/views/comercial/ReportGoalEdition.vue'),
-          meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'CRONOGRAMA_OBJETIVOS', roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptControlComercial',
           name: 'ReportControlComercial',
           component: () => import('@/views/comercial/ReportControlComercial.vue'),
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'CONTROL_GESTION', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
         },
         // Reportes generales — todos los comerciales
         {
           path: 'RptMktProduct',
           name: 'ReportMktProduct',
           component: () => import('@/views/comercial/ReportMktProduct.vue'),
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'MARKETING_GESTION', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptSLA',
@@ -436,7 +436,7 @@ const routes = [
           path: 'RptCalling',
           name: 'ReportCalling',
           component: () => import('@/views/comercial/ReportCalling.vue'),
-          meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+          meta: { submodule: 'LLAMADA_GESTION', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptPerformanceMarketing',
@@ -461,44 +461,44 @@ const routes = [
       name: 'Fundacion',
       component: RouterViewStub,
       redirect: { name: 'FundacionLeads' },
-      meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+      meta: { module: 'FUNDACION', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
       children: [
         {
           path: 'leads',
           name: 'FundacionLeads',
           component: () => import('@/views/fundacion/Leads.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
         },
         {
           path: 'leads/new',
           name: 'FundacionLeadsNew',
           component: () => import('@/views/fundacion/LeadsNew.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
         },
         {
           path: 'leads/:id',
           name: 'FundacionLeadsEdit',
           component: () => import('@/views/fundacion/LeadsNew.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
           props: true,
         },
         {
           path: 'company-leads',
           name: 'FundacionCompanyLeads',
           component: () => import('@/views/fundacion/company-leads/Index.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
         },
         {
           path: 'company-leads/new',
           name: 'FundacionCompanyLeadNew',
           component: () => import('@/views/fundacion/company-leads/Form.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
         },
         {
           path: 'company-leads/:id',
           name: 'FundacionCompanyLeadEdit',
           component: () => import('@/views/fundacion/company-leads/Form.vue'),
-          meta: { roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
+          meta: { submodule: 'LEADS_EMPRESAS', roles: ['ADMIN', 'FUNDACION', 'GERENCIA'] },
           props: true,
         },
       ],
@@ -512,26 +512,57 @@ const routes = [
       name: 'B2B',
       component: RouterViewStub,
       redirect: { name: 'B2BLeads' },
-      meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+      meta: { module: 'B2B', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
       children: [
         {
           path: 'leads',
           name: 'B2BLeads',
           component: () => import('@/views/b2b/Leads.vue'),
-          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
         },
         {
           path: 'leads/new',
           name: 'B2BLeadsNew',
           component: () => import('@/views/b2b/LeadsNew.vue'),
-          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
         },
         {
           path: 'leads/:id',
           name: 'B2BLeadsEdit',
           component: () => import('@/views/b2b/LeadsNew.vue'),
-          meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+          meta: { submodule: 'LEADS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           props: true,
+        },
+      ],
+    },
+
+    // =====================
+    // CONFIGURACION (solo ADMIN)
+    // =====================
+    {
+      path: 'configuracion',
+      name: 'Configuracion',
+      component: RouterViewStub,
+      redirect: { name: 'ConfigUsuarios' },
+      meta: { module: 'CONFIGURACION', roles: ['ADMIN'] },
+      children: [
+        {
+          path: 'usuarios',
+          name: 'ConfigUsuarios',
+          component: () => import('@/views/configuracion/Usuarios.vue'),
+          meta: { submodule: 'USUARIOS', roles: ['ADMIN'] },
+        },
+        {
+          path: 'roles',
+          name: 'ConfigRoles',
+          component: () => import('@/views/configuracion/RolesPermisos.vue'),
+          meta: { submodule: 'ROLES', roles: ['ADMIN'] },
+        },
+        {
+          path: 'importacion',
+          name: 'ConfigImportacion',
+          component: () => import('@/views/configuracion/Importacion.vue'),
+          meta: { submodule: 'IMPORTACION', roles: ['ADMIN'] },
         },
       ],
     },
@@ -543,26 +574,26 @@ const routes = [
       path: 'academica/aulas',
       name: 'AcademicaAulas',
       component: () => import('@/views/academica/Aulas.vue'),
-      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+      meta: { module: 'ACADEMICA', submodule: 'AULAS', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
     {
       path: 'academica/aulas/:id',
       name: 'AcademicaAulaDetail',
       component: () => import('@/views/academica/AulaDetail.vue'),
-      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+      meta: { module: 'ACADEMICA', submodule: 'AULAS', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
       props: true,
     },
     {
       path: 'academica/reporte',
       name: 'AcademicaReporte',
       component: () => import('@/views/academica/ReporteAcademico.vue'),
-      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+      meta: { module: 'ACADEMICA', submodule: 'REPORTE', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
     {
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),
-      meta: { roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+      meta: { module: 'ACADEMICA', submodule: 'BOT', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
 
     ],
@@ -617,14 +648,18 @@ router.beforeEach((to, from, next) => {
   // 2. Obtener datos
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
-  
+
   let userRoles = []; // Inicializamos como array vacío por seguridad
+  let userModules = null; // null = sesión sin módulos cargados (pre-matriz)
+  let userSubmodules = null; // { FICO: ['TOKENS', ...], ... }
 
   if (userStr) {
       try {
           const user = JSON.parse(userStr);
           // Aseguramos que sea un array, incluso si viene null
-          userRoles = user.roles || []; 
+          userRoles = user.roles || [];
+          userModules = Array.isArray(user.modules) ? user.modules : null;
+          userSubmodules = (user.submodules && typeof user.submodules === 'object') ? user.submodules : null;
       } catch (e) {
           console.error("Error parseando user del storage", e);
           // Si falla el parseo, forzamos logout borrando token para evitar bucles
@@ -650,24 +685,43 @@ router.beforeEach((to, from, next) => {
   }
 
   // ---------------------------------------------------------
-  // CASO C: VALIDACIÓN DE ROLES (CORREGIDO)
+  // CASO C: VALIDACIÓN DE ACCESO (roles hardcodeados ∪ matriz de Configuración)
   // ---------------------------------------------------------
-  // Si hay token Y la ruta define roles permitidos
-  if (token && to.meta.roles) {
-    
-      
-      // LÓGICA DE INTERSECCIÓN DE ARRAYS:
-      // "Verifica si ALGUNO (some) de los roles del usuario está INCLUIDO en los roles de la ruta"
-      const tienePermiso = userRoles.some(rolUsuario => to.meta.roles.includes(rolUsuario));
+  // to.meta es el merge de toda la cadena matched: meta.module viene del grupo
+  // padre y meta.roles/meta.submodule de la hoja. Acceso si:
+  //   a) algún rol del usuario está en meta.roles (comportamiento original), o
+  //   b) la matriz le otorga el submódulo de la hoja (o el módulo, si la hoja
+  //      no declara submodule). Una hoja con roles pero SIN submodule solo se
+  //      abre por rol (funciones de liderazgo, ej. crear descuentos).
+  if (token && (to.meta.roles || to.meta.module)) {
 
-      if (!tienePermiso) {
+      const porRol = Array.isArray(to.meta.roles) &&
+          userRoles.some(rolUsuario => to.meta.roles.includes(rolUsuario));
+
+      let porMatriz = false;
+      if (to.meta.module) {
+          if (to.meta.submodule) {
+              const subs = userSubmodules ? userSubmodules[to.meta.module] : null;
+              porMatriz = Array.isArray(subs) && subs.includes(to.meta.submodule);
+          } else if (!to.meta.roles) {
+              // Ruta sin roles ni submodule (ej. grupo marketing): basta el módulo.
+              porMatriz = Array.isArray(userModules) && userModules.includes(to.meta.module);
+          }
+          // Hoja con roles pero sin submodule: solo se abre por rol explícito.
+      }
+
+      // Sesión vieja sin user.modules en una ruta que solo define module
+      // (ej. marketing): se mantiene el comportamiento previo (sin bloqueo).
+      const legacySinModulos = !to.meta.roles && userModules === null;
+
+      if (!porRol && !porMatriz && !legacySinModulos) {
           toast.info('No tienes permisos para acceder a esta sección.');
-        
-          console.warn(`Acceso denegado. Usuario con roles [${userRoles}] intentó entrar a ruta que requiere [${to.meta.roles}]`);
-          
+
+          console.warn(`Acceso denegado. Usuario con roles [${userRoles}] intentó entrar a ruta que requiere roles [${to.meta.roles}] o módulo [${to.meta.module}] / submódulo [${to.meta.submodule}]`);
+
           // no rediriga a nada
           return next(from.fullPath); // Quédate en la página actual
-          
+
       }
   }
 

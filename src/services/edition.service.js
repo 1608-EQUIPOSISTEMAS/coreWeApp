@@ -74,6 +74,30 @@ export default class EditionService {
     return response
   }
 
+  async classroomGradesGet(payload) {
+    const response = (await api.post('/edition/classroomgradesget', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  async classroomGradesSave(payload) {
+    const response = (await api.post('/edition/classroomgradessave', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response
+  }
+
+  // Borradores de observacion con la IA local (Ollama). Puede tardar ~1 min
+  // con un aula completa; timeout amplio y sin loader global.
+  async classroomGradesObservations(payload) {
+    const response = (await api.post('/edition/classroomgradesobservations', payload, {
+      meta: { skipLoader: true },
+      timeout: 180000
+    })).data
+    return response
+  }
+
   async classroomAuditRunAi({ edition_id, session_number, transcript_text, syllabus_image }) {
     const fd = new FormData()
     fd.append('edition_id', String(edition_id))

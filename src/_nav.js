@@ -1,3 +1,10 @@
+// Navegación del sidebar.
+// Visibilidad por ítem = UNIÓN de dos fuentes:
+//   1. `roles`  — lista hardcodeada (comportamiento original)
+//   2. matriz de Configuración → Roles y Permisos:
+//      - grupo:  `module` (código en tabla modules)
+//      - hijo:   `submodule` (código en tabla submodules, dentro del módulo del grupo)
+// Un hijo con `submodule` solo se abre por matriz si el rol tiene ese submódulo.
 export default [
   {
     component: 'CNavItem',
@@ -16,24 +23,28 @@ export default [
     name: 'Finanzas',
     to: '/fico',
     icon: 'cil-calculator',
+    module: 'FICO',
     roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Inscripciones',
         to: '/fico/inscripciones',
+        submodule: 'INSCRIPCIONES',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Tokens de Pago',
         to: '/fico/tokens',
+        submodule: 'TOKENS',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Cobranzas',
         to: '/fico/cobranzas',
+        submodule: 'COBRANZAS',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
       },
     ],
@@ -43,36 +54,42 @@ export default [
     name: 'Producto',
     to: '/producto',
     icon: 'cil-layers',
+    module: 'PRODUCTO',
     roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Programas',
         to: '/producto/programas',
+        submodule: 'PROGRAMAS',
         roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Docentes',
         to: '/producto/docentes',
+        submodule: 'DOCENTES',
         roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Cronograma',
         to: '/producto/cronograma',
+        submodule: 'CRONOGRAMA',
         roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'COMERCIAL', 'GERENCIA', 'ACADEMICA'],
       },
       {
         component: 'CNavItem',
         name: 'Lista de Precios',
         to: '/producto/precios',
+        submodule: 'PRECIOS',
         roles: ['ADMIN', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Carga de Links',
         to: '/producto/links',
+        submodule: 'LINKS',
         roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
     ],
@@ -82,42 +99,49 @@ export default [
     name: 'Comercial',
     to: '/comercial',
     icon: 'cil-dollar',
+    module: 'COMERCIAL',
     roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Comercial',
         to: '/comercial/leads',
+        submodule: 'LEADS',
         roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Control - Gestión',
         to: '/comercial/RptControlComercial',
+        submodule: 'CONTROL_GESTION',
         roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Marketing - Gestión',
         to: '/comercial/RptMktProduct',
+        submodule: 'MARKETING_GESTION',
         roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Llamada - Gestión',
         to: '/comercial/RptCalling',
+        submodule: 'LLAMADA_GESTION',
         roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Asesor - Objetivos',
         to: '/comercial/RptGoalAgent',
+        submodule: 'ASESOR_OBJETIVOS',
         roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Cronograma - Objetivos',
         to: '/comercial/RptGoalEdition',
+        submodule: 'CRONOGRAMA_OBJETIVOS',
         roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
     ],
@@ -127,18 +151,21 @@ export default [
     name: 'Fundación',
     to: '/fundacion',
     icon: 'cil-people',
+    module: 'FUNDACION',
     roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Leads Fundación',
         to: '/fundacion/leads',
+        submodule: 'LEADS',
         roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Leads Empresas',
         to: '/fundacion/company-leads',
+        submodule: 'LEADS_EMPRESAS',
         roles: ['ADMIN', 'FUNDACION', 'GERENCIA'],
       },
     ],
@@ -148,36 +175,42 @@ export default [
     name: 'B2B',
     to: '/business',
     icon: 'cil-people',
+    module: 'B2B',
     roles: ['ADMIN', 'B2B', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Leads B2B',
         to: '/b2b/leads',
+        submodule: 'LEADS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Leads Empresas',
         to: '/business/company-leads',
+        submodule: 'LEADS_EMPRESAS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Empresas',
         to: '/business/companies',
+        submodule: 'EMPRESAS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Contratos',
         to: '/business/contracts',
+        submodule: 'CONTRATOS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
       {
         component: 'CNavItem',
         name: 'Convenios',
         to: '/business/agreements',
+        submodule: 'CONVENIOS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
     ],
@@ -187,24 +220,28 @@ export default [
     name: 'Académica',
     to: '/academica',
     icon: 'cil-notes',
+    module: 'ACADEMICA',
     roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Aulas',
         to: '/academica/aulas',
+        submodule: 'AULAS',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
       },
       {
         component: 'CNavItem',
         name: 'Reporte Académico',
         to: '/academica/reporte',
+        submodule: 'REPORTE',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
       },
       {
         component: 'CNavItem',
         name: 'Bot Académico',
         to: '/academica/bot',
+        submodule: 'BOT',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
       },
     ],
@@ -214,12 +251,14 @@ export default [
     name: 'Marketing',
     to: '/marketing',
     icon: 'cil-speech',
+    module: 'MARKETING',
     roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Overview',
         to: '/marketing/overview',
+        submodule: 'OVERVIEW',
         roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
       },
     ],
@@ -233,6 +272,7 @@ export default [
     name: 'Cliente',
     to: '/general/cliente',
     icon: 'cil-user',
+    module: 'CLIENTE',
     roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'],
   },
   {
@@ -240,6 +280,44 @@ export default [
     name: 'Notificaciones',
     to: '/general/notificaciones',
     icon: 'cil-bell',
+    module: 'NOTIFICACIONES',
     roles: ['ADMIN'],
+  },
+  {
+    component: 'CNavTitle',
+    name: 'Administración',
+    roles: ['ADMIN'],
+    module: 'CONFIGURACION',
+  },
+  {
+    component: 'CNavGroup',
+    name: 'Configuración',
+    to: '/configuracion',
+    icon: 'cil-settings',
+    module: 'CONFIGURACION',
+    roles: ['ADMIN'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Usuarios',
+        to: '/configuracion/usuarios',
+        submodule: 'USUARIOS',
+        roles: ['ADMIN'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Roles y Permisos',
+        to: '/configuracion/roles',
+        submodule: 'ROLES',
+        roles: ['ADMIN'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Importación',
+        to: '/configuracion/importacion',
+        submodule: 'IMPORTACION',
+        roles: ['ADMIN'],
+      },
+    ],
   },
 ]

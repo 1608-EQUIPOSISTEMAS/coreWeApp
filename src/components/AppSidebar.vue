@@ -6,7 +6,7 @@ import { useSidebarStore } from '@/stores/sidebar.js'
 import { useFilteredNav } from '@/composables/useFilteredNav.js'
 
 const sidebar = useSidebarStore()
-const { filteredNav } = useFilteredNav()
+const { filteredNav, refreshModules } = useFilteredNav()
 const route = useRoute()
 
 const expandedGroups = ref(new Set())
@@ -42,6 +42,8 @@ function badgeText(b) {
 }
 
 onMounted(() => {
+  // Trae los módulos vigentes de la matriz de permisos (sin re-login).
+  refreshModules()
   filteredNav.value.forEach((item, idx) => {
     if (item.component === 'CNavGroup' && hasActiveChild(item)) {
       expandedGroups.value.add(idx)
