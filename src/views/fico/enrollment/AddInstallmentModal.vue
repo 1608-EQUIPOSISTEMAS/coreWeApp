@@ -37,7 +37,6 @@
             v-model="dueDate"
             type="date"
             class="ai-date-input"
-            :min="todayIso"
           />
         </div>
       </div>
@@ -89,8 +88,6 @@ const amount = ref(null)
 const dueDate = ref('')
 const justificacion = ref('')
 const amountInputRef = ref(null)
-
-const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 
 const canSave = computed(() =>
   Number.isFinite(amount.value) && amount.value > 0 &&

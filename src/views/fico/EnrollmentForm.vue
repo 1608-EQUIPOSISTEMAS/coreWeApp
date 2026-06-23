@@ -104,6 +104,15 @@
           <label>Perfil <span class="ef-req">*</span></label>
           <SearchSelect v-model="form.client_profile" :items="clientProfileOptions" label-field="label" value-field="id" placeholder="Profesional / Estudiante..." />
         </div>
+        <div class="ef-field">
+          <label>Membresia <span class="ef-optional">(opcional)</span></label>
+          <SearchSelect v-model="form.membership_tier" :items="membershipOptions" label-field="label" value-field="id" placeholder="Sin membresia..." />
+        </div>
+      </div>
+
+      <div v-if="isMembershipBenefit" class="ef-b2b-note">
+        <i class="fa-solid fa-gift"></i>
+        Inscripcion gratuita por beneficio de membresia: total 0, sin pago. PLUS no aplica (sigue el flujo normal).
       </div>
 
       <!-- COPIA (CC) DEL CORREO DE CONFIRMACION -->
@@ -174,7 +183,7 @@
     </div>
 
     <!-- INFORMACION DE PAGO -->
-    <div class="ef-card" v-if="!isB2BDocumental">
+    <div class="ef-card" v-if="!isB2BDocumental && !isMembershipBenefit">
       <h6 class="ef-section-title"><i class="fa-solid fa-credit-card"></i> INFORMACION DE PAGO</h6>
       <div class="ef-grid-4">
         <div class="ef-field">
@@ -270,7 +279,7 @@
     </div>
 
     <!-- DATOS DEL PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental">
+    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
       <h6 class="ef-section-title"><i class="fa-solid fa-money-check-dollar"></i> DATOS DEL PAGO</h6>
       <div class="ef-grid-3">
         <div class="ef-field">
@@ -302,7 +311,7 @@
     </div>
 
     <!-- PLAN DE CUOTAS -->
-    <div class="ef-card" v-if="isInstallment && !form.is_scholarship && !isB2BDocumental">
+    <div class="ef-card" v-if="isInstallment && !form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
       <h6 class="ef-section-title"><i class="fa-solid fa-calendar-days"></i> PLAN DE CUOTAS</h6>
 
       <div class="ef-grid-3" style="margin-bottom:16px">
@@ -357,7 +366,7 @@
     </div>
 
     <!-- COMPROBANTE DE PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental">
+    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
       <h6 class="ef-section-title"><i class="fa-solid fa-cloud-arrow-up"></i> COMPROBANTE DE PAGO</h6>
       <MultiFileUploader
         v-model="form.ticket_payment_urls"
@@ -513,6 +522,7 @@ const form = reactive({
   transaction_code: '',
   payment_date: '',
   client_profile: '',
+  membership_tier: null,
   agent_category: '',
   seller_agent_id: null,
   cat_b2b_doctype: null,
@@ -556,6 +566,30 @@ function clearCcField () {
 
 const isB2BDocumental = computed(() => {
   return form.agent_category === 'b2b' && !form.seller_agent_id && !!form.cat_b2b_doctype
+})
+
+// GOLD/PLAT/BLACK regalan el curso (beneficio de membresia => total 0). PLUS NO:
+// sigue el flujo de pago normal. Mismo "pago cero" del SP que beca/B2B documental,
+// pero con su propio flag is_membership_benefit (ver SP register_direct).
+const isMembershipBenefit = computed(() => ['gold', 'plat', 'black'].includes(form.membership_tier))
+
+// Al activar el beneficio, limpiamos pago/cuotas/descuentos para no mandar
+// montos viejos (el SP fuerza 0 igual, pero la UI no debe mostrar pago).
+watch(isMembershipBenefit, (benefit) => {
+  if (!benefit) return
+  form.total_amount = 0
+  form.saved_money = 0
+  form.cat_payment_way = null
+  form.cat_payment_medium = null
+  form.cat_business_entity = null
+  form.bank_account_id = null
+  form.transaction_code = ''
+  form.ticket_payment_urls = []
+  installments.value = []
+  form.dsct_porcent_id = null; form.dsct_porcent_label = null; form.val_porcentaje = 0
+  form.dsct_stick_id = null; form.dsct_stick_label = null; form.val_fijo = 0
+  form.dsct_benefit_ids = []; form.val_beneficios = []
+  discountResetKey.value++
 })
 
 watch(() => form.seller_agent_id, (val) => {
@@ -636,7 +670,7 @@ const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100
 watch(
   () => [form.list_price, form.val_porcentaje, form.val_fijo, form.val_beneficios, form.dsct_porcent_id, form.dsct_stick_id],
   () => {
-    if (form.is_scholarship || isB2BDocumental.value) return
+    if (form.is_scholarship || isB2BDocumental.value || isMembershipBenefit.value) return
     const base = Number(form.list_price) || 0
     const montoPorcentaje = round2((base * (form.val_porcentaje || 0)) / 100)
     const subtotalAfterPct = round2(base - montoPorcentaje)
@@ -883,6 +917,13 @@ const clientProfileOptions = [
   { id: 'estudiante', label: 'Estudiante' }
 ]
 
+const membershipOptions = [
+  { id: 'plus', label: 'WE PLUS' },
+  { id: 'gold', label: 'WE GOLD' },
+  { id: 'plat', label: 'WE PLATINUM' },
+  { id: 'black', label: 'WE BLACK' }
+]
+
 // Asesores asignables a una inscripcion B2B: los users con rol B2B (externos)
 // + cualquier asesor comercial que pueda cerrar venta B2B (ej. AE30 → "B2B - AE30").
 // Dedup por user_id por si un comercial tambien tiene rol B2B.
@@ -1101,7 +1142,8 @@ async function handleSave () {
         cat_currency: form.cat_currency || catCurrency.find(c => c.alias === 'we_currency_soles')?.id || null,
         cat_payment_way: form.cat_payment_way || catPaymentWay.find(c => c.alias === 'we_payment_way_single')?.id || null,
         list_price: form.list_price || 0,
-        total_amount: form.total_amount || 0,
+        total_amount: isMembershipBenefit.value ? 0 : (form.total_amount || 0),
+        is_membership_benefit: isMembershipBenefit.value,
         saved_money: form.saved_money || 0,
         seller_agent_id: resolveAgentId(),
         agent_origin: resolveAgentOrigin(),
@@ -1185,7 +1227,7 @@ function resetForm () {
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
     cat_insc_modality: null, cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
     cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
-    client_profile: '', agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
+    client_profile: '', membership_tier: null, agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
     email_cc: '',
     dsct_porcent_id: null, dsct_porcent_label: null, val_porcentaje: 0,
     dsct_stick_id: null, dsct_stick_label: null, val_fijo: 0,

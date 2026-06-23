@@ -190,6 +190,7 @@
                   <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
                   <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
+                  <th colspan="6" class="th-group th-group-c">AULA / INSCRITOS</th>
                 </tr>
 
                 <!-- FILA 2: Columnas individuales -->
@@ -264,6 +265,14 @@
                       <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
                     </div>
                   </th>
+
+                  <!-- Aula / Inscritos (contador por canal) -->
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Venta directa con asesor">VENTAS</th>
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Vino por Cambio de Curso (seguimiento)">SEGUI</th>
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Ingresó vía membresía">MEMB</th>
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Convenio B2B">B2B</th>
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Beca / 100% descuento — NO suma al aula">BECA</th>
+                  <th class="ts ts-c text-center" style="min-width:58px;" title="Total en aula = VENTAS+SEGUI+MEMB+B2B (sin becas)">AULA</th>
                 </tr>
               </thead>
 
@@ -279,7 +288,7 @@
                 <template v-else>
                 <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
                   <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
-                    <td :colspan="(isCompact ? 16 : 11) + (isAcademica ? 2 : 0)" class="week-header-cell">
+                    <td :colspan="(isCompact ? 16 : 11) + (isAcademica ? 2 : 0) + 6" class="week-header-cell">
                       <div class="week-header-inner">
                         <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         <span class="week-label">Semana {{ week.schedule }}</span>
@@ -569,6 +578,14 @@
                         <b v-if="e.clasification">{{ e.clasification }}</b>
                       </div>
                     </td>
+
+                    <!-- Aula / Inscritos -->
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
+                    <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                   </tr>
                 </template>
                 </template>
@@ -753,6 +770,14 @@
                       <b v-if="e.clasification">{{ e.clasification }}</b>
                     </div>
                   </td>
+
+                  <!-- Aula / Inscritos -->
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
+                  <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                 </tr>
                 </template>
               </tbody>
@@ -2545,7 +2570,7 @@ async function saveEditLink(edition) {
 
 const date = ref();
 const isCompact = ref(true)
-const tableColCount = computed(() => (isCompact.value ? 16 : 11) + (isAcademica.value ? 2 : 0))
+const tableColCount = computed(() => (isCompact.value ? 16 : 11) + (isAcademica.value ? 2 : 0) + 6)
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])

@@ -294,7 +294,19 @@ function prettySize (bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 function errMsg (err, fallback) {
-  return err?.response?.data?.error || err?.response?.data?.message || fallback
+  if (err?.response?.data?.error || err?.response?.data?.message) {
+    return err.response.data.error || err.response.data.message
+  }
+  // Sin respuesta del backend = fallo de red/timeout (la hoja grande tarda mas
+  // que el timeout). Decirlo en vez del generico, que no da ninguna pista.
+  if (err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '')) {
+    // En validacion no se escribe nada; en commit pueden haber entrado filas.
+    return committing.value
+      ? 'La importacion tardo demasiado: algunas filas pueden haberse importado. Revisa el listado antes de reintentar (los duplicados se saltan solos).'
+      : 'La validacion tardo demasiado (la hoja puede ser muy grande). Es un dry-run: no se guardo nada. Reintenta o sube el .xlsx.'
+  }
+  if (!err?.response) return `${fallback} No hubo respuesta del servidor (revisa que el backend este corriendo).`
+  return fallback
 }
 </script>
 

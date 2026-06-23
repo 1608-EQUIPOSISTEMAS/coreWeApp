@@ -528,6 +528,15 @@ function handleOfName(name) {
   return '@' + first.normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
+// Acta de notas: apellidos primero. Arma "APELLIDOS, NOMBRES" con los campos
+// separados del backend; cae a full_name si por algun motivo no vienen.
+function apellidosNombres(s) {
+  const ap = [s.last_name, s.mother_last_name].filter(Boolean).join(' ').trim()
+  const no = (s.first_name || '').trim()
+  if (ap && no) return `${ap}, ${no}`
+  return ap || no || s.full_name || ''
+}
+
 // =====================================================================
 // AUDITORIA: rubrica por sesion
 // =====================================================================
@@ -1481,7 +1490,7 @@ onMounted(async () => {
           <thead>
             <tr class="th-groups">
               <th class="sticky-c0" rowspan="2">N&deg;</th>
-              <th class="sticky-c1" rowspan="2">Nombre y apellidos</th>
+              <th class="sticky-c1" rowspan="2">Apellidos y nombres</th>
               <th rowspan="2">Ocup.</th>
               <th rowspan="2">Mod.</th>
               <th rowspan="2">Seguimiento</th>
@@ -1510,8 +1519,8 @@ onMounted(async () => {
                   <div class="student-name-cell">
                     <span class="av-sm">{{ initialsOf(s.full_name) }}</span>
                     <div>
-                      <div class="sn-name" :title="s.full_name">
-                        {{ s.full_name }}
+                      <div class="sn-name" :title="apellidosNombres(s)">
+                        {{ apellidosNombres(s) }}
                         <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
                           <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
                         </span>

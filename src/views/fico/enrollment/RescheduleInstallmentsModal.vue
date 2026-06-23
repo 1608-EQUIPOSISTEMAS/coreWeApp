@@ -232,10 +232,11 @@ const rowValidations = computed(() => {
     const oldD = new Date(r.old_due_date); oldD.setHours(0, 0, 0, 0)
     const newD = new Date(r.new_due_date); newD.setHours(0, 0, 0, 0)
 
+    // ponytail: se permite mover la fecha hacia atras o adelante; solo se valida
+    // que sea valida y que no supere el fin de la edicion.
     let error = null, errorShort = null, changed = false
     if (isNaN(newD.getTime())) { error = 'Fecha invalida'; errorShort = 'Invalida' }
     else if (newD.getTime() === oldD.getTime()) { changed = false }
-    else if (newD < oldD) { error = 'No se puede adelantar'; errorShort = 'Adelanta' }
     else if (endLimit && newD > endLimit) { error = `Supera fin de edicion (${formatDate(endLimit)})`; errorShort = 'Fuera rango' }
     else { changed = true }
 
