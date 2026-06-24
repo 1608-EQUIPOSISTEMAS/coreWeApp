@@ -53,6 +53,11 @@
     </div>
   </div>
 
+  <div v-if="membershipName" class="eh-membership">
+    <i class="fa-solid fa-gift"></i>
+    <span>Beneficio de membresía: {{ membershipName }}</span>
+  </div>
+
   <div v-if="additionalInfo" class="eh-additional">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ additionalInfo }}</span>
@@ -75,6 +80,11 @@ const fmt = useEnrollmentFormatters()
 const email = computed(() => props.enrollment?.email || props.detail?.email || '')
 const phone = computed(() => props.enrollment?.phone || props.detail?.phone || '')
 const additionalInfo = computed(() => props.enrollment?.additional_info || null)
+// El tier de membresia vive normalizado en enrollments.membership_program_id (FK a
+// programs). El detalle ya trae el nombre resuelto (membership_program_name).
+const membershipName = computed(() =>
+  props.detail?.membership_program_name || props.enrollment?.membership_program_name || null
+)
 const editionStartDate = computed(() =>
   props.detail?.edition_start_date || props.enrollment?.edition_start_date || null
 )
@@ -223,6 +233,28 @@ const editionStartDate = computed(() =>
   line-height: 1.5;
 }
 .eh-additional i { font-size: 13px; color: #0D9488; flex-shrink: 0; margin-top: 1px; }
+
+.eh-membership {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #92400E;
+  line-height: 1.5;
+}
+.eh-membership i { font-size: 13px; color: #D97706; flex-shrink: 0; margin-top: 1px; }
+[data-coreui-theme="dark"] .eh-membership {
+  background: rgba(245,158,11,0.14);
+  border-color: rgba(245,158,11,0.4);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .eh-membership i { color: #FBBF24; }
 
 /* ════════════════════════════════════════
    DARK MODE

@@ -166,6 +166,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
+import Swal from 'sweetalert2'
 import { ServiceKeys } from '@/services'
 
 const importService = inject(ServiceKeys.Import)
@@ -261,10 +262,36 @@ async function validate () {
 
 async function commit () {
   committing.value = true
+  const jobId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
+  const total = report.value?.summary?.total || 0
+
+  Swal.fire({
+    title: 'Importando…',
+    html: `Procesando <b id="imp-done">0</b> de <b>${total}</b> fila(s)…<br><small>No cierres esta ventana.</small>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading()
+  })
+
+  // Polling del avance: cada ~700ms pregunta cuantas filas lleva el backend y
+  // actualiza solo el numero (sin re-render del Swal, para no cortar el spinner).
+  let polling = true
+  const poll = async () => {
+    while (polling) {
+      try {
+        const p = await importService.getProgress(jobId)
+        const el = document.getElementById('imp-done')
+        if (el && p) el.textContent = p.done
+      } catch { /* el avance es best-effort; el commit sigue corriendo igual */ }
+      await new Promise(r => setTimeout(r, 700))
+    }
+  }
+  poll()
+
   try {
     report.value = source.value === 'url'
-      ? await importService.commitUrl(selectedEntity.value, sheetUrl.value)
-      : await importService.commit(selectedEntity.value, file.value)
+      ? await importService.commitUrl(selectedEntity.value, sheetUrl.value, jobId)
+      : await importService.commit(selectedEntity.value, file.value, jobId)
     committed.value = true
     const s = report.value.summary
     if (s.imported > 0) toast.success(`${s.imported} inscripción(es) importada(s).`)
@@ -272,7 +299,9 @@ async function commit () {
   } catch (err) {
     toast.error(errMsg(err, 'No se pudo completar la importación.'))
   } finally {
+    polling = false
     committing.value = false
+    Swal.close()
   }
 }
 

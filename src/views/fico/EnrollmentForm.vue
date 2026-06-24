@@ -106,7 +106,7 @@
         </div>
         <div class="ef-field">
           <label>Membresia <span class="ef-optional">(opcional)</span></label>
-          <SearchSelect v-model="form.membership_tier" :items="membershipOptions" label-field="label" value-field="id" placeholder="Sin membresia..." />
+          <SearchSelect v-model="form.membership_program_id" :items="membershipOptions" label-field="description" value-field="id" placeholder="Sin membresia..." />
         </div>
       </div>
 
@@ -522,7 +522,7 @@ const form = reactive({
   transaction_code: '',
   payment_date: '',
   client_profile: '',
-  membership_tier: null,
+  membership_program_id: null,
   agent_category: '',
   seller_agent_id: null,
   cat_b2b_doctype: null,
@@ -571,7 +571,10 @@ const isB2BDocumental = computed(() => {
 // GOLD/PLAT/BLACK regalan el curso (beneficio de membresia => total 0). PLUS NO:
 // sigue el flujo de pago normal. Mismo "pago cero" del SP que beca/B2B documental,
 // pero con su propio flag is_membership_benefit (ver SP register_direct).
-const isMembershipBenefit = computed(() => ['gold', 'plat', 'black'].includes(form.membership_tier))
+// La regla "es gratis" se deriva del nombre (PLUS es el unico que paga), asi no
+// dependemos de program_ids que pueden diferir entre entornos.
+const selectedMembership = computed(() => membershipOptions.value.find(p => p.id === form.membership_program_id) || null)
+const isMembershipBenefit = computed(() => !!selectedMembership.value && !/plus/i.test(selectedMembership.value.description || ''))
 
 // Al activar el beneficio, limpiamos pago/cuotas/descuentos para no mandar
 // montos viejos (el SP fuerza 0 igual, pero la UI no debe mostrar pago).
@@ -777,7 +780,7 @@ watch(() => form.cat_currency, (newVal, oldVal) => {
 })
 
 onMounted(async () => {
-  await Promise.all([loadAgents(), loadB2BAgents(), loadBankAccounts()])
+  await Promise.all([loadAgents(), loadB2BAgents(), loadBankAccounts(), loadMemberships()])
   const pen = catCurrency.find(c => c.alias === 'we_currency_soles' || c.description?.toLowerCase().includes('pen'))
   if (pen) form.cat_currency = pen.id
   const dni = catDocTypes.find(c => c.alias?.toLowerCase().includes('dni'))
@@ -917,12 +920,16 @@ const clientProfileOptions = [
   { id: 'estudiante', label: 'Estudiante' }
 ]
 
-const membershipOptions = [
-  { id: 'plus', label: 'WE PLUS' },
-  { id: 'gold', label: 'WE GOLD' },
-  { id: 'plat', label: 'WE PLATINUM' },
-  { id: 'black', label: 'WE BLACK' }
-]
+// Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
+// programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
+// programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
+// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
+const membershipOptions = ref([])
+async function loadMemberships () {
+  try {
+    membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
+  } catch (e) { console.error(e) }
+}
 
 // Asesores asignables a una inscripcion B2B: los users con rol B2B (externos)
 // + cualquier asesor comercial que pueda cerrar venta B2B (ej. AE30 → "B2B - AE30").
@@ -1156,7 +1163,10 @@ async function handleSave () {
         transaction_code: form.transaction_code || null,
         payment_date: form.payment_date || null,
         ticket_payment_urls: form.ticket_payment_urls.length > 0 ? form.ticket_payment_urls : null,
+        // La membresia ya no se estampa en notes: va normalizada en su columna FK.
         observations: form.observations?.trim() || null,
+        // FK a la membresia (programs.is_membership=Y). NULL = sin membresia.
+        membership_program_id: form.membership_program_id || null,
         installment_plan: isInstallment.value && installments.value.length > 0
           ? installments.value.map((c, i) => ({ installment_number: i + 1, amount: c.amount, due_date: c.due_date }))
           : null,
@@ -1227,7 +1237,7 @@ function resetForm () {
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
     cat_insc_modality: null, cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
     cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
-    client_profile: '', membership_tier: null, agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
+    client_profile: '', membership_program_id: null, agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
     email_cc: '',
     dsct_porcent_id: null, dsct_porcent_label: null, val_porcentaje: 0,
     dsct_stick_id: null, dsct_stick_label: null, val_fijo: 0,
