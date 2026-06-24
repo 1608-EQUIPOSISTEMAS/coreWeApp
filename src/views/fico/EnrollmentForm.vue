@@ -568,6 +568,18 @@ const isB2BDocumental = computed(() => {
   return form.agent_category === 'b2b' && !form.seller_agent_id && !!form.cat_b2b_doctype
 })
 
+// Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
+// programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
+// programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
+// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
+// Debe declararse ANTES de los computed/watch que lo usan (TDZ en <script setup>).
+const membershipOptions = ref([])
+async function loadMemberships () {
+  try {
+    membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
+  } catch (e) { console.error(e) }
+}
+
 // GOLD/PLAT/BLACK regalan el curso (beneficio de membresia => total 0). PLUS NO:
 // sigue el flujo de pago normal. Mismo "pago cero" del SP que beca/B2B documental,
 // pero con su propio flag is_membership_benefit (ver SP register_direct).
@@ -919,17 +931,6 @@ const clientProfileOptions = [
   { id: 'profesional', label: 'Profesional' },
   { id: 'estudiante', label: 'Estudiante' }
 ]
-
-// Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
-// programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
-// programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
-// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
-const membershipOptions = ref([])
-async function loadMemberships () {
-  try {
-    membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
-  } catch (e) { console.error(e) }
-}
 
 // Asesores asignables a una inscripcion B2B: los users con rol B2B (externos)
 // + cualquier asesor comercial que pueda cerrar venta B2B (ej. AE30 → "B2B - AE30").
