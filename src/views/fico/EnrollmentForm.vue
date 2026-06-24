@@ -571,20 +571,12 @@ const isB2BDocumental = computed(() => {
 // Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
 // programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
 // programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
-// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
-// Debe declararse ANTES de los computed/watch que lo usan (TDZ en <script setup>).
+// OJO: debe declararse ANTES de los computed/watch de abajo. watch() evalua su
+// fuente al registrarse; si se declara despues, da TDZ (ReferenceError) que rompe
+// el setup y deja el formulario en blanco.
+// GOLD/PLAT/BLACK regalan el curso (beneficio => total 0); PLUS paga. La regla
+// "es gratis" se deriva del nombre (solo PLUS paga), no de program_ids.
 const membershipOptions = ref([])
-async function loadMemberships () {
-  try {
-    membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
-  } catch (e) { console.error(e) }
-}
-
-// GOLD/PLAT/BLACK regalan el curso (beneficio de membresia => total 0). PLUS NO:
-// sigue el flujo de pago normal. Mismo "pago cero" del SP que beca/B2B documental,
-// pero con su propio flag is_membership_benefit (ver SP register_direct).
-// La regla "es gratis" se deriva del nombre (PLUS es el unico que paga), asi no
-// dependemos de program_ids que pueden diferir entre entornos.
 const selectedMembership = computed(() => membershipOptions.value.find(p => p.id === form.membership_program_id) || null)
 const isMembershipBenefit = computed(() => !!selectedMembership.value && !/plus/i.test(selectedMembership.value.description || ''))
 
@@ -931,6 +923,12 @@ const clientProfileOptions = [
   { id: 'profesional', label: 'Profesional' },
   { id: 'estudiante', label: 'Estudiante' }
 ]
+
+async function loadMemberships () {
+  try {
+    membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
+  } catch (e) { console.error(e) }
+}
 
 // Asesores asignables a una inscripcion B2B: los users con rol B2B (externos)
 // + cualquier asesor comercial que pueda cerrar venta B2B (ej. AE30 → "B2B - AE30").
