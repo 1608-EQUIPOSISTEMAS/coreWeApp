@@ -573,6 +573,14 @@ const isB2BDocumental = computed(() => {
 // pero con su propio flag is_membership_benefit (ver SP register_direct).
 // La regla "es gratis" se deriva del nombre (PLUS es el unico que paga), asi no
 // dependemos de program_ids que pueden diferir entre entornos.
+// Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
+// programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
+// programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
+// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
+// OJO: debe declararse ANTES de los computed/watch de abajo. watch() evalua su
+// fuente al registrarse, y si membershipOptions se declara despues, da TDZ
+// (ReferenceError) que rompe el setup y deja el formulario en blanco.
+const membershipOptions = ref([])
 const selectedMembership = computed(() => membershipOptions.value.find(p => p.id === form.membership_program_id) || null)
 const isMembershipBenefit = computed(() => !!selectedMembership.value && !/plus/i.test(selectedMembership.value.description || ''))
 
@@ -920,11 +928,6 @@ const clientProfileOptions = [
   { id: 'estudiante', label: 'Estudiante' }
 ]
 
-// Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
-// programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
-// programCaller devuelve { id, description } (167 BLACK / 168 PLUS / 169 GOLDEN / 170 PLATINIUM).
-// ponytail: 2506 es el catalog_id del tipo "Membresia"; si algun dia se mueve, este filtro cambia.
-const membershipOptions = ref([])
 async function loadMemberships () {
   try {
     membershipOptions.value = await programService.programCaller({ cat_type_program: 2506, active: 'Y' }) || []
