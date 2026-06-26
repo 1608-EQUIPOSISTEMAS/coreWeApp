@@ -53,6 +53,13 @@ export default class EditionService {
     return response.data || []
   }
 
+  async classroomStudentsHistory(payload) {
+    const response = (await api.post('/edition/classroomstudentshistory', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
   async classroomAuditGet(payload) {
     const response = (await api.post('/edition/classroomauditget', payload, {
       meta: { skipLoader: true }

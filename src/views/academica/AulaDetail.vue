@@ -106,6 +106,7 @@ const teacherInitials = computed(() => {
 // =====================================================================
 const TABS = [
   { id: 'notas', label: 'Notas', icon: 'fa-list-check' },
+  { id: 'historial', label: 'Historial', icon: 'fa-clock-rotate-left' },
   { id: 'auditoria', label: 'Auditoria', icon: 'fa-clipboard-check' },
   { id: 'general', label: 'General', icon: 'fa-chart-line' },
 ]
@@ -128,6 +129,7 @@ function switchTab(id) {
     if (!students.value.length) loadStudents()
     if (gradesMap.value === null) loadGrades()
   }
+  if (id === 'historial' && history.value === null) loadHistory()
   if (id === 'auditoria' && !auditMap.value) loadAudit()
   // El tab General consume `auditMap` igual que Auditoria, asi que
   // disparamos el mismo fetch para no requerir entrar antes a Auditoria.
@@ -161,6 +163,44 @@ async function loadStudents() {
   } finally {
     isLoadingStudents.value = false
   }
+}
+
+// =====================================================================
+// HISTORIAL: alumnos que estuvieron en el aula pero ya no estan en la lista
+// (retiros, cambios de curso, reprogramaciones, bajas). null = aun no cargado.
+// =====================================================================
+const history = ref(null)
+const isLoadingHistory = ref(false)
+
+async function loadHistory() {
+  isLoadingHistory.value = true
+  try {
+    history.value = await editionService.classroomStudentsHistory({ edition_id: editionId.value })
+  } catch (err) {
+    console.error('Error cargando historial:', err)
+    toast.error('Error cargando el historial del aula')
+    history.value = []
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+// Motivo de salida legible. Prioriza el estado de tipo (retiro/cambio/etc);
+// luego baja manual; luego FICO no confirmado.
+const HISTORY_REASON = {
+  we_enrollment_status_retired: { label: 'Retirado', cls: 'hb-ret' },
+  we_enrollment_status_course_changed: { label: 'Cambio de curso', cls: 'hb-cc' },
+  we_enrollment_status_reprogrammed: { label: 'Reprogramado', cls: 'hb-rp' },
+  we_enrollment_status_observed: { label: 'Observado', cls: 'hb-obs' },
+}
+function historyReason(h) {
+  const m = HISTORY_REASON[h.type_status_alias]
+  if (m) return m
+  if (h.active === 'N') return { label: 'Dado de baja', cls: 'hb-baja' }
+  if (h.fico_status_alias !== 'we_enrollment_status_checked') {
+    return { label: h.fico_status_label || 'FICO no confirmado', cls: 'hb-fico' }
+  }
+  return { label: h.type_status_label || '--', cls: 'hb-otro' }
 }
 
 // Reglas de calculo (espejo de GRADE_RULES en Backend edition.entity.js; al
@@ -1789,6 +1829,54 @@ onMounted(async () => {
     </section>
 
     <!-- ============================================================ -->
+    <!-- HISTORIAL (alumnos que estuvieron pero ya no estan)          -->
+    <!-- ============================================================ -->
+    <section v-else-if="activeTab === 'historial'" class="tab-body">
+      <div v-if="isLoadingHistory" class="state-msg muted">
+        <i class="fa-solid fa-spinner fa-spin"></i> Cargando historial...
+      </div>
+      <div v-else-if="!history || !history.length" class="state-msg muted">
+        <i class="fa-regular fa-folder-open"></i>
+        Sin movimientos: ningun alumno se ha retirado o cambiado de este aula.
+      </div>
+      <div v-else class="hist-wrap">
+        <p class="hist-note">
+          Alumnos que estuvieron matriculados en esta aula pero ya no figuran en la
+          lista activa (retiros, cambios de curso, reprogramaciones, bajas).
+        </p>
+        <table class="hist-table">
+          <thead>
+            <tr>
+              <th>Alumno</th>
+              <th>DNI</th>
+              <th>Motivo</th>
+              <th>Matriculado</th>
+              <th>Fecha de salida</th>
+              <th>Realizado por</th>
+              <th>Justificacion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="h in history" :key="h.enrollment_id">
+              <td>
+                <div class="hist-name">
+                  <span class="avatar">{{ initialsOf(h.full_name) }}</span>
+                  {{ apellidosNombres(h) }}
+                </div>
+              </td>
+              <td>{{ h.dni || '--' }}</td>
+              <td><span class="hist-badge" :class="historyReason(h).cls">{{ historyReason(h).label }}</span></td>
+              <td>{{ formatDate(h.enrolled_on) }}</td>
+              <td>{{ formatDateTime(h.left_at) }}</td>
+              <td>{{ h.performed_by || '--' }}</td>
+              <td class="hist-just">{{ h.justificacion || '--' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
     <!-- AUDITORIA (rubrica)                                         -->
     <!-- ============================================================ -->
     <section v-else-if="activeTab === 'auditoria'" class="tab-body">
@@ -2506,6 +2594,36 @@ onMounted(async () => {
 .tb-act { background: #E5F5EC; color: #1D7A4D; }
 .tb-member { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
 .tb-member i { margin-right: 2px; font-size: 9px; }
+
+/* HISTORIAL */
+.hist-wrap { padding: 4px 2px; }
+.hist-note { font-size: 12.5px; color: var(--ink-3); margin: 0 0 14px; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hist-table th {
+  text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600;
+  color: var(--ink-3); text-transform: uppercase; letter-spacing: .3px;
+  border-bottom: 1px solid var(--line);
+}
+.hist-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.hist-table tbody tr:hover { background: var(--slate-soft); }
+.hist-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.hist-name .avatar {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--slate-soft);
+  color: var(--slate-ink); display: inline-flex; align-items: center;
+  justify-content: center; font-size: 10px; font-weight: 700; flex: 0 0 auto;
+}
+.hist-just { color: var(--ink-3); max-width: 260px; }
+.hist-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+}
+.hb-ret  { background: #FEE2E2; color: #B91C1C; }
+.hb-cc   { background: var(--blue-soft); color: var(--blue-ink); }
+.hb-rp   { background: #FCE4EC; color: #BE185D; }
+.hb-obs  { background: var(--slate-soft); color: var(--slate-ink); }
+.hb-baja { background: #F3F4F6; color: #4B5563; }
+.hb-fico { background: var(--amber-soft); color: var(--amber-ink); }
+.hb-otro { background: var(--slate-soft); color: var(--slate-ink); }
 
 .td-att { padding: 3px 4px !important; text-align: center; }
 .td-part { padding: 3px 4px !important; text-align: center; }

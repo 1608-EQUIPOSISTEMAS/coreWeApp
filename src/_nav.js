@@ -14,6 +14,13 @@ export default [
     // Sin roles = siempre visible
   },
   {
+    component: 'CNavItem',
+    name: 'Cronograma Vista',
+    to: '/producto/cronograma-vista',
+    icon: 'cil-calendar',
+    // Sin roles = siempre visible (solo lectura)
+  },
+  {
     component: 'CNavTitle',
     name: 'Áreas',
     // Sin roles = siempre visible

@@ -33,6 +33,15 @@ async liderList(payload) {
     return response.data;
   }
 
+  // Nº de consultas (leads) por edición. payload: { edition_ids: number[] }
+  // Devuelve [{ edition_num_id, consultas }]
+  async leadsPerEditionList(payload) {
+    const response = (await api.post('/dashboard/leads-per-edition', payload, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data || [];
+  }
+
   async ventasCanalList(payload) {
     const response = (await api.post('/dashboard/ventas-canal', payload)).data;
     return response.data;

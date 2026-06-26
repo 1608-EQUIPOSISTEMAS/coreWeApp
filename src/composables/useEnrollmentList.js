@@ -141,11 +141,21 @@ export function useEnrollmentList () {
   // Cascada de purga: cuando un filtro padre cambia, retiramos del hijo cualquier
   // seleccion que ya no este en su nueva lista de opciones. Sin esto, el usuario
   // veria chips colgados con valores que no aplican al estado actual.
+  //
+  // Guard `catalogsLoaded`: los catalogos de Programa/Edicion son lazy (solo al
+  // abrir el modal). Al volver de un detalle, useTablePersistence restaura los
+  // filtros con Object.assign, lo que reasigna type_program_ids/model_modality_ids
+  // a nuevas refs y dispara este watch ANTES de que el catalogo exista. Con la lista
+  // vacia, validIds queda vacio y purgaria la seleccion restaurada (el bug: el
+  // filtro Programa/Curso se "desactivaba" al regresar). Sin catalogo no hay base
+  // para invalidar nada, asi que no purgamos hasta tenerlo cargado.
   watch([() => filters.type_program_ids, () => filters.model_modality_ids], () => {
+    if (!catalogsLoaded.value) return
     const validIds = new Set(filtroProgramas.value.map(p => p.id))
     filters.program_version_ids = (filters.program_version_ids || []).filter(p => validIds.has(p?.value ?? p?.id))
   })
   watch(() => filters.program_version_ids, () => {
+    if (!catalogsLoaded.value) return
     const validIds = new Set(filtroEdiciones.value.map(e => e.id))
     filters.edition_num_ids = (filters.edition_num_ids || []).filter(e => validIds.has(e?.value ?? e?.id))
   })

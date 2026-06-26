@@ -136,6 +136,13 @@ const routes = [
             meta: { submodule: 'CRONOGRAMA', roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA', 'ACADEMICA'] },
           },
           {
+            path: 'cronograma-vista',
+            name: 'ScheduleBoard',
+            // vista de solo lectura del cronograma — sin roles = cualquier usuario logueado
+            component: () => import('@/views/producto/ScheduleBoard.vue'),
+            meta: {},
+          },
+          {
             path: 'precios',
             name: 'Prices',
             component: () => import('@/views/producto/Prices.vue'),
