@@ -13,11 +13,14 @@ export default class IntegrationService {
   }
 
   async syncFicoSalesToSheet() {
-    return (await api.post('/integration/syncFicoSalesToSheet')).data;
+    // timeout: 0 = sin timeout. La query FICO + sobreescritura del Sheet supera
+    // los 30s globales de axios; sin esto axios aborta con "timeout exceeded".
+    return (await api.post('/integration/syncFicoSalesToSheet', undefined, { timeout: 0 })).data;
   }
 
   async syncFicoToSheets() {
-    return (await api.post('/integration/syncFicoToSheets')).data;
+    // 4 hojas en serie, aun mas lento que la de ventas sola → sin timeout.
+    return (await api.post('/integration/syncFicoToSheets', undefined, { timeout: 0 })).data;
   }
 
   async syncScheduleToSheet(payload) {
