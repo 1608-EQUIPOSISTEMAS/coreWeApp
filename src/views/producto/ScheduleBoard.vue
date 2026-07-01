@@ -66,6 +66,7 @@
             </div>
           </div>
           <span class="cg-colh">Objetivo</span>
+          <span class="cg-colh cg-colh-cons">Consultas</span>
           <span></span>
         </div>
 
@@ -75,6 +76,7 @@
             <span class="cg-sk" :style="{ width: (45 + (n * 13) % 40) + '%' }"></span>
             <span class="cg-sk" style="width:80%"></span>
             <span class="cg-sk" style="width:70%"></span>
+            <span class="cg-sk"></span>
             <span class="cg-sk"></span>
             <span class="cg-sk"></span>
             <span class="cg-sk"></span>
@@ -147,6 +149,11 @@
                     <span class="cg-goal-pct" :style="{ color: it.fl.color }">{{ it.fl.pct }}%</span>
                   </div>
                   <div class="cg-bar"><div :style="{ width: it.fl.w + '%', background: it.fl.color }"></div></div>
+                </div>
+
+                <!-- Consultas (leads, excluye Desestimado/Cerrado) -->
+                <div class="cg-cons">
+                  <span class="cg-cons-num" :class="{ zero: !it.e.cnt_consultas }">{{ it.e.cnt_consultas ?? 0 }}</span>
                 </div>
 
                 <!-- chevron -->
@@ -463,7 +470,7 @@ onMounted(fetchAll)
 .cg-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; border: 2px solid #fff; }
 
 /* Grid compartido (header + filas) */
-.cg-grid { display: grid; grid-template-columns: minmax(190px,1.2fr) minmax(175px,1.1fr) minmax(130px,.9fr) 104px 216px 146px 38px; gap: 14px; align-items: center; }
+.cg-grid { display: grid; grid-template-columns: minmax(190px,1.2fr) minmax(175px,1.1fr) minmax(130px,.9fr) 104px 216px 146px 72px 38px; gap: 14px; align-items: center; }
 .cg-colhead { padding: 9px 18px 9px 22px; position: sticky; top: 0; z-index: 6; background: #FBFCFE; border-bottom: 1px solid var(--line); }
 .cg-colh { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #94A3B8; font-weight: 700; }
 .cg-colh-aula { color: #B45309; font-size: 9px; letter-spacing: .06em; margin-bottom: 3px; text-align: center; }
@@ -514,6 +521,10 @@ onMounted(fetchAll)
 .cg-num.bec { font-weight: 500; color: #94A3B8; }
 .cg-num.bec.zero { color: #D5DCE6; }
 .cg-aula { font-size: 14px; font-weight: 700; text-align: center; color: #B45309; font-variant-numeric: tabular-nums; }
+.cg-colh-cons { text-align: center; }
+.cg-cons { text-align: center; }
+.cg-cons-num { font-size: 14px; font-weight: 700; text-align: center; color: #2563EB; font-variant-numeric: tabular-nums; }
+.cg-cons-num.zero { font-weight: 400; color: #D5DCE6; }
 .cg-goal-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
 .cg-goal-meta { font-size: 11px; color: #94A3B8; font-weight: 500; }
 .cg-goal-pct { font-size: 10px; font-weight: 700; }

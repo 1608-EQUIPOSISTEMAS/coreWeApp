@@ -1535,6 +1535,8 @@ onMounted(async () => {
               <th rowspan="2">Mod.</th>
               <th rowspan="2">Seguimiento</th>
               <th rowspan="2">B2B</th>
+              <th rowspan="2">Becas</th>
+              <th rowspan="2">Membresia</th>
               <th class="th-group-att" :colspan="(sessionsTotal || 1) + 1">Nota de tests &middot; 6/20</th>
               <th class="th-group-part" :colspan="(sessionsTotal || 1) + 1">Participacion &middot; 2/20</th>
               <th class="th-group-pi" colspan="3">Proyecto integrador &middot; 6+8/20</th>
@@ -1561,9 +1563,6 @@ onMounted(async () => {
                     <div>
                       <div class="sn-name" :title="apellidosNombres(s)">
                         {{ apellidosNombres(s) }}
-                        <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
-                          <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
-                        </span>
                       </div>
                       <div class="sn-handle" :title="s.email || ''">
                         {{ s.email || handleOfName(s.full_name) }}
@@ -1600,6 +1599,16 @@ onMounted(async () => {
                 </td>
                 <td>
                   <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td class="td-center">
+                  <span v-if="s.is_beca" class="type-badge tb-beca"><i class="fa-solid fa-graduation-cap"></i> Beca</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td class="td-center">
+                  <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
+                    <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
+                  </span>
                   <span v-else class="muted small">--</span>
                 </td>
                 <td v-for="n in sessionNumbers" :key="'t' + n" class="td-att">
@@ -2594,6 +2603,8 @@ onMounted(async () => {
 .tb-act { background: #E5F5EC; color: #1D7A4D; }
 .tb-member { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
 .tb-member i { margin-right: 2px; font-size: 9px; }
+.tb-beca { background: #E0F2FE; color: #075985; border: 1px solid #7DD3FC; }
+.tb-beca i { margin-right: 2px; font-size: 9px; }
 
 /* HISTORIAL */
 .hist-wrap { padding: 4px 2px; }
