@@ -138,9 +138,15 @@ const routes = [
           {
             path: 'cronograma-vista',
             name: 'ScheduleBoard',
-            // vista de solo lectura del cronograma — sin roles = cualquier usuario logueado
+            // Vista de solo lectura del cronograma: visible para TODOS los roles.
+            // Necesita su propia meta.roles porque, sin ella, hereda la del grupo
+            // padre 'producto' (ADMIN/PRODUCTO/GERENCIA) y el guard bloquea al resto.
             component: () => import('@/views/producto/ScheduleBoard.vue'),
-            meta: {},
+            meta: {
+              submodule: 'CRONOGRAMA',
+              roles: ['ADMIN', 'GERENCIA', 'COMERCIAL', 'ACADEMICA', 'PRODUCTO',
+                'LIDER_COMERCIAL', 'LIDER_PRODUCTO', 'LIDER_ACADEMICA', 'LIDER_FICO', 'FICO', 'B2B'],
+            },
           },
           {
             path: 'precios',
