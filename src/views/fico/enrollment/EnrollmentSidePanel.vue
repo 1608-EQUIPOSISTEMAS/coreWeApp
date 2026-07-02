@@ -30,6 +30,13 @@
         >
           <i class="fa-solid fa-laptop"></i> Traera laptop
         </span>
+        <span
+          v-if="fmt.hasClaudeAccount(enrollment)"
+          class="esp-pill esp-pill-claude"
+          title="Beneficio CUENTA CLAUDE — el alumno usara su cuenta personal"
+        >
+          <i class="fa-solid fa-user-shield"></i> CUENTA PERSONAL
+        </span>
       </div>
 
       <div class="esp-highlights">
@@ -556,6 +563,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 }
 .esp-pill-laptop i { font-size: 10px; color: #0891B2; }
 
+.esp-pill-claude {
+  background: #FFF7ED;
+  color: #9A3412;
+  border: 1px solid #FED7AA;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.esp-pill-claude i { font-size: 10px; color: #EA580C; }
+
 /* Highlights */
 .esp-highlights {
   display: grid;
@@ -1006,6 +1023,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   border-color: rgba(8,145,178,0.4);
 }
 [data-coreui-theme="dark"] .esp-pill-laptop i { color: #22D3EE; }
+[data-coreui-theme="dark"] .esp-pill-claude {
+  background: rgba(234,88,12,0.16);
+  color: #FDBA74;
+  border-color: rgba(234,88,12,0.4);
+}
+[data-coreui-theme="dark"] .esp-pill-claude i { color: #FB923C; }
 [data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
 [data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }

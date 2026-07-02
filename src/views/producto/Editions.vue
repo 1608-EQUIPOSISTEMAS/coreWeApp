@@ -1463,7 +1463,7 @@
               <tr v-if="activeGoalsList.length === 0">
                 <td colspan="10" class="text-center text-muted py-5"><i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i><br>No hay ediciones activas para este periodo.</td>
               </tr>
-              <tr v-for="item in activeGoalsList" :key="item.edition_num_id">
+              <tr v-for="(item, gIndex) in activeGoalsList" :key="item.edition_num_id">
                 <td class="text-muted">{{ item.program_line_business || '—' }}</td>
                 <td><span class="badge bg-light text-dark border">{{ item.cat_course_category_label || '—' }}</span></td>
                 <td><div class="segment-circle mx-auto" style="width:20px;height:20px;font-size:0.6rem;">{{ item.cat_segment || '—' }}</div></td>
@@ -1472,7 +1472,7 @@
                 <td class="text-muted">{{ item.schedules?.[0]?.day_combination_label || item.day_combination_label || '—' }}</td>
                 <td class="text-muted">{{ item.schedules?.[0]?.hour_combination_label || item.hour_combination_label || '—' }}</td>
                 <td class="fw-bold border-end">{{ formatDate(item.start_date) }}</td>
-                <td class="bg-primary-subtle bg-opacity-10 border-end p-2"><input type="number" class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" v-model.number="item.target_vacants" placeholder="0" /></td>
+                <td class="bg-primary-subtle bg-opacity-10 border-end p-2"><input type="number" class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" v-model.number="item.target_vacants" placeholder="0" @paste="onGoalsPaste($event, gIndex)" /></td>
                 <td class="bg-primary-subtle bg-opacity-10 p-2"><CurrencyInput v-model="item.target_revenue" currency="PEN" :storeAsMinor="false" class="form-control form-control-sm fw-bold text-end text-success border-primary-subtle" placeholder="0.00" /></td>
               </tr>
             </tbody>
@@ -2498,6 +2498,7 @@ const previousSegmentId = ref(null)
 const programService = inject(ServiceKeys.Program)
 const editionService = inject(ServiceKeys.Edition)
 const instructorService = inject(ServiceKeys.Instructor)
+const dashboardService = inject(ServiceKeys.Dashboard)
 const catalog = inject('catalog')
 const toast = useToast()
 const { proxy } = getCurrentInstance()
@@ -2938,39 +2939,70 @@ async function openMonthlyGoalsModal() {
   // 2. Extraemos todos los items del mes actual y filtramos SOLO los activos
   // (Dependiendo de tu BD, el campo active puede ser 'Y' o true)
   const currentMonthItems = schedules.value.flatMap(week => week.items || [])
-  activeGoalsList.value = currentMonthItems.filter(item => item.active === 'Y' || item.active === true || item.active === 1)
+  activeGoalsList.value = currentMonthItems.filter(item =>
+    (item.active === 'Y' || item.active === true || item.active === 1) &&
+    (item.cat_segment || '').toUpperCase() !== 'A5') // A5 = cancelados: no llevan objetivo
 
-  // 3. Inicializamos las propiedades de objetivos si no existen para que Vue las haga reactivas
+  // 3. Traemos las metas ya guardadas para pre-llenar el formulario
+  const savedByEd = {}
+  try {
+    const goals = await dashboardService.programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value })
+    ;(goals.items || goals || []).forEach(g => { savedByEd[g.edition_id] = g })
+  } catch (e) {
+    console.error('No se pudieron cargar las metas guardadas:', e)
+  }
+
   activeGoalsList.value.forEach(item => {
-    // Si la BD no trae target_vacants, usamos las vacantes regulares como sugerencia inicial
-    if (item.target_vacants === undefined) item.target_vacants = item.vacant || 0
-    // Campo de meta de dinero (revenue)
-    if (item.target_revenue === undefined) item.target_revenue = 0
+    const saved = savedByEd[item.edition_num_id]
+    // Prioridad: meta guardada en BD → vacantes regulares como sugerencia inicial
+    item.target_vacants = saved ? saved.meta_vacantes : (item.vacant || 0)
+    item.target_revenue = saved ? saved.meta_monto : 0
   })
 
   // 4. Abrimos el modal
   showMonthlyGoalsModal.value = true
 }
 
+// Pegado tipo hoja de cálculo: una columna copiada de Google Sheets/Excel se
+// reparte hacia abajo desde la fila donde se pega. Las líneas vacías respetan
+// la alineación de la hoja pero NO tocan el valor existente de esa fila.
+function onGoalsPaste(ev, startIndex) {
+  const text = ev.clipboardData?.getData('text') ?? ''
+  if (!/[\n\t]/.test(text)) return // un solo valor → pegado normal del navegador
+  ev.preventDefault()
+  const lines = text.replace(/\r/g, '').split('\n')
+  // quitar solo las líneas vacías FINALES (Sheets siempre agrega una al copiar)
+  while (lines.length && lines[lines.length - 1].trim() === '') lines.pop()
+  let applied = 0, blanks = 0, overflow = 0
+  lines.forEach((line, i) => {
+    const row = activeGoalsList.value[startIndex + i]
+    if (!row) { overflow++; return }
+    const raw = line.split('\t')[0].trim() // si copian varias columnas, usamos la primera
+    if (raw === '') { blanks++; return }
+    const num = Number(raw.replace(/,/g, ''))
+    if (Number.isFinite(num)) { row.target_vacants = num; applied++ }
+  })
+  // Feedback de alineación: si tu hoja tiene más/menos filas que el modal
+  // (p.ej. incluye ediciones A5 que aquí no se muestran), se nota al instante.
+  const parts = [`${applied} objetivos aplicados`]
+  if (blanks) parts.push(`${blanks} líneas vacías (fila sin cambio)`)
+  if (overflow) parts.push(`${overflow} valores sobrantes — tu hoja tiene más filas que el modal`)
+  const remaining = activeGoalsList.value.length - startIndex - lines.length
+  if (remaining > 0) parts.push(`${remaining} filas de abajo sin tocar`)
+  toast[overflow ? 'warning' : 'info'](`Pegado: ${parts.join(' · ')}`)
+}
+
 async function saveMonthlyGoals() {
   try {
-    // Aquí mapeas los datos que necesitas enviar a tu backend
-    const payload = activeGoalsList.value.map(item => ({
+    const goals = activeGoalsList.value.map(item => ({
       edition_num_id: item.edition_num_id,
-      target_vacants: item.target_vacants,
-      target_revenue: item.target_revenue
+      target_vacants: Number(item.target_vacants) || 0,
+      target_revenue: Number(item.target_revenue) || 0
     }))
 
-    // TODO: Reemplazar con tu servicio real, por ejemplo:
-    // const response = await editionService.saveGoals(payload)
-    // handleServiceResponse(response)
-
-    console.log("Objetivos a guardar:", payload)
-    toast.success("Objetivos actualizados correctamente")
+    const result = await dashboardService.saveProgramGoals({ goals })
+    toast.success(`Objetivos guardados correctamente (${result?.saved ?? goals.length})`)
     showMonthlyGoalsModal.value = false
-
-    // Opcional: recargar calendario
-    // fetchSchedule()
   } catch (error) {
     console.error("Error guardando objetivos:", error)
     toast.error("Ocurrió un error al guardar los objetivos")

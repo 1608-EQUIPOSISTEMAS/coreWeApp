@@ -577,7 +577,7 @@ async function loadRPEditions () {
   try {
     const items = await ficoService.getAvailableEditions(enrollmentId.value)
     rpEditions.value = (items || [])
-      .filter(e => e.start_date && isFutureOrToday(e.start_date))
+      .filter(e => e.start_date && isWithinReprogramWindow(e.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
         label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
@@ -589,16 +589,31 @@ async function loadRPEditions () {
   }
 }
 
-// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift:
+// Parsea start_date (cadena calendario) a Date local sin sufrir TZ shift:
 // si el server Node corre en UTC, el ISO viene como '2026-05-09T00:00:00.000Z',
 // que `new Date()` interpreta como 2026-05-08 19:00 Lima — falsea el filtro.
-function isFutureOrToday (startDate) {
+function parseLocalDate (startDate) {
   const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return false
-  const ed = new Date(+m[1], +m[2] - 1, +m[3])
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null
+}
+
+// Cambio de curso: solo ediciones de hoy en adelante.
+function isFutureOrToday (startDate) {
+  const ed = parseLocalDate(startDate)
+  if (!ed) return false
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return ed >= today
+}
+
+// Reprogramación: admite desde el 1ro de hace 2 meses.
+// Ej: estando en julio, admite ediciones desde el 01/05.
+function isWithinReprogramWindow (startDate) {
+  const ed = parseLocalDate(startDate)
+  if (!ed) return false
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  return ed >= cutoff
 }
 
 async function handleReprogramConfirm () {

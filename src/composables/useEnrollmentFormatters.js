@@ -52,6 +52,13 @@ export function useEnrollmentFormatters () {
     return /\bLAPTOP\b/.test(haystack)
   }
 
+  // Detecta el beneficio "CUENTA CLAUDE" — el alumno usara su cuenta personal.
+  const hasClaudeAccount = e => {
+    if (!e) return false
+    const haystack = `${e.main_discount || ''} ${e.additional_discounts || ''}`.toUpperCase()
+    return /CUENTA\s+CLAUDE/.test(haystack)
+  }
+
   const getReserva = e => Number(e.reservation_amount) || 0
 
   const getPagado = e => {
@@ -117,7 +124,7 @@ export function useEnrollmentFormatters () {
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, hasLaptopPromo, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, isPendiente, isContado, hasLaptopPromo, hasClaudeAccount, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel,
     auditIcon, auditLabel
   }

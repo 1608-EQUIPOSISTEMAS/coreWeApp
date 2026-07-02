@@ -99,7 +99,7 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0 }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasClaudeAccount(e) }]"
           @click="onRowClick(e, $event)"
         >
           <td class="tc">
@@ -500,6 +500,45 @@ function clearColFilters () {
 }
 .pill-validation i {
   font-size: 9px;
+}
+
+/* Fila con tinte cian cuando la inscripcion incluye promo LAPTOP
+   (mismo color que la etiqueta "Traera laptop" del panel lateral).
+   Se pinta sobre los td porque hover/is-selected tambien pintan td. */
+.ect-row.has-laptop td {
+  background: #ECFEFF;
+}
+.ect-row.has-laptop:hover td {
+  background: #CFFAFE;
+}
+.ect-row.has-laptop.is-selected td {
+  background: #A5F3FC;
+}
+[data-coreui-theme="dark"] .ect-row.has-laptop td {
+  background: rgba(8, 145, 178, 0.14);
+}
+[data-coreui-theme="dark"] .ect-row.has-laptop:hover td,
+[data-coreui-theme="dark"] .ect-row.has-laptop.is-selected td {
+  background: rgba(8, 145, 178, 0.26);
+}
+
+/* Fila con tinte naranja cuando tiene el beneficio CUENTA CLAUDE
+   (mismo color que la etiqueta "CUENTA PERSONAL" del panel lateral) */
+.ect-row.has-claude td {
+  background: #FFF7ED;
+}
+.ect-row.has-claude:hover td {
+  background: #FFEDD5;
+}
+.ect-row.has-claude.is-selected td {
+  background: #FED7AA;
+}
+[data-coreui-theme="dark"] .ect-row.has-claude td {
+  background: rgba(234, 88, 12, 0.14);
+}
+[data-coreui-theme="dark"] .ect-row.has-claude:hover td,
+[data-coreui-theme="dark"] .ect-row.has-claude.is-selected td {
+  background: rgba(234, 88, 12, 0.26);
 }
 
 /* Fila completa con tinte morado claro cuando tiene convalidaciones */

@@ -57,8 +57,9 @@
         <div class="cg-grid cg-colhead">
           <span class="cg-colh">Curso · Identificación</span>
           <span class="cg-colh">Cronograma</span>
+          <span class="cg-colh cg-colh-c" title="Cuenta apertura / Cuenta programada">CA · CP</span>
           <span class="cg-colh">Docente</span>
-          <span class="cg-colh">Confirmación</span>
+          <span class="cg-colh">Seguimiento</span>
           <div>
             <div class="cg-colh cg-colh-aula">Aula / Inscritos</div>
             <div class="cg-aula-grid cg-aula-head">
@@ -66,7 +67,8 @@
             </div>
           </div>
           <span class="cg-colh">Objetivo</span>
-          <span class="cg-colh cg-colh-cons">Consultas</span>
+          <span class="cg-colh cg-colh-cons" title="Consultas (leads)">Cons.</span>
+          <span class="cg-colh">Obs.</span>
           <span></span>
         </div>
 
@@ -75,7 +77,9 @@
           <div v-for="n in 7" :key="'sk' + n" class="cg-grid cg-skrow">
             <span class="cg-sk" :style="{ width: (45 + (n * 13) % 40) + '%' }"></span>
             <span class="cg-sk" style="width:80%"></span>
+            <span class="cg-sk"></span>
             <span class="cg-sk" style="width:70%"></span>
+            <span class="cg-sk"></span>
             <span class="cg-sk"></span>
             <span class="cg-sk"></span>
             <span class="cg-sk"></span>
@@ -103,7 +107,7 @@
                 :style="{ borderLeftColor: it.sc.color, background: it.sc.tint }"
                 @click="toggleRow(it.e.edition_num_id)"
               >
-                <!-- Curso / Identificación -->
+                <!-- Curso / Identificación: SEG · ED · CURSO · LÍNEA · TIPO -->
                 <div class="cg-min">
                   <div class="cg-ident-top">
                     <span class="cg-seg" :style="{ background: it.sc.color + '1A', color: it.sc.color }">{{ it.e.cat_segment || '—' }}</span>
@@ -113,23 +117,33 @@
                   <div class="cg-linetype">{{ lineLabel(it.e) }} · {{ typeLabel(it.e) }}</div>
                 </div>
 
-                <!-- Cronograma -->
+                <!-- Cronograma: INI → FIN · SES · DÍAS · HORARIO -->
                 <div class="cg-min">
-                  <div class="cg-dates">{{ fmtShort(it.e.start_date) }}<span class="cg-arrow">→</span>{{ fmtShort(it.e.end_date) }}</div>
+                  <div class="cg-dates">
+                    {{ fmtShort(it.e.start_date) }}<span class="cg-arrow">→</span>{{ fmtShort(it.e.end_date) }}
+                    <span class="cg-ses" v-if="it.e.program_sessions">· {{ it.e.program_sessions }} ses</span>
+                  </div>
                   <div class="cg-sched"><b>{{ daysLabel(it.e) }}</b><span class="sep">·</span><span>{{ hourLabel(it.e) }}</span></div>
+                </div>
+
+                <!-- CA / CP -->
+                <div class="cg-capcp">
+                  <div><span class="k">CA</span><span class="v">{{ it.e.calc_da ?? 0 }}</span></div>
+                  <div><span class="k">CP</span><span class="v">{{ it.e.calc_dp ?? 0 }}</span></div>
                 </div>
 
                 <!-- Docente -->
                 <div class="cg-doc">
-                  <span class="cg-doc-eyebrow">Docente</span>
-                  <span class="cg-docname">{{ it.e.instructor || '—' }}</span>
+                  <span class="cg-doc-eyebrow">{{ docentes(it.e).length > 1 ? 'Docentes' : 'Docente' }}</span>
+                  <span v-for="(d, i) in docentes(it.e)" :key="i" class="cg-docname" :title="d">{{ d }}</span>
                 </div>
 
-                <!-- Confirmación -->
+                <!-- Seguimiento: MEJO · FICH · PRE · CONF -->
                 <div class="cg-conf">
+                  <div><span class="cg-dot" :class="it.e.upgrade ? 'on' : 'off'"></span><span>Mejora</span></div>
+                  <div><span class="cg-dot" :class="it.e.expedient ? 'on' : 'off'"></span><span>Ficha</span></div>
                   <div><span class="cg-dot" :class="it.e.preconfirmation ? 'on' : 'off'"></span><span>Pre-conf.</span></div>
                   <div><span class="cg-dot" :class="it.e.confirmation ? 'on' : 'off'"></span><span>Confirmado</span></div>
-                  <div><span class="cg-dot" :class="it.e.expedient ? 'on' : 'off'"></span><span>Ficha</span></div>
                 </div>
 
                 <!-- Aula / Inscritos -->
@@ -143,18 +157,24 @@
                 </div>
 
                 <!-- Objetivo -->
-                <div>
-                  <div class="cg-goal-top">
-                    <span class="cg-goal-meta">Meta {{ it.e.meta_vacantes || '—' }}</span>
-                    <span class="cg-goal-pct" :style="{ color: it.fl.color }">{{ it.fl.pct }}%</span>
-                  </div>
-                  <div class="cg-bar"><div :style="{ width: it.fl.w + '%', background: it.fl.color }"></div></div>
+                <div class="cg-goal">
+                  <template v-if="it.e.meta_vacantes">
+                    <div class="cg-goal-top">
+                      <span class="cg-goal-frac"><b>{{ it.e.cnt_ventas ?? 0 }}</b><i>/ {{ it.e.meta_vacantes }}</i></span>
+                      <span class="cg-goal-chip" :style="{ background: it.fl.color + '1A', color: it.fl.color }">{{ it.fl.pct }}%</span>
+                    </div>
+                    <div class="cg-bar"><div :style="{ width: it.fl.w + '%', background: it.fl.color }"></div></div>
+                  </template>
+                  <span v-else class="cg-goal-none">Sin meta</span>
                 </div>
 
                 <!-- Consultas (leads, excluye Desestimado/Cerrado) -->
                 <div class="cg-cons">
                   <span class="cg-cons-num" :class="{ zero: !it.e.cnt_consultas }">{{ it.e.cnt_consultas ?? 0 }}</span>
                 </div>
+
+                <!-- Obs -->
+                <div class="cg-obs" :title="it.e.notes">{{ it.e.notes || '—' }}</div>
 
                 <!-- chevron -->
                 <div class="cg-chev"><span :class="{ open: it.open }">▾</span></div>
@@ -194,7 +214,7 @@
 
     <div class="cg-foot">
       <span class="cg-foot-dot"></span>
-      <span>Haz clic en cualquier fila para ver el detalle completo · Identificación, Cronograma, Aula e Inscritos y Objetivo.</span>
+      <span>Haz clic en cualquier fila para ver el detalle completo · Mejora / Ficha / Pre-conf. / Confirmado: punto verde = Sí.</span>
     </div>
   </div>
 </template>
@@ -262,7 +282,7 @@ async function fetchAll() {
     weeks.forEach(w => (w.items || []).forEach(e => {
       e.meta_vacantes = goalByEd[e.edition_num_id] || 0
       e.consultas = consByEd[e.edition_num_id] ?? 0
-      e.vf = (e.cnt_aula ?? 0) - e.meta_vacantes
+      e.vf = (e.cnt_ventas ?? 0) - e.meta_vacantes
     }))
 
     schedules.value = weeks
@@ -298,10 +318,11 @@ function statusOf(e) {
   if (en && today > en) return { key: 'Finalizado', live: false }
   return { key: 'En curso', live: true }
 }
+// % de logro del objetivo: se mide por VENTAS (no por aula, que mezcla otros canales).
 function fillOf(e) {
-  const aula = e.cnt_aula ?? 0
+  const ventas = e.cnt_ventas ?? 0
   const obj = e.meta_vacantes ?? 0
-  const pct = obj > 0 ? Math.round((aula / obj) * 100) : 0
+  const pct = obj > 0 ? Math.round((ventas / obj) * 100) : 0
   let color = '#EF4444'
   if (pct >= 100) color = '#6366F1'
   else if (pct >= 80) color = '#10B981'
@@ -337,7 +358,7 @@ const displayWeeks = computed(() => filteredWeeks.value
     return {
       schedule: w.schedule, count: items.length, items,
       isOpen: !closedWeeks.value[w.schedule],
-      summary: `${live} en curso · ${avg}% llenado prom.`,
+      summary: `${live} en curso · ${avg}% logro prom.`,
     }
   }))
 
@@ -373,6 +394,11 @@ function fmtFull(v) {
   const d = parseLocal(v)
   return d ? `${String(d.getDate()).padStart(2, '0')} ${MABBR[d.getMonth()]} ${d.getFullYear()}` : '—'
 }
+// Varios docentes vienen en un solo string separado por comas → uno por línea.
+function docentes(e) {
+  const list = (e.instructor || '').split(',').map(s => s.trim()).filter(Boolean)
+  return list.length ? list : ['—']
+}
 function daysLabel(e) { return e.schedules?.[0]?.day_combination_label || '—' }
 function hourLabel(e) {
   if (!e.schedules?.length) return '—'
@@ -382,7 +408,7 @@ function hourLabel(e) {
 
 function detailSections(e) {
   const yesno = b => ({ v: b ? 'Sí' : 'No', cls: b ? 'v-yes' : 'v-no' })
-  const falt = (e.meta_vacantes || 0) - (e.cnt_aula ?? 0)
+  const falt = (e.meta_vacantes || 0) - (e.cnt_ventas ?? 0)
   return [
     { title: 'Identificación', accent: '#475569', fields: [
       { k: 'Segmento', v: e.cat_segment || '—' },
@@ -390,6 +416,7 @@ function detailSections(e) {
       { k: 'Tipo', v: typeLabel(e) },
       { k: 'Edición', v: e.version_code || '—', cls: 'v-mono' },
       { k: 'Cuenta apertura', v: e.calc_da ?? 0, cls: 'v-mono' },
+      { k: 'Cuenta programada', v: e.calc_dp ?? 0, cls: 'v-mono' },
     ] },
     { title: 'Cronograma', accent: '#0F766E', fields: [
       { k: 'Inicio', v: fmtFull(e.start_date), cls: 'v-mono' },
@@ -412,8 +439,8 @@ function detailSections(e) {
     ] },
     { title: 'Objetivo', accent: '#6D28D9', fields: [
       { k: 'Objetivo vacantes', v: e.meta_vacantes || '—' },
-      { k: 'Vacantes faltantes', v: falt > 0 ? falt : 'Completo', cls: falt > 0 ? 'v-neg' : 'v-pos' },
-      { k: '% Llenado', v: fillOf(e).pct + '%' },
+      { k: 'Ventas faltantes', v: falt > 0 ? falt : 'Completo', cls: falt > 0 ? 'v-neg' : 'v-pos' },
+      { k: '% Logro (ventas)', v: fillOf(e).pct + '%' },
       { k: 'Consultas (leads)', v: e.consultas ?? 0 },
     ] },
   ]
@@ -469,17 +496,18 @@ onMounted(fetchAll)
 .cg-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
 .cg-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; border: 2px solid #fff; }
 
-/* Grid compartido (header + filas) */
-.cg-grid { display: grid; grid-template-columns: minmax(190px,1.2fr) minmax(175px,1.1fr) minmax(130px,.9fr) 104px 216px 146px 72px 38px; gap: 14px; align-items: center; }
-.cg-colhead { padding: 9px 18px 9px 22px; position: sticky; top: 0; z-index: 6; background: #FBFCFE; border-bottom: 1px solid var(--line); }
+/* Grid compartido (header + filas): ident · crono · ca/cp · docente · seguimiento · aula · objetivo · consultas · obs · chevron */
+.cg-grid { display: grid; grid-template-columns: minmax(190px,1.5fr) minmax(185px,1.2fr) 64px minmax(130px,1.3fr) 104px minmax(216px,1.1fr) minmax(130px,1fr) 56px minmax(95px,.5fr) 30px; gap: 12px; align-items: center; min-width: 1330px; }
+.cg-colhead { padding: 9px 14px 9px 22px; position: sticky; top: 0; z-index: 6; background: #FBFCFE; border-bottom: 1px solid var(--line); }
 .cg-colh { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #94A3B8; font-weight: 700; }
+.cg-colh-c { text-align: center; }
 .cg-colh-aula { color: #B45309; font-size: 9px; letter-spacing: .06em; margin-bottom: 3px; text-align: center; }
 .cg-aula-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; align-items: center; }
 .cg-aula-head span { font-size: 9.5px; color: #94A3B8; font-weight: 700; text-align: center; }
 .cg-aula-head .amber { color: #B45309; }
 
 /* Skeleton */
-.cg-skrow { padding: 16px 18px 16px 22px; border-top: 1px solid #F1F4F9; }
+.cg-skrow { padding: 16px 14px 16px 22px; border-top: 1px solid #F1F4F9; }
 .cg-sk { height: 13px; border-radius: 6px; background: linear-gradient(90deg,#F1F5F9,#E5EAF1,#F1F5F9); background-size: 200% 100%; animation: cgsk 1.3s infinite; }
 @keyframes cgsk { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
 
@@ -495,7 +523,7 @@ onMounted(fetchAll)
 
 /* Filas */
 .cg-rowwrap { border-top: 1px solid #F1F4F9; }
-.cg-row { padding: 15px 18px 15px 19px; cursor: pointer; border-left: 3px solid; transition: box-shadow .15s, border-left-width .15s; }
+.cg-row { padding: 15px 14px 15px 19px; cursor: pointer; border-left: 3px solid; transition: box-shadow .15s, border-left-width .15s; }
 .cg-row:hover { border-left-width: 6px; box-shadow: inset 0 0 0 9999px rgba(255,255,255,.35); }
 .cg-min { min-width: 0; }
 .cg-ident-top { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
@@ -505,14 +533,19 @@ onMounted(fetchAll)
 .cg-linetype { font-size: 11.5px; color: #94A3B8; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cg-dates { font-family: ui-monospace, 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--navy); white-space: nowrap; }
 .cg-arrow { color: #CBD5E1; margin: 0 5px; }
+.cg-ses { font-size: 10.5px; color: #94A3B8; font-weight: 500; font-family: inherit; }
 .cg-sched { font-size: 11.5px; color: #64748B; margin-top: 3px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cg-sched b { color: #475569; font-weight: 600; }
 .cg-sched .sep { color: #CBD5E1; }
+.cg-capcp { display: flex; flex-direction: column; gap: 3px; }
+.cg-capcp > div { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; }
+.cg-capcp .k { font-size: 9px; letter-spacing: .06em; color: #B4BECC; font-weight: 700; }
+.cg-capcp .v { font-family: ui-monospace, 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums; }
 .cg-doc { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cg-doc-eyebrow { font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: #B4BECC; font-weight: 700; }
 .cg-docname { font-size: 13px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cg-conf { display: flex; flex-direction: column; gap: 4px; }
-.cg-conf > div { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #64748B; }
+.cg-conf { display: flex; flex-direction: column; gap: 3px; }
+.cg-conf > div { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: #64748B; }
 .cg-dot { width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box; flex-shrink: 0; }
 .cg-dot.on { background: #10B981; box-shadow: 0 0 0 2px #D1FAE5; }
 .cg-dot.off { background: #fff; border: 1.5px solid #CBD5E1; }
@@ -525,11 +558,16 @@ onMounted(fetchAll)
 .cg-cons { text-align: center; }
 .cg-cons-num { font-size: 14px; font-weight: 700; text-align: center; color: #2563EB; font-variant-numeric: tabular-nums; }
 .cg-cons-num.zero { font-weight: 400; color: #D5DCE6; }
-.cg-goal-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
-.cg-goal-meta { font-size: 11px; color: #94A3B8; font-weight: 500; }
-.cg-goal-pct { font-size: 10px; font-weight: 700; }
+.cg-goal { min-width: 0; }
+.cg-goal-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.cg-goal-frac { display: flex; align-items: baseline; gap: 2px; white-space: nowrap; }
+.cg-goal-frac b { font-size: 14px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+.cg-goal-frac i { font-style: normal; font-size: 11px; color: #94A3B8; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cg-goal-chip { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.cg-goal-none { font-size: 11.5px; color: #B4BECC; font-weight: 500; }
 .cg-bar { height: 6px; border-radius: 999px; background: #EEF2F6; overflow: hidden; }
 .cg-bar > div { height: 100%; border-radius: 999px; transition: width .4s; }
+.cg-obs { font-size: 11px; color: #64748B; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .cg-chev { display: flex; justify-content: center; color: #94A3B8; font-size: 11px; }
 .cg-chev span { display: inline-block; transition: transform .18s; transform: rotate(-90deg); }
 .cg-chev span.open { transform: rotate(0); }

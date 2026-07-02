@@ -33,6 +33,12 @@ async liderList(payload) {
     return response.data;
   }
 
+  // Upsert de metas por edición. payload: { goals: [{ edition_num_id, target_vacants, target_revenue }] }
+  async saveProgramGoals(payload) {
+    const response = (await api.post('/dashboard/program-goals/save', payload)).data;
+    return response.data;
+  }
+
   // Nº de consultas (leads) por edición. payload: { edition_ids: number[] }
   // Devuelve [{ edition_num_id, consultas }]
   async leadsPerEditionList(payload) {

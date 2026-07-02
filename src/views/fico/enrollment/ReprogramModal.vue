@@ -115,7 +115,7 @@ watch(() => props.visible, async (v) => {
   try {
     const items = await ficoService.getAvailableEditions(Number(props.enrollment.enrollment_id))
     reprogramEditions.value = (items || [])
-      .filter(e => e.start_date && isFutureOrToday(e.start_date))
+      .filter(e => e.start_date && isWithinReprogramWindow(e.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
         label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
@@ -127,14 +127,15 @@ watch(() => props.visible, async (v) => {
   }
 })
 
-// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift.
-function isFutureOrToday (startDate) {
+// Compara start_date (cadena calendario) contra el 1ro de hace 2 meses,
+// sin sufrir TZ shift. Ej: estando en julio, admite ediciones desde el 01/05.
+function isWithinReprogramWindow (startDate) {
   const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (!m) return false
   const ed = new Date(+m[1], +m[2] - 1, +m[3])
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return ed >= today
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  return ed >= cutoff
 }
 
 async function handleReprogram () {
