@@ -1,8 +1,10 @@
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import AulasFilterModal from './AulasFilterModal.vue'
 
 const editionService = inject(ServiceKeys.Edition)
 const catalog = inject('catalog')
@@ -90,6 +92,8 @@ function mapRow(row) {
     sessions: Number(row.program_sessions) || 0,
     startDate: formatDate(row.start_date),
     endDate: formatDate(row.end_date),
+    rawStart: row.start_date ? String(row.start_date).slice(0, 10) : null,
+    rawEnd: row.end_date ? String(row.end_date).slice(0, 10) : null,
     schedule: buildSchedule(row),
     status: deriveStatus(row),
     color: SEGMENT_COLORS[row.cat_segment] || FALLBACK_COLOR,
@@ -154,13 +158,61 @@ onMounted(loadCourses)
 
 const layout = ref('grid')
 const filter = ref('Activo')
-const query = ref('')
 
-const filtered = computed(() =>
-  COURSES.value.filter((c) => {
+// === Filtros avanzados (mismo patron que FICO EnrollmentFilterModal, pero
+// client-side: todo el dataset ya esta en COURSES, no hay refetch) ===
+const showFilterModal = ref(false)
+const advFilters = reactive({
+  q: '',
+  modality_ids: [],
+  segment_ids: [],
+  teacher_ids: [],
+  start_range_string: null,
+  start_from: null,
+  start_to: null,
+  end_range_string: null,
+  end_from: null,
+  end_to: null,
+})
+
+// Catalogos del modal derivados de los datos cargados (valores unicos).
+const distinct = (key) =>
+  [...new Set(COURSES.value.map((c) => c[key]).filter((v) => v && v !== '--'))]
+    .sort()
+    .map((v) => ({ id: v, description: v }))
+const filtroModalidad = computed(() => distinct('modality'))
+const filtroSegmento = computed(() => distinct('agent'))
+const filtroDocente = computed(() => distinct('teacher'))
+
+// El locale Spanish de flatpickr usa ' a ' como rangeSeparator; el ingles ' to '.
+function handleDateChange(dateStr, type) {
+  const p = dateStr ? String(dateStr).split(/\s+(?:to|a)\s+/i) : []
+  const from = p[0] || null
+  const to = p[1] || p[0] || null
+  if (type === 'start') { advFilters.start_from = from; advFilters.start_to = to }
+  if (type === 'end') { advFilters.end_from = from; advFilters.end_to = to }
+}
+
+const selectedSet = (arr) => new Set((arr || []).map((i) => i.value ?? i.id ?? i))
+const inRange = (d, from, to) => !!d && (!from || d >= from) && (!to || d <= to)
+
+const filtered = computed(() => {
+  const mods = selectedSet(advFilters.modality_ids)
+  const segs = selectedSet(advFilters.segment_ids)
+  const teach = selectedSet(advFilters.teacher_ids)
+  return COURSES.value.filter((c) => {
     if (filter.value !== 'Todos' && c.status !== filter.value) return false
-    if (query.value) {
-      const q = query.value.toLowerCase()
+    if (mods.size && !mods.has(c.modality)) return false
+    if (segs.size && !segs.has(c.agent)) return false
+    if (teach.size && !teach.has(c.teacher)) return false
+    if (advFilters.start_from || advFilters.start_to) {
+      if (!inRange(c.rawStart, advFilters.start_from, advFilters.start_to)) return false
+    }
+    if (advFilters.end_from || advFilters.end_to) {
+      if (!inRange(c.rawEnd, advFilters.end_from, advFilters.end_to)) return false
+    }
+    if (advFilters.q) {
+      const q = advFilters.q.toLowerCase()
       return (
         c.name.toLowerCase().includes(q) ||
         c.code.toLowerCase().includes(q) ||
@@ -168,8 +220,41 @@ const filtered = computed(() =>
       )
     }
     return true
-  }),
-)
+  })
+})
+
+// Chips activos: computed en vez del rebuild manual de enrollment porque el
+// filtrado es reactivo/client-side y no hay "aplicar" contra backend.
+const activeFilterChips = computed(() => {
+  const chips = []
+  const mc = (key, lbl, items) => {
+    if (!items?.length) return
+    const ls = items.map((i) => i.label || i.description || i.value || i)
+    chips.push({ key, label: ls.length === 1 ? `${lbl}: ${ls[0]}` : `${lbl}: ${ls.length} sel.`, details: ls })
+  }
+  if (advFilters.q) chips.push({ key: 'q', label: `Busqueda: ${advFilters.q}` })
+  mc('modality_ids', 'Modalidad', advFilters.modality_ids)
+  mc('segment_ids', 'Segmento', advFilters.segment_ids)
+  mc('teacher_ids', 'Docente', advFilters.teacher_ids)
+  if (advFilters.start_from) chips.push({ key: 'start_range', label: `Inicio: ${advFilters.start_from} a ${advFilters.start_to}` })
+  if (advFilters.end_from) chips.push({ key: 'end_range', label: `Fin: ${advFilters.end_from} a ${advFilters.end_to}` })
+  return chips
+})
+
+function clearAdvFilter(key) {
+  if (key === 'q') advFilters.q = ''
+  else if (key === 'start_range') Object.assign(advFilters, { start_range_string: null, start_from: null, start_to: null })
+  else if (key === 'end_range') Object.assign(advFilters, { end_range_string: null, end_from: null, end_to: null })
+  else advFilters[key] = []
+}
+
+function clearAdvFilters() {
+  Object.assign(advFilters, {
+    q: '', modality_ids: [], segment_ids: [], teacher_ids: [],
+    start_range_string: null, start_from: null, start_to: null,
+    end_range_string: null, end_from: null, end_to: null,
+  })
+}
 
 const activeCourses = computed(() => COURSES.value.filter((c) => c.status === 'Activo'))
 const totalActive = computed(() => activeCourses.value.length)
@@ -277,10 +362,11 @@ const statusPillClass = (s) =>
       <span class="divider"></span>
       <div class="input">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input v-model="query" placeholder="Buscar por nombre, codigo o docente..." />
+        <input v-model="advFilters.q" placeholder="Buscar por nombre, codigo o docente..." />
       </div>
-      <button class="chip">
+      <button class="chip" :class="{ active: activeFilterChips.length > 0 }" @click="showFilterModal = true">
         <i class="fa-solid fa-filter"></i> Mas filtros
+        <span v-if="activeFilterChips.length" class="chip-count">{{ activeFilterChips.length }}</span>
       </button>
       <div class="spacer"></div>
       <span class="muted">{{ filtered.length }} resultados</span>
@@ -293,6 +379,27 @@ const statusPillClass = (s) =>
         </button>
       </div>
     </div>
+
+    <div v-if="activeFilterChips.length" class="filter-strip">
+      <span class="filter-strip-badge">
+        <i class="fa-solid fa-circle-half-stroke"></i>
+        Filtros activos
+        <span class="filter-strip-count">{{ activeFilterChips.length }}</span>
+      </span>
+      <BaseFilterChips :items="activeFilterChips" @remove="clearAdvFilter" @clear-all="clearAdvFilters" />
+    </div>
+
+    <AulasFilterModal
+      :visible="showFilterModal"
+      @update:visible="v => showFilterModal = v"
+      :filters="advFilters"
+      :filtro-modalidad="filtroModalidad"
+      :filtro-segmento="filtroSegmento"
+      :filtro-docente="filtroDocente"
+      @apply="showFilterModal = false"
+      @clear="clearAdvFilters"
+      @date-change="handleDateChange"
+    />
 
     <div v-if="layout === 'grid'" class="course-grid">
       <article
@@ -568,6 +675,28 @@ const statusPillClass = (s) =>
   font-weight: 500;
 }
 
+/* Strip de filtros activos: mismo patron visual que el de FICO enrollment. */
+.filter-strip {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 14px; margin: -8px 0 14px;
+  border: 1px solid rgba(16, 185, 129, 0.32); border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.filter-strip-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 600; color: var(--green-ink);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.filter-strip-badge i { font-size: 11px; }
+.filter-strip-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: var(--green); color: #fff; border-radius: 9px;
+  font-size: 10.5px; font-weight: 700;
+}
+.filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
+.filter-strip :deep(.active-filters .label) { display: none; }
+
 /* status pills */
 .status-pill {
   display: inline-flex; align-items: center; gap: 5px;
@@ -738,6 +867,10 @@ const statusPillClass = (s) =>
 [data-coreui-theme="dark"] .aulas-shell .btn.primary:hover { background: #E4E4DD; }
 [data-coreui-theme="dark"] .aulas-shell .kpi { background: #1A1A14; }
 [data-coreui-theme="dark"] .aulas-shell .filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .aulas-shell .filter-strip {
+  border-color: rgba(52, 211, 153, 0.32);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
 [data-coreui-theme="dark"] .aulas-shell .chip { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
 [data-coreui-theme="dark"] .aulas-shell .chip:hover { background: #1F1F1A; }
 [data-coreui-theme="dark"] .aulas-shell .chip.active {
