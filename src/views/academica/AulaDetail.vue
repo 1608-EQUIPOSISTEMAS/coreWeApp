@@ -1573,6 +1573,11 @@ onMounted(async () => {
                       class="fa-solid fa-circle-exclamation debt-ico"
                       :title="`Deuda pendiente: ${s.fin_overdue} cuota(s) vencida(s)`"
                     ></i>
+                    <i
+                      v-if="s.has_laptop_promo"
+                      class="fa-solid fa-laptop laptop-ico"
+                      title="Traera laptop (promo LAPTOP en su inscripcion)"
+                    ></i>
                   </div>
                 </td>
                 <td class="td-center">
@@ -1585,11 +1590,14 @@ onMounted(async () => {
                   <span v-else class="muted">--</span>
                 </td>
                 <td>
-                  <span v-if="s.parent_code"
-                        class="type-badge tb-seg mono"
-                        :title="s.type_status_label || 'Programa padre'">
-                    {{ s.parent_code }}
-                  </span>
+                  <div v-if="(s.parent_codes && s.parent_codes.length) || s.parent_code" class="seg-stack">
+                    <span v-for="pc in (s.parent_codes && s.parent_codes.length ? s.parent_codes : [s.parent_code])"
+                          :key="pc"
+                          class="type-badge tb-seg mono"
+                          :title="s.type_status_label || 'Programa padre'">
+                      {{ pc }}
+                    </span>
+                  </div>
                   <span v-else-if="typeStatusBadge(s.type_status_alias)"
                         class="type-badge"
                         :class="typeStatusBadge(s.type_status_alias).cls">
@@ -1714,6 +1722,9 @@ onMounted(async () => {
                       </label>
                       <div class="deliv-flags">
                         <span v-if="s.has_certificate" class="type-badge tb-seg"><i class="fa-solid fa-certificate"></i> Certificado</span>
+                        <span v-if="s.has_laptop_promo" class="type-badge tb-laptop" title="Esta inscripcion incluye laptop como beneficio">
+                          <i class="fa-solid fa-laptop"></i> Traera laptop
+                        </span>
                         <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
                         <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
                           <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
@@ -2597,6 +2608,7 @@ onMounted(async () => {
   font-size: 10px; font-weight: 600; font-family: var(--font-mono);
 }
 .tb-seg { background: var(--amber-soft); color: var(--amber-ink); }
+.seg-stack { display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .tb-rp  { background: #FCE4EC; color: #BE185D; }
 .tb-cc  { background: var(--blue-soft); color: var(--blue-ink); }
 .tb-obs { background: var(--slate-soft); color: var(--slate-ink); }
@@ -2605,6 +2617,9 @@ onMounted(async () => {
 .tb-member i { margin-right: 2px; font-size: 9px; }
 .tb-beca { background: #E0F2FE; color: #075985; border: 1px solid #7DD3FC; }
 .tb-beca i { margin-right: 2px; font-size: 9px; }
+/* Mismos colores que la etiqueta "Traera laptop" del panel FICO */
+.tb-laptop { background: #ECFEFF; color: #155E75; border: 1px solid #A5F3FC; }
+.tb-laptop i { margin-right: 2px; font-size: 9px; color: #0891B2; }
 
 /* HISTORIAL */
 .hist-wrap { padding: 4px 2px; }
@@ -2667,6 +2682,7 @@ onMounted(async () => {
 .row-debt td { background: #EAF2FD !important; }
 .row-debt .sticky-c0, .row-debt .sticky-c1 { background: #EAF2FD !important; }
 .debt-ico { color: var(--blue-ink); font-size: 12px; margin-left: 2px; flex-shrink: 0; }
+.laptop-ico { color: #0891B2; font-size: 12px; margin-left: 2px; flex-shrink: 0; }
 .grades-table .sticky-c1 { overflow: hidden; }
 .debt-swatch {
   display: inline-block; width: 14px; height: 14px;
