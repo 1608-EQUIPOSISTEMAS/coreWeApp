@@ -626,7 +626,6 @@ async function handleSaveEdit (justificacion) {
     fields.transaction_code = ini ? ini._transaction_code : ficoForm.transaction_code
     fields.cat_currency = ini ? ini._cat_currency : ficoForm.cat_currency
     fields.payment_date = ini ? ini._payment_date : ficoForm.payment_date
-    fields.notes = detail.value?.notes || null
 
     const paidDiffs = collectPaidCuotaDiffs()
     if (paidDiffs.length) fields.paid_installments = paidDiffs

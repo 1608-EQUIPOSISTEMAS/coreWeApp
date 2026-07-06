@@ -19,9 +19,6 @@
           <i class="fa-solid" :class="syncingSheet ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'"></i>
           {{ syncingSheet ? 'Sincronizando...' : 'Sincronizar ventas' }}
         </button>
-        <button class="ep-btn-export" @click="showExportModal = true" title="Descargar alumnos en aula por curso y edición">
-          <i class="fa-solid fa-file-arrow-down"></i> Exportar aula
-        </button>
         <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nueva inscripcion</button>
       </div>
     </header>
@@ -127,10 +124,6 @@
       @date-change="list.handleDateChange"
     />
 
-    <ClassroomExportModal
-      :visible="showExportModal"
-      @update:visible="v => showExportModal = v"
-    />
   </div>
 </template>
 
@@ -146,16 +139,12 @@ import EnrollmentCompactTable from './EnrollmentCompactTable.vue'
 import EnrollmentExpandedTable from './EnrollmentExpandedTable.vue'
 import EnrollmentFilterModal from './EnrollmentFilterModal.vue'
 import EnrollmentSidePanel from './EnrollmentSidePanel.vue'
-import ClassroomExportModal from './ClassroomExportModal.vue'
 
 const list = useEnrollmentList()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const integrationService = inject(ServiceKeys.Integration)
-
-// === Modal exportar aula ===
-const showExportModal = ref(false)
 
 // === Sync ventas a Google Sheets ===
 const syncingSheet = ref(false)
@@ -166,7 +155,8 @@ async function syncToSheet () {
     const resp = await integrationService.syncFicoToSheets()
     const ventas = resp?.data?.ventas?.rows_synced ?? 0
     const aula = resp?.data?.aula?.rows_synced ?? 0
-    toast.success(`Ventas: ${ventas} filas · Aula: ${aula} filas sincronizadas`, { timeout: 5000 })
+    const cronograma = resp?.data?.cronograma?.rows_synced ?? 0
+    toast.success(`Ventas: ${ventas} · Aula: ${aula} · Cronograma: ${cronograma} filas sincronizadas`, { timeout: 5000 })
   } catch (err) {
     console.error('[syncToSheet]', err)
     const msg = err?.response?.data?.error || err?.message || 'Error al sincronizar'
@@ -413,16 +403,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 .ep-btn-sheet:hover:not(:disabled) { border-color: #34A853; color: #1E7E34; background: #F0FDF4; }
 .ep-btn-sheet:disabled { opacity: 0.6; cursor: not-allowed; }
 .ep-btn-sheet i { font-size: 11px; }
-
-.ep-btn-export {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px; font-size: 13px; font-weight: 600;
-  color: var(--e-text); background: #fff;
-  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
-  transition: all .2s ease; font-family: inherit;
-}
-.ep-btn-export:hover { border-color: #6366F1; color: #4F46E5; background: #EEF2FF; }
-.ep-btn-export i { font-size: 11px; }
 
 /* === Section wrapper (transparent by default — Aulas style) === */
 .ep-section {
@@ -741,13 +721,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 [data-coreui-theme="dark"] .enrollment-page .ep-toggle-btn.is-active { background: #2A2A22; }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-sheet {
   background: #1A1A14;
-}
-[data-coreui-theme="dark"] .enrollment-page .ep-btn-export {
-  background: #1A1A14;
-}
-[data-coreui-theme="dark"] .enrollment-page .ep-btn-export:hover {
-  background: rgba(99, 102, 241, 0.12);
-  color: #818CF8;
 }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
 [data-coreui-theme="dark"] .enrollment-page .ep-btn-new:hover { background: #E4E4DD; }

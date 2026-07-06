@@ -406,6 +406,65 @@ async function saveGrades() {
   }
 }
 
+// --- Exportar CSV de la lista de notas ---------------------------------
+// Genera el archivo en el cliente con los datos ya cargados en la tabla
+// (mismo mecanismo de descarga blob que el "Exportar aula" de FICO, pero
+// sin modal ni llamada extra al backend). Exporta TODOS los alumnos del
+// aula, ignorando busqueda/filtros activos.
+function exportNotasCsv() {
+  if (!students.value.length) return
+  const esc = (v) => {
+    const s = v == null ? '' : String(v)
+    return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const header = [
+    'N', 'Apellidos y nombres', 'Email', 'DNI', 'Ocup.', 'Mod.', 'Seguimiento', 'B2B', 'Beca', 'Membresia',
+    ...sessionNumbers.value.map((n) => `Test S${n}`), 'TEST',
+    ...sessionNumbers.value.map((n) => `Part. S${n}`), 'PTS',
+    'PARCIAL', 'FINAL', 'NOTA FINAL', 'RESULTADO', 'GRUPO', 'OBSERVACION',
+  ]
+  const rows = students.value.map((s, idx) => {
+    const d = draftFor(s)
+    const graded = hasAnyGrade(d)
+    const parents = s.parent_codes?.length ? s.parent_codes : (s.parent_code ? [s.parent_code] : [])
+    const seg = parents.join(' / ') || typeStatusBadge(s.type_status_alias)?.label || ''
+    return [
+      String(idx + 1).padStart(2, '0'),
+      apellidosNombres(s),
+      s.email || '',
+      s.dni || '',
+      ocupLabel(s),
+      modalityLabel(s),
+      seg,
+      b2bLabel(s) || '',
+      s.is_beca ? 'BECA' : '',
+      s.membership_active ? s.membership_tier_name : '',
+      ...sessionNumbers.value.map((n) => d.tests[String(n)] ?? ''),
+      testScore(d),
+      ...sessionNumbers.value.map((n) => (d.participation[String(n)] === true ? 'X' : '')),
+      partScore(d),
+      partialScore(d),
+      finalDelivScore(d),
+      graded ? finalGrade(d) : '',
+      graded ? (finalGrade(d) >= GRADE_RULES.PASS_THRESHOLD ? 'APROBADO' : 'DESAPROBADO') : '',
+      d.group_number ?? '',
+      d.observation || '',
+    ]
+  })
+  // BOM para que Excel abra los acentos en UTF-8 correctamente.
+  const csv = '\ufeff' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `notas_${aula.value?.global_code || editionId.value}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  toast.success('Descarga lista.')
+}
+
 // --- Observaciones IA (Ollama local via tunel) -------------------------
 // El modelo solo produce BORRADORES: entran al draft como filas sucias y se
 // persisten con el boton Guardar, siempre tras revision humana.
@@ -1502,6 +1561,14 @@ onMounted(async () => {
         <div class="spacer"></div>
         <button
           class="btn"
+          :disabled="!students.length"
+          title="Descargar la lista de notas completa en CSV"
+          @click="exportNotasCsv"
+        >
+          <i class="fa-solid fa-file-arrow-down"></i> Exportar CSV
+        </button>
+        <button
+          class="btn"
           :disabled="isGeneratingObs || !students.length"
           title="Genera borradores de observacion por alumno con la IA local"
           @click="generateObservations()"
@@ -1555,7 +1622,7 @@ onMounted(async () => {
           </thead>
           <tbody>
             <template v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
-              <tr :class="{ 'row-debt': hasDebt(s) }">
+              <tr :class="{ 'row-debt': hasDebt(s), 'row-laptop': s.has_laptop_promo }">
                 <td class="sticky-c0 mono small">{{ String(idx + 1).padStart(2, '0') }}</td>
                 <td class="sticky-c1">
                   <div class="student-name-cell">
@@ -1572,11 +1639,6 @@ onMounted(async () => {
                       v-if="hasDebt(s)"
                       class="fa-solid fa-circle-exclamation debt-ico"
                       :title="`Deuda pendiente: ${s.fin_overdue} cuota(s) vencida(s)`"
-                    ></i>
-                    <i
-                      v-if="s.has_laptop_promo"
-                      class="fa-solid fa-laptop laptop-ico"
-                      title="Traera laptop (promo LAPTOP en su inscripcion)"
                     ></i>
                   </div>
                 </td>
@@ -2681,8 +2743,13 @@ onMounted(async () => {
 .ocup-pill.e { background: var(--blue-soft); color: var(--blue-ink); }
 .row-debt td { background: #EAF2FD !important; }
 .row-debt .sticky-c0, .row-debt .sticky-c1 { background: #EAF2FD !important; }
+/* Promo LAPTOP: fila con tinte cian (mismo color que la tabla FICO).
+   Si el alumno ademas tiene deuda, gana el azul de deuda (doble clase). */
+.row-laptop td { background: #ECFEFF !important; }
+.row-laptop .sticky-c0, .row-laptop .sticky-c1 { background: #ECFEFF !important; }
+.row-debt.row-laptop td,
+.row-debt.row-laptop .sticky-c0, .row-debt.row-laptop .sticky-c1 { background: #EAF2FD !important; }
 .debt-ico { color: var(--blue-ink); font-size: 12px; margin-left: 2px; flex-shrink: 0; }
-.laptop-ico { color: #0891B2; font-size: 12px; margin-left: 2px; flex-shrink: 0; }
 .grades-table .sticky-c1 { overflow: hidden; }
 .debt-swatch {
   display: inline-block; width: 14px; height: 14px;
@@ -3078,6 +3145,12 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .row-debt td,
 [data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c0,
 [data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c1 { background: #1B2536 !important; }
+[data-coreui-theme="dark"] .aula-detail .row-laptop td,
+[data-coreui-theme="dark"] .aula-detail .row-laptop .sticky-c0,
+[data-coreui-theme="dark"] .aula-detail .row-laptop .sticky-c1 { background: rgba(8, 145, 178, 0.14) !important; }
+[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop td,
+[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop .sticky-c0,
+[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop .sticky-c1 { background: #1B2536 !important; }
 [data-coreui-theme="dark"] .aula-detail .deliv-subrow > td { background: #1F1F1A; }
 [data-coreui-theme="dark"] .aula-detail .summary-card { background: #1A1A14; border-color: #3A3A33; }
 [data-coreui-theme="dark"] .aula-detail .obs-textarea,

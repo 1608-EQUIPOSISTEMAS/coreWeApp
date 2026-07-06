@@ -265,15 +265,4 @@ export default class FicoService {
     return response.data;
   }
 
-  async getClassroomExportOptions() {
-    const response = (await api.get('/fico/classroomexport/options')).data;
-    return response.data;
-  }
-
-  async downloadClassroomExport(programVersionId, editionNumId) {
-    return await api.get('/fico/classroomexport', {
-      params: { programVersionId, editionNumId },
-      responseType: 'blob'
-    });
-  }
 }
