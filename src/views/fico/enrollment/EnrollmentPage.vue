@@ -156,7 +156,8 @@ async function syncToSheet () {
     const ventas = resp?.data?.ventas?.rows_synced ?? 0
     const aula = resp?.data?.aula?.rows_synced ?? 0
     const cronograma = resp?.data?.cronograma?.rows_synced ?? 0
-    toast.success(`Ventas: ${ventas} · Aula: ${aula} · Cronograma: ${cronograma} filas sincronizadas`, { timeout: 5000 })
+    const adicionales = resp?.data?.adicionales?.rows_synced ?? 0
+    toast.success(`Ventas: ${ventas} · Aula: ${aula} · Cronograma: ${cronograma} · Adicionales: ${adicionales} filas sincronizadas`, { timeout: 5000 })
   } catch (err) {
     console.error('[syncToSheet]', err)
     const msg = err?.response?.data?.error || err?.message || 'Error al sincronizar'

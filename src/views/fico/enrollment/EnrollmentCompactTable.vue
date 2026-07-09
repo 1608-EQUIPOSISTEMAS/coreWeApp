@@ -99,7 +99,7 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasClaudeAccount(e) }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasClaudeAccount(e), 'has-cert': fmt.hasCertPaid(e) }]"
           @click="onRowClick(e, $event)"
         >
           <td class="tc">
@@ -539,6 +539,25 @@ function clearColFilters () {
 [data-coreui-theme="dark"] .ect-row.has-claude:hover td,
 [data-coreui-theme="dark"] .ect-row.has-claude.is-selected td {
   background: rgba(234, 88, 12, 0.26);
+}
+
+/* Fila con tinte verde cuando el becado ya pago su certificado
+   (etiqueta "Certificar", mismo verde que el pill del detalle) */
+.ect-row.has-cert td {
+  background: #ECFDF5;
+}
+.ect-row.has-cert:hover td {
+  background: #D1FAE5;
+}
+.ect-row.has-cert.is-selected td {
+  background: #A7F3D0;
+}
+[data-coreui-theme="dark"] .ect-row.has-cert td {
+  background: rgba(16, 185, 129, 0.14);
+}
+[data-coreui-theme="dark"] .ect-row.has-cert:hover td,
+[data-coreui-theme="dark"] .ect-row.has-cert.is-selected td {
+  background: rgba(16, 185, 129, 0.26);
 }
 
 /* Fila completa con tinte morado claro cuando tiene convalidaciones */

@@ -115,7 +115,109 @@
 
     <!-- CONTADO -->
     <div v-if="isContado" class="ef-payment">
-      <h6 class="ef-sub-title"><i class="fa-solid fa-money-bill-wave"></i> Pago al Contado</h6>
+      <!-- Becado: nav Pago / Adicionales (pago del certificado) -->
+      <div v-if="isBeca" class="ef-cuota-tabs">
+        <button :class="['ef-cuota-tab', { active: becaTab === 'pago' }]" @click="becaTab = 'pago'">
+          <i class="fa-solid fa-money-bill-wave"></i> Pago
+        </button>
+        <button :class="['ef-cuota-tab', { active: becaTab === 'adicionales' }]" @click="becaTab = 'adicionales'">
+          <i class="fa-solid fa-file-invoice"></i> Adicionales
+          <span v-if="certificatePaid" class="ef-cert-pill"><i class="fa-solid fa-certificate"></i> Certificar</span>
+        </button>
+      </div>
+
+      <!-- Adicionales: pago del certificado del becado -->
+      <div v-if="isBeca && becaTab === 'adicionales'" class="ef-tab-body">
+        <!-- Pago ya registrado: solo lectura -->
+        <div v-if="certificatePayment" class="ef-inicial-card">
+          <div class="ef-inicial-top">
+            <div class="ef-inicial-info">
+              <span class="ef-bar-label">Pago de Certificado</span>
+              <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(certificatePayment.amount) }}</span>
+            </div>
+            <div class="ef-inicial-actions">
+              <span class="ef-cert-badge"><i class="fa-solid fa-certificate"></i> Certificar</span>
+              <a v-if="certificatePayment.evidence_url" :href="certificatePayment.evidence_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
+              <span v-else class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
+            </div>
+          </div>
+          <div class="ef-form-row mt12">
+            <div class="ef-field"><label>Medio de Pago</label><span class="ef-readonly">{{ certificatePayment.payment_method || '---' }}</span></div>
+            <div class="ef-field"><label>Entidad Empresa</label><span class="ef-readonly">{{ certificatePayment.business_entity || '---' }}</span></div>
+            <div class="ef-field"><label>Cuenta Bancaria</label><span class="ef-readonly">{{ [certificatePayment.bank_name, certificatePayment.account_number].filter(Boolean).join(' - ') || '---' }}</span></div>
+            <div class="ef-field"><label>N. Operacion</label><span class="ef-readonly mono">{{ certificatePayment.transaction_code || '---' }}</span></div>
+            <div class="ef-field"><label>Fecha de Pago</label><span class="ef-readonly">{{ certificatePayment.payment_date ? fmt.formatDate(certificatePayment.payment_date) : '---' }}</span></div>
+          </div>
+        </div>
+
+        <!-- Sin pago aun: formulario de registro -->
+        <div v-else class="ef-inicial-card">
+          <div class="ef-inicial-top">
+            <div class="ef-inicial-info">
+              <span class="ef-bar-label">Pago de Certificado</span>
+              <div class="ef-cert-amount">
+                <span class="fw700 mono" style="font-size:16px">S/.</span>
+                <input v-model.number="adicional.amount" type="number" step="0.01" min="0" class="ef-input ef-cert-amount-input mono" placeholder="50.00" />
+              </div>
+            </div>
+            <div class="ef-inicial-actions">
+              <a v-if="adicional.voucher_url" :href="adicional.voucher_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
+              <label class="ef-voucher-link" style="cursor:pointer">
+                <i class="fa-solid fa-cloud-arrow-up"></i> {{ adicional.voucher_url ? 'Cambiar Voucher' : 'Adjuntar Voucher' }}
+                <input type="file" accept="image/*,.pdf" style="display:none" @change="uploadAdicionalVoucher" />
+              </label>
+            </div>
+          </div>
+          <div class="ef-form-row mt12">
+            <div class="ef-field">
+              <label>Tipo Moneda</label>
+              <select v-model="adicional.cat_currency" class="ef-select">
+                <option :value="null">Seleccionar...</option>
+                <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
+              </select>
+            </div>
+            <div class="ef-field">
+              <label>Medio de Pago</label>
+              <select v-model="adicional.cat_payment_medium" class="ef-select">
+                <option :value="null">Seleccionar...</option>
+                <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
+              </select>
+            </div>
+            <div class="ef-field">
+              <label>Entidad Empresa</label>
+              <select v-model="adicional.cat_business_entity" class="ef-select">
+                <option :value="null">Seleccionar...</option>
+                <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
+              </select>
+            </div>
+            <div class="ef-field">
+              <label>Cuenta Bancaria</label>
+              <select v-model="adicional.bank_account_id" class="ef-select" :disabled="!adicional.cat_business_entity">
+                <option :value="null">{{ adicional.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
+                <option v-for="a in filteredAccounts(adicional.cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
+              </select>
+            </div>
+            <div class="ef-field">
+              <label>N. Operacion</label>
+              <input v-model="adicional.transaction_code" class="ef-input" placeholder="Numero de operacion" />
+            </div>
+            <div class="ef-field">
+              <label>Fecha de Pago</label>
+              <input v-model="adicional.payment_date" type="date" class="ef-input" :max="todayIso" />
+            </div>
+          </div>
+          <div class="ef-cert-actions">
+            <p class="ef-cert-hint"><i class="fa-solid fa-circle-info"></i> Al registrar el pago se activara la etiqueta <strong>Certificar</strong> para este becado.</p>
+            <button class="ef-btn-primary" :disabled="!canSaveAdicional || saving" @click="$emit('save-additional', { ...adicional })">
+              <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+              {{ saving ? 'Registrando...' : 'Registrar Pago' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <template v-if="!isBeca || becaTab === 'pago'">
+      <h6 v-if="!isBeca" class="ef-sub-title"><i class="fa-solid fa-money-bill-wave"></i> Pago al Contado</h6>
       <div class="ef-contado-card">
         <div class="ef-contado-amount">
           <span class="ef-bar-label">Monto</span>
@@ -212,6 +314,7 @@
           <input v-model="form.payment_date" type="date" class="ef-input" :max="todayIso" />
         </div>
       </div>
+      </template>
     </div>
 
     <!-- CUOTAS -->
@@ -575,7 +678,8 @@ const emit = defineEmits([
   'change-edition',
   'confirm-cuota',
   'open-reschedule',
-  'edit-cuota-amount'
+  'edit-cuota-amount',
+  'save-additional'
 ])
 
 // Estado de credenciales SAP que emite el EmailPreviewStep. `valid` arranca en
@@ -649,6 +753,41 @@ const planStatus = computed(() => {
 })
 
 const isBeca = computed(() => total.value === 0 && discount.value > 0)
+
+// --- Adicionales (pago del certificado del becado) ---
+const becaTab = ref('pago')
+const adicional = reactive({
+  amount: 50,
+  cat_currency: null,
+  cat_payment_medium: null,
+  cat_business_entity: null,
+  bank_account_id: null,
+  transaction_code: '',
+  payment_date: new Date().toISOString().slice(0, 10),
+  voucher_url: null
+})
+const certificatePayment = computed(() => props.detail?.additional_payments?.[0] || null)
+const certificatePaid = computed(() => props.detail?.certificate_status_alias === 'we_certificate_status_paid')
+const canSaveAdicional = computed(() =>
+  Number(adicional.amount) > 0 && adicional.cat_currency && adicional.cat_payment_medium
+)
+
+async function uploadAdicionalVoucher (event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const res = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (res.data?.url) {
+      adicional.voucher_url = res.data.url
+      toast.success('Voucher subido')
+    }
+  } catch {
+    toast.error('Error al subir voucher')
+  }
+  event.target.value = ''
+}
 
 const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 const canConfirmContado = computed(() => isBeca.value || (props.form.cat_currency && props.form.cat_payment_medium))
@@ -1061,6 +1200,31 @@ function needsEditionDecision (child) {
 .ef-inicial-info { display: flex; flex-direction: column; gap: 3px; }
 .ef-inicial-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
+/* Adicionales: pago del certificado del becado */
+.ef-cert-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: #ECFDF5; color: #059669;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.ef-cert-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px;
+  background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.ef-cert-amount { display: inline-flex; align-items: center; gap: 8px; }
+.ef-cert-amount-input { width: 110px; text-align: right; font-weight: 700; }
+.ef-cert-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 16px;
+}
+.ef-cert-hint {
+  margin: 0; font-size: 12px; color: #737373;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ef-cert-hint i { color: #A3A3A3; }
+
 /* Notice */
 .ef-notice {
   display: flex;
@@ -1442,6 +1606,15 @@ function needsEditionDecision (child) {
 }
 
 [data-coreui-theme="dark"] .ef-inicial-card { background: #1F1F1A; }
+
+[data-coreui-theme="dark"] .ef-cert-pill { background: rgba(16,185,129,0.16); color: #34D399; }
+[data-coreui-theme="dark"] .ef-cert-badge {
+  background: rgba(16,185,129,0.16);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+[data-coreui-theme="dark"] .ef-cert-hint { color: #A0A099; }
+[data-coreui-theme="dark"] .ef-cert-hint i { color: #6F6F66; }
 
 [data-coreui-theme="dark"] .ef-notice {
   background: rgba(245,158,11,0.14);

@@ -22,6 +22,7 @@ export function useEnrollmentList () {
     type_program_ids: [], model_modality_ids: [],
     program_version_ids: [], edition_num_ids: [],
     payment_channel_ids: [],
+    only_scholarship: false,
     confirmations: [],
     date_from: null, date_to: null, created_range_string: null,
     edition_start_from: null, edition_start_to: null, edition_range_string: null,
@@ -249,6 +250,7 @@ export function useEnrollmentList () {
       tf(filters.type_program_ids, 'program_types')
       tf(filters.model_modality_ids, 'modalities')
       tf(filters.payment_channel_ids, 'payment_channels')
+      if (filters.only_scholarship) params.only_scholarship = true
       // IDs numericos para Programa/Edicion: el SP filtra por PK, no por label.
       // MultiSelect emite { value, label, raw } -> idsFrom() extrae el value.
       const pvIds = idsFrom(filters.program_version_ids)
@@ -317,6 +319,7 @@ export function useEnrollmentList () {
     mc('program_version_ids', 'Programa', filters.program_version_ids)
     mc('edition_num_ids', 'Edicion', filters.edition_num_ids)
     mc('payment_channel_ids', 'Canal', filters.payment_channel_ids)
+    if (filters.only_scholarship) chips.push({ key: 'only_scholarship', text: 'Solo becados', label: 'Solo becados' })
     if (filters.created_range_string) chips.push({ key: 'created_range', text: `Registro: ${filters.created_range_string}`, label: `Registro: ${filters.created_range_string}` })
     if (filters.edition_range_string) chips.push({ key: 'edition_range', text: `Inicio: ${filters.edition_range_string}`, label: `Inicio: ${filters.edition_range_string}` })
     if (filters.payment_range_string) chips.push({ key: 'payment_range', text: `F.Pago: ${filters.payment_range_string}`, label: `F.Pago: ${filters.payment_range_string}` })
@@ -329,13 +332,14 @@ export function useEnrollmentList () {
     else if (key === 'created_range') { filters.date_from = null; filters.date_to = null; filters.created_range_string = null }
     else if (key === 'edition_range') { filters.edition_start_from = null; filters.edition_start_to = null; filters.edition_range_string = null }
     else if (key === 'payment_range') { filters.payment_from = null; filters.payment_to = null; filters.payment_range_string = null }
+    else if (key === 'only_scholarship') filters.only_scholarship = false
     else if (ak.includes(key)) filters[key] = []
     if (key === 'confirmations') colFilters.estado = []
     applyFilters()
   }
 
   function clearFilters () {
-    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], program_version_ids: [], edition_num_ids: [], payment_channel_ids: [], confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null, payment_from: null, payment_to: null, payment_range_string: null })
+    Object.assign(filters, { q: '', order_by: 0, enrollment_status_ids: [], seller_agent_ids: [], type_program_ids: [], model_modality_ids: [], program_version_ids: [], edition_num_ids: [], payment_channel_ids: [], only_scholarship: false, confirmations: [], date_from: null, date_to: null, created_range_string: null, edition_start_from: null, edition_start_to: null, edition_range_string: null, payment_from: null, payment_to: null, payment_range_string: null })
     colFilters.estado = []
     pagin.value.page = 1; saveState(); fetchEnrollments()
   }
@@ -434,6 +438,7 @@ export function useEnrollmentList () {
       type_program_ids: [], model_modality_ids: [],
       program_version_ids: [], edition_num_ids: [],
       payment_channel_ids: [],
+      only_scholarship: false,
       confirmations: [],
       date_from: null, date_to: null, created_range_string: null,
       edition_start_from: null, edition_start_to: null, edition_range_string: null,

@@ -20,6 +20,14 @@
           <div class="flt-field"><label>Estado Alumno</label><MultiSelect v-model="filters.enrollment_status_ids" :items="filtroStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="flt-field"><label>Asesor</label><MultiSelect v-model="filters.seller_agent_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="flt-field"><label>Canal de Pago</label><MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="flt-field">
+            <label>Beca</label>
+            <label class="flt-toggle" :class="{ active: filters.only_scholarship }">
+              <input v-model="filters.only_scholarship" type="checkbox" class="flt-toggle-input" />
+              <span class="flt-toggle-track"><span class="flt-toggle-thumb"></span></span>
+              <span class="flt-toggle-text"><i class="fa-solid fa-graduation-cap"></i> Solo becados</span>
+            </label>
+          </div>
         </div>
       </fieldset>
       <fieldset class="flt-fieldset">
@@ -102,6 +110,34 @@ defineEmits(['update:visible', 'apply', 'clear', 'date-change'])
   transition: border-color .15s;
 }
 .flt-input:focus { outline: none; border-color: var(--e-accent, #0D9488); box-shadow: 0 0 0 3px rgba(13,148,136,.08); }
+.flt-field label.flt-toggle {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+  width: 100%; box-sizing: border-box; padding: 8px 12px; margin-bottom: 0;
+  border: 1px solid var(--e-border, #E5E7EB); border-radius: 6px;
+  background: var(--e-bg-subtle, #F9FAFB);
+  font-size: 13px; font-weight: 500; color: var(--e-text-secondary, #6B7280);
+  text-transform: none; letter-spacing: normal;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.flt-field label.flt-toggle:hover { border-color: #D1D5DB; }
+.flt-field label.flt-toggle.active {
+  border-color: var(--e-accent, #0D9488);
+  background: rgba(13, 148, 136, .06);
+  color: #0F766E;
+}
+.flt-toggle-input { position: absolute; opacity: 0; pointer-events: none; }
+.flt-toggle-track {
+  flex: none; width: 32px; height: 18px; border-radius: 999px;
+  background: #D1D5DB; position: relative; transition: background .18s;
+}
+.flt-toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+  transition: transform .18s;
+}
+.flt-toggle.active .flt-toggle-track { background: var(--e-accent, #0D9488); }
+.flt-toggle.active .flt-toggle-thumb { transform: translateX(14px); }
+.flt-toggle-text { display: inline-flex; align-items: center; gap: 6px; }
 .flt-footer { display: flex; justify-content: space-between; align-items: center; }
 .flt-actions { display: flex; gap: 8px; }
 .btn-ghost {

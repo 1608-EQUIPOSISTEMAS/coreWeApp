@@ -65,6 +65,13 @@ export default class FicoService {
     return response.data;
   }
 
+  // Pago adicional de becado (certificado): registra el pago suelto y activa
+  // la etiqueta Certificar (cat_certificate_status -> pagado).
+  async registerAdditionalPayment(payload) {
+    const response = (await api.post('/fico/additionalpayment', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+    return response.data;
+  }
+
   async sendConfirmationEmail(enrollment_id, sapCreds = {}) {
     const payload = { enrollment_id }
     if (sapCreds.sapUsername != null) payload.sap_username = sapCreds.sapUsername

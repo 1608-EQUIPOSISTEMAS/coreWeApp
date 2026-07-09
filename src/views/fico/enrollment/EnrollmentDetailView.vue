@@ -9,6 +9,7 @@
         <span class="edv-topbar-name">{{ detail.student_full_name || enrollment?.student_full_name || '' }}</span>
         <span class="edv-topbar-program">{{ detail.program_name || enrollment?.program_name || '' }}</span>
         <span class="edv-topbar-pill" :class="statusPillClass">{{ statusLabel }}</span>
+        <span v-if="showCertificarPill" class="edv-topbar-pill pill-certificar"><i class="fa-solid fa-certificate"></i> Certificar</span>
       </div>
       <div v-if="totalNav > 0" class="edv-topbar-nav" :title="`Pendientes del ${fmt.formatDate(enrollment?.pay_date)}`">
         <span class="edv-nav-counter">
@@ -172,6 +173,7 @@
             @add-cuota="addCuota"
             @remove-cuota="removeCuota"
             @confirm-cuota="handleConfirmCuota"
+            @save-additional="handleSaveAdditional"
             @reject-enrollment="handleRejectEnrollment"
             @toggle-validation="handleToggleValidation"
             @change-edition="handleChangeEdition"
@@ -401,6 +403,14 @@ const statusLabel = computed(() => {
   return s
 })
 const statusPillClass = computed(() => fmt.statusPill(enrollment.value?.confirmation))
+
+// Etiqueta "Certificar": becado (total 0 con descuento) que ya pago su
+// certificado (pago adicional registrado -> cat_certificate_status = paid).
+const showCertificarPill = computed(() => {
+  const d = detail.value || {}
+  const isBeca = modalTotal.value === 0 && (Number(d.discount_amount) || Number(enrollment.value?.total_discounted) || 0) > 0
+  return isBeca && d.certificate_status_alias === 'we_certificate_status_paid'
+})
 
 const lastPayment = computed(() => {
   const hist = detail.value?.payment_history
@@ -862,6 +872,22 @@ async function handleConfirmCuota (cuota) {
   }
 }
 
+// Pago adicional del becado (certificado): registra el pago y activa la
+// etiqueta Certificar; el refresh trae certificate_status_alias actualizado.
+async function handleSaveAdditional (payload) {
+  savingFinancials.value = true
+  try {
+    await ficoService.registerAdditionalPayment({ enrollment_id: enrollmentId.value, ...payload })
+    toast.success('Pago de certificado registrado. Etiqueta Certificar activada.')
+    await refreshDetail()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al registrar el pago adicional.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
 async function handleSaveCuotasData () {
   savingFinancials.value = true
   try {
@@ -1229,6 +1255,7 @@ watch(enrollmentId, (newId, oldId) => {
 .edv-topbar-pill.pill-green { background: #ECFDF5; color: #065F46; }
 .edv-topbar-pill.pill-amber { background: #FFF8EB; color: #92400E; }
 .edv-topbar-pill.pill-red   { background: #FEF2F2; color: #991B1B; }
+.edv-topbar-pill.pill-certificar { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; gap: 5px; }
 
 .edv-topbar-nav {
   display: inline-flex;
@@ -1512,6 +1539,7 @@ watch(enrollmentId, (newId, oldId) => {
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
 [data-coreui-theme="dark"] .edv-topbar-pill.pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
+[data-coreui-theme="dark"] .edv-topbar-pill.pill-certificar { background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.4); color: #34D399; }
 
 [data-coreui-theme="dark"] .edv-topbar-nav {
   background: #14140F;

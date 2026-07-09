@@ -59,6 +59,10 @@ export function useEnrollmentFormatters () {
     return /CUENTA\s+CLAUDE/.test(haystack)
   }
 
+  // Becado que ya pago su certificado (etiqueta Certificar). Flag calculado
+  // por sp_fico_enrollment_list (beca_certificada).
+  const hasCertPaid = e => e?.beca_certificada === true
+
   const getReserva = e => Number(e.reservation_amount) || 0
 
   const getPagado = e => {
@@ -124,7 +128,7 @@ export function useEnrollmentFormatters () {
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, hasLaptopPromo, hasClaudeAccount, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, isPendiente, isContado, hasLaptopPromo, hasClaudeAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel,
     auditIcon, auditLabel
   }
