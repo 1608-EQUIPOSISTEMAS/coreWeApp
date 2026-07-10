@@ -72,6 +72,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Edicion del pago de certificado ya registrado (exige justificacion; audita diff).
+  async editAdditionalPayment(payload) {
+    const response = (await api.post('/fico/additionalpayment/edit', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+    return response.data;
+  }
+
   async sendConfirmationEmail(enrollment_id, sapCreds = {}) {
     const payload = { enrollment_id }
     if (sapCreds.sapUsername != null) payload.sap_username = sapCreds.sapUsername
@@ -106,10 +112,11 @@ export default class FicoService {
     return response.data;
   }
 
-  async previewEmail(enrollment_id, override_edition_id = null, activation_date = null, sapCreds = {}, override_program_version_id = null) {
+  async previewEmail(enrollment_id, override_edition_id = null, activation_date = null, sapCreds = {}, override_program_version_id = null, override_installments = null) {
     const payload = { enrollment_id }
     if (override_edition_id) payload.override_edition_id = override_edition_id
     if (override_program_version_id) payload.override_program_version_id = override_program_version_id
+    if (Array.isArray(override_installments)) payload.override_installments = override_installments
     if (activation_date) payload.activation_date = activation_date
     if (sapCreds.sapUsername != null) payload.sap_username = sapCreds.sapUsername
     if (sapCreds.sapPassword != null) payload.sap_password = sapCreds.sapPassword

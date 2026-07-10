@@ -153,6 +153,7 @@ function parseChanges (changes) {
 .dot-edition_reprogrammed { background: #F59E0B; }
 .dot-course_changed { background: #8B5CF6; }
 .dot-created_from_cc { background: #8B5CF6; }
+.dot-created_from_rp { background: #8B5CF6; }
 .dot-children_created { background: #0D9488; }
 .dot-modality_changed { background: #D97706; }
 .dot-profile_changed { background: #D97706; }
@@ -165,6 +166,8 @@ function parseChanges (changes) {
 .dot-validation_applied { background: #059669; }
 .dot-installments_rescheduled { background: #F59E0B; }
 .dot-odoo_fee_paid { background: #6366F1; }
+.dot-additional_payment { background: #059669; }
+.dot-additional_payment_edited { background: #D97706; }
 
 .ea-body { flex: 1; padding-top: 3px; }
 

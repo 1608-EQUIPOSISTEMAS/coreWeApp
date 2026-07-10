@@ -122,14 +122,13 @@
         </button>
         <button :class="['ef-cuota-tab', { active: becaTab === 'adicionales' }]" @click="becaTab = 'adicionales'">
           <i class="fa-solid fa-file-invoice"></i> Adicionales
-          <span v-if="certificatePaid" class="ef-cert-pill"><i class="fa-solid fa-certificate"></i> Certificar</span>
         </button>
       </div>
 
       <!-- Adicionales: pago del certificado del becado -->
       <div v-if="isBeca && becaTab === 'adicionales'" class="ef-tab-body">
         <!-- Pago ya registrado: solo lectura -->
-        <div v-if="certificatePayment" class="ef-inicial-card">
+        <div v-if="certificatePayment && !editingAdicional" class="ef-inicial-card">
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
               <span class="ef-bar-label">Pago de Certificado</span>
@@ -150,11 +149,11 @@
           </div>
         </div>
 
-        <!-- Sin pago aun: formulario de registro -->
+        <!-- Sin pago aun (registro) o editando el pago existente -->
         <div v-else class="ef-inicial-card">
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
-              <span class="ef-bar-label">Pago de Certificado</span>
+              <span class="ef-bar-label">{{ editingAdicional ? 'Editar Pago de Certificado' : 'Pago de Certificado' }}</span>
               <div class="ef-cert-amount">
                 <span class="fw700 mono" style="font-size:16px">S/.</span>
                 <input v-model.number="adicional.amount" type="number" step="0.01" min="0" class="ef-input ef-cert-amount-input mono" placeholder="50.00" />
@@ -206,12 +205,26 @@
               <input v-model="adicional.payment_date" type="date" class="ef-input" :max="todayIso" />
             </div>
           </div>
+          <!-- Edicion: justificacion obligatoria (queda en el historial) -->
+          <div v-if="editingAdicional" class="ef-cert-just">
+            <label class="ef-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion del cambio (obligatorio)</label>
+            <textarea v-model="adicionalJust" class="ef-textarea" rows="2" placeholder="Explica el motivo de la edicion..."></textarea>
+          </div>
           <div class="ef-cert-actions">
-            <p class="ef-cert-hint"><i class="fa-solid fa-circle-info"></i> Al registrar el pago se activara la etiqueta <strong>Certificar</strong> para este becado.</p>
-            <button class="ef-btn-primary" :disabled="!canSaveAdicional || saving" @click="$emit('save-additional', { ...adicional })">
-              <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-              {{ saving ? 'Registrando...' : 'Registrar Pago' }}
-            </button>
+            <template v-if="editingAdicional">
+              <button class="ef-action-btn" @click="editingAdicional = false">Cancelar edicion</button>
+              <button class="ef-btn-primary" :disabled="!canSaveAdicional || !adicionalJust.trim() || saving" @click="$emit('update-additional', { payment_id: certificatePayment.payment_id, ...adicional, justificacion: adicionalJust })">
+                <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+                {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </template>
+            <template v-else>
+              <p class="ef-cert-hint"><i class="fa-solid fa-circle-info"></i> Al registrar el pago se activara la etiqueta <strong>Certificar</strong> para este becado.</p>
+              <button class="ef-btn-primary" :disabled="!canSaveAdicional || saving" @click="$emit('save-additional', { ...adicional })">
+                <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                {{ saving ? 'Registrando...' : 'Registrar Pago' }}
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -517,8 +530,13 @@
 
     <!-- Footer buttons -->
     <div class="ef-footer">
-      <template v-if="mode === 'view' && !isEditing">
-        <button class="ef-action-btn" @click="$emit('start-edit')">
+      <template v-if="mode === 'view' && !isEditing && !editingAdicional">
+        <!-- Becado: la edicion solo aplica al nav Adicionales (su Pago es beca,
+             no hay datos financieros que editar). Requiere pago ya registrado. -->
+        <button v-if="!isBeca" class="ef-action-btn" @click="$emit('start-edit')">
+          <i class="fa-solid fa-pen-to-square"></i> Editar datos
+        </button>
+        <button v-else-if="becaTab === 'adicionales' && certificatePayment" class="ef-action-btn" @click="startEditAdicional">
           <i class="fa-solid fa-pen-to-square"></i> Editar datos
         </button>
       </template>
@@ -642,7 +660,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, inject } from 'vue'
+import { ref, reactive, computed, inject, watch } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { useToast } from 'vue-toastification'
@@ -679,7 +697,8 @@ const emit = defineEmits([
   'confirm-cuota',
   'open-reschedule',
   'edit-cuota-amount',
-  'save-additional'
+  'save-additional',
+  'update-additional'
 ])
 
 // Estado de credenciales SAP que emite el EmailPreviewStep. `valid` arranca en
@@ -767,10 +786,34 @@ const adicional = reactive({
   voucher_url: null
 })
 const certificatePayment = computed(() => props.detail?.additional_payments?.[0] || null)
-const certificatePaid = computed(() => props.detail?.certificate_status_alias === 'we_certificate_status_paid')
 const canSaveAdicional = computed(() =>
   Number(adicional.amount) > 0 && adicional.cat_currency && adicional.cat_payment_medium
 )
+
+// Edicion del pago de certificado ya registrado: prellena el formulario con los
+// valores actuales (el detalle trae los IDs crudos ademas de los labels).
+const editingAdicional = ref(false)
+const adicionalJust = ref('')
+
+function startEditAdicional () {
+  const p = certificatePayment.value
+  if (!p) return
+  Object.assign(adicional, {
+    amount: Number(p.amount) || 50,
+    cat_currency: p.cat_currency || null,
+    cat_payment_medium: p.cat_method_payment || null,
+    cat_business_entity: p.cat_business_entity || null,
+    bank_account_id: p.bank_account_id || null,
+    transaction_code: p.transaction_code || '',
+    payment_date: p.payment_date ? String(p.payment_date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+    voucher_url: p.evidence_url || null
+  })
+  adicionalJust.value = ''
+  editingAdicional.value = true
+}
+
+// Al refrescar el detalle (guardado exitoso) se cierra el modo edicion.
+watch(() => props.detail, () => { editingAdicional.value = false })
 
 async function uploadAdicionalVoucher (event) {
   const file = event.target.files?.[0]
@@ -1201,12 +1244,6 @@ function needsEditionDecision (child) {
 .ef-inicial-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* Adicionales: pago del certificado del becado */
-.ef-cert-pill {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 999px;
-  background: #ECFDF5; color: #059669;
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-}
 .ef-cert-badge {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 8px;
@@ -1214,6 +1251,7 @@ function needsEditionDecision (child) {
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
 }
 .ef-cert-amount { display: inline-flex; align-items: center; gap: 8px; }
+.ef-cert-just { margin-top: 14px; }
 .ef-cert-amount-input { width: 110px; text-align: right; font-weight: 700; }
 .ef-cert-actions {
   display: flex; align-items: center; justify-content: space-between;
@@ -1607,7 +1645,6 @@ function needsEditionDecision (child) {
 
 [data-coreui-theme="dark"] .ef-inicial-card { background: #1F1F1A; }
 
-[data-coreui-theme="dark"] .ef-cert-pill { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .ef-cert-badge {
   background: rgba(16,185,129,0.16);
   border-color: rgba(16,185,129,0.4);

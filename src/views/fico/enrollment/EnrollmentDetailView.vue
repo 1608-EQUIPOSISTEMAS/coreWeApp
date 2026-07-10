@@ -174,6 +174,7 @@
             @remove-cuota="removeCuota"
             @confirm-cuota="handleConfirmCuota"
             @save-additional="handleSaveAdditional"
+            @update-additional="handleUpdateAdditional"
             @reject-enrollment="handleRejectEnrollment"
             @toggle-validation="handleToggleValidation"
             @change-edition="handleChangeEdition"
@@ -880,9 +881,27 @@ async function handleSaveAdditional (payload) {
     await ficoService.registerAdditionalPayment({ enrollment_id: enrollmentId.value, ...payload })
     toast.success('Pago de certificado registrado. Etiqueta Certificar activada.')
     await refreshDetail()
+    refreshAuditLog()
   } catch (err) {
     console.error(err)
     toast.error(err?.response?.data?.error || 'Error al registrar el pago adicional.')
+  } finally {
+    savingFinancials.value = false
+  }
+}
+
+// Edicion del pago de certificado (nav Adicionales): exige justificacion y el
+// backend audita el diff old -> new, visible en el Historial.
+async function handleUpdateAdditional (payload) {
+  savingFinancials.value = true
+  try {
+    await ficoService.editAdditionalPayment({ enrollment_id: enrollmentId.value, ...payload })
+    toast.success('Pago de certificado actualizado.')
+    await refreshDetail()
+    refreshAuditLog()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al actualizar el pago adicional.')
   } finally {
     savingFinancials.value = false
   }

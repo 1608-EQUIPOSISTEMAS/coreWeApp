@@ -48,6 +48,9 @@ const props = defineProps({
   // El preview la usa como override sobre la fecha persistida (que aun no
   // existe en este punto del flujo — el confirm la persiste despues).
   activationDate: { type: String, default: null },
+  // Reprogramacion: plan de cuotas que se trasladara al enrollment destino
+  // (aun no existe en este paso). [{ installment_number, amount, due_date }]
+  overrideInstallments: { type: Array, default: null },
   // Habilita el formulario de credenciales SAP cuando el curso es SAP online.
   // Solo el flujo de confirmar+enviar lo activa; RP/CC lo dejan en false.
   collectSapCredentials: { type: Boolean, default: false }
@@ -86,7 +89,8 @@ async function loadPreview () {
       props.overrideEditionId,
       props.activationDate,
       { sapUsername: sapUsername.value, sapPassword: sapPassword.value },
-      props.overrideProgramVersionId
+      props.overrideProgramVersionId,
+      props.overrideInstallments
     )
   } catch (err) {
     console.error(err)

@@ -89,6 +89,25 @@
                 <i v-else class="fa-solid fa-chevron-down eact-select-icon"></i>
               </div>
             </div>
+            <!-- Plan de cuotas pendientes que se trasladan a la nueva inscripcion -->
+            <div v-if="rpPendingCuotas.length" class="eact-field">
+              <label>Nuevo plan de cuotas <span class="eact-rp-saldo">Saldo pendiente: {{ fmt.formatMoney(rpPendingTotal) }}</span></label>
+              <div class="eact-rp-plan">
+                <div class="eact-rp-plan-head">
+                  <span>#</span><span>Monto</span><span>Vencimiento</span>
+                </div>
+                <div v-for="(c, i) in rpPlan" :key="c.installment_id" class="eact-rp-plan-row">
+                  <span class="eact-rp-plan-num">{{ i + 1 }}</span>
+                  <input v-model.number="c.amount" type="number" step="0.01" min="0.01" class="eact-input eact-input-amount" />
+                  <input v-model="c.due_date" type="date" class="eact-input" />
+                </div>
+                <div class="eact-rp-plan-foot" :class="{ 'eact-rp-plan-foot--err': !rpPlanSumsOk }">
+                  <span>Total del plan: {{ fmt.formatMoney(rpPlanTotal) }}</span>
+                  <span v-if="!rpPlanSumsOk">Debe igualar el saldo pendiente ({{ fmt.formatMoney(rpPendingTotal) }})</span>
+                </div>
+              </div>
+              <small class="eact-price-hint">Lo ya pagado queda en la inscripcion RP; estas cuotas se trasladan a la nueva inscripcion y saldran en el correo.</small>
+            </div>
             <div class="eact-field">
               <label>Justificacion <span class="eact-req">*</span></label>
               <textarea v-model="rpJustificacion" class="eact-textarea" rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
@@ -96,7 +115,7 @@
           </div>
         </template>
         <template #step-1>
-          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="rpEditionId" ref="emailPreviewRef" />
+          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="rpEditionId" :override-installments="rpPreviewInstallments" ref="emailPreviewRef" />
         </template>
       </ActionStepper>
 
@@ -538,6 +557,7 @@ function resetAllForms () {
   rpEditionId.value = null
   rpJustificacion.value = ''
   rpEditions.value = []
+  rpPlan.value = []
   ccProgramVersionId.value = null
   ccEditionId.value = null
   ccTotalAmount.value = 0
@@ -569,8 +589,63 @@ const rpEditionId = ref(null)
 const rpJustificacion = ref('')
 const rpEditions = ref([])
 const loadingEditions = ref(false)
+// Plan editable de las cuotas pendientes del origen: se trasladan a la nueva
+// inscripcion (lo pagado queda en el origen RP). [{installment_id, amount, due_date}]
+const rpPlan = ref([])
 
-const canAdvanceRP = computed(() => rpEditionId.value !== null && rpJustificacion.value.trim().length > 0)
+// Cuotas realmente pendientes del origen: excluye pagadas (ambos namespaces),
+// anuladas (4456) y las que ya tienen un pago activo aunque sigan "pendiente
+// verificacion" (ese dinero queda en el origen RP). Mismo filtro que el backend.
+const rpPendingCuotas = computed(() => {
+  const conPago = new Set((props.detail?.payment_history || []).map(p => p.installment_id))
+  return (props.detail?.installments || []).filter(i =>
+    i.installment_number > 0 &&
+    ![4454, 2471, 4456].includes(Number(i.cat_status)) &&
+    !conPago.has(i.installment_id)
+  )
+})
+const rpPendingTotal = computed(() => rpPendingCuotas.value.reduce((s, c) => s + (Number(c.amount) || 0), 0))
+const rpPlanTotal = computed(() => rpPlan.value.reduce((s, c) => s + (Number(c.amount) || 0), 0))
+const rpPlanSumsOk = computed(() =>
+  rpPlan.value.every(c => Number(c.amount) > 0 && c.due_date) &&
+  Math.abs(rpPlanTotal.value - rpPendingTotal.value) <= 0.01
+)
+
+const canAdvanceRP = computed(() =>
+  rpEditionId.value !== null &&
+  rpJustificacion.value.trim().length > 0 &&
+  (rpPendingCuotas.value.length === 0 || rpPlanSumsOk.value)
+)
+
+// Para el preview del correo: el plan con la numeracion 1..n que tendra el
+// enrollment destino (que aun no existe en ese paso).
+const rpPreviewInstallments = computed(() => {
+  if (!rpPendingCuotas.value.length) return []
+  return [...rpPlan.value]
+    .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))
+    .map((c, i) => ({ installment_number: i + 1, amount: Number(c.amount) || 0, due_date: c.due_date }))
+})
+
+// Corre una fecha 'YYYY-MM-DD' N dias, en UTC (sin TZ shift).
+function shiftDateStr (dateStr, days) {
+  const m = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return ''
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + days)).toISOString().slice(0, 10)
+}
+
+// Al elegir edicion destino, propone el plan por defecto: mismas cuotas con la
+// fecha corrida por el desplazamiento entre ediciones (FICO puede editarlas).
+watch(rpEditionId, (id) => {
+  const ed = rpEditions.value.find(e => e.id === id)
+  const oldStart = parseLocalDate(props.enrollment?.start_date || props.enrollment?.edition_start_date)
+  const newStart = ed ? parseLocalDate(ed.start_date) : null
+  const diffDays = (oldStart && newStart) ? Math.round((newStart - oldStart) / 86400000) : 0
+  rpPlan.value = rpPendingCuotas.value.map(c => ({
+    installment_id: c.installment_id,
+    amount: Number(c.amount) || 0,
+    due_date: shiftDateStr(c.due_date, diffDays)
+  }))
+})
 
 async function loadRPEditions () {
   loadingEditions.value = true
@@ -580,6 +655,7 @@ async function loadRPEditions () {
       .filter(e => e.start_date && isWithinReprogramWindow(e.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
+        start_date: e.start_date,
         label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}`
       }))
   } catch (err) {
@@ -619,12 +695,22 @@ function isWithinReprogramWindow (startDate) {
 async function handleReprogramConfirm () {
   saving.value = true
   try {
-    await ficoService.reprogramEdition({
+    const payload = {
       enrollment_id: enrollmentId.value,
       new_edition_id: rpEditionId.value,
       justificacion: rpJustificacion.value.trim()
-    })
-    toast.success('Edicion reprogramada correctamente.')
+    }
+    if (rpPendingCuotas.value.length) {
+      payload.installment_plan = rpPlan.value.map(c => ({
+        installment_id: Number(c.installment_id),
+        amount: Number(c.amount),
+        due_date: c.due_date
+      }))
+    }
+    const res = await ficoService.reprogramEdition(payload)
+    toast.success(res?.new_enrollment_id
+      ? `Edicion reprogramada. Nueva inscripcion #${res.new_enrollment_id}; el correo se enviara automaticamente.`
+      : 'Edicion reprogramada correctamente.')
     emit('action-completed')
   } catch (err) {
     console.error(err)
@@ -1292,4 +1378,40 @@ async function handleRetire () {
 .eact-observe-banner i { font-size: 16px; color: #F59E0B; margin-top: 2px; flex-shrink: 0; }
 .eact-observe-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
 .eact-observe-banner p { margin: 0; }
+
+/* Plan de cuotas de la reprogramacion */
+.eact-rp-saldo { float: right; font-weight: 700; color: #92400E; text-transform: none; letter-spacing: 0; }
+.eact-rp-plan {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.eact-rp-plan-head, .eact-rp-plan-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+}
+.eact-rp-plan-head {
+  background: #F9FAFB;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.eact-rp-plan-row { border-top: 1px solid #F3F4F6; }
+.eact-rp-plan-num { font-size: 12px; font-weight: 700; color: #6B7280; }
+.eact-rp-plan-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+}
+.eact-rp-plan-foot--err { color: #DC2626; background: #FEF2F2; }
 </style>
