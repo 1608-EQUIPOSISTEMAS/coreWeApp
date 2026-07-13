@@ -239,6 +239,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Vista Semanal',
+        to: '/academica/semanal',
+        submodule: 'SEMANAL',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Reporte Académico',
         to: '/academica/reporte',
         submodule: 'REPORTE',

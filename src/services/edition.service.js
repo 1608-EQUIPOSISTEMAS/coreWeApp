@@ -39,6 +39,27 @@ export default class EditionService {
     return (await api.post('/edition/editionupdate', payload)).data;
   }
   
+  // Vista Semanal Academica: aulas en curso por dia con nº de sesion.
+  async weeklySessions(payload) {
+    const response = (await api.post('/edition/weeklysessions', payload)).data
+    return response.data
+  }
+
+  // Control de ediciones: aulas que inician en la semana + estados por sesion.
+  async weeklyControl(payload) {
+    const response = (await api.post('/edition/weeklycontrol', payload)).data
+    return response.data
+  }
+
+  // Guarda estado de una sesion (A/R/T + fecha reprogramada) y devuelve la
+  // fila recalculada del aula. Sin loader global: el guardado es por celda.
+  async sessionControlSave(payload) {
+    const response = (await api.post('/edition/sessioncontrolsave', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data
+  }
+
   async classroomMetricsList(payload) {
     const response = (await api.post('/edition/classroommetricslist', payload, {
       meta: { skipLoader: true }

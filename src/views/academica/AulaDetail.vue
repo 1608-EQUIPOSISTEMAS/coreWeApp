@@ -206,8 +206,7 @@ function historyReason(h) {
 // Reglas de calculo (espejo de GRADE_RULES en Backend edition.entity.js; al
 // guardar, el backend recalcula los totales y es la fuente de verdad).
 const GRADE_RULES = {
-  TEST_MAX_PER_SESSION: 5,
-  TEST_MULTIPLIER: 4, // promedio(0-5) * 4 => /20
+  TEST_MAX_PER_SESSION: 20, // nota del TEST FINAL del quiz de la sesion (0-20)
   WEIGHT_TEST: 0.3,
   WEIGHT_PARTIAL: 0.3,
   WEIGHT_FINAL: 0.4,
@@ -215,16 +214,17 @@ const GRADE_RULES = {
   PASS_THRESHOLD: 12,
   CAP_FINAL_AT_20: true,
 }
+// Cada criterio se califica de 0 a 20; el total /20 es el promedio ponderado.
 const PARTIAL_CRITERIA = [
-  { key: '1', label: 'Identificacion del problema central', max: 8 },
-  { key: '2', label: 'Analisis del entorno y datos', max: 8 },
-  { key: '3', label: 'Claridad y estructura del documento', max: 4 },
+  { key: '1', label: 'Identificacion del problema central', max: 20, weight: 0.4 },
+  { key: '2', label: 'Analisis del entorno y datos', max: 20, weight: 0.4 },
+  { key: '3', label: 'Claridad y estructura del documento', max: 20, weight: 0.2 },
 ]
 const FINAL_CRITERIA = [
-  { key: '1', label: 'Pensamiento Estrategico', max: 5 },
-  { key: '2', label: 'Decision y Justificacion', max: 5 },
-  { key: '3', label: 'Presentacion Ejecutiva', max: 5 },
-  { key: '4', label: 'Comunicacion y Adaptacion', max: 5 },
+  { key: '1', label: 'Pensamiento Estrategico', max: 20, weight: 0.3 },
+  { key: '2', label: 'Decision y Justificacion', max: 20, weight: 0.3 },
+  { key: '3', label: 'Presentacion Ejecutiva', max: 20, weight: 0.2 },
+  { key: '4', label: 'Comunicacion y Adaptacion', max: 20, weight: 0.2 },
 ]
 
 // gradesMap: enrollment_id -> fila guardada en BD (null = aun no cargado).
@@ -297,7 +297,7 @@ const sumVals = (obj) =>
 
 function testScore(d) {
   const n = sessionsTotal.value
-  return n ? round2g((sumVals(d.tests) / n) * GRADE_RULES.TEST_MULTIPLIER) : 0
+  return n ? round2g(sumVals(d.tests) / n) : 0
 }
 function partScore(d) {
   const n = sessionsTotal.value
@@ -305,11 +305,16 @@ function partScore(d) {
   const checks = Object.values(d.participation || {}).filter((v) => v === true).length
   return Math.min(Math.round((checks * GRADE_RULES.PARTICIPATION_MAX) / n), GRADE_RULES.PARTICIPATION_MAX)
 }
+const weightedScore = (criteria, defs) =>
+  round2g(defs.reduce((acc, c) => {
+    const v = Number(criteria?.[c.key])
+    return acc + (Number.isFinite(v) ? v * c.weight : 0)
+  }, 0))
 function partialScore(d) {
-  return round2g(sumVals(d.partial_criteria))
+  return weightedScore(d.partial_criteria, PARTIAL_CRITERIA)
 }
 function finalDelivScore(d) {
-  return round2g(sumVals(d.final_criteria))
+  return weightedScore(d.final_criteria, FINAL_CRITERIA)
 }
 function finalGrade(d) {
   let g = round2g(
@@ -394,6 +399,9 @@ async function saveGrades() {
       }
       gradesMap.value = map
       dirtyGrades.clear()
+      // Re-hidratar drafts: el backend puede devolver filas extra (entregables
+      // grupales propagados a companeros de grupo que no se editaron aqui)
+      hydrateGradesDraft()
       toast.success(`Notas guardadas (${(res.data || []).length} alumnos)`, { timeout: 2000 })
     } else {
       toast.error(res?.message || 'No se pudieron guardar las notas')
@@ -1734,9 +1742,9 @@ onMounted(async () => {
                 <td :colspan="gradesColspan">
                   <div class="deliv-grid">
                     <div class="deliv-group">
-                      <div class="deliv-title">Entregable parcial <span class="muted">(suma /20 &middot; peso 6)</span></div>
+                      <div class="deliv-title">Entregable parcial <span class="muted">(criterios 0-20 &middot; ponderado /20)</span></div>
                       <label v-for="c in PARTIAL_CRITERIA" :key="'pc' + c.key" class="deliv-field">
-                        <span>{{ c.key }}. {{ c.label }} <b class="mono">/{{ c.max }}</b></span>
+                        <span>{{ c.key }}. {{ c.label }} <b class="mono">{{ Math.round(c.weight * 100) }}%</b></span>
                         <input
                           class="grade-input wide"
                           type="number"
@@ -1749,9 +1757,9 @@ onMounted(async () => {
                       </label>
                     </div>
                     <div class="deliv-group">
-                      <div class="deliv-title">Entregable final <span class="muted">(suma /20 &middot; peso 8)</span></div>
+                      <div class="deliv-title">Entregable final <span class="muted">(criterios 0-20 &middot; ponderado /20)</span></div>
                       <label v-for="c in FINAL_CRITERIA" :key="'fc' + c.key" class="deliv-field">
-                        <span>{{ c.key }}. {{ c.label }} <b class="mono">/{{ c.max }}</b></span>
+                        <span>{{ c.key }}. {{ c.label }} <b class="mono">{{ Math.round(c.weight * 100) }}%</b></span>
                         <input
                           class="grade-input wide"
                           type="number"

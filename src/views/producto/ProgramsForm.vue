@@ -80,7 +80,7 @@
             <div class="col-md-3">
               <label class="exec-label">Tipo de programa <span class="c-red">*</span></label>
               <SearchSelect
-                :disabled="isEdit"
+                :disabled="isCatLocked('cat_type_program')"
                 v-model="form.cat_type_program"
                 :items="catalogs.programTypeList"
                 label-field="description"
@@ -95,7 +95,7 @@
             <div class="col-md-3">
               <label class="exec-label">Categoría del Programa <span class="c-red">*</span></label>
               <SearchSelect
-                :disabled="isEdit"
+                :disabled="isCatLocked('cat_category')"
                 v-model="form.cat_category"
                 :items="catalogs.categoryList"
                 label-field="description"
@@ -109,7 +109,7 @@
             <div class="col-md-3">
               <label class="exec-label">Línea de Negocio <span class="c-red">*</span></label>
               <SearchSelect
-                :disabled="isEdit"
+                :disabled="isCatLocked('cat_business_line_id')"
                 v-model="form.cat_business_line_id"
                 :items="catalogs.businessLineList"
                 label-field="description"
@@ -123,7 +123,7 @@
             <div class="col-md-3">
               <label class="exec-label">Modalidad <span class="c-red">*</span></label>
               <SearchSelect
-                :disabled="isEdit"
+                :disabled="isCatLocked('cat_model_modality')"
                 v-model="form.cat_model_modality"
                 :items="catalogs.modalityList"
                 label-field="description"
@@ -413,6 +413,13 @@ import FileUploader from '@/components/FileUploader.vue'
   const loaded = ref(false)
   const saving = ref(false)
 
+  // ponytail: catálogos que vinieron NULL de la BD quedan editables para poder
+  // completar el dato faltante (si no, isValid nunca se cumple y el botón muere)
+  const missingCatsAtLoad = ref(new Set())
+  function isCatLocked(field) {
+    return isEdit.value && !missingCatsAtLoad.value.has(field)
+  }
+
   const form = reactive({
     program_name: null,
     skem_clasification: null,
@@ -556,6 +563,11 @@ import FileUploader from '@/components/FileUploader.vue'
    */
   async function loadData(id) {
     const data = await programService.programGet({ id })
+
+    missingCatsAtLoad.value = new Set(
+      ['cat_type_program', 'cat_category', 'cat_business_line_id', 'cat_model_modality']
+        .filter(k => data[k] == null)
+    )
 
     form.program_name = data.program_name ?? null
     form.cat_type_program = data.cat_type_program ?? null

@@ -597,6 +597,12 @@ const routes = [
       props: true,
     },
     {
+      path: 'academica/semanal',
+      name: 'AcademicaSemanal',
+      component: () => import('@/views/academica/SemanaAcademica.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'SEMANAL', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
       path: 'academica/reporte',
       name: 'AcademicaReporte',
       component: () => import('@/views/academica/ReporteAcademico.vue'),
