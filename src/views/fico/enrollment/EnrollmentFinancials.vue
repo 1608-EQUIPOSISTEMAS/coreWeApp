@@ -457,45 +457,45 @@
               <td v-else :class="{ 'c-red fw700': fmt.isOverdue(c.due_date) && c.status !== 'paid' }">{{ fmt.formatDate(c.due_date) }}</td>
               <td class="tc"><span class="ef-pill" :class="fmt.cuotaStatusPill(c, planStatus)">{{ fmt.cuotaStatusLabel(c, planStatus) }}</span></td>
               <td>
-                <select v-model="c._cat_currency" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <select v-model="c._cat_currency" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="cur in catalogs.catCurrency" :key="cur.id" :value="cur.id">{{ cur.abbreviation || cur.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_payment_medium" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <select v-model="c._cat_payment_medium" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_business_entity" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <select v-model="c._cat_business_entity" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
                   <option :value="null">---</option>
                   <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._bank_account_id" class="ef-select-sm" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador' || !c._cat_business_entity">
+                <select v-model="c._bank_account_id" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador' || !c._cat_business_entity">
                   <option :value="null">---</option>
                   <option v-for="a in filteredAccounts(c._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }}</option>
                 </select>
               </td>
               <td>
-                <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
+                <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
               </td>
               <td>
-                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="(c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
+                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
               </td>
               <td class="tc">
                 <a v-if="c._voucher_url" :href="c._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher"><i class="fa-solid fa-image"></i></a>
-                <label v-if="planStatus !== 'borrador' && c.status !== 'paid'" class="ef-upload-btn" title="Subir voucher">
+                <label v-if="planStatus !== 'borrador' && c.status !== 'paid' && !fmt.isCuotaAnulada(c)" class="ef-upload-btn" title="Subir voucher">
                   <i class="fa-solid fa-cloud-arrow-up"></i>
                   <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, c)" />
                 </label>
               </td>
               <td class="tc">
                 <button
-                  v-if="c.status !== 'paid' && c._cat_currency && c._cat_payment_medium"
+                  v-if="c.status !== 'paid' && !fmt.isCuotaAnulada(c) && c._cat_currency && c._cat_payment_medium"
                   class="ef-btn-confirm-cuota"
                   @click="$emit('confirm-cuota', c)"
                   title="Confirmar pago de cuota"
@@ -719,7 +719,7 @@ function onConfirmSend () {
 // no esta paga, y el plan ya paso de borrador (esta en gestion FICO).
 function canEditAmount (c) {
   if (!c || c._isNew) return false
-  if (c.status === 'paid') return false
+  if (c.status === 'paid' || fmt.isCuotaAnulada(c)) return false
   if (props.planStatus === 'borrador') return false
   return true
 }
@@ -740,7 +740,8 @@ const listPrice = computed(() => Number(props.enrollment?.list_price) || Number(
 const discount = computed(() => Number(props.enrollment?.total_discounted) || Number(props.detail?.discount_amount) || 0)
 const total = computed(() => {
   if (props.installments?.length) {
-    return props.installments.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
+    // Las anuladas (retiro / campaña de cobranza) siguen visibles pero no suman.
+    return props.installments.reduce((sum, i) => sum + (fmt.isCuotaAnulada(i) ? 0 : Number(i.amount) || 0), 0)
   }
   return Number(props.enrollment?.total_to_pay) || Number(props.detail?.net_amount) || 0
 })
@@ -763,7 +764,7 @@ const hasLaptopPromo = computed(() => fmt.hasLaptopPromo(props.enrollment))
 
 const inicial = computed(() => props.installments.find(i => i.installment_number === 0 || i.is_reserva) || null)
 const cuotas = computed(() => props.installments.filter(i => i.installment_number !== 0 && !i.is_reserva))
-const cuotasTotal = computed(() => cuotas.value.reduce((sum, c) => sum + (Number(c.amount) || 0), 0))
+const cuotasTotal = computed(() => cuotas.value.reduce((sum, c) => sum + (fmt.isCuotaAnulada(c) ? 0 : Number(c.amount) || 0), 0))
 
 const planStatus = computed(() => {
   const conf = (props.enrollment?.confirmation || '').toLowerCase()
@@ -834,7 +835,7 @@ async function uploadAdicionalVoucher (event) {
 
 const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 const canConfirmContado = computed(() => isBeca.value || (props.form.cat_currency && props.form.cat_payment_medium))
-const hasReschedulableCuotas = computed(() => cuotas.value.some(c => c.status !== 'paid' && Number(c.cat_status) !== 4454))
+const hasReschedulableCuotas = computed(() => cuotas.value.some(c => c.status !== 'paid' && Number(c.cat_status) !== 4454 && !fmt.isCuotaAnulada(c)))
 
 async function uploadVoucher (event, cuota) {
   const file = event.target.files?.[0]
@@ -1336,6 +1337,9 @@ function needsEditionDecision (child) {
 .ef-table tbody tr:hover { background: #FAFAFA; }
 .ef-table .cuota-paid td { background: #F7FDF9; }
 .ef-table .cuota-overdue td { background: #FFFBFB; }
+/* Anulada por retiro / campaña de cobranza: tachada pero presente (auditoria) */
+.ef-table .cuota-annulled td { background: #FAFAFA; color: #A3A3A3; }
+.ef-table .cuota-annulled td:nth-child(-n+3) { text-decoration: line-through; }
 
 .ef-total-row td {
   padding: 12px 10px;
@@ -1677,6 +1681,7 @@ function needsEditionDecision (child) {
 [data-coreui-theme="dark"] .ef-table tbody tr:hover { background: #1F1F1A; }
 [data-coreui-theme="dark"] .ef-table .cuota-paid td { background: rgba(16,185,129,0.08); }
 [data-coreui-theme="dark"] .ef-table .cuota-overdue td { background: rgba(239,68,68,0.08); }
+[data-coreui-theme="dark"] .ef-table .cuota-annulled td { background: #1F1F1A; color: #6F6F66; }
 [data-coreui-theme="dark"] .ef-total-row td {
   background: #1F1F1A;
   border-top-color: #2A2A22;

@@ -307,7 +307,7 @@
                       required
                       @change="(val) => { if(val) child.isNewAssigned = true; }"
                     />
-                    <button class="btn-icon btn-icon-sm position-absolute" style="right: -30px; top: 6px;" @click="removeChildVersion(parentKey(ver), child.program_version_id || idy)" title="Quitar">
+                    <button class="btn-icon btn-icon-sm position-absolute" style="right: -30px; top: 6px;" @click="ver.childs.splice(idy, 1)" title="Quitar">
                         <i class="fa-solid fa-xmark text-danger"></i>
                     </button>
                   </div>
@@ -506,18 +506,8 @@ import FileUploader from '@/components/FileUploader.vue'
   /**
    * Helpers de hijos por versión (para la vista)
    */
-  function parentKey(ver) {
-    return ver.program_version_id ?? ver._key
-  }
-
   function childrenByParent(ver) {
     return Array.isArray(ver.childs) ? ver.childs : []
-  }
-
-  function removeChildVersion(pKey, childId) {
-    const parent = form.program_versions.find(v => parentKey(v) === pKey)
-    if (!parent || !Array.isArray(parent.childs)) return
-    parent.childs = parent.childs.filter(c => c.id !== childId)
   }
 
   function onAddChildClick(ver) {

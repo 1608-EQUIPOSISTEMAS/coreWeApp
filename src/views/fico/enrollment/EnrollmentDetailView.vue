@@ -211,6 +211,7 @@
       :enrollment="enrollment"
       :installments="modalInstallments"
       :edition-end-date="editionEndDate"
+      :catalogs="catalogData"
       @completed="handleRescheduleCompleted"
     />
 

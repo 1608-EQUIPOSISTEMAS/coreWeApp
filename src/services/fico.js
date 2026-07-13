@@ -196,6 +196,11 @@ export default class FicoService {
     return response.data;
   }
 
+  async applyCollectionCampaign(payload) {
+    const response = (await api.post('/fico/collectioncampaign', payload)).data;
+    return response.data;
+  }
+
   async enrollmentUpdate(payload) {
     const response = (await api.post('/fico/enrollmentupdate', payload)).data;
     return response.data;

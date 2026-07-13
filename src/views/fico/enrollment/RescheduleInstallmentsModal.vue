@@ -23,6 +23,22 @@
         <button :class="['ri-tab', { active: mode === 'individual' }]" @click="mode = 'individual'">
           <i class="fa-solid fa-pen-to-square"></i> Editar individualmente
         </button>
+        <button :class="['ri-tab', { active: mode === 'campaign' }]" @click="mode = 'campaign'">
+          <i class="fa-solid fa-bullhorn"></i> Campaña de cobranza
+        </button>
+      </div>
+
+      <!-- Campaign mode: hint -->
+      <div v-if="mode === 'campaign'" class="ri-panel">
+        <div class="ri-campaign-hint">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>
+            <strong>Pagar</strong>: las cuotas marcadas se registran pagadas con una sola data
+            de pago (mismo voucher / N° operacion para todas). <strong>Anular</strong>: la cuota
+            no se elimina — queda tachada en el historial con su monto original, el motivo y
+            quien lo hizo. Si el total baja, la diferencia se registra como descuento por cobranza.
+          </span>
+        </div>
       </div>
 
       <!-- Shift mode -->
@@ -50,8 +66,8 @@
             <tr>
               <th style="width:40px">N</th>
               <th style="width:90px">Monto</th>
-              <th style="width:115px">Fecha actual</th>
-              <th style="width:130px">Nueva fecha</th>
+              <th style="width:115px">{{ mode === 'campaign' ? 'Vencimiento' : 'Fecha actual' }}</th>
+              <th style="width:170px">{{ mode === 'campaign' ? 'Accion' : 'Nueva fecha' }}</th>
               <th class="tc" style="width:100px">Estado</th>
             </tr>
           </thead>
@@ -59,13 +75,30 @@
             <tr
               v-for="row in rows"
               :key="row.installment_id"
-              :class="{ 'ri-row-paid': row.isPaid, 'ri-row-error': rowMeta(row).error }"
+              :class="{ 'ri-row-paid': row.isPaid || row.isAnnulled, 'ri-row-error': rowMeta(row).error, 'ri-row-annul': mode === 'campaign' && row.campaignAction === 'annul' }"
             >
               <td class="fw700 tc">{{ row.installment_number }}</td>
-              <td class="mono">S/. {{ formatMoney(row.amount) }}</td>
-              <td>{{ formatDate(row.old_due_date) }}</td>
+              <td class="mono" :class="{ 'ri-strike': row.isAnnulled }">S/. {{ formatMoney(row.amount) }}</td>
+              <td :class="{ 'ri-strike': row.isAnnulled }">{{ formatDate(row.old_due_date) }}</td>
               <td>
-                <template v-if="row.isPaid">—</template>
+                <template v-if="row.isPaid || row.isAnnulled">—</template>
+                <template v-else-if="mode === 'campaign'">
+                  <div class="ri-campaign-cell">
+                    <select v-model="row.campaignAction" class="ri-select ri-select-sm">
+                      <option value="keep">Mantener</option>
+                      <option value="pay">Pagar</option>
+                      <option value="annul">Anular</option>
+                      <option value="adjust">Nuevo monto</option>
+                    </select>
+                    <input
+                      v-if="row.campaignAction === 'adjust'"
+                      v-model.number="row.new_amount"
+                      type="number" min="0.01" step="0.01"
+                      class="ri-amount-input mono"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </template>
                 <BaseDatePicker
                   v-else-if="mode === 'individual'"
                   v-model="row.new_due_date"
@@ -76,6 +109,14 @@
               </td>
               <td class="tc">
                 <span v-if="row.isPaid" class="ri-pill ri-pill-muted">Pagada</span>
+                <span v-else-if="row.isAnnulled" class="ri-pill ri-pill-muted">Anulada</span>
+                <template v-else-if="mode === 'campaign'">
+                  <span v-if="row.campaignAction === 'pay'" class="ri-pill ri-pill-green">Se pagara</span>
+                  <span v-else-if="row.campaignAction === 'annul'" class="ri-pill ri-pill-red">Se anulara</span>
+                  <span v-else-if="row.campaignAction === 'adjust' && !(Number(row.new_amount) > 0)" class="ri-pill ri-pill-red">Monto invalido</span>
+                  <span v-else-if="row.campaignAction === 'adjust'" class="ri-pill ri-pill-green">Nuevo monto</span>
+                  <span v-else class="ri-pill ri-pill-muted">Sin cambio</span>
+                </template>
                 <template v-else>
                   <span v-if="rowMeta(row).error" class="ri-pill ri-pill-red" :title="rowMeta(row).error">{{ rowMeta(row).errorShort }}</span>
                   <span v-else-if="rowMeta(row).changed" class="ri-pill ri-pill-green">Se movera</span>
@@ -90,16 +131,121 @@
         </table>
       </div>
 
+      <!-- Datos del pago consolidado: misma data para todas las cuotas "Pagar" -->
+      <div v-if="mode === 'campaign' && campaignStats.payCount > 0" class="ri-pay-block">
+        <div class="ri-pay-title">
+          <i class="fa-solid fa-money-bill-wave"></i>
+          Pago consolidado — {{ campaignStats.payCount }} cuota(s) por
+          <strong class="mono">S/. {{ formatMoney(campaignStats.payTotal) }}</strong>
+          <span class="ri-pay-hint">(misma data de pago para todas)</span>
+        </div>
+        <!-- Descuento de campaña: 5% por pago adelantado, o S/50-S/100 fijos -->
+        <div class="ri-pay-discount-row">
+          <div class="ri-field">
+            <label class="ri-label">Descuento de campaña</label>
+            <div class="ri-discount-wrap">
+              <div class="ri-discount-toggle">
+                <button type="button" :class="{ active: payDiscountType === 'percent' }" @click="payDiscountType = 'percent'">%</button>
+                <button type="button" :class="{ active: payDiscountType === 'amount' }" @click="payDiscountType = 'amount'">S/.</button>
+              </div>
+              <input
+                v-model.number="payDiscount"
+                type="number" min="0" :step="payDiscountType === 'percent' ? 1 : 0.01"
+                :max="payDiscountType === 'percent' ? 99 : undefined"
+                class="ri-input ri-discount-input mono"
+                :placeholder="payDiscountType === 'percent' ? '5' : '50.00'"
+              />
+            </div>
+          </div>
+          <div class="ri-pay-net" :class="{ 'ri-pay-net-error': payDiscountInvalid }">
+            <span class="ri-label">Total a pagar</span>
+            <strong class="mono">S/. {{ formatMoney(payNetTotal) }}</strong>
+            <span v-if="payDiscountInvalid" class="ri-pay-net-msg">El descuento no puede ser mayor o igual al total</span>
+            <span v-else-if="payDiscountSoles > 0" class="ri-pay-net-msg">
+              <template v-if="payDiscountType === 'percent'">{{ payDiscount }}% = S/. {{ formatMoney(payDiscountSoles) }} — </template>se repartira entre las cuotas y quedara en el historial como descuento por cobranza
+            </span>
+          </div>
+        </div>
+        <div class="ri-pay-grid">
+          <div class="ri-field">
+            <label class="ri-label">Moneda <span class="ri-req">*</span></label>
+            <select v-model="payment.cat_currency" class="ri-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="c in catalogs.catCurrency || []" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
+            </select>
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">Medio de pago <span class="ri-req">*</span></label>
+            <select v-model="payment.cat_payment_medium" class="ri-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="m in catalogs.catPaymentMedium || []" :key="m.id" :value="m.id">{{ m.description }}</option>
+            </select>
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">Entidad empresa</label>
+            <select v-model="payment.cat_business_entity" class="ri-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="b in catalogs.catBusinessEntity || []" :key="b.id" :value="b.id">{{ b.description }}</option>
+            </select>
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">Cuenta bancaria</label>
+            <select v-model="payment.bank_account_id" class="ri-select" :disabled="!payment.cat_business_entity">
+              <option :value="null">{{ payment.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
+              <option v-for="a in filteredAccounts" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
+            </select>
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">N° Operacion</label>
+            <input v-model="payment.transaction_code" class="ri-input" placeholder="Numero de operacion" />
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">Fecha de pago</label>
+            <input v-model="payment.payment_date" type="date" class="ri-input" :max="todayIso" />
+          </div>
+          <div class="ri-field">
+            <label class="ri-label">Voucher</label>
+            <label class="ri-voucher-btn">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              {{ payment.voucher_url ? 'Cambiar voucher' : 'Adjuntar voucher' }}
+              <input type="file" accept="image/*,.pdf" style="display:none" @change="uploadPayVoucher" />
+            </label>
+            <a v-if="payment.voucher_url" :href="payment.voucher_url" target="_blank" class="ri-voucher-view"><i class="fa-solid fa-image"></i> Ver</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign summary -->
+      <div v-if="mode === 'campaign' && campaignChangesCount > 0" class="ri-campaign-summary">
+        <span v-if="campaignStats.payCount">
+          Se pagan <strong>{{ campaignStats.payCount }}</strong> cuota(s) en un solo pago de
+          <strong class="mono">S/. {{ formatMoney(payNetTotal) }}</strong>
+          <template v-if="payDiscountSoles > 0">
+            (descuento {{ payDiscountType === 'percent' ? `${payDiscount}% = ` : '' }}<strong class="mono">S/. {{ formatMoney(payDiscountSoles) }}</strong>)
+          </template>
+        </span>
+        <span v-if="campaignStats.annulCount">
+          Se anulan <strong>{{ campaignStats.annulCount }}</strong> cuota(s) por
+          <strong class="mono">S/. {{ formatMoney(campaignStats.annulTotal) }}</strong>
+        </span>
+        <span v-if="campaignStats.adjustCount">
+          {{ campaignStats.adjustCount }} cuota(s) con nuevo monto
+        </span>
+        <span>
+          Nuevo total pendiente: <strong class="mono">S/. {{ formatMoney(campaignStats.newPendingTotal) }}</strong>
+        </span>
+        <span v-if="campaignStats.discountDelta > 0.001" class="ri-summary-discount">
+          Descuento por cobranza: <strong class="mono">S/. {{ formatMoney(campaignStats.discountDelta) }}</strong>
+        </span>
+      </div>
+
       <!-- Reason + justification -->
       <div class="ri-grid2">
         <div class="ri-field">
           <label class="ri-label">Motivo <span class="ri-req">*</span></label>
           <select v-model="reasonCode" class="ri-select">
             <option value="">Seleccionar...</option>
-            <option value="financiero">Financiero</option>
-            <option value="academico">Academico</option>
-            <option value="personal">Personal</option>
-            <option value="otro">Otro</option>
+            <option v-for="opt in reasonOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
         </div>
         <div class="ri-field ri-field-full">
@@ -114,7 +260,7 @@
       </div>
 
       <!-- Edition end-date warning -->
-      <div v-if="editionEndDate" class="ri-edition-note">
+      <div v-if="editionEndDate && mode !== 'campaign'" class="ri-edition-note">
         <i class="fa-solid fa-circle-info"></i>
         Ninguna cuota puede superar el fin de la edicion: <strong>{{ formatDate(editionEndDate) }}</strong>
       </div>
@@ -128,25 +274,32 @@
         @click="handleSave"
       >
         <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        <i v-else class="fa-solid fa-calendar-check"></i>
-        Reprogramar {{ pendingChangesCount }} cuota{{ pendingChangesCount === 1 ? '' : 's' }}
+        <i v-else :class="mode === 'campaign' ? 'fa-solid fa-bullhorn' : 'fa-solid fa-calendar-check'"></i>
+        <template v-if="mode === 'campaign'">
+          Aplicar campaña ({{ campaignChangesCount }})
+        </template>
+        <template v-else>
+          Reprogramar {{ pendingChangesCount }} cuota{{ pendingChangesCount === 1 ? '' : 's' }}
+        </template>
       </button>
     </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, reactive, computed, watch, inject } from 'vue'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
+import api from '@/services/api'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
   enrollment: { type: Object, default: null },
   installments: { type: Array, default: () => [] },
-  editionEndDate: { type: [String, Date, null], default: null }
+  editionEndDate: { type: [String, Date, null], default: null },
+  catalogs: { type: Object, default: () => ({}) }
 })
 
 const emit = defineEmits(['update:visible', 'completed'])
@@ -162,6 +315,20 @@ const saving = ref(false)
 const rows = ref([])
 
 const PAID_STATUS = 4454
+const ANNULLED_STATUS = 4456
+
+const RESCHEDULE_REASONS = [
+  { value: 'financiero', label: 'Financiero' },
+  { value: 'academico', label: 'Academico' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'otro', label: 'Otro' }
+]
+const CAMPAIGN_REASONS = [
+  { value: 'campana_cobranza', label: 'Campaña de cobranza' },
+  { value: 'pago_adelantado', label: 'Descuento por pago adelantado' },
+  { value: 'otro', label: 'Otro' }
+]
+const reasonOptions = computed(() => mode.value === 'campaign' ? CAMPAIGN_REASONS : RESCHEDULE_REASONS)
 
 const studentName = computed(() => {
   const e = props.enrollment || {}
@@ -206,14 +373,17 @@ function buildInitialRows () {
       amount: i.amount,
       old_due_date: toISO(i.due_date),
       new_due_date: toISO(i.due_date),
-      isPaid: Number(i.cat_status) === PAID_STATUS || i.status === 'paid'
+      isPaid: Number(i.cat_status) === PAID_STATUS || i.status === 'paid',
+      isAnnulled: Number(i.cat_status) === ANNULLED_STATUS,
+      campaignAction: 'keep',
+      new_amount: Number(i.amount) || 0
     }))
 }
 
 function applyShift () {
   const n = Number(shiftDays.value)
   for (const r of rows.value) {
-    if (r.isPaid) continue
+    if (r.isPaid || r.isAnnulled) continue
     if (!Number.isFinite(n) || n < 1) { r.new_due_date = r.old_due_date; continue }
     const d = new Date(r.old_due_date)
     d.setDate(d.getDate() + n)
@@ -227,7 +397,7 @@ const rowValidations = computed(() => {
 
   const map = new Map()
   for (const r of rows.value) {
-    if (r.isPaid) { map.set(r.installment_id, { isPaid: true, error: null, errorShort: null, changed: false }); continue }
+    if (r.isPaid || r.isAnnulled) { map.set(r.installment_id, { isPaid: true, error: null, errorShort: null, changed: false }); continue }
 
     const oldD = new Date(r.old_due_date); oldD.setHours(0, 0, 0, 0)
     const newD = new Date(r.new_due_date); newD.setHours(0, 0, 0, 0)
@@ -255,6 +425,17 @@ watch(() => props.visible, (v) => {
   shiftDays.value = 15
   reasonCode.value = ''
   justificacion.value = ''
+  payDiscount.value = 0
+  payDiscountType.value = 'percent'
+  Object.assign(payment, {
+    cat_currency: null,
+    cat_payment_medium: null,
+    cat_business_entity: null,
+    bank_account_id: null,
+    transaction_code: '',
+    payment_date: new Date().toISOString().slice(0, 10),
+    voucher_url: null
+  })
   rows.value = buildInitialRows()
   applyShift()
 })
@@ -270,6 +451,83 @@ watch([shiftDays, mode], () => {
   if (mode.value === 'shift') applyShift()
 })
 
+// Los motivos de campaña son otros: al cambiar de tab se limpia si no aplica.
+watch(mode, () => {
+  if (!reasonOptions.value.some(o => o.value === reasonCode.value)) reasonCode.value = ''
+})
+
+// --- Campaña de cobranza ---
+// Data unica del pago consolidado ("pague las 5 de una", "2 cuotas con el
+// mismo voucher"): se aplica a todas las cuotas marcadas Pagar.
+const payment = reactive({
+  cat_currency: null,
+  cat_payment_medium: null,
+  cat_business_entity: null,
+  bank_account_id: null,
+  transaction_code: '',
+  payment_date: new Date().toISOString().slice(0, 10),
+  voucher_url: null
+})
+const todayIso = computed(() => new Date().toISOString().slice(0, 10))
+const payDiscount = ref(0)
+const payDiscountType = ref('percent') // el caso tipico de campaña es %
+// Descuento efectivo en soles (el % se calcula sobre el total de las cuotas a pagar).
+const payDiscountSoles = computed(() => {
+  const d = Number(payDiscount.value) || 0
+  if (d <= 0) return 0
+  return payDiscountType.value === 'percent'
+    ? Math.round(campaignStats.value.payTotal * d) / 100
+    : d
+})
+const payNetTotal = computed(() => Math.max(0, campaignStats.value.payTotal - payDiscountSoles.value))
+const payDiscountInvalid = computed(() => {
+  const d = Number(payDiscount.value) || 0
+  if (d < 0) return true
+  if (payDiscountType.value === 'percent' && d >= 100) return true
+  return campaignStats.value.payCount > 0 && d > 0 && payDiscountSoles.value >= campaignStats.value.payTotal
+})
+const filteredAccounts = computed(() => {
+  if (!payment.cat_business_entity || !props.catalogs?.allBankAccounts) return []
+  return props.catalogs.allBankAccounts.filter(a => a.business_entity_catalog_id === payment.cat_business_entity)
+})
+
+async function uploadPayVoucher (event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const res = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (res.data?.url) {
+      payment.voucher_url = res.data.url
+      toast.success('Voucher subido')
+    }
+  } catch {
+    toast.error('Error al subir voucher')
+  }
+  event.target.value = ''
+}
+
+const campaignStats = computed(() => {
+  let annulCount = 0, annulTotal = 0, adjustCount = 0, adjustDelta = 0, invalid = 0, newPendingTotal = 0, payCount = 0, payTotal = 0
+  for (const r of rows.value) {
+    if (r.isPaid || r.isAnnulled) continue
+    const amt = Number(r.amount) || 0
+    if (r.campaignAction === 'pay') { payCount++; payTotal += amt; continue }
+    if (r.campaignAction === 'annul') { annulCount++; annulTotal += amt; continue }
+    if (r.campaignAction === 'adjust') {
+      const na = Number(r.new_amount)
+      if (!(na > 0)) { invalid++; continue }
+      adjustCount++; adjustDelta += na - amt; newPendingTotal += na
+      continue
+    }
+    newPendingTotal += amt
+  }
+  return { annulCount, annulTotal, adjustCount, adjustDelta, invalid, newPendingTotal, payCount, payTotal, discountDelta: annulTotal - adjustDelta }
+})
+const campaignChangesCount = computed(() =>
+  campaignStats.value.annulCount + campaignStats.value.adjustCount + campaignStats.value.payCount)
+
 const pendingChangesCount = computed(() => {
   let n = 0
   for (const r of rows.value) {
@@ -283,49 +541,83 @@ const hasErrors = computed(() => {
   return false
 })
 
-const canConfirm = computed(() =>
-  pendingChangesCount.value > 0 &&
-  !hasErrors.value &&
-  reasonCode.value &&
-  justificacion.value.trim().length > 0
-)
+const canConfirm = computed(() => {
+  if (!reasonCode.value || justificacion.value.trim().length === 0) return false
+  if (mode.value === 'campaign') {
+    if (campaignChangesCount.value === 0 || campaignStats.value.invalid > 0) return false
+    // Pago consolidado: la data compartida exige moneda y medio (igual que
+    // confirmar una cuota suelta) y un descuento coherente.
+    if (campaignStats.value.payCount > 0 && (!payment.cat_currency || !payment.cat_payment_medium)) return false
+    if (payDiscountInvalid.value) return false
+    return true
+  }
+  return pendingChangesCount.value > 0 && !hasErrors.value
+})
+
+// El backend responde con la misma forma en ambos endpoints (odoo_sync,
+// odoo_failed_fees...), asi que el toast se resuelve una sola vez.
+function notifyResult (res, okMsg) {
+  if (res?.odoo_sync === false) {
+    const allSameError = Array.isArray(res.odoo_failed_fees)
+      && res.odoo_failed_fees.length > 0
+      && res.odoo_failed_fees.every(f => f.error === res.odoo_failed_fees[0].error)
+    const msg = allSameError
+      ? res.odoo_failed_fees[0].error
+      : (res.odoo_error || 'Odoo no se sincronizo')
+    toast.warning(`Cuotas guardadas. ${msg}`, { timeout: 7000 })
+  } else if (res?.odoo_skipped) {
+    toast.success(okMsg)
+  } else {
+    toast.success(`${okMsg} Sincronizado con Odoo.`)
+  }
+}
 
 async function handleSave () {
   if (!canConfirm.value) return
   saving.value = true
   try {
-    const changes = rows.value
-      .filter(r => {
-        const m = rowMeta(r)
-        return !r.isPaid && m.changed && !m.error
+    if (mode.value === 'campaign') {
+      const alive = rows.value.filter(r => !r.isPaid && !r.isAnnulled)
+      const payIds = alive.filter(r => r.campaignAction === 'pay').map(r => r.installment_id)
+      const res = await ficoService.applyCollectionCampaign({
+        enrollment_id: Number(props.enrollment.enrollment_id),
+        annul_ids: alive.filter(r => r.campaignAction === 'annul').map(r => r.installment_id),
+        pay_ids: payIds,
+        pay_discount: payIds.length ? (Number(payDiscount.value) || 0) : 0,
+        pay_discount_type: payDiscountType.value,
+        payment: payIds.length ? { ...payment, transaction_code: payment.transaction_code || null } : null,
+        adjustments: alive
+          .filter(r => r.campaignAction === 'adjust')
+          .map(r => ({ installment_id: r.installment_id, new_amount: Number(r.new_amount) })),
+        justificacion: justificacion.value.trim(),
+        reason_code: reasonCode.value
       })
-      .map(r => ({ installment_id: r.installment_id, new_due_date: r.new_due_date }))
-
-    const res = await ficoService.rescheduleInstallments({
-      enrollment_id: Number(props.enrollment.enrollment_id),
-      changes,
-      justificacion: justificacion.value.trim(),
-      reason_code: reasonCode.value
-    })
-
-    if (res?.odoo_sync === false) {
-      const allSameError = Array.isArray(res.odoo_failed_fees)
-        && res.odoo_failed_fees.length > 0
-        && res.odoo_failed_fees.every(f => f.error === res.odoo_failed_fees[0].error)
-      const msg = allSameError
-        ? res.odoo_failed_fees[0].error
-        : (res.odoo_error || 'Odoo no se sincronizo')
-      toast.warning(`Cuotas guardadas. ${msg}`, { timeout: 7000 })
-    } else if (res?.odoo_skipped) {
-      toast.success(`${res?.updated || changes.length} cuota(s) reprogramada(s).`)
+      const parts = []
+      if (res?.paid) parts.push(`${res.paid} pagada(s) en un solo pago`)
+      if (res?.annulled) parts.push(`${res.annulled} anulada(s)`)
+      if (res?.adjusted) parts.push(`${res.adjusted} ajustada(s)`)
+      notifyResult(res, `Campaña aplicada: ${parts.join(', ') || 'sin cambios'}.`)
     } else {
-      toast.success(`${res?.updated || changes.length} cuota(s) reprogramada(s) y sincronizada(s) con Odoo.`)
+      const changes = rows.value
+        .filter(r => {
+          const m = rowMeta(r)
+          return !r.isPaid && !r.isAnnulled && m.changed && !m.error
+        })
+        .map(r => ({ installment_id: r.installment_id, new_due_date: r.new_due_date }))
+
+      const res = await ficoService.rescheduleInstallments({
+        enrollment_id: Number(props.enrollment.enrollment_id),
+        changes,
+        justificacion: justificacion.value.trim(),
+        reason_code: reasonCode.value
+      })
+      notifyResult(res, `${res?.updated || changes.length} cuota(s) reprogramada(s).`)
     }
     emit('completed')
     emit('update:visible', false)
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al reprogramar cuotas.')
+    toast.error(err?.response?.data?.error || 'Error al guardar los cambios de cuotas.')
   } finally {
     saving.value = false
   }
@@ -404,6 +696,85 @@ async function handleSave () {
 .ri-pill-green { background: #ECFDF5; color: #065F46; }
 .ri-pill-red { background: #FEF2F2; color: #991B1B; }
 .ri-pill-muted { background: #F3F4F6; color: #6B7280; }
+
+/* Campaña de cobranza */
+.ri-campaign-hint {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A;
+  border-radius: 8px; font-size: 12px; color: #92400E; line-height: 1.45;
+}
+.ri-campaign-hint i { color: #F59E0B; margin-top: 2px; }
+.ri-campaign-cell { display: flex; align-items: center; gap: 6px; }
+/* Doble clase: gana a la regla generica .ri-select (padding 8px 12px) que
+   recortaba el texto verticalmente en el select compacto de la tabla. */
+.ri-select.ri-select-sm {
+  height: 32px; padding: 0 8px; font-size: 12px; width: auto;
+  line-height: 32px;
+}
+.ri-amount-input {
+  width: 80px; height: 30px; padding: 0 8px; font-size: 12px; font-weight: 600;
+  border: 1px solid #E5E7EB; border-radius: 6px; outline: none; text-align: right;
+}
+.ri-amount-input:focus { border-color: #4338CA; }
+.ri-strike { text-decoration: line-through; color: #A3A3A3; }
+.ri-row-annul td { background: #FFF7F7; }
+.ri-pay-block {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; background: #F7FDF9; border: 1px solid #A7F3D0; border-radius: 8px;
+}
+.ri-pay-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 600; color: #065F46;
+}
+.ri-pay-title i { color: #059669; }
+.ri-pay-hint { font-weight: 400; font-size: 11.5px; color: #047857; }
+.ri-pay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ri-pay-discount-row {
+  display: flex; align-items: flex-end; gap: 20px;
+  padding-bottom: 10px; border-bottom: 1px dashed #A7F3D0;
+}
+.ri-discount-wrap { display: flex; align-items: center; gap: 8px; }
+.ri-discount-toggle {
+  display: inline-flex; border: 1px solid #A7F3D0; border-radius: 6px; overflow: hidden;
+}
+.ri-discount-toggle button {
+  padding: 0 12px; height: 36px; font-size: 12px; font-weight: 600;
+  background: #FFFFFF; color: #6B7280; border: none; cursor: pointer;
+  font-family: inherit; transition: all .15s;
+}
+.ri-discount-toggle button + button { border-left: 1px solid #A7F3D0; }
+.ri-discount-toggle button.active { background: #059669; color: #FFFFFF; }
+.ri-discount-input { width: 110px; text-align: right; font-weight: 600; }
+.ri-pay-net { display: flex; flex-direction: column; gap: 3px; }
+.ri-pay-net strong { font-size: 16px; color: #065F46; }
+.ri-pay-net-msg { font-size: 11px; color: #047857; }
+.ri-pay-net-error strong { color: #991B1B; }
+.ri-pay-net-error .ri-pay-net-msg { color: #991B1B; }
+.ri-input {
+  height: 36px; padding: 0 12px; font-size: 13px; font-family: inherit;
+  color: #374151; background: #FFFFFF;
+  border: 1px solid #E5E7EB; border-radius: 6px; outline: none;
+  transition: border-color .15s;
+}
+.ri-input:focus { border-color: #4338CA; box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.08); }
+.ri-voucher-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 12px; font-size: 12px; font-weight: 500;
+  background: #FFFFFF; color: #1A1A1A; border: 1px solid #E5E7EB;
+  border-radius: 6px; cursor: pointer;
+}
+.ri-voucher-btn:hover { background: #F9FAFB; }
+.ri-voucher-view {
+  font-size: 11.5px; color: #4338CA; text-decoration: none; margin-top: 4px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+.ri-campaign-summary {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  padding: 10px 14px; background: #F9FAFB; border: 1px solid #E5E7EB;
+  border-radius: 8px; font-size: 12px; color: #374151;
+}
+.ri-summary-discount { color: #B45309; }
 
 .ri-grid2 { display: grid; grid-template-columns: 180px 1fr; gap: 14px; }
 
