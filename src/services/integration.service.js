@@ -19,8 +19,13 @@ export default class IntegrationService {
   }
 
   async syncFicoToSheets() {
-    // 4 hojas en serie, aun mas lento que la de ventas sola → sin timeout.
-    return (await api.post('/integration/syncFicoToSheets', undefined, { timeout: 0 })).data;
+    // Fire-and-forget: el backend responde al instante (202) y sincroniza en
+    // segundo plano. El progreso se consulta con getFicoSyncStatus().
+    return (await api.post('/integration/syncFicoToSheets')).data;
+  }
+
+  async getFicoSyncStatus() {
+    return (await api.get('/integration/syncFicoToSheets/status')).data;
   }
 
   async syncScheduleToSheet(payload) {

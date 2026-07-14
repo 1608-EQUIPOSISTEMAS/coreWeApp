@@ -246,6 +246,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Control de Ediciones',
+        to: '/academica/control-ediciones',
+        submodule: 'CONTROL_EDICIONES',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Reporte Académico',
         to: '/academica/reporte',
         submodule: 'REPORTE',

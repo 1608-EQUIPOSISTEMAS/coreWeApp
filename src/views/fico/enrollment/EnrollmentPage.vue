@@ -17,7 +17,7 @@
         </div>
         <button class="ep-btn-sheet" :disabled="syncingSheet" @click="syncToSheet" title="Subir ventas aprobadas a Google Sheets">
           <i class="fa-solid" :class="syncingSheet ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'"></i>
-          {{ syncingSheet ? 'Sincronizando...' : 'Sincronizar ventas' }}
+          {{ syncingSheet ? 'Procesando…' : 'Sincronizar ventas' }}
         </button>
         <button class="ep-btn-new" @click="list.goNew()"><i class="fa-solid fa-plus"></i> Nueva inscripcion</button>
       </div>
@@ -147,19 +147,50 @@ const toast = useToast()
 const integrationService = inject(ServiceKeys.Integration)
 
 // === Sync ventas a Google Sheets ===
+// El sync corre en el backend (estado global para todos los usuarios); el
+// boton refleja ese estado via polling, asi que "Procesando..." se ve igual
+// si recargas la pagina o si otro usuario inicio la sincronizacion.
 const syncingSheet = ref(false)
+let syncPollAlive = true
+
 async function syncToSheet () {
   if (syncingSheet.value) return
   syncingSheet.value = true
   try {
     const resp = await integrationService.syncFicoToSheets()
-    const ventas = resp?.data?.ventas?.rows_synced ?? 0
-    const aula = resp?.data?.aula?.rows_synced ?? 0
-    const cronograma = resp?.data?.cronograma?.rows_synced ?? 0
-    const adicionales = resp?.data?.adicionales?.rows_synced ?? 0
-    toast.success(`Ventas: ${ventas} · Aula: ${aula} · Cronograma: ${cronograma} · Adicionales: ${adicionales} filas sincronizadas`, { timeout: 5000 })
+    if (resp?.data?.already_running) {
+      toast.info('Ya hay una sincronización en curso, un momento por favor…', { timeout: 4000 })
+    } else {
+      toast.success('Sincronización iniciada correctamente. Los datos se están actualizando en Google Sheets.', { timeout: 5000 })
+    }
   } catch (err) {
     console.error('[syncToSheet]', err)
+    const msg = err?.response?.data?.error || err?.message || 'Error al sincronizar'
+    toast.error(`No se pudo sincronizar: ${msg}`, { timeout: 7000 })
+    syncingSheet.value = false
+    return
+  }
+  await trackFicoSync()
+}
+
+// Sigue el sync en curso hasta que termine, consultando el estado cada 3s:
+// boton en "Procesando..." mientras tanto, toast de exito o error al final.
+// Lo usan syncToSheet y onMounted (para retomar un sync ya iniciado).
+async function trackFicoSync () {
+  syncingSheet.value = true
+  try {
+    for (;;) {
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      if (!syncPollAlive) return
+      const st = (await integrationService.getFicoSyncStatus())?.data
+      if (!st?.running) {
+        if (st?.last_error) throw new Error(st.last_error)
+        break
+      }
+    }
+    toast.success('Listo: las ventas ya están actualizadas en Google Sheets.', { timeout: 6000 })
+  } catch (err) {
+    console.error('[trackFicoSync]', err)
     const msg = err?.response?.data?.error || err?.message || 'Error al sincronizar'
     toast.error(`No se pudo sincronizar: ${msg}`, { timeout: 7000 })
   } finally {
@@ -288,6 +319,11 @@ function onKeyDown (e) {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
+  // Si ya hay una sincronizacion a Sheets en curso (iniciada en otra pestana
+  // o por otro usuario), mostrar el boton en "Procesando..." y seguirla.
+  integrationService.getFicoSyncStatus()
+    .then(st => { if (st?.data?.running) trackFicoSync() })
+    .catch(() => {})
   list.loadOwners()
   // Prioridad de carga:
   // 1. URL query params (si hay) -> contexto compartido por link
@@ -319,7 +355,10 @@ watch(() => list.viewMode.value, (newMode, oldMode) => {
   list.fetchEnrollments()
 })
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  syncPollAlive = false // corta el polling del sync al salir de la pagina
+})
 </script>
 
 <style scoped>

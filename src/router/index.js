@@ -603,6 +603,12 @@ const routes = [
       meta: { module: 'ACADEMICA', submodule: 'SEMANAL', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
     {
+      path: 'academica/control-ediciones',
+      name: 'AcademicaControlEdiciones',
+      component: () => import('@/views/academica/ControlEdiciones.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'CONTROL_EDICIONES', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
       path: 'academica/reporte',
       name: 'AcademicaReporte',
       component: () => import('@/views/academica/ReporteAcademico.vue'),
