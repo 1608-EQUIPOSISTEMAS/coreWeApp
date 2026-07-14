@@ -4300,8 +4300,8 @@ function toggleReschedule(contacto) {
 .ef-btn-warning:disabled,
 .ef-btn-token:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ef-btn-primary { color: #fff; background: #1A1A1A; border-color: #1A1A1A; }
-.ef-btn-primary:hover:not(:disabled) { background: #333; }
+.ef-btn-primary { color: #fff; background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); }
+.ef-btn-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
 .ef-btn-outline { color: #737373; background: #fff; border: 1px solid #E8E8E8; }
 .ef-btn-outline:hover:not(:disabled) { border-color: #D4D4D4; color: #1A1A1A; }
@@ -4445,11 +4445,11 @@ function toggleReschedule(contacto) {
 .btn-exec:disabled { opacity: .5; cursor: default; }
 
 .btn-exec-primary {
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   color: #fff;
-  border-color: #1A1A1A;
+  border-color: var(--we-navy, #002060);
 }
-.btn-exec-primary:hover:not(:disabled) { background: #333; }
+.btn-exec-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
 .btn-exec-ghost {
   background: transparent;
@@ -4481,9 +4481,9 @@ function toggleReschedule(contacto) {
 .btn-exec-warning:hover:not(:disabled) { background: #D97706; }
 
 .btn-exec-active {
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   color: #fff;
-  border-color: #1A1A1A;
+  border-color: var(--we-navy, #002060);
 }
 
 .btn-exec-danger-ghost {

@@ -1303,7 +1303,7 @@ function needsEditionDecision (child) {
   transition: all .2s ease;
 }
 .ef-btn-sm:hover { opacity: .85; }
-.ef-btn-teal { background: #1A1A1A; color: #fff; }
+.ef-btn-teal { background: var(--we-navy, #002060); color: #fff; }
 .ef-btn-outline {
   background: #fff; color: #4338CA; border: 1px solid #C7D2FE;
 }
@@ -1462,12 +1462,12 @@ function needsEditionDecision (child) {
 
 .ef-btn-primary {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 20px; background: #1A1A1A; color: #fff;
+  padding: 9px 20px; background: var(--we-navy, #002060); color: #fff;
   border: none; border-radius: 8px; font-size: 13px;
   font-weight: 600; font-family: inherit; cursor: pointer;
   transition: background .2s ease;
 }
-.ef-btn-primary:hover { background: #333; }
+.ef-btn-primary:hover { background: var(--we-navy-dark, #001540); }
 .ef-btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
 /* Observe button */

@@ -1585,7 +1585,7 @@
   --slate-400: #94a3b8;
   --slate-300: #cbd5e1;
   --slate-100: #f1f5f9;
-  --teal-600:  #12274e;
+  --teal-600:  #002060; /* navy WE */
   --teal-500:  #12274e;
   --blue-600:  #2563eb;
   --gold-400:  #fbbf24;

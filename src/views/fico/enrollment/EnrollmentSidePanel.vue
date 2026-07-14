@@ -974,7 +974,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -982,7 +982,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
   font-family: inherit;
   letter-spacing: -0.01em;
 }
-.esp-btn-primary:hover { background: #333; }
+.esp-btn-primary:hover { background: var(--we-navy-dark, #001540); }
 .esp-btn-primary i { font-size: 11px; }
 
 /* Pill colors (reused) */

@@ -2307,12 +2307,12 @@ const saldoPendienteDisplay = computed(() => {
 .ep-btn-new {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px; font-size: 13px; font-weight: 600;
-  color: #fff; background: var(--e-text);
+  color: #fff; background: var(--we-navy, #002060);
   border: none; border-radius: 8px; cursor: pointer;
   transition: background .2s ease; font-family: inherit;
   letter-spacing: -0.01em;
 }
-.ep-btn-new:hover { background: #333; }
+.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
 .ep-btn-new i { font-size: 11px; }
 
 /* === Body === */

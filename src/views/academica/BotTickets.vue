@@ -610,15 +610,15 @@ onActivated(() => {
 button.ep-btn-new {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px; font-size: 12.5px; font-weight: 600;
-  color: #fff !important; background: #14140F !important;
-  border: 1px solid #14140F !important; border-radius: 8px;
+  color: #fff !important; background: var(--we-navy, #002060) !important;
+  border: 1px solid var(--we-navy, #002060) !important; border-radius: 8px;
   cursor: pointer; font-family: inherit;
   letter-spacing: -0.01em;
   transition: background .2s ease, border-color .2s ease;
   box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
 }
 button.ep-btn-new:hover:not(:disabled) {
-  background: #333 !important; border-color: #333 !important;
+  background: var(--we-navy-dark, #001540) !important; border-color: var(--we-navy-dark, #001540) !important;
 }
 button.ep-btn-new:disabled { opacity: .5; cursor: default; }
 button.ep-btn-new i { font-size: 11px; }

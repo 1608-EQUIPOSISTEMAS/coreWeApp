@@ -375,7 +375,7 @@ const currencyDollars = computed(() => {
 :root {
   --navy-900: #0f172a; --navy-800: #1e293b; --navy-700: #334155;
   --slate-400: #94a3b8; --slate-300: #cbd5e1; --slate-100: #f1f5f9; --slate-50:  #f8fafc;
-  --teal-600:  #12274e; --teal-500:  #12274e;
+  --teal-600:  #002060; --teal-500:  #002060; /* navy WE */
   --blue-600:  #2563eb;
   --amber-500: #f59e0b;
   --red-600:   #dc2626;

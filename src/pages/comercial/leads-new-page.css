@@ -83,8 +83,8 @@
 .ef-page .ef-btn-warning:disabled,
 .ef-page .ef-btn-token:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ef-page .ef-btn-primary { color: #fff; background: #1A1A1A; border-color: #1A1A1A; }
-.ef-page .ef-btn-primary:hover:not(:disabled) { background: #333; }
+.ef-page .ef-btn-primary { color: #fff; background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); }
+.ef-page .ef-btn-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
 .ef-page .ef-btn-outline { color: #737373; background: #fff; border: 1px solid #E8E8E8; }
 .ef-page .ef-btn-outline:hover:not(:disabled) { border-color: #D4D4D4; color: #1A1A1A; }
@@ -228,11 +228,11 @@
 .ef-page .btn-exec:disabled { opacity: .5; cursor: default; }
 
 .ef-page .btn-exec-primary {
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   color: #fff;
-  border-color: #1A1A1A;
+  border-color: var(--we-navy, #002060);
 }
-.ef-page .btn-exec-primary:hover:not(:disabled) { background: #333; }
+.ef-page .btn-exec-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
 .ef-page .btn-exec-ghost {
   background: transparent;
@@ -264,9 +264,9 @@
 .ef-page .btn-exec-warning:hover:not(:disabled) { background: #D97706; }
 
 .ef-page .btn-exec-active {
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   color: #fff;
-  border-color: #1A1A1A;
+  border-color: var(--we-navy, #002060);
 }
 
 .ef-page .btn-exec-danger-ghost {

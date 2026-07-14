@@ -77,7 +77,7 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
 
 <style scoped>
 .as-stepper {
-  --as-accent: #1A1A1A;
+  --as-accent: var(--we-navy, #002060);
   --as-border: #F0F0F0;
   --as-text: #1A1A1A;
   --as-text-muted: #A3A3A3;
@@ -191,11 +191,11 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
   background: var(--as-accent);
   color: #fff;
 }
-.as-btn--primary:hover:not(:disabled) { background: #333; }
+.as-btn--primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
 .as-btn--confirm {
   background: var(--as-accent);
   color: #fff;
 }
-.as-btn--confirm:hover:not(:disabled) { background: #333; }
+.as-btn--confirm:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 </style>

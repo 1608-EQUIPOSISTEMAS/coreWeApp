@@ -1487,7 +1487,7 @@ onUnmounted(() => {
   padding: 5px 10px;
   border: none;
   border-radius: 7px;
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -1495,7 +1495,7 @@ onUnmounted(() => {
   transition: all .2s ease;
   white-space: nowrap;
 }
-.tp-btn-confirm:hover { background: #333; }
+.tp-btn-confirm:hover { background: var(--we-navy-dark, #001540); }
 
 .tp-confirmed-icon { color: #059669; font-size: 16px; }
 
@@ -1696,14 +1696,14 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background .2s ease;
   font-family: inherit;
 }
-.ep-btn-new:hover { background: #333; }
+.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
 .ep-btn-new:disabled { opacity: .4; cursor: not-allowed; }
 
 @media (max-width: 1280px) {

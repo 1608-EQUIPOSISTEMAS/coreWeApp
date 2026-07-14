@@ -451,7 +451,7 @@ function confirmRepro() {
 .cw-shell {
   --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --accent: #6b5cf0;
+  --accent: #002060; /* navy corporativo WE */
   --accent-ink: #ffffff;
   --r-lg: 16px;
   --surface: #ffffff;

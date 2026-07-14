@@ -194,6 +194,55 @@
       <span><template v-if="canSeeAulaInfo">Haz clic en un curso para ver de dónde sale su AULA · </template>Ficha / Confirmado: punto verde = Sí.</span>
     </div>
 
+    <!-- ════ RESÚMENES DEL MES ════ -->
+    <div class="sumgrid">
+      <div class="sumcard">
+        <div class="sum-title">CANTIDAD DE PROGRAMAS POR CATEGORÍA</div>
+        <table class="sumtbl">
+          <thead><tr><th v-for="c in catSummary.cols" :key="c.label">{{ c.label }}</th><th class="tot">TOTAL</th></tr></thead>
+          <tbody><tr><td v-for="c in catSummary.cols" :key="c.label">{{ c.n }}</td><td class="tot">{{ catSummary.total }}</td></tr></tbody>
+        </table>
+      </div>
+      <div class="sumcard sum-lines">
+        <div class="sum-title">CANTIDAD DE PROGRAMAS PROGRAMADOS POR LÍNEAS</div>
+        <table class="sumtbl">
+          <thead><tr><th v-for="l in lineSummary" :key="l.label">{{ l.label }}</th></tr></thead>
+          <tbody><tr><td v-for="l in lineSummary" :key="l.label">{{ l.n }}</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sumgrid">
+      <div class="sumcard">
+        <div class="sum-title">TIPOS DE CURSO</div>
+        <table class="deftbl">
+          <thead><tr><th>N°</th><th>TIPO</th><th>N° DE TIPO</th><th>DEFINICIÓN</th></tr></thead>
+          <tbody>
+            <tr v-for="(t, i) in typeSummary" :key="t.key">
+              <td class="num">{{ i + 1 }}</td>
+              <td class="tag">{{ t.key }}</td>
+              <td class="num">{{ t.n }}</td>
+              <td class="def">{{ t.def }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sumcard">
+        <div class="sum-title">SEGMENTOS</div>
+        <table class="deftbl">
+          <thead><tr><th>N°</th><th>SEG</th><th>N° PROG</th><th>DEFINICIÓN</th></tr></thead>
+          <tbody>
+            <tr v-for="(s, i) in segSummary" :key="s.key" :style="s.tint ? { background: s.tint } : null">
+              <td class="num">{{ i + 1 }}</td>
+              <td class="tag">{{ s.key }}</td>
+              <td class="num">{{ s.n }}</td>
+              <td class="def">{{ s.def }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ════ MODAL: de dónde sale el AULA (solo roles de gestión) ════ -->
     <div v-if="aulaModal" class="am-overlay" @click.self="aulaModal = null">
       <div class="am-card" :class="{ wide: amTab === 'alumnos' }">
@@ -519,6 +568,50 @@ const kpis = computed(() => {
   ]
 })
 
+// ── Resúmenes del mes (sobre TODO el mes, sin filtros; incluye A5 cancelados) ──
+const TYPE_DEFS = [
+  { key: 'A', def: 'Cursos que no requieren mayor seguimiento y esfuerzo en el proceso de venta' },
+  { key: 'B', def: 'Cursos que requieren seguimiento y monitoreo en el proceso de venta' },
+  { key: 'C', def: 'Cursos que requieren minuciosa atención y seguimiento para la venta' },
+  { key: 'D', def: 'Cursos que requieren mucho esfuerzo para la venta' },
+  { key: 'N1', def: 'Curso nuevo de una línea existente' },
+  { key: 'N2', def: 'Curso nuevo de una línea nueva. Ejemplo: Marketing Digital, Contrataciones' },
+]
+const SEG_DEFS = [
+  { key: 'A1', tint: '#eaf7ee', def: 'Cursos de apertura (no seguimientos: son los Diplomados, Especializaciones y PEE)' },
+  { key: 'A2', tint: '#fdf3dd', def: 'Cursos de seguimiento (los cursos que pertenecen a un Diplomado, Especialización o PEE)' },
+  { key: 'A3', def: 'Modificación de cursos aperturados: Marketing & Comercial deben realizar los cambios respectivos' },
+  { key: 'A4', def: 'Modificación de cursos de seguimiento: Marketing & Comercial deben realizar los cambios respectivos' },
+  { key: 'A5', tint: '#fdecea', def: 'Cursos cancelados' },
+  { key: 'A6', tint: '#edeafc', def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
+]
+
+const monthItems = computed(() => schedules.value.flatMap(w => w.items || []))
+
+const catSummary = computed(() => {
+  const n = alias => monthItems.value.filter(e => e.program_type_alias === alias).length
+  const cols = [
+    { label: 'DIP', n: n('we_program_type_diploma') },
+    { label: 'PEE', n: n('we_program_type_pee') },
+    { label: 'ESP', n: n('we_program_type_specialization') },
+    { label: 'CURSO', n: n('we_program_type_course') },
+  ]
+  return { cols, total: cols.reduce((s, c) => s + c.n, 0) }
+})
+
+const lineSummary = computed(() => {
+  const m = new Map()
+  monthItems.value.forEach(e => {
+    const l = lineLabel(e)
+    m.set(l, (m.get(l) || 0) + 1)
+  })
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, n]) => ({ label, n }))
+})
+
+const countBy = (fn, key) => monthItems.value.filter(e => (fn(e) || '').toUpperCase().trim() === key).length
+const typeSummary = computed(() => TYPE_DEFS.map(t => ({ ...t, n: countBy(typeLabel, t.key) })))
+const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(e => e.cat_segment, s.key) })))
+
 // ── Helpers de presentación ──
 function lineLabel(e) { return e.business_line_label || e.program_line_business || '—' }
 function typeLabel(e) { return e.cat_course_category_label || e.program_type || '—' }
@@ -556,7 +649,7 @@ onMounted(fetchAll)
 .board-shell {
   --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --accent: #6b5cf0;
+  --accent: #002060; /* navy corporativo WE */
   --bg: #f3f2f1;
   --surface: #ffffff;
   --surface-2: #faf9f8;
@@ -628,7 +721,7 @@ onMounted(fetchAll)
 
 /* ===== Tabla ===== */
 .crono-tbl { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
-  overflow: auto; max-height: calc(100vh - 168px); }
+  overflow: auto; max-height: calc(100vh - 110px); }
 .crono-tbl::-webkit-scrollbar { width: 10px; height: 10px; }
 .crono-tbl::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--surface); }
 table.crono { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1150px; }
@@ -810,6 +903,25 @@ tr.skrow td { padding: 16px 12px; }
 .empty-state .icon { font-size: 34px; margin-bottom: 10px; opacity: .5; }
 .empty-state .big { font-size: 18px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
 .empty-state .sub { font-size: 12.5px; }
+/* ===== resúmenes del mes ===== */
+.sumgrid { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 10px; align-items: start; }
+.sumgrid + .sumgrid { grid-template-columns: 1fr 1fr; }
+.sumcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 10px 14px; overflow-x: auto; }
+.sum-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--ink-3); margin-bottom: 7px; }
+.sumtbl { border-collapse: collapse; }
+.sumtbl th, .sumtbl td { border: 1px solid var(--border-strong); padding: 3px 12px; text-align: center; white-space: nowrap; }
+.sumtbl th { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--ink-2); background: var(--surface-3); }
+.sumtbl td { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink); }
+.sumtbl .tot { background: var(--surface-3); }
+.sumtbl td.tot { font-weight: 800; }
+.deftbl { border-collapse: collapse; width: 100%; }
+.deftbl th, .deftbl td { border: 1px solid var(--border-strong); padding: 3px 9px; text-align: left; }
+.deftbl th { font-size: 9.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-2); background: var(--surface-3); white-space: nowrap; }
+.deftbl td { font-size: 11px; color: var(--ink-2); }
+.deftbl td.num { font-family: var(--font-mono); font-weight: 700; text-align: center; color: var(--ink); width: 1%; white-space: nowrap; }
+.deftbl td.tag { font-family: var(--font-mono); font-weight: 800; text-align: center; color: var(--ink); width: 1%; white-space: nowrap; }
+.deftbl td.def { line-height: 1.35; }
+
 .crono-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
 .crono-foot .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s4-fg); flex: none; }
 .crono-foot b { color: var(--accent); }

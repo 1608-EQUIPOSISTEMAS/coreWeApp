@@ -269,15 +269,15 @@ export default [
   },
   {
     component: 'CNavGroup',
-    name: 'Marketing',
+    name: 'Reporte',
     to: '/marketing',
-    icon: 'cil-speech',
+    icon: 'cil-chart-pie',
     module: 'MARKETING',
     roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
-        name: 'Overview',
+        name: 'Reporte Completo',
         to: '/marketing/overview',
         submodule: 'OVERVIEW',
         roles: ['ADMIN', 'MARKETING', 'GERENCIA'],

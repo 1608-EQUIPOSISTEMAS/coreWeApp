@@ -1303,7 +1303,7 @@ function goBack () { router.back() }
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: #1A1A1A;
+  background: var(--we-navy, #002060);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -1311,7 +1311,7 @@ function goBack () { router.back() }
   font-family: inherit;
   letter-spacing: -0.01em;
 }
-.ef-btn-primary:hover { background: #333; }
+.ef-btn-primary:hover { background: var(--we-navy-dark, #001540); }
 .ef-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .ef-btn-outline {

@@ -1344,11 +1344,11 @@ const goToLead = id => { if (!id) return; window.open(router.resolve({ name:'Com
 .rc-btn {
   flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
   padding: 8px 14px; font-size: 12px; font-weight: 600;
-  background: var(--e-text); color: #fff;
+  background: var(--we-navy, #002060); color: #fff;
   border: none; border-radius: 7px; cursor: pointer; font-family: inherit;
   transition: background .15s; white-space: nowrap;
 }
-.rc-btn:hover { background: #333; }
+.rc-btn:hover { background: var(--we-navy-dark, #001540); }
 .rc-btn i { font-size: 9px; }
 .rc-btn-urgent { background: #DC2626; }
 .rc-btn-urgent:hover { background: #B91C1C; }

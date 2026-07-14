@@ -1,152 +1,474 @@
 <template>
-  <div class="page-dashboard">
-    <div class="header-flex">
-      <div>
-        <h2 class="page-title">Marketing & Producto</h2>
-        <p class="page-sub">Rendimiento por canal de adquisición y popularidad de programas</p>
+  <div class="reporte-page">
+    <div class="rep-head">
+      <div class="rep-title">
+        <div class="eyebrow">REPORTE PRINCIPAL · INGRESOS</div>
+        <h1>Resumen por líneas de negocio</h1>
+      </div>
+      <div class="grow"></div>
+      <div class="period-nav">
+        <button class="arrow" type="button" v-html="ic.chevL"></button>
+        <span class="lbl">{{ R.period.label }}</span>
+        <button class="arrow" type="button" v-html="ic.chevR"></button>
       </div>
     </div>
 
-    <div class="charts-row">
-      <div class="chart-card flex-2">
-        <div class="chart-header">
-          <span class="chart-title">Leads por Canal (Origen)</span>
-        </div>
-        <div class="chart-body">
-          <Doughnut :data="channelData" :options="pieOptions" />
+    <!-- Banner de totales -->
+    <div class="total-banner">
+      <div class="tb-cell hero">
+        <div class="lbl"><span class="lic" v-html="ic.chart14"></span> INGRESO TOTAL · {{ R.period.label.toUpperCase() }}</div>
+        <div class="big">{{ soles(R.totals.ingresos) }}</div>
+        <div class="sub">
+          <span :class="['delta', R.totals.varMoM >= 0 ? 'up' : 'down']">{{ deltaTxt(R.totals.varMoM) }}</span>
+          vs. {{ R.period.prevLabel }}
         </div>
       </div>
+      <div class="tb-cell">
+        <div class="lbl"><span class="lic" v-html="ic.people"></span> N° DE VENTAS (#)</div>
+        <div class="big sm">{{ num(R.totals.ventas) }}</div>
+        <div class="sub">Transacciones del periodo</div>
+      </div>
+      <div class="tb-cell">
+        <div class="lbl">TICKET PROMEDIO</div>
+        <div class="big sm">{{ soles(R.totals.ticket) }}</div>
+        <div class="sub">Ingreso ÷ ventas</div>
+      </div>
+      <div class="tb-cell">
+        <div class="lbl">CUMPLIMIENTO OBJETIVO</div>
+        <div class="big sm">{{ R.totals.cumplimiento }}%</div>
+        <div class="sub">Meta {{ soles(R.totals.objetivo) }}</div>
+        <div class="mini-track"><i :style="{ width: Math.min(100, R.totals.cumplimiento) + '%' }"></i></div>
+      </div>
+    </div>
 
-      <div class="chart-card flex-3">
-        <div class="chart-header">
-          <span class="chart-title">Ventas vs Leads por Categoría</span>
+    <!-- Tarjetas por línea -->
+    <div class="line-cards">
+      <div v-for="l in R.lines" :key="l.key" class="lc" :style="{ '--lc': l.color }">
+        <div class="lc-head">
+          <span class="lc-ic" v-html="ic[l.key]"></span>
+          <div>
+            <div class="lc-name">{{ l.name }}</div>
+            <div class="lc-desc">{{ l.desc }}</div>
+          </div>
+          <span class="lc-share">{{ Math.round((l.ingresos / R.totals.ingresos) * 100) }}%</span>
         </div>
-        <div class="chart-body">
-          <Bar :data="categoryPerformanceData" :options="barGroupedOptions" />
+        <div class="lc-body">
+          <div class="lc-metric">
+            <div class="k">INGRESOS · S/.</div>
+            <div class="v">{{ solesK(l.ingresos) }}</div>
+          </div>
+          <div class="lc-divider"></div>
+          <div class="lc-metric">
+            <div class="k">VENTAS · #</div>
+            <div class="v">{{ num(l.ventas) }}</div>
+          </div>
+        </div>
+        <div class="lc-tickets">
+          <div class="tk"><span class="tk-n">{{ soles(l.ticket) }}</span><span class="tk-l">ticket prom.</span></div>
+          <div class="tk"><span class="tk-n">{{ l.cumplimiento }}%</span><span class="tk-l">de la meta</span></div>
+        </div>
+        <div class="lc-foot">
+          <span :class="['delta', l.varMoM >= 0 ? 'up' : 'down']">{{ deltaTxt(l.varMoM) }}</span>
+          <span class="obj">vs. {{ R.period.prevLabel }}</span>
         </div>
       </div>
     </div>
 
-    <div class="table-card">
-      <div class="chart-header">
-        <span class="chart-title">🏆 Top Programas / Cursos (Ranking por Ingresos)</span>
+    <div class="rep-cols">
+      <!-- Composición -->
+      <div class="panel">
+        <div class="p-eyebrow">PARTICIPACIÓN POR LÍNEA</div>
+        <div class="p-title">Composición de ingresos</div>
+        <div class="stacked">
+          <i v-for="l in R.lines" :key="l.key"
+             :style="{ width: (l.ingresos / R.totals.ingresos * 100) + '%', background: l.color }"
+             :data-tip="l.name.replace('Línea ', '') + ' — ' + soles(l.ingresos) + ' (' + Math.round(l.ingresos / R.totals.ingresos * 100) + '%)'"></i>
+        </div>
+        <div class="stack-legend">
+          <div v-for="l in R.lines" :key="l.key" class="sl-row">
+            <span class="sw" :style="{ background: l.color }"></span>
+            <span class="nm">{{ l.name }}</span>
+            <span class="amt">{{ soles(l.ingresos) }}</span>
+            <span class="pc">{{ Math.round(l.ingresos / R.totals.ingresos * 100) }}%</span>
+          </div>
+        </div>
       </div>
-      <div class="table-responsive">
-        <table class="table">
+
+      <!-- Tendencia semanal -->
+      <div class="panel">
+        <div class="p-eyebrow">TENDENCIA SEMANAL · {{ R.period.label.toUpperCase() }}</div>
+        <div class="p-title">Ingresos por semana y línea</div>
+        <div class="trend">
+          <div v-for="(wk, wi) in weeks" :key="wk" class="trend-col">
+            <div class="trend-bars">
+              <div v-for="l in R.lines" :key="l.key" class="tbar"
+                   :style="{ height: (l.weekly[wi].ingresos / weeklyMax * 100) + '%', background: l.color }"
+                   :data-tip="l.name.replace('Línea ', '') + ' · ' + wk + ' — ' + soles(l.weekly[wi].ingresos)"></div>
+            </div>
+            <div class="trend-x">{{ wk }}</div>
+          </div>
+        </div>
+        <div class="trend-legend">
+          <span v-for="l in R.lines" :key="l.key">
+            <span class="sw" :style="{ background: l.color }"></span>{{ l.name.replace('Línea ', '') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle -->
+    <div class="detail-panel">
+      <div class="dp-head">
+        <span class="lic" v-html="ic.chart18"></span>
+        <h3>Detalle de ingresos por línea, categoría y rubro</h3>
+        <span class="grow"></span>
+        <span class="meta-line">{{ R.period.label }} · S/. = ingreso · # = ventas</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="rep">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Programa</th>
-              <th class="text-center">Leads Totales</th>
-              <th class="text-center">Inscritos</th>
-              <th class="text-center">Conversión</th>
-              <th class="text-end">Ingresos Totales</th>
+              <th class="l">Línea / Categoría / Rubro</th>
+              <th>S/. Ingreso</th>
+              <th># Ventas</th>
+              <th>Ticket prom.</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(prog, idx) in topPrograms" :key="prog.name">
-              <td class="text-muted fw-600">{{ idx + 1 }}</td>
-              <td class="fw-600 text-dark">{{ prog.name }}</td>
-              <td class="text-center">{{ prog.leads }}</td>
-              <td class="text-center">{{ prog.sales }}</td>
-              <td class="text-center">
-                <div class="progress-wrapper">
-                  <div class="progress-bar" :style="{ width: prog.conversion + '%' }"></div>
-                  <span class="progress-text">{{ prog.conversion }}%</span>
-                </div>
-              </td>
-              <td class="text-end fw-600 text-success">S/ {{ prog.revenue.toLocaleString() }}</td>
+            <template v-for="l in R.lines" :key="l.key">
+              <tr :class="['line-head', collapsed[l.key] ? 'collapsed' : '']" :style="{ '--lc': l.color }">
+                <td class="l">
+                  <div class="lh">
+                    <button class="caret" type="button" @click="toggle(l.key)" v-html="ic.caret"></button>
+                    <span class="swz"></span>
+                    <span class="nm">{{ l.name }}</span>
+                  </div>
+                </td>
+                <td class="val">{{ soles(l.ingresos) }}</td>
+                <td class="val">{{ num(l.ventas) }}</td>
+                <td class="val gan">{{ soles(l.ticket) }}</td>
+              </tr>
+              <template v-if="!collapsed[l.key]">
+                <template v-for="(g, gi) in l.grupos" :key="l.key + '-' + gi">
+                  <tr class="grp-head">
+                    <td>{{ g.name }}</td>
+                    <td class="gv">{{ soles(g.ingresos) }}</td>
+                    <td class="gv">{{ num(g.ventas) }}</td>
+                    <td class="gv">{{ soles(g.ticket) }}</td>
+                  </tr>
+                  <tr v-for="(it, ii) in g.items" :key="l.key + '-' + gi + '-' + ii" class="item">
+                    <td class="l">{{ it.name }}</td>
+                    <td>{{ soles(it.ingresos) }}</td>
+                    <td>{{ num(it.ventas) }}</td>
+                    <td>{{ soles(it.ticket) }}</td>
+                  </tr>
+                </template>
+              </template>
+            </template>
+            <tr class="total-row">
+              <td class="l">TOTAL GENERAL</td>
+              <td>{{ soles(R.totals.ingresos) }}</td>
+              <td>{{ num(R.totals.ventas) }}</td>
+              <td>{{ soles(R.totals.ticket) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <div class="rep-foot">
+      S/. = ingreso del rubro · # = número de ventas · Ticket promedio = ingreso ÷ ventas · Datos de ejemplo, reemplazables con el reporte real.
+    </div>
   </div>
 </template>
 
 <script setup>
-import {
-  Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale
-} from 'chart.js'
-import { Doughnut, Bar } from 'vue-chartjs'
+import { reactive } from 'vue'
 
-ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+/* ===== Datos de ejemplo (mismos del diseño Claude Design · Reporte.html) ===== */
+const period = { mes: 'Junio', year: '2026', label: 'Junio 2026', prevLabel: 'Mayo 2026' }
 
-// --- MOCK DATA ---
-const topPrograms = [
-  { name: 'Diplomado en Gestión Pública', leads: 450, sales: 45, conversion: 10, revenue: 56000 },
-  { name: 'Curso Especializado Excel',    leads: 800, sales: 120, conversion: 15, revenue: 24000 },
-  { name: 'PEE Finanzas Corporativas',    leads: 150, sales: 10,  conversion: 6.6, revenue: 18500 },
-  { name: 'Taller Habilidades Blandas',   leads: 200, sales: 15,  conversion: 7.5, revenue: 4500 },
-  { name: 'Membresía Anual 2025',         leads: 90,  sales: 5,   conversion: 5.5, revenue: 2500 },
+/* Paleta anclada al navy WE #002060, validada (contraste + daltonismo) */
+const LINES = {
+  b2c:  { key: 'b2c',  name: 'Línea B2C',         desc: 'En Vivo · Online · Membresías', color: '#2a52a0' },
+  b2b:  { key: 'b2b',  name: 'Línea B2B',         desc: 'Categorías propias · Convenios', color: '#0e9cd6' },
+  fund: { key: 'fund', name: 'Línea Fundación',   desc: 'Fundación WE',                   color: '#15a361' },
+  adic: { key: 'adic', name: 'Línea Adicionales', desc: 'Otros ingresos',                 color: '#d97706' },
+}
+
+const mk = (name, ingresos, costo, ventas) =>
+  ({ name, ingresos, costo, ventas, ganancia: ingresos - costo, ticket: Math.round(ingresos / ventas) })
+
+const lines = [
+  {
+    ...LINES.b2c,
+    objetivo: 445000, prev: 402300,
+    grupos: [
+      { name: 'En Vivo', items: [
+        mk('Cursos', 128400, 61600, 428), mk('Especializaciones', 74200, 35600, 106),
+        mk('PEE', 31500, 15100, 45), mk('Diplomados', 22800, 11900, 19),
+        mk('Programas en Vivo', 14600, 7200, 12), mk('Ingresos extras', 4300, 900, 34),
+      ]},
+      { name: 'Online', items: [
+        mk('Cursos', 46200, 18500, 308), mk('Especializaciones', 21800, 8700, 62),
+        mk('Membresía Plus', 15400, 4600, 154), mk('Cuotas Membresía Plus', 8200, 2400, 164),
+        mk('Ingresos extras', 2900, 600, 21),
+      ]},
+      { name: 'Membresías', items: [
+        mk('Membresía Black', 28600, 8600, 52), mk('Membresía Gold', 21400, 6400, 71),
+        mk('Cuota Memb. Black', 11200, 3100, 56), mk('Cuota Memb. Gold', 8600, 2400, 86),
+      ]},
+    ],
+  },
+  {
+    ...LINES.b2b,
+    objetivo: 175000, prev: 158900,
+    grupos: [
+      { name: 'Categorías Propias', items: [
+        mk('In House (talleres, cursos, diplo)', 68400, 27400, 24),
+        mk('Corporativo (financiado empresas)', 52600, 20800, 11),
+        mk('Consultoría', 21800, 8100, 6), mk('Ingresos Extras', 3200, 700, 5),
+      ]},
+      { name: 'Relacionadas a otras unidades', items: [
+        mk('Convenio · Online', 12400, 4900, 38), mk('Convenio · En Vivo', 9800, 3800, 22),
+        mk('Convenio · Membresía', 5600, 1700, 14), mk('Convenio · Eventos Fundación', 4200, 1400, 8),
+        mk('Auspicio · Fundación', 5100, 1500, 4), mk('Ingresos Extras', 2100, 400, 6),
+      ]},
+    ],
+  },
+  {
+    ...LINES.fund,
+    objetivo: 45000, prev: 38700,
+    grupos: [
+      { name: 'Fundación WE', items: [
+        mk('Tickets Eventos', 22600, 14300, 452), mk('Auspicio', 11800, 3200, 9),
+        mk('Donación', 6400, 400, 63), mk('Ingresos Extras', 2100, 500, 12),
+      ]},
+    ],
+  },
+  {
+    ...LINES.adic,
+    objetivo: 20000, prev: 19400,
+    grupos: [
+      { name: 'Otros Ingresos', items: [
+        mk('Pronto pago', 9800, 700, 140), mk('Alquiler de espacios', 8600, 2100, 17),
+        mk('Certificaciones', 3200, 900, 64), mk('Ingresos varios', 2100, 400, 28),
+      ]},
+    ],
+  },
 ]
 
-// --- CHART 1: CANALES ---
-const channelData = {
-  labels: ['Facebook Ads', 'TikTok (Orgánico)', 'Google Search', 'Referidos', 'Base de Datos'],
-  datasets: [{
-    data: [40, 25, 15, 10, 10],
-    backgroundColor: ['#1877F2', '#000000', '#EA4335', '#34A853', '#FBBC05'],
-    borderWidth: 0
-  }]
-}
-const pieOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { position: 'right' } }
-}
+// Agregados por línea
+lines.forEach((l) => {
+  let ing = 0, vts = 0
+  l.grupos.forEach((g) => {
+    g.ingresos = g.items.reduce((a, i) => a + i.ingresos, 0)
+    g.ventas = g.items.reduce((a, i) => a + i.ventas, 0)
+    g.ticket = Math.round(g.ingresos / g.ventas)
+    ing += g.ingresos; vts += g.ventas
+  })
+  l.ingresos = ing; l.ventas = vts
+  l.ticket = Math.round(ing / vts)
+  l.cumplimiento = Math.round((l.ingresos / l.objetivo) * 100)
+  l.varMoM = Math.round(((l.ingresos - l.prev) / l.prev) * 100)
+})
 
-// --- CHART 2: CATEGORIA (Leads vs Ventas) ---
-const categoryPerformanceData = {
-  labels: ['Diplomados', 'Cursos', 'PEE', 'Talleres'],
-  datasets: [
-    {
-      label: 'Leads Generados',
-      data: [800, 1200, 300, 400],
-      backgroundColor: '#cbd5e1',
-      borderRadius: 4
-    },
-    {
-      label: 'Ventas Cerradas',
-      data: [80, 150, 20, 35],
-      backgroundColor: '#3b82f6',
-      borderRadius: 4
-    }
-  ]
+// Serie semanal (S1-S4) para la tendencia
+const weeklySplit = [0.22, 0.26, 0.24, 0.28]
+lines.forEach((l) => {
+  l.weekly = weeklySplit.map((w, i) => ({ week: 'S' + (i + 1), ingresos: Math.round(l.ingresos * w) }))
+})
+
+const totals = {
+  ingresos: lines.reduce((a, l) => a + l.ingresos, 0),
+  ventas: lines.reduce((a, l) => a + l.ventas, 0),
+  objetivo: lines.reduce((a, l) => a + l.objetivo, 0),
+  prev: lines.reduce((a, l) => a + l.prev, 0),
 }
-const barGroupedOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { position: 'top' } },
-  scales: { y: { beginAtZero: true } }
+totals.ticket = Math.round(totals.ingresos / totals.ventas)
+totals.cumplimiento = Math.round((totals.ingresos / totals.objetivo) * 100)
+totals.varMoM = Math.round(((totals.ingresos - totals.prev) / totals.prev) * 100)
+
+const R = { period, lines, totals }
+
+const weeks = ['S1', 'S2', 'S3', 'S4']
+const weeklyMax = Math.max(...lines.flatMap((l) => l.weekly.map((w) => w.ingresos)))
+
+/* ===== Helpers de formato ===== */
+const soles = (n) => 'S/ ' + n.toLocaleString('es-PE')
+const solesK = (n) => 'S/ ' + (n / 1000).toLocaleString('es-PE', { maximumFractionDigits: 1 }) + 'K'
+const num = (n) => n.toLocaleString('es-PE')
+const deltaTxt = (v) => (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v) + '%'
+
+/* ===== Colapso de líneas en la tabla ===== */
+const collapsed = reactive({})
+const toggle = (k) => { collapsed[k] = !collapsed[k] }
+
+/* ===== Íconos inline (SVG con currentColor) ===== */
+const svg = (inner, size) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
+const CHART = '<path d="M18 20V10M12 20V4M6 20v-6"/>'
+const ic = {
+  chart14: svg(CHART, 14),
+  chart18: svg(CHART, 18),
+  people: svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', 13),
+  chevL: svg('<polyline points="15 18 9 12 15 6"/>', 18),
+  chevR: svg('<polyline points="9 18 15 12 9 6"/>', 18),
+  caret: svg('<polyline points="6 9 12 15 18 9"/>', 15),
+  b2c: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', 20),
+  b2b: svg('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>', 20),
+  fund: svg('<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>', 20),
+  adic: svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>', 20),
 }
 </script>
 
 <style scoped>
-/* Reutilizar estilos base */
-.page-dashboard { padding: 1.5rem; background-color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; gap: 1.5rem; color: #1e293b; font-family: 'Inter', sans-serif;}
-.header-flex { display: flex; justify-content: space-between; align-items: flex-end; }
-.page-title { font-size: 1.5rem; font-weight: 700; margin: 0; color: #0f172a; }
-.page-sub { font-size: 0.875rem; color: #64748b; margin: 0; }
-.charts-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-.chart-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem; min-height: 320px; display: flex; flex-direction: column; }
-.flex-2 { flex: 2; min-width: 300px; }
-.flex-3 { flex: 3; min-width: 400px; }
-.chart-header { border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
-.chart-title { font-weight: 600; color: #334155; font-size: 0.95rem; }
-.chart-body { flex: 1; position: relative; }
-.table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.table th { text-align: left; padding: 0.75rem 1rem; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
-.table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
-.fw-600 { font-weight: 600; }
-.text-center { text-align: center; }
-.text-end { text-align: right; }
-.text-success { color: #166534; }
-.text-muted { color: #94a3b8; }
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap');
 
-/* Custom Progress Bar para Conversion */
-.progress-wrapper { display: flex; align-items: center; gap: 8px; }
-.progress-bar { height: 6px; background-color: #3b82f6; border-radius: 4px; min-width: 2px; }
-.progress-text { font-size: 0.7rem; color: #64748b; min-width: 35px; }
+/* Tokens del diseño (tema claro) — mismos del cronograma-vista */
+.reporte-page {
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --accent: #002060; /* navy corporativo WE */
+  --surface: #ffffff;
+  --surface-2: #faf9f8;
+  --surface-3: #f1efed;
+  --border: #e8e6e3;
+  --border-strong: #d8d4d0;
+  --ink: #1b1917;
+  --ink-2: #57534e;
+  --ink-3: #8d877f;
+  --shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 1px 1px rgba(28, 25, 23, 0.03);
+  --track: #ece9e6;
+  --s1-bg: #fde8e6; --s1-fg: #c0362c;
+  --s4-bg: #d9f3df; --s4-fg: #1d7a40;
+  --r-lg: 16px;
+  --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* sin fondo propio: hereda el del layout del ERP para no duplicar fondos */
+  padding: 2px 2px 1rem;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.reporte-page button { cursor: pointer; font-family: inherit; }
+.grow { flex: 1; }
+.lic { display: inline-flex; align-items: center; }
+
+/* ===== Cabecera ===== */
+.rep-head { display: flex; align-items: center; gap: 18px; margin: 4px 2px 22px; flex-wrap: wrap; }
+.rep-title .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.13em; color: var(--ink-3); }
+.rep-title h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; margin: 3px 0 0; color: var(--ink); }
+.period-nav { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; box-shadow: var(--shadow); padding: 5px; }
+.period-nav .arrow { width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent; color: var(--ink-2); display: grid; place-items: center; transition: 0.15s; }
+.period-nav .arrow:hover { background: var(--surface-3); color: var(--ink); }
+.period-nav .lbl { padding: 0 16px; font-size: 15px; font-weight: 800; }
+
+/* ===== Banner de totales ===== */
+.total-banner { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 18px; }
+@media (max-width: 1100px) { .total-banner { grid-template-columns: 1fr 1fr; } }
+.tb-cell { padding: 22px 26px; border-right: 1px solid var(--border); }
+.tb-cell:last-child { border-right: none; }
+.tb-cell.hero { background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 12%, var(--surface)), var(--surface)); }
+.tb-cell .lbl { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-3); display: flex; align-items: center; gap: 7px; }
+.tb-cell .big { font-size: 34px; font-weight: 800; letter-spacing: -0.025em; margin-top: 8px; }
+.tb-cell .big.sm { font-size: 27px; }
+.tb-cell .sub { font-size: 12.5px; color: var(--ink-2); margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+.delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 800; font-family: var(--font-mono); border-radius: 20px; padding: 2px 8px; }
+.delta.up { background: var(--s4-bg); color: var(--s4-fg); }
+.delta.down { background: var(--s1-bg); color: var(--s1-fg); }
+.mini-track { height: 6px; border-radius: 20px; background: var(--track); overflow: hidden; margin-top: 10px; }
+.mini-track > i { display: block; height: 100%; border-radius: 20px; background: var(--accent); }
+
+/* ===== Tarjetas por línea ===== */
+.line-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+@media (max-width: 1200px) { .line-cards { grid-template-columns: repeat(2, 1fr); } }
+.lc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 20px 22px; position: relative; overflow: hidden; }
+.lc::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--lc); }
+.lc .lc-head { display: flex; align-items: flex-start; gap: 12px; }
+.lc .lc-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; flex: none; background: color-mix(in oklab, var(--lc) 15%, transparent); color: var(--lc); }
+.lc .lc-name { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.lc .lc-desc { font-size: 11.5px; color: var(--ink-3); font-weight: 500; margin-top: 2px; }
+.lc .lc-share { margin-left: auto; font-family: var(--font-mono); font-size: 12px; font-weight: 800; color: var(--lc); background: color-mix(in oklab, var(--lc) 12%, transparent); border-radius: 7px; padding: 3px 9px; }
+.lc-body { display: flex; gap: 20px; margin-top: 18px; }
+.lc-metric { flex: 1; }
+.lc-metric .k { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--ink-3); }
+.lc-metric .v { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; margin-top: 4px; }
+.lc-divider { width: 1px; background: var(--border); }
+.lc-tickets { display: flex; gap: 10px; margin-top: 14px; }
+.lc-tickets .tk { flex: 1; display: flex; flex-direction: column; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; }
+.lc-tickets .tk-n { font-family: var(--font-mono); font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.lc-tickets .tk-l { font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.03em; }
+.lc-foot { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.lc-foot .obj { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-left: auto; }
+
+/* ===== Composición + Tendencia ===== */
+.rep-cols { display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px; margin-bottom: 20px; align-items: start; }
+@media (max-width: 1100px) { .rep-cols { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 22px 24px; }
+.panel .p-title { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.panel .p-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink-3); }
+.stacked { display: flex; gap: 2px; height: 26px; margin: 18px 0 14px; }
+.stacked > i { height: 100%; transition: width 0.5s; }
+.stacked > i:first-child { border-radius: 8px 0 0 8px; }
+.stacked > i:last-child { border-radius: 0 8px 8px 0; }
+.stack-legend { display: flex; flex-direction: column; gap: 11px; }
+.sl-row { display: flex; align-items: center; gap: 12px; }
+.sl-row .sw { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.sl-row .nm { font-size: 13.5px; font-weight: 700; flex: 1; }
+.sl-row .amt { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; white-space: nowrap; text-align: right; min-width: 96px; }
+.sl-row .pc { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); font-weight: 600; width: 44px; text-align: right; }
+.trend { display: flex; align-items: flex-end; gap: 20px; height: 190px; padding: 24px 4px 0; }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+.trend-bars { display: flex; gap: 4px; align-items: flex-end; height: 100%; width: 100%; justify-content: center; }
+.tbar { flex: 1; max-width: 16px; border-radius: 5px 5px 0 0; transition: height 0.5s; }
+
+/* Tooltip popup al pasar el mouse (barras de tendencia y composición) */
+.tbar, .stacked > i { position: relative; }
+.tbar:hover, .stacked > i:hover { filter: brightness(1.12); z-index: 3; }
+.tbar::after, .stacked > i::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(3px); background: var(--ink); color: #fff;
+  font-size: 11.5px; font-weight: 700; font-family: var(--font-sans); white-space: nowrap;
+  padding: 6px 11px; border-radius: 8px; box-shadow: 0 8px 24px -8px rgba(28, 25, 23, 0.4);
+  opacity: 0; pointer-events: none; transition: opacity 0.13s, transform 0.13s;
+}
+.tbar::before, .stacked > i::before {
+  content: ''; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%) translateY(3px);
+  border: 5px solid transparent; border-top-color: var(--ink); border-bottom: none;
+  opacity: 0; pointer-events: none; transition: opacity 0.13s, transform 0.13s;
+}
+.tbar:hover::after, .stacked > i:hover::after,
+.tbar:hover::before, .stacked > i:hover::before { opacity: 1; transform: translateX(-50%) translateY(0); }
+.trend-x { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.trend-legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.trend-legend .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; }
+
+/* ===== Tabla de detalle ===== */
+.detail-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
+.detail-panel .dp-head { display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.detail-panel .dp-head h3 { font-size: 17px; font-weight: 800; margin: 0; }
+.meta-line { font-size: 12.5px; color: var(--ink-3); }
+table.rep { border-collapse: separate; border-spacing: 0; width: 100%; }
+table.rep th { text-align: right; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--ink-3); padding: 11px 22px; background: var(--surface-3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.rep th.l { text-align: left; }
+table.rep td { padding: 12px 22px; border-bottom: 1px solid var(--border); text-align: right; font-family: var(--font-mono); font-size: 13.5px; font-weight: 600; }
+table.rep td.l { text-align: left; font-family: inherit; }
+tr.line-head td { background: color-mix(in oklab, var(--lc) 7%, var(--surface)); border-bottom: 1px solid var(--border); padding: 13px 22px; }
+tr.line-head .lh { display: flex; align-items: center; gap: 11px; }
+tr.line-head .caret { width: 22px; height: 22px; border: none; background: transparent; color: var(--ink-3); display: grid; place-items: center; border-radius: 6px; }
+tr.line-head .caret:hover { background: var(--surface-3); color: var(--ink); }
+tr.line-head .caret :deep(svg) { transition: transform 0.18s; }
+tr.line-head.collapsed .caret :deep(svg) { transform: rotate(-90deg); }
+tr.line-head .swz { width: 10px; height: 20px; border-radius: 4px; background: var(--lc); }
+tr.line-head .nm { font-size: 15px; font-weight: 800; }
+tr.line-head td.val { font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: var(--ink); }
+tr.line-head td.gan { color: var(--lc); }
+tr.grp-head td { background: var(--surface-2); font-size: 11px; letter-spacing: 0.06em; font-weight: 700; color: var(--ink-3); text-transform: uppercase; padding: 8px 22px 8px 44px; text-align: left; }
+tr.grp-head td.gv { text-align: right; font-family: var(--font-mono); color: var(--ink-2); }
+tr.item td.l { padding-left: 44px; color: var(--ink-2); font-weight: 500; }
+tr.item:hover td { background: var(--surface-2); }
+tr.total-row td { background: var(--surface-3); font-weight: 800; font-size: 14px; padding: 15px 22px; border-top: 2px solid var(--border-strong); }
+tr.total-row td.l { font-family: inherit; }
+
+.rep-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--ink-3); }
 </style>

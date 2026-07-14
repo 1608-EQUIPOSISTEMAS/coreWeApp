@@ -11,6 +11,12 @@ html, body {
   font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif !important;
 }
 
+/* Color de marca WE (logo Educación Ejecutiva) */
+:root {
+  --we-navy: #002060;
+  --we-navy-dark: #001540;
+}
+
 body {
   background-color: var(--cui-tertiary-bg);
 }
@@ -60,10 +66,10 @@ body {
   transition: all 0.15s ease;
 }
 .swal-btn-primary {
-  background: #6366F1 !important;
+  background: var(--we-navy, #002060) !important;
   color: #FFFFFF !important;
 }
-.swal-btn-primary:hover { background: #4F46E5 !important; }
+.swal-btn-primary:hover { background: var(--we-navy-dark, #001540) !important; }
 
 .swal-btn-danger {
   background: #DC2626 !important;
@@ -250,7 +256,7 @@ textarea.form-control {
   border-radius: 50%; position: absolute; top: 3px; left: 3px;
   transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
-.exec-switch input:checked + span { background: var(--teal-600, #12274e); }
+.exec-switch input:checked + span { background: var(--we-navy, #002060); }
 .exec-switch input:checked + span::after { left: 17px; }
 
 /* Modificador para Switch Grande */
@@ -270,8 +276,8 @@ textarea.form-control {
 .btn-exec-ghost { background: transparent; color: var(--slate-400, #94a3b8); } /* Color un poco más oscuro para mejor contraste */
 .btn-exec-ghost:hover { background: rgba(0,0,0,0.04); color: var(--text-primary, #0f172a); } /* Ajustado hover para ghost buttons sobre fondos claros */
 
-.btn-exec-primary { background: var(--teal-600, #12274e); color: var(--white, #fff); }
-.btn-exec-primary:hover:not(:disabled) { background: #0c1a35; } /* Oscurece el teal-600 */
+.btn-exec-primary { background: var(--we-navy, #002060); color: var(--white, #fff); }
+.btn-exec-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 .btn-exec-primary:disabled { background: var(--slate-300, #cbd5e1); color: var(--slate-500); cursor: not-allowed; opacity: 1; border-color: transparent;}
 
 .btn-exec-outline { background: transparent; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
@@ -370,3 +376,72 @@ textarea.form-control {
 .input-group > .btn {
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════
+   MASTHEAD CLARO (unificación de marca, 07/2026)
+   22 vistas definían su .exec-masthead en navy oscuro (scoped).
+   Este bloque los fuerza a claro para que todos los módulos
+   luzcan como FICO/Inscripciones. Los !important son necesarios
+   para ganarle a los estilos scoped de cada vista.
+═══════════════════════════════════════════════ */
+/* Sin lienzo propio: las vistas exec pintaban su propio fondo (#f8fafc) dentro del
+   layout gris de CoreUI y se veían como una hoja flotante. FICO no pinta fondo y se
+   funde con la página — se iguala eso. */
+.exec-shell { background: transparent !important; }
+
+/* Sin banda propia: el header no pinta fondo y deja de ser sticky — el título
+   simplemente hace scroll con la página, como FICO/Inscripciones. */
+.exec-masthead {
+  background: transparent !important;
+  position: static !important;
+  color: var(--text-primary, #0f172a) !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+.exec-masthead .masthead-inner { border-bottom: none !important; padding-top: 20px !important; padding-bottom: 8px !important; }
+.exec-masthead .brand-rule { display: none !important; }
+.exec-masthead .brand-title {
+  color: var(--text-primary, #0f172a) !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+.exec-masthead .brand-eyebrow,
+.exec-masthead .filter-label,
+.exec-masthead .inline-kpi-label { color: #64748b !important; }
+.exec-masthead .inline-kpi-value { color: var(--text-primary, #0f172a) !important; }
+.exec-masthead .inline-kpi-value.accent { color: var(--we-navy, #002060) !important; }
+.exec-masthead .filter-sep { background: var(--border, #e2e8f0) !important; }
+.exec-masthead .filter-nav-btn {
+  background: #fff !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  color: var(--text-secondary, #475569) !important;
+}
+.exec-masthead .filter-nav-btn:hover { background: var(--slate-100, #f1f5f9) !important; color: var(--text-primary, #0f172a) !important; }
+.exec-masthead .exec-select {
+  color: var(--text-primary, #0f172a) !important;
+  border-bottom-color: var(--slate-300, #cbd5e1) !important;
+  background: transparent !important;
+}
+.exec-masthead .btn-exec-ghost {
+  background: #fff !important;
+  color: var(--text-secondary, #475569) !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+}
+.exec-masthead .btn-exec-ghost:hover:not(:disabled) {
+  background: var(--slate-50, #f8fafc) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+/* Estado "filtro activo" (antes teal sobre oscuro) → navy suave */
+.exec-masthead .btn-exec-teal {
+  background: rgba(0, 32, 96, 0.08) !important;
+  color: var(--we-navy, #002060) !important;
+  border: 1px solid rgba(0, 32, 96, 0.25) !important;
+}
+.exec-masthead .btn-exec-teal:hover { background: rgba(0, 32, 96, 0.14) !important; }
+.exec-masthead .btn-exec-primary {
+  background: var(--we-navy, #002060) !important;
+  color: #fff !important;
+  border-color: var(--we-navy, #002060) !important;
+}
+.exec-masthead .btn-exec-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540) !important; }
