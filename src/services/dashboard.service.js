@@ -2,6 +2,12 @@
 import api from './api';
 
 export default class DashboardService {
+  // Resumen ejecutivo del sistema (solo ADMIN/GERENCIA)
+  async adminSummary() {
+    const response = (await api.post('/dashboard/admin-summary', {})).data;
+    return response.data;
+  }
+
   /**
    * Obtiene el listado de métricas del dashboard basado en filtros de tiempo.
    * @param {Object} payload - { year, month, period }

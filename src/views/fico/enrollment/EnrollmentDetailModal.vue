@@ -1527,7 +1527,7 @@ watch(() => props.enrollment, async (e) => {
   --e-success: #059669;
   --e-warning: #D97706;
   --e-danger: #DC2626;
-  --e-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --e-font: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --e-mono: 'JetBrains Mono', 'SF Mono', monospace;
 }
 

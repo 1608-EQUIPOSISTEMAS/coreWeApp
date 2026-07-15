@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
   --e-accent: #10B981;
   --e-accent-soft: #ECFDF4;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
   max-width: 1600px;
   margin: 0 auto;
@@ -409,10 +409,10 @@ onBeforeUnmount(() => {
   margin-top: 2px;
 }
 .ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
-.ep-view-toggle { display: flex; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
+.ep-view-toggle { display: flex; align-items: center; height: 38px; box-sizing: border-box; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
 .ep-toggle-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; font-size: 12px; font-weight: 500;
+  height: 100%; padding: 0 14px; font-size: 12px; font-weight: 500;
   color: var(--e-text-secondary); background: transparent;
   border: none; border-radius: 6px; cursor: pointer;
   transition: all .2s ease; font-family: inherit;
@@ -424,7 +424,7 @@ onBeforeUnmount(() => {
 .ep-toggle-btn:not(.is-active):hover { color: var(--e-text); }
 .ep-btn-new {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  height: 38px; box-sizing: border-box; padding: 0 18px; font-size: 13px; font-weight: 600;
   color: #fff; background: var(--we-navy, #002060);
   border: none; border-radius: 8px; cursor: pointer;
   transition: background .2s ease; font-family: inherit;
@@ -435,7 +435,7 @@ onBeforeUnmount(() => {
 
 .ep-btn-sheet {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  height: 38px; box-sizing: border-box; padding: 0 16px; font-size: 13px; font-weight: 600;
   color: var(--e-text); background: #fff;
   border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
   transition: all .2s ease; font-family: inherit;

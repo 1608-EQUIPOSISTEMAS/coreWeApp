@@ -538,7 +538,7 @@ const statusPillClass = (s) =>
   --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--ink);
   font-size: 14px;
   max-width: 1600px;

@@ -327,7 +327,7 @@ function $hasRole(roles) {
   position: sticky;
   top: 0;
   z-index: 30;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -428,7 +428,7 @@ function $hasRole(roles) {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #34D399 0%, #10B981 45%, #047857 100%);
+  background: linear-gradient(140deg, #2a52a0 0%, var(--we-navy, #002060) 55%, var(--we-navy-dark, #001540) 100%);
   display: grid;
   place-items: center;
   color: #FFFFFF;
@@ -436,7 +436,7 @@ function $hasRole(roles) {
   font-size: 12px;
   letter-spacing: 0.02em;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px -2px rgba(16,185,129,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 2px 8px -2px rgba(0,32,96,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 .user-pill__info {
   display: flex;

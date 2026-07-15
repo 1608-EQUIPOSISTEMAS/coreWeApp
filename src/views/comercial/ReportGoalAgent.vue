@@ -147,7 +147,7 @@
                 <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="10" stroke-linecap="round"/>
                 <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="10" stroke-linecap="round"
                   :stroke-dasharray="`${gaugeProgress * 1.57} 157`" stroke-dashoffset="0"/>
-                <text x="60" y="60" text-anchor="middle" fill="white" font-size="18" font-weight="700" font-family="'Inter', sans-serif">{{ pctMetaUnidades }}%</text>
+                <text x="60" y="60" text-anchor="middle" fill="white" font-size="18" font-weight="700" font-family="'Hanken Grotesk', sans-serif">{{ pctMetaUnidades }}%</text>
               </svg>
               <div class="rg-gauge-label" :class="{ 'is-weekly': filters.period !== 'ALL' }">
                 {{ filters.period !== 'ALL' ? 'META SEMANAL' : 'META UNIDADES' }}
@@ -1372,7 +1372,7 @@ const myLeadsStackedChartData = computed(() => {
   --e-accent: #10B981;
   --e-accent-soft: #ECFDF4;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
   max-width: 1600px;
   margin: 0 auto;

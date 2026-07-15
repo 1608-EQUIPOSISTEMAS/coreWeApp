@@ -124,7 +124,7 @@ const barGroupedOptions = {
 
 <style scoped>
 /* Reutilizar estilos base */
-.page-dashboard { padding: 1.5rem; background-color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; gap: 1.5rem; color: #1e293b; font-family: 'Inter', sans-serif;}
+.page-dashboard { padding: 1.5rem; background-color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; gap: 1.5rem; color: #1e293b; font-family: 'Hanken Grotesk', sans-serif;}
 .header-flex { display: flex; justify-content: space-between; align-items: flex-end; }
 .page-title { font-size: 1.5rem; font-weight: 700; margin: 0; color: #0f172a; }
 .page-sub { font-size: 0.875rem; color: #64748b; margin: 0; }

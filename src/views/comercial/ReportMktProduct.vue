@@ -608,7 +608,7 @@ const doughnutOptions = {
   --border:         #e2e8f0;
   --gold-400:       #fbbf24;
 
-  font-family: 'IBM Plex Sans', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', 'DM Sans', system-ui, sans-serif;
   background: var(--slate-50);
   min-height: 100vh;
   display: flex;

@@ -4221,7 +4221,7 @@ function toggleReschedule(contacto) {
 .ef-page {
   background: #FFFFFF;
   padding: 32px 32px 24px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1A1A1A;
   min-height: 100%;
   max-width: 1200px;

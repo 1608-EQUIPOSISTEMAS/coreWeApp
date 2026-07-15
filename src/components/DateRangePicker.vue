@@ -441,7 +441,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 .drp-root {
   position: relative;
   display: inline-block;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --drp-line: #E2E2DC;
   --drp-line-soft: #EEEEE8;
   --drp-ink: #14140F;

@@ -315,7 +315,7 @@ onMounted(() => {
 
 <style scoped>
 .cob-page {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #14140F;
   max-width: 1600px;
   margin: 0 auto;

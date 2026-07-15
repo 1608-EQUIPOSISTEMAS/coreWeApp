@@ -35,6 +35,14 @@
 
     <!-- ════ KPIs ════ -->
     <div class="kpis">
+      <div class="kpi">
+        <div class="lbl"><span class="dot" style="background:#6b5cf0"></span>Ventas vs Objetivo</div>
+        <div class="val">
+          <b>{{ kpiVsObjetivo.ventas }}</b>
+          <span class="vs">/ {{ kpiVsObjetivo.objetivo }}</span>
+          <span class="kpct" :style="{ background: kpiVsObjetivo.color + '1A', color: kpiVsObjetivo.color }">{{ kpiVsObjetivo.pct }}%</span>
+        </div>
+      </div>
       <div v-for="k in kpis" :key="k.label" class="kpi">
         <div class="lbl"><span class="dot" :style="{ background: k.color }"></span>{{ k.label }}</div>
         <div class="val"><b>{{ k.value }}</b><span>{{ k.unit }}</span></div>
@@ -135,7 +143,7 @@
                   <td>
                     <div class="segui">
                       <div class="item"><span class="g" :class="it.e.expedient ? 'ok' : 'no'"></span>Ficha</div>
-                      <div class="item"><span class="g" :class="it.e.confirmation ? 'ok' : 'no'"></span>Confirmado</div>
+                      <div class="item"><span class="g" :class="it.e.confirmation ? 'ok' : 'no'"></span>Docente</div>
                     </div>
                   </td>
 
@@ -146,8 +154,9 @@
                       <span class="acol" :class="{ zero: !it.e.cnt_segui }">{{ it.e.cnt_segui ?? 0 }}</span>
                       <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
                       <span class="acol" :class="{ zero: !it.e.cnt_b2b }">{{ it.e.cnt_b2b ?? 0 }}</span>
-                      <span class="acol" :class="{ zero: !it.e.cnt_becas }">{{ it.e.cnt_becas ?? 0 }}</span>
-                      <span class="acol total" :style="{ color: aulaColor(it.e.cnt_aula ?? 0) }">{{ it.e.cnt_aula ?? 0 }}</span>
+                      <span class="acol bec">{{ it.e.cnt_becas ?? 0 }}</span>
+                      <span class="acol total" :class="{ empty: !(it.e.cnt_aula ?? 0) }"
+                        :style="(it.e.cnt_aula ?? 0) ? { background: aulaColor(it.e.cnt_aula) } : null">{{ it.e.cnt_aula ?? 0 }}</span>
                     </div>
                   </td>
 
@@ -268,7 +277,7 @@
             <div v-for="c in AULA_CHANNELS" :key="c.tag" class="am-row">
               <span class="am-tag" :style="{ background: c.color + '1A', color: c.color }">{{ c.tag }}</span>
               <div class="am-txt">
-                <div class="am-t">{{ c.title }} <b>{{ aulaModal.e[c.key] ?? 0 }}</b></div>
+                <div class="am-t">{{ c.title }} <b>{{ amChannelValue(c) }}</b></div>
                 <div class="am-d">{{ c.desc }}</div>
               </div>
             </div>
@@ -277,7 +286,7 @@
           <div class="am-foot">
             <div class="am-formula">
               AULA = VEN + SEG + MEM + B2B →
-              <b :style="{ color: aulaColor(aulaModal.e.cnt_aula ?? 0) }">{{ aulaModal.e.cnt_aula ?? 0 }}</b>
+              <b :style="{ color: aulaColor(amFromList ? amAula : (aulaModal.e.cnt_aula ?? 0)) }">{{ amFromList ? amAula : (aulaModal.e.cnt_aula ?? 0) }}</b>
               <span>(las becas ocupan asiento pero no suman)</span>
             </div>
             <div v-if="aulaModal.isProgram" class="am-note">
@@ -367,14 +376,17 @@ function openAulaInfo(it) {
   aulaModal.value = it
   amTab.value = 'info'
   amStudents.value = null
+  loadStudents(it.e.edition_num_id)
 }
 
-async function showStudentsTab() {
-  amTab.value = 'alumnos'
-  if (amStudents.value || !aulaModal.value) return
+function showStudentsTab() { amTab.value = 'alumnos' }
+
+// Se carga al abrir el modal: Información cuenta sobre la MISMA lista real que
+// muestra Alumnos, para que ambas pestañas y la fórmula del AULA cuadren.
+async function loadStudents(editionId) {
   amLoading.value = true
   try {
-    const rows = await editionService.classroomStudentsList({ edition_id: aulaModal.value.e.edition_num_id })
+    const rows = await editionService.classroomStudentsList({ edition_id: editionId })
     const order = { VEN: 0, SEG: 1, MEM: 2, B2B: 3, BEC: 4 }
     amStudents.value = (rows || [])
       .map(s => ({ ...s, ch: studentChannel(s) }))
@@ -386,6 +398,22 @@ async function showStudentsTab() {
   } finally {
     amLoading.value = false
   }
+}
+
+// Conteo por canal desde la lista real. Si el aula está vacía (programas padre:
+// sus alumnos se sientan en los cursos hijos) se cae a los contadores de la fila,
+// que ahí describen las ventas del programa.
+const amFromList = computed(() => Array.isArray(amStudents.value) && amStudents.value.length > 0)
+const amCounts = computed(() => {
+  const c = { VEN: 0, SEG: 0, MEM: 0, B2B: 0, BEC: 0 }
+  ;(amStudents.value || []).forEach(s => { c[s.ch.tag]++ })
+  return c
+})
+const amAula = computed(() => amCounts.value.VEN + amCounts.value.SEG + amCounts.value.MEM + amCounts.value.B2B)
+function amChannelValue(c) {
+  if (amFromList.value) return amCounts.value[c.tag]
+  if (amStudents.value) return aulaModal.value?.e[c.key] ?? 0
+  return '…'
 }
 
 // Clasificación por canal del alumno: mismo criterio que los contadores del
@@ -556,17 +584,24 @@ const displayWeeks = computed(() => filteredWeeks.value
     }
   }))
 
-// ── KPIs (sobre lo filtrado): objetivo, ventas, total de programas y aula ──
-const kpis = computed(() => {
+// ── KPIs (sobre lo filtrado): ventas vs objetivo (juntos, para compararlos), programas y aula ──
+const kpiSums = computed(() => {
   const all = filteredWeeks.value.flatMap(w => w.items)
   const sum = k => all.reduce((s, e) => s + (e[k] ?? 0), 0)
-  return [
-    { label: 'Objetivo', value: sum('meta_vacantes'), unit: 'vacantes', color: '#6b5cf0' },
-    { label: 'Ventas', value: sum('cnt_ventas'), unit: 'directas', color: '#1b1917' },
-    { label: 'Programas', value: all.length, unit: 'ediciones', color: '#2a6fdb' },
-    { label: 'En aula', value: sum('cnt_aula'), unit: 'inscritos', color: '#d9603b' },
-  ]
+  return { count: all.length, ventas: sum('cnt_ventas'), objetivo: sum('meta_vacantes'), aula: sum('cnt_aula') }
 })
+const kpiVsObjetivo = computed(() => {
+  const { ventas, objetivo } = kpiSums.value
+  const pct = objetivo > 0 ? Math.round((ventas / objetivo) * 100) : 0
+  let color = '#d9603b'
+  if (pct > 100) color = '#1d7a40'
+  else if (pct >= 50) color = '#1b1917'
+  return { ventas, objetivo, pct, color }
+})
+const kpis = computed(() => [
+  { label: 'Programas', value: kpiSums.value.count, unit: 'ediciones', color: '#2a6fdb' },
+  { label: 'En aula', value: kpiSums.value.aula, unit: 'inscritos', color: '#d9603b' },
+])
 
 // ── Resúmenes del mes (sobre TODO el mes, sin filtros; incluye A5 cancelados) ──
 const TYPE_DEFS = [
@@ -710,7 +745,7 @@ onMounted(fetchAll)
 .refresh:hover { background: var(--surface-3); color: var(--ink); }
 
 /* ===== KPIs ===== */
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.kpis { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 8px 14px;
   display: flex; align-items: baseline; gap: 10px; }
 .kpi .lbl { display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; letter-spacing: .07em; color: var(--ink-3); text-transform: uppercase; }
@@ -718,6 +753,8 @@ onMounted(fetchAll)
 .kpi .val { display: flex; align-items: baseline; gap: 6px; margin-left: auto; }
 .kpi .val b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .kpi .val span { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.kpi .val .vs { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-3); }
+.kpi .val .kpct { font-family: var(--font-mono); font-size: 10px; font-weight: 800; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 
 /* ===== Tabla ===== */
 .crono-tbl { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
@@ -738,7 +775,7 @@ table.crono tbody tr.skrow td:not(:last-child) { border-right: 1px solid var(--b
 .th-group .g-title { font-size: 10px; letter-spacing: .1em; color: var(--accent); margin-bottom: 4px; }
 .th-group .g-cols { display: flex; gap: 8px; justify-content: center; }
 .th-group .g-cols span { width: 26px; text-align: center; }
-.th-group .g-cols span.hot { color: var(--ink); }
+.th-group .g-cols span.hot { color: var(--ink); font-weight: 800; width: 32px; }
 th.c-num, td.c-num { text-align: center; }
 
 /* fila banda de semana */
@@ -769,7 +806,7 @@ tr.ed.sinmeta:hover td { background: #e8effb; }
 .cacp { display: flex; flex-direction: column; gap: 1px; }
 .cacp .kv { display: flex; align-items: center; gap: 6px; }
 .cacp .k { font-size: 8.5px; font-weight: 700; color: var(--ink-3); width: 14px; }
-.cacp .v { font-family: var(--font-mono); font-weight: 700; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.cacp .v { font-family: var(--font-mono); font-weight: 400; font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
 /* curso */
 .curso { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
@@ -802,10 +839,15 @@ tr.ed.sinmeta:hover td { background: #e8effb; }
 .g.ok { background: var(--s4-fg); } .g.no { background: var(--ink-3); }
 
 /* aula: el color del total lo pone aulaColor(): <15 naranja · 15–34 negro · 35+ verde */
-.aula-cell { display: flex; gap: 8px; justify-content: center; }
+.aula-cell { display: flex; gap: 8px; justify-content: center; align-items: center; }
 .aula-cell .acol { width: 26px; text-align: center; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .aula-cell .acol.zero { color: var(--ink-3); font-weight: 500; opacity: .6; }
-.aula-cell .acol.total { font-weight: 800; }
+/* becas siempre en gris apagado: no suman al aula, no deben llamar la atención */
+.aula-cell .acol.bec { color: var(--ink-3); font-weight: 500; opacity: .6; }
+/* el total AULA es el punto focal de la fila: píldora sólida con el color del
+   semáforo (el ojo va primero a las formas rellenas de color) */
+.aula-cell .acol.total { font-weight: 800; font-size: 12.5px; color: #fff; border-radius: 7px; padding: 3px 0; width: 32px; flex: none; }
+.aula-cell .acol.total.empty { background: var(--surface-3); color: var(--ink-3); font-weight: 600; }
 
 /* objetivo */
 .obj { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }

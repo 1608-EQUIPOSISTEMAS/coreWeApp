@@ -185,7 +185,7 @@ async function submitBulk () {
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   background: #f8fafc;
   min-height: 100vh;
   display: flex;
@@ -268,7 +268,7 @@ async function submitBulk () {
 .paste-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
 .btn-exec {
-  font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600;
+  font-family: 'Hanken Grotesk', sans-serif; font-size: 12px; font-weight: 600;
   padding: 8px 16px; border-radius: 5px; border: 1px solid transparent;
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
   transition: all 0.15s; letter-spacing: 0.01em;

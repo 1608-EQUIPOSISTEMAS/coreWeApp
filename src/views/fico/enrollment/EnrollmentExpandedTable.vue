@@ -317,7 +317,7 @@ const totalCols = computed(() => {
   width: max-content;
   min-width: 100%;
   border-collapse: collapse;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   font-size: 12px;
   color: #1F2937;
 }

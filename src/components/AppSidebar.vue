@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import weLogo from '@/assets/brand/WE-EDUCACION-PRINCIPAL.png'
 import { useSidebarStore } from '@/stores/sidebar.js'
@@ -30,10 +30,17 @@ function hasActiveChild(group) {
   )
 }
 
-function goTo(navigate) {
+function goTo(navigate, to) {
   navigate()
-  sidebar.toggleVisible(false)
+  // El Dashboard es el único módulo donde la sidebar permanece visible.
+  if (to !== '/dashboard') sidebar.toggleVisible(false)
 }
+
+// Al entrar al Dashboard por cualquier vía (login, logo, URL) la sidebar se muestra.
+watch(
+  () => route.path,
+  (p) => { if (p === '/dashboard') sidebar.toggleVisible(true) },
+)
 
 function badgeText(b) {
   if (b == null) return null
@@ -101,7 +108,7 @@ onMounted(() => {
                 class="nav-item nav-child"
                 :class="{ active: isActive }"
                 type="button"
-                @click="goTo(navigate)"
+                @click="goTo(navigate, child.to)"
               >
                 <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
                 <span class="label">{{ child.name }}</span>
@@ -123,7 +130,7 @@ onMounted(() => {
             class="nav-item"
             :class="{ active: isActive }"
             type="button"
-            @click="goTo(navigate)"
+            @click="goTo(navigate, item.to)"
           >
             <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
             <span class="label">{{ item.name }}</span>
@@ -160,7 +167,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   color: var(--ink-2);
   z-index: 1000;

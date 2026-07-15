@@ -1095,7 +1095,7 @@ const goToLead = id => { if (!id) return; window.open(router.resolve({ name:'Com
   --e-accent: #10B981;
   --e-accent-soft: #ECFDF4;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--e-text);
   max-width: 1600px;
   margin: 0 auto;

@@ -193,7 +193,7 @@ function changePage(newPage) {
   background-color: transparent;
   flex-wrap: wrap;
   gap: 16px;
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   font-size: 12px;
 }
 
@@ -285,7 +285,7 @@ function changePage(newPage) {
   font-family: 'IBM Plex Mono', monospace;
 }
 .text-sans {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
 }
 .text-muted {
   color: var(--text-muted, #94a3b8);

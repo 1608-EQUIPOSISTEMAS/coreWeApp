@@ -282,7 +282,7 @@ const horizontalOptions = {
 <style scoped>
 /* SISTEMA DE DISEÑO */
 .channel-system {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   background: #f1f5f9;
   padding: 2rem;
   color: #0f172a;

@@ -309,7 +309,7 @@
 }
 
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   background: var(--slate-50, #f8fafc);
   min-height: 100vh;
   display: flex;

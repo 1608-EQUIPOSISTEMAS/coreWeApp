@@ -572,7 +572,7 @@ onMounted(() => { fetchData() })
 
 <style scoped>
 /* ESTILOS BASE */
-.system-container { font-family: 'Inter', sans-serif; max-width: 1400px; margin: 0 auto; padding: 2rem; background-color: #f8fafc; min-height: 100vh; color: #0f172a; }
+.system-container { font-family: 'Hanken Grotesk', sans-serif; max-width: 1400px; margin: 0 auto; padding: 2rem; background-color: #f8fafc; min-height: 100vh; color: #0f172a; }
 .animate-fade { animation: fadeIn 0.4s ease-in-out; }
 .animate-slide-up { animation: slideUp 0.5s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

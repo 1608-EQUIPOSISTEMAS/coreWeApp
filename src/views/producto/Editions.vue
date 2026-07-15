@@ -1571,7 +1571,7 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 .exec-shell {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   background: #f8fafc;
   height: 100vh;
   display: flex;
@@ -1696,7 +1696,7 @@
 .exec-select {
   background: transparent; border: none;
   border-bottom: 1px solid rgba(255,255,255,0.2);
-  color: var(--white); font-family: 'IBM Plex Sans', inherit;
+  color: var(--white); font-family: 'Hanken Grotesk', inherit;
   font-size: 12.5px; font-weight: 500; padding: 3px 0;
   outline: none; cursor: pointer; min-width: 110px; appearance: auto;
 }
@@ -1797,7 +1797,7 @@
 ═══════════════════════════════════════════════ */
 .exec-table {
   width: 100%; border-collapse: collapse;
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: 'Hanken Grotesk', sans-serif;
   font-size: 12.5px; min-width: 1200px;
 }
 

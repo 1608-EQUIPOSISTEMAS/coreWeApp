@@ -1207,7 +1207,7 @@ watch(enrollmentId, (newId, oldId) => {
 .edv-page {
   background: #fff;
   min-height: 100vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1A1A1A;
 }
 

@@ -182,7 +182,7 @@ const doughnutOptions = {
 <style scoped>
 /* Layout Principal */
 .analytics-dashboard { 
-  font-family: 'Inter', system-ui, sans-serif; 
+  font-family: 'Hanken Grotesk', system-ui, sans-serif; 
   background-color: #f8fafc; 
   padding: 2rem; 
   color: #334155; 

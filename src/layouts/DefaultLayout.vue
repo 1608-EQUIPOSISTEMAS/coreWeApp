@@ -27,7 +27,7 @@ const sidebar = useSidebarStore()
 .layout-shell {
   min-height: 100vh;
   background: #F7F7F5;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   transition: background 0.18s;
 }
 
