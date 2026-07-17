@@ -113,13 +113,25 @@ export default {
     }
   },
   methods: {
+    // Destino post-login: ADMIN aterriza en el Dashboard; cualquier otro rol
+    // va directo al cronograma de solo lectura (pedido del 17/07).
+    homeRoute() {
+      try {
+        const roles = JSON.parse(localStorage.getItem('user') || '{}').roles || []
+        return roles.includes('ADMIN')
+          ? { name: 'Dashboard' }
+          : { name: 'ScheduleBoard' }
+      } catch {
+        return { name: 'Dashboard' }
+      }
+    },
     async handleLogin() {
       this.loading = true
       this.errorMsg = ''
       try {
         await this.authService.login(this.credentials)
         this.toast.success('¡Bienvenido!')
-        this.router.push({ name: 'Dashboard' })
+        this.router.push(this.homeRoute())
       } catch (error) {
         const mensaje = error.response?.data?.message || 'Credenciales incorrectas'
         this.toast.error(mensaje)
@@ -131,7 +143,7 @@ export default {
   },
   mounted() {
     if (this.authService?.isAuthenticated?.()) {
-      this.router.push({ name: 'Dashboard' })
+      this.router.push(this.homeRoute())
     }
   }
 }

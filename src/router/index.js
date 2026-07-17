@@ -18,7 +18,16 @@ const routes = [
     path: '/',
     name: 'Home',
     component: DefaultLayout,
-    redirect: '/dashboard',
+    // Home segun rol: ADMIN al dashboard, el resto al cronograma de solo
+    // lectura (pedido 17/07). Mismo criterio que el post-login de Login.vue.
+    redirect: () => {
+      try {
+        const roles = JSON.parse(localStorage.getItem('user') || '{}').roles || []
+        return roles.includes('ADMIN') ? '/dashboard' : '/producto/cronograma-vista'
+      } catch {
+        return '/dashboard'
+      }
+    },
     children: [
       {
         path: 'dashboard',
@@ -700,13 +709,11 @@ router.beforeEach((to, from, next) => {
     return next('/pages/login');
   }
 
-  // CASO B: Logueado intentando ir a Login -> Dashboard
+  // CASO B: Logueado intentando ir a Login -> home segun rol
+  // (ADMIN al dashboard; el resto al cronograma de solo lectura).
   if (to.path === '/pages/login' && token) {
-      //TOAST
-      
-    toast.info('Ya has iniciado sesión. Redirigiendo al dashboard.');
-    
-     return next('/dashboard');
+    toast.info('Ya has iniciado sesión.');
+    return next(userRoles.includes('ADMIN') ? '/dashboard' : '/producto/cronograma-vista');
   }
 
   // ---------------------------------------------------------

@@ -329,15 +329,20 @@ function hasAnyGrade(d) {
 }
 const hasDebt = (s) => Number(s.fin_overdue) > 0
 const ocupLabel = (s) => (s.profile_alias === 'we_profile_student' ? 'E' : 'P')
-// B2B: el registro puede venir por doctype B2B (cat_b2b_doctype) o por el
-// origen del agente (agent_origin tipo "B2B", "JF39-B2B"). Etiqueta resultante:
-// "B2B", "JF39-B2B" o "B2B - JP39" segun el dato disponible.
-const isB2bStudent = (s) => s.is_b2b === true || /b2b/i.test(s.agent_origin || '')
+// B2B: la decision vive en el backend (is_b2b de classroomStudentsList),
+// que aplica la MISMA regla que el contador del cronograma: doctype B2B, o
+// canal B2B con asesor convenio (NY12/JF39) o sin asesor. Un comercial con
+// codigo B2B es VENTA — por eso ya no se mira agent_origin aca (fix 17/07:
+// la lista contaba 3 B2B donde el cronograma contaba 1).
+const isB2bStudent = (s) => s.is_b2b === true
+// Etiqueta estilo FICO: "B2B - JF39" (origen + codigo de asesor) cuando hay
+// ambos; "B2B" cuando solo hay doctype.
 function b2bLabel(s) {
   if (!isB2bStudent(s)) return null
   const origin = (s.agent_origin || '').trim().toUpperCase()
-  if (!origin) return 'B2B'
-  return origin.includes('B2B') ? origin : `B2B - ${origin}`
+  const code = (s.agent_code || '').trim().toUpperCase()
+  if (!origin.includes('B2B')) return 'B2B'
+  return code && !origin.includes(code) ? `${origin} - ${code}` : origin
 }
 
 async function saveGrades() {

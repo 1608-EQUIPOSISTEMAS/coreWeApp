@@ -311,7 +311,7 @@
                 <tr v-for="s in amStudents" :key="s.enrollment_id">
                   <td><span class="am-tag" :style="{ background: s.ch.color + '1A', color: s.ch.color }">{{ s.ch.tag }}</span></td>
                   <td class="am-name">{{ s.full_name }}</td>
-                  <td class="am-agent">{{ s.agent_code || s.agent_origin || '—' }}</td>
+                  <td class="am-agent">{{ agentLabel(s) }}</td>
                   <td class="am-mail">{{ s.platform_user || s.email || '—' }}</td>
                   <td class="am-extra">
                     <template v-if="s.ch.tag === 'SEG' && s.parent_codes?.length">Viene de {{ s.parent_codes.join(', ') }}</template>
@@ -416,12 +416,25 @@ function amChannelValue(c) {
   return '…'
 }
 
-// Clasificación por canal del alumno: mismo criterio que los contadores del
-// cronograma (beca > b2b > membresía > hijo de paquete (SEG) > venta directa).
+// ASESOR con la misma composicion que la columna AGENTE del panel FICO:
+// "origen - codigo" cuando existen ambos (ej. "B2B - JF39"), si no el que haya.
+function agentLabel(s) {
+  const origin = String(s.agent_origin || '').trim()
+  const code = String(s.agent_code || '').trim()
+  if (origin && code && !origin.toUpperCase().includes(code.toUpperCase())) {
+    return `${origin} - ${code}`
+  }
+  return code || origin || '—'
+}
+
+// Clasificación por canal del alumno: mismo criterio y PRIORIDAD que los
+// contadores del cronograma (comm_bucket): beca > membresía > b2b > hijo de
+// paquete (SEG) > venta directa. MEM usa member_benefits (excluye MEMBRESIA
+// PLUS, igual que el cronograma): un socio PLUS cuenta como VEN/SEG.
 function studentChannel(s) {
   const tag = s.is_beca ? 'BEC'
+    : s.member_benefits ? 'MEM'
     : s.is_b2b ? 'B2B'
-    : s.membership_active ? 'MEM'
     : (s.parent_codes && s.parent_codes.length) ? 'SEG'
     : 'VEN'
   return AULA_CHANNELS.find(c => c.tag === tag)
