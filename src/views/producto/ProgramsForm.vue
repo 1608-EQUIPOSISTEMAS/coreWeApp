@@ -266,7 +266,7 @@
 
               <div class="col-md-2 d-flex flex-column align-items-center justify-content-center">
                 <label class="exec-label mb-2">Estado Activo</label>
-                <label class="exec-switch" @click="mapActiveChild(ver)">
+                <label class="exec-switch">
                   <input type="checkbox" v-model="ver.active" />
                   <span></span>
                 </label>
@@ -728,12 +728,4 @@ import FileUploader from '@/components/FileUploader.vue'
     loaded.value = true
   })
 
-  function mapActiveChild(child){
-    form.program_versions.forEach(ver => {
-      if (ver.program_version_id != child.program_version_id) {
-        ver.active = false
-      }
-    })
-
-  }
 </script>

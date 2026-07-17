@@ -7,7 +7,6 @@ import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import AulasFilterModal from './AulasFilterModal.vue'
 
 const editionService = inject(ServiceKeys.Edition)
-const catalog = inject('catalog')
 const toast = useToast()
 const router = useRouter()
 
@@ -61,9 +60,7 @@ function deriveStatus(row) {
 }
 
 function buildSchedule(row) {
-  if (!Array.isArray(row.schedules) || !row.schedules.length) return '--'
-  const s = row.schedules[0]
-  const parts = [s.day_combination_label, s.hour_combination_label].filter(Boolean)
+  const parts = [row.day_combination_label, row.hour_combination_label].filter(Boolean)
   return parts.length ? parts.join(' ') : '--'
 }
 
@@ -98,6 +95,8 @@ function mapRow(row) {
     status: deriveStatus(row),
     color: SEGMENT_COLORS[row.cat_segment] || FALLBACK_COLOR,
     ...metrics,
+    // Conteo real (FICO aprobadas sin hijos) ya viene unido en la consulta.
+    students: row.students == null ? null : Number(row.students),
   }
 }
 
@@ -107,50 +106,25 @@ const isLoading = ref(false)
 async function loadCourses() {
   isLoading.value = true
   try {
-    const courseTypeId = (catalog?.options?.('we_program_type') || [])
-      .find((o) => o.alias === 'we_program_type_course')?.id
-    const payload = {
-      active: 'Y',
-      page: 1,
-      size: 500,
-      type_program_ids: courseTypeId ? [{ value: courseTypeId }] : [],
-    }
-    const { items } = await editionService.editionList(payload)
+    // Una sola llamada ligera (misma que el Reporte Academico): trae cursos +
+    // horario + conteo de alumnos juntos. Reemplaza al par editionList (SP de
+    // 15s/3MB) + classroomMetricsList. El equivalente del viejo active='Y'
+    // se aplica aca (los A5 ya cubren active='N' salvo segmento explicito).
+    const rows = await editionService.academicReport()
     // Excluimos cat_segment === 'A5' porque representa cursos cancelados:
     // la vista academica no los considera (ni en conteos, ni en tarjetas, ni
     // en KPIs). El filtro ocurre aca y no en `filtered` para que el numero
     // "X aulas en el periodo" tampoco los cuente.
-    const baseRows = (Array.isArray(items) ? items : [])
+    COURSES.value = (Array.isArray(rows) ? rows : [])
+      .filter((row) => row.active === 'Y')
       .filter((row) => String(row?.cat_segment || '').toUpperCase() !== 'A5')
       .map(mapRow)
-
-    const editionIds = baseRows.map((c) => c.id).filter((id) => Number.isFinite(id))
-    const metricsById = await fetchMetricsByEdition(editionIds)
-
-    COURSES.value = baseRows.map((c) => ({ ...c, ...(metricsById[c.id] || {}) }))
   } catch (err) {
     console.error('Error cargando aulas:', err)
     toast.error('Error al cargar aulas')
     COURSES.value = []
   } finally {
     isLoading.value = false
-  }
-}
-
-async function fetchMetricsByEdition(editionIds) {
-  if (!editionIds.length) return {}
-  try {
-    const rows = await editionService.classroomMetricsList({ edition_ids: editionIds })
-    const map = {}
-    for (const r of rows || []) {
-      map[r.edition_num_id] = {
-        students: Number(r.students) || 0,
-      }
-    }
-    return map
-  } catch (err) {
-    console.warn('No se pudo obtener metricas de aulas:', err?.message || err)
-    return {}
   }
 }
 
@@ -582,9 +556,9 @@ const statusPillClass = (s) =>
 }
 .btn:hover { background: var(--bg-soft); border-color: #DDD; }
 .btn.primary {
-  background: var(--ink); color: white; border-color: var(--ink);
+  background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060);
 }
-.btn.primary:hover { background: #2A2A22; }
+.btn.primary:hover { background: var(--we-navy-dark, #001540); }
 .btn.sm { padding: 5px 9px; font-size: 12.5px; }
 
 /* KPIs */
@@ -860,11 +834,11 @@ const statusPillClass = (s) =>
   border-color: #3A3A33;
 }
 [data-coreui-theme="dark"] .aulas-shell .btn.primary {
-  background: #F4F4F0;
-  border-color: #F4F4F0;
-  color: #14140F;
+  background: var(--we-navy, #002060);
+  border-color: #2f4a8a;
+  color: #fff;
 }
-[data-coreui-theme="dark"] .aulas-shell .btn.primary:hover { background: #E4E4DD; }
+[data-coreui-theme="dark"] .aulas-shell .btn.primary:hover { background: #1a3a75; }
 [data-coreui-theme="dark"] .aulas-shell .kpi { background: #1A1A14; }
 [data-coreui-theme="dark"] .aulas-shell .filter-bar { background: #1A1A14; }
 [data-coreui-theme="dark"] .aulas-shell .filter-strip {

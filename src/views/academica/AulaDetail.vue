@@ -35,35 +35,24 @@ async function loadAula() {
     aula.value = detail || null
 
     // editionGet (sp_edition_tree_get) devuelve la estructura padre/hijos +
-    // schedules + sesiones, pero NO trae program_abreviature ni instructor
-    // (esos los expone sp_edition_list a traves de joins distintos). Si
-    // alguno falta, hacemos una segunda llamada al list filtrando por el
-    // codigo global y mergeamos. Es la misma fuente de datos que usa la
-    // pagina /academica/aulas, asi que los valores son consistentes.
+    // schedules + sesiones, pero NO trae program_abreviature ni instructor.
+    // Antes se enriquecia con editionList (SP de 15s: hacia lentisimo abrir
+    // CUALQUIER aula); ahora se usa la consulta ligera del modulo academico
+    // filtrada a esta edicion (~0.3s). Misma fuente que /academica/aulas.
     if (detail && (!detail.program_abreviature || !detail.instructor)) {
       try {
-        const code = detail.global_code
-        if (code) {
-          const { items } = await editionService.editionList({
-            active: null,
-            q: code,
-            page: 1,
-            size: 50,
-          })
-          const match = (items || []).find(
-            (r) => Number(r.edition_num_id) === editionId.value,
-          )
-          if (match) {
-            aula.value = {
-              ...detail,
-              program_abreviature: detail.program_abreviature || match.program_abreviature,
-              instructor: detail.instructor || match.instructor,
-              cat_segment: detail.cat_segment || match.cat_segment,
-            }
+        const rows = await editionService.academicReport({ edition_id: editionId.value })
+        const match = (rows || [])[0]
+        if (match) {
+          aula.value = {
+            ...detail,
+            program_abreviature: detail.program_abreviature || match.program_abreviature,
+            instructor: detail.instructor || match.instructor,
+            cat_segment: detail.cat_segment || match.cat_segment,
           }
         }
       } catch (err) {
-        console.warn('No se pudo enriquecer aula con editionList:', err?.message || err)
+        console.warn('No se pudo enriquecer aula con academicReport:', err?.message || err)
       }
     }
   } catch (err) {
@@ -2596,8 +2585,8 @@ onMounted(async () => {
   color: var(--ink-2); cursor: pointer;
 }
 .btn:hover:not(:disabled) { background: var(--bg-soft); }
-.btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
-.btn.primary:hover:not(:disabled) { background: #2A2A22; }
+.btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
+.btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* MATRIZ DE ASISTENCIA */
@@ -2877,7 +2866,7 @@ onMounted(async () => {
   cursor: pointer;
 }
 .schip:hover { background: var(--bg-soft); }
-.schip.active { background: var(--ink); color: white; border-color: var(--ink); }
+.schip.active { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
 .sdot { width: 6px; height: 6px; border-radius: 999px; background: var(--ink-4); }
 .schip.active .sdot { background: white; }
 .sdot.sdot-empty { background: var(--ink-4); }
@@ -3573,8 +3562,8 @@ onMounted(async () => {
   color: #3A3A33; cursor: pointer;
 }
 .aam-foot .btn:hover:not(:disabled) { background: #FAFAF8; }
-.aam-foot .btn.primary { background: #14140F; color: white; border-color: #14140F; }
-.aam-foot .btn.primary:hover:not(:disabled) { background: #2A2A22; }
+.aam-foot .btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
+.aam-foot .btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 .aam-foot .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Dark mode */
@@ -3587,5 +3576,5 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-ai-modal .aam-upload-btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
 [data-coreui-theme="dark"] .aula-ai-modal .aam-field textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
 [data-coreui-theme="dark"] .aula-ai-modal .aam-foot .btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aula-ai-modal .aam-foot .btn.primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .aula-ai-modal .aam-foot .btn.primary { background: var(--we-navy, #002060); color: #fff; border-color: #2f4a8a; }
 </style>

@@ -47,7 +47,13 @@ const sidebar = useSidebarStore()
 .page-body {
   flex: 1;
   padding: 22px 28px 60px;
-  max-width: 100%;
+  /* Ancho unico para TODAS las vistas (mismo formato que /academica/reporte
+     y /fico/inscripciones): 1600px de contenido + 56px de padding lateral.
+     Las vistas con su propio max-width interno (1600) quedan identicas;
+     las demas dejan de estirarse infinito en monitores anchos. */
+  width: 100%;
+  max-width: 1656px;
+  margin: 0 auto;
   overflow-x: hidden;
 }
 

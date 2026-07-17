@@ -116,6 +116,26 @@ export default class EditionService {
     return response
   }
 
+  // Datos del Reporte Academico: una sola llamada ligera (ediciones curso +
+  // resumen de auditoria juntos). Reemplaza al par editionList(500) +
+  // classroomAuditSummaryList que tardaba 15s+ contra la BD remota.
+  async academicReport(payload = {}) {
+    const response = (await api.post('/edition/academicreport', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  // Recomendaciones IA del Reporte Academico (Ollama local). El backend hace
+  // hasta 2 intentos de ~60s; sin loader global (la carta muestra el suyo).
+  async reportRecommendations(payload) {
+    const response = (await api.post('/edition/reportrecommendations', payload, {
+      meta: { skipLoader: true },
+      timeout: 150000
+    })).data
+    return response
+  }
+
   // Borradores de observacion con la IA local (Ollama). Puede tardar ~1 min
   // con un aula completa; timeout amplio y sin loader global.
   async classroomGradesObservations(payload) {
