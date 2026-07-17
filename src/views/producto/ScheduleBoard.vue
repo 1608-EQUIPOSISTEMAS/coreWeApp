@@ -94,7 +94,7 @@
               </tr>
 
               <template v-for="it in (week.isOpen ? week.items : [])" :key="it.e.edition_num_id">
-                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', { fused: it.fused, clickable: canSeeAulaInfo }, it.e.meta_vacantes ? 'meta' : 'sinmeta']" @click="openAulaInfo(it)">
+                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta']" @click="openAulaInfo(it)">
                   <!-- CA / CP -->
                   <td>
                     <div class="cacp">
@@ -200,7 +200,7 @@
 
     <div class="crono-foot">
       <span class="dot"></span>
-      <span><template v-if="canSeeAulaInfo">Haz clic en un curso para ver de dónde sale su AULA · </template>Ficha / Confirmado: punto verde = Sí.</span>
+      <span>Haz clic en un curso para ver de dónde sale su AULA · Ficha / Confirmado: punto verde = Sí.</span>
     </div>
 
     <!-- ════ RESÚMENES DEL MES ════ -->
@@ -252,7 +252,7 @@
       </div>
     </div>
 
-    <!-- ════ MODAL: de dónde sale el AULA (solo roles de gestión) ════ -->
+    <!-- ════ MODAL: de dónde sale el AULA (Información: todos · Alumnos: líderes/gerencia) ════ -->
     <div v-if="aulaModal" class="am-overlay" @click.self="aulaModal = null">
       <div class="am-card" :class="{ wide: amTab === 'alumnos' }">
         <div class="am-head">
@@ -266,7 +266,7 @@
 
         <div class="am-tabs">
           <button type="button" :class="{ on: amTab === 'info' }" @click="amTab = 'info'">Información</button>
-          <button type="button" :class="{ on: amTab === 'alumnos' }" @click="showStudentsTab">
+          <button v-if="canSeeStudents" type="button" :class="{ on: amTab === 'alumnos' }" @click="showStudentsTab">
             Alumnos<span v-if="amStudents"> · {{ amStudents.length }}</span>
           </button>
         </div>
@@ -363,20 +363,23 @@ const aulaModal = ref(null)
 
 // Rol desde la sesión (mismo storage que usa el guard del router)
 let userRoles = []
-try { userRoles = JSON.parse(localStorage.getItem('user'))?.roles ?? [] } catch { /* sesión corrupta: sin modal */ }
-const canSeeAulaInfo = ['ADMIN', 'GERENCIA', 'LIDER_COMERCIAL', 'ACADEMICA', 'LIDER_ACADEMICA', 'LIDER_PRODUCTO']
-  .some(r => userRoles.includes(r))
+try { userRoles = JSON.parse(localStorage.getItem('user'))?.roles ?? [] } catch { /* sesión corrupta: sin tab Alumnos */ }
+// El modal lo abre cualquiera (el tab Información enseña cómo se clasifica y
+// qué es venta). El tab Alumnos (datos personales) es solo para gerencia y
+// líderes: cualquier alias LIDER_* califica, sin lista que mantener.
+const canSeeStudents = userRoles.some(r => r === 'ADMIN' || r === 'GERENCIA' || r.startsWith('LIDER_'))
 
 const amTab = ref('info')
 const amStudents = ref(null)
 const amLoading = ref(false)
 
 function openAulaInfo(it) {
-  if (!canSeeAulaInfo) return
   aulaModal.value = it
   amTab.value = 'info'
-  amStudents.value = null
-  loadStudents(it.e.edition_num_id)
+  // Sin permiso de Alumnos no se pide la lista (trae correos): con [] el tab
+  // Información cae a los contadores de la fila.
+  amStudents.value = canSeeStudents ? null : []
+  if (canSeeStudents) loadStudents(it.e.edition_num_id)
 }
 
 function showStudentsTab() { amTab.value = 'alumnos' }
