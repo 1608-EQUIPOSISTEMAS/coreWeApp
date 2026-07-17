@@ -273,14 +273,16 @@ export default [
     to: '/marketing',
     icon: 'cil-chart-pie',
     module: 'MARKETING',
-    roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
+    // MARKETING ya no va hardcodeado: su acceso a Reporte se gobierna solo
+    // desde Configuración → Roles y Permisos (submódulo OVERVIEW).
+    roles: ['ADMIN', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
         name: 'Reporte Completo',
         to: '/marketing/overview',
         submodule: 'OVERVIEW',
-        roles: ['ADMIN', 'MARKETING', 'GERENCIA'],
+        roles: ['ADMIN', 'GERENCIA'],
       },
     ],
   },

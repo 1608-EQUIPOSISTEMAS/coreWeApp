@@ -151,11 +151,10 @@ const routes = [
             // Necesita su propia meta.roles porque, sin ella, hereda la del grupo
             // padre 'producto' (ADMIN/PRODUCTO/GERENCIA) y el guard bloquea al resto.
             component: () => import('@/views/producto/ScheduleBoard.vue'),
-            meta: {
-              submodule: 'CRONOGRAMA',
-              roles: ['ADMIN', 'GERENCIA', 'COMERCIAL', 'ACADEMICA', 'PRODUCTO',
-                'LIDER_COMERCIAL', 'LIDER_PRODUCTO', 'LIDER_ACADEMICA', 'LIDER_FICO', 'FICO', 'B2B'],
-            },
+            // public: cualquier usuario logueado, incluidos roles nuevos de la
+            // matriz (una lista de roles aquí siempre termina desactualizada:
+            // MARKETING y FUNDACION ya se habían quedado fuera).
+            meta: { public: true },
           },
           {
             path: 'precios',
@@ -725,7 +724,9 @@ router.beforeEach((to, from, next) => {
   //   b) la matriz le otorga el submódulo de la hoja (o el módulo, si la hoja
   //      no declara submodule). Una hoja con roles pero SIN submodule solo se
   //      abre por rol (funciones de liderazgo, ej. crear descuentos).
-  if (token && (to.meta.roles || to.meta.module)) {
+  // meta.public = accesible para cualquier usuario logueado (ignora el merge
+  // de roles/module heredado del grupo padre).
+  if (token && !to.meta.public && (to.meta.roles || to.meta.module)) {
 
       const porRol = Array.isArray(to.meta.roles) &&
           userRoles.some(rolUsuario => to.meta.roles.includes(rolUsuario));
