@@ -121,6 +121,13 @@
               </tr>
             </thead>
             <tbody>
+              <!-- skeleton de carga -->
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 10" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr v-for="c in customers" :key="c.customer_id" class="tbody-row" @dblclick="editCustomer(c)">
                 <td class="td-a text-center">
                   <button class="btn-icon" @click="editCustomer(c)" title="Editar">
@@ -162,6 +169,7 @@
               <tr v-if="!customers.length">
                 <td colspan="10" class="empty-state">Sin resultados con los filtros actuales.</td>
               </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -234,6 +242,7 @@ function openFilterModal() { showFilterModal.value = true }
 
 const customers = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
+const isLoading = ref(false)
 
 const filters = reactive({
   active: null,
@@ -317,6 +326,7 @@ function goNew() { router.push({ name: 'CustomerNew' }) }
 function editCustomer(c) { router.push({ name: 'CustomerEdit', params: { id: c.customer_id } }) }
 
 async function fetchCustomers() {
+  isLoading.value = true
   try {
     const { items, total, page, size } = await customerService.customerList({
       active: filters.active,
@@ -336,6 +346,8 @@ async function fetchCustomers() {
   } catch (err) {
     console.error('Error cargando clientes:', err)
     customers.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -413,6 +425,16 @@ onMounted(() => { rebuildChips(); fetchCustomers() })
 .pill-red    { background: #fee2e2; color: #b91c1c; }
 
 .empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); }
 
 /* ══ FILTROS INLINE EN CABECERA ══════════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }

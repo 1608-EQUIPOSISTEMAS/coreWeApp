@@ -68,6 +68,12 @@
               </tr>
             </thead>
             <tbody>
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 7" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr v-for="p in programs" :key="p.program_id" class="tbody-row">
                 <td class="td-a text-center nowrap">
                   <button class="btn-icon btn-icon-sm" @click="editProgram(p)" title="Editar Programa">
@@ -98,6 +104,7 @@
                   <p>No se encontraron programas con los filtros actuales.</p>
                 </td>
               </tr>
+              </template>
             </tbody>
           </table>
 
@@ -115,6 +122,12 @@
               </tr>
             </thead>
             <tbody>
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 8" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr v-for="v in programs" :key="v.id" class="tbody-row">
                 <td class="td-a text-center nowrap">
                   <button class="btn-icon btn-icon-sm" @click="editProgram({ program_id: v.program_id })" title="Editar Versión">
@@ -149,6 +162,7 @@
                   <p>No se encontraron versiones con los filtros actuales.</p>
                 </td>
               </tr>
+              </template>
             </tbody>
           </table>
 
@@ -333,6 +347,16 @@
   border-color: var(--teal-500, #12274e) !important;
   box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1) !important;
 }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); }
 </style>
 <script setup>
 import { ref, reactive, onMounted, inject } from 'vue'
@@ -363,6 +387,7 @@ function openFilterModal () { showFilterModal.value = true }
 const programs = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
 const selectedType = ref('versions') // Valor por defecto
+const isLoading = ref(false)
 
 // === Filtros ===
 const filters = reactive({
@@ -462,6 +487,7 @@ function rebuildChips() {
 
 // === API ===
 async function fetchPrograms() {
+  isLoading.value = true
   try {
     const payload = {
       active: filters.estado,
@@ -491,6 +517,8 @@ async function fetchPrograms() {
     console.error('Error cargando programas:', err)
     programs.value = []
     pagin.value.total = 0
+  } finally {
+    isLoading.value = false
   }
 }
 

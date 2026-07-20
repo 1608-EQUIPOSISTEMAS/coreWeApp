@@ -58,32 +58,40 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in filteredUsers" :key="u.user_id" class="tbody-row" @dblclick="openEdit(u)">
-                <td class="td-a text-center">
-                  <button class="btn-icon" @click="openEdit(u)" title="Editar">
-                    <i class="fa-solid fa-pen-to-square text-warning"></i>
-                  </button>
-                </td>
-                <td class="td-a">
-                  <span class="pill" :class="u.active ? 'pill-green' : 'pill-red'">
-                    {{ u.active ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </td>
-                <td class="td-a text-mono fw-600 nowrap">{{ u.alias }}</td>
-                <td class="td-a nowrap">{{ u.full_name || '—' }}</td>
-                <td class="td-a small text-muted nowrap">{{ u.email || '—' }}</td>
-                <td class="td-a">
-                  <span v-for="r in u.roles" :key="r.rol_id" class="pill pill-slate me-1">{{ r.alias }}</span>
-                  <span v-if="!u.roles.length" class="text-muted small">Sin rol</span>
-                </td>
-                <td class="td-a small text-mono nowrap">
-                  <span v-if="u.telefonos.length">{{ u.telefonos.join(' · ') }}</span>
-                  <span v-else class="text-muted">—</span>
-                </td>
-              </tr>
-              <tr v-if="!filteredUsers.length">
-                <td colspan="7" class="empty-state">Sin usuarios que coincidan con la búsqueda.</td>
-              </tr>
+              <!-- skeleton de carga -->
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 7" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
+                <tr v-for="u in filteredUsers" :key="u.user_id" class="tbody-row" @dblclick="openEdit(u)">
+                  <td class="td-a text-center">
+                    <button class="btn-icon" @click="openEdit(u)" title="Editar">
+                      <i class="fa-solid fa-pen-to-square text-warning"></i>
+                    </button>
+                  </td>
+                  <td class="td-a">
+                    <span class="pill" :class="u.active ? 'pill-green' : 'pill-red'">
+                      {{ u.active ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td class="td-a text-mono fw-600 nowrap">{{ u.alias }}</td>
+                  <td class="td-a nowrap">{{ u.full_name || '—' }}</td>
+                  <td class="td-a small text-muted nowrap">{{ u.email || '—' }}</td>
+                  <td class="td-a">
+                    <span v-for="r in u.roles" :key="r.rol_id" class="pill pill-slate me-1">{{ r.alias }}</span>
+                    <span v-if="!u.roles.length" class="text-muted small">Sin rol</span>
+                  </td>
+                  <td class="td-a small text-mono nowrap">
+                    <span v-if="u.telefonos.length">{{ u.telefonos.join(' · ') }}</span>
+                    <span v-else class="text-muted">—</span>
+                  </td>
+                </tr>
+                <tr v-if="!filteredUsers.length">
+                  <td colspan="7" class="empty-state">Sin usuarios que coincidan con la búsqueda.</td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -182,6 +190,7 @@ const users = ref([])
 const roles = ref([])
 const search = ref('')
 const filterActive = ref(null)
+const isLoading = ref(false)
 
 const filtroEstado = [
   { value: null, description: 'Todos' },
@@ -316,7 +325,14 @@ async function fetchRoles() {
   }
 }
 
-onMounted(() => { fetchUsers(); fetchRoles() })
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    await Promise.all([fetchUsers(), fetchRoles()])
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -370,6 +386,16 @@ onMounted(() => { fetchUsers(); fetchRoles() })
 .pill-green { background: #dcfce7; color: #15803d; }
 .pill-red { background: #fee2e2; color: #b91c1c; }
 .empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); }
 
 .hf-input { height: 32px; padding: 3px 10px; font-size: 12px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
 .hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20,184,166,.15); }

@@ -45,6 +45,13 @@
             </tr>
           </thead>
           <tbody>
+            <!-- Skeleton de carga (shimmer) mientras se traen los convenios -->
+            <template v-if="isLoading">
+              <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                <td v-for="col in 8" :key="col"><span class="skel"></span></td>
+              </tr>
+            </template>
+            <template v-else>
             <tr v-for="item in agreements" :key="item.agreement_id">
               <td class="ta-right nowrap">
                 <button class="btn btn-outline btn-md" @click="editAgreement(item)">
@@ -107,6 +114,7 @@
             <tr v-if="!agreements.length">
               <td colspan="8" class="empty-state">Sin resultados.</td>
             </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -209,6 +217,8 @@ function openFilterModal () { showFilterModal.value = true }
 
 // === tabla + paginación
 const agreements = ref([])
+// Flag de carga para el skeleton de la tabla
+const isLoading = ref(false)
 const pagin = ref({ size: 25, page: 1, total: 0 })
 const totalPages = computed(() =>
   Math.max(1, Math.ceil((pagin.value.total || 0) / pagin.value.size))
@@ -301,6 +311,7 @@ function editAgreement (item) {
 
 // === Backend Call
 async function fetchAgreements () {
+  isLoading.value = true
   try {
     const payload = {
       active: filters.active,
@@ -321,6 +332,8 @@ async function fetchAgreements () {
     console.error('Error cargando convenios:', err)
     agreements.value = []
     pagin.value.total = 0
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -351,6 +364,14 @@ onMounted(() => {
 .nowrap { white-space: nowrap; }
 .ta-right { text-align: right; }
 .empty-state { text-align: center; padding: 1rem; color: #6b7280; font-style: italic; }
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .name { font-weight: 600; color: #111827; }
 .muted { color: #6b7280; }
 .badge { display: inline-block; padding: .2rem .45rem; font-size: .72rem; border-radius: .5rem; border: 1px solid transparent; white-space: nowrap; }

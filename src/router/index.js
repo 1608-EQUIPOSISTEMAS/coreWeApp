@@ -318,16 +318,18 @@ const routes = [
         path: 'marketing',
         name: 'Marketing',
         component: RouterViewStub,
-        redirect: { name: 'MarketingOverview' },
+        redirect: { name: 'MarketingIngresosDiarios' },
         meta: { module: 'MARKETING', area: 'MARKETING' },
         children: [
           {
-            path: 'overview',
-            name: 'MarketingOverview',
-            // panel general
-            component: () => import('@/views/marketing/Overview.vue'),
-            meta: { submodule: 'OVERVIEW', area: 'MARKETING' },
+            path: 'reporte/ingresos-diarios',
+            name: 'MarketingIngresosDiarios',
+            // reporte principal de ingresos por línea de negocio
+            component: () => import('@/views/marketing/IngresosDiarios.vue'),
+            meta: { submodule: 'INGRESOS_DIARIOS', area: 'MARKETING' },
           },
+          // ruta vieja: redirige para no romper marcadores
+          { path: 'overview', redirect: { name: 'MarketingIngresosDiarios' } },
         ],
       },
       

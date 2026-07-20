@@ -81,6 +81,13 @@
               </tr>
             </thead>
             <tbody>
+              <!-- Skeleton de carga (shimmer) mientras se traen los leads -->
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 9" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr v-for="l in leadsRaw" :key="l.lead_id" class="tbody-row" @dblclick="editLead(l)">
                 <td class="td-a text-center">
                   <button class="btn-icon" @click="editLead(l)" title="Editar">
@@ -115,6 +122,7 @@
               <tr v-if="!leadsRaw.length">
                 <td colspan="9" class="empty-state">No se encontraron leads empresa con los filtros actuales.</td>
               </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -178,6 +186,8 @@ const followMap = computed(() =>
 // Estado
 const showFilterModal = ref(false)
 const leadsRaw = ref([])
+// Flag de carga para el skeleton de la tabla
+const isLoading = ref(false)
 const pagin = ref({ page: 1, size: 25, total: 0 })
 
 // Filtros inline
@@ -264,6 +274,7 @@ function badgeForFollow(alias) {
 
 // Fetch
 async function fetchLeads() {
+  isLoading.value = true
   try {
     const getIds = (arr) => (Array.isArray(arr) ? arr.map(i => (typeof i === 'object' ? i.value : i)) : [])
     const { items, total: t, page: p } = await b2bService.companyLeadList({
@@ -282,6 +293,8 @@ async function fetchLeads() {
   } catch (err) {
     console.error('Error cargando leads empresa:', err)
     leadsRaw.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -370,6 +383,16 @@ onMounted(() => {
 .pill-teal   { background: #ccfbf1; color: #0f766e; }
 
 .empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; }
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* ══ FILTROS INLINE EN CABECERA ══════════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }

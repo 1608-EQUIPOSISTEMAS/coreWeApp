@@ -24,6 +24,14 @@
         <!-- ── Lista de roles ── -->
         <aside class="roles-panel">
           <div class="panel-title">Roles del sistema</div>
+          <!-- skeleton de carga: lista de roles -->
+          <template v-if="isLoading">
+            <div v-for="n in 5" :key="'skr' + n" class="role-item skel-role">
+              <span class="skel" :style="{ width: (45 + (n % 3) * 15) + '%' }"></span>
+              <span class="skel skel-pill"></span>
+            </div>
+          </template>
+          <template v-else>
           <button
             v-for="r in roles"
             :key="r.rol_id"
@@ -45,11 +53,23 @@
               </span>
             </div>
           </button>
+          </template>
         </aside>
 
         <!-- ── Detalle: permisos del rol ── -->
         <section class="detail-panel">
-          <template v-if="selectedRole">
+          <!-- skeleton de carga: matriz de permisos -->
+          <template v-if="isLoading">
+            <div class="skel skel-title"></div>
+            <div class="skel-matrix">
+              <div v-for="n in 6" :key="'skm' + n" class="skel-matrix-card">
+                <span class="skel" :style="{ width: (55 + (n % 4) * 10) + '%' }"></span>
+                <span class="skel skel-sub" :style="{ width: (35 + (n % 3) * 15) + '%' }"></span>
+                <span class="skel skel-sub" :style="{ width: (45 + ((n + 1) % 3) * 12) + '%' }"></span>
+              </div>
+            </div>
+          </template>
+          <template v-else-if="selectedRole">
             <div class="detail-head">
               <div>
                 <div class="detail-alias">{{ selectedRole.alias }}</div>
@@ -175,6 +195,7 @@ const moduleDraft = ref([])      // module_ids marcados
 const submoduleDraft = ref([])   // submodule_ids marcados
 const descriptionDraft = ref('')
 const saving = ref(false)
+const isLoading = ref(false)
 
 const isSuperRole = computed(() => selectedRole.value?.alias === 'ADMIN')
 
@@ -325,7 +346,14 @@ async function fetchModules() {
   }
 }
 
-onMounted(() => { fetchModules(); fetchRoles() })
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    await Promise.all([fetchModules(), fetchRoles()])
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -409,6 +437,22 @@ onMounted(() => { fetchModules(); fetchRoles() })
 .small { font-size: 11.5px; }
 .me-1 { margin-right: 4px; }
 .empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-role { justify-content: space-between; cursor: default; }
+.skel-role:hover { background: #fff; }
+.skel-pill { width: 42px; height: 18px; flex-shrink: 0; }
+.skel-title { width: 200px; height: 22px; margin-bottom: 18px; }
+.skel-matrix { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; align-items: start; }
+.skel-matrix-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.skel-sub { height: 11px; margin-left: 14px; }
 
 .exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 4px; }
 .exec-input-light { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 7px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary, #0f172a); transition: border-color .15s; height: 36px; display: block; }

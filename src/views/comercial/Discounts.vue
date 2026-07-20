@@ -42,6 +42,12 @@
             </tr>
           </thead>
           <tbody>
+            <template v-if="isLoading">
+              <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                <td v-for="col in 7" :key="col"><span class="skel"></span></td>
+              </tr>
+            </template>
+            <template v-else>
             <tr v-for="d in discounts" :key="d.discount_id">
               <td class="ta-center nowrap">
                 <button class="btn btn-outline btn-sm" @click="editDiscount(d)">
@@ -98,6 +104,7 @@
             <tr v-if="!discounts.length">
               <td colspan="7" class="empty-state">No se encontraron descuentos.</td>
             </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -200,6 +207,7 @@ function openFilterModal() { showFilterModal.value = true }
 // === Datos ===
 const discounts = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
+const isLoading = ref(false)
 
 // === Filtros ===
 const filters = reactive({
@@ -284,6 +292,7 @@ function rebuildChips() {
 
 // === API ===
 async function fetchDiscounts() {
+  isLoading.value = true
   try {
     const payload = {
       q: filters.q || null,
@@ -305,6 +314,8 @@ async function fetchDiscounts() {
     console.error("Error fetching discounts:", error)
     discounts.value = []
     pagin.value.total = 0
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -418,4 +429,13 @@ onMounted(() => {
 .input-group-text { background: #f9fafb; border-color: #d1d5db; color: #6b7280; }
 
 .empty-state { padding: 3rem; text-align: center; color: #9ca3af; font-style: italic; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>

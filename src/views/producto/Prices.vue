@@ -90,6 +90,12 @@
             </thead>
 
             <tbody>
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
+                  <td v-for="col in 9" :key="col"><span class="skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr
                 v-for="e in lPrices"
                 :key="e.program_version_id"
@@ -199,6 +205,7 @@
                   <p class="mb-0">No hay versiones de programas cargadas o no coinciden con los filtros.</p>
                 </td>
               </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -220,6 +227,7 @@ const catalog = inject('catalog')
 
 const dense = ref(false)
 const lPrices = ref([])
+const isLoading = ref(false)
 
 // --- Filtros & Catálogos ---
 const filters = reactive({
@@ -243,6 +251,7 @@ const clearFilters = () => {
 
 // --- Carga Inicial ---
 const fetchPrograms = async () => {
+  isLoading.value = true
   try {
     // Aquí puedes pasar los filtros si tu backend ya los soporta en este endpoint
     // ej: programService.programVersionCaller({ ...filters })
@@ -271,6 +280,8 @@ const fetchPrograms = async () => {
   } catch (error) {
     console.error('Error al cargar programas:', error)
     toast.error('Error al cargar el listado de precios')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -482,4 +493,14 @@ const currencyDollars = computed(() => {
 /* Empty state */
 .empty-state { padding: 40px; text-align: center; color: var(--slate-400); font-size: 13px; font-weight: 500; }
 .empty-state svg { display: block; margin: 0 auto 10px auto; }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-row td { padding: 8px 12px; border-bottom: 1px solid var(--slate-100); }
 </style>

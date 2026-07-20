@@ -16,6 +16,7 @@ import B2bService from './b2b.service'
 import BotService from './bot.service'
 import ConfigService from './config.service'
 import ImportService from './import.service'
+import MarketingService from './marketing.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -37,7 +38,8 @@ Notification: Symbol('NotificationService'),
   B2b: Symbol('B2bService'),
   Bot: Symbol('BotService'),
   Config: Symbol('ConfigService'),
-  Import: Symbol('ImportService')
+  Import: Symbol('ImportService'),
+  Marketing: Symbol('MarketingService')
 }
 
 export function createServices() {
@@ -57,6 +59,7 @@ export function createServices() {
     [ServiceKeys.B2b]: new B2bService(api),
     [ServiceKeys.Bot]: new BotService(api),
     [ServiceKeys.Config]: new ConfigService(api),
-    [ServiceKeys.Import]: new ImportService(api)
+    [ServiceKeys.Import]: new ImportService(api),
+    [ServiceKeys.Marketing]: new MarketingService(api)
   }
 }

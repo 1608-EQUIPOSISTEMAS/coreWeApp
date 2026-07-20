@@ -467,6 +467,75 @@ function exportNotasCsv() {
   toast.success('Descarga lista.')
 }
 
+// --- Importar notas finales (aulas que aun viven en el Google Sheet) ----
+// Modal simple: lista de alumnos + una casilla de NOTA FINAL (0-20). No se
+// interpreta la metodologia del Sheet: la nota digitada se replica en tests,
+// PP y PF (los pesos suman 1.0 y participacion queda como este) para que la
+// NOTA FINAL calculada sea exactamente esa. Sin endpoint nuevo: rellena
+// gradesDraft + dirty y se persiste con el "Guardar cambios" de siempre.
+const showCsvMenu = ref(false)
+const showImportModal = ref(false)
+const importGrades = reactive({}) // enrollment_id -> texto del input
+
+function openImportModal() {
+  for (const k of Object.keys(importGrades)) delete importGrades[k]
+  showImportModal.value = true
+}
+
+const parseNota = (v) => {
+  const raw = String(v ?? '').trim().replace(',', '.')
+  if (raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return null
+  // En el Sheet a veces ponen 21 a los que destacan; la escala tope es 20,
+  // asi que todo lo que exceda se importa como 20 en vez de rechazarse.
+  return Math.min(n, 20)
+}
+
+const importCount = computed(
+  () => students.value.filter((s) => parseNota(importGrades[s.enrollment_id]) != null).length,
+)
+
+// Pegar la columna completa copiada del Sheet: si el texto pegado trae varias
+// lineas, se reparte hacia abajo desde el alumno donde se pega (misma logica
+// que pegar en el propio Sheet). Lineas vacias no tocan a ese alumno.
+function onImportPaste(e, startIdx) {
+  const text = e.clipboardData?.getData('text') ?? ''
+  if (!/[\n\t]/.test(text)) return // pegado de un solo valor: comportamiento normal
+  e.preventDefault()
+  const lines = text.replace(/\r/g, '').split('\n')
+  lines.forEach((line, i) => {
+    const s = students.value[startIdx + i]
+    if (!s) return
+    // si copiaron varias columnas, tomamos la primera celda; coma decimal -> punto
+    const val = line.split('\t')[0].trim().replace(',', '.')
+    if (val !== '') importGrades[s.enrollment_id] = val
+  })
+}
+
+// Nota actual del alumno como referencia en el modal ('--' si no tiene).
+function currentFinalLabel(s) {
+  const d = gradesDraft[s.enrollment_id]
+  return d && hasAnyGrade(d) ? fmtNota(finalGrade(d)) : '--'
+}
+
+function applyImport() {
+  let applied = 0
+  for (const s of students.value) {
+    const n = parseNota(importGrades[s.enrollment_id])
+    if (n == null) continue
+    const d = draftFor(s)
+    for (const sn of sessionNumbers.value) d.tests[String(sn)] = n
+    for (const c of PARTIAL_CRITERIA) d.partial_criteria[c.key] = n
+    for (const c of FINAL_CRITERIA) d.final_criteria[c.key] = n
+    markDirty(s.enrollment_id)
+    applied += 1
+  }
+  if (!applied) return
+  showImportModal.value = false
+  toast.success(`${applied} alumnos actualizados. Revisa la tabla y pulsa "Guardar cambios".`, { timeout: 4000 })
+}
+
 // --- Observaciones IA (Ollama local via tunel) -------------------------
 // El modelo solo produce BORRADORES: entran al draft como filas sucias y se
 // persisten con el boton Guardar, siempre tras revision humana.
@@ -1561,14 +1630,28 @@ onMounted(async () => {
           <span class="lg"><span class="debt-swatch"></span> Con deuda pendiente</span>
         </div>
         <div class="spacer"></div>
-        <button
-          class="btn"
-          :disabled="!students.length"
-          title="Descargar la lista de notas completa en CSV"
-          @click="exportNotasCsv"
-        >
-          <i class="fa-solid fa-file-arrow-down"></i> Exportar CSV
-        </button>
+        <div class="csv-menu-wrap">
+          <button
+            class="btn"
+            :disabled="!students.length"
+            title="Importar o exportar la lista de notas en CSV"
+            @click="showCsvMenu = !showCsvMenu"
+          >
+            <i class="fa-solid fa-file-csv"></i> CSV <i class="fa-solid fa-chevron-down csv-caret"></i>
+          </button>
+          <template v-if="showCsvMenu">
+            <!-- backdrop invisible: cierra el menu al clickear fuera sin listeners -->
+            <div class="csv-menu-backdrop" @click="showCsvMenu = false"></div>
+            <div class="csv-menu">
+              <button @click="showCsvMenu = false; openImportModal()">
+                <i class="fa-solid fa-file-arrow-up"></i> Importar notas finales
+              </button>
+              <button @click="showCsvMenu = false; exportNotasCsv()">
+                <i class="fa-solid fa-file-arrow-down"></i> Exportar CSV
+              </button>
+            </div>
+          </template>
+        </div>
         <button
           class="btn"
           :disabled="isGeneratingObs || !students.length"
@@ -1691,7 +1774,7 @@ onMounted(async () => {
                     :max="GRADE_RULES.TEST_MAX_PER_SESSION"
                     step="1"
                     :value="draftFor(s).tests[String(n)]"
-                    @input="draftFor(s).tests[String(n)] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                    @input="draftFor(s).tests[String(n)] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
                   />
                 </td>
                 <td class="td-total mono">{{ fmtNota(testScore(draftFor(s))) }}</td>
@@ -1746,7 +1829,7 @@ onMounted(async () => {
                           :max="c.max"
                           step="0.5"
                           :value="draftFor(s).partial_criteria[c.key]"
-                          @input="draftFor(s).partial_criteria[c.key] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                          @input="draftFor(s).partial_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
                         />
                       </label>
                     </div>
@@ -1761,7 +1844,7 @@ onMounted(async () => {
                           :max="c.max"
                           step="0.5"
                           :value="draftFor(s).final_criteria[c.key]"
-                          @input="draftFor(s).final_criteria[c.key] = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                          @input="draftFor(s).final_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
                         />
                       </label>
                     </div>
@@ -2366,6 +2449,57 @@ onMounted(async () => {
       </div>
     </section>
 
+    <!-- MODAL: importar notas pegadas desde el Google Sheet. Mismo shell
+         visual que el modal de IA (clases aam-*). -->
+    <Teleport to="body">
+      <div v-if="showImportModal" class="aula-ai-modal-overlay" @click.self="showImportModal = false">
+        <div class="aula-ai-modal">
+          <header class="aam-head">
+            <div>
+              <div class="aam-eyebrow"><i class="fa-solid fa-file-arrow-up"></i> Importar notas finales</div>
+              <h3>{{ aula?.global_code || 'Aula' }}</h3>
+            </div>
+            <button class="aam-close" @click="showImportModal = false">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </header>
+          <div class="aam-body">
+            <p class="aam-intro">
+              Escribe la <strong>NOTA FINAL (0-20)</strong> solo a los alumnos que quieras actualizar;
+              las casillas vacias no se tocan. Tambien puedes <strong>copiar la columna de notas
+              del Sheet y pegarla</strong> en la casilla del primer alumno: se reparte hacia abajo
+              en orden (verifica que el orden de alumnos coincida con el Sheet). La nota se registra como nota unica del alumno
+              (tests, PP y PF quedan con ese valor para que la NOTA FINAL calculada coincida).
+            </p>
+            <div class="imp-list">
+              <div v-for="(s, idx) in students" :key="s.enrollment_id" class="imp-row">
+                <span class="imp-num mono">{{ String(idx + 1).padStart(2, '0') }}</span>
+                <span class="imp-name">{{ apellidosNombres(s) }}</span>
+                <span class="imp-cur" title="Nota final actual">{{ currentFinalLabel(s) }}</span>
+                <input
+                  v-model="importGrades[s.enrollment_id]"
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  placeholder="--"
+                  :class="{ bad: importGrades[s.enrollment_id] && parseNota(importGrades[s.enrollment_id]) == null }"
+                  @paste="onImportPaste($event, idx)"
+                />
+              </div>
+            </div>
+          </div>
+          <footer class="aam-foot">
+            <button class="btn" @click="showImportModal = false">Cancelar</button>
+            <button class="btn primary" :disabled="!importCount" @click="applyImport">
+              <i class="fa-solid fa-check"></i>
+              Aplicar{{ importCount ? ` (${importCount} alumnos)` : '' }}
+            </button>
+          </footer>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- MODAL: ejecutar IA. Teleport a <body> para escapar de cualquier
          transform/filter del layout padre que rompa position:fixed. -->
     <Teleport to="body">
@@ -2593,6 +2727,26 @@ onMounted(async () => {
 .btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
 .btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Menu desplegable Importar/Exportar CSV */
+.csv-menu-wrap { position: relative; }
+.csv-caret { font-size: 9px; opacity: 0.6; }
+.csv-menu-backdrop { position: fixed; inset: 0; z-index: 40; }
+.csv-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 41;
+  min-width: 220px; padding: 4px;
+  background: white; border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column;
+}
+.csv-menu button {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 11px; border: none; border-radius: 7px;
+  background: transparent; text-align: left; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; color: var(--ink-2);
+}
+.csv-menu button:hover { background: var(--bg-soft); }
+.csv-menu button i { width: 14px; text-align: center; opacity: 0.7; }
 
 /* MATRIZ DE ASISTENCIA */
 .att-matrix-scroll {
@@ -3135,6 +3289,9 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .input,
 [data-coreui-theme="dark"] .aula-detail .chip,
 [data-coreui-theme="dark"] .aula-detail .schip { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
+[data-coreui-theme="dark"] .aula-detail .csv-menu { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .aula-detail .csv-menu button { color: #D4D4CC; }
+[data-coreui-theme="dark"] .aula-detail .csv-menu button:hover { background: #22221C; }
 [data-coreui-theme="dark"] .aula-detail .att-matrix thead th,
 [data-coreui-theme="dark"] .aula-detail .att-matrix .sticky-c0,
 [data-coreui-theme="dark"] .aula-detail .att-matrix .sticky-c1,
@@ -3570,6 +3727,31 @@ onMounted(async () => {
 .aam-foot .btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
 .aam-foot .btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 .aam-foot .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Importar notas finales: lista de alumnos con casilla de nota */
+.imp-list {
+  border: 1px solid #E8E8E3; border-radius: 10px;
+  max-height: 52vh; overflow-y: auto;
+}
+.imp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px; border-bottom: 1px solid #F0F0EB;
+}
+.imp-row:last-child { border-bottom: none; }
+.imp-num { font-size: 11px; color: #9C9C93; }
+.imp-name { flex: 1; font-size: 13px; font-weight: 500; color: #3A3A33; }
+.imp-cur { font-size: 11.5px; color: #9C9C93; min-width: 34px; text-align: right; }
+.imp-row input {
+  width: 68px; padding: 5px 8px; text-align: center;
+  border: 1px solid #E8E8E3; border-radius: 7px;
+  font-size: 13px; font-weight: 600; color: #3A3A33; background: white;
+}
+.imp-row input:focus { outline: none; border-color: var(--we-navy, #002060); }
+.imp-row input.bad { border-color: #B91C1C; color: #B91C1C; }
+[data-coreui-theme="dark"] .imp-list { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .imp-row { border-color: #24241E; }
+[data-coreui-theme="dark"] .imp-name { color: #D4D4CC; }
+[data-coreui-theme="dark"] .imp-row input { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
 
 /* Dark mode */
 [data-coreui-theme="dark"] .aula-ai-modal {

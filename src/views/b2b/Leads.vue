@@ -330,6 +330,23 @@
             </thead>
 
             <tbody v-if="!isCompact">
+              <template v-if="isTableLoading">
+                <tr v-for="n in 10" :key="'sk-'+n" class="skeleton-row">
+                  <td><div class="sk-cell" style="width:52px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:120px"></div><div class="sk-cell mt-1" style="width:80px;height:8px"></div></td>
+                  <td><div class="sk-cell" style="width:80px"></div></td>
+                  <td><div class="sk-cell" style="width:60px"></div></td>
+                  <td><div class="sk-cell" style="width:180px"></div><div class="sk-cell mt-1" style="width:100px;height:8px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:60px"></div></td>
+                  <td><div class="sk-cell" style="width:55px"></div></td>
+                  <td><div class="sk-cell" style="width:90px"></div></td>
+                  <td><div class="sk-cell" style="width:70px"></div></td>
+                  <td><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
+                </tr>
+              </template>
+              <template v-else>
               <tr
                 v-for="l in leadsRaw"
                 :key="l.id"
@@ -399,10 +416,25 @@
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
               </tr>
+              </template>
             </tbody>
 
 <!-- ══ COMPACT TBODY ══════════════════════════════════════════════════ -->
 <tbody v-else>
+  <template v-if="isTableLoading">
+    <tr v-for="n in 10" :key="'skc-'+n" class="skeleton-row">
+      <td><div class="sk-cell" style="width:52px"></div></td>
+      <td v-show="colGroups.programa" v-for="c in 6" :key="'p'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.programa"></td>
+      <td v-show="colGroups.cliente" v-for="c in 5" :key="'cl'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.cliente"></td>
+      <td v-show="colGroups.lead" v-for="c in 7" :key="'l'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.lead"></td>
+      <td v-show="colGroups.asesor" v-for="c in 4" :key="'a'+c"><div class="sk-cell"></div></td>
+      <td v-if="!colGroups.asesor"></td>
+    </tr>
+  </template>
+  <template v-else>
   <tr
     v-for="l in leadsRaw"
     :key="l.id"
@@ -497,6 +529,7 @@
   <tr v-if="!leadsRaw.length">
     <td colspan="20" class="empty-state">No se encontraron leads con los filtros actuales.</td>
   </tr>
+  </template>
 </tbody>
           </table>
         </div>
@@ -1088,6 +1121,8 @@ const isCompact = ref(true)
 const dense = ref(false)
 const activeFilterChips = ref([])
 const leadsRaw = ref([])
+// Flag de carga para el skeleton de la tabla (mismo patrón que comercial/Leads.vue)
+const isTableLoading = ref(false)
 const filtroOwners = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
 
@@ -1639,6 +1674,7 @@ function rebuildChips() {
 
 // === API ===
 async function fetchLeads() {
+  isTableLoading.value = true
   try {
     const getIds = (arr) => {
       if (!Array.isArray(arr)) return []
@@ -1696,6 +1732,8 @@ async function fetchLeads() {
     console.error('Error cargando leads:', e)
     leadsRaw.value = []
     pagin.value.total = 0
+  } finally {
+    isTableLoading.value = false
   }
 }
 
@@ -2214,6 +2252,23 @@ const totalPlanSum = computed(() => {
 @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.4); } 70% { box-shadow: 0 0 0 6px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
 
 .text-slate-400 { color: var(--slate-400, #94a3b8); }
+
+/* ══ SKELETON LOADING ════════════════════════════════════════ */
+.skeleton-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; }
+.sk-cell {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+  width: 100%;
+}
+.sk-cell.mt-1 { margin-top: 5px; }
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* ═══════════════════════════════════════════════════════════════ */
 
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
 .thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }

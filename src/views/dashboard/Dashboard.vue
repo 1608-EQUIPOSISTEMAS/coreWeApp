@@ -246,6 +246,22 @@
         </div>
       </template>
 
+      <!-- Skeleton de carga (silueta general: KPIs + charts) -->
+      <template v-else-if="loading">
+        <div class="kpis">
+          <div v-for="n in 4" :key="'skk' + n" class="kcard">
+            <span class="skel" style="width: 120px; height: 11px"></span>
+            <span class="skel" style="width: 96px; height: 34px; margin-top: 14px"></span>
+            <span class="skel" style="height: 6px; margin-top: 20px"></span>
+          </div>
+        </div>
+        <div class="grid-21">
+          <div class="card"><span class="skel skel-chart"></span></div>
+          <div class="card"><span class="skel skel-chart"></span></div>
+        </div>
+        <div class="card"><span class="skel skel-chart"></span></div>
+      </template>
+
       <div v-else-if="error" class="card error-card">
         <h2>No se pudo cargar el dashboard</h2>
         <p>{{ error }}</p>
@@ -630,6 +646,16 @@ b { color: var(--navy); }
 .dtitle { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
 .dtext { font-size: 14px; color: var(--ink2); line-height: 1.55; flex: 1; }
 .dfoot { margin-top: 16px; padding-top: 14px; border-top: 1px solid #eef1f6; font-size: 12px; color: var(--muted); }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-chart { height: 260px; border-radius: 10px; }
 
 .error-card { text-align: center; padding: 50px 20px; }
 .error-card h2 { font-weight: 800; color: var(--navy); }

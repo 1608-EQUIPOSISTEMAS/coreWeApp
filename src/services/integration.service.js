@@ -3,19 +3,21 @@ import api from './api';
 
 export default class IntegrationService {
     
+  // meta.showLoader: estas esperas de exportacion a Google Sheets son las
+  // UNICAS que muestran el overlay blur global (LoadingOverlay).
   async updateLeadBase(payload) {
-    return (await api.post('/integration/syncleadstosheet', payload)).data;
+    return (await api.post('/integration/syncleadstosheet', payload, { meta: { showLoader: true } })).data;
   }
 
 
   async updateEnrollmentBase(payload) {
-    return (await api.post('/integration/syncEnrollmentToSheet', payload)).data;
+    return (await api.post('/integration/syncEnrollmentToSheet', payload, { meta: { showLoader: true } })).data;
   }
 
   async syncFicoSalesToSheet() {
     // timeout: 0 = sin timeout. La query FICO + sobreescritura del Sheet supera
     // los 30s globales de axios; sin esto axios aborta con "timeout exceeded".
-    return (await api.post('/integration/syncFicoSalesToSheet', undefined, { timeout: 0 })).data;
+    return (await api.post('/integration/syncFicoSalesToSheet', undefined, { timeout: 0, meta: { showLoader: true } })).data;
   }
 
   async syncFicoToSheets() {
@@ -29,7 +31,7 @@ export default class IntegrationService {
   }
 
   async syncScheduleToSheet(payload) {
-    return (await api.post('/integration/syncscheduletosheet', payload)).data;
+    return (await api.post('/integration/syncscheduletosheet', payload, { meta: { showLoader: true } })).data;
   }
   async uploadFile(file) {
     const formData = new FormData();
@@ -42,7 +44,7 @@ export default class IntegrationService {
 
   
   async syncRprospectos(payload) {
-    const response = (await api.post('/integration/syncrprospectos', payload)).data;
+    const response = (await api.post('/integration/syncrprospectos', payload, { meta: { showLoader: true } })).data;
     return response;
   }
      

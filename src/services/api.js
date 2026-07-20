@@ -36,11 +36,13 @@ api.interceptors.request.use((config) => {
     }
   }
 
-  // muestra overlay salvo que lo pidan explícitamente
-  if (!config.meta?.skipLoader) loader.start()
+  // Overlay blur global SOLO si el caller lo pide (meta.showLoader), p.ej.
+  // exportaciones a Google Sheets. El resto de vistas usa su propio skeleton.
+  // (los meta.skipLoader que quedan en services son inofensivos: ya es opt-in)
+  if (config.meta?.showLoader) loader.start()
   return config
 }, (error) => {
-  loader.stop()
+  if (error.config?.meta?.showLoader) loader.stop()
   return Promise.reject(error)
 })
 
@@ -49,12 +51,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     // Éxito: Detenemos loader
-    if (!response.config.meta?.skipLoader) loader.stop()
+    if (response.config.meta?.showLoader) loader.stop()
     return response
-  }, 
+  },
   (error) => {
     // Error: Detenemos loader
-    if (!error.config?.meta?.skipLoader) loader.stop()
+    if (error.config?.meta?.showLoader) loader.stop()
 
     // -----------------------------------------------------------
     // LÓGICA DE AUTO-LOGOUT (Token Expirado)

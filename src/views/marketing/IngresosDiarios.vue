@@ -2,14 +2,14 @@
   <div class="reporte-page">
     <div class="rep-head">
       <div class="rep-title">
-        <div class="eyebrow">REPORTE PRINCIPAL · INGRESOS</div>
+        <div class="eyebrow">MARKETING · REPORTE · INGRESOS DIARIOS</div>
         <h1>Resumen por líneas de negocio</h1>
       </div>
       <div class="grow"></div>
       <div class="period-nav">
-        <button class="arrow" type="button" v-html="ic.chevL"></button>
+        <button class="arrow" type="button" @click="shiftMonth(-1)" v-html="ic.chevL"></button>
         <span class="lbl">{{ R.period.label }}</span>
-        <button class="arrow" type="button" v-html="ic.chevR"></button>
+        <button class="arrow" type="button" @click="shiftMonth(1)" v-html="ic.chevR"></button>
       </div>
     </div>
 
@@ -43,6 +43,33 @@
 
     <!-- Tarjetas por línea -->
     <div class="line-cards">
+      <!-- Skeleton mientras carga el reporte -->
+      <template v-if="loading">
+        <div v-for="n in 4" :key="'sk' + n" class="lc" style="--lc: #e2e8f0">
+          <div class="lc-head">
+            <span class="skel" style="width: 40px; height: 40px; border-radius: 11px"></span>
+            <div style="flex: 1">
+              <span class="skel" style="width: 70%; height: 16px"></span>
+              <span class="skel" style="width: 50%; height: 11px; margin-top: 6px"></span>
+            </div>
+          </div>
+          <div class="lc-body">
+            <div class="lc-metric">
+              <div class="k">INGRESOS · S/.</div>
+              <span class="skel" style="width: 80px; height: 23px; margin-top: 6px"></span>
+            </div>
+            <div class="lc-divider"></div>
+            <div class="lc-metric">
+              <div class="k">VENTAS · #</div>
+              <span class="skel" style="width: 56px; height: 23px; margin-top: 6px"></span>
+            </div>
+          </div>
+          <div class="lc-foot">
+            <span class="skel" style="width: 60%"></span>
+          </div>
+        </div>
+      </template>
+      <template v-else>
       <div v-for="l in R.lines" :key="l.key" class="lc" :style="{ '--lc': l.color }">
         <div class="lc-head">
           <span class="lc-ic" v-html="ic[l.key]"></span>
@@ -50,7 +77,7 @@
             <div class="lc-name">{{ l.name }}</div>
             <div class="lc-desc">{{ l.desc }}</div>
           </div>
-          <span class="lc-share">{{ Math.round((l.ingresos / R.totals.ingresos) * 100) }}%</span>
+          <span class="lc-share">{{ pct(l.ingresos, R.totals.ingresos) }}%</span>
         </div>
         <div class="lc-body">
           <div class="lc-metric">
@@ -72,6 +99,7 @@
           <span class="obj">vs. {{ R.period.prevLabel }}</span>
         </div>
       </div>
+      </template>
     </div>
 
     <div class="rep-cols">
@@ -81,15 +109,15 @@
         <div class="p-title">Composición de ingresos</div>
         <div class="stacked">
           <i v-for="l in R.lines" :key="l.key"
-             :style="{ width: (l.ingresos / R.totals.ingresos * 100) + '%', background: l.color }"
-             :data-tip="l.name.replace('Línea ', '') + ' — ' + soles(l.ingresos) + ' (' + Math.round(l.ingresos / R.totals.ingresos * 100) + '%)'"></i>
+             :style="{ width: pct(l.ingresos, R.totals.ingresos) + '%', background: l.color }"
+             :data-tip="l.name.replace('Línea ', '') + ' — ' + soles(l.ingresos) + ' (' + pct(l.ingresos, R.totals.ingresos) + '%)'"></i>
         </div>
         <div class="stack-legend">
           <div v-for="l in R.lines" :key="l.key" class="sl-row">
             <span class="sw" :style="{ background: l.color }"></span>
             <span class="nm">{{ l.name }}</span>
             <span class="amt">{{ soles(l.ingresos) }}</span>
-            <span class="pc">{{ Math.round(l.ingresos / R.totals.ingresos * 100) }}%</span>
+            <span class="pc">{{ pct(l.ingresos, R.totals.ingresos) }}%</span>
           </div>
         </div>
       </div>
@@ -102,8 +130,8 @@
           <div v-for="(wk, wi) in weeks" :key="wk" class="trend-col">
             <div class="trend-bars">
               <div v-for="l in R.lines" :key="l.key" class="tbar"
-                   :style="{ height: (l.weekly[wi].ingresos / weeklyMax * 100) + '%', background: l.color }"
-                   :data-tip="l.name.replace('Línea ', '') + ' · ' + wk + ' — ' + soles(l.weekly[wi].ingresos)"></div>
+                   :style="{ height: ((l.weekly[wi]?.ingresos || 0) / weeklyMax * 100) + '%', background: l.color }"
+                   :data-tip="l.name.replace('Línea ', '') + ' · ' + wk + ' — ' + soles(l.weekly[wi]?.ingresos || 0)"></div>
             </div>
             <div class="trend-x">{{ wk }}</div>
           </div>
@@ -135,6 +163,16 @@
             </tr>
           </thead>
           <tbody>
+            <!-- Skeleton de filas mientras carga -->
+            <template v-if="loading">
+              <tr v-for="n in 8" :key="'skr' + n">
+                <td class="l"><span class="skel" style="width: 60%"></span></td>
+                <td><span class="skel" style="width: 70px; margin-left: auto"></span></td>
+                <td><span class="skel" style="width: 48px; margin-left: auto"></span></td>
+                <td><span class="skel" style="width: 70px; margin-left: auto"></span></td>
+              </tr>
+            </template>
+            <template v-else>
             <template v-for="l in R.lines" :key="l.key">
               <tr :class="['line-head', collapsed[l.key] ? 'collapsed' : '']" :style="{ '--lc': l.color }">
                 <td class="l">
@@ -171,22 +209,24 @@
               <td>{{ num(R.totals.ventas) }}</td>
               <td>{{ soles(R.totals.ticket) }}</td>
             </tr>
+            </template>
           </tbody>
         </table>
       </div>
     </div>
 
     <div class="rep-foot">
-      S/. = ingreso del rubro · # = número de ventas · Ticket promedio = ingreso ÷ ventas · Datos de ejemplo, reemplazables con el reporte real.
+      S/. = ingreso del rubro · # = número de ventas · Ticket promedio = ingreso ÷ ventas ·
+      Línea B2C: data real (pagos del sistema) · B2B / Fundación / Adicionales: datos de ejemplo, pendientes de fuente.
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, computed, inject, onMounted, watch } from 'vue'
+import { ServiceKeys } from '@/services'
 
-/* ===== Datos de ejemplo (mismos del diseño Claude Design · Reporte.html) ===== */
-const period = { mes: 'Junio', year: '2026', label: 'Junio 2026', prevLabel: 'Mayo 2026' }
+const marketing = inject(ServiceKeys.Marketing)
 
 /* Paleta anclada al navy WE #002060, validada (contraste + daltonismo) */
 const LINES = {
@@ -196,43 +236,31 @@ const LINES = {
   adic: { key: 'adic', name: 'Línea Adicionales', desc: 'Otros ingresos',                 color: '#d97706' },
 }
 
-const mk = (name, ingresos, costo, ventas) =>
-  ({ name, ingresos, costo, ventas, ganancia: ingresos - costo, ticket: Math.round(ingresos / ventas) })
+/* ===== Periodo (mes navegable) ===== */
+const now = new Date()
+const month = ref(new Date(now.getFullYear(), now.getMonth(), 1))
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const label = (d) => `${MESES[d.getMonth()]} ${d.getFullYear()}`
+const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+const shiftMonth = (n) => { month.value = new Date(month.value.getFullYear(), month.value.getMonth() + n, 1) }
 
-const lines = [
-  {
-    ...LINES.b2c,
-    objetivo: 445000, prev: 402300,
-    grupos: [
-      { name: 'En Vivo', items: [
-        mk('Cursos', 128400, 61600, 428), mk('Especializaciones', 74200, 35600, 106),
-        mk('PEE', 31500, 15100, 45), mk('Diplomados', 22800, 11900, 19),
-        mk('Programas en Vivo', 14600, 7200, 12), mk('Ingresos extras', 4300, 900, 34),
-      ]},
-      { name: 'Online', items: [
-        mk('Cursos', 46200, 18500, 308), mk('Especializaciones', 21800, 8700, 62),
-        mk('Membresía Plus', 15400, 4600, 154), mk('Cuotas Membresía Plus', 8200, 2400, 164),
-        mk('Ingresos extras', 2900, 600, 21),
-      ]},
-      { name: 'Membresías', items: [
-        mk('Membresía Black', 28600, 8600, 52), mk('Membresía Gold', 21400, 6400, 71),
-        mk('Cuota Memb. Black', 11200, 3100, 56), mk('Cuota Memb. Gold', 8600, 2400, 86),
-      ]},
-    ],
-  },
+/* ===== Líneas sin fuente todavía: datos de ejemplo (B2B / Fundación / Adicionales) ===== */
+// ponytail: cuando existan fuentes reales para estas líneas, reemplazar los mocks
+// por endpoints como el de B2C.
+const mk = (name, ingresos, ventas) => ({ name, ingresos, ventas, ticket: Math.round(ingresos / ventas) })
+const mockLines = [
   {
     ...LINES.b2b,
     objetivo: 175000, prev: 158900,
     grupos: [
       { name: 'Categorías Propias', items: [
-        mk('In House (talleres, cursos, diplo)', 68400, 27400, 24),
-        mk('Corporativo (financiado empresas)', 52600, 20800, 11),
-        mk('Consultoría', 21800, 8100, 6), mk('Ingresos Extras', 3200, 700, 5),
+        mk('In House (talleres, cursos, diplo)', 68400, 24), mk('Corporativo (financiado empresas)', 52600, 11),
+        mk('Consultoría', 21800, 6), mk('Ingresos Extras', 3200, 5),
       ]},
       { name: 'Relacionadas a otras unidades', items: [
-        mk('Convenio · Online', 12400, 4900, 38), mk('Convenio · En Vivo', 9800, 3800, 22),
-        mk('Convenio · Membresía', 5600, 1700, 14), mk('Convenio · Eventos Fundación', 4200, 1400, 8),
-        mk('Auspicio · Fundación', 5100, 1500, 4), mk('Ingresos Extras', 2100, 400, 6),
+        mk('Convenio · Online', 12400, 38), mk('Convenio · En Vivo', 9800, 22),
+        mk('Convenio · Membresía', 5600, 14), mk('Convenio · Eventos Fundación', 4200, 8),
+        mk('Auspicio · Fundación', 5100, 4), mk('Ingresos Extras', 2100, 6),
       ]},
     ],
   },
@@ -241,8 +269,8 @@ const lines = [
     objetivo: 45000, prev: 38700,
     grupos: [
       { name: 'Fundación WE', items: [
-        mk('Tickets Eventos', 22600, 14300, 452), mk('Auspicio', 11800, 3200, 9),
-        mk('Donación', 6400, 400, 63), mk('Ingresos Extras', 2100, 500, 12),
+        mk('Tickets Eventos', 22600, 452), mk('Auspicio', 11800, 9),
+        mk('Donación', 6400, 63), mk('Ingresos Extras', 2100, 12),
       ]},
     ],
   },
@@ -251,54 +279,103 @@ const lines = [
     objetivo: 20000, prev: 19400,
     grupos: [
       { name: 'Otros Ingresos', items: [
-        mk('Pronto pago', 9800, 700, 140), mk('Alquiler de espacios', 8600, 2100, 17),
-        mk('Certificaciones', 3200, 900, 64), mk('Ingresos varios', 2100, 400, 28),
+        mk('Pronto pago', 9800, 140), mk('Alquiler de espacios', 8600, 17),
+        mk('Certificaciones', 3200, 64), mk('Ingresos varios', 2100, 28),
       ]},
     ],
   },
 ]
 
-// Agregados por línea
-lines.forEach((l) => {
+/* ===== Agregación ===== */
+const B2C_OBJETIVO = 445000 // meta referencial; no hay fuente de objetivos aún
+
+const round0 = (n) => Math.round(Number(n) || 0)
+const safeDiv = (a, b) => (b > 0 ? a / b : 0)
+
+function aggregateLine (l) {
   let ing = 0, vts = 0
   l.grupos.forEach((g) => {
-    g.ingresos = g.items.reduce((a, i) => a + i.ingresos, 0)
+    g.ingresos = round0(g.items.reduce((a, i) => a + Number(i.ingresos), 0))
     g.ventas = g.items.reduce((a, i) => a + i.ventas, 0)
-    g.ticket = Math.round(g.ingresos / g.ventas)
+    g.ticket = round0(safeDiv(g.ingresos, g.ventas))
     ing += g.ingresos; vts += g.ventas
   })
   l.ingresos = ing; l.ventas = vts
-  l.ticket = Math.round(ing / vts)
-  l.cumplimiento = Math.round((l.ingresos / l.objetivo) * 100)
-  l.varMoM = Math.round(((l.ingresos - l.prev) / l.prev) * 100)
-})
-
-// Serie semanal (S1-S4) para la tendencia
-const weeklySplit = [0.22, 0.26, 0.24, 0.28]
-lines.forEach((l) => {
-  l.weekly = weeklySplit.map((w, i) => ({ week: 'S' + (i + 1), ingresos: Math.round(l.ingresos * w) }))
-})
-
-const totals = {
-  ingresos: lines.reduce((a, l) => a + l.ingresos, 0),
-  ventas: lines.reduce((a, l) => a + l.ventas, 0),
-  objetivo: lines.reduce((a, l) => a + l.objetivo, 0),
-  prev: lines.reduce((a, l) => a + l.prev, 0),
+  l.ticket = round0(safeDiv(ing, vts))
+  l.cumplimiento = round0(safeDiv(ing, l.objetivo) * 100)
+  l.varMoM = round0(safeDiv(ing - l.prev, l.prev) * 100)
+  return l
 }
-totals.ticket = Math.round(totals.ingresos / totals.ventas)
-totals.cumplimiento = Math.round((totals.ingresos / totals.objetivo) * 100)
-totals.varMoM = Math.round(((totals.ingresos - totals.prev) / totals.prev) * 100)
 
-const R = { period, lines, totals }
+/* true mientras se resuelve la carga del mes (skeleton visible) */
+const loading = ref(true)
 
-const weeks = ['S1', 'S2', 'S3', 'S4']
-const weeklyMax = Math.max(...lines.flatMap((l) => l.weekly.map((w) => w.ingresos)))
+const R = reactive({
+  period: { label: label(month.value), prevLabel: '—' },
+  lines: [],
+  totals: { ingresos: 0, ventas: 0, ticket: 0, objetivo: 0, cumplimiento: 0, varMoM: 0 },
+})
+
+const weeks = ref(['S1', 'S2', 'S3', 'S4'])
+const weeklyMax = computed(() =>
+  Math.max(1, ...R.lines.flatMap((l) => (l.weekly || []).map((w) => w.ingresos)))
+)
+
+async function load () {
+  loading.value = true
+  const prevDate = new Date(month.value.getFullYear(), month.value.getMonth() - 1, 1)
+  R.period = { label: label(month.value), prevLabel: label(prevDate) }
+
+  let b2cData = { totals: { ingresos: 0, ventas: 0 }, prev: { ingresos: 0 }, weekly: [], grupos: [] }
+  try {
+    b2cData = await marketing.ingresosB2C({ month: ym(month.value) })
+  } catch (e) {
+    console.error('[IngresosDiarios] ingresosB2C:', e?.message || e)
+  }
+
+  // B2C real
+  const b2c = aggregateLine({
+    ...LINES.b2c,
+    objetivo: B2C_OBJETIVO,
+    prev: round0(b2cData.prev.ingresos) || 1,
+    grupos: (b2cData.grupos || []).map((g) => ({
+      name: g.name,
+      items: g.items.map((i) => ({ name: i.name, ingresos: round0(i.ingresos), ventas: i.ventas, ticket: round0(safeDiv(i.ingresos, i.ventas)) })),
+    })),
+  })
+
+  const lines = [b2c, ...mockLines.map((m) => aggregateLine(m))]
+
+  // Semanas: las que reporta B2C (4 o 5); los mocks se reparten uniforme
+  const W = Math.max(4, (b2cData.weekly || []).length)
+  weeks.value = Array.from({ length: W }, (_, i) => 'S' + (i + 1))
+  b2c.weekly = Array.from({ length: W }, (_, i) => ({ week: 'S' + (i + 1), ingresos: round0(b2cData.weekly[i]?.ingresos || 0) }))
+  mockLines.forEach((l) => { l.weekly = weeks.value.map((w) => ({ week: w, ingresos: round0(l.ingresos / W) })) })
+
+  const totals = {
+    ingresos: lines.reduce((a, l) => a + l.ingresos, 0),
+    ventas: lines.reduce((a, l) => a + l.ventas, 0),
+    objetivo: lines.reduce((a, l) => a + l.objetivo, 0),
+    prev: lines.reduce((a, l) => a + l.prev, 0),
+  }
+  totals.ticket = round0(safeDiv(totals.ingresos, totals.ventas))
+  totals.cumplimiento = round0(safeDiv(totals.ingresos, totals.objetivo) * 100)
+  totals.varMoM = round0(safeDiv(totals.ingresos - totals.prev, totals.prev) * 100)
+
+  R.lines = lines
+  R.totals = totals
+  loading.value = false
+}
+
+onMounted(load)
+watch(month, load)
 
 /* ===== Helpers de formato ===== */
-const soles = (n) => 'S/ ' + n.toLocaleString('es-PE')
-const solesK = (n) => 'S/ ' + (n / 1000).toLocaleString('es-PE', { maximumFractionDigits: 1 }) + 'K'
-const num = (n) => n.toLocaleString('es-PE')
+const soles = (n) => 'S/ ' + round0(n).toLocaleString('es-PE')
+const solesK = (n) => 'S/ ' + (round0(n) / 1000).toLocaleString('es-PE', { maximumFractionDigits: 1 }) + 'K'
+const num = (n) => (Number(n) || 0).toLocaleString('es-PE')
 const deltaTxt = (v) => (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v) + '%'
+const pct = (a, b) => round0(safeDiv(a, b) * 100)
 
 /* ===== Colapso de líneas en la tabla ===== */
 const collapsed = reactive({})
@@ -471,4 +548,13 @@ tr.total-row td { background: var(--surface-3); font-weight: 800; font-size: 14p
 tr.total-row td.l { font-family: inherit; }
 
 .rep-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--ink-3); }
+
+/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
+.skel {
+  display: block; height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>

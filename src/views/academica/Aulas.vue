@@ -284,7 +284,7 @@ const statusPillClass = (s) =>
           <span>Aulas activas</span>
           <i class="fa-solid fa-graduation-cap k-icon"></i>
         </div>
-        <div class="k-value">{{ totalActive }}</div>
+        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalActive }}</template></div>
         <div class="k-foot">
           <span>de {{ COURSES.length }} totales</span>
         </div>
@@ -294,7 +294,7 @@ const statusPillClass = (s) =>
           <span>Alumnos en curso</span>
           <i class="fa-solid fa-users k-icon"></i>
         </div>
-        <div class="k-value">{{ totalStudents ?? '--' }}</div>
+        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalStudents ?? '--' }}</template></div>
         <div class="k-foot">
           <span>matriculados</span>
         </div>
@@ -304,7 +304,7 @@ const statusPillClass = (s) =>
           <span>Asistencia promedio</span>
           <i class="fa-solid fa-arrow-trend-up k-icon"></i>
         </div>
-        <div class="k-value">{{ avgAttendance == null ? '--' : avgAttendance + '%' }}</div>
+        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ avgAttendance == null ? '--' : avgAttendance + '%' }}</template></div>
         <div class="k-foot">
           <span>en aulas activas</span>
         </div>
@@ -314,7 +314,7 @@ const statusPillClass = (s) =>
           <span>Alumnos en riesgo</span>
           <i class="fa-solid fa-triangle-exclamation k-icon"></i>
         </div>
-        <div class="k-value">{{ totalAtRisk ?? '--' }}</div>
+        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalAtRisk ?? '--' }}</template></div>
         <div class="k-foot">
           <span>requieren seguimiento</span>
         </div>
@@ -376,6 +376,20 @@ const statusPillClass = (s) =>
     />
 
     <div v-if="layout === 'grid'" class="course-grid">
+      <template v-if="isLoading">
+        <article v-for="n in 8" :key="'sk' + n" class="course-card skel-card">
+          <div class="c-bar skel"></div>
+          <div class="c-head">
+            <span class="skel" style="width: 90px; height: 18px"></span>
+            <span class="skel" style="width: 60px; height: 18px"></span>
+          </div>
+          <div class="skel" style="width: 70%; height: 20px; margin-bottom: 12px"></div>
+          <div class="skel" style="height: 48px; margin-bottom: 12px"></div>
+          <div class="skel" style="width: 85%; height: 14px; margin-bottom: 8px"></div>
+          <div class="skel" style="width: 60%; height: 14px"></div>
+        </article>
+      </template>
+      <template v-else>
       <article
         v-for="c in filtered"
         :key="c.id"
@@ -434,6 +448,7 @@ const statusPillClass = (s) =>
           </button>
         </div>
       </article>
+      </template>
     </div>
 
     <table v-else class="course-table">
@@ -452,6 +467,12 @@ const statusPillClass = (s) =>
         </tr>
       </thead>
       <tbody>
+        <template v-if="isLoading">
+          <tr v-for="n in 8" :key="'skr' + n" class="skel-row">
+            <td v-for="col in 10" :key="col"><span class="skel" style="height: 14px"></span></td>
+          </tr>
+        </template>
+        <template v-else>
         <tr v-for="c in filtered" :key="c.id" @click="openAula(c.id)">
           <td class="mono">{{ c.code }}</td>
           <td class="ct-name">
@@ -484,6 +505,7 @@ const statusPillClass = (s) =>
             </button>
           </td>
         </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -799,6 +821,22 @@ const statusPillClass = (s) =>
 }
 .row-action:hover { background: var(--bg-soft); color: var(--ink); }
 
+/* skeleton loading (mismo shimmer que BotTickets) */
+.skel {
+  display: block;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel-kpi { width: 56px; height: 30px; }
+.skel-card { cursor: default; pointer-events: none; }
+.skel-card .c-bar { height: 3px; }
+
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -865,4 +903,8 @@ const statusPillClass = (s) =>
 [data-coreui-theme="dark"] .aulas-shell .course-table { background: #1A1A14; }
 [data-coreui-theme="dark"] .aulas-shell .course-table th { background: #1F1F1A; }
 [data-coreui-theme="dark"] .aulas-shell .course-table tbody tr:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .aulas-shell .skel {
+  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
+  background-size: 200% 100%;
+}
 </style>
