@@ -94,7 +94,7 @@
               </tr>
 
               <template v-for="it in (week.isOpen ? week.items : [])" :key="it.e.edition_num_id">
-                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta']" @click="openAulaInfo(it)">
+                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta', 'segrow-' + (it.e.cat_segment || 'none').toLowerCase()]" @click="openAulaInfo(it)">
                   <!-- CA / CP -->
                   <td>
                     <div class="cacp">
@@ -130,8 +130,8 @@
                     </div>
                   </td>
 
-                  <!-- Docente -->
-                  <td>
+                  <!-- Docente: clic = copiar TODOS los docentes (incl. los ocultos tras "+N más"), no abre el modal -->
+                  <td class="doc-copy" @click.stop="copyDocentes(it.e)" :title="'Clic para copiar: ' + docentes(it.e).join(', ')">
                     <div class="docs">
                       <div class="lbl">{{ docentes(it.e).length > 1 ? 'DOCENTES' : 'DOCENTE' }}</div>
                       <div v-for="(d, i) in docentes(it.e).slice(0, 2)" :key="i" class="name" :class="{ multi: docentes(it.e).length > 1 }" :title="d">{{ d }}</div>
@@ -266,6 +266,7 @@
 
         <div class="am-tabs">
           <button type="button" :class="{ on: amTab === 'info' }" @click="amTab = 'info'">Información</button>
+          <button type="button" :class="{ on: amTab === 'arbol' }" @click="amTab = 'arbol'">Árbol</button>
           <button v-if="canSeeStudents" type="button" :class="{ on: amTab === 'alumnos' }" @click="showStudentsTab">
             Alumnos<span v-if="amStudents"> · {{ amStudents.length }}</span>
           </button>
@@ -292,6 +293,35 @@
             <div v-if="aulaModal.isProgram" class="am-note">
               Este es un programa padre: sus alumnos se sientan en las aulas de sus cursos hijos,
               por eso su AULA puede ser 0 y los hijos muestran a esos alumnos en la columna SEG.
+            </div>
+          </div>
+        </template>
+
+        <!-- Tab: Árbol (padre + hijos de ESTA edición; si el padre tiene otro padre, sale también) -->
+        <template v-else-if="amTab === 'arbol'">
+          <div class="am-body">
+            <div v-if="!amTree.length" class="am-loading">Esta edición no tiene programas padres ni cursos hijos asociados.</div>
+            <div v-else>
+              <div v-for="(g, gi) in amTree" :key="gi" class="am-tree-grp">
+                <div class="am-tree-parent">
+                  <span class="am-tree-ptag">PADRE</span>
+                  <b>{{ g.name || '—' }}</b>
+                  <span class="am-tree-code">{{ g.code }}</span>
+                </div>
+                <div v-for="ch in g.children" :key="ch.edition_num_id || ch.global_code" class="am-tree-child" :class="{ cur: ch.is_current }">
+                  <span class="am-tree-node"></span>
+                  <div class="am-tree-txt">
+                    <div>
+                      <b>{{ ch.program_abreviature || ch.abbreviation || '—' }}</b>
+                      <span v-if="ch.is_current" class="am-tree-curtag">ESTA EDICIÓN</span>
+                    </div>
+                    <div class="am-tree-meta">
+                      {{ ch.global_code || 'S/C' }}<template v-if="ch.specific_code"> · {{ ch.specific_code }}</template>
+                      <template v-if="ch.start_date"> · {{ fmtShort(ch.start_date) }} → {{ fmtShort(ch.end_date) }}</template>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </template>
@@ -346,7 +376,8 @@ const MABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'O
 const SEG_COLORS = {
   A1: { color: '#2256c9' }, A2: { color: '#a96208' },
   A3: { color: '#0a7a5c' }, A4: { color: '#d9603b' },
-  A5: { color: '#c0362c' }, A6: { color: '#6b5cf0' },
+  A5: { color: '#c0362c' }, A6: { color: '#7c3aed' },
+  A7: { color: '#1e3a8a' }, // CERRADO: navy en tinte pastel, como el resto
 }
 const DEFAULT_SEG = { color: '#57534e' }
 function segColor(e) { return SEG_COLORS[(e.cat_segment || '').toUpperCase()] || DEFAULT_SEG }
@@ -383,6 +414,44 @@ function openAulaInfo(it) {
 }
 
 function showStudentsTab() { amTab.value = 'alumnos' }
+
+async function copyDocentes(e) {
+  const list = docentes(e)
+  if (!list.length) { toast.info('Sin docentes asignados'); return }
+  try {
+    await navigator.clipboard.writeText(list.join('\n'))
+    toast.success(list.length === 1 ? 'Docente copiado' : `${list.length} docentes copiados`)
+  } catch {
+    toast.error('No se pudo copiar al portapapeles')
+  }
+}
+
+// Árbol de ESTA edición (misma interpretación de tree_detail que Editions.vue):
+// cursos → nodos de contexto con parent_* + children (hermanos, incl. él mismo);
+// programas → lista plana de hijos, el programa mismo hace de padre del grupo.
+// Los cancelados/inactivos (A5, active='N') no se muestran en el árbol,
+// salvo que sea la edición que el usuario tiene abierta.
+const amTree = computed(() => {
+  const e = aulaModal.value?.e
+  const raw = Array.isArray(e?.tree_detail) ? e.tree_detail : []
+  if (!e || !raw.length) return []
+  const alive = ch => (ch.active || 'Y') !== 'N' || ch.edition_num_id === e.edition_num_id
+  const isChildContext = raw[0].children || raw[0].parent_edition_id
+  if (isChildContext) {
+    return raw
+      .filter(n => (n.active || 'Y') !== 'N')
+      .map(n => ({
+        code: n.parent_global_code || 'S/C',
+        name: n.parent_abbreviation || 'Programa padre',
+        children: (n.children || []).filter(alive).map(ch => ({ ...ch, is_current: ch.edition_num_id === e.edition_num_id })),
+      }))
+  }
+  return [{
+    code: e.global_code || 'S/C',
+    name: e.program_abreviature,
+    children: raw.filter(alive).map(ch => ({ ...ch, is_current: false })),
+  }]
+})
 
 // Se carga al abrir el modal: Información cuenta sobre la MISMA lista real que
 // muestra Alumnos, para que ambas pestañas y la fórmula del AULA cuadren.
@@ -634,7 +703,8 @@ const SEG_DEFS = [
   { key: 'A3', def: 'Modificación de cursos aperturados: Marketing & Comercial deben realizar los cambios respectivos' },
   { key: 'A4', def: 'Modificación de cursos de seguimiento: Marketing & Comercial deben realizar los cambios respectivos' },
   { key: 'A5', tint: '#fdecea', def: 'Cursos cancelados' },
-  { key: 'A6', tint: '#edeafc', def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
+  { key: 'A6', tint: '#ecdcfa', def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
+  { key: 'A7', tint: '#d9e2f2', def: 'Cursos cerrados' },
 ]
 
 const monthItems = computed(() => schedules.value.flatMap(w => w.items || []))
@@ -887,6 +957,13 @@ td.obs { color: var(--ink-3); font-size: 10.5px; font-style: italic; max-width: 
    ============================================================ */
 tr.ed.fam td { background: color-mix(in oklab, var(--accent) 4%, var(--surface)); }
 tr.ed.fam:hover td { background: color-mix(in oklab, var(--accent) 8%, var(--surface-2)); }
+
+/* Tinte de fila por segmento: gana sobre el tinte de familia (va después) y sobre el
+   hover genérico de la línea 815 (por eso lleva el prefijo table.crono tbody).
+   A6 = morado pastel (aplica también a hijos) · A7 = CERRADO (pastel azul-gris + filete navy) */
+table.crono tbody tr.ed.segrow-a6 td, table.crono tbody tr.ed.segrow-a6:hover td { background: #ecdcfa; }
+table.crono tbody tr.ed.segrow-a7 td, table.crono tbody tr.ed.segrow-a7:hover td { background: #d9e2f2; }
+table.crono tbody tr.ed.segrow-a7 td:first-child { box-shadow: inset 3px 0 0 #1e3a8a; }
 /* miembros fusionados: sin línea divisoria dentro de la familia */
 tr.ed.fused td { border-bottom-color: transparent; }
 
@@ -944,6 +1021,21 @@ tr.skrow td { padding: 16px 12px; }
 .am-tbl .am-extra { color: var(--ink-3); font-size: 12px; }
 .am-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .am-row:last-child { border-bottom: none; }
+td.doc-copy { cursor: copy; }
+
+/* Tab Árbol */
+.am-tree-grp { margin-bottom: 16px; }
+.am-tree-grp:last-child { margin-bottom: 0; }
+.am-tree-parent { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); padding-bottom: 6px; }
+.am-tree-ptag { font-size: 9px; font-weight: 800; font-family: var(--font-mono); letter-spacing: .06em; border-radius: 4px; padding: 1px 6px; background: color-mix(in oklab, var(--accent) 12%, transparent); color: var(--accent); flex: none; }
+.am-tree-code { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+.am-tree-child { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0 6px 10px; margin-left: 6px; border-left: 2px solid var(--border-strong); }
+.am-tree-child.cur { background: color-mix(in oklab, var(--accent) 8%, transparent); border-radius: 0 8px 8px 0; border-left-color: var(--accent); }
+.am-tree-node { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); margin-top: 5px; flex: none; }
+.am-tree-child.cur .am-tree-node { background: var(--accent); }
+.am-tree-txt { font-size: 12.5px; color: var(--ink); }
+.am-tree-meta { font-size: 10.5px; font-family: var(--font-mono); color: var(--ink-3); margin-top: 1px; }
+.am-tree-curtag { font-size: 9px; font-weight: 800; font-family: var(--font-mono); border-radius: 4px; padding: 1px 6px; margin-left: 6px; background: var(--accent); color: #fff; }
 .am-tag { flex: none; font-family: var(--font-mono); font-size: 10px; font-weight: 800; border-radius: 5px; padding: 3px 8px; margin-top: 1px; }
 .am-txt { min-width: 0; }
 .am-t { font-size: 13.5px; font-weight: 700; color: var(--ink); }

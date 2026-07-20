@@ -269,9 +269,9 @@
                   <!-- Aula / Inscritos (contador por canal) -->
                   <th class="ts ts-c text-center" style="min-width:54px;" title="Venta directa con asesor">VENTAS</th>
                   <th class="ts ts-c text-center" style="min-width:54px;" title="Vino por Cambio de Curso (seguimiento)">SEGUI</th>
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Ingresó vía membresía">MEMB</th>
                   <th class="ts ts-c text-center" style="min-width:54px;" title="Convenio B2B">B2B</th>
                   <th class="ts ts-c text-center" style="min-width:54px;" title="Beca / 100% descuento — NO suma al aula">BECA</th>
+                  <th class="ts ts-c text-center" style="min-width:54px;" title="Ingresó vía membresía">MEMB</th>
                   <th class="ts ts-c text-center" style="min-width:58px;" title="Total en aula = VENTAS+SEGUI+MEMB+B2B (sin becas)">AULA</th>
                 </tr>
               </thead>
@@ -582,9 +582,9 @@
                     <!-- Aula / Inscritos -->
                     <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
                     <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
                     <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
                     <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
+                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
                     <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                   </tr>
                 </template>
@@ -774,9 +774,9 @@
                   <!-- Aula / Inscritos -->
                   <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
                   <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
                   <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
                   <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
+                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
                   <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                 </tr>
                 </template>
@@ -2120,7 +2120,8 @@
 .seg-a3 { background: #fef9c3; color: #854d0e; }
 .seg-a4 { background: #fde8c8; color: #9a3412; }
 .seg-a5 { background: #fecdd3; color: #9f1239; }
-.seg-a6 { background: #e9d5ff; color: #6b21a8; }
+.seg-a6 { background: #e6d5fa; color: #6d28d9; }
+.seg-a7 { background: #ccd8ed; color: #1e3a8a; }
 
 /* Tipo tag */
 .tipo-tag {
@@ -2148,7 +2149,8 @@ tr.row-segment-a2 { --seg-bg: #fbebd8; --seg-border: #fbb56a; }
 tr.row-segment-a3 { --seg-bg: #f9f6d8; --seg-border: #fde047; }
 tr.row-segment-a4 { --seg-bg: #f8f4c9; --seg-border: #edce33; }
 tr.row-segment-a5 { --seg-bg: #f9d5d8; --seg-border: #fb7185; }
-tr.row-segment-a6 { --seg-bg: #ebddfa; --seg-border: #d1a9fb; }
+tr.row-segment-a6 { --seg-bg: #ecdcfa; --seg-border: #a855f7; } /* A6 = morado pastel (aplica también a hijos) */
+tr.row-segment-a7 { --seg-bg: #d9e2f2; --seg-border: #1e3a8a; } /* A7 = CERRADO: pastel azul acero, el borde navy marca el cierre */
 
 tr[class*="row-segment-"] .td-a,
 tr[class*="row-segment-"] .td-b,
@@ -2370,7 +2372,8 @@ tr[class*="row-segment-"]:hover .td-d {
 .row-segment-a3 td { background-color: #f9f6d8 !important; }
 .row-segment-a4 td { background-color: #f8f4c9 !important; }
 .row-segment-a5 td { background-color: #f9d5d8 !important; }
-.row-segment-a6 td { background-color: #ebddfa !important; }
+.row-segment-a6 td { background-color: #ecdcfa !important; }
+.row-segment-a7 td { background-color: #d9e2f2 !important; }
 
 /* Modal goals */
 .kpi-card {

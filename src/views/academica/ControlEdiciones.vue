@@ -163,8 +163,8 @@ async function save(edition, session, status, newDate) {
       status: status || null,
       new_date: newDate || null
     })
-    // El backend devuelve la fila recalculada (una R reubica esa sesion
-    // cronologicamente entre las demas): se reemplaza in-place.
+    // El backend devuelve la fila recalculada (una R corre las fechas de las
+    // sesiones siguientes): se reemplaza in-place.
     const idx = editions.value.findIndex((x) => x.edition_num_id === edition.edition_num_id)
     if (row && idx !== -1) data.value.editions.splice(idx, 1, row)
   } catch (err) {
@@ -425,8 +425,8 @@ function confirmRepro() {
             <input type="date" v-model="pop.dateVal" />
             <div class="pop-hint">
               Fecha original: <b>{{ fmtShort(pop.session.planned_date) }}</b> —
-              la sesión se reubica en el orden según su nueva fecha; las demás
-              conservan su fecha.
+              las sesiones siguientes corren desde la nueva fecha,
+              manteniendo la frecuencia del curso.
               <br />
               Quedan <b>{{ Math.max(0, (pop.edition.repro_max || 3) - pop.edition.repro_count) }}</b>
               de {{ pop.edition.repro_max || 3 }} reprogramaciones para este curso.

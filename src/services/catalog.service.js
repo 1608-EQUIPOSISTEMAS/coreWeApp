@@ -1,7 +1,7 @@
 // src/services/catalog.service.js
 import api from './api'
 
-const LS_KEY = 'CORE_CATALOG_V1'
+const LS_KEY = 'CORE_CATALOG_V2' // V2: se agregó A7 (cerrado) al catálogo de segmentos — bump fuerza refetch en todos los clientes
 
 const DEFAULT_WE_CURRENCY = [
   {
