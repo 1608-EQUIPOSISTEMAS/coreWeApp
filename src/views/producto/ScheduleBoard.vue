@@ -694,7 +694,9 @@ const kpis = computed(() => [
   { label: 'En aula', value: kpiSums.value.aula, unit: 'inscritos', color: '#d9603b' },
 ])
 
-// ── Resúmenes del mes (sobre TODO el mes, sin filtros; incluye A5 cancelados) ──
+// ── Resúmenes del mes (sobre TODO el mes, sin filtros de UI). Los A5
+// (cancelados) NUNCA cuentan en Categoría/Líneas/Tipos; solo aparecen en su
+// propia fila de la tabla Segmentos. ──
 const TYPE_DEFS = [
   { key: 'A', def: 'Cursos que no requieren mayor seguimiento y esfuerzo en el proceso de venta' },
   { key: 'B', def: 'Cursos que requieren seguimiento y monitoreo en el proceso de venta' },
@@ -714,9 +716,12 @@ const SEG_DEFS = [
 ]
 
 const monthItems = computed(() => schedules.value.flatMap(w => w.items || []))
+const monthItemsActive = computed(() =>
+  monthItems.value.filter(e => (e.cat_segment || '').toUpperCase().trim() !== 'A5')
+)
 
 const catSummary = computed(() => {
-  const n = alias => monthItems.value.filter(e => e.program_type_alias === alias).length
+  const n = alias => monthItemsActive.value.filter(e => e.program_type_alias === alias).length
   const cols = [
     { label: 'DIP', n: n('we_program_type_diploma') },
     { label: 'PEE', n: n('we_program_type_pee') },
@@ -728,16 +733,18 @@ const catSummary = computed(() => {
 
 const lineSummary = computed(() => {
   const m = new Map()
-  monthItems.value.forEach(e => {
+  monthItemsActive.value.forEach(e => {
     const l = lineLabel(e)
     m.set(l, (m.get(l) || 0) + 1)
   })
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, n]) => ({ label, n }))
 })
 
-const countBy = (fn, key) => monthItems.value.filter(e => (fn(e) || '').toUpperCase().trim() === key).length
-const typeSummary = computed(() => TYPE_DEFS.map(t => ({ ...t, n: countBy(typeLabel, t.key) })))
-const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(e => e.cat_segment, s.key) })))
+// segSummary sigue usando monthItems: la fila A5 de Segmentos es justamente
+// el conteo de cancelados; en el resto de resúmenes los A5 no existen.
+const countBy = (items, fn, key) => items.filter(e => (fn(e) || '').toUpperCase().trim() === key).length
+const typeSummary = computed(() => TYPE_DEFS.map(t => ({ ...t, n: countBy(monthItemsActive.value, typeLabel, t.key) })))
+const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(monthItems.value, e => e.cat_segment, s.key) })))
 
 // ── Helpers de presentación ──
 function lineLabel(e) { return e.business_line_label || e.program_line_business || '—' }
