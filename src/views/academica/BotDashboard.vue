@@ -25,9 +25,49 @@
       </div>
     </section>
 
-    <div v-if="isLoading" class="exec-loader py-5">
-      <div class="loader-ring"></div>
-      <p class="text-muted small mt-2 fw-600">Calculando métricas...</p>
+    <div v-if="isLoading">
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-blue-light text-blue"><i class="fa-solid fa-ticket"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">Total Solicitudes</span>
+              <span class="kpi-value"><span class="skel-kpi"></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-amber-light text-amber"><i class="fa-solid fa-clock"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">Pendientes de Acción</span>
+              <span class="kpi-value"><span class="skel-kpi"></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-teal-light text-teal"><i class="fa-solid fa-check-double"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">Tickets Solucionados</span>
+              <span class="kpi-value"><span class="skel-kpi"></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-yellow-light text-yellow"><i class="fa-solid fa-star"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">CSAT Promedio</span>
+              <span class="kpi-value"><span class="skel-kpi"></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="exec-loader py-5">
+        <div class="loader-ring"></div>
+        <p class="text-muted small mt-2 fw-600">Calculando métricas...</p>
+      </div>
     </div>
 
     <div v-else-if="metrics">

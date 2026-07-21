@@ -85,20 +85,23 @@
         </div>
 
         <transition name="rg-fade">
-          <div class="rg-inline-kpis" v-if="!loading">
+          <div class="rg-inline-kpis">
             <div class="rg-mini-kpi" @click="drillDown({ type: 'sales' })" title="Ver ventas">
               <span class="rg-mini-kpi-l">Venta total</span>
-              <span class="rg-mini-kpi-v c-accent">{{ formatCurrency(totals.ven_monto) }}</span>
+              <span v-if="loading" class="skel-kpi"></span>
+              <span v-else class="rg-mini-kpi-v c-accent">{{ formatCurrency(totals.ven_monto) }}</span>
             </div>
             <div class="rg-mini-kpi-divider"></div>
             <div class="rg-mini-kpi">
               <span class="rg-mini-kpi-l">Ticket prom.</span>
-              <span class="rg-mini-kpi-v">{{ formatCurrency(totals.ticketProm) }}</span>
+              <span v-if="loading" class="skel-kpi"></span>
+              <span v-else class="rg-mini-kpi-v">{{ formatCurrency(totals.ticketProm) }}</span>
             </div>
             <div class="rg-mini-kpi-divider"></div>
             <div class="rg-mini-kpi">
               <span class="rg-mini-kpi-l">% Meta S/.</span>
-              <span class="rg-mini-kpi-v" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
+              <span v-if="loading" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="rg-mini-kpi-v" :class="totals.pctMetaMonto >= 80 ? 'c-green' : totals.pctMetaMonto >= 50 ? 'c-amber' : 'c-red'">
                 {{ totals.pctMetaMonto }}%
               </span>
             </div>
@@ -201,7 +204,7 @@
         <div class="ep-kpis ep-kpis-4">
           <article class="ep-kpi" :class="totals.pctMetaMonto >= 80 ? 'ep-kpi-green' : totals.pctMetaMonto >= 50 ? 'ep-kpi-amber' : 'ep-kpi-red'">
             <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta S/.</span><i class="fa-solid fa-bullseye ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
             <div class="rg-kpi-progress">
               <div class="rg-kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'is-green' : totals.pctMetaMonto >= 50 ? 'is-amber' : 'is-red'"
                 :style="`width:${Math.min(100, totals.pctMetaMonto)}%`"></div>
@@ -211,7 +214,7 @@
 
           <article class="ep-kpi ep-kpi-teal rg-clickable" @click="drillDown({ type: 'leads' })">
             <div class="ep-kpi-head"><span class="ep-kpi-label">Mis leads</span><i class="fa-solid fa-users ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ myData?.contactos || 0 }}</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ myData?.contactos || 0 }}</span></div>
             <div class="rg-kpi-progress">
               <div class="rg-kpi-progress-fill is-blue" :style="`width:${Math.min(100, myData?.pct_gestion || 0)}%`"></div>
             </div>
@@ -220,7 +223,7 @@
 
           <article class="ep-kpi" :class="(myData?.ratio || 0) === 0 ? 'ep-kpi-red is-alert' : (myData?.ratio || 0) >= 15 ? 'ep-kpi-green' : 'ep-kpi-amber'">
             <div class="ep-kpi-head"><span class="ep-kpi-label">Ratio leads → venta</span><i class="fa-solid fa-arrow-trend-up ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ myData?.ratio || 0 }}%</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ myData?.ratio || 0 }}%</span></div>
             <div class="rg-kpi-progress">
               <div class="rg-kpi-progress-fill" :class="(myData?.ratio || 0) === 0 ? 'is-red' : (myData?.ratio || 0) >= 15 ? 'is-green' : 'is-amber'"
                 :style="`width:${Math.min(100, (myData?.ratio || 0) * 3)}%`"></div>
@@ -230,7 +233,7 @@
 
           <article class="ep-kpi ep-kpi-indigo">
             <div class="ep-kpi-head"><span class="ep-kpi-label">Ticket promedio</span><i class="fa-solid fa-receipt ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ formatCurrency(myData?.ven > 0 ? myData.ven_monto / myData.ven : 0) }}</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ formatCurrency(myData?.ven > 0 ? myData.ven_monto / myData.ven : 0) }}</span></div>
             <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-blue" style="width:60%"></div></div>
             <span class="ep-kpi-foot">Conv. cohorte: <strong>{{ myData?.conv || 0 }}%</strong></span>
           </article>
@@ -496,7 +499,7 @@
         <div class="ep-kpis ep-kpis-4">
           <article class="ep-kpi" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'ep-kpi-green' : 'ep-kpi-red'">
             <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta unidades</span><i class="fa-solid fa-bullseye ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.obj > 0 ? Math.round((totals.ven / totals.obj) * 100) : 0 }}%</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totals.obj > 0 ? Math.round((totals.ven / totals.obj) * 100) : 0 }}%</span></div>
             <div class="rg-kpi-progress">
               <div class="rg-kpi-progress-fill" :class="totals.obj > 0 && (totals.ven/totals.obj) >= 0.8 ? 'is-green' : 'is-red'"
                 :style="`width:${Math.min(100, totals.obj > 0 ? Math.round((totals.ven/totals.obj)*100) : 0)}%`"></div>
@@ -506,7 +509,7 @@
 
           <article class="ep-kpi" :class="totals.pctMetaMonto >= 80 ? 'ep-kpi-green' : totals.pctMetaMonto >= 50 ? 'ep-kpi-amber' : 'ep-kpi-red'">
             <div class="ep-kpi-head"><span class="ep-kpi-label">% Meta S/.</span><i class="fa-solid fa-coins ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totals.pctMetaMonto }}%</span></div>
             <div class="rg-kpi-progress">
               <div class="rg-kpi-progress-fill" :class="totals.pctMetaMonto >= 80 ? 'is-green' : 'is-amber'" :style="`width:${Math.min(100, totals.pctMetaMonto)}%`"></div>
             </div>
@@ -515,14 +518,14 @@
 
           <article class="ep-kpi ep-kpi-teal">
             <div class="ep-kpi-head"><span class="ep-kpi-label">Ratio leads → venta</span><i class="fa-solid fa-arrow-trend-up ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.avgRatio }}%</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totals.avgRatio }}%</span></div>
             <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-blue" :style="`width:${Math.min(100, totals.avgRatio * 3)}%`"></div></div>
             <span class="ep-kpi-foot">Eficiencia de contacto del período</span>
           </article>
 
           <article class="ep-kpi ep-kpi-amber">
             <div class="ep-kpi-head"><span class="ep-kpi-label">Leads activos</span><i class="fa-solid fa-fire ep-kpi-icon"></i></div>
-            <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totals.activos }}</span></div>
+            <div class="ep-kpi-main"><span v-if="loading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totals.activos }}</span></div>
             <div class="rg-kpi-progress"><div class="rg-kpi-progress-fill is-amber" :style="`width:${Math.min(100, totals.avgGestion)}%`"></div></div>
             <span class="ep-kpi-foot"><strong>{{ totals.avgGestion }}%</strong> gestionados del total</span>
           </article>

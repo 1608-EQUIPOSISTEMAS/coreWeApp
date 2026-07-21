@@ -32,8 +32,9 @@
             <i class="fa-solid ep-kpi-icon" :class="k.icon"></i>
           </div>
           <div class="ep-kpi-main">
-            <span class="ep-kpi-value">{{ k.formatted }}</span>
-            <span v-if="!k.isMissing" class="ep-kpi-delta" :class="deltaClass(k.delta, k.invertDelta)">
+            <span v-if="list.isLoading.value" class="skel-kpi"></span>
+            <span v-else class="ep-kpi-value">{{ k.formatted }}</span>
+            <span v-if="!list.isLoading.value && !k.isMissing" class="ep-kpi-delta" :class="deltaClass(k.delta, k.invertDelta)">
               <i class="fa-solid" :class="deltaIcon(k.delta)"></i>
               {{ formatDelta(k.delta, k.unit) }}
             </span>

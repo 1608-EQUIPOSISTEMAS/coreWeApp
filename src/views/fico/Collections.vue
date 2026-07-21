@@ -32,23 +32,23 @@
       <div class="cob-kpis">
         <article class="cob-kpi cob-kpi-indigo">
           <div class="cob-kpi-head"><span class="cob-kpi-label">Total a cobrar</span><i class="fa-solid fa-coins cob-kpi-icon"></i></div>
-          <div class="cob-kpi-value">S/. {{ fmtMoney(kpis.total_amount) }}</div>
-          <span class="cob-kpi-foot">{{ kpis.total_count }} cuota{{ kpis.total_count === 1 ? '' : 's' }}</span>
+          <div class="cob-kpi-value"><span v-if="loading" class="skel-kpi"></span><template v-else>S/. {{ fmtMoney(kpis.total_amount) }}</template></div>
+          <span class="cob-kpi-foot"><span v-if="loading" class="skel-kpi" style="width:48px"></span><template v-else>{{ kpis.total_count }} cuota{{ kpis.total_count === 1 ? '' : 's' }}</template></span>
         </article>
         <article class="cob-kpi cob-kpi-red">
           <div class="cob-kpi-head"><span class="cob-kpi-label">Vencidas</span><i class="fa-solid fa-triangle-exclamation cob-kpi-icon"></i></div>
-          <div class="cob-kpi-value">S/. {{ fmtMoney(kpis.overdue_amount) }}</div>
-          <span class="cob-kpi-foot">{{ kpis.overdue_count }} cuota{{ kpis.overdue_count === 1 ? '' : 's' }}</span>
+          <div class="cob-kpi-value"><span v-if="loading" class="skel-kpi"></span><template v-else>S/. {{ fmtMoney(kpis.overdue_amount) }}</template></div>
+          <span class="cob-kpi-foot"><span v-if="loading" class="skel-kpi" style="width:48px"></span><template v-else>{{ kpis.overdue_count }} cuota{{ kpis.overdue_count === 1 ? '' : 's' }}</template></span>
         </article>
         <article class="cob-kpi cob-kpi-amber">
           <div class="cob-kpi-head"><span class="cob-kpi-label">Hoy</span><i class="fa-solid fa-clock cob-kpi-icon"></i></div>
-          <div class="cob-kpi-value">S/. {{ fmtMoney(kpis.today_amount) }}</div>
-          <span class="cob-kpi-foot">{{ kpis.today_count }} cuota{{ kpis.today_count === 1 ? '' : 's' }}</span>
+          <div class="cob-kpi-value"><span v-if="loading" class="skel-kpi"></span><template v-else>S/. {{ fmtMoney(kpis.today_amount) }}</template></div>
+          <span class="cob-kpi-foot"><span v-if="loading" class="skel-kpi" style="width:48px"></span><template v-else>{{ kpis.today_count }} cuota{{ kpis.today_count === 1 ? '' : 's' }}</template></span>
         </article>
         <article class="cob-kpi cob-kpi-green">
           <div class="cob-kpi-head"><span class="cob-kpi-label">Por vencer</span><i class="fa-solid fa-calendar-check cob-kpi-icon"></i></div>
-          <div class="cob-kpi-value">S/. {{ fmtMoney(kpis.upcoming_amount) }}</div>
-          <span class="cob-kpi-foot">{{ kpis.upcoming_count }} cuota{{ kpis.upcoming_count === 1 ? '' : 's' }}</span>
+          <div class="cob-kpi-value"><span v-if="loading" class="skel-kpi"></span><template v-else>S/. {{ fmtMoney(kpis.upcoming_amount) }}</template></div>
+          <span class="cob-kpi-foot"><span v-if="loading" class="skel-kpi" style="width:48px"></span><template v-else>{{ kpis.upcoming_count }} cuota{{ kpis.upcoming_count === 1 ? '' : 's' }}</template></span>
         </article>
       </div>
     </section>

@@ -16,7 +16,8 @@
             <i class="fa-solid ep-kpi-icon" :class="k.icon"></i>
           </div>
           <div class="ep-kpi-main">
-            <span class="ep-kpi-value">{{ k.formatted }}</span>
+            <span v-if="isLoading" class="skel-kpi"></span>
+            <span v-else class="ep-kpi-value">{{ k.formatted }}</span>
           </div>
           <span class="ep-kpi-foot">
             {{ k.description }}

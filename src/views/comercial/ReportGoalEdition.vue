@@ -53,28 +53,33 @@
         <div class="filter-spacer"></div>
 
         <transition name="slide-fade">
-          <div class="masthead-kpis" v-if="!isDashboard && !isLoading">
+          <div class="masthead-kpis" v-if="!isDashboard">
             <div class="inline-kpi">
               <span class="inline-kpi-label">META M.</span>
-              <span class="inline-kpi-value">{{ formatMoney(totalObjetivo) }}</span>
+              <span v-if="isLoading" class="skel-kpi"></span>
+              <span v-else class="inline-kpi-value">{{ formatMoney(totalObjetivo) }}</span>
             </div>
             <div class="inline-kpi">
               <span class="inline-kpi-label">VENTA M.</span>
-              <span class="inline-kpi-value accent">{{ formatMoney(totalVenta) }}</span>
+              <span v-if="isLoading" class="skel-kpi"></span>
+              <span v-else class="inline-kpi-value accent">{{ formatMoney(totalVenta) }}</span>
             </div>
             <div class="inline-kpi" style="margin-right: 20px;">
               <span class="inline-kpi-label">LOGRO M.</span>
-              <span class="inline-kpi-value" :class="pctClass(calcPct(totalVenta, totalObjetivo))">
+              <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value" :class="pctClass(calcPct(totalVenta, totalObjetivo))">
                 {{ calcPct(totalVenta, totalObjetivo) }}%
               </span>
             </div>
             <div class="inline-kpi">
               <span class="inline-kpi-label">META VAC.</span>
-              <span class="inline-kpi-value" style="color: var(--slate-300)">{{ totalObjetivoVacantes }}</span>
+              <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value" style="color: var(--slate-300)">{{ totalObjetivoVacantes }}</span>
             </div>
             <div class="inline-kpi">
               <span class="inline-kpi-label">INSCRITOS</span>
-              <span class="inline-kpi-value" style="color: var(--gold-400)">{{ totalVentaVacantes }}</span>
+              <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value" style="color: var(--gold-400)">{{ totalVentaVacantes }}</span>
             </div>
           </div>
         </transition>
@@ -263,7 +268,7 @@
               <span class="kpi-card-label">LOGRO GLOBAL</span>
               <div class="kpi-indicator" :class="kpiStats.globalPct >= 80 ? 'ind-green' : 'ind-amber'"></div>
             </div>
-            <div class="kpi-card-value" :class="pctClass(kpiStats.globalPct)">{{ kpiStats.globalPct }}%</div>
+            <div class="kpi-card-value" :class="pctClass(kpiStats.globalPct)"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ kpiStats.globalPct }}%</template></div>
             <div class="kpi-progress">
               <div class="kpi-progress-fill" :class="kpiStats.globalPct >= 80 ? 'fill-green' : 'fill-amber'"
                 :style="`width: ${Math.min(kpiStats.globalPct, 100)}%`"></div>
@@ -276,7 +281,7 @@
               <span class="kpi-card-label">VENTA TOTAL</span>
               <div class="kpi-indicator ind-blue"></div>
             </div>
-            <div class="kpi-card-value">{{ formatMoney(totalVenta) }}</div>
+            <div class="kpi-card-value"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ formatMoney(totalVenta) }}</template></div>
             <div class="kpi-card-sub meta-line">Meta: {{ formatMoney(totalObjetivo) }}</div>
           </div>
 
@@ -285,7 +290,7 @@
               <span class="kpi-card-label">PROGRAMAS ACTIVOS</span>
               <div class="kpi-indicator ind-slate"></div>
             </div>
-            <div class="kpi-card-value accent-text">{{ filteredProcessedData.length }}</div>
+            <div class="kpi-card-value accent-text"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ filteredProcessedData.length }}</template></div>
             <div class="kpi-card-sub">Registros del período seleccionado</div>
           </div>
 
@@ -294,7 +299,7 @@
               <span class="kpi-card-label" style="color: var(--gold-400)">TOP PROGRAMA</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-400)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
-            <div class="kpi-card-value kpi-card-top-name" :title="kpiStats.topProgram.name">{{ kpiStats.topProgram.name }}</div>
+            <div class="kpi-card-value kpi-card-top-name" :title="kpiStats.topProgram.name"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ kpiStats.topProgram.name }}</template></div>
             <div class="kpi-card-sub" style="color: var(--gold-400); font-weight: 600;">{{ formatMoney(kpiStats.topProgram.venta) }}</div>
           </div>
         </div>

@@ -28,7 +28,7 @@
     </header>
 
     <main class="exec-body">
-      <div class="row g-3 mb-4" v-if="!toolbarCollapsed && kpis">
+      <div class="row g-3 mb-4" v-if="!toolbarCollapsed && (kpis || isLoading)">
         <div class="col-md-3">
           <div class="finance-card d-flex align-items-center gap-3">
             <div class="lead-avatar" style="background:#fffbeb; color:#d97706; border-color:#fde68a;">
@@ -37,7 +37,8 @@
             <div>
               <div class="small text-muted fw-600">Pendientes / En Proceso</div>
               <div class="fw-700 text-dark" style="font-size: 18px;">
-                {{ kpis.tickets_pendientes + kpis.tickets_en_proceso }} <span class="x-small text-muted fw-500">/ {{ kpis.total_tickets }}</span>
+                <span v-if="isLoading" class="skel-kpi"></span>
+                <template v-else>{{ (kpis?.tickets_pendientes ?? 0) + (kpis?.tickets_en_proceso ?? 0) }} <span class="x-small text-muted fw-500">/ {{ kpis?.total_tickets ?? 0 }}</span></template>
               </div>
             </div>
           </div>
@@ -49,7 +50,10 @@
             </div>
             <div>
               <div class="small text-muted fw-600">Solucionados</div>
-              <div class="fw-700 text-dark" style="font-size: 18px;">{{ kpis.tickets_solucionados }}</div>
+              <div class="fw-700 text-dark" style="font-size: 18px;">
+                <span v-if="isLoading" class="skel-kpi"></span>
+                <template v-else>{{ kpis?.tickets_solucionados ?? 0 }}</template>
+              </div>
             </div>
           </div>
         </div>
@@ -61,7 +65,8 @@
             <div>
               <div class="small text-muted fw-600">CSAT Promedio</div>
               <div class="fw-700 text-dark" style="font-size: 18px;">
-                {{ kpis.csat_avg_score || '0.0' }} <span class="x-small fw-500 text-warning"><i class="fa-solid fa-star"></i></span>
+                <span v-if="isLoading" class="skel-kpi"></span>
+                <template v-else>{{ kpis?.csat_avg_score || '0.0' }} <span class="x-small fw-500 text-warning"><i class="fa-solid fa-star"></i></span></template>
               </div>
             </div>
           </div>

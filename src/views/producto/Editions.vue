@@ -138,15 +138,18 @@
           <div class="masthead-kpis">
             <div class="inline-kpi">
               <span class="inline-kpi-label">SEMANAS</span>
-              <span class="inline-kpi-value">{{ schedules.length }}</span>
+              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
+              <span v-else class="inline-kpi-value">{{ schedules.length }}</span>
             </div>
             <div class="inline-kpi">
               <span class="inline-kpi-label">EDICIONES</span>
-              <span class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
+              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
+              <span v-else class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
             </div>
             <div class="inline-kpi" v-if="hasColumnFilters" style="margin-right:20px;">
               <span class="inline-kpi-label">FILTRADAS</span>
-              <span class="inline-kpi-value" style="color:var(--gold-400)">{{ filteredSchedules.flatMap(w => w.items || []).length }}</span>
+              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
+              <span v-else class="inline-kpi-value" style="color:var(--gold-400)">{{ filteredSchedules.flatMap(w => w.items || []).length }}</span>
             </div>
           </div>
         </template>
@@ -158,7 +161,8 @@
           <div class="masthead-kpis" style="margin-right:20px;">
             <div class="inline-kpi">
               <span class="inline-kpi-label">RESULTADOS</span>
-              <span class="inline-kpi-value accent">{{ historyList.length }}</span>
+              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
+              <span v-else class="inline-kpi-value accent">{{ historyList.length }}</span>
             </div>
           </div>
         </template>

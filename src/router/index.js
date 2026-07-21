@@ -328,6 +328,13 @@ const routes = [
             component: () => import('@/views/marketing/IngresosDiarios.vue'),
             meta: { submodule: 'INGRESOS_DIARIOS', area: 'MARKETING' },
           },
+          {
+            path: 'publicaciones',
+            name: 'MarketingPublicaciones',
+            // calendario/registro de publicaciones RRSS (IG / LinkedIn)
+            component: () => import('@/views/marketing/Publicaciones.vue'),
+            meta: { submodule: 'PUBLICACIONES', area: 'MARKETING' },
+          },
           // ruta vieja: redirige para no romper marcadores
           { path: 'overview', redirect: { name: 'MarketingIngresosDiarios' } },
         ],

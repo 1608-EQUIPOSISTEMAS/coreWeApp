@@ -55,15 +55,18 @@
         <div class="ms-auto d-flex gap-4">
           <div class="inline-kpi">
             <span class="inline-kpi-label">TOTAL CONSULTAS</span>
-            <span class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
+            <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+            <span v-else class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
           </div>
           <div class="inline-kpi">
             <span class="inline-kpi-label">TOTAL VENTAS</span>
-            <span class="inline-kpi-value" style="color: var(--teal-500)">{{ totalGlobal.ventas }}</span>
+            <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+            <span v-else class="inline-kpi-value" style="color: var(--teal-500)">{{ totalGlobal.ventas }}</span>
           </div>
           <div class="inline-kpi">
             <span class="inline-kpi-label">CONVERSIÓN GLOBAL</span>
-            <span class="inline-kpi-value" style="color: var(--amber-500)">{{ calcPct(totalGlobal.consultas, totalGlobal.ventas) }}%</span>
+            <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+            <span v-else class="inline-kpi-value" style="color: var(--amber-500)">{{ calcPct(totalGlobal.consultas, totalGlobal.ventas) }}%</span>
           </div>
         </div>
       </div>

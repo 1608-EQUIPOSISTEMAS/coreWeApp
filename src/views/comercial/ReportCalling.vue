@@ -84,7 +84,7 @@
                 <span class="ep-kpi-label">Mis intentos</span>
                 <i class="fa-solid fa-phone-volume ep-kpi-icon"></i>
               </div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(callKPIs.intentos) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(callKPIs.intentos) }}</span></div>
               <span class="ep-kpi-foot">{{ fmt(callKPIs.leads) }} leads · prom. <strong>{{ callKPIs.promIntentos }}</strong>/lead</span>
             </article>
             <article class="ep-kpi" :class="callKPIs.tasaContacto >= 40 ? 'ep-kpi-green' : callKPIs.tasaContacto >= 25 ? 'ep-kpi-amber' : 'ep-kpi-red'">
@@ -92,7 +92,7 @@
                 <span class="ep-kpi-label">Contactabilidad</span>
                 <i class="fa-solid fa-bullseye ep-kpi-icon"></i>
               </div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ callKPIs.tasaContacto }}%</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ callKPIs.tasaContacto }}%</span></div>
               <span class="ep-kpi-foot"><strong>{{ fmt(callKPIs.contactados) }}</strong> contactados efectivos</span>
             </article>
             <article class="ep-kpi ep-kpi-green">
@@ -100,7 +100,7 @@
                 <span class="ep-kpi-label">Mis ventas</span>
                 <i class="fa-solid fa-circle-check ep-kpi-icon"></i>
               </div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(callKPIs.ventas) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(callKPIs.ventas) }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ callKPIs.conversion }}%</strong> tasa de cierre</span>
             </article>
             <article class="ep-kpi ep-kpi-red" :class="{ 'is-urgent': overdueCount > 0 }">
@@ -108,7 +108,7 @@
                 <span class="ep-kpi-label">Pendientes</span>
                 <i class="fa-solid fa-clock ep-kpi-icon"></i>
               </div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ totalPendingCount }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ totalPendingCount }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ overdueCount }}</strong> vencidas · {{ upcomingCount }} próximas</span>
             </article>
           </div>
@@ -332,27 +332,27 @@
           <div class="ep-kpis ep-kpis-5">
             <article class="ep-kpi ep-kpi-teal">
               <div class="ep-kpi-head"><span class="ep-kpi-label">Intentos totales</span><i class="fa-solid fa-phone-volume ep-kpi-icon"></i></div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(liderKPIs.intentos) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(liderKPIs.intentos) }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ fmt(liderKPIs.leads) }}</strong> leads gestionados</span>
             </article>
             <article class="ep-kpi ep-kpi-green">
               <div class="ep-kpi-head"><span class="ep-kpi-label">Atendidas</span><i class="fa-solid fa-circle-check ep-kpi-icon"></i></div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(liderKPIs.atendidas) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(liderKPIs.atendidas) }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ liderKPIs.pctAtendidas }}%</strong> del total</span>
             </article>
             <article class="ep-kpi ep-kpi-red">
               <div class="ep-kpi-head"><span class="ep-kpi-label">Sin atención</span><i class="fa-solid fa-circle-xmark ep-kpi-icon"></i></div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(liderKPIs.sinAtencion) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(liderKPIs.sinAtencion) }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ liderKPIs.pctSinAtencion }}%</strong> incumplimiento</span>
             </article>
             <article class="ep-kpi" :class="callKPIs.tasaContacto >= 40 ? 'ep-kpi-green' : 'ep-kpi-amber'">
               <div class="ep-kpi-head"><span class="ep-kpi-label">Contactabilidad</span><i class="fa-solid fa-bullseye ep-kpi-icon"></i></div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ callKPIs.tasaContacto }}%</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ callKPIs.tasaContacto }}%</span></div>
               <span class="ep-kpi-foot"><strong>{{ fmt(callKPIs.contactados) }}</strong> contactados</span>
             </article>
             <article class="ep-kpi ep-kpi-indigo">
               <div class="ep-kpi-head"><span class="ep-kpi-label">Reprogramadas</span><i class="fa-solid fa-rotate ep-kpi-icon"></i></div>
-              <div class="ep-kpi-main"><span class="ep-kpi-value">{{ fmt(liderKPIs.reprogramadas) }}</span></div>
+              <div class="ep-kpi-main"><span v-if="isLoading" class="skel-kpi"></span><span v-else class="ep-kpi-value">{{ fmt(liderKPIs.reprogramadas) }}</span></div>
               <span class="ep-kpi-foot"><strong>{{ liderKPIs.pctRescheduleExito }}%</strong> se atendieron después</span>
             </article>
           </div>

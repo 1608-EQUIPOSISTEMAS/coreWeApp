@@ -1,15 +1,18 @@
 <template>
   <div class="bot-tab">
     <!-- KPI cards (estilo Leads) -->
-    <div class="row g-3 mb-3" v-if="kpis">
+    <div class="row g-3 mb-3" v-if="kpis || isLoading">
       <div class="col-md-4">
         <div class="kpi-card">
           <div class="kpi-icon bg-amber-light text-amber"><i class="fa-solid fa-clock-rotate-left"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Pendientes / En Proceso</span>
             <span class="kpi-value">
-              {{ (kpis.tickets_pendientes || 0) + (kpis.tickets_en_proceso || 0) }}
-              <span class="small fw-500 text-muted">/ {{ kpis.total_tickets || 0 }}</span>
+              <span v-if="isLoading" class="skel-kpi"></span>
+              <template v-else>
+                {{ (kpis?.tickets_pendientes || 0) + (kpis?.tickets_en_proceso || 0) }}
+                <span class="small fw-500 text-muted">/ {{ kpis?.total_tickets || 0 }}</span>
+              </template>
             </span>
           </div>
         </div>
@@ -19,7 +22,10 @@
           <div class="kpi-icon bg-teal-light text-teal"><i class="fa-solid fa-check-double"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">Solucionados</span>
-            <span class="kpi-value">{{ kpis.tickets_solucionados || 0 }}</span>
+            <span class="kpi-value">
+              <span v-if="isLoading" class="skel-kpi"></span>
+              <template v-else>{{ kpis?.tickets_solucionados || 0 }}</template>
+            </span>
           </div>
         </div>
       </div>
@@ -28,7 +34,10 @@
           <div class="kpi-icon bg-yellow-light text-yellow"><i class="fa-solid fa-star"></i></div>
           <div class="kpi-info">
             <span class="kpi-label">CSAT Promedio</span>
-            <span class="kpi-value">{{ kpis.csat_avg_score || '0.0' }} <span class="small fw-500 text-muted">/ 5.0</span></span>
+            <span class="kpi-value">
+              <span v-if="isLoading" class="skel-kpi"></span>
+              <template v-else>{{ kpis?.csat_avg_score || '0.0' }} <span class="small fw-500 text-muted">/ 5.0</span></template>
+            </span>
           </div>
         </div>
       </div>

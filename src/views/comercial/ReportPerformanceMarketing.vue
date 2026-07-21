@@ -36,15 +36,15 @@
       <div class="mini-kpis">
         <div class="mini-card">
           <span>VENTA TOTAL (S/.)</span>
-          <strong>{{ formatCurrency(totals.ven_monto) }}</strong>
+          <strong><span v-if="loading" class="skel-kpi"></span><template v-else>{{ formatCurrency(totals.ven_monto) }}</template></strong>
         </div>
         <div class="mini-card">
           <span>TICKET PROM.</span>
-          <strong>{{ formatCurrency(totals.ticketProm) }}</strong>
+          <strong><span v-if="loading" class="skel-kpi"></span><template v-else>{{ formatCurrency(totals.ticketProm) }}</template></strong>
         </div>
         <div class="mini-card highlight">
           <span>% META S/.</span>
-          <strong>{{ totals.pctMetaMonto }}%</strong>
+          <strong><span v-if="loading" class="skel-kpi" style="width:48px"></span><template v-else>{{ totals.pctMetaMonto }}%</template></strong>
         </div>
       </div>
     </div>

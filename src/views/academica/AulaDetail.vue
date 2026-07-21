@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted, inject, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import apexchart from 'vue3-apexcharts'
+import Swal from 'sweetalert2'
 import { ServiceKeys } from '@/services'
 
 const props = defineProps({
@@ -408,6 +409,73 @@ async function saveGrades() {
   }
 }
 
+// --- Certificar en Odoo -------------------------------------------------
+// Aplica las notas guardadas del ERP a las Evaluaciones de Odoo y corre el
+// proceso de certificación masiva completo (cargar → aprobados → PDFs).
+const isCertifying = ref(false)
+const certCodeOf = (s) => gradesMap.value?.[s.enrollment_id]?.odoo_cert_code || null
+async function certifyInOdoo() {
+  if (dirtyGrades.size) {
+    toast.warning('Guarda los cambios de notas antes de certificar')
+    return
+  }
+  const confirm = await Swal.fire({
+    title: '¿Certificar en Odoo?',
+    html: 'Se aplicarán las <b>notas guardadas</b> a las Evaluaciones de Odoo y se ejecutará el <b>proceso de certificación masiva</b>.<br>Solo se certifican <b>aprobados sin deuda pendiente</b>.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, certificar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#002060',
+  })
+  if (!confirm.isConfirmed) return
+
+  isCertifying.value = true
+  Swal.fire({
+    title: 'Certificando en Odoo...',
+    html: 'Aplicando notas y generando certificados.<br>Esto puede tardar unos minutos.',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading(),
+  })
+  try {
+    const res = await editionService.classroomOdooCertify({ edition_id: editionId.value })
+    if (!res?.ok) {
+      Swal.fire({ icon: 'error', title: 'No se pudo certificar', text: res?.message || 'Error desconocido' })
+      return
+    }
+    const d = res.data
+    await loadGrades() // refresca la columna Cert. con los códigos recién emitidos
+    const warn = []
+    if (d.students_with_debt?.length) warn.push(`<b>Excluidos por deuda pendiente (no se certifican):</b> ${d.students_with_debt.join(', ')}`)
+    if (d.grades_missing?.length) warn.push(`<b>No encontrados en Odoo (ni por nombre):</b> ${d.grades_missing.join(', ')}`)
+    if (d.score_mismatches?.length) warn.push(`<b>Notas que Odoo recalculó distinto:</b><br>${d.score_mismatches.join('<br>')}`)
+    if (d.pdf_errors?.length) warn.push(`<b>PDFs con error:</b><br>${d.pdf_errors.join('<br>')}`)
+    Swal.fire({
+      icon: warn.length ? 'warning' : 'success',
+      title: d.new_certificates
+        ? `Proceso ${d.process_name || ''} · ${d.new_certificates} certificados nuevos`
+        : `Sin certificados nuevos por emitir`,
+      html: `
+        <div style="text-align:left">
+          <p><b>Grupo:</b> ${d.group_name}</p>
+          <p><b>Notas aplicadas en Odoo:</b> ${d.grades_applied} alumnos
+             ${d.students_without_grades ? `(${d.students_without_grades} sin notas en el ERP)` : ''}</p>
+          ${d.matched_by_name ? `<p><b>Vinculados por nombre (sin id previo):</b> ${d.matched_by_name}</p>` : ''}
+          ${d.already_certified ? `<p><b>Ya tenían certificado (no se duplican):</b> ${d.already_certified}</p>` : ''}
+          <p><b>Certificados del grupo:</b> ${d.certificates_total} · <b>PDFs generados ahora:</b> ${d.pdfs_generated}</p>
+          ${warn.length ? `<hr><p>${warn.join('</p><p>')}</p>` : ''}
+        </div>`,
+      width: 640,
+    })
+  } catch (err) {
+    console.error('Error certificando en Odoo:', err)
+    Swal.fire({ icon: 'error', title: 'Error certificando en Odoo', text: err?.response?.data?.message || err.message })
+  } finally {
+    isCertifying.value = false
+  }
+}
+
 // --- Exportar CSV de la lista de notas ---------------------------------
 // Genera el archivo en el cliente con los datos ya cargados en la tabla
 // (mismo mecanismo de descarga blob que el "Exportar aula" de FICO, pero
@@ -669,7 +737,7 @@ const aulaGradeAverage = computed(() => {
   return round2g(finals.reduce((a, b) => a + b, 0) / finals.length)
 })
 
-const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 13)
+const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 14)
 
 const TYPE_STATUS_BADGE = {
   we_enrollment_status_tracking: { label: 'SEG', cls: 'tb-seg' },
@@ -1574,18 +1642,23 @@ onMounted(async () => {
       <div class="head-kpis">
         <div class="hk">
           <div class="hk-label">Alumnos</div>
-          <div class="hk-value mono">{{ students.length || (isLoadingStudents ? '...' : 0) }}</div>
+          <div class="hk-value mono">
+            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
+            <template v-else>{{ students.length }}</template>
+          </div>
         </div>
         <div class="hk">
           <div class="hk-label">Aprobados</div>
-          <div class="hk-value mono" :class="{ muted: !gradesSummary.approved }">
-            {{ gradesSummary.approved }}
+          <div class="hk-value mono" :class="{ muted: !isLoadingStudents && !gradesSummary.approved }">
+            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
+            <template v-else>{{ gradesSummary.approved }}</template>
           </div>
         </div>
         <div class="hk">
           <div class="hk-label">Prom. final</div>
-          <div class="hk-value mono" :class="{ muted: aulaGradeAverage == null }">
-            {{ aulaGradeAverage == null ? '--' : fmtNota(aulaGradeAverage) }}
+          <div class="hk-value mono" :class="{ muted: !isLoadingStudents && aulaGradeAverage == null }">
+            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
+            <template v-else>{{ aulaGradeAverage == null ? '--' : fmtNota(aulaGradeAverage) }}</template>
           </div>
         </div>
       </div>
@@ -1662,6 +1735,15 @@ onMounted(async () => {
           {{ isGeneratingObs ? 'Generando...' : 'Generar observaciones (IA)' }}
         </button>
         <button
+          class="btn"
+          :disabled="isCertifying || !students.length"
+          title="Aplica las notas guardadas en Odoo y genera los certificados de los aprobados"
+          @click="certifyInOdoo()"
+        >
+          <i class="fa-solid" :class="isCertifying ? 'fa-spinner fa-spin' : 'fa-certificate'"></i>
+          {{ isCertifying ? 'Certificando...' : 'Certificar en Odoo' }}
+        </button>
+        <button
           class="btn primary"
           :disabled="!dirtyGrades.size || isSavingGrades"
           @click="saveGrades"
@@ -1694,6 +1776,7 @@ onMounted(async () => {
               <th class="th-group-pi" colspan="3">Proyecto integrador &middot; 6+8/20</th>
               <th rowspan="2" class="th-summary">Nota final</th>
               <th rowspan="2">Resultado</th>
+              <th rowspan="2">Cert.</th>
             </tr>
             <tr>
               <th v-for="n in sessionNumbers" :key="'t' + n" class="th-session att">S{{ n }}</th>
@@ -1812,6 +1895,14 @@ onMounted(async () => {
                     class="result-pill"
                     :class="finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'ok' : 'bad'"
                   >{{ finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'APROBADO' : 'DESAPROBADO' }}</span>
+                  <span v-else class="muted small">--</span>
+                </td>
+                <td class="td-center">
+                  <span
+                    v-if="certCodeOf(s)"
+                    class="cert-pill"
+                    :title="'Certificado emitido en Odoo: ' + certCodeOf(s)"
+                  ><i class="fa-solid fa-certificate"></i> {{ certCodeOf(s) }}</span>
                   <span v-else class="muted small">--</span>
                 </td>
               </tr>
@@ -2924,6 +3015,12 @@ onMounted(async () => {
 }
 .result-pill.ok { background: #E5F5EC; color: #1D7A4D; }
 .result-pill.bad { background: #FDEAEA; color: #B43E3E; }
+.cert-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.03em;
+  background: #EAF0FA; color: #002060; white-space: nowrap;
+}
 
 .deliv-subrow > td { background: #FBFBF5; padding: 12px 16px; }
 .deliv-grid {

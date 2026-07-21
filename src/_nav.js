@@ -287,6 +287,23 @@ export default [
     ],
   },
   {
+    component: 'CNavGroup',
+    name: 'Marketing',
+    to: '/marketing/publicaciones',
+    icon: 'cil-layers',
+    module: 'MARKETING',
+    roles: ['ADMIN', 'GERENCIA'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Publicaciones RRSS',
+        to: '/marketing/publicaciones',
+        submodule: 'PUBLICACIONES',
+        roles: ['ADMIN', 'GERENCIA'],
+      },
+    ],
+  },
+  {
     component: 'CNavTitle',
     name: 'Administración',
     roles: ['ADMIN'],

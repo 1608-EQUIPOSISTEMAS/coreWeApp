@@ -56,18 +56,21 @@
         <div class="filter-spacer"></div>
 
         <transition name="slide-fade">
-          <div class="masthead-kpis" v-if="!isRefreshing">
+          <div class="masthead-kpis">
             <div class="inline-kpi">
               <span class="inline-kpi-label">TOTAL CONSULTAS</span>
-              <span class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
+              <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value">{{ totalGlobal.consultas }}</span>
             </div>
             <div class="inline-kpi">
               <span class="inline-kpi-label">TOTAL VENTAS</span>
-              <span class="inline-kpi-value accent">{{ totalGlobal.ventas }}</span>
+              <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value accent">{{ totalGlobal.ventas }}</span>
             </div>
             <div class="inline-kpi" style="margin-right: 4px;">
               <span class="inline-kpi-label">CONVERSIÓN GLOBAL</span>
-              <span class="inline-kpi-value" :class="pctColorClass(calcPct(totalGlobal.consultas, totalGlobal.ventas))">
+              <span v-if="isRefreshing" class="skel-kpi" style="width:48px"></span>
+              <span v-else class="inline-kpi-value" :class="pctColorClass(calcPct(totalGlobal.consultas, totalGlobal.ventas))">
                 {{ calcPct(totalGlobal.consultas, totalGlobal.ventas) }}%
               </span>
             </div>
@@ -204,7 +207,7 @@
               <span class="kpi-card-label">CONVERSIÓN GLOBAL</span>
               <div class="kpi-indicator" :class="globalPct >= 30 ? 'ind-green' : globalPct >= 15 ? 'ind-amber' : 'ind-red'"></div>
             </div>
-            <div class="kpi-card-value" :class="pctColorClass(globalPct)">{{ globalPct }}%</div>
+            <div class="kpi-card-value" :class="pctColorClass(globalPct)"><span v-if="isRefreshing" class="skel-kpi"></span><template v-else>{{ globalPct }}%</template></div>
             <div class="kpi-progress">
               <div class="kpi-progress-fill" :class="globalPct >= 30 ? 'fill-green' : 'fill-amber'"
                 :style="`width: ${Math.min(globalPct * 2, 100)}%`"></div>
@@ -217,7 +220,7 @@
               <span class="kpi-card-label">TOTAL CONSULTAS</span>
               <div class="kpi-indicator ind-blue"></div>
             </div>
-            <div class="kpi-card-value">{{ totalGlobal.consultas }}</div>
+            <div class="kpi-card-value"><span v-if="isRefreshing" class="skel-kpi"></span><template v-else>{{ totalGlobal.consultas }}</template></div>
             <div class="kpi-card-sub">Leads captados en el período</div>
           </div>
 
@@ -226,7 +229,7 @@
               <span class="kpi-card-label">TOTAL VENTAS</span>
               <div class="kpi-indicator ind-teal"></div>
             </div>
-            <div class="kpi-card-value" style="color: #0f766e;">{{ totalGlobal.ventas }}</div>
+            <div class="kpi-card-value" style="color: #0f766e;"><span v-if="isRefreshing" class="skel-kpi"></span><template v-else>{{ totalGlobal.ventas }}</template></div>
             <div class="kpi-card-sub">Cierres confirmados</div>
           </div>
 
@@ -235,7 +238,7 @@
               <span class="kpi-card-label" style="color: var(--gold-400, #fbbf24);">CANAL ESTRELLA</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-400, #fbbf24)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
-            <div class="kpi-card-value kpi-top-name">{{ topChannel.name }}</div>
+            <div class="kpi-card-value kpi-top-name"><span v-if="isRefreshing" class="skel-kpi"></span><template v-else>{{ topChannel.name }}</template></div>
             <div class="kpi-card-sub" style="color: #fbbf24; font-weight: 600;">{{ topChannel.ventas }} ventas · {{ topChannel.pct }}% conv.</div>
           </div>
         </div>

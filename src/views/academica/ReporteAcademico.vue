@@ -920,7 +920,7 @@ function openAula(id) {
             {{ Math.abs(kpiDeltas.avg20.value).toFixed(1) }}
           </span>
         </div>
-        <div class="k-value" :class="kpis.avgClass">{{ fmt20(kpis.avg20) }}<span class="k-suffix"> /20</span></div>
+        <div class="k-value" :class="kpis.avgClass"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ fmt20(kpis.avg20) }}<span class="k-suffix"> /20</span></template></div>
         <div class="k-meter">
           <div class="k-context"><span>Meta {{ META_20.toFixed(1) }}</span><span class="k-pct">{{ kpis.avg20 != null ? Math.min(100, Math.round((kpis.avg20 / META_20) * 100)) : 0 }}%</span></div>
           <div class="k-bar"><div class="k-fill" :style="{ width: (kpis.avg20 != null ? Math.min(100, Math.round((kpis.avg20 / META_20) * 100)) : 0) + '%' }"></div></div>
@@ -935,7 +935,7 @@ function openAula(id) {
             {{ Math.abs(kpiDeltas.good.value) }}
           </span>
         </div>
-        <div class="k-value">{{ kpis.good ?? 0 }}<span class="k-suffix"> /{{ kpis.total ?? 0 }}</span></div>
+        <div class="k-value"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ kpis.good ?? 0 }}<span class="k-suffix"> /{{ kpis.total ?? 0 }}</span></template></div>
         <div class="k-meter">
           <div class="k-context"><span>Bueno + Excelente</span><span class="k-pct">{{ kpis.total ? Math.round((kpis.good / kpis.total) * 100) : 0 }}%</span></div>
           <div class="k-bar"><div class="k-fill" :style="{ width: (kpis.total ? Math.round((kpis.good / kpis.total) * 100) : 0) + '%' }"></div></div>
@@ -950,7 +950,7 @@ function openAula(id) {
             {{ Math.abs(kpiDeltas.atRisk.value) }}
           </span>
         </div>
-        <div class="k-value">{{ kpis.atRisk ?? 0 }}</div>
+        <div class="k-value"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ kpis.atRisk ?? 0 }}</template></div>
         <div class="k-meter">
           <div class="k-context"><span>Deficiente + En proceso</span><span class="k-pct">{{ kpis.total ? Math.round((kpis.atRisk / kpis.total) * 100) : 0 }}%</span></div>
           <div class="k-bar"><div class="k-fill" :style="{ width: (kpis.total ? Math.round((kpis.atRisk / kpis.total) * 100) : 0) + '%' }"></div></div>
@@ -965,7 +965,7 @@ function openAula(id) {
             {{ Math.abs(kpiDeltas.evaluated.value) }}
           </span>
         </div>
-        <div class="k-value">{{ coveragePct }}<span class="k-suffix">%</span></div>
+        <div class="k-value"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ coveragePct }}<span class="k-suffix">%</span></template></div>
         <div class="k-meter">
           <div class="k-context"><span>IA {{ globalCoverage.aiPct }}% · Manual {{ globalCoverage.manualPct }}%</span><span class="k-pct">{{ coveragePct }}%</span></div>
           <div class="k-bar"><div class="k-fill" :style="{ width: coveragePct + '%' }"></div></div>

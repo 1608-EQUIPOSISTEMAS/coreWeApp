@@ -38,14 +38,20 @@
       <div class="kpi">
         <div class="lbl"><span class="dot" style="background:#6b5cf0"></span>Ventas vs Objetivo</div>
         <div class="val">
-          <b>{{ kpiVsObjetivo.ventas }}</b>
-          <span class="vs">/ {{ kpiVsObjetivo.objetivo }}</span>
-          <span class="kpct" :style="{ background: kpiVsObjetivo.color + '1A', color: kpiVsObjetivo.color }">{{ kpiVsObjetivo.pct }}%</span>
+          <span v-if="isLoading" class="skel-kpi"></span>
+          <template v-else>
+            <b>{{ kpiVsObjetivo.ventas }}</b>
+            <span class="vs">/ {{ kpiVsObjetivo.objetivo }}</span>
+            <span class="kpct" :style="{ background: kpiVsObjetivo.color + '1A', color: kpiVsObjetivo.color }">{{ kpiVsObjetivo.pct }}%</span>
+          </template>
         </div>
       </div>
       <div v-for="k in kpis" :key="k.label" class="kpi">
         <div class="lbl"><span class="dot" :style="{ background: k.color }"></span>{{ k.label }}</div>
-        <div class="val"><b>{{ k.value }}</b><span>{{ k.unit }}</span></div>
+        <div class="val">
+          <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
+          <template v-else><b>{{ k.value }}</b><span>{{ k.unit }}</span></template>
+        </div>
       </div>
     </div>
 

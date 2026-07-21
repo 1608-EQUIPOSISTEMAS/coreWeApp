@@ -91,7 +91,7 @@
               <span class="kpi-card-label">TOTAL CONSULTAS</span>
               <div class="kpi-indicator" style="background: var(--blue-600)"></div>
             </div>
-            <div class="kpi-card-value accent-text">{{ stats.general.total }}</div>
+            <div class="kpi-card-value accent-text"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ stats.general.total }}</template></div>
             <div class="kpi-card-actions">
                <span class="pill pill-blue interactive-pill" @click.stop="drillDown('web')">Web: {{ stats.general.countWeb }}</span>
                <span class="pill pill-slate interactive-pill border" @click.stop="drillDown('b2b')">B2B: {{ stats.general.countB2B }}</span>
@@ -103,7 +103,7 @@
               <span class="kpi-card-label">SEG. PENDIENTES</span>
               <div class="kpi-indicator" style="background: var(--amber-500)"></div>
             </div>
-            <div class="kpi-card-value" style="color: var(--amber-500)">{{ stats.general.followUpPending }}</div>
+            <div class="kpi-card-value" style="color: var(--amber-500)"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ stats.general.followUpPending }}</template></div>
             <div class="kpi-card-sub">De <strong class="text-dark">{{ stats.general.attemptUpCount }}</strong> gestionados</div>
           </div>
 
@@ -112,7 +112,7 @@
               <span class="kpi-card-label">ALTA PRIORIDAD</span>
               <div class="kpi-indicator" style="background: var(--red-600)"></div>
             </div>
-            <div class="kpi-card-value" style="color: var(--red-600)">{{ stats.general.highInterestCount }}</div>
+            <div class="kpi-card-value" style="color: var(--red-600)"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ stats.general.highInterestCount }}</template></div>
             <div class="kpi-card-sub">Ediciones por comenzar</div>
           </div>
 
@@ -125,7 +125,7 @@
               <span class="kpi-card-label" style="color:#0891b2">CONVERSIÓN</span>
               <div class="kpi-indicator" style="background:#0891b2"></div>
             </div>
-            <div class="kpi-card-value" style="color:#0891b2">{{ stats.general.conversion ?? '—' }}</div>
+            <div class="kpi-card-value" style="color:#0891b2"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ stats.general.conversion ?? '—' }}</template></div>
             <div class="kpi-card-sub" style="color:#0891b2; font-weight:600;">
               <template v-if="filters.rangoFechas.start">
                 {{ stats.general.conversionRate }}% · 1er contacto en período
@@ -142,7 +142,7 @@
               <span class="kpi-card-label" style="color:#7c3aed">RATIO (F. PAGO)</span>
               <div class="kpi-indicator" style="background:#7c3aed"></div>
             </div>
-            <div class="kpi-card-value" style="color:#7c3aed">{{ stats.general.ratio ?? '—' }}</div>
+            <div class="kpi-card-value" style="color:#7c3aed"><span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ stats.general.ratio ?? '—' }}</template></div>
             <div class="kpi-card-sub" style="color:#7c3aed; font-weight:600;">
               <template v-if="filters.rangoFechas.start">
                 {{ stats.general.ratioRate }}% · cobros en período

@@ -116,6 +116,16 @@ export default class EditionService {
     return response
   }
 
+  // Certificar aula en Odoo: notas → evaluaciones + certificación masiva +
+  // PDFs. Puede tardar varios minutos con un aula completa.
+  async classroomOdooCertify(payload) {
+    const response = (await api.post('/edition/classroomodoocertify', payload, {
+      meta: { skipLoader: true },
+      timeout: 300000
+    })).data
+    return response
+  }
+
   // Datos del Reporte Academico: una sola llamada ligera (ediciones curso +
   // resumen de auditoria juntos). Reemplaza al par editionList(500) +
   // classroomAuditSummaryList que tardaba 15s+ contra la BD remota.
