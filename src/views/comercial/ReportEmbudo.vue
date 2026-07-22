@@ -65,10 +65,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import {
   Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale
 } from 'chart.js'
 import { Doughnut, Bar } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
@@ -82,14 +84,14 @@ const topPrograms = [
 ]
 
 // --- CHART 1: CANALES ---
-const channelData = {
+const channelData = computed(() => ({
   labels: ['Facebook Ads', 'TikTok (Orgánico)', 'Google Search', 'Referidos', 'Base de Datos'],
   datasets: [{
     data: [40, 25, 15, 10, 10],
-    backgroundColor: ['#1877F2', '#000000', '#EA4335', '#34A853', '#FBBC05'],
+    backgroundColor: ['#1877F2', isDark.value ? '#E5E7EB' : '#000000', '#EA4335', '#34A853', '#FBBC05'],
     borderWidth: 0
   }]
-}
+}))
 const pieOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -149,4 +151,20 @@ const barGroupedOptions = {
 .progress-wrapper { display: flex; align-items: center; gap: 8px; }
 .progress-bar { height: 6px; background-color: #3b82f6; border-radius: 4px; min-width: 2px; }
 .progress-text { font-size: 0.7rem; color: #64748b; min-width: 35px; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .page-dashboard { background-color: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .page-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .page-sub { color: #A0A099; }
+[data-coreui-theme="dark"] .chart-card, [data-coreui-theme="dark"] .table-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .chart-header { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .chart-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .table th { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .table td { border-bottom-color: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .text-success { color: #34D399; }
+[data-coreui-theme="dark"] .text-muted { color: #8A8A80; }
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .progress-text { color: #A0A099; }
 </style>

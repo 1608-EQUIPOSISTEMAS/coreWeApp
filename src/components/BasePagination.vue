@@ -344,6 +344,25 @@ function changePage(newPage) {
   user-select: none;
 }
 
+/* ═══════════ DARK MODE ═══════════ */
+/* Todas las reglas usan var(--token, fallback claro): basta redefinir
+   los tokens en la raíz del componente para el tema oscuro. */
+[data-coreui-theme="dark"] .exec-pagination {
+  --white: #1A1A14;
+  --border: #2A2A22;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --teal-500: #8FAADC;
+  --teal-600: #8FAADC;
+}
+/* Página activa: fondo acento claro → texto oscuro para contraste */
+[data-coreui-theme="dark"] .page-btn.active { color: #14140F; }
+
 /* Responsive */
 @media (max-width: 600px) {
   .mobile-hide { display: none; }

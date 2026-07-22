@@ -500,6 +500,50 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 .slide-fade-enter-active { transition: all .3s ease; }
 .slide-fade-enter-from { opacity: 0; transform: translateY(10px); }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* tokens: los var(--x, fallback) del CSS de esta vista y del global los recogen */
+  --slate-50: #1F1F1A; --slate-100: #24241E; --slate-300: #3A3A33; --slate-400: #8A8A80;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0; --text-secondary: #A0A099; --text-muted: #8A8A80;
+  --teal-600: #8FAADC; --blue-600: #60A5FA; --amber-500: #FBBF24; --red-600: #F87171;
+}
+/* masthead (el global lo fuerza claro con !important) */
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .brand-eyebrow,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .filter-label { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary { background: #F4F4F0 !important; color: #14140F !important; border-color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD !important; }
+/* superficies */
+[data-coreui-theme="dark"] .kpi-card, [data-coreui-theme="dark"] .chart-panel { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3); }
+[data-coreui-theme="dark"] .kpi-interactive:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -4px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .metrics-legend { background: #1F1F1A; }
+[data-coreui-theme="dark"] .chart-panel-header { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .text-dark { color: #F4F4F0 !important; }
+/* acentos conversión / ratio (cian y violeta más claros en dark) */
+[data-coreui-theme="dark"] .exec-shell [style*="#0891b2"] { color: #22D3EE !important; }
+[data-coreui-theme="dark"] .exec-shell [style*="#7c3aed"] { color: #A78BFA !important; }
+[data-coreui-theme="dark"] .ml-conv .ml-dot { background: #22D3EE; }
+[data-coreui-theme="dark"] .ml-ratio .ml-dot { background: #A78BFA; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-thead .th-conv), [data-coreui-theme="dark"] .interest-table .col-conv { color: #22D3EE; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-thead .th-ratio), [data-coreui-theme="dark"] .interest-table .col-ratio { color: #A78BFA; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-conv-val), [data-coreui-theme="dark"] .col-conv-val { color: #22D3EE; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-ratio-val), [data-coreui-theme="dark"] .col-ratio-val { color: #A78BFA; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-conv-val:hover), [data-coreui-theme="dark"] .col-conv-val:hover { background: rgba(34,211,238,.16) !important; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-ratio-val:hover), [data-coreui-theme="dark"] .col-ratio-val:hover { background: rgba(167,139,250,.16) !important; }
+/* tablas */
+[data-coreui-theme="dark"] .exec-shell :deep(.st-summary td) { background: #24241E; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell :deep(.st-row:hover td) { background: #1F1F1A; }
+[data-coreui-theme="dark"] .interest-row:hover td { background: #1F1F1A; }
+/* badges de cabecera de panel */
+[data-coreui-theme="dark"] .exec-shell :deep(.phs-conv) { background: rgba(59,130,246,.16); color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-shell :deep(.phs-ratio) { background: rgba(167,139,250,.16); color: #A78BFA; }
+/* pills (globales con colores light hardcodeados) */
+[data-coreui-theme="dark"] .exec-shell .pill-blue { background: rgba(59,130,246,.16); color: #60A5FA; border-color: rgba(59,130,246,.3) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.3) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245,158,11,.16); color: #FBBF24; border-color: rgba(245,158,11,.3) !important; }
 </style>
 
 <script setup>

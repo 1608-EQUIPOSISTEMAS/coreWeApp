@@ -684,6 +684,7 @@ import { ref, computed, reactive, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler } from 'chart.js'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 import { ServiceKeys } from '@/services'
 
 const availableWeeks  = ref([])
@@ -1186,10 +1187,10 @@ const trendChartData = computed(() => {
   return {
     labels,
     datasets: [
-      { type: 'line', label: 'Ventas Acumuladas', data: cumulative, borderColor: '#0f172a', backgroundColor: 'rgba(15, 23, 42, 0.08)', borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#0f172a', order: 1 },
+      { type: 'line', label: 'Ventas Acumuladas', data: cumulative, borderColor: isDark.value ? '#E5E7EB' : '#0f172a', backgroundColor: isDark.value ? 'rgba(229,231,235,0.08)' : 'rgba(15, 23, 42, 0.08)', borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: isDark.value ? '#E5E7EB' : '#0f172a', order: 1 },
       { type: 'line', label: 'Meta Proyectada', data: projection, borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 2, borderDash: [8, 4], fill: false, tension: 0, pointRadius: 3, pointBackgroundColor: '#ef4444', pointBorderColor: '#fff', pointBorderWidth: 1.5, order: 2 },
       { type: 'bar', label: 'Ventas Periodo', data: ventasDiarias, backgroundColor: 'rgba(59, 130, 246, 0.75)', borderRadius: 5, order: 4 },
-      { type: 'bar', label: 'Consultas (Leads)', data: consultasDiarias, backgroundColor: 'rgba(226, 232, 240, 0.8)', borderRadius: 5, order: 5 }
+      { type: 'bar', label: 'Consultas (Leads)', data: consultasDiarias, backgroundColor: isDark.value ? 'rgba(58,58,51,0.8)' : 'rgba(226, 232, 240, 0.8)', borderRadius: 5, order: 5 }
     ]
   }
 })
@@ -1218,13 +1219,13 @@ const ticketChartData = computed(() => {
   if (tableData.value.length === 0) return { labels: [], datasets: [] }
   const sorted = [...tableData.value].filter(d => d.ven > 0).sort((a, b) => (b.ven_monto / b.ven) - (a.ven_monto / a.ven))
   const tickets = sorted.map(d => d.ven > 0 ? Math.round(d.ven_monto / d.ven) : 0)
-  const ticketColors = tickets.map(t => { const max = Math.max(...tickets); const ratio = t / (max || 1); return `rgba(15, 23, 42, ${0.3 + ratio * 0.7})` })
+  const ticketColors = tickets.map(t => { const max = Math.max(...tickets); const ratio = t / (max || 1); return isDark.value ? `rgba(229, 231, 235, ${0.3 + ratio * 0.7})` : `rgba(15, 23, 42, ${0.3 + ratio * 0.7})` })
   return { labels: sorted.map(d => d.asesor), datasets: [{ type: 'bar', label: 'Ticket Promedio (S/.)', data: tickets, backgroundColor: ticketColors, borderRadius: 6, yAxisID: 'yTicket', order: 2 }, { type: 'line', label: 'Nº Ventas', data: sorted.map(d => d.ven), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 5, pointBackgroundColor: '#3b82f6', fill: false, yAxisID: 'yVentas', order: 1 }] }
 })
 
 const revenueChartData = computed(() => {
   const active = tableData.value.filter(d => selectedAdvisorCode.value !== 'ALL' ? d.cod === selectedAdvisorCode.value : (d.obj_monto > 0 || d.ven_monto > 0 || d.obj > 0))
-  return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => Number(d.obj_monto) || 0), backgroundColor: '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => Number(d.ven_monto) || 0), backgroundColor: '#10b981', borderRadius: 4 }] }
+  return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => Number(d.obj_monto) || 0), backgroundColor: isDark.value ? '#3A3A33' : '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => Number(d.ven_monto) || 0), backgroundColor: '#10b981', borderRadius: 4 }] }
 })
 
 const leadsStackedChartData = computed(() => {
@@ -1243,7 +1244,7 @@ const leadsStackedChartData = computed(() => {
     return { asesor: adv.asesor, statusCounts }
   })
   const statusArray = Array.from(allStatuses)
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', '#0f172a']
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', isDark.value ? '#E5E7EB' : '#0f172a']
   const datasets = statusArray.map((statusAlias, index) => ({
     label: statusAlias,
     data: advisorData.map(adv => adv.statusCounts[statusAlias] || 0),
@@ -1253,7 +1254,7 @@ const leadsStackedChartData = computed(() => {
   return { labels: advisorData.map(adv => adv.asesor), datasets }
 })
 
-const stackedBarOptions = {
+const stackedBarOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -1262,11 +1263,11 @@ const stackedBarOptions = {
   },
   scales: {
     x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
-    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } }
+    y: { stacked: true, beginAtZero: true, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } }
   }
-}
+}))
 
-const PROGRAM_COLORS = ['#0d9488', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b', '#10b981', '#ec4899', '#0f172a']
+const PROGRAM_COLORS = computed(() => ['#0d9488', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b', '#10b981', '#ec4899', isDark.value ? '#E5E7EB' : '#0f172a'])
 
 const programSalesChartData = computed(() => {
   let rows = []
@@ -1287,15 +1288,15 @@ const programSalesChartData = computed(() => {
       .filter(p => p.cantidad > 0)
   }
 
-  if (rows.length === 0) return { labels: ['Sin datos'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] }
+  if (rows.length === 0) return { labels: ['Sin datos'], datasets: [{ data: [1], backgroundColor: [isDark.value ? '#3A3A33' : '#e2e8f0'] }] }
 
   return {
     labels: rows.map(p => p.nombre),
     datasets: [{
       data: rows.map(p => Number(p.cantidad)),
-      backgroundColor: rows.map((_, i) => PROGRAM_COLORS[i % PROGRAM_COLORS.length]),
+      backgroundColor: rows.map((_, i) => PROGRAM_COLORS.value[i % PROGRAM_COLORS.value.length]),
       borderWidth: 2,
-      borderColor: '#fff'
+      borderColor: isDark.value ? '#1A1A14' : '#fff'
     }]
   }
 })
@@ -1321,14 +1322,14 @@ const shareChartData = computed(() => {
   if (tableData.value.length === 0) return { labels: [], datasets: [] }
   const top = tableData.value.filter(d => Number(d.ven) > 0)
   const filteredTop = selectedAdvisorCode.value !== 'ALL' ? top.filter(d => d.cod === selectedAdvisorCode.value) : top
-  return { labels: filteredTop.map(d => d.asesor), datasets: [{ data: filteredTop.map(d => Number(d.ven)), backgroundColor: ['#0f172a','#334155','#64748b','#94a3b8','#cbd5e1','#e2e8f0','#f1f5f9','#2563eb','#3b82f6','#60a5fa'], borderWidth: 1, borderColor: '#ffffff' }] }
+  return { labels: filteredTop.map(d => d.asesor), datasets: [{ data: filteredTop.map(d => Number(d.ven)), backgroundColor: isDark.value ? ['#E5E7EB','#CBD5E1','#64748b','#94a3b8','#cbd5e1','#e2e8f0','#f1f5f9','#2563eb','#3b82f6','#60a5fa'] : ['#0f172a','#334155','#64748b','#94a3b8','#cbd5e1','#e2e8f0','#f1f5f9','#2563eb','#3b82f6','#60a5fa'], borderWidth: 1, borderColor: isDark.value ? '#1A1A14' : '#ffffff' }] }
 })
 
-const lineOptions = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top', labels: { boxWidth: 14, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => { if (ctx.dataset.label === 'Meta Proyectada' || ctx.dataset.label === 'Ventas Acumuladas') return ` ${ctx.dataset.label}: ${ctx.raw} ventas`; return ` ${ctx.dataset.label}: ${ctx.raw}` } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 } } } } }
-const rankingBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label === '% Cumplimiento Meta (#)' ? ` ${ctx.raw}% de la meta` : ` Referencia: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, max: Math.max(120, ...(rankingChartData.value?.datasets?.[0]?.data || [120])), ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } } }
-const convBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } } }
-const pipelineBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } } } }
-const ticketBarOptions = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => { if (ctx.dataset.yAxisID === 'yTicket') return ` Ticket: S/. ${new Intl.NumberFormat('es-PE').format(ctx.raw)}`; return ` Ventas: ${ctx.raw}` } } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, yTicket: { type: 'linear', position: 'left', beginAtZero: true, ticks: { callback: v => 'S/' + new Intl.NumberFormat('es-PE').format(v), font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } }, yVentas: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } } } } }
+const lineOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top', labels: { boxWidth: 14, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => { if (ctx.dataset.label === 'Meta Proyectada' || ctx.dataset.label === 'Ventas Acumuladas') return ` ${ctx.dataset.label}: ${ctx.raw} ventas`; return ` ${ctx.dataset.label}: ${ctx.raw}` } } } }, scales: { y: { beginAtZero: true, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 } } } } }))
+const rankingBarOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label === '% Cumplimiento Meta (#)' ? ` ${ctx.raw}% de la meta` : ` Referencia: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, max: Math.max(120, ...(rankingChartData.value?.datasets?.[0]?.data || [120])), ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } } } }))
+const convBarOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } } } }))
+const pipelineBarOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } } } }))
+const ticketBarOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => { if (ctx.dataset.yAxisID === 'yTicket') return ` Ticket: S/. ${new Intl.NumberFormat('es-PE').format(ctx.raw)}`; return ` Ventas: ${ctx.raw}` } } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, yTicket: { type: 'linear', position: 'left', beginAtZero: true, ticks: { callback: v => 'S/' + new Intl.NumberFormat('es-PE').format(v), font: { size: 10 } }, grid: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } }, yVentas: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 } } } } }))
 const groupedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'bottom' } } }
 const doughnutOptions   = { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'right', labels: { boxWidth: 9, font: { size: 9 } } } } }
 
@@ -1339,7 +1340,7 @@ const myLeadsStackedChartData = computed(() => {
     if (day.leads_by_status) Object.keys(day.leads_by_status).forEach(st => allStatuses.add(st))
   })
   const statusArray = Array.from(allStatuses)
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', '#0f172a']
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6', isDark.value ? '#E5E7EB' : '#0f172a']
   const datasets = statusArray.map((statusAlias, index) => {
     let labelName = statusAlias
     try {
@@ -1957,4 +1958,33 @@ const myLeadsStackedChartData = computed(() => {
 [data-coreui-theme="dark"] .rg-tfoot-row td { background: #1F1F1A !important; }
 [data-coreui-theme="dark"] .rg-impersonation-banner { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.30); color: #FCD34D; }
 [data-coreui-theme="dark"] .rg-impersonation-banner strong { color: #FDE68A; }
+[data-coreui-theme="dark"] .ep-view-toggle,
+[data-coreui-theme="dark"] .ep-btn-export,
+[data-coreui-theme="dark"] .rg-modality { background: #1A1A14; }
+[data-coreui-theme="dark"] .ep-btn-export.is-active { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.40); color: #FBBF24; }
+[data-coreui-theme="dark"] .rg-filter-chip.is-impersonate { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.35); }
+[data-coreui-theme="dark"] .rg-filter-chip.is-impersonate .rg-filter-label { color: #FBBF24; }
+[data-coreui-theme="dark"] .rg-banner-exit { color: #FCD34D; border-color: rgba(245, 158, 11, 0.35); }
+[data-coreui-theme="dark"] .rg-banner-exit:hover { background: rgba(245, 158, 11, 0.16); }
+[data-coreui-theme="dark"] .rg-mod-btn.is-active { color: #34D399; }
+[data-coreui-theme="dark"] .rg-action-card.is-hot .rg-action-icon { background: rgba(220, 38, 38, 0.16); color: #F87171; }
+[data-coreui-theme="dark"] .rg-action-card.is-followup .rg-action-icon { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
+[data-coreui-theme="dark"] .rg-action-card.is-hot .rg-action-value { color: #F87171; }
+[data-coreui-theme="dark"] .rg-action-card.is-followup .rg-action-value { color: #60A5FA; }
+[data-coreui-theme="dark"] .rg-th-group.rg-grp-a { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .rg-thead-sub th.ts-a { color: #F4F4F0; }
+[data-coreui-theme="dark"] .rg-thead-sub th.ts-b { color: #34D399; }
+[data-coreui-theme="dark"] .rg-thead-sub th.ts-c { color: #60A5FA; }
+[data-coreui-theme="dark"] .rg-thead-sub th.ts-d { color: #A5B4FC; }
+[data-coreui-theme="dark"] .rg-btn-view-as:hover { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.40); color: #FBBF24; }
+[data-coreui-theme="dark"] .rg-status-pill.is-ok { border-color: rgba(16, 185, 129, 0.35); color: #34D399; }
+[data-coreui-theme="dark"] .rg-status-pill.is-low { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.35); color: #F87171; }
+[data-coreui-theme="dark"] .rg-gap-neg { color: #F87171; }
+[data-coreui-theme="dark"] .rg-gap-pos,
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .c-amber { color: #FBBF24; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .c-blue { color: #60A5FA; }
+[data-coreui-theme="dark"] .c-indigo { color: #A5B4FC; }
+[data-coreui-theme="dark"] .rg-legend-line[style] { background: #F4F4F0 !important; }
 </style>

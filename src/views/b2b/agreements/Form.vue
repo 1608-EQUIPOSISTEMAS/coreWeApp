@@ -335,4 +335,20 @@ onMounted(async () => {
 .btn-outline { background-color: #fff; border-color: #d1d5db; color: #374151; }
 .form-control { border: 1px solid #e5e7eb; border-radius: .375rem; padding: .4rem .6rem; width: 100%; font-size: .875rem; }
 .form-label { font-size: .85rem; font-weight: 500; color: #374151; display: block; }
+
+/* ══ DARK MODE ══ */
+[data-coreui-theme="dark"] .lead-form { color: #F4F4F0; }
+[data-coreui-theme="dark"] .card-header { background-color: #1A1A14; border-bottom: 1px solid #2A2A22 !important; }
+[data-coreui-theme="dark"] .required-star { color: #F87171; }
+[data-coreui-theme="dark"] .form-section__title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .discount-table-wrapper { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .discount-table thead th { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .discount-table tbody tr { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .pct-symbol { color: #A0A099; }
+[data-coreui-theme="dark"] .empty-discounts { color: #8A8A80; background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+[data-coreui-theme="dark"] .btn-outline { background-color: #1A1A14; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-control { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-label { color: #A0A099; }
 </style>

@@ -66,4 +66,18 @@ function close() {
   background: transparent; border: none; font-size: 1.1rem; cursor: pointer;
   color: #6b7280;
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+/* Contenido teleportado a <body>: el atributo de scope viaja con los
+   nodos, así que los selectores scoped siguen aplicando. */
+[data-coreui-theme="dark"] .modal-overlay { background: rgba(0, 0, 0, .6); }
+[data-coreui-theme="dark"] .modal-card {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-close { color: #A0A099; }
 </style>

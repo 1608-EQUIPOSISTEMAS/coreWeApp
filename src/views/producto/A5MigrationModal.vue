@@ -419,4 +419,64 @@ function formatAmount (n) {
 
 .text-center { text-align: center; }
 .text-end { text-align: right; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .a5-origin-card { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); }
+[data-coreui-theme="dark"] .a5-origin-icon { color: #F87171; }
+[data-coreui-theme="dark"] .a5-origin-title { color: #FCA5A5; }
+[data-coreui-theme="dark"] .a5-origin-sub { color: #F87171; }
+[data-coreui-theme="dark"] .a5-origin-count-num { color: #FCA5A5; }
+[data-coreui-theme="dark"] .a5-origin-count-lbl { color: #F87171; }
+[data-coreui-theme="dark"] .a5-loading,
+[data-coreui-theme="dark"] .a5-empty { color: #A0A099; }
+[data-coreui-theme="dark"] .a5-empty-title { color: #D0D0C8; }
+[data-coreui-theme="dark"] .a5-empty-sub { color: #8A8A80; }
+[data-coreui-theme="dark"] .a5-bulk-bar { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .a5-bulk-label { color: #D0D0C8; }
+[data-coreui-theme="dark"] .a5-bulk-select,
+[data-coreui-theme="dark"] .a5-row-select { background: #14140F; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .a5-table-wrap { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .a5-table thead th { background: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .a5-table tbody td { border-top-color: #24241E; }
+[data-coreui-theme="dark"] .a5-row-warn td { background: rgba(245,158,11,.12); }
+[data-coreui-theme="dark"] .a5-stu-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .a5-stu-doc { color: #8A8A80; }
+[data-coreui-theme="dark"] .a5-prog-name { color: #D0D0C8; }
+[data-coreui-theme="dark"] .a5-prog-sub { color: #8A8A80; }
+[data-coreui-theme="dark"] .a5-amt { color: #34D399; }
+[data-coreui-theme="dark"] .a5-pill-parent { background: rgba(59,130,246,.2); color: #93C5FD; }
+[data-coreui-theme="dark"] .a5-pill-child { background: rgba(99,102,241,.2); color: #C7D2FE; }
+[data-coreui-theme="dark"] .a5-just-label { color: #A0A099; }
+[data-coreui-theme="dark"] .a5-required { color: #F87171; }
+[data-coreui-theme="dark"] .a5-textarea {
+  border-color: rgba(245,158,11,.45);
+  background: rgba(245,158,11,.10);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .a5-textarea:focus { border-color: #FBBF24; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+[data-coreui-theme="dark"] .a5-warning { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #FBBF24; }
+[data-coreui-theme="dark"] .a5-warning i { color: #FBBF24; }
+[data-coreui-theme="dark"] .a5-btn-cancel { border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .a5-btn-cancel:hover:not(:disabled) { background: #1F1F1A; }
+[data-coreui-theme="dark"] .a5-btn-ghost { background: #1F1F1A; border-color: #3A3A33; color: #D0D0C8; }
+[data-coreui-theme="dark"] .a5-btn-ghost:hover:not(:disabled) { background: #24241E; }
+[data-coreui-theme="dark"] .a5-confirm-overlay { background: rgba(0,0,0,0.65); }
+[data-coreui-theme="dark"] .a5-confirm-box { background: #1A1A14; box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
+[data-coreui-theme="dark"] .a5-confirm-title { color: #FCA5A5; }
+[data-coreui-theme="dark"] .a5-confirm-text { color: #D0D0C8; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene este cuerpo (.a5-body). */
+[data-coreui-theme="dark"] .modal-card:has(.a5-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.a5-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.a5-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.a5-body) .btn-close { color: #A0A099; }
 </style>

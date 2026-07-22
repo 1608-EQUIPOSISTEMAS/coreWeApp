@@ -794,4 +794,39 @@ onMounted(async () => {
   .contact-row { flex-wrap: wrap; }
   .contact-col--country { flex: 0 0 110px; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* los var(--x, fallback) no estan definidos en light: definirlos solo
+     en dark no altera el modo claro */
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  background: #14140F;
+}
+[data-coreui-theme="dark"] .exec-shell .exec-card { background: #1A1A14; box-shadow: 0 1px 3px rgba(0, 0, 0, .4); }
+[data-coreui-theme="dark"] .exec-shell .exec-card__header { border-bottom-color: #2A2A22; color: #C9C9C1; }
+[data-coreui-theme="dark"] .exec-shell .exec-input,
+[data-coreui-theme="dark"] .exec-shell .exec-select-light { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled) { background: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .type-btn { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .type-btn--active { background: rgba(20, 184, 166, .12); border-color: #2DD4BF; color: #2DD4BF; }
+[data-coreui-theme="dark"] .exec-shell .form-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .form-switch input:checked + span { background: #0d9488; }
+[data-coreui-theme="dark"] .exec-shell .contact-list::-webkit-scrollbar-track { background: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .contact-list::-webkit-scrollbar-thumb { background: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .contact-del-btn { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .35); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .contact-del-btn:hover { background: rgba(239, 68, 68, .22); border-color: rgba(239, 68, 68, .5); }
+[data-coreui-theme="dark"] .exec-shell .affiliate-row { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .affiliate-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .text-muted { color: #8A8A80; }
 </style>

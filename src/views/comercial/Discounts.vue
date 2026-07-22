@@ -438,4 +438,34 @@ onMounted(() => {
   animation: shimmer 1.4s ease-in-out infinite;
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .discounts-card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 4px 6px -1px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .card-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .title span { color: #F4F4F0; }
+[data-coreui-theme="dark"] .title .sub { color: #A0A099; }
+[data-coreui-theme="dark"] .table { color: #F4F4F0; }
+[data-coreui-theme="dark"] .table thead th { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .table td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .table-hover tbody tr:hover { background-color: #1F1F1A; }
+[data-coreui-theme="dark"] .name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .muted { color: #A0A099; }
+[data-coreui-theme="dark"] .text-danger { color: #F87171; }
+[data-coreui-theme="dark"] .text-warning { color: #FBBF24; }
+[data-coreui-theme="dark"] .badge-success { background: rgba(16,185,129,.14); color: #34D399; border-color: rgba(16,185,129,.3); }
+[data-coreui-theme="dark"] .badge-danger { background: rgba(239,68,68,.14); color: #F87171; border-color: rgba(239,68,68,.3); }
+[data-coreui-theme="dark"] .badge-value { background: #24241E; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .badge-global { background: rgba(14,165,233,.14); color: #38BDF8; border-color: rgba(14,165,233,.3); }
+[data-coreui-theme="dark"] .badge-specific { background: rgba(217,70,239,.14); color: #E879F9; border-color: rgba(217,70,239,.3); }
+[data-coreui-theme="dark"] .btn { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+[data-coreui-theme="dark"] .btn-primary:hover { background: #4338ca; }
+[data-coreui-theme="dark"] .btn-outline:hover { background: #24241E; border-color: #4A4A42; }
+[data-coreui-theme="dark"] .form-label { color: #A0A099; }
+[data-coreui-theme="dark"] .form-control { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .input-group-text { background: #1F1F1A; border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .empty-state { color: #8A8A80; }
+[data-coreui-theme="dark"] .skel { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
 </style>

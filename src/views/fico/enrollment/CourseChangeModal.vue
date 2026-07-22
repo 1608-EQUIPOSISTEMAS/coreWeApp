@@ -612,4 +612,55 @@ async function handleCourseChange() {
 .cc-btn--confirm:hover:not(:disabled) {
   background: #9d174d;
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .cc-header-bar { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .cc-student-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .cc-student-doc { color: #A0A099; }
+[data-coreui-theme="dark"] .cc-student-program { color: #D4D4CC; }
+[data-coreui-theme="dark"] .cc-section { border-top-color: #1F1F1A; }
+[data-coreui-theme="dark"] .cc-section-label { color: #8A8A80; }
+[data-coreui-theme="dark"] .cc-field label { color: #A0A099; }
+[data-coreui-theme="dark"] .cc-readonly { color: #F4F4F0; }
+[data-coreui-theme="dark"] .cc-amount { color: #F4F4F0; }
+[data-coreui-theme="dark"] .cc-amount--green { color: #34D399; }
+[data-coreui-theme="dark"] .cc-amount--red { color: #F87171; }
+[data-coreui-theme="dark"] .cc-amounts-row { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .cc-profile-tag {
+  color: #A78BFA;
+  background: rgba(99,102,241,.16);
+  border-color: rgba(99,102,241,.35);
+}
+[data-coreui-theme="dark"] .cc-price-breakdown { color: #A0A099; }
+[data-coreui-theme="dark"] .cc-price-breakdown__discount { color: #F87171; }
+[data-coreui-theme="dark"] .cc-input,
+[data-coreui-theme="dark"] .cc-select {
+  border-color: #2A2A22;
+  background: #14140F;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .cc-select:disabled { background: #1F1F1A; color: #6F6F66; }
+[data-coreui-theme="dark"] .cc-textarea {
+  border-color: rgba(245,158,11,.4);
+  background: rgba(245,158,11,.10);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .cc-textarea::placeholder { color: #FBBF24; opacity: 0.5; }
+[data-coreui-theme="dark"] .cc-btn--ghost { color: #A0A099; }
+[data-coreui-theme="dark"] .cc-btn--ghost:hover:not(:disabled) { background: #2A2A22; color: #F4F4F0; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene este cuerpo (.cc-body). */
+[data-coreui-theme="dark"] .modal-card:has(.cc-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.cc-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.cc-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.cc-body) .btn-close { color: #A0A099; }
 </style>

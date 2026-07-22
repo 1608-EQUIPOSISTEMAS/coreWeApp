@@ -1255,7 +1255,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--info-note-border, #bee5eb) !important; background-color: var(--info-note-bg, #e2f3f5) !important;">
                 <i class="fa-solid fa-link me-2"></i> Este pago se registrará en la hoja <strong>"TOKEN DIGITAL 2026"</strong>
               </div>
             </div>
@@ -1263,7 +1263,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
           <template v-if="isChannelWeb">
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--info-note-border, #bee5eb) !important; background-color: var(--info-note-bg, #e2f3f5) !important;">
                 <i class="fa-solid fa-globe me-2"></i> El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
               </div>
             </div>
@@ -2778,4 +2778,168 @@ const {
   gap: .5rem;
   flex-shrink: 0;
 }
+
+/* === Dark mode === */
+[data-coreui-theme="dark"] .exec-shell {
+  background: #14140F;
+  color: #F4F4F0;
+  --teal-600: #8FAADC; /* títulos de fieldset con color inline var(--teal-600, #12274e) */
+}
+[data-coreui-theme="dark"] .exec-shell .exec-form-wrapper { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+[data-coreui-theme="dark"] .exec-shell .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-shell .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .text-muted { color: #A0A099 !important; }
+
+/* Dark mode — inputs del formulario */
+[data-coreui-theme="dark"] .exec-shell .exec-input-light,
+[data-coreui-theme="dark"] .exec-shell .exec-select-light,
+[data-coreui-theme="dark"] .exec-shell .exec-textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .exec-input-light:disabled,
+[data-coreui-theme="dark"] .exec-shell .exec-select-light:disabled,
+[data-coreui-theme="dark"] .exec-shell .exec-textarea:disabled { background-color: #24241E; color: #8A8A80; }
+
+/* Dark mode — botones */
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-ghost { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-danger-ghost { border-color: rgba(239, 68, 68, 0.45); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-danger-ghost:hover:not(:disabled) { background: rgba(239, 68, 68, 0.14); border-color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .exec-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .exec-switch input:checked + span { background: var(--teal-500, #14b8a6); }
+
+/* Dark mode — pills */
+[data-coreui-theme="dark"] .exec-shell .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+
+/* Dark mode — estado vacío e historial de intentos */
+[data-coreui-theme="dark"] .exec-shell .empty-state { background: #1F1F1A; border-color: #3A3A33; color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-shell .edition-meta b { color: #E4E4DD; }
+[data-coreui-theme="dark"] .exec-shell .attempt-head { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .attempt-row { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .attempt-row:hover { background: #1F1F1A; }
+
+/* Dark mode — timer de llamadas */
+[data-coreui-theme="dark"] .exec-shell .timer-btn--start { background: rgba(16, 185, 129, 0.18); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .timer-btn--start:hover { background: rgba(16, 185, 129, 0.28); }
+[data-coreui-theme="dark"] .exec-shell .timer-btn--stop { background: rgba(239, 68, 68, 0.18); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .timer-btn--stop:hover { background: rgba(239, 68, 68, 0.28); }
+[data-coreui-theme="dark"] .exec-shell .timer-display { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-shell .timer-display--active { color: #F87171; }
+
+/* Dark mode — estado eliminado */
+[data-coreui-theme="dark"] .exec-shell .select--danger { background: rgba(239, 68, 68, 0.14) !important; color: #F87171 !important; }
+[data-coreui-theme="dark"] .exec-shell .delete-status-banner { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.5); }
+[data-coreui-theme="dark"] .exec-shell .delete-banner-icon { color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .delete-banner-body { color: #FCA5A5; }
+[data-coreui-theme="dark"] .exec-shell .delete-banner-body strong { color: #F87171; }
+
+@media (max-width: 991px) {
+  [data-coreui-theme="dark"] .exec-shell .attempt-row { background: #1F1F1A; border-color: #2A2A22; }
+  [data-coreui-theme="dark"] .exec-shell .attempt-row__num { border-bottom-color: #2A2A22; }
+}
+
+/* === Dark mode — contenido de modales (BaseModal teleporta a <body>: fuera de .exec-shell,
+   por eso estos selectores van sin el prefijo. Mismo casco #1A1A14 de BaseModal) === */
+[data-coreui-theme="dark"] .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .text-muted { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-input-light,
+[data-coreui-theme="dark"] .exec-select-light,
+[data-coreui-theme="dark"] .exec-textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-input-light:disabled,
+[data-coreui-theme="dark"] .exec-select-light:disabled,
+[data-coreui-theme="dark"] .exec-textarea:disabled { background-color: #24241E; color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+[data-coreui-theme="dark"] .empty-state { background: #1F1F1A; border-color: #3A3A33; color: #8A8A80; }
+
+/* Dark modales — Historial Completo del Cliente */
+[data-coreui-theme="dark"] .modal-info-bar { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-tabs { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-tabs__item { color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-tabs__item:hover { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-tabs__item--active { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-tabs__panel { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-table thead tr { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-table th { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-table td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-table tbody tr:hover { background: #1F1F1A; }
+
+/* Dark modales — Detalle del Programa */
+[data-coreui-theme="dark"] .price-panel { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .price-panel__title { color: #8A8A80; }
+[data-coreui-theme="dark"] .edition-card { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .edition-card__header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .editions-scroll-container::-webkit-scrollbar-thumb { background: #3A3A33; }
+
+/* Dark modales — Inscripción del Lead */
+[data-coreui-theme="dark"] .insc-header { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .program-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .program-edition { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .program-link-btn { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.4); color: #34D399; }
+[data-coreui-theme="dark"] .program-link-btn:hover { background: rgba(16, 185, 129, 0.24); border-color: rgba(16, 185, 129, 0.55); }
+[data-coreui-theme="dark"] .program-link-btn--disabled { background: #24241E; border-color: #3A3A33; color: #6F6F66; }
+[data-coreui-theme="dark"] .user-badge { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .user-icon { background: #3A3A33; }
+[data-coreui-theme="dark"] .profile-badge.is-student { background: rgba(59, 130, 246, 0.16); color: #7DD3FC; border-color: rgba(59, 130, 246, 0.35); }
+[data-coreui-theme="dark"] .profile-badge.is-pro { background: #24241E; color: #E4E4DD; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .profile-badge.is-b2b { background: rgba(168, 85, 247, 0.16); color: #C4B5FD; border-color: rgba(168, 85, 247, 0.35); }
+[data-coreui-theme="dark"] .insc-price-box { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); }
+[data-coreui-theme="dark"] .price-label { color: #34D399; }
+[data-coreui-theme="dark"] .price-amount { color: #34D399; }
+[data-coreui-theme="dark"] .insc-price-box .exec-input-light { color: #2DD4BF !important; }
+[data-coreui-theme="dark"] .summary-card { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .summary-header { background: #1F1F1A; border-bottom-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .summary-divider { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .label-total { color: #8A8A80; }
+[data-coreui-theme="dark"] .value-total { color: #F4F4F0; }
+
+/* Dark modales — Plan de Cuotas */
+[data-coreui-theme="dark"] .installment-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-alert { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-bottom-color: rgba(245, 158, 11, 0.4); }
+[data-coreui-theme="dark"] .installment-row { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .installment-row--head { background: #1F1F1A; color: #8A8A80; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-row--invalid { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .installment-row--total { background: #1F1F1A; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-row--grand { background: rgba(16, 185, 129, 0.12); border-top-color: rgba(16, 185, 129, 0.35); color: #F4F4F0; }
+[data-coreui-theme="dark"] .installment-row--diferida { background: rgba(245, 158, 11, 0.10); border-left-color: #FBBF24; }
+[data-coreui-theme="dark"] .installment-reserva-row { background: rgba(59, 130, 246, 0.10); border-bottom-color: rgba(59, 130, 246, 0.3); }
+[data-coreui-theme="dark"] .installment-divider { background: #1F1F1A; border-bottom-color: #2A2A22; color: #8A8A80; }
+[data-coreui-theme="dark"] .installment-footer-note { background: #1F1F1A; border-top-color: #2A2A22; color: #8A8A80; }
+[data-coreui-theme="dark"] .cuota-num { color: #8A8A80; }
+[data-coreui-theme="dark"] .cuota-currency-input { background: #1F1F1A; color: #F4F4F0; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .cuota-currency-input.is-invalid { border-color: #F87171 !important; background: rgba(239, 68, 68, 0.14) !important; }
+[data-coreui-theme="dark"] .pill-pending { background: rgba(59, 130, 246, 0.2); color: #93C5FD; }
+[data-coreui-theme="dark"] .pill-draft { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .reserva-error { color: #F87171; }
+
+/* Dark modales — estilos inline del modal de inscripción (tags Hoy/Diferido, badge R, montos) */
+[data-coreui-theme="dark"] .insc-modal [style*="#dbeafe"] { background: rgba(59, 130, 246, 0.2) !important; color: #93C5FD !important; }
+[data-coreui-theme="dark"] .insc-modal [style*="#fef3c7"] { background: rgba(245, 158, 11, 0.16) !important; color: #FBBF24 !important; }
+[data-coreui-theme="dark"] .profile-badge[style*="#fef3c7"] { border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .insc-modal [style*="#1d4ed8"] { color: #60A5FA !important; }
+[data-coreui-theme="dark"] .insc-modal [style*="#b45309"] { color: #FBBF24 !important; }
+[data-coreui-theme="dark"] .insc-modal [style*="#b91c1c"] { color: #F87171 !important; }
+[data-coreui-theme="dark"] .insc-modal [style*="#fafafa"] { background: #1F1F1A !important; }
+[data-coreui-theme="dark"] .insc-modal i[style*="#12274e"] { color: #2DD4BF !important; }
+[data-coreui-theme="dark"] .insc-modal { --info-note-border: rgba(59, 130, 246, 0.4); --info-note-bg: rgba(59, 130, 246, 0.12); }
+
+/* Dark modales — confirmación de eliminación */
+[data-coreui-theme="dark"] .delete-confirm-icon { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.5); color: #F87171; }
+[data-coreui-theme="dark"] .delete-confirm-title { color: #FCA5A5; }
+[data-coreui-theme="dark"] .delete-confirm-desc { color: #D4D4CC; }
+[data-coreui-theme="dark"] .delete-confirm-lead-info { background: #1F1F1A; border-color: #2A2A22; }
 </style>

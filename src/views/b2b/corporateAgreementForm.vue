@@ -308,4 +308,14 @@ onMounted(async () => {
 .form-section__header::before { content: ""; position: absolute; left: 0; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background-color: #3b82f6; }
 .form-section__title { font-size: .8rem; font-weight: 600; color: #111827; text-transform: uppercase; letter-spacing: .03em; }
 .input-group-text { background-color: #f9fafb; font-size: 0.85rem; }
+
+/* ══ DARK MODE ══ */
+[data-coreui-theme="dark"] .lead-form { color: #F4F4F0; }
+[data-coreui-theme="dark"] .card-header { background-color: #1A1A14; border-bottom: 1px solid #2A2A22 !important; }
+[data-coreui-theme="dark"] .lead-form .bg-white { background-color: #1A1A14 !important; }
+[data-coreui-theme="dark"] .form-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .form-switch input:checked + span { background: #3b82f6; }
+[data-coreui-theme="dark"] .required-star { color: #F87171; }
+[data-coreui-theme="dark"] .form-section__title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .input-group-text { background-color: #1F1F1A; color: #A0A099; }
 </style>

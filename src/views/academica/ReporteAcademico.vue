@@ -342,11 +342,11 @@ const verdictDistribution = computed(() => {
 // Donut SVG (mismo patron del diseño "Reporte de Trafico": circulos con
 // pathLength=100, dash = pct del segmento, offset acumulado negativo).
 const DONUT_META = [
-  ['EXCELENTE', 'Excelente', '#12a150'],
-  ['BUENO', 'Bueno', '#2f6bdb'],
-  ['EN PROCESO', 'En proceso', '#f0932b'],
-  ['DEFICIENTE', 'Deficiente', '#b23b3b'],
-  ['SIN EVALUAR', 'Sin evaluar', '#c4cad6'],
+  ['EXCELENTE', 'Excelente', 'var(--green)'],
+  ['BUENO', 'Bueno', 'var(--blue)'],
+  ['EN PROCESO', 'En proceso', 'var(--amber)'],
+  ['DEFICIENTE', 'Deficiente', 'var(--red-deep)'],
+  ['SIN EVALUAR', 'Sin evaluar', 'var(--donut-empty)'],
 ]
 
 const donutView = computed(() => {
@@ -1003,7 +1003,7 @@ function openAula(id) {
             <span class="sm-dot sm-dot-ia"></span>
             <span class="sm-value sm-ia">{{ fmt20(scoreAverages.ia) }}</span>
             <span class="sm-tip">
-              <span class="dt-dot" style="background: #5b6cf0"></span>
+              <span class="dt-dot" style="background: var(--indigo)"></span>
               <b>Evaluación IA</b>&nbsp;· promedio {{ fmt20(scoreAverages.ia) }} / 20
             </span>
           </div>
@@ -1016,7 +1016,7 @@ function openAula(id) {
             <span class="sm-dot sm-dot-cons"></span>
             <span class="sm-value sm-cons">{{ fmt20(kpis.avg20) }}</span>
             <span class="sm-tip">
-              <span class="dt-dot" style="background: #f0932b"></span>
+              <span class="dt-dot" style="background: var(--amber)"></span>
               <b>Consolidado</b>&nbsp;· {{ Math.round(CONSOLIDATED_WEIGHT_IA * 100) }}% IA + {{ Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100) }}% manual = {{ fmt20(kpis.avg20) }} / 20
             </span>
           </div>
@@ -1029,7 +1029,7 @@ function openAula(id) {
             <span class="sm-dot sm-dot-man"></span>
             <span class="sm-value sm-man">{{ fmt20(scoreAverages.manual) }}</span>
             <span class="sm-tip">
-              <span class="dt-dot" style="background: #12a150"></span>
+              <span class="dt-dot" style="background: var(--green)"></span>
               <b>Rúbrica manual</b>&nbsp;· promedio {{ fmt20(scoreAverages.manual) }} / 20
             </span>
           </div>
@@ -1070,7 +1070,7 @@ function openAula(id) {
                   class="donut-seg"
                   :class="{ dim: donutTip && donutTip.key !== seg.key }"
                   cx="100" cy="100" r="80" fill="none"
-                  :stroke="seg.color" stroke-width="30" pathLength="100"
+                  :style="{ stroke: seg.color }" stroke-width="30" pathLength="100"
                   :stroke-dasharray="seg.dash" :stroke-dashoffset="seg.offset"
                   @mousemove="moveDonutTip($event, seg)"
                 ></circle>
@@ -1397,6 +1397,7 @@ function openAula(id) {
   --blue-soft: #eef2fb;
   --indigo: #5b6cf0;
   --indigo-ink: #3f4fb8;
+  --donut-empty: #c4cad6;
 
   font-family: Inter, 'Hanken Grotesk', -apple-system, system-ui, sans-serif;
   color: var(--ink);
@@ -1938,4 +1939,83 @@ function openAula(id) {
   .kpi-grid { grid-template-columns: 1fr; }
   .rpt-head { flex-direction: column; }
 }
+
+/* ══════════ DARK MODE ══════════ */
+/* --navy NO se voltea: sigue siendo fondo de hero/botones/avatars (navy + texto
+   blanco funciona en ambos temas). Los usos de --navy como TEXTO se corrigen
+   selector por selector mas abajo. */
+[data-coreui-theme="dark"] .rpt {
+  --bg: #1F1F1A;
+  --line: #2A2A22;
+  --line-soft: #24241E;
+  --ink: #F4F4F0;
+  --slate: #C9C9C1;
+  --slate-2: #A0A099;
+  --mut: #8A8A80;
+  --mut-2: #8A8A80;
+  --eyebrow: #8A8A80;
+  --green: #34D399;
+  --green-ink: #34D399;
+  --green-soft: rgba(16, 185, 129, .14);
+  --red: #F87171;
+  --red-deep: #F87171;
+  --red-soft: rgba(239, 68, 68, .14);
+  --amber: #FBBF24;
+  --amber-ink: #FBBF24;
+  --amber-soft: rgba(245, 158, 11, .14);
+  --blue: #60A5FA;
+  --blue-soft: rgba(59, 130, 246, .14);
+  --indigo: #818CF8;
+  --indigo-ink: #A5B4FC;
+  --donut-empty: #6E6E64;
+}
+/* usos de --navy como texto */
+[data-coreui-theme="dark"] .rpt .rpt-head h1,
+[data-coreui-theme="dark"] .rpt .card-title,
+[data-coreui-theme="dark"] .rpt .k-value,
+[data-coreui-theme="dark"] .rpt .dc-value,
+[data-coreui-theme="dark"] .rpt .dl-count,
+[data-coreui-theme="dark"] .rpt .sm-tip b,
+[data-coreui-theme="dark"] .rpt .donut-tip b,
+[data-coreui-theme="dark"] .rpt .rk-name,
+[data-coreui-theme="dark"] .rpt .aula-name,
+[data-coreui-theme="dark"] .rpt .dec-title,
+[data-coreui-theme="dark"] .rpt .dec-owner b,
+[data-coreui-theme="dark"] .rpt .filter-title { color: #8FAADC; }
+/* superficies */
+[data-coreui-theme="dark"] .rpt .kpi,
+[data-coreui-theme="dark"] .rpt .card { background: #1A1A14; }
+[data-coreui-theme="dark"] .rpt .btn-ghost,
+[data-coreui-theme="dark"] .rpt .ai-btn,
+[data-coreui-theme="dark"] .rpt .foco,
+[data-coreui-theme="dark"] .rpt .chip,
+[data-coreui-theme="dark"] .rpt .select,
+[data-coreui-theme="dark"] .rpt .input,
+[data-coreui-theme="dark"] .rpt .pager-btn { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .btn-ghost:hover { background: #24241E; }
+[data-coreui-theme="dark"] .rpt .k-bar,
+[data-coreui-theme="dark"] .rpt .rk-cov-bar,
+[data-coreui-theme="dark"] .rpt .seg-tabs { background: #24241E; }
+[data-coreui-theme="dark"] .rpt .v-tab:hover { background: #2A2A22; }
+[data-coreui-theme="dark"] .rpt .rk-table thead th { background: #1A1A14; }
+[data-coreui-theme="dark"] .rpt .rk-row:hover,
+[data-coreui-theme="dark"] .rpt .row-clickable:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .decision,
+[data-coreui-theme="dark"] .rpt .gap-stat { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .detail-table thead tr { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .sm-tip,
+[data-coreui-theme="dark"] .rpt .donut-tip { background: #1F1F1A; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+[data-coreui-theme="dark"] .rpt .sm-dot { border-color: #1A1A14; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+[data-coreui-theme="dark"] .rpt .ai-btn:hover { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .rpt .foco-red.active { border-color: rgba(239, 68, 68, .4); box-shadow: 0 0 0 3px rgba(239, 68, 68, .1); }
+[data-coreui-theme="dark"] .rpt .foco-amber.active { border-color: rgba(245, 158, 11, .4); box-shadow: 0 0 0 3px rgba(245, 158, 11, .1); }
+[data-coreui-theme="dark"] .rpt .gap-pill,
+[data-coreui-theme="dark"] .rpt .verdict-pill,
+[data-coreui-theme="dark"] .rpt .verdict-pill.sg-empty { background: #24241E; }
+[data-coreui-theme="dark"] .rpt .teacher-name { color: #DDDDD6; }
+[data-coreui-theme="dark"] .rpt .scale-track {
+  background: linear-gradient(90deg, rgba(239, 68, 68, .24) 0%, rgba(245, 158, 11, .22) 55%, rgba(16, 185, 129, .24) 100%);
+}
+/* anillo base del donut (color en atributo del SVG) */
+[data-coreui-theme="dark"] .rpt .donut svg circle[stroke="#eef1f6"] { stroke: #24241E; }
 </style>

@@ -1030,7 +1030,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 <div
   v-if="!clientProfileType"
   class="profile-badge"
-  style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;"
+  style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);border:1px solid var(--ln-amber-bd,#fde68a);"
   title="Ve a 'Datos del Contacto' y selecciona una Ocupación"
 >
   <i class="fa-solid fa-triangle-exclamation"></i>
@@ -1297,7 +1297,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--ln-cyan-bd,#bee5eb) !important; background-color: var(--ln-cyan-bg,#e2f3f5) !important;">
                 <i class="fa-solid fa-link me-2"></i> Este pago se registrará en la hoja <strong>"TOKEN DIGITAL 2026"</strong>
               </div>
             </div>
@@ -1331,7 +1331,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: #bee5eb !important; background-color: #e2f3f5 !important;">
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--ln-cyan-bd,#bee5eb) !important; background-color: var(--ln-cyan-bg,#e2f3f5) !important;">
                 <i class="fa-solid fa-globe me-2"></i>
                 <template v-if="insc.cat_type_payment === 'we_payment_way_installments'">
                   El alumno pagó el <strong>adelanto</strong> por la pasarela web. Las cuotas restantes se cobrarán por otro canal. Se notificará al canal de <strong>Slack</strong> apenas envies.
@@ -1410,7 +1410,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   v-for="ben in insc.dsct_benefit_ids"
                   :key="ben.value"
                   class="d-flex justify-content-between align-items-center"
-                  style="font-size:11px; color: #b91c1c; padding: 1px 4px;"
+                  style="font-size:11px; color: var(--ln-red-tx,#b91c1c); padding: 1px 4px;"
                 >
                   <span>• {{ ben.label }}</span>
                 </div>
@@ -1463,7 +1463,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- TOKEN: sin adjunto -->
       <div class="col-12" v-if="isChannelToken">
-        <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:#fafafa;">
+        <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:var(--ln-soft-bg,#fafafa);">
           <i class="fa-solid fa-circle-info me-2 text-info"></i>
           Para pagos por link/token no se requiere adjuntar comprobante.
           El proveedor enviará la confirmación directamente.
@@ -1614,7 +1614,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- Badge + Título -->
       <div class="reserva-id">
-        <span class="cuota-num" style="background:#dbeafe;color:#1e40af;">R</span>
+        <span class="cuota-num" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);">R</span>
         <div>
           <div class="fw-700" style="font-size:12px;">Reserva / Pago Inicial</div>
           <div style="font-size:10px;color:var(--slate-400);">Abono inicial al confirmar</div>
@@ -1625,7 +1625,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <div class="reserva-amounts">
         <!-- Sin split: monto directo -->
         <div v-if="!reservaSplitEnabled" class="reserva-single">
-          <span class="fw-700" style="font-size:15px;color:#1d4ed8;">
+          <span class="fw-700" style="font-size:15px;color:var(--ln-blue-strong,#1d4ed8);">
             {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
           </span>
         </div>
@@ -1633,19 +1633,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <!-- Con split: 2 filas -->
         <template v-else>
           <div class="reserva-split-line">
-            <span class="reserva-tag" style="background:#dbeafe;color:#1e40af;">Hoy</span>
+            <span class="reserva-tag" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);">Hoy</span>
             <CurrencyInput
               v-model="reservaInmediata"
               :currency="selectedCurrency"
               :storeAsMinor="false"
               class="exec-input-light text-end fw-700"
-              style="font-size:13px;color:#1d4ed8;max-width:110px;height:28px;padding:3px 8px;"
+              style="font-size:13px;color:var(--ln-blue-strong,#1d4ed8);max-width:110px;height:28px;padding:3px 8px;"
               placeholder="0.00"
             />
           </div>
           <div class="reserva-split-line">
-            <span class="reserva-tag" style="background:#fef3c7;color:#92400e;">Diferido</span>
-            <span class="fw-700" style="font-size:13px;color:#b45309;min-width:80px;text-align:right;">
+            <span class="reserva-tag" style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);">Diferido</span>
+            <span class="fw-700" style="font-size:13px;color:var(--ln-amber-strong,#b45309);min-width:80px;text-align:right;">
               {{ selectedCurrency.symbol }} {{ fmt2(reservaDiferida) }}
             </span>
             <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:9px;"></i>
@@ -1664,7 +1664,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- Acciones -->
       <div class="reserva-actions">
-        <span class="pill" style="background:#dbeafe;color:#1e40af;font-size:9px;">Inicial</span>
+        <span class="pill" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);font-size:9px;">Inicial</span>
         <button
           type="button"
           class="btn-exec btn-exec-sm"
@@ -1727,7 +1727,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <!-- Estado -->
         <div class="text-center">
           <span v-if="cuota.is_reserva_diferida" 
-                class="pill" style="background:#fef3c7;color:#92400e;font-size:9.5px;">
+                class="pill" style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);font-size:9.5px;">
             Reserva
           </span>
           <span class="pill pill-draft" v-else>Borrador</span>
@@ -5382,6 +5382,19 @@ function toggleReschedule(contacto) {
 [data-coreui-theme="dark"] .ef-page {
   background: #0E0E0A;
   color: #F4F4F0;
+  /* tokens para estilos inline del template (light usa el fallback) */
+  --teal-600: #8FAADC;
+  --ln-soft-bg: #1F1F1A;
+  --ln-red-tx: #F87171;
+  --ln-amber-bg: rgba(245, 158, 11, 0.14);
+  --ln-amber-bd: rgba(245, 158, 11, 0.35);
+  --ln-amber-tx: #FBBF24;
+  --ln-amber-strong: #FBBF24;
+  --ln-blue-bg: rgba(59, 130, 246, 0.16);
+  --ln-blue-tx: #60A5FA;
+  --ln-blue-strong: #60A5FA;
+  --ln-cyan-bg: rgba(6, 182, 212, 0.12);
+  --ln-cyan-bd: rgba(6, 182, 212, 0.30);
 }
 [data-coreui-theme="dark"] .ef-breadcrumb { color: #6F6F66; }
 [data-coreui-theme="dark"] .ef-page-title { color: #F4F4F0; }
@@ -5437,4 +5450,130 @@ function toggleReschedule(contacto) {
 
 [data-coreui-theme="dark"] .ef-footer-actions { border-top-color: #2A2A22; }
 [data-coreui-theme="dark"] .c-red { color: #F87171; }
+
+/* Botones restantes */
+[data-coreui-theme="dark"] .btn-exec-active { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-exec-danger-ghost { color: #F87171; border-color: rgba(239, 68, 68, 0.40); }
+[data-coreui-theme="dark"] .btn-exec-danger-ghost:hover:not(:disabled) { background: rgba(239, 68, 68, 0.14); border-color: #F87171; }
+
+/* Switch */
+[data-coreui-theme="dark"] .exec-switch span { background: #3A3A33; }
+
+/* Pills / badges */
+[data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .pill-teal { background: rgba(20, 184, 166, 0.14); color: #2DD4BF; border-color: rgba(20, 184, 166, 0.35) !important; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(239, 68, 68, 0.14); color: #F87171; border-color: rgba(239, 68, 68, 0.35) !important; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-color: rgba(245, 158, 11, 0.35) !important; }
+[data-coreui-theme="dark"] .pill-pending { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
+[data-coreui-theme="dark"] .pill-draft { background: #24241E; color: #A0A099; }
+
+/* Estados vacíos y metadatos */
+[data-coreui-theme="dark"] .empty-state { background: #1F1F1A; border-color: #3A3A33; color: #8A8A80; }
+[data-coreui-theme="dark"] .edition-meta b { color: #A0A099; }
+
+/* Intentos de llamada */
+[data-coreui-theme="dark"] .attempt-head { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .attempt-row { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .attempt-row:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .timer-btn--start { background: rgba(16, 185, 129, 0.18); color: #34D399; }
+[data-coreui-theme="dark"] .timer-btn--start:hover { background: rgba(16, 185, 129, 0.30); }
+[data-coreui-theme="dark"] .timer-btn--stop { background: rgba(239, 68, 68, 0.18); color: #F87171; }
+[data-coreui-theme="dark"] .timer-btn--stop:hover { background: rgba(239, 68, 68, 0.30); }
+[data-coreui-theme="dark"] .timer-display { color: #A0A099; }
+[data-coreui-theme="dark"] .timer-display--active { color: #F87171; }
+
+/* Tabs */
+[data-coreui-theme="dark"] .exec-tabs { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-tabs__item:hover { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-tabs__item--active { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-tabs__panel { background: #1A1A14; border-color: #2A2A22; }
+
+/* Tablas */
+[data-coreui-theme="dark"] .exec-table thead tr { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-table td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-table tbody tr:hover { background: #1F1F1A; }
+
+/* Paneles / tarjetas dentro de modales */
+[data-coreui-theme="dark"] .modal-info-bar,
+[data-coreui-theme="dark"] .price-panel,
+[data-coreui-theme="dark"] .delete-confirm-lead-info { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .user-avatar { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .edition-card { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .edition-card__header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .editions-scroll-container::-webkit-scrollbar-thumb { background: #3A3A33; }
+[data-coreui-theme="dark"] .insc-header { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .program-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .program-edition { background: #24241E; }
+[data-coreui-theme="dark"] .user-badge { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .user-icon { background: #3A3A33; }
+[data-coreui-theme="dark"] .profile-badge.is-student { background: rgba(59, 130, 246, 0.14); color: #60A5FA; border-color: rgba(59, 130, 246, 0.35); }
+[data-coreui-theme="dark"] .profile-badge.is-pro { background: #24241E; color: #F4F4F0; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .profile-badge.is-b2b { background: rgba(168, 85, 247, 0.14); color: #C084FC; border-color: rgba(168, 85, 247, 0.35); }
+[data-coreui-theme="dark"] .insc-price-box { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); }
+[data-coreui-theme="dark"] .price-label { color: #34D399; }
+[data-coreui-theme="dark"] .price-amount { color: #34D399; }
+[data-coreui-theme="dark"] .summary-card { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .summary-header { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .summary-divider { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .value-total { color: #F4F4F0; }
+
+/* Plan de cuotas */
+[data-coreui-theme="dark"] .installment-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-alert { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-bottom-color: rgba(245, 158, 11, 0.30); }
+[data-coreui-theme="dark"] .installment-row { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .installment-row--head { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-row--invalid td,
+[data-coreui-theme="dark"] .installment-row--invalid { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .installment-row--total { background: #1F1F1A; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-row--grand { background: rgba(16, 185, 129, 0.12); border-top-color: rgba(16, 185, 129, 0.35); }
+[data-coreui-theme="dark"] .installment-row--diferida { background: rgba(245, 158, 11, 0.12); }
+[data-coreui-theme="dark"] .installment-divider { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-footer-note { background: #1F1F1A; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .installment-reserva-row { background: rgba(59, 130, 246, 0.10); border-bottom-color: rgba(59, 130, 246, 0.30); }
+[data-coreui-theme="dark"] .cuota-date-fixed,
+[data-coreui-theme="dark"] .cuota-amount-fixed { color: #34D399; }
+[data-coreui-theme="dark"] .cuota-date-input { background: #14140F; color: #F4F4F0; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .cuota-amount-editable { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .cuota-amount-editable.is-invalid { border-color: #F87171; background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .cuota-amount-input { color: #F4F4F0; }
+[data-coreui-theme="dark"] .currency-prefix { background: #1F1F1A; border-right-color: #2A2A22; }
+[data-coreui-theme="dark"] .cuota-currency-input { background: #14140F !important; color: #F4F4F0 !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .cuota-currency-input.is-invalid { border-color: #F87171 !important; background: rgba(239, 68, 68, 0.10) !important; }
+
+/* Enlaces de programa */
+[data-coreui-theme="dark"] .program-link-btn { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #34D399; }
+[data-coreui-theme="dark"] .program-link-btn:hover { background: rgba(16, 185, 129, 0.22); border-color: rgba(16, 185, 129, 0.50); }
+[data-coreui-theme="dark"] .program-link-btn--disabled { background: #24241E; border-color: #2A2A22; color: #6F6F66; }
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+
+/* Estado eliminado */
+[data-coreui-theme="dark"] .delete-status-banner { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.40); }
+[data-coreui-theme="dark"] .delete-banner-body { color: #FCA5A5; }
+[data-coreui-theme="dark"] .delete-banner-body strong { color: #F87171; }
+[data-coreui-theme="dark"] .select--danger { background: rgba(239, 68, 68, 0.14) !important; color: #F87171 !important; }
+[data-coreui-theme="dark"] .delete-confirm-icon { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.40); }
+[data-coreui-theme="dark"] .delete-confirm-title { color: #FCA5A5; }
+[data-coreui-theme="dark"] .delete-confirm-desc { color: #A0A099; }
+[data-coreui-theme="dark"] .reserva-error { color: #F87171; }
+
+/* Banner de observación */
+[data-coreui-theme="dark"] .obs-banner { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.30); border-left-color: #F59E0B; }
+[data-coreui-theme="dark"] .obs-banner-body strong { color: #FDE68A; }
+[data-coreui-theme="dark"] .obs-banner-body p { color: #FCD34D; }
+[data-coreui-theme="dark"] .obs-banner-hint { color: #FCD34D; }
+
+/* Validaciones */
+[data-coreui-theme="dark"] .validation-toggle-label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .validation-row { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .validation-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .validation-badge-conv { background: rgba(245, 158, 11, 0.14); color: #FBBF24; }
+[data-coreui-theme="dark"] .validation-badge-insc { background: rgba(16, 185, 129, 0.14); color: #34D399; }
+[data-coreui-theme="dark"] .validation-radio { color: #A0A099; }
+
+/* Filas de intentos en móvil (la base solo aplica bajo 991px) */
+@media (max-width: 991px) {
+  [data-coreui-theme="dark"] .attempt-row { background: #1F1F1A; border-color: #2A2A22; }
+  [data-coreui-theme="dark"] .attempt-row__num { border-bottom-color: #2A2A22; }
+}
 </style>

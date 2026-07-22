@@ -31,7 +31,7 @@
       <div class="row g-3 mb-4" v-if="!toolbarCollapsed && (kpis || isLoading)">
         <div class="col-md-3">
           <div class="finance-card d-flex align-items-center gap-3">
-            <div class="lead-avatar" style="background:#fffbeb; color:#d97706; border-color:#fde68a;">
+            <div class="lead-avatar" style="background:var(--tint-amber-bg,#fffbeb); color:var(--tint-amber-fg,#d97706); border-color:var(--tint-amber-bd,#fde68a);">
               <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
             <div>
@@ -45,7 +45,7 @@
         </div>
         <div class="col-md-3">
           <div class="finance-card d-flex align-items-center gap-3">
-            <div class="lead-avatar" style="background:#f0fdf4; color:#15803d; border-color:#bbf7d0;">
+            <div class="lead-avatar" style="background:var(--tint-green-bg,#f0fdf4); color:var(--tint-green-fg,#15803d); border-color:var(--tint-green-bd,#bbf7d0);">
               <i class="fa-solid fa-check-double"></i>
             </div>
             <div>
@@ -59,7 +59,7 @@
         </div>
         <div class="col-md-3">
           <div class="finance-card d-flex align-items-center gap-3">
-            <div class="lead-avatar" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">
+            <div class="lead-avatar" style="background:var(--tint-blue-bg,#f0f9ff); color:var(--tint-blue-fg,#0369a1); border-color:var(--tint-blue-bd,#bae6fd);">
               <i class="fa-solid fa-star"></i>
             </div>
             <div>
@@ -226,7 +226,7 @@
               <span class="info-value text-muted">{{ selectedTicket.created_at_fmt }}</span>
             </div>
 
-            <div v-if="selectedTicket.csat_info" class="exec-alert alert-info mt-4" style="border-left-color: #f59e0b; background:#fffbeb; color:#92400e;">
+            <div v-if="selectedTicket.csat_info" class="exec-alert alert-info mt-4" style="border-left-color: #f59e0b; background:var(--tint-amber-bg,#fffbeb); color:var(--csat-ink,#92400e);">
               <div>
                 <strong>Calificación del Alumno:</strong><br>
                 <div class="text-warning mt-1" style="font-size: 16px;">
@@ -804,4 +804,71 @@ onMounted(() => {
 
 .tg-hint-asesor { color: #6d28d9; }
 
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* los var(--x, fallback) de esta vista no estan definidos en light:
+     definirlos SOLO en dark no cambia nada del modo claro */
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-200: #2A2A22;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --slate-500: #8A8A80;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --tint-amber-bg: rgba(245, 158, 11, .14);
+  --tint-amber-fg: #FBBF24;
+  --tint-amber-bd: rgba(245, 158, 11, .3);
+  --tint-green-bg: rgba(16, 185, 129, .14);
+  --tint-green-fg: #34D399;
+  --tint-green-bd: rgba(16, 185, 129, .3);
+  --tint-blue-bg: rgba(59, 130, 246, .14);
+  --tint-blue-fg: #60A5FA;
+  --tint-blue-bd: rgba(59, 130, 246, .3);
+  --csat-ink: #FBBF24;
+  background: #14140F;
+}
+[data-coreui-theme="dark"] .exec-shell .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled) { background: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .table-shell { background: #1A1A14; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+[data-coreui-theme="dark"] .exec-shell .thead-sub .ts { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .tbody-row:hover td { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .row-inscrito > td { background: rgba(16, 185, 129, .10); }
+[data-coreui-theme="dark"] .exec-shell .row-blue > td { background: rgba(59, 130, 246, .10); }
+[data-coreui-theme="dark"] .exec-shell .row-emerald > td { background: rgba(13, 148, 136, .12); }
+[data-coreui-theme="dark"] .exec-shell .row-yellow > td { background: rgba(245, 158, 11, .10); }
+[data-coreui-theme="dark"] .exec-shell .row-red > td { background: rgba(239, 68, 68, .10); }
+[data-coreui-theme="dark"] .exec-shell .row-highlight > td { background: rgba(59, 130, 246, .16) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-teal { background: rgba(20, 184, 166, .16); color: #2DD4BF; border-color: rgba(20, 184, 166, .35) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245, 158, 11, .16); color: #FBBF24; border-color: rgba(245, 158, 11, .35) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-red { background: rgba(239, 68, 68, .16); color: #F87171; border-color: rgba(239, 68, 68, .35) !important; }
+[data-coreui-theme="dark"] .exec-shell .accent-text,
+[data-coreui-theme="dark"] .exec-shell .enrollment-title { color: #2DD4BF; }
+[data-coreui-theme="dark"] .exec-shell .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .thead-filter .tf { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .hf-input,
+[data-coreui-theme="dark"] .exec-shell .exec-input-light,
+[data-coreui-theme="dark"] .exec-shell .exec-select-light,
+[data-coreui-theme="dark"] .exec-shell .exec-textarea { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .hf-clear-btn { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .35); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .hf-clear-btn:hover { background: rgba(239, 68, 68, .22); border-color: rgba(239, 68, 68, .5); }
+[data-coreui-theme="dark"] .exec-shell .hf-new-btn { background: rgba(16, 185, 129, .14); border-color: rgba(16, 185, 129, .35); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .alert-info { background: rgba(59, 130, 246, .12); color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-shell .alert-warning { background: rgba(245, 158, 11, .12); color: #FBBF24; }
+[data-coreui-theme="dark"] .exec-shell .alert-success { background: rgba(16, 185, 129, .12); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .banner-danger { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .3); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .banner-success { background: rgba(16, 185, 129, .12); border-color: rgba(16, 185, 129, .3); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .enrollment-header { background: #1A1A14; }
+[data-coreui-theme="dark"] .exec-shell .empty-state svg { color: #6F6F66; }
+[data-coreui-theme="dark"] .exec-shell .timer-btn--start { background: rgba(16, 185, 129, .18); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .timer-btn--stop { background: rgba(239, 68, 68, .18); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .timer-display--active { color: #F87171; }
 </style>

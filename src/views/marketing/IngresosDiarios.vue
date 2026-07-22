@@ -557,4 +557,29 @@ tr.total-row td.l { font-family: inherit; }
   animation: shimmer 1.4s ease-in-out infinite;
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ══════════ DARK MODE ══════════ */
+[data-coreui-theme="dark"] .reporte-page {
+  --accent: #8FAADC;
+  --surface: #1A1A14;
+  --surface-2: #1F1F1A;
+  --surface-3: #24241E;
+  --border: #2A2A22;
+  --border-strong: #3A3A33;
+  --ink: #F4F4F0;
+  --ink-2: #A0A099;
+  --ink-3: #8A8A80;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --track: #24241E;
+  --s1-bg: rgba(239, 68, 68, 0.14); --s1-fg: #F87171;
+  --s4-bg: rgba(16, 185, 129, 0.14); --s4-fg: #34D399;
+}
+/* colores de línea (--lc inline desde JS): aclarar sus usos como texto */
+[data-coreui-theme="dark"] .reporte-page .lc .lc-share,
+[data-coreui-theme="dark"] .reporte-page .lc .lc-ic,
+[data-coreui-theme="dark"] .reporte-page tr.line-head td.gan { color: color-mix(in srgb, var(--lc) 60%, #ffffff); }
+/* tooltip: fondo claro en dark (var(--ink) se invierte) → texto oscuro */
+[data-coreui-theme="dark"] .reporte-page .tbar::after,
+[data-coreui-theme="dark"] .reporte-page .stacked > i::after { color: #14140F; box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.55); }
+[data-coreui-theme="dark"] .reporte-page .skel { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
 </style>

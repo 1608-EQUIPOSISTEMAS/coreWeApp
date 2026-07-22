@@ -81,4 +81,31 @@ function getFileIcon(type) {
 .x-small {
     font-size: 0.75rem;
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .empty-state {
+    background-color: #1F1F1A;
+    border-color: #3A3A33;
+}
+/* Utilidades Bootstrap dentro del componente que no se adaptan solas */
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .list-group {
+    --cui-list-group-bg: #1A1A14;
+    --cui-list-group-color: #F4F4F0;
+    --cui-list-group-border-color: #2A2A22;
+    --cui-list-group-action-hover-bg: #1F1F1A;
+    --cui-list-group-action-hover-color: #F4F4F0;
+    --cui-list-group-action-active-bg: #24241E;
+    --cui-list-group-action-active-color: #F4F4F0;
+    border-color: #2A2A22 !important;
+}
+[data-coreui-theme="dark"] .btn-light {
+    background-color: #24241E;
+    border-color: #3A3A33 !important;
+    color: #8FAADC !important;
+}
+[data-coreui-theme="dark"] .btn-light:hover {
+    background-color: #2A2A22;
+    color: #A9C2E8 !important;
+}
 </style>

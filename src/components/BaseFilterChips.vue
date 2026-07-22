@@ -251,6 +251,53 @@ function calculatePosition(targetElement) {
   background-color: #f3f4f6;
 }
 
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .label { color: #A0A099; }
+[data-coreui-theme="dark"] .chip {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+[data-coreui-theme="dark"] .chip:hover {
+  background-color: #1F1F1A;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .x { color: #8A8A80; }
+[data-coreui-theme="dark"] .chip:hover .x { color: #F87171; }
+[data-coreui-theme="dark"] .chip.clear-all {
+  background: transparent;
+  border-color: #3A3A33;
+  color: #A0A099;
+  box-shadow: none;
+}
+[data-coreui-theme="dark"] .chip.clear-all:hover {
+  border-color: #F87171;
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.14);
+}
+[data-coreui-theme="dark"] .chip-dropdown {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+[data-coreui-theme="dark"] .chip-dropdown.pos-bottom::before {
+  border-color: transparent transparent #1A1A14 transparent;
+  filter: drop-shadow(0 -1px 0 #2A2A22);
+}
+[data-coreui-theme="dark"] .chip-dropdown.pos-top::before {
+  border-color: #1A1A14 transparent transparent transparent;
+  filter: drop-shadow(0 1px 0 #2A2A22);
+}
+[data-coreui-theme="dark"] .dropdown-content { scrollbar-color: #3A3A33 transparent; }
+[data-coreui-theme="dark"] .dropdown-content::-webkit-scrollbar-thumb { background-color: #3A3A33; }
+[data-coreui-theme="dark"] .dropdown-item {
+  color: #A0A099;
+  border-bottom-color: #1F1F1A;
+}
+[data-coreui-theme="dark"] .dropdown-item:hover { background-color: #24241E; }
+
 /* Transiciones */
 .fade-enter-active,
 .fade-leave-active {

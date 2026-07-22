@@ -357,6 +357,73 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+/* El dropdown va con <Teleport to="body">: los nodos conservan el atributo
+   de scope (los selectores scoped aplican), pero NO heredan variables CSS
+   del wrapper — por eso los overrides usan valores explícitos, no tokens. */
+
+/* Control */
+[data-coreui-theme="dark"] .searchselect-control {
+  background-color: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .searchselect-control:hover:not(.is-disabled):not(.is-locked) {
+  border-color: #3A3A33;
+}
+[data-coreui-theme="dark"] .searchselect-control:focus-within:not(.is-disabled) {
+  border-color: #8FAADC;
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.15);
+}
+[data-coreui-theme="dark"] .searchselect-control.is-disabled {
+  background-color: #1F1F1A;
+  color: #8A8A80;
+}
+[data-coreui-theme="dark"] .searchselect-control.is-locked {
+  background-color: #1F1F1A;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .searchselect-control.is-locked:hover:not(.is-disabled) {
+  background-color: #1A1A14;
+  border-color: #3A3A33;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+[data-coreui-theme="dark"] .ss-locked-label { color: #8FAADC; }
+[data-coreui-theme="dark"] .searchselect-control.has-error { border-color: #F87171 !important; }
+[data-coreui-theme="dark"] .searchselect-control.has-error:focus-within {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18) !important;
+}
+[data-coreui-theme="dark"] .searchselect-control.has-success { border-color: #34D399 !important; }
+[data-coreui-theme="dark"] .searchselect-input { color: #F4F4F0; }
+[data-coreui-theme="dark"] .searchselect-input::placeholder { color: #8A8A80; }
+[data-coreui-theme="dark"] .searchselect-input[disabled] { color: #8A8A80; }
+[data-coreui-theme="dark"] .dropdown-arrow { color: #8A8A80; }
+[data-coreui-theme="dark"] .searchselect-control:focus-within .dropdown-arrow { color: #8FAADC; }
+[data-coreui-theme="dark"] .btn-clear { color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-clear:hover {
+  background-color: rgba(239, 68, 68, 0.16);
+  color: #F87171;
+}
+
+/* Dropdown (teleportado a body) */
+[data-coreui-theme="dark"] .searchselect-dropdown {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+[data-coreui-theme="dark"] .dropdown-message { color: #A0A099; }
+[data-coreui-theme="dark"] .dropdown-message--empty { color: #8A8A80; }
+[data-coreui-theme="dark"] .dropdown-item-exec:hover { background-color: rgba(143, 170, 220, 0.10); }
+[data-coreui-theme="dark"] .dropdown-item-exec:hover .dropdown-item-exec__label { color: #8FAADC; }
+[data-coreui-theme="dark"] .dropdown-item-exec:active { background-color: rgba(143, 170, 220, 0.16); }
+[data-coreui-theme="dark"] .dropdown-item-exec__label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .dropdown-item-exec__sublabel { color: #8A8A80; }
+[data-coreui-theme="dark"] .form-text-exec { color: #8A8A80; }
+[data-coreui-theme="dark"] .spinner,
+[data-coreui-theme="dark"] .spinner-small {
+  border-color: #2A2A22;
+  border-top-color: #8FAADC;
+}
 </style>
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'

@@ -417,7 +417,9 @@ const showCertificarPill = computed(() => {
 const lastPayment = computed(() => {
   const hist = detail.value?.payment_history
   if (!hist || !Array.isArray(hist) || !hist.length) return null
-  return hist[0]
+  // Pagos sueltos (installment_id null: certificado/reasignacion) viven en el
+  // nav Adicionales, no en el bloque de contado.
+  return hist.find(p => p.installment_id != null) || null
 })
 
 const profileOptions = computed(() => {

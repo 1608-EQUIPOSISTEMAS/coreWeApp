@@ -71,4 +71,16 @@ const showPass = ref(false)
   transition: all .2s ease;
 }
 .eo-toggle:hover { background: #F5F5F5; color: #737373; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .eo-bar { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .eo-item { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .eo-item > i { color: #A78BFA; }
+[data-coreui-theme="dark"] .eo-label { color: #8A8A80; }
+[data-coreui-theme="dark"] .eo-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eo-muted { color: #6F6F66; }
+[data-coreui-theme="dark"] .eo-toggle { color: #A0A099; }
+[data-coreui-theme="dark"] .eo-toggle:hover { background: #2A2A22; color: #F4F4F0; }
 </style>

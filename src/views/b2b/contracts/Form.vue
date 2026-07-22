@@ -320,4 +320,18 @@ onMounted(async () => {
 .input-group-text { background: #f9fafb; border: 1px solid #e5e7eb; border-right: none; padding: .4rem .6rem; border-radius: .375rem 0 0 .375rem; display: flex; align-items: center; }
 .input-group .form-control { border-radius: 0; }
 .input-group .btn-sm { border-radius: 0 .375rem .375rem 0; border-left: none; }
+
+/* ══ DARK MODE ══ */
+[data-coreui-theme="dark"] .lead-form { color: #F4F4F0; }
+[data-coreui-theme="dark"] .card-header { background-color: #1A1A14; border-bottom: 1px solid #2A2A22 !important; }
+[data-coreui-theme="dark"] .required-star { color: #F87171; }
+[data-coreui-theme="dark"] .form-section__title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .form-switch input:checked + span { background: #3b82f6; }
+[data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+[data-coreui-theme="dark"] .btn-outline { background-color: #1A1A14; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-control { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-label { color: #A0A099; }
+[data-coreui-theme="dark"] .input-group-text { background: #1F1F1A; border-color: #3A3A33; color: #A0A099; }
 </style>

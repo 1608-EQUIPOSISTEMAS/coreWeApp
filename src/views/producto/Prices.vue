@@ -503,4 +503,52 @@ const currencyDollars = computed(() => {
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .skel-row td { padding: 8px 12px; border-bottom: 1px solid var(--slate-100); }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   (los tokens light viven en un :root scoped que no aplica;
+   aquí se definen sobre el shell solo para dark)
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  color: #F4F4F0;
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+  --slate-400: #8A8A80;
+  --slate-100: #24241E;
+  --slate-50: #1F1F1A;
+  --teal-600: #8FAADC; /* navy WE derivado claro para dark */
+  --teal-500: #8FAADC;
+  --blue-600: #60A5FA;
+  --amber-500: #FBBF24;
+  --red-600: #F87171;
+  --white: #1A1A14;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --border: #2A2A22;
+}
+[data-coreui-theme="dark"] .th-group-a { background: #1B2537; color: #93C5FD; border-left-color: #2A3A55; }
+[data-coreui-theme="dark"] .th-group-b { background: #16281F; color: #6EE7B7; border-left-color: #1F3A2E; }
+[data-coreui-theme="dark"] .ts-a { background: #182030; color: #60A5FA; border-left-color: #2A3A55; }
+[data-coreui-theme="dark"] .ts-b { background: #14231C; color: #34D399; border-left-color: #1F3A2E; }
+[data-coreui-theme="dark"] .td-a { border-left-color: #1B2537; }
+[data-coreui-theme="dark"] .td-b { border-left-color: #16281F; }
+[data-coreui-theme="dark"] .row-modified td { background-color: rgba(245,158,11,.12) !important; }
+[data-coreui-theme="dark"] .text-success { color: #34D399 !important; }
+[data-coreui-theme="dark"] .text-danger { color: #F87171 !important; }
+[data-coreui-theme="dark"] .exec-table .bg-white { background-color: #1A1A14 !important; }
+[data-coreui-theme="dark"] .exec-table .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .btn-save { background-color: rgba(52,211,153,.16); color: #34D399; }
+[data-coreui-theme="dark"] .btn-save:hover { background-color: #16a34a; color: #fff; }
+[data-coreui-theme="dark"] .btn-undo { background-color: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .btn-undo:hover { background-color: #ef4444; color: #fff; }
+[data-coreui-theme="dark"] .exec-input-light::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .exec-input-light:focus,
+[data-coreui-theme="dark"] .exec-select-light:focus { box-shadow: 0 0 0 3px rgba(143,170,220,0.15); }
+[data-coreui-theme="dark"] .exec-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .skel {
+  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
+  background-size: 200% 100%;
+}
 </style>

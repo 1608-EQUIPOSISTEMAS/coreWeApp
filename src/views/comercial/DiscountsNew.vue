@@ -572,4 +572,31 @@ onMounted(async () => {
 .insc-head { background: #f8fafc; border-bottom: 1px solid #e2e8f0; border-radius: .3rem .3rem 0 0; }
 .insc-title { font-weight: 600; font-size: 1.1rem; color: #111827; }
 .insc-section { background: #fff; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .card-header { background-color: #1A1A14; border-bottom-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .form-section { background-color: transparent; }
+[data-coreui-theme="dark"] .form-section__title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-section__note { color: #A0A099; }
+[data-coreui-theme="dark"] .form-label { color: #A0A099; }
+[data-coreui-theme="dark"] .text-label-aux { color: #8A8A80; }
+[data-coreui-theme="dark"] .form-control, [data-coreui-theme="dark"] .form-select { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-control:disabled, [data-coreui-theme="dark"] .form-control[readonly], [data-coreui-theme="dark"] .form-select:disabled { background-color: #24241E; border-color: #2A2A22; color: #6F6F66; }
+[data-coreui-theme="dark"] .required-star { color: #F87171; }
+[data-coreui-theme="dark"] .card-footer { background-color: #1A1A14 !important; border-top-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .form-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .form-switch input:checked + span { background: #3b82f6; }
+[data-coreui-theme="dark"] .bg-blue-light { background-color: rgba(59,130,246,.16); }
+[data-coreui-theme="dark"] .btn-icon:hover { background-color: rgba(239,68,68,.16); }
+[data-coreui-theme="dark"] .insc-head { background: #1F1F1A !important; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .insc-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .insc-section { background: #1A1A14; }
+/* utilidades bootstrap hardcodeadas en template */
+[data-coreui-theme="dark"] .bg-light { background-color: #1F1F1A !important; }
+[data-coreui-theme="dark"] .bg-white { background-color: #1A1A14 !important; }
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .text-secondary { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .input-group-text { background-color: #1F1F1A !important; border-color: #3A3A33; color: #A0A099 !important; }
 </style>

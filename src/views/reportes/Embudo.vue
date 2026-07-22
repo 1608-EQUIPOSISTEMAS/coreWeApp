@@ -333,4 +333,22 @@ function badgeForStatus(s) {
     height: 220px;
   }
 }
+
+/* ══════════ DARK MODE ══════════ */
+[data-coreui-theme="dark"] .page .page-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .page .page-sub { color: #A0A099; }
+[data-coreui-theme="dark"] .page .filters-group { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .page .filters-group label { color: #A0A099; }
+[data-coreui-theme="dark"] .page .filters-group select { color: #F4F4F0; }
+[data-coreui-theme="dark"] .page .chart-card,
+[data-coreui-theme="dark"] .page .table-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .page .chart-title { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .page .table-head { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .page .table th,
+[data-coreui-theme="dark"] .page .table td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .page .badge { background: #24241E; color: #C9C9C1; }
+[data-coreui-theme="dark"] .page .badge-success { background: rgba(16, 185, 129, .16); color: #34D399; }
+[data-coreui-theme="dark"] .page .badge-warning { background: rgba(245, 158, 11, .16); color: #FBBF24; }
+[data-coreui-theme="dark"] .page .badge-muted { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .page .badge-primary { background: rgba(59, 130, 246, .16); color: #93C5FD; }
 </style>

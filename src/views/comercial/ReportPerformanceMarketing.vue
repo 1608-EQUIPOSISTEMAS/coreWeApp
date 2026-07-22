@@ -357,6 +357,7 @@
 import { ref, computed, reactive, onMounted, inject, watch } from 'vue'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler } from 'chart.js'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 
@@ -553,15 +554,15 @@ const trendChartData = computed(() => {
   const labels = currentDailyStats.value.map(d => d.name)
   const values = currentDailyStats.value.map(d => d.ven)
   const cumulative = values.reduce((acc, curr, i) => [...acc, curr + (acc[i-1] || 0)], [])
-  return { labels, datasets: [{ label: 'Ventas Acumuladas', data: cumulative, borderColor: '#0f172a', backgroundColor: 'rgba(15, 23, 42, 0.1)', fill: true, tension: 0.4 }] }
+  return { labels, datasets: [{ label: 'Ventas Acumuladas', data: cumulative, borderColor: isDark.value ? '#E5E7EB' : '#0f172a', backgroundColor: isDark.value ? 'rgba(229,231,235,0.1)' : 'rgba(15, 23, 42, 0.1)', fill: true, tension: 0.4 }] }
 })
 const revenueChartData = computed(() => {
   const active = tableData.value.filter(d => d.obj > 0)
-  return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => d.obj_monto), backgroundColor: '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => d.ven_monto), backgroundColor: '#10b981', borderRadius: 4 }] }
+  return { labels: active.map(d => d.asesor), datasets: [{ label: 'Meta S/.', data: active.map(d => d.obj_monto), backgroundColor: isDark.value ? '#3A3A33' : '#e2e8f0', borderRadius: 4 }, { label: 'Real S/.', data: active.map(d => d.ven_monto), backgroundColor: '#10b981', borderRadius: 4 }] }
 })
 const shareChartData = computed(() => {
   const top = tableData.value.filter(d => d.ven > 0)
-  return { labels: top.map(d => d.asesor), datasets: [{ data: top.map(d => d.ven), backgroundColor: ['#0f172a','#334155','#64748b','#94a3b8'], borderWidth: 0 }] }
+  return { labels: top.map(d => d.asesor), datasets: [{ data: top.map(d => d.ven), backgroundColor: isDark.value ? ['#E5E7EB','#CBD5E1','#64748b','#94a3b8'] : ['#0f172a','#334155','#64748b','#94a3b8'], borderWidth: 0 }] }
 })
 const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
 const groupedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'bottom' } } }
@@ -696,4 +697,66 @@ thead th { padding: 0.75rem 1rem; font-weight: 700; text-transform: uppercase; b
 .spin { animation: spin 1s linear infinite; }
 
 @media (max-width: 1024px) { .split-section { grid-template-columns: 1fr; } .days-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .system-container { background-color: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .main-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .system-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .system-subtitle { color: #A0A099; }
+[data-coreui-theme="dark"] .btn-toggle { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .btn-toggle:hover { background: #E4E4DD; }
+[data-coreui-theme="dark"] .btn-refresh { background: #1A1A14; color: #F4F4F0; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-refresh:hover { background-color: #24241E; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .filter-bar { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .filter-item label { color: #8A8A80; }
+[data-coreui-theme="dark"] .filter-item select, [data-coreui-theme="dark"] .custom-select { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .mini-kpis { border-left-color: #2A2A22; }
+[data-coreui-theme="dark"] .mini-card span { color: #A0A099; }
+[data-coreui-theme="dark"] .mini-card strong { color: #F4F4F0; }
+[data-coreui-theme="dark"] .mini-card.highlight strong { color: #34D399; }
+[data-coreui-theme="dark"] .table-card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] thead th { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .group-blue { background: rgba(59,130,246,.14); color: #60A5FA; border-left-color: #1A1A14; }
+[data-coreui-theme="dark"] .group-green { background: rgba(16,185,129,.14); color: #34D399; border-left-color: #1A1A14; }
+[data-coreui-theme="dark"] .group-gray { background: #1F1F1A; color: #A0A099; border-left-color: #1A1A14; }
+[data-coreui-theme="dark"] .group-dark { background: #24241E; color: #F4F4F0; border-left-color: #1A1A14; }
+[data-coreui-theme="dark"] .sub-blue { background: rgba(59,130,246,.10); color: #60A5FA; }
+[data-coreui-theme="dark"] .sub-green { background: rgba(16,185,129,.10); color: #34D399; }
+[data-coreui-theme="dark"] .sub-gray { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .sub-dark { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .data-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .bg-green-light { background: rgba(16,185,129,.08); }
+[data-coreui-theme="dark"] .bg-blue-light { background: rgba(59,130,246,.08); }
+[data-coreui-theme="dark"] .bg-dark-light { background: #1F1F1A; }
+[data-coreui-theme="dark"] .row-total td { background: #1F1F1A; border-top-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .daily-section { background: #1A1A14; border-color: #2A2A22; border-top-color: #F4F4F0; }
+[data-coreui-theme="dark"] .section-desc { color: #A0A099; }
+[data-coreui-theme="dark"] .day-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .day-card.active-day { border-color: rgba(59,130,246,.4); box-shadow: 0 4px 6px -1px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .day-header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .day-name { color: #A0A099; }
+[data-coreui-theme="dark"] .metric-row { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .metric-row.highlight { background: rgba(16,185,129,.12); color: #34D399; }
+[data-coreui-theme="dark"] .panel { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .panel-header { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .panel-header h4 { color: #F4F4F0; }
+[data-coreui-theme="dark"] .f-label { color: #A0A099; }
+[data-coreui-theme="dark"] .f-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .loading-container { color: #A0A099; }
+[data-coreui-theme="dark"] .spinner { border-color: #2A2A22; border-top-color: #F4F4F0; }
+[data-coreui-theme="dark"] .custom-scrollbar::-webkit-scrollbar-track { background: #1F1F1A; }
+[data-coreui-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb { background: #3A3A33; }
+[data-coreui-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4A4A42; }
+[data-coreui-theme="dark"] .tab-btn { color: #A0A099; }
+[data-coreui-theme="dark"] .tab-btn.active, [data-coreui-theme="dark"] .tab-btn:hover { color: #F4F4F0; }
+[data-coreui-theme="dark"] .tab-btn.active { border-bottom-color: #F4F4F0; }
+[data-coreui-theme="dark"] .text-success { color: #34D399; }
+[data-coreui-theme="dark"] .text-danger { color: #F87171; }
+[data-coreui-theme="dark"] .text-blue { color: #60A5FA; }
+[data-coreui-theme="dark"] .text-muted { color: #8A8A80; }
+/* utilidades bootstrap del template (tabla del modal) */
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .bg-white { background-color: #1A1A14 !important; }
 </style>

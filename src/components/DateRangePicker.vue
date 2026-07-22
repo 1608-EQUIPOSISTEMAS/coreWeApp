@@ -640,4 +640,45 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 .drp-btn-primary:disabled {
   background: var(--drp-ink-4); border-color: var(--drp-ink-4); cursor: not-allowed;
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+/* El panel NO usa Teleport (absolute dentro de .drp-root), así que
+   hereda los tokens redefinidos aquí. Overrides puntuales para los
+   `white` / hex hardcodeados fuera de tokens. */
+[data-coreui-theme="dark"] .drp-root {
+  --drp-line: #2A2A22;
+  --drp-line-soft: #24241E;
+  --drp-ink: #F4F4F0;
+  --drp-ink-2: #C4C4BC;
+  --drp-ink-3: #A0A099;
+  --drp-ink-4: #6F6F66;
+  --drp-bg-soft: #1F1F1A;
+  --drp-accent: #60A5FA;
+  --drp-accent-soft: rgba(59, 130, 246, 0.16);
+  color-scheme: dark;
+}
+[data-coreui-theme="dark"] .drp-trigger { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-trigger:hover { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .drp-trigger-open {
+  border-color: var(--drp-accent);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, .18);
+}
+[data-coreui-theme="dark"] .drp-panel {
+  background: #1A1A14;
+  box-shadow: 0 6px 32px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3);
+}
+[data-coreui-theme="dark"] .drp-presets { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-radio.checked { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-cell.cell-start,
+[data-coreui-theme="dark"] .drp-cell.cell-end { color: #14140F; }
+[data-coreui-theme="dark"] .drp-cell.cell-today.cell-start::after,
+[data-coreui-theme="dark"] .drp-cell.cell-today.cell-end::after { background: #14140F; }
+[data-coreui-theme="dark"] .drp-check { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-compare-toggle input:checked + .drp-check::after { color: #14140F; }
+[data-coreui-theme="dark"] .drp-select,
+[data-coreui-theme="dark"] .drp-date-input { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-btn { background: #1A1A14; }
+[data-coreui-theme="dark"] .drp-btn-primary { background: var(--drp-accent); color: #14140F; }
+[data-coreui-theme="dark"] .drp-btn-primary:hover { background: #7FB5FB; }
+[data-coreui-theme="dark"] .drp-btn-primary:disabled { color: #F4F4F0; }
 </style>

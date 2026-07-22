@@ -333,4 +333,30 @@ async function submitBulk () {
   background: #fee2e2; color: #991b1b; padding: 4px 12px;
   border-radius: 4px; font-size: 12px; font-family: 'IBM Plex Mono', monospace;
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  background: #14140F;
+  color: #F4F4F0;
+  --slate-100: #24241E;
+  --teal-500: #8FAADC; /* navy WE derivado claro: el puro no se lee en dark */
+  --white: #1A1A14;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --border: #2A2A22;
+}
+[data-coreui-theme="dark"] .paste-textarea { background: #1A1A14; }
+[data-coreui-theme="dark"] .paste-textarea:focus { box-shadow: 0 0 0 3px rgba(143,170,220,0.15); }
+[data-coreui-theme="dark"] .paste-textarea::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .preview-table tbody tr:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .td-link a { color: #60A5FA; }
+[data-coreui-theme="dark"] .row-error { background: rgba(239,68,68,.14) !important; }
+[data-coreui-theme="dark"] .row-error:hover { background: rgba(239,68,68,.22) !important; }
+[data-coreui-theme="dark"] .badge-ok { background: rgba(52,211,153,.16); color: #34D399; }
+[data-coreui-theme="dark"] .badge-fail { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .notfound-list li { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .notfound-section .section-title { color: #F87171 !important; }
 </style>

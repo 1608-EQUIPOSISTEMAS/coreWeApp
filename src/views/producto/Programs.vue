@@ -357,6 +357,68 @@
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  color: #F4F4F0;
+  --white: #1A1A14;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --teal-500: #8FAADC; /* navy WE derivado claro para dark */
+  --teal-600: #8FAADC;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+}
+[data-coreui-theme="dark"] .pill-teal { background: rgba(52,211,153,.16); color: #34D399; border-color: rgba(52,211,153,.35) !important; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.35) !important; }
+[data-coreui-theme="dark"] .thead-sub .ts { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-table .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .skel {
+  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
+  background-size: 200% 100%;
+}
+[data-coreui-theme="dark"] .skel-row td { border-bottom-color: #24241E; }
+
+/* Contenido del modal de filtros (teleported a body: los tokens del shell no llegan) */
+[data-coreui-theme="dark"] .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .form-contrast .form-control,
+[data-coreui-theme="dark"] .form-contrast :deep(.searchselect-control),
+[data-coreui-theme="dark"] .form-contrast :deep(.multiselect-control) {
+  background-color: #1F1F1A !important;
+  border-color: #3A3A33 !important;
+  color: #F4F4F0 !important;
+}
+[data-coreui-theme="dark"] .form-contrast .form-control::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .form-contrast .form-control:focus,
+[data-coreui-theme="dark"] .form-contrast :deep(.searchselect-control:focus-within),
+[data-coreui-theme="dark"] .form-contrast :deep(.multiselect-control:focus-within) {
+  background-color: #1A1A14 !important;
+  border-color: #8FAADC !important;
+  box-shadow: 0 0 0 3px rgba(143,170,220,0.15) !important;
+}
+[data-coreui-theme="dark"] .btn-exec-outline { border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; color: #F4F4F0; border-color: #3A3A33; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene el formulario de filtros (.form-contrast). */
+[data-coreui-theme="dark"] .modal-card:has(.form-contrast) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .btn-close { color: #A0A099; }
 </style>
 <script setup>
 import { ref, reactive, onMounted, inject } from 'vue'

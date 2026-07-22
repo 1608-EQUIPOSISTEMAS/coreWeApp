@@ -192,7 +192,7 @@
                   <th v-if="isAcademica" colspan="2" class="th-group th-group-e">ACADÉMICA</th>
                   <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
                   <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
-                  <th colspan="2" class="th-group th-group-c">SEGUIMIENTO</th>
+                  <th colspan="3" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
                   <th colspan="6" class="th-group th-group-c">AULA / INSCRITOS</th>
                 </tr>
@@ -255,6 +255,7 @@
                   <!-- Seguimiento -->
                   <th class="ts ts-c text-center" style="min-width:120px;max-width:200px">FICHA / MEJORA</th>
                   <th class="ts ts-c text-center" style="min-width:100px;max-width:180px">CONFIRM.</th>
+                  <th class="ts ts-c text-center" style="min-width:64px;" title="Nueva Metodología">N. MET.</th>
 
                   <!-- Referencia -->
                   <th class="ts ts-d">
@@ -558,6 +559,16 @@
                         <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
                       </template>
                     </td>
+                    <td class="td-c text-center">
+                      <template v-if="!isAcademica">
+                        <label class="exec-switch scale-75" title="Nueva Metodología">
+                          <input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span>
+                        </label>
+                      </template>
+                      <template v-else>
+                        <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
+                      </template>
+                    </td>
 
                     <!-- REFERENCIA -->
                     <td class="td-d">
@@ -751,6 +762,14 @@
                       <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
                     </template>
                   </td>
+                  <td class="td-c text-center">
+                    <template v-if="!isAcademica">
+                      <label class="exec-switch scale-75" title="Nueva Metodología"><input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span></label>
+                    </template>
+                    <template v-else>
+                      <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
+                    </template>
+                  </td>
 
                   <td class="td-d">
 <textarea
@@ -798,7 +817,7 @@
 
     <!-- Modal: Historial Global -->
     <BaseModal v-model="showHistoryModal" title="Historial Global de Cambios" size="xl">
-      <div class="p-3 bg-light" style="min-height:400px;max-height:80vh;overflow-y:auto;">
+      <div class="p-3 bg-light ed-modal-body" style="min-height:400px;max-height:80vh;overflow-y:auto;">
         <div v-if="isLoadingHistory" class="text-center p-5 text-muted">
           <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
           <p>Cargando historial…</p>
@@ -962,7 +981,7 @@
 
     <!-- Modal: Filtros -->
     <BaseModal v-model="showFilterModal" title="Filtrar Cronograma" size="lg">
-      <div class="p-3 row">
+      <div class="p-3 row ed-modal-body">
         <div class="row g-2 mb-3">
           <label class="form-label small fw-bold">Rango Fecha inicio</label>
           <BaseDatePicker v-model="filterForm.range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango (Desde a Hasta)" @on-change="handleRangeFilterChange" />
@@ -1443,7 +1462,7 @@
 
     <!-- Modal: Objetivos Mensuales -->
     <BaseModal v-model="showMonthlyGoalsModal" title="Definición de Objetivos Mensuales" size="xl">
-      <div class="p-3 bg-light rounded" style="min-height:400px;max-height:70vh;overflow-y:auto;">
+      <div class="p-3 bg-light rounded ed-modal-body" style="min-height:400px;max-height:70vh;overflow-y:auto;">
         <div class="table-responsive bg-white border rounded shadow-sm">
           <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size:0.8rem;">
             <thead class="table-light sticky-top">
@@ -1496,16 +1515,16 @@
 
 <BaseModal v-model="showAuditModal"
   :title="currentEditionId ? 'Historial de Cambios — Edición' : 'Historial Global de Cambios'"
-  size="xl">  <div v-if="loadingAudit && !auditLogs.length" class="text-center py-5">
+  size="xl">  <div v-if="loadingAudit && !auditLogs.length" class="text-center py-5 ed-modal-body">
     <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
     <p class="text-muted fw-600">Cargando historial...</p>
   </div>
 
-  <div v-else-if="!auditLogs.length" class="empty-state">
+  <div v-else-if="!auditLogs.length" class="empty-state ed-modal-body">
     No hay historial de cambios registrado.
   </div>
 
-  <div v-else>
+  <div v-else class="ed-modal-body">
     <div v-for="log in auditLogs" :key="log.transaction_id" class="audit-entry mb-3">
       <!-- Cabecera de transacción -->
       <div class="audit-entry__header">
@@ -2449,6 +2468,199 @@ tr[class*="row-segment-"]:hover .td-d {
 .field-new  { color: #15803d; font-weight: 600; }
 .action-btn-audit { background: rgba(99,102,241,0.1); color: #6366f1; }
 .action-btn-audit:hover { background: rgba(244,243,243,0.767); }
+
+/* ═══════════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  color: #F4F4F0;
+  --white: #1A1A14;
+  --slate-100: #24241E;
+  --slate-50: #1F1F1A;
+  --slate-200: #2A2A22;
+  --slate-500: #A0A099;
+  --red-600: #F87171;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --border: #2A2A22;
+
+  /* Grupos de columna (sólidos: los thead son sticky) */
+  --col-a-bg: #1B2537; --col-a-head: #93C5FD; --col-a-border: #2A3A55; --col-a-td: #171D2A; --col-a-tdbdr: #232E44;
+  --col-b-bg: #16281F; --col-b-head: #6EE7B7; --col-b-border: #1F3A2E; --col-b-td: #141F19; --col-b-tdbdr: #1E3227;
+  --col-c-bg: #2B2214; --col-c-head: #FCD34D; --col-c-border: #45361C; --col-c-td: #201B12; --col-c-tdbdr: #3A2E1A;
+  --col-d-bg: #1F1F1A; --col-d-head: #A0A099; --col-d-border: #2A2A22; --col-d-td: #1C1C16; --col-d-tdbdr: #24241E;
+}
+
+/* ── Masthead (el bloque global "masthead claro" fuerza #fff con !important) ── */
+[data-coreui-theme="dark"] .exec-masthead .filter-nav-btn { background: #24241E !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal { background: rgba(143,170,220,.15) !important; color: #8FAADC !important; border-color: rgba(143,170,220,.4) !important; }
+[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal:hover { background: rgba(143,170,220,.25) !important; }
+[data-coreui-theme="dark"] .inline-kpi-value.accent { color: #8FAADC !important; }
+
+/* ── Tabla principal ── */
+[data-coreui-theme="dark"] .th-act { background: #24242E; }
+[data-coreui-theme="dark"] .th-group-e { background: #251F33; color: #C4B5FD; border-left-color: #3A3050; }
+[data-coreui-theme="dark"] .ts-e { background: #211D2E; color: #C4B5FD; border-left-color: #3A3050; }
+[data-coreui-theme="dark"] .td-e { background: #1D1A26; border-left-color: #2A2438; }
+[data-coreui-theme="dark"] .skeleton-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .sk-cell {
+  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
+  background-size: 200% 100%;
+}
+[data-coreui-theme="dark"] .tbody-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .tbody-row:hover td { background-color: #252B33 !important; }
+[data-coreui-theme="dark"] .link-wa { background: rgba(37,211,102,.15); color: #4ADE80; }
+[data-coreui-theme="dark"] .link-teams { background: rgba(165,180,252,.18); color: #A5B4FC; }
+[data-coreui-theme="dark"] .lac-chip:hover { border-color: rgba(255,255,255,.15); }
+[data-coreui-theme="dark"] .lac-chip--wa { color: #4ADE80; }
+[data-coreui-theme="dark"] .lac-chip--wa:hover { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.35); }
+[data-coreui-theme="dark"] .lac-chip--teams { color: #A5B4FC; }
+[data-coreui-theme="dark"] .lac-chip--teams:hover { background: rgba(165,180,252,.12); border-color: rgba(165,180,252,.35); }
+[data-coreui-theme="dark"] .lac-chip--no-link { color: #5A5A50 !important; }
+[data-coreui-theme="dark"] .lac-chip--no-link:hover { background: #24241E; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .lac-chip-btn--edit:hover { background: #24241E; color: #8FAADC; }
+[data-coreui-theme="dark"] .lac-chip--wa .lac-chip-btn--go:hover { background: rgba(74,222,128,.2); color: #4ADE80; }
+[data-coreui-theme="dark"] .lac-chip--teams .lac-chip-btn--go:hover { background: rgba(165,180,252,.2); color: #A5B4FC; }
+[data-coreui-theme="dark"] .lac-inline-input { background: #14140F; }
+[data-coreui-theme="dark"] .lac-inline-btn--save { background: rgba(74,222,128,.16); color: #4ADE80; }
+[data-coreui-theme="dark"] .lac-inline-btn--cancel { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .dot-ro-on { box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
+[data-coreui-theme="dark"] .dot-ro-off { background: #3A3A33; }
+[data-coreui-theme="dark"] .action-btn { border-color: rgba(255,255,255,.14); }
+[data-coreui-theme="dark"] .action-btn-view { color: #38BDF8; }
+[data-coreui-theme="dark"] .action-btn-tree { color: #F87171; }
+[data-coreui-theme="dark"] .action-btn-neutral { color: #A0A099; }
+[data-coreui-theme="dark"] .action-btn-edit { color: #FBBF24; }
+[data-coreui-theme="dark"] .action-btn-hier,
+[data-coreui-theme="dark"] .action-btn-audit { color: #A5B4FC; }
+[data-coreui-theme="dark"] .action-btn-view:hover,
+[data-coreui-theme="dark"] .action-btn-tree:hover,
+[data-coreui-theme="dark"] .action-btn-neutral:hover,
+[data-coreui-theme="dark"] .action-btn-edit:hover,
+[data-coreui-theme="dark"] .action-btn-hier:hover,
+[data-coreui-theme="dark"] .action-btn-audit:hover { background: rgba(255,255,255,.15); }
+[data-coreui-theme="dark"] .btn-pdf-dl { background: rgba(248,113,113,.12); color: #F87171; }
+[data-coreui-theme="dark"] .btn-pdf-dl:hover:not(:disabled) { background: rgba(248,113,113,.22); }
+[data-coreui-theme="dark"] .prog-link { color: #7BA3F0; }
+[data-coreui-theme="dark"] .date-link { color: #7DD3FC; }
+[data-coreui-theme="dark"] .pill-blue { background: rgba(59,130,246,.2); color: #93C5FD; }
+[data-coreui-theme="dark"] .pill-violet { background: rgba(139,92,246,.2); color: #C4B5FD; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,.18); color: #FCD34D; }
+[data-coreui-theme="dark"] .pill-teal { background: rgba(45,212,191,.18); color: #5EEAD4; }
+[data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .seg-a1 { background: rgba(59,130,246,.25); color: #93C5FD; }
+[data-coreui-theme="dark"] .seg-a2 { background: rgba(249,115,22,.25); color: #FDBA74; }
+[data-coreui-theme="dark"] .seg-a3 { background: rgba(234,179,8,.25); color: #FDE047; }
+[data-coreui-theme="dark"] .seg-a4 { background: rgba(217,119,6,.25); color: #FCD34D; }
+[data-coreui-theme="dark"] .seg-a5 { background: rgba(244,63,94,.25); color: #FDA4AF; }
+[data-coreui-theme="dark"] .seg-a6 { background: rgba(168,85,247,.25); color: #C4B5FD; }
+[data-coreui-theme="dark"] .seg-a7 { background: rgba(143,170,220,.25); color: #A5C0E8; }
+[data-coreui-theme="dark"] .exec-textarea:hover { background-color: #1F1F1A; }
+
+/* Semáforos de fila por segmento (los pasteles claros no funcionan en dark) */
+[data-coreui-theme="dark"] tr.row-segment-a1 { --seg-bg: #202A3D; }
+[data-coreui-theme="dark"] tr.row-segment-a2 { --seg-bg: #332413; }
+[data-coreui-theme="dark"] tr.row-segment-a3 { --seg-bg: #302B12; }
+[data-coreui-theme="dark"] tr.row-segment-a4 { --seg-bg: #2E2710; }
+[data-coreui-theme="dark"] tr.row-segment-a5 { --seg-bg: #331A1E; }
+[data-coreui-theme="dark"] tr.row-segment-a6 { --seg-bg: #2A2038; }
+[data-coreui-theme="dark"] tr.row-segment-a7 { --seg-bg: #232B3B; --seg-border: #8FAADC; }
+[data-coreui-theme="dark"] .row-pressing .td-a,
+[data-coreui-theme="dark"] .row-pressing .td-b,
+[data-coreui-theme="dark"] .row-pressing .td-c,
+[data-coreui-theme="dark"] .row-pressing .td-d { background-color: #2A3A55 !important; }
+
+/* Switches (semáforo FICHA/CONFIRM): navy WE → derivado claro */
+[data-coreui-theme="dark"] .exec-switch span { background: #3A3A33; }
+[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-switch input:checked + span { background: #8FAADC; }
+
+/* ── Popovers ── */
+[data-coreui-theme="dark"] .schedule-preview-popover { background-color: #1F1F1A !important; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .schedule-popover { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .popover-header-sm { background: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .clean-table thead th { background-color: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .clean-table tbody td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .row-highlight { background-color: rgba(59,130,246,.18) !important; }
+[data-coreui-theme="dark"] .row-highlight td:first-child { border-left-color: #60A5FA; }
+
+/* ── Modales (teleported a body: no heredan los tokens del shell) ── */
+[data-coreui-theme="dark"] .form-section { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .section-label { background: #1A1A14; color: #60A5FA; }
+[data-coreui-theme="dark"] .form-label-sm { color: #A0A099; }
+[data-coreui-theme="dark"] .hierarchy-container { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .status-card { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .switch-label { color: #D0D0C8; }
+[data-coreui-theme="dark"] .accordion-header:hover { background-color: #24241E; }
+[data-coreui-theme="dark"] .meta-dashboard { background-color: #14140F; }
+[data-coreui-theme="dark"] .meta-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .meta-card__header { background: #1A1A14; color: #A0A099; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .line-item { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .line-item:hover { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .line-item.is-zero { background: #1A1A14; }
+[data-coreui-theme="dark"] .line-item__name { color: #8A8A80; }
+[data-coreui-theme="dark"] .line-item__count { color: #F4F4F0; }
+[data-coreui-theme="dark"] .line-item.is-zero .line-item__count { color: #4A4A42; }
+[data-coreui-theme="dark"] .segment-circle { background: rgba(99,102,241,.25); color: #C7D2FE; }
+[data-coreui-theme="dark"] .row-segment-a1 td { background-color: #202A3D !important; }
+[data-coreui-theme="dark"] .row-segment-a2 td { background-color: #332413 !important; }
+[data-coreui-theme="dark"] .row-segment-a3 td { background-color: #302B12 !important; }
+[data-coreui-theme="dark"] .row-segment-a4 td { background-color: #2E2710 !important; }
+[data-coreui-theme="dark"] .row-segment-a5 td { background-color: #331A1E !important; }
+[data-coreui-theme="dark"] .row-segment-a6 td { background-color: #2A2038 !important; }
+[data-coreui-theme="dark"] .row-segment-a7 td { background-color: #232B3B !important; }
+[data-coreui-theme="dark"] .kpi-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-header { color: #D0D0C8; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .audit-entry { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .audit-entry__header { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .audit-change { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .audit-field-row { background: #1F1F1A; }
+[data-coreui-theme="dark"] .field-name { color: #A0A099; }
+[data-coreui-theme="dark"] .field-old { color: #F87171; }
+[data-coreui-theme="dark"] .field-new { color: #34D399; }
+[data-coreui-theme="dark"] .btn-exec-outline { border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; color: #F4F4F0; border-color: #3A3A33; }
+
+/* Inputs de los modales (el CSS global los fuerza a blanco) */
+[data-coreui-theme="dark"] .form-control,
+[data-coreui-theme="dark"] .form-select {
+  background-color: #1F1F1A !important;
+  border-color: #3A3A33 !important;
+  color: #F4F4F0 !important;
+}
+[data-coreui-theme="dark"] .form-control::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .form-control:focus,
+[data-coreui-theme="dark"] .form-select:focus {
+  background-color: #1A1A14 !important;
+  border-color: #8FAADC !important;
+  box-shadow: 0 0 0 3px rgba(143,170,220,0.15) !important;
+}
+
+/* Utilidades Bootstrap que no se adaptan solas al tema oscuro */
+[data-coreui-theme="dark"] .bg-light { background-color: #1F1F1A !important; }
+[data-coreui-theme="dark"] .bg-white { background-color: #1A1A14 !important; }
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .bg-warning.text-dark { color: #14140F !important; }
+[data-coreui-theme="dark"] .table-light { --cui-table-bg: #24241E; --cui-table-color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .table-light th { background-color: #24241E !important; color: #A0A099; }
+[data-coreui-theme="dark"] .alert-light { background-color: #1F1F1A; border-color: #2A2A22 !important; color: #D0D0C8; }
+[data-coreui-theme="dark"] .border-light { border-color: #2A2A22 !important; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo para los modales de esta vista, identificados por su contenido. */
+[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .btn-close { color: #A0A099; }
 </style>
 <script setup>
 
@@ -2554,6 +2766,7 @@ async function saveEditLink(edition) {
       upgrade:         currentData.upgrade          ? 'Y' : 'N',
       preconfirmation: currentData.preconfirmation  ? 'Y' : 'N',
       confirmation:    currentData.confirmation     ? 'Y' : 'N',
+      new_methodology: currentData.new_methodology === 'Y' ? 'Y' : 'N',
       notes:           currentData.notes            || '',
       whatsapp_link:   field === 'whatsapp_link' ? value : (currentData.whatsapp_link || null),
       teams_link:      field === 'teams_link'    ? value : (currentData.teams_link    || null),
@@ -2578,7 +2791,7 @@ async function saveEditLink(edition) {
 
 const date = ref();
 const isCompact = ref(true)
-const tableColCount = computed(() => (isCompact.value ? 16 : 11) + (isAcademica.value ? 2 : 0) + 6)
+const tableColCount = computed(() => (isCompact.value ? 17 : 12) + (isAcademica.value ? 2 : 0) + 6)
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])
@@ -4040,6 +4253,7 @@ async function saveQuickChange(edition) {
       preconfirmation: edition.preconfirmation ? 'Y' : 'N',
 
       confirmation: edition.confirmation ? 'Y' : 'N',
+      new_methodology: edition.new_methodology ? 'Y' : 'N',
       notes: edition.notes // Texto directo
     }
 

@@ -214,4 +214,24 @@ function parseChanges (changes) {
 .ea-new { color: #059669; font-weight: 600; }
 .ea-same { color: #1A1A1A; }
 .ea-arrow { font-size: 10px; color: #C4C4C4; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ea-badge { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .ea-empty { color: #6F6F66; }
+[data-coreui-theme="dark"] .ea-item:not(:last-child)::before { background: #2A2A22; }
+[data-coreui-theme="dark"] .ea-dot { background: #3A3A33; }
+[data-coreui-theme="dark"] .ea-action { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ea-user { color: #8A8A80; }
+[data-coreui-theme="dark"] .ea-date { color: #6F6F66; }
+[data-coreui-theme="dark"] .ea-details { color: #A0A099; }
+[data-coreui-theme="dark"] .ea-justificacion { background: rgba(245,158,11,.12); color: #FBBF24; }
+[data-coreui-theme="dark"] .ea-changes { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ea-change-row.ea-change-modified { background: rgba(245,158,11,.08); }
+[data-coreui-theme="dark"] .ea-change-field { color: #8A8A80; }
+[data-coreui-theme="dark"] .ea-old { color: #F87171; }
+[data-coreui-theme="dark"] .ea-new { color: #34D399; }
+[data-coreui-theme="dark"] .ea-same { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ea-arrow { color: #6F6F66; }
 </style>

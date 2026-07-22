@@ -90,4 +90,13 @@ defineEmits(['update:visible', 'apply', 'clear', 'date-change'])
   display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
 }
 .btn-exec:hover { background: #0F766E; }
+
+/* ══════════ DARK MODE ══════════ */
+[data-coreui-theme="dark"] .flt-fieldset { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .flt-legend,
+[data-coreui-theme="dark"] .flt-field label { color: #A0A099; }
+[data-coreui-theme="dark"] .flt-input { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .flt-input:focus { border-color: #2DD4BF; box-shadow: 0 0 0 3px rgba(45, 212, 191, .12); }
+[data-coreui-theme="dark"] .btn-ghost { border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-ghost:hover { background: #24241E; border-color: #3A3A33; }
 </style>

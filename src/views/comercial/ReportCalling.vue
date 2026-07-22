@@ -628,6 +628,7 @@ import {
   Title, Tooltip, Legend, Filler
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement,
@@ -958,7 +959,7 @@ const hourlyFlowChartData = computed(() => {
     ]
   }
 })
-const hourlyFlowOptions = {
+const hourlyFlowOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   interaction: { mode: 'index', intersect: false },
@@ -985,7 +986,7 @@ const hourlyFlowOptions = {
       position: 'left',
       beginAtZero: true,
       max: 100,
-      grid: { color: '#f1f5f9' },
+      grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' },
       ticks: {
         font: { size: 10 },
         callback: v => v + '%'
@@ -994,7 +995,7 @@ const hourlyFlowOptions = {
         display: true,
         text: '% sobre intentos',
         font: { size: 10 },
-        color: '#94a3b8'
+        color: isDark.value ? '#A0A099' : '#94a3b8'
       }
     },
     yCount: {
@@ -1010,11 +1011,11 @@ const hourlyFlowOptions = {
         display: true,
         text: 'Nº intentos',
         font: { size: 10 },
-        color: '#94a3b8'
+        color: isDark.value ? '#A0A099' : '#94a3b8'
       }
     }
   }
-}
+}))
 
 const persistenceData = computed(() => {
   const keys   = [1,2,3,4,'5+']
@@ -1677,4 +1678,45 @@ const goToLead = id => { if (!id) return; window.open(router.resolve({ name:'Com
 [data-coreui-theme="dark"] .rc-card-head { background: linear-gradient(180deg, #1A1A14, #1F1F1A); }
 [data-coreui-theme="dark"] .rc-table-wrap-lider .rc-td-sticky { background: #1A1A14 !important; }
 [data-coreui-theme="dark"] .rc-tr-clickable.is-selected td { background: rgba(16, 185, 129, 0.16) !important; }
+[data-coreui-theme="dark"] .ep-btn-export,
+[data-coreui-theme="dark"] .rc-toggle-btn.is-active,
+[data-coreui-theme="dark"] .rc-pill-stat { background: #1A1A14; }
+[data-coreui-theme="dark"] .rc-td-sticky { background: #1A1A14 !important; }
+[data-coreui-theme="dark"] .ep-kpi.is-urgent { background: linear-gradient(180deg, #1A1A14 0%, rgba(220, 38, 38, 0.10) 100%); }
+[data-coreui-theme="dark"] .rc-card-persistence .rc-card-head { background: linear-gradient(180deg, #1F1F1A, #1A1A14); }
+[data-coreui-theme="dark"] .rc-call-overdue { border-color: rgba(239, 68, 68, 0.35); border-left-color: #F87171; }
+[data-coreui-theme="dark"] .rc-origin-total { color: #14140F; }
+[data-coreui-theme="dark"] .rc-badge-red,
+[data-coreui-theme="dark"] .rc-block-cnt-red,
+[data-coreui-theme="dark"] .rc-pill-mini.is-red,
+[data-coreui-theme="dark"] .rc-sd-rate.is-red { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.35); color: #F87171; }
+[data-coreui-theme="dark"] .rc-badge-amber,
+[data-coreui-theme="dark"] .rc-step-tag.is-drop,
+[data-coreui-theme="dark"] .rc-sd-rate.is-amber,
+[data-coreui-theme="dark"] .rc-pill-mini.is-amber { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.35); color: #FBBF24; }
+[data-coreui-theme="dark"] .rc-block-cnt-teal { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.35); color: #34D399; }
+[data-coreui-theme="dark"] .rc-tag-origin,
+[data-coreui-theme="dark"] .rc-resched-who.is-lider { background: rgba(99, 102, 241, 0.16); border-color: rgba(99, 102, 241, 0.35); color: #A5B4FC; }
+[data-coreui-theme="dark"] .rc-pill-stat.is-green { border-color: rgba(16, 185, 129, 0.35); }
+[data-coreui-theme="dark"] .rc-sd.is-blue { background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.35); }
+[data-coreui-theme="dark"] .rc-sd-n.is-blue { color: #60A5FA; }
+[data-coreui-theme="dark"] .rc-insight,
+[data-coreui-theme="dark"] .rc-alert { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.30); color: #FCD34D; }
+[data-coreui-theme="dark"] .rc-insight span { color: #FCD34D; }
+[data-coreui-theme="dark"] .rc-insight strong { color: #FDE68A; }
+[data-coreui-theme="dark"] .rc-block-hdr-red,
+[data-coreui-theme="dark"] .rc-toggle-btn.is-active-red,
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .rc-th-red { color: #F87171 !important; }
+[data-coreui-theme="dark"] .rc-th-green { color: #34D399 !important; }
+[data-coreui-theme="dark"] .rc-th-amber { color: #FBBF24 !important; }
+[data-coreui-theme="dark"] .rc-th-indigo { color: #A5B4FC !important; }
+[data-coreui-theme="dark"] .c-green,
+[data-coreui-theme="dark"] .rc-sd-n.is-green,
+[data-coreui-theme="dark"] .rc-sd-rate.is-green,
+[data-coreui-theme="dark"] .rc-pill-mini.is-green,
+[data-coreui-theme="dark"] .rc-pill-stat.is-green .rc-pill-v,
+[data-coreui-theme="dark"] .rc-step-tag.is-peak { color: #34D399; }
+[data-coreui-theme="dark"] .c-amber { color: #FBBF24; }
+[data-coreui-theme="dark"] .c-indigo { color: #A5B4FC; }
 </style>

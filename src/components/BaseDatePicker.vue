@@ -188,4 +188,35 @@ function clearDate() {
   background-color: #fee2e2;
   color: var(--red-600, #dc2626);
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input) {
+  color: #F4F4F0;
+  background-color: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input:focus) {
+  border-color: #8FAADC !important;
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.15) !important;
+  background-color: #1A1A14 !important;
+}
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input:hover:not(:disabled)) {
+  border-color: #3A3A33;
+}
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input[readonly]:not(:disabled)) {
+  background-color: #1A1A14;
+}
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input:disabled) {
+  background-color: #1F1F1A !important;
+  color: #8A8A80 !important;
+  border-color: #2A2A22 !important;
+}
+[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input:required:invalid:not(:placeholder-shown)) {
+  border-color: #F87171 !important;
+}
+[data-coreui-theme="dark"] .btn-clear { color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-clear:hover {
+  background-color: rgba(239, 68, 68, 0.16);
+  color: #F87171;
+}
 </style>

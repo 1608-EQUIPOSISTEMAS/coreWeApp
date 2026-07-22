@@ -389,6 +389,36 @@
 .exec-version-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: var(--white, #fff); overflow: hidden; transition: box-shadow 0.2s; }
 .exec-version-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
 .empty-state { text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50, #f8fafc); border-radius: 6px; border: 1px dashed var(--slate-300, #cbd5e1); }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  color: #F4F4F0;
+  --white: #1A1A14;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --teal-600: #8FAADC; /* navy WE derivado claro para dark */
+  --teal-500: #8FAADC;
+  --amber-500: #FBBF24;
+  --red-600: #F87171;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+}
+[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; }
+[data-coreui-theme="dark"] .exec-input-light::placeholder,
+[data-coreui-theme="dark"] .exec-textarea::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .exec-input-light:focus,
+[data-coreui-theme="dark"] .exec-select-light:focus,
+[data-coreui-theme="dark"] .exec-textarea:focus { box-shadow: 0 0 0 3px rgba(143,170,220,0.15); }
+[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
+[data-coreui-theme="dark"] .pill-teal { background: rgba(52,211,153,.16); color: #34D399; border-color: rgba(52,211,153,.35) !important; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.35) !important; }
+[data-coreui-theme="dark"] .bg-white { background-color: #1F1F1A !important; }
 </style>
 
 <script setup>

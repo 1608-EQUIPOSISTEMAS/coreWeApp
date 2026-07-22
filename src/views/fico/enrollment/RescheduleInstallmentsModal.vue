@@ -826,4 +826,128 @@ async function handleSave () {
 .tc { text-align: center; }
 .fw700 { font-weight: 700; }
 .mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ri-student-bar { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .ri-student-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ri-student-doc { color: #A0A099; }
+[data-coreui-theme="dark"] .ri-program-pill {
+  color: #A78BFA;
+  background: rgba(99,102,241,.16);
+  border-color: rgba(99,102,241,.35);
+}
+[data-coreui-theme="dark"] .ri-tabs { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .ri-tab { color: #8A8A80; }
+[data-coreui-theme="dark"] .ri-tab:hover { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ri-tab.active { color: #F4F4F0; border-bottom-color: #818CF8; }
+[data-coreui-theme="dark"] .ri-shift-input {
+  color: #F4F4F0;
+  background: #14140F;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ri-shift-input:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
+[data-coreui-theme="dark"] .ri-shift-hint { color: #A0A099; }
+[data-coreui-theme="dark"] .ri-preview-title { color: #A0A099; }
+[data-coreui-theme="dark"] .ri-table { color: #D4D4CC; }
+[data-coreui-theme="dark"] .ri-table thead th {
+  background: #1F1F1A;
+  color: #8A8A80;
+  border-bottom-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ri-table tbody td { border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .ri-row-paid td { background: #1F1F1A; color: #6F6F66; }
+[data-coreui-theme="dark"] .ri-row-error td { background: rgba(239,68,68,.08); }
+[data-coreui-theme="dark"] .ri-datepicker :deep(input) {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ri-empty { color: #6F6F66; }
+[data-coreui-theme="dark"] .ri-pill-green { background: rgba(16,185,129,.14); color: #34D399; }
+[data-coreui-theme="dark"] .ri-pill-red { background: rgba(239,68,68,.14); color: #F87171; }
+[data-coreui-theme="dark"] .ri-pill-muted { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .ri-campaign-hint {
+  background: rgba(245,158,11,.12);
+  border-color: rgba(245,158,11,.35);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .ri-campaign-hint i { color: #FBBF24; }
+[data-coreui-theme="dark"] .ri-amount-input {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ri-amount-input:focus { border-color: #818CF8; }
+[data-coreui-theme="dark"] .ri-strike { color: #6F6F66; }
+[data-coreui-theme="dark"] .ri-row-annul td { background: rgba(239,68,68,.08); }
+[data-coreui-theme="dark"] .ri-pay-block {
+  background: rgba(16,185,129,.08);
+  border-color: rgba(16,185,129,.35);
+}
+[data-coreui-theme="dark"] .ri-pay-title { color: #34D399; }
+[data-coreui-theme="dark"] .ri-pay-title i { color: #34D399; }
+[data-coreui-theme="dark"] .ri-pay-hint { color: #6EE7B7; }
+[data-coreui-theme="dark"] .ri-pay-discount-row { border-bottom-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .ri-discount-toggle { border-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .ri-discount-toggle button { background: #14140F; color: #A0A099; }
+[data-coreui-theme="dark"] .ri-discount-toggle button + button { border-left-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .ri-discount-toggle button.active { background: #059669; color: #FFFFFF; }
+[data-coreui-theme="dark"] .ri-pay-net strong { color: #34D399; }
+[data-coreui-theme="dark"] .ri-pay-net-msg { color: #6EE7B7; }
+[data-coreui-theme="dark"] .ri-pay-net-error strong { color: #F87171; }
+[data-coreui-theme="dark"] .ri-pay-net-error .ri-pay-net-msg { color: #F87171; }
+[data-coreui-theme="dark"] .ri-input {
+  color: #F4F4F0;
+  background: #14140F;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ri-input:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
+[data-coreui-theme="dark"] .ri-input[type="date"] { color-scheme: dark; }
+[data-coreui-theme="dark"] .ri-voucher-btn {
+  background: #1A1A14;
+  color: #F4F4F0;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ri-voucher-btn:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ri-voucher-view { color: #A78BFA; }
+[data-coreui-theme="dark"] .ri-campaign-summary {
+  background: #1F1F1A;
+  border-color: #2A2A22;
+  color: #D4D4CC;
+}
+[data-coreui-theme="dark"] .ri-summary-discount { color: #FBBF24; }
+[data-coreui-theme="dark"] .ri-label { color: #A0A099; }
+[data-coreui-theme="dark"] .ri-req { color: #F87171; }
+[data-coreui-theme="dark"] .ri-select,
+[data-coreui-theme="dark"] .ri-textarea {
+  color: #F4F4F0;
+  background: #14140F;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ri-select:focus,
+[data-coreui-theme="dark"] .ri-textarea:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
+[data-coreui-theme="dark"] .ri-textarea { background: rgba(245,158,11,.10); border-color: rgba(245,158,11,.4); }
+[data-coreui-theme="dark"] .ri-edition-note {
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.35);
+  color: #93C5FD;
+}
+[data-coreui-theme="dark"] .ri-edition-note i { color: #60A5FA; }
+[data-coreui-theme="dark"] .ri-btn-cancel { border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .ri-btn-cancel:hover { background: #1F1F1A; border-color: #3A3A33; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene este cuerpo (.ri-body). */
+[data-coreui-theme="dark"] .modal-card:has(.ri-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.ri-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.ri-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.ri-body) .btn-close { color: #A0A099; }
 </style>

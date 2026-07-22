@@ -411,6 +411,7 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut, Scatter } from 'vue-chartjs'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue' // <-- IMPORTANTE
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
 
@@ -440,7 +441,7 @@ const metricGroupDefinitions = {
   comercial: { title: 'ESTADO COMERCIAL', field: 'breakdown_estados' }
 }
 
-const CHART_COLORS = ['#0f766e','#0369a1','#b45309','#7c3aed','#be123c','#0284c7','#12274e','#a16207','#6d28d9','#475569']
+const CHART_COLORS = computed(() => ['#0f766e','#0369a1','#b45309','#7c3aed','#be123c','#0284c7', isDark.value ? '#8FAADC' : '#12274e','#a16207','#6d28d9','#475569'])
 
 onMounted(() => loadData())
 
@@ -614,8 +615,8 @@ const dynamicDoughnutChartData = computed(() => ({
   labels: currentDynamicColumnsFlat.value.map(c => c.displayName),
   datasets: [{
     data: currentDynamicColumnsFlat.value.map(c => getDynamicTotal(currentGroupField.value, c.originalName)),
-    backgroundColor: CHART_COLORS.slice(0, currentDynamicColumnsFlat.value.length),
-    borderWidth: 3, borderColor: '#ffffff'
+    backgroundColor: CHART_COLORS.value.slice(0, currentDynamicColumnsFlat.value.length),
+    borderWidth: 3, borderColor: isDark.value ? '#1A1A14' : '#ffffff'
   }]
 }))
 
@@ -629,7 +630,7 @@ const catgStackedChartData = computed(() => {
       data: grouped.map(g =>
         g.rawItems.reduce((sum, raw) => sum + getDynamicValue(raw, currentGroupField.value, col.originalName, 'cant'), 0)
       ),
-      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+      backgroundColor: CHART_COLORS.value[idx % CHART_COLORS.value.length],
       stack: 'stack1'
     }))
   }
@@ -641,7 +642,7 @@ const lineaRevenueChartData = computed(() => {
   return {
     labels: grouped.map(g => truncate(g.name, 22)),
     datasets: [
-      { label: 'Meta S/.', data: grouped.map(g => g.objetivo), backgroundColor: '#e2e8f0', borderRadius: 3, borderSkipped: false },
+      { label: 'Meta S/.', data: grouped.map(g => g.objetivo), backgroundColor: isDark.value ? '#3A3A33' : '#e2e8f0', borderRadius: 3, borderSkipped: false },
       { label: 'Venta S/.', data: grouped.map(g => g.venta), backgroundColor: '#0f766e', borderRadius: 3, borderSkipped: false }
     ]
   }
@@ -659,7 +660,7 @@ const tipoRankingChartData = computed(() => {
         label: '% Logro', data: pcts, borderRadius: 4,
         backgroundColor: pcts.map(p => p >= 100 ? '#0f766e' : p >= 80 ? '#0369a1' : '#be123c')
       },
-      { label: 'Meta 100%', data: grouped.map(() => 100), type: 'line', borderColor: 'rgba(0,0,0,0.25)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false }
+      { label: 'Meta 100%', data: grouped.map(() => 100), type: 'line', borderColor: isDark.value ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,0.25)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false }
     ]
   }
 })
@@ -680,7 +681,7 @@ const bcgChartData = computed(() => {
         d.y >= 100                    ? 'rgba(180,83,9,0.82)'   :
                                         'rgba(190,18,60,0.82)'
       ),
-      borderColor: '#fff', borderWidth: 2,
+      borderColor: isDark.value ? '#1A1A14' : '#fff', borderWidth: 2,
       pointRadius: 9, pointHoverRadius: 12
     }]
   }
@@ -689,28 +690,28 @@ const bcgChartData = computed(() => {
 // ── Chart Options ──
 const baseFont = { family: 'inherit', size: 11 }
 
-const groupedBarOptions = {
+const groupedBarOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  scales: { x: { grid: { display: false }, ticks: { font: baseFont } }, y: { grid: { color: '#f1f5f9' }, ticks: { font: baseFont } } }
-}
+  scales: { x: { grid: { display: false }, ticks: { font: baseFont } }, y: { grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { font: baseFont } } }
+}))
 
-const rankingBarOptions = {
+const rankingBarOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false, indexAxis: 'y',
   plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } } },
-  scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } }, y: { grid: { display: false }, ticks: { font: baseFont } } }
-}
+  scales: { x: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } }, y: { grid: { display: false }, ticks: { font: baseFont } } }
+}))
 
 const doughnutOptions = {
   responsive: true, maintainAspectRatio: false, cutout: '68%',
   plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14, font: baseFont } } }
 }
 
-const stackedBarOptions = {
+const stackedBarOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: baseFont } }, tooltip: { mode: 'index', intersect: false } },
-  scales: { x: { stacked: true, grid: { display: false }, ticks: { font: baseFont } }, y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } } }
-}
+  scales: { x: { stacked: true, grid: { display: false }, ticks: { font: baseFont } }, y: { stacked: true, beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { font: baseFont } } }
+}))
 
 const bcgChartOptions = computed(() => {
   const avgVenta = totalVenta.value / (filteredProcessedData.value.length || 1)
@@ -729,8 +730,8 @@ const bcgChartOptions = computed(() => {
       }
     },
     scales: {
-      x: { title: { display: true, text: 'Ventas (S/.) →', font: { ...baseFont, weight: 600 } }, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } },
-      y: { title: { display: true, text: '% Cumplimiento →', font: { ...baseFont, weight: 600 } }, beginAtZero: true, grid: { color: ctx => ctx.tick.value === 100 ? 'rgba(0,0,0,0.2)' : '#f1f5f9' }, ticks: { font: baseFont } }
+      x: { title: { display: true, text: 'Ventas (S/.) →', font: { ...baseFont, weight: 600 } }, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { font: baseFont } },
+      y: { title: { display: true, text: '% Cumplimiento →', font: { ...baseFont, weight: 600 } }, beginAtZero: true, grid: { color: ctx => ctx.tick.value === 100 ? (isDark.value ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,0.2)') : (isDark.value ? '#2A2A22' : '#f1f5f9') }, ticks: { font: baseFont } }
     }
   }
 })
@@ -1251,4 +1252,97 @@ thead .sticky-ed   { background: #f0f7ff !important; }
 .tbody-row td.td-b[style*="border-right"] {
   border-right-color: #fde68a !important;
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* tokens: los var(--x, fallback) de esta vista y del CSS global los recogen */
+  --slate-50: #1F1F1A; --slate-100: #24241E; --slate-300: #3A3A33; --slate-400: #8A8A80;
+  --border: #2A2A22; --white: #1A1A14;
+  --text-primary: #F4F4F0; --text-secondary: #A0A099; --text-muted: #8A8A80;
+  --teal-600: #8FAADC; --teal-500: #8FAADC; --gold-400: #FBBF24;
+}
+/* masthead (el global lo fuerza claro con !important) */
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .brand-eyebrow,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .filter-label,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .inline-kpi-label { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary { background: #F4F4F0 !important; color: #14140F !important; border-color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost { background: #1A1A14 !important; color: #A0A099 !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost:hover { background: #24241E !important; color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .inline-kpi-value.accent { color: #8FAADC !important; }
+/* cabeceras de grupo (tintes pastel → tintes oscuros) */
+[data-coreui-theme="dark"] .th-group-a { background: rgba(59,130,246,.14); color: #60A5FA; border-left-color: rgba(59,130,246,.35); }
+[data-coreui-theme="dark"] .th-group-b { background: rgba(245,158,11,.14); color: #FBBF24; border-left-color: rgba(245,158,11,.35); }
+[data-coreui-theme="dark"] .th-group-c { background: rgba(16,185,129,.14); color: #34D399; border-left-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .th-subgroup-marketing { background: rgba(99,102,241,.14); color: #A5B4FC; border-left-color: rgba(99,102,241,.35); }
+[data-coreui-theme="dark"] .th-subgroup-estrategias { background: rgba(245,158,11,.14); color: #FBBF24; border-left-color: rgba(245,158,11,.35); }
+[data-coreui-theme="dark"] .th-subgroup-otros { background: #1F1F1A; color: #A0A099; border-left-color: #3A3A33; border-top-color: #8A8A80; }
+[data-coreui-theme="dark"] .th-subgroup-general { background: rgba(16,185,129,.14); color: #34D399; border-left-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .ts-a { background: #1B1D22; color: #60A5FA; border-left-color: rgba(59,130,246,.25); }
+[data-coreui-theme="dark"] .ts-b { background: rgba(245,158,11,.10); color: #FBBF24; border-left-color: rgba(245,158,11,.25); }
+[data-coreui-theme="dark"] .ts-c { background: rgba(16,185,129,.10); color: #34D399; border-left-color: rgba(16,185,129,.25); }
+[data-coreui-theme="dark"] .thead-sub th.ts-b[style*="border-right"] { border-right-color: rgba(245,158,11,.35) !important; }
+[data-coreui-theme="dark"] .col-dyn-sub { color: #8A8A80; }
+/* filas */
+[data-coreui-theme="dark"] .tbody-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .row-alt { background: rgba(255,255,255,.02); }
+[data-coreui-theme="dark"] .tbody-row:hover td:not(.td-c):not(.td-cat) { background: rgba(59,130,246,.08) !important; }
+[data-coreui-theme="dark"] .tbody-row:hover td.td-c { background: #24241E !important; }
+[data-coreui-theme="dark"] .td-a { background: #1B1D22; border-left-color: #252A35; }
+[data-coreui-theme="dark"] .td-b { background: rgba(245,158,11,.06); border-left-color: rgba(245,158,11,.20); }
+[data-coreui-theme="dark"] .tbody-row td.td-b[style*="border-right"] { border-right-color: rgba(245,158,11,.35) !important; }
+[data-coreui-theme="dark"] .td-c { background: #1F1F1A; }
+/* badges y textos de estado */
+[data-coreui-theme="dark"] .logro-success { background: rgba(16,185,129,.16); color: #34D399; }
+[data-coreui-theme="dark"] .logro-info { background: rgba(59,130,246,.16); color: #60A5FA; }
+[data-coreui-theme="dark"] .logro-danger { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .dyn-count { color: #2DD4BF; }
+[data-coreui-theme="dark"] .dyn-pct { color: #8A8A80; border-left-color: #2A2A22; }
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .c-blue { color: #60A5FA; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell td[style*="#0f766e"] { color: #2DD4BF !important; }
+/* celdas dinámicas de color */
+[data-coreui-theme="dark"] .bg-dyn-high { background-color: rgba(16,185,129,.20) !important; border-left-color: rgba(16,185,129,.45) !important; }
+[data-coreui-theme="dark"] .bg-dyn-low { background-color: rgba(239,68,68,.18) !important; border-left-color: rgba(239,68,68,.40) !important; }
+[data-coreui-theme="dark"] .tbody-row:hover td.bg-dyn-high { background-color: rgba(16,185,129,.32) !important; }
+[data-coreui-theme="dark"] .tbody-row:hover td.bg-dyn-low { background-color: rgba(239,68,68,.30) !important; }
+/* footer de tabla navy: el texto debe seguir claro aunque --white sea oscuro */
+[data-coreui-theme="dark"] .tfoot-row td { color: #F4F4F0; }
+[data-coreui-theme="dark"] .kpi-card-top-name { color: #F4F4F0; }
+/* leyenda BCG */
+[data-coreui-theme="dark"] .bcg-star { color: #2DD4BF; }
+[data-coreui-theme="dark"] .bcg-cow { color: #38BDF8; }
+[data-coreui-theme="dark"] .bcg-q { color: #FBBF24; }
+[data-coreui-theme="dark"] .bcg-dog { color: #FB7185; }
+[data-coreui-theme="dark"] .qlab { opacity: 0.14; }
+/* columnas sticky: fondos SÓLIDOS (no rgba, para que no se transparente al scrollear) */
+[data-coreui-theme="dark"] thead .sticky-num,
+[data-coreui-theme="dark"] thead .sticky-linea,
+[data-coreui-theme="dark"] thead .sticky-prog,
+[data-coreui-theme="dark"] thead .sticky-tipo,
+[data-coreui-theme="dark"] thead .sticky-ini,
+[data-coreui-theme="dark"] thead .sticky-ed { background: #1E212A !important; }
+[data-coreui-theme="dark"] .sticky-group-a { background: #1E212A !important; }
+[data-coreui-theme="dark"] .tbody-row .sticky-num,
+[data-coreui-theme="dark"] .tbody-row .sticky-linea,
+[data-coreui-theme="dark"] .tbody-row .sticky-prog,
+[data-coreui-theme="dark"] .tbody-row .sticky-tipo,
+[data-coreui-theme="dark"] .tbody-row .sticky-ini,
+[data-coreui-theme="dark"] .tbody-row .sticky-ed { background: #1B1D22 !important; }
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-num,
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-linea,
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-prog,
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-tipo,
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-ini,
+[data-coreui-theme="dark"] .tbody-row.row-alt .sticky-ed { background: #1E212A !important; }
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-num,
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-linea,
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-prog,
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-tipo,
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-ini,
+[data-coreui-theme="dark"] .tbody-row:hover .sticky-ed { background: #232834 !important; }
+[data-coreui-theme="dark"] .sticky-ed { box-shadow: 4px 0 8px rgba(0,0,0,.35); border-right-color: rgba(96,165,250,.35) !important; }
 </style>

@@ -152,4 +152,36 @@ defineEmits(['update:visible', 'apply', 'clear', 'date-change'])
   display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
 }
 .btn-exec:hover { background: #0F766E; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .flt-body,
+[data-coreui-theme="dark"] .flt-footer {
+  --e-border: #2A2A22;
+  --e-bg-subtle: #1F1F1A;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+}
+[data-coreui-theme="dark"] .flt-input { color: #F4F4F0; }
+[data-coreui-theme="dark"] .flt-field label.flt-toggle:hover { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .flt-field label.flt-toggle.active {
+  background: rgba(13, 148, 136, .16);
+  color: #2DD4BF;
+}
+[data-coreui-theme="dark"] .flt-toggle-track { background: #3A3A33; }
+[data-coreui-theme="dark"] .btn-ghost:hover { border-color: #3A3A33; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene este filtro (.flt-body). */
+[data-coreui-theme="dark"] .modal-card:has(.flt-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.flt-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.flt-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.flt-body) .btn-close { color: #A0A099; }
 </style>

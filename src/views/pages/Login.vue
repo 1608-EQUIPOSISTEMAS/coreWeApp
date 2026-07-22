@@ -443,4 +443,53 @@ export default {
   .hero-sub { font-size: 15px; }
   .card { padding: 34px 26px; border-radius: 18px; }
 }
+
+/* ══════════ DARK MODE ══════════
+   El fondo navy del hero ya es oscuro y se mantiene igual;
+   solo la tarjeta del formulario cambia a superficie oscura. */
+[data-coreui-theme="dark"] .card {
+  background: #1A1A14;
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+[data-coreui-theme="dark"] .card-title { color: #8FAADC; }
+[data-coreui-theme="dark"] .card-sub { color: #A0A099; }
+[data-coreui-theme="dark"] .fld-label { color: #C9C9C1; }
+[data-coreui-theme="dark"] .fld-input {
+  color: #F4F4F0 !important;
+  background: #1F1F1A !important;
+  background-color: #1F1F1A !important;
+  border-color: #2A2A22 !important;
+}
+[data-coreui-theme="dark"] .fld-input::placeholder { color: #8A8A80 !important; }
+[data-coreui-theme="dark"] .fld-input:focus {
+  border-color: #8FAADC !important;
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.14) !important;
+  background: #24241E !important;
+  background-color: #24241E !important;
+}
+[data-coreui-theme="dark"] .fld-input:required:invalid,
+[data-coreui-theme="dark"] .fld-input:required:valid { border: 1.5px solid #2A2A22 !important; }
+[data-coreui-theme="dark"] .fld-input:required:invalid:focus,
+[data-coreui-theme="dark"] .fld-input:required:valid:focus { border-color: #8FAADC !important; }
+[data-coreui-theme="dark"] .fld-toggle { color: #8FAADC; }
+[data-coreui-theme="dark"] .fld-toggle:hover { background: #24241E; }
+[data-coreui-theme="dark"] .btn-go {
+  background: #F4F4F0;
+  color: #0b0b52;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+}
+[data-coreui-theme="dark"] .btn-go:hover:not(:disabled) {
+  background: #E4E4DD;
+  box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.7);
+}
+[data-coreui-theme="dark"] .spinner {
+  border-color: rgba(11, 11, 82, 0.3);
+  border-top-color: #0b0b52;
+}
+[data-coreui-theme="dark"] .err {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #F87171;
+}
+[data-coreui-theme="dark"] .ftr { color: #8A8A80; }
 </style>

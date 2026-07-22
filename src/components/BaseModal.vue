@@ -106,4 +106,18 @@ onBeforeUnmount(() => { document.body.style.overflow = originalOverflow })
 .modal-footer { padding:.75rem 1rem; border-top:1px solid #e5e7eb; display:flex; gap:.5rem; justify-content:flex-end; }
 .btn-close { background:transparent; border:none; font-size:1.1rem; cursor:pointer; color:#6b7280; }
 
+/* ═══════════ DARK MODE ═══════════ */
+/* El modal se teletransporta a <body>, pero Vue estampa el atributo de scope
+   también en el contenido teleportado, así que estos selectores scoped aplican. */
+[data-coreui-theme="dark"] .modal-overlay { background: rgba(0, 0, 0, .6); }
+[data-coreui-theme="dark"] .modal-card {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-close { color: #A0A099; }
+
 </style>

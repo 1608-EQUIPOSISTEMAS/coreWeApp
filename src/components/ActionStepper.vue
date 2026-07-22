@@ -198,4 +198,25 @@ defineEmits(['update:modelValue', 'confirm', 'cancel'])
   color: #fff;
 }
 .as-btn--confirm:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
+
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .as-stepper {
+  --as-accent: #8FAADC;
+  --as-border: #2A2A22;
+  --as-text: #F4F4F0;
+  --as-text-muted: #8A8A80;
+  --as-bg-subtle: #1F1F1A;
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .as-step-dot { background: #24241E; }
+[data-coreui-theme="dark"] .as-step.is-active .as-step-dot { color: #14140F; }
+[data-coreui-theme="dark"] .as-step.is-done .as-step-label { color: #34D399; }
+[data-coreui-theme="dark"] .as-step-line { background: #2A2A22; }
+[data-coreui-theme="dark"] .as-step-line.is-done { background: #34D399; }
+[data-coreui-theme="dark"] .as-btn--ghost { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .as-btn--ghost:hover:not(:disabled) { background: #24241E; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .as-btn--primary,
+[data-coreui-theme="dark"] .as-btn--confirm { color: #14140F; }
+[data-coreui-theme="dark"] .as-btn--primary:hover:not(:disabled),
+[data-coreui-theme="dark"] .as-btn--confirm:hover:not(:disabled) { background: #A9C2E8; }
 </style>

@@ -297,4 +297,29 @@ onMounted(() => { rebuildChips(); fetchCompanies() })
 .input-group { display: flex; }
 .input-group-text { background: #f9fafb; border: 1px solid #e5e7eb; border-right: none; padding: .4rem .6rem; border-radius: .375rem 0 0 .375rem; }
 .form-control { border: 1px solid #e5e7eb; border-radius: 0 .375rem .375rem 0; padding: .4rem .6rem; flex: 1; }
+
+/* ══ DARK MODE ══ */
+[data-coreui-theme="dark"] .card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 2px rgba(0,0,0,.4); color: #F4F4F0; }
+[data-coreui-theme="dark"] .card-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .title .sub { color: #A0A099; }
+[data-coreui-theme="dark"] .active-filters .label { color: #A0A099; }
+[data-coreui-theme="dark"] .chip { background: #24241E; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .chip .x { color: #A0A099; }
+[data-coreui-theme="dark"] .chip.clear-all { background: #1A1A14; }
+[data-coreui-theme="dark"] .table thead th { background-color: #1F1F1A; color: #F4F4F0; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .table td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .muted { color: #A0A099; }
+[data-coreui-theme="dark"] .empty-state { color: #A0A099; }
+[data-coreui-theme="dark"] .badge-neutral { background: #24241E; color: #F4F4F0; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .badge-success { background: rgba(16,185,129,.14); color: #34D399; border-color: rgba(16,185,129,.3); }
+[data-coreui-theme="dark"] .badge-intermediary { background: rgba(139,92,246,.14); color: #A78BFA; border-color: rgba(139,92,246,.3); }
+[data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+[data-coreui-theme="dark"] .btn-outline { background-color: #1A1A14; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .page-size select { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .input-group-text { background: #1F1F1A; border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .form-control { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .form-label { color: #A0A099; }
 </style>

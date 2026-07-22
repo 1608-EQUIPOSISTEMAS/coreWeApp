@@ -115,8 +115,9 @@
 
     <!-- CONTADO -->
     <div v-if="isContado" class="ef-payment">
-      <!-- Becado: nav Pago / Adicionales (pago del certificado) -->
-      <div v-if="isBeca" class="ef-cuota-tabs">
+      <!-- Nav Pago / Adicionales: becado (pago del certificado) o pago suelto
+           de reasignacion ya registrado -->
+      <div v-if="showAdicionales" class="ef-cuota-tabs">
         <button :class="['ef-cuota-tab', { active: becaTab === 'pago' }]" @click="becaTab = 'pago'">
           <i class="fa-solid fa-money-bill-wave"></i> Pago
         </button>
@@ -125,17 +126,17 @@
         </button>
       </div>
 
-      <!-- Adicionales: pago del certificado del becado -->
-      <div v-if="isBeca && becaTab === 'adicionales'" class="ef-tab-body">
+      <!-- Adicionales: pago del certificado del becado o de reasignacion -->
+      <div v-if="showAdicionales && becaTab === 'adicionales'" class="ef-tab-body">
         <!-- Pago ya registrado: solo lectura -->
         <div v-if="certificatePayment && !editingAdicional" class="ef-inicial-card">
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
-              <span class="ef-bar-label">Pago de Certificado</span>
+              <span class="ef-bar-label">{{ adicionalLabel }}</span>
               <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(certificatePayment.amount) }}</span>
             </div>
             <div class="ef-inicial-actions">
-              <span class="ef-cert-badge"><i class="fa-solid fa-certificate"></i> Certificar</span>
+              <span class="ef-cert-badge"><i class="fa-solid" :class="isReasignacion ? 'fa-shuffle' : 'fa-certificate'"></i> {{ isReasignacion ? 'Reasignación' : 'Certificar' }}</span>
               <a v-if="certificatePayment.evidence_url" :href="certificatePayment.evidence_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
               <span v-else class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
             </div>
@@ -153,7 +154,7 @@
         <div v-else class="ef-inicial-card">
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
-              <span class="ef-bar-label">{{ editingAdicional ? 'Editar Pago de Certificado' : 'Pago de Certificado' }}</span>
+              <span class="ef-bar-label">{{ editingAdicional ? 'Editar ' + adicionalLabel : adicionalLabel }}</span>
               <div class="ef-cert-amount">
                 <span class="fw700 mono" style="font-size:16px">S/.</span>
                 <input v-model.number="adicional.amount" type="number" step="0.01" min="0" class="ef-input ef-cert-amount-input mono" placeholder="50.00" />
@@ -229,7 +230,7 @@
         </div>
       </div>
 
-      <template v-if="!isBeca || becaTab === 'pago'">
+      <template v-if="!showAdicionales || becaTab === 'pago'">
       <h6 v-if="!isBeca" class="ef-sub-title"><i class="fa-solid fa-money-bill-wave"></i> Pago al Contado</h6>
       <div class="ef-contado-card">
         <div class="ef-contado-amount">
@@ -531,12 +532,13 @@
     <!-- Footer buttons -->
     <div class="ef-footer">
       <template v-if="mode === 'view' && !isEditing && !editingAdicional">
-        <!-- Becado: la edicion solo aplica al nav Adicionales (su Pago es beca,
-             no hay datos financieros que editar). Requiere pago ya registrado. -->
-        <button v-if="!isBeca" class="ef-action-btn" @click="$emit('start-edit')">
+        <!-- En el nav Adicionales se edita el pago adicional (certificado o
+             reasignacion); en Pago, los datos financieros (salvo becas, cuyo
+             Pago es beca y no tiene nada que editar). -->
+        <button v-if="becaTab === 'adicionales' && certificatePayment" class="ef-action-btn" @click="startEditAdicional">
           <i class="fa-solid fa-pen-to-square"></i> Editar datos
         </button>
-        <button v-else-if="becaTab === 'adicionales' && certificatePayment" class="ef-action-btn" @click="startEditAdicional">
+        <button v-else-if="!isBeca && (!showAdicionales || becaTab === 'pago')" class="ef-action-btn" @click="$emit('start-edit')">
           <i class="fa-solid fa-pen-to-square"></i> Editar datos
         </button>
       </template>
@@ -787,6 +789,11 @@ const adicional = reactive({
   voucher_url: null
 })
 const certificatePayment = computed(() => props.detail?.additional_payments?.[0] || null)
+// El nav Adicionales aparece para becados (registran/editan su certificado) o
+// cuando ya existe un pago suelto (ej. reasignacion registrada por sistema).
+const showAdicionales = computed(() => isBeca.value || !!certificatePayment.value)
+const isReasignacion = computed(() => certificatePayment.value?.payment_type_alias === 'we_payment_type_reassignment')
+const adicionalLabel = computed(() => (isReasignacion.value ? 'Pago de Reasignación' : 'Pago de Certificado'))
 const canSaveAdicional = computed(() =>
   Number(adicional.amount) > 0 && adicional.cat_currency && adicional.cat_payment_medium
 )

@@ -174,6 +174,9 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
       <span v-for="k in ['A', 'R', 'T', '']" :key="k" class="lg">
         <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
       </span>
+      <span class="lg">
+        <span class="sw e-nm">NM</span>Nueva metodología
+      </span>
       <span class="lg hint">Clic en una clase para abrir su aula</span>
     </div>
 
@@ -198,6 +201,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
             v-for="c in d.classes"
             :key="c.edition.edition_num_id + ':' + c.session.session_number"
             class="cls"
+            :class="{ 'cls-nm': c.edition.new_methodology }"
             @click="openAula(c.edition.edition_num_id)"
           >
             <div class="cls-top">
@@ -207,6 +211,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
             <div class="cls-name">{{ c.edition.abbreviation }}</div>
             <div class="cls-code">{{ c.edition.specific_code }}</div>
             <div class="cls-doc">{{ c.edition.instructor || 'Sin docente' }}</div>
+            <div v-if="c.edition.new_methodology" class="cls-badge e-nm">Nueva metodología</div>
             <div v-if="c.session.status" class="cls-badge" :class="'e-' + estadoOf(c.session).key">
               {{ estadoOf(c.session).label }}
               <template v-if="c.session.new_date"> · era {{ fmtShort(c.session.planned_date) }}</template>
@@ -239,6 +244,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
   --s1-bg: #fde8e6; --s1-fg: #c0362c; /* repro */
   --s2-bg: #fdeccb; --s2-fg: #a96208; /* tardanza */
   --s4-bg: #d9f3df; --s4-fg: #1d7a40; /* dictada */
+  --nm-bg: #cffafe; --nm-fg: #0e7490; /* nueva metodologia */
   font-family: var(--font-sans);
   color: var(--ink);
 }
@@ -278,6 +284,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 .e-dictada { background: var(--s4-bg); color: var(--s4-fg); }
 .e-repro { background: var(--s1-bg); color: var(--s1-fg); }
 .e-tard { background: var(--s2-bg); color: var(--s2-fg); }
+.e-nm { background: var(--nm-bg); color: var(--nm-fg); }
 
 /* ---------- agenda grid ---------- */
 .grid-wrap { overflow-x: auto; padding-bottom: 6px; }
@@ -298,6 +305,8 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 .cls { display: block; width: 100%; text-align: left; background: var(--surface-2); border: 1px solid var(--border);
   border-radius: 11px; padding: 9px 11px; transition: 0.13s; }
 .cls:hover { border-color: var(--accent); background: var(--surface); }
+.cls.cls-nm { border-left: 3px solid var(--nm-fg); }
+.cls.cls-nm:hover { border-color: var(--nm-fg); }
 .cls-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .cls-top .hr { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-2); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }

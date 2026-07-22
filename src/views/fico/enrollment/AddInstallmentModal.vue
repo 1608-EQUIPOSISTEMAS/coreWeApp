@@ -248,4 +248,54 @@ function onClose () {
 .ai-btn-save:hover:not(:disabled) { background: #4F46E5; }
 .ai-btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
 .ai-btn-save i { font-size: 11px; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ai-meta { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .ai-meta-pill {
+  color: #F4F4F0;
+  background: #14140F;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ai-meta-line { color: #A0A099; }
+[data-coreui-theme="dark"] .ai-label { color: #A0A099; }
+[data-coreui-theme="dark"] .ai-warn-label { color: #FBBF24; }
+[data-coreui-theme="dark"] .ai-amount-wrap { border-color: #2A2A22; background: #14140F; }
+[data-coreui-theme="dark"] .ai-amount-prefix {
+  color: #A0A099;
+  border-right-color: #2A2A22;
+  background: #1F1F1A;
+}
+[data-coreui-theme="dark"] .ai-amount-input { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ai-date-input {
+  border-color: #2A2A22;
+  background: #14140F;
+  color: #F4F4F0;
+  color-scheme: dark;
+}
+[data-coreui-theme="dark"] .ai-textarea {
+  border-color: rgba(245,158,11,.35);
+  background: rgba(245,158,11,.10);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .ai-btn-cancel {
+  color: #A0A099;
+  background: #1A1A14;
+  border-color: #2A2A22;
+}
+[data-coreui-theme="dark"] .ai-btn-cancel:hover:not(:disabled) { background: #1F1F1A; color: #F4F4F0; }
+</style>
+
+<style>
+/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
+   solo cuando el modal contiene este cuerpo (.ai-body). */
+[data-coreui-theme="dark"] .modal-card:has(.ai-body) {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+[data-coreui-theme="dark"] .modal-card:has(.ai-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .modal-card:has(.ai-body) .modal-footer { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .modal-card:has(.ai-body) .btn-close { color: #A0A099; }
 </style>

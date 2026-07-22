@@ -202,6 +202,7 @@ import {
   LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
 
@@ -322,7 +323,7 @@ const barChartData = computed(() => ({
   labels: channelLabels,
   datasets: [
     { label: 'Consultas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].c), backgroundColor: '#cbd5e1', borderRadius: 4 },
-    { label: 'Ventas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v), backgroundColor: '#12274e', borderRadius: 4 }
+    { label: 'Ventas', data: channelsOrder.map(ch => aggregatedByChannel.value[ch].v), backgroundColor: isDark.value ? '#8FAADC' : '#12274e', borderRadius: 4 }
   ]
 }))
 
@@ -367,17 +368,17 @@ const doughnutChartData = computed(() => {
     labels: Object.keys(salesByType),
     datasets: [{
       data: Object.values(salesByType),
-      backgroundColor: ['#12274e', '#3b82f6', '#f59e0b', '#dc2626'],
-      borderWidth: 2, borderColor: '#fff'
+      backgroundColor: [isDark.value ? '#8FAADC' : '#12274e', '#3b82f6', '#f59e0b', '#dc2626'],
+      borderWidth: 2, borderColor: isDark.value ? '#1A1A14' : '#fff'
     }]
   }
 })
 
 // ─── OPCIONES DE GRÁFICOS ───
 const baseFont = { family: 'inherit', size: 11 }
-const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: baseFont } } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
-const pctBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%' } }, x: { grid: { display: false } } } }
-const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+const barOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: baseFont } } }, scales: { y: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' } }, x: { grid: { display: false } } } }))
+const pctBarOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } } }, scales: { y: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { callback: v => v + '%' } }, x: { grid: { display: false } } } }))
+const lineOptions = computed(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' } }, x: { grid: { display: false } } } }))
 const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: baseFont } } } }
 
 </script>
@@ -504,4 +505,43 @@ const doughnutOptions = { responsive: true, maintainAspectRatio: false, cutout: 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
+
+/* ════════════════════════════════════════
+   DARK MODE — método 1: overrides de tokens en la clase raíz
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  --slate-400: #8A8A80; --slate-300: #8A8A80; --slate-100: #24241E; --slate-50: #1F1F1A;
+  --teal-600: #8FAADC; --teal-500: #8FAADC; --teal-100: rgba(20,184,166,.16);
+  --blue-600: #60A5FA;
+  --amber-500: #FBBF24; --amber-100: rgba(245,158,11,.16);
+  --red-600: #F87171;
+  --purple-600: #A78BFA; --purple-100: rgba(139,92,246,.16);
+  --white: #1A1A14;
+  --text-primary: #F4F4F0; --text-secondary: #A0A099; --text-muted: #8A8A80;
+  --border: #2A2A22;
+}
+/* masthead (el global lo fuerza claro con !important) */
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .brand-eyebrow,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .filter-label,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .inline-kpi-label { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary { background: #F4F4F0 !important; color: #14140F !important; border-color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary:hover { background: #E4E4DD !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost { background: #1A1A14 !important; color: #A0A099 !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost:hover { background: #24241E !important; color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .btn-exec-active { background: #F4F4F0 !important; color: #14140F !important; border-color: #F4F4F0 !important; }
+/* superficies con hex fuera de tokens */
+[data-coreui-theme="dark"] .table-shell { box-shadow: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3); }
+[data-coreui-theme="dark"] .table-panel-header { background: #1F1F1A; }
+[data-coreui-theme="dark"] .thead-sub .ts { background: #1F1F1A; }
+[data-coreui-theme="dark"] .tbody-row:hover td:not(.sticky-col) { background: #1F1F1A; }
+/* cabeceras de grupo (tintes pastel → tintes oscuros) */
+[data-coreui-theme="dark"] .th-teal { background: rgba(20,184,166,.12); color: #2DD4BF; border-top-color: #8FAADC; }
+[data-coreui-theme="dark"] .th-slate { background: #1F1F1A; color: #A0A099; border-top-color: #8A8A80; }
+[data-coreui-theme="dark"] .th-amber { background: rgba(245,158,11,.12); color: #FBBF24; }
+[data-coreui-theme="dark"] .th-purple { background: rgba(139,92,246,.12); color: #A78BFA; }
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+/* heatmap de porcentajes */
+[data-coreui-theme="dark"] .bg-pct-low { background-color: rgba(52,211,153,.16); color: #34D399; }
+[data-coreui-theme="dark"] .bg-pct-med { background-color: rgba(52,211,153,.35); color: #6EE7B7; }
+[data-coreui-theme="dark"] .chart-panel { box-shadow: 0 4px 6px -1px rgba(0,0,0,.4); }
 </style>

@@ -1414,4 +1414,110 @@ async function handleRetire () {
   color: #111827;
 }
 .eact-rp-plan-foot--err { color: #DC2626; background: #FEF2F2; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .eact-btn {
+  background: #1A1A14;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .eact-btn:hover { border-color: #F4F4F0; background: #1F1F1A; }
+[data-coreui-theme="dark"] .eact-btn i { color: #8A8A80; }
+[data-coreui-theme="dark"] .eact-btn:hover i { color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .eact-btn-danger { border-color: #2A2A22; color: #F87171; }
+[data-coreui-theme="dark"] .eact-btn-danger:hover { border-color: rgba(248,113,113,.45); background: rgba(239,68,68,.10); }
+[data-coreui-theme="dark"] .eact-btn-danger i { color: rgba(248,113,113,.55); }
+[data-coreui-theme="dark"] .eact-btn-danger:hover i { color: #F87171; }
+
+[data-coreui-theme="dark"] .eact-btn-warn { border-color: #2A2A22; color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-btn-warn:hover { border-color: rgba(251,191,36,.45); background: rgba(245,158,11,.10); }
+[data-coreui-theme="dark"] .eact-btn-warn i { color: rgba(251,191,36,.55); }
+[data-coreui-theme="dark"] .eact-btn-warn:hover i { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .eact-btn-approve { border-color: rgba(16,185,129,.35); color: #34D399; background: rgba(16,185,129,.12); }
+[data-coreui-theme="dark"] .eact-btn-approve:hover { border-color: #34D399; background: rgba(16,185,129,.18); }
+[data-coreui-theme="dark"] .eact-btn-approve i { color: #34D399; }
+[data-coreui-theme="dark"] .eact-btn-approve:hover i { color: #6EE7B7; }
+[data-coreui-theme="dark"] .eact-tag-approve { background: rgba(16,185,129,.2); color: #34D399; }
+
+[data-coreui-theme="dark"] .eact-migration-banner {
+  background: rgba(245,158,11,.12);
+  border-color: rgba(245,158,11,.35);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .eact-migration-banner i { color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-migration-banner strong { color: #FCD34D; }
+[data-coreui-theme="dark"] .eact-migration-banner p { color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-migration-banner a { color: #FCD34D; }
+
+[data-coreui-theme="dark"] .eact-tag { background: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .eact-tag-cc { background: rgba(139,92,246,.16); color: #A78BFA; }
+[data-coreui-theme="dark"] .eact-sep { background: #2A2A22; }
+
+[data-coreui-theme="dark"] .eact-student-bar { background: #1F1F1A; }
+[data-coreui-theme="dark"] .eact-student-name { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eact-student-doc { color: #8A8A80; }
+[data-coreui-theme="dark"] .eact-program-pill { background: rgba(99,102,241,.16); color: #A78BFA; }
+
+[data-coreui-theme="dark"] .eact-field label { color: #8A8A80; }
+[data-coreui-theme="dark"] .eact-req { color: #F87171; }
+[data-coreui-theme="dark"] .eact-readonly { color: #F4F4F0; background: #1F1F1A; }
+
+[data-coreui-theme="dark"] .eact-select,
+[data-coreui-theme="dark"] .eact-input {
+  background: #14140F;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .eact-select:focus,
+[data-coreui-theme="dark"] .eact-input:focus {
+  border-color: #F4F4F0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+}
+[data-coreui-theme="dark"] .eact-select:disabled { background: #1F1F1A; color: #6F6F66; }
+[data-coreui-theme="dark"] .eact-select-icon { color: #6F6F66; }
+[data-coreui-theme="dark"] .eact-input[type="date"] { color-scheme: dark; }
+
+[data-coreui-theme="dark"] .eact-textarea {
+  background: rgba(245,158,11,.08);
+  border-color: rgba(245,158,11,.35);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .eact-textarea:focus { border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.10); }
+[data-coreui-theme="dark"] .eact-textarea::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .eact-textarea-danger { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.08); }
+[data-coreui-theme="dark"] .eact-textarea-danger:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.10); }
+
+[data-coreui-theme="dark"] .eact-subsection-label { color: #8A8A80; }
+[data-coreui-theme="dark"] .eact-amount { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eact-amount-green { color: #34D399; }
+[data-coreui-theme="dark"] .eact-amount-red { color: #F87171; }
+[data-coreui-theme="dark"] .eact-price-hint { color: #A0A099; }
+
+[data-coreui-theme="dark"] .eact-warn-label { color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-warn-label i { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .eact-checkbox-label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .eact-checkbox-label input { accent-color: #F4F4F0; }
+
+[data-coreui-theme="dark"] .eact-observe-banner {
+  background: rgba(245,158,11,.12);
+  color: #FBBF24;
+}
+[data-coreui-theme="dark"] .eact-observe-banner i { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .eact-rp-saldo { color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-rp-plan { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .eact-rp-plan-head { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .eact-rp-plan-row { border-top-color: #1F1F1A; }
+[data-coreui-theme="dark"] .eact-rp-plan-num { color: #A0A099; }
+[data-coreui-theme="dark"] .eact-rp-plan-foot {
+  border-top-color: #2A2A22;
+  background: #1F1F1A;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .eact-rp-plan-foot--err { color: #F87171; background: rgba(239,68,68,.12); }
 </style>

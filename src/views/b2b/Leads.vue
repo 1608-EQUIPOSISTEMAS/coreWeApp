@@ -2341,4 +2341,151 @@ const totalPlanSum = computed(() => {
 
 .tg-hint-asesor { color: #6d28d9; }
 
+/* === Dark mode === */
+[data-coreui-theme="dark"] .exec-shell { background: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-active { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .table-shell { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+[data-coreui-theme="dark"] .exec-shell .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+
+/* Dark mode — filtros inline en cabecera */
+[data-coreui-theme="dark"] .exec-shell .thead-filter .tf { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .hf-input { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .hf-input::placeholder { color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-shell .hf-multiselect { --ms-border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .hf-clear-btn { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.4); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .hf-clear-btn:hover { background: rgba(239, 68, 68, 0.24); border-color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .hf-new-btn { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.4); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .hf-new-btn:hover { background: rgba(16, 185, 129, 0.24); border-color: rgba(16, 185, 129, 0.55); color: #6EE7B7; }
+
+/* Dark mode — celdas hint de grupos colapsados */
+[data-coreui-theme="dark"] .exec-shell .tg-hint-programa { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-cliente  { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-lead     { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-asesor   { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-main { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-strong { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .tg-hint-muted { color: #A0A099; }
+
+/* Dark mode — filas de la tabla */
+[data-coreui-theme="dark"] .exec-shell .tbody-row td { color: #E4E4DD; border-bottom-color: #2A2A22; background: #1A1A14; }
+[data-coreui-theme="dark"] .exec-shell .tbody-row:hover td { background: #232319; }
+[data-coreui-theme="dark"] .exec-shell .text-dark { color: #E4E4DD !important; }
+[data-coreui-theme="dark"] .exec-shell .text-muted { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-shell .accent-text { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .pay-date-cell { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .c-red { color: #F87171; }
+
+/* Dark mode — fondos de fila por estado (pasteles claros) */
+[data-coreui-theme="dark"] .exec-shell .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
+[data-coreui-theme="dark"] .exec-shell .row-blue > td     { background: rgba(59, 130, 246, 0.10); }
+[data-coreui-theme="dark"] .exec-shell .row-emerald > td  { background: rgba(13, 148, 136, 0.10); }
+[data-coreui-theme="dark"] .exec-shell .row-yellow > td   { background: rgba(245, 158, 11, 0.10); }
+[data-coreui-theme="dark"] .exec-shell .row-gray > td     { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .exec-shell .row-red > td      { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .exec-shell .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
+[data-coreui-theme="dark"] .exec-shell .row-inscrito:hover > td { background: rgba(16, 185, 129, 0.18); }
+[data-coreui-theme="dark"] .exec-shell .row-blue:hover > td     { background: rgba(59, 130, 246, 0.18); }
+[data-coreui-theme="dark"] .exec-shell .row-emerald:hover > td  { background: rgba(13, 148, 136, 0.18); }
+[data-coreui-theme="dark"] .exec-shell .row-yellow:hover > td   { background: rgba(245, 158, 11, 0.18); }
+[data-coreui-theme="dark"] .exec-shell .row-gray:hover > td     { background: #2A2A22; }
+[data-coreui-theme="dark"] .exec-shell .row-red:hover > td      { background: rgba(239, 68, 68, 0.18); }
+
+/* Dark mode — pills y botones de icono */
+[data-coreui-theme="dark"] .exec-shell .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .exec-shell .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+[data-coreui-theme="dark"] .exec-shell .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .exec-shell .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
+
+/* Dark mode — estado vacío y skeleton */
+[data-coreui-theme="dark"] .exec-shell .empty-state { color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-shell .empty-state svg { color: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .skeleton-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .sk-cell { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
+
+/* === Dark mode — contenido de modales (BaseModal teleporta a <body>: fuera de .exec-shell,
+   por eso estos selectores van sin el prefijo. Mismo casco #1A1A14 de BaseModal) === */
+[data-coreui-theme="dark"] .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-input-light,
+[data-coreui-theme="dark"] .exec-select-light,
+[data-coreui-theme="dark"] .exec-textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-input-light:disabled,
+[data-coreui-theme="dark"] .exec-select-light:disabled,
+[data-coreui-theme="dark"] .exec-textarea:disabled { background: #24241E; color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .table-shell { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+[data-coreui-theme="dark"] .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .tbody-row td { color: #E4E4DD; border-bottom-color: #2A2A22; background: #1A1A14; }
+[data-coreui-theme="dark"] .tbody-row:hover td { background: #232319; }
+[data-coreui-theme="dark"] .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
+[data-coreui-theme="dark"] .row-blue > td { background: rgba(59, 130, 246, 0.10); }
+[data-coreui-theme="dark"] .row-red > td { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
+[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+[data-coreui-theme="dark"] .text-dark { color: #E4E4DD !important; }
+[data-coreui-theme="dark"] .text-muted { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .text-slate-400 { color: #8A8A80; }
+[data-coreui-theme="dark"] .accent-text { color: #34D399; }
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .pay-date-cell { color: #34D399; }
+[data-coreui-theme="dark"] .empty-state { color: #8A8A80; }
+[data-coreui-theme="dark"] .empty-state svg { color: #3A3A33; }
+
+/* Dark modales — Gestión de Seguimiento */
+[data-coreui-theme="dark"] .modal-lead-strip { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .lead-avatar { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border-color: rgba(59, 130, 246, 0.35); }
+[data-coreui-theme="dark"] .timer-btn--start { background: rgba(16, 185, 129, 0.18); color: #34D399; }
+[data-coreui-theme="dark"] .timer-btn--start:hover { background: rgba(16, 185, 129, 0.28); }
+[data-coreui-theme="dark"] .timer-btn--stop { background: rgba(239, 68, 68, 0.18); color: #F87171; }
+[data-coreui-theme="dark"] .timer-btn--stop:hover { background: rgba(239, 68, 68, 0.28); }
+[data-coreui-theme="dark"] .timer-display { color: #A0A099; }
+[data-coreui-theme="dark"] .timer-display--active { color: #F87171; }
+[data-coreui-theme="dark"] .scroll-area { scrollbar-color: #3A3A33 transparent; }
+[data-coreui-theme="dark"] .scroll-area::-webkit-scrollbar-thumb { background: #3A3A33; }
+
+/* Dark modales — Panel de Control / Mis Permisos */
+[data-coreui-theme="dark"] .exec-alert.alert-info { background: rgba(59, 130, 246, 0.14); color: #93C5FD; border-color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-alert.alert-warning { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-color: #FBBF24; }
+[data-coreui-theme="dark"] .exec-alert.alert-success { background: rgba(34, 197, 94, 0.14); color: #4ADE80; border-color: #4ADE80; }
+[data-coreui-theme="dark"] .exec-alert-banner.banner-danger { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.4); color: #F87171; }
+[data-coreui-theme="dark"] .exec-alert-banner.banner-success { background: rgba(34, 197, 94, 0.14); border-color: rgba(34, 197, 94, 0.4); color: #4ADE80; }
+[data-coreui-theme="dark"] .banner-text { color: #D4D4CC; }
+[data-coreui-theme="dark"] .control-table-wrapper tbody .sticky-col { background: #1A1A14; }
+[data-coreui-theme="dark"] .th-group { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .th-group-a { background: rgba(59, 130, 246, 0.15); color: #93C5FD; border-left-color: rgba(59, 130, 246, 0.35); }
+[data-coreui-theme="dark"] .th-group-b { background: rgba(34, 197, 94, 0.15); color: #86EFAC; border-left-color: rgba(34, 197, 94, 0.35); }
+[data-coreui-theme="dark"] .ts-a { background: rgba(59, 130, 246, 0.08); color: #60A5FA; border-left-color: rgba(59, 130, 246, 0.25); }
+[data-coreui-theme="dark"] .ts-b { background: rgba(34, 197, 94, 0.08); color: #4ADE80; border-left-color: rgba(34, 197, 94, 0.25); }
+[data-coreui-theme="dark"] .exec-input-light[style*="#f8fafc"] { background: #1F1F1A !important; color: #8A8A80 !important; }
+
+/* Dark modales — Detalle de Matrícula */
+[data-coreui-theme="dark"] .enrollment-header { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .enrollment-title { color: #2DD4BF; }
+[data-coreui-theme="dark"] .enrollment-sub { color: #8A8A80; }
+[data-coreui-theme="dark"] .info-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .finance-card { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .finance-card hr { border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .file-item { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .file-item:hover { border-color: #2DD4BF; }
+[data-coreui-theme="dark"] .file-icon { background: #24241E; }
+[data-coreui-theme="dark"] .loader-ring { border-color: #2A2A22; border-top-color: #2DD4BF; }
+[data-coreui-theme="dark"] .pill[style*="#eff6ff"],
+[data-coreui-theme="dark"] .pill[style*="#dbeafe"] { background: rgba(59, 130, 246, 0.2) !important; color: #93C5FD !important; }
+[data-coreui-theme="dark"] span[style*="#1d4ed8"] { color: #60A5FA !important; }
+[data-coreui-theme="dark"] .exec-table tfoot tr[style*="#f8fafc"] { background: #1F1F1A !important; border-top-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-table tfoot td[style*="#475569"] { color: #A0A099 !important; }
+
 </style>

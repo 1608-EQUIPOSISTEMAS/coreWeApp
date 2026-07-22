@@ -236,6 +236,31 @@
   outline: none !important;
 }
 
+/* ═══════════ DARK MODE ═══════════ */
+/* Componente 100% tokenizado con fallbacks claros: redefinimos los
+   tokens en la raíz .dt12 (los :deep de flatpickr-input también los
+   heredan porque el input vive dentro de .dt12). */
+[data-coreui-theme="dark"] .dt12 {
+  --white: #1A1A14;
+  --border: #2A2A22;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --teal-500: #8FAADC;
+  --teal-600: #8FAADC;
+  --red-600: #F87171;
+  color-scheme: dark; /* desplegables nativos de <select> en oscuro */
+}
+[data-coreui-theme="dark"] .dt12:focus-within:not(.is-disabled) {
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.15);
+}
+[data-coreui-theme="dark"] .dt12--error:focus-within {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18) !important;
+}
+
 /* Responsive para pantallas muy pequeñas */
 @media (max-width: 400px) {
   .dt12 {

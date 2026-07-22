@@ -202,6 +202,32 @@
 .text-muted    { color: var(--text-muted, #94a3b8); }
 .fw-600        { font-weight: 600; }
 .small         { font-size: 12.5px; }
+
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .exec-multi-uploader {
+  --border: #2A2A22;
+  --white: #1A1A14;
+  --slate-50: #1F1F1A;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  --teal-500: #8FAADC;
+  --teal-600: #8FAADC;
+  --red-500: #F87171;
+  --red-600: #F87171;
+}
+[data-coreui-theme="dark"] .upload-trigger.is-loading { background-color: rgba(143, 170, 220, 0.08); }
+[data-coreui-theme="dark"] .upload-trigger.is-dragging {
+  background-color: rgba(143, 170, 220, 0.10);
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.12);
+}
+[data-coreui-theme="dark"] .upload-trigger.is-required-empty { background-color: rgba(239, 68, 68, 0.12); }
+[data-coreui-theme="dark"] .req-badge { background: rgba(239, 68, 68, 0.16); color: #F87171; }
+[data-coreui-theme="dark"] .req-badge.is-success { background: rgba(16, 185, 129, 0.16); color: #34D399; }
+[data-coreui-theme="dark"] .req-badge.is-error { background: rgba(239, 68, 68, 0.16); color: #F87171; }
+[data-coreui-theme="dark"] .file-chip { box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+[data-coreui-theme="dark"] .chip-remove:hover { background-color: rgba(239, 68, 68, 0.16); }
 </style>
 
 <script setup>

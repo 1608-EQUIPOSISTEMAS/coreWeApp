@@ -169,8 +169,17 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement
 } from 'chart.js'
 import { Bar, Doughnut } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, BarElement, Title, Tooltip, Legend, ArcElement)
+
+// Colores de canal casi negros ilegibles en dark → equivalentes claros
+const chartColor = (c) => {
+  if (!isDark.value) return c
+  if (c === '#000000') return '#E5E7EB' // TikTok
+  if (c === '#14171A') return '#CBD5E1' // Twitter / X
+  return c
+}
 
 // --- ESTADO ---
 const isDashboard = ref(false)
@@ -232,7 +241,7 @@ const efficiencyChartData = computed(() => ({
   labels: channels.map(c => c.name),
   datasets: [
     { label: 'Inversión (S/)', data: channels.map(c => c.spend), backgroundColor: '#cbd5e1', borderRadius: 4, barPercentage: 0.6 },
-    { label: 'Retorno (S/)', data: channels.map(c => c.revenue), backgroundColor: channels.map(c => c.color), borderRadius: 4, barPercentage: 0.6 }
+    { label: 'Retorno (S/)', data: channels.map(c => c.revenue), backgroundColor: channels.map(c => chartColor(c.color)), borderRadius: 4, barPercentage: 0.6 }
   ]
 }))
 
@@ -241,7 +250,7 @@ const distributionChartData = computed(() => ({
   labels: channels.map(c => c.name),
   datasets: [{
     data: channels.map(c => c.leads),
-    backgroundColor: channels.map(c => c.color),
+    backgroundColor: channels.map(c => chartColor(c.color)),
     borderWidth: 0,
     hoverOffset: 10
   }]
@@ -253,29 +262,29 @@ const conversionChartData = computed(() => ({
   datasets: [{
     label: '% Cierre de Ventas',
     data: channels.map(c => (c.sales / c.leads * 100).toFixed(1)),
-    backgroundColor: channels.map(c => c.color),
+    backgroundColor: channels.map(c => chartColor(c.color)),
     borderRadius: 4
   }]
 }))
 
 // --- OPCIONES DE GRÁFICOS ---
-const efficiencyOptions = {
+const efficiencyOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { position: 'top', align: 'end' } },
-  scales: { y: { grid: { color: '#f1f5f9' }, ticks: { callback: (val) => 'S/' + val } }, x: { grid: { display: false } } }
-}
+  scales: { y: { grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { callback: (val) => 'S/' + val } }, x: { grid: { display: false } } }
+}))
 
 const doughnutOptions = {
   responsive: true, maintainAspectRatio: false, cutout: '70%',
   plugins: { legend: { display: false } }
 }
 
-const horizontalOptions = {
+const horizontalOptions = computed(() => ({
   indexAxis: 'y',
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  scales: { x: { grid: { color: '#f1f5f9' }, ticks: { callback: (val) => val + '%' } }, y: { grid: { display: false } } }
-}
+  scales: { x: { grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { callback: (val) => val + '%' } }, y: { grid: { display: false } } }
+}))
 
 </script>
 
@@ -400,4 +409,43 @@ tfoot td { background: #f8fafc; padding: 1rem; font-weight: 700; border-top: 2px
   .kpi-row { grid-template-columns: 1fr 1fr; }
   .charts-row { grid-template-columns: 1fr; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .channel-system { background: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .period-badge { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .system-subtitle { color: #A0A099; }
+[data-coreui-theme="dark"] .toggle-track { background: #1A1A14; border-color: #3A3A33; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .toggle-option { color: #A0A099; }
+[data-coreui-theme="dark"] .toggle-option.selected { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .table-card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 4px 6px -1px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .col-fixed { background: #1A1A14; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .group-traffic { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .group-conversion { background: rgba(59,130,246,.14); color: #60A5FA; border-bottom-color: rgba(59,130,246,.35); }
+[data-coreui-theme="dark"] .group-business { background: rgba(16,185,129,.14); color: #34D399; border-bottom-color: rgba(16,185,129,.35); }
+[data-coreui-theme="dark"] .sub-headers th { color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .th-conversion { background: rgba(59,130,246,.14); }
+[data-coreui-theme="dark"] .th-business { background: rgba(16,185,129,.14); }
+[data-coreui-theme="dark"] .data-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .col-channel { color: #F4F4F0; }
+[data-coreui-theme="dark"] .channel-dot, [data-coreui-theme="dark"] .legend-item .dot { box-shadow: 0 0 0 1px #3A3A33; }
+[data-coreui-theme="dark"] .num-font { color: #A0A099; }
+[data-coreui-theme="dark"] .text-muted { color: #8A8A80; }
+[data-coreui-theme="dark"] .bg-blue-50 { background: rgba(59,130,246,.10); }
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0; }
+[data-coreui-theme="dark"] .text-success { color: #34D399; }
+[data-coreui-theme="dark"] .text-warning { color: #FBBF24; }
+[data-coreui-theme="dark"] .text-danger { color: #F87171; }
+[data-coreui-theme="dark"] .badge-high { background: rgba(16,185,129,.16); color: #34D399; }
+[data-coreui-theme="dark"] .badge-mid { background: rgba(245,158,11,.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .badge-low { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] tfoot td { background: #1F1F1A; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-card.highlight { background: #0f172a; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-label { color: #A0A099; }
+[data-coreui-theme="dark"] .kpi-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .kpi-card.highlight .kpi-value { color: #fff; }
+[data-coreui-theme="dark"] .chart-panel { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .panel-header p { color: #A0A099; }
 </style>

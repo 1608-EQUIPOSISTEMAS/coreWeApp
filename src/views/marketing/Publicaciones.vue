@@ -321,4 +321,48 @@ h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 0; }
 .pub-modal input, .pub-modal select, .pub-modal textarea { border: 1px solid #e2e8f0; border-radius: 9px; padding: 8px 10px; font-size: 13px; font-family: inherit; color: #0f172a; }
 .m-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 @media (max-width: 640px) { .row2 { grid-template-columns: 1fr; } }
+
+/* ══════════ DARK MODE ══════════ */
+[data-coreui-theme="dark"] .pub-page .eyebrow { color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page h1 { color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .period-nav .arrow { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .btn.ghost { background: #1F1F1A; border-color: #2A2A22; color: #C9C9C1; }
+[data-coreui-theme="dark"] .pub-page .st { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .st .n { color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .st .l { color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .st.ok .n { color: #34D399; }
+[data-coreui-theme="dark"] .pub-page .st.warn .n { color: #FBBF24; }
+[data-coreui-theme="dark"] .pub-page .st.alert { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .4); }
+[data-coreui-theme="dark"] .pub-page .st.alert .n { color: #F87171; }
+[data-coreui-theme="dark"] .pub-page .chip { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .chip.on { background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); color: #fff; }
+[data-coreui-theme="dark"] .pub-page .panel { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .tbl th { color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .tbl td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .pub-page .tbl .empty { color: #8A8A80; }
+[data-coreui-theme="dark"] .pub-page .lnk { color: #60A5FA; }
+[data-coreui-theme="dark"] .pub-page .acc { color: #C9C9C1; }
+[data-coreui-theme="dark"] .pub-page .net.ig { background: rgba(236, 72, 153, .14); color: #F9A8D4; }
+[data-coreui-theme="dark"] .pub-page .net.linkedin { background: rgba(59, 130, 246, .14); color: #93C5FD; }
+[data-coreui-theme="dark"] .pub-page .status.programado { background: rgba(245, 158, 11, .14); color: #FBBF24; }
+[data-coreui-theme="dark"] .pub-page .status.publicado { background: rgba(16, 185, 129, .14); color: #34D399; }
+[data-coreui-theme="dark"] .pub-page .status.no_programado { background: rgba(239, 68, 68, .14); color: #F87171; }
+[data-coreui-theme="dark"] .pub-page .status.cancelado { background: #24241E; color: #8A8A80; }
+[data-coreui-theme="dark"] .pub-page .src { color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .src.auto { color: #A78BFA; }
+[data-coreui-theme="dark"] .pub-page .ab { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .ab.ok { color: #34D399; border-color: rgba(16, 185, 129, .35); }
+[data-coreui-theme="dark"] .pub-page .ab.pub { color: #FBBF24; border-color: rgba(245, 158, 11, .35); }
+[data-coreui-theme="dark"] .pub-page .ab.del { color: #F87171; }
+[data-coreui-theme="dark"] .pub-page .skel { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
+[data-coreui-theme="dark"] .pub-page .pub-modal { background: #1A1A14; color: #F4F4F0; box-shadow: 0 24px 60px rgba(0, 0, 0, .6); }
+[data-coreui-theme="dark"] .pub-page .pub-modal::backdrop { background: rgba(0, 0, 0, .6); }
+[data-coreui-theme="dark"] .pub-page .pub-modal h2 { color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .pub-modal label { color: #C9C9C1; }
+[data-coreui-theme="dark"] .pub-page .pub-modal input,
+[data-coreui-theme="dark"] .pub-page .pub-modal select,
+[data-coreui-theme="dark"] .pub-page .pub-modal textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .seg { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .seg button { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .seg button.on { background: var(--we-navy, #002060); color: #fff; }
 </style>

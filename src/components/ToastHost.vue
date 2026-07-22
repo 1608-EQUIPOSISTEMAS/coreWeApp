@@ -65,6 +65,19 @@ function resume() {}
   background: transparent; border: 0; font-size: 18px; cursor: pointer;
 }
 
+/* ═══════════ DARK MODE ═══════════ */
+[data-coreui-theme="dark"] .toast {
+  background: #1A1A14;
+  color: #F4F4F0;
+  box-shadow: 0 6px 24px rgba(0,0,0,.45);
+  border-left-color: #6F6F66;
+}
+[data-coreui-theme="dark"] .toast--success { border-color: #34D399; }
+[data-coreui-theme="dark"] .toast--danger  { border-color: #F87171; }
+[data-coreui-theme="dark"] .toast--warning { border-color: #FBBF24; }
+[data-coreui-theme="dark"] .toast--info    { border-color: #60A5FA; }
+[data-coreui-theme="dark"] .toast-close { color: #A0A099; }
+
 /* Animaciones */
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-8px); }
 .toast-enter-active, .toast-leave-active { transition: all .18s ease; }

@@ -413,4 +413,40 @@ function errMsg (err, fallback) {
   .exec-body { padding: 16px 12px; }
   .entity-select { width: 100%; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* los var(--x, fallback) no estan definidos en light: definirlos solo
+     en dark no altera el modo claro */
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  background: #14140F;
+}
+[data-coreui-theme="dark"] .exec-shell .card,
+[data-coreui-theme="dark"] .exec-shell .table-shell { background: #1A1A14; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled),
+[data-coreui-theme="dark"] .exec-shell .btn-exec-ghost-dark:hover:not(:disabled) { background: #24241E; }
+[data-coreui-theme="dark"] .exec-shell .source-tab.active { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .thead-sub .ts { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .hf-input { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .dropzone { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .dropzone:hover,
+[data-coreui-theme="dark"] .exec-shell .dropzone-over { background: rgba(20, 184, 166, .08); }
+[data-coreui-theme="dark"] .exec-shell .dropzone-has { background: rgba(20, 184, 166, .1); }
+[data-coreui-theme="dark"] .exec-shell .dropzone-icon { color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .pill-green { background: rgba(16, 185, 129, .16); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .pill-red { background: rgba(239, 68, 68, .16); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245, 158, 11, .16); color: #FBBF24; }
+[data-coreui-theme="dark"] .exec-shell .err-list { color: #F87171; }
 </style>

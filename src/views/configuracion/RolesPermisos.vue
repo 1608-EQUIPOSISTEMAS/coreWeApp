@@ -464,4 +464,49 @@ onMounted(async () => {
   .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px 16px; }
   .exec-body { padding: 16px 12px; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  /* los var(--x, fallback) no estan definidos en light: definirlos solo
+     en dark no altera el modo claro */
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+  background: #14140F;
+}
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary,
+[data-coreui-theme="dark"] .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell .btn-exec-primary:hover:not(:disabled),
+[data-coreui-theme="dark"] .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
+[data-coreui-theme="dark"] .btn-exec-outline { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .exec-shell .btn-link { color: #2DD4BF; }
+[data-coreui-theme="dark"] .exec-shell .roles-panel,
+[data-coreui-theme="dark"] .exec-shell .detail-panel { background: #1A1A14; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+[data-coreui-theme="dark"] .exec-shell .panel-title { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .role-item { background: #1A1A14; }
+[data-coreui-theme="dark"] .exec-shell .role-item:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .role-item.selected { background: rgba(20, 184, 166, .12); }
+[data-coreui-theme="dark"] .exec-shell .skel-role:hover { background: #1A1A14; }
+[data-coreui-theme="dark"] .exec-shell .super-banner { background: rgba(59, 130, 246, .12); border-color: rgba(59, 130, 246, .3); color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-shell .module-card,
+[data-coreui-theme="dark"] .exec-shell .module-head { background: #1A1A14; }
+[data-coreui-theme="dark"] .exec-shell .module-card.checked { border-color: #2DD4BF; }
+[data-coreui-theme="dark"] .exec-shell .module-card.checked .module-head { background: rgba(20, 184, 166, .12); }
+[data-coreui-theme="dark"] .exec-shell .submodule-row:hover:not(.disabled) { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell .pill-green { background: rgba(16, 185, 129, .16); color: #34D399; }
+[data-coreui-theme="dark"] .exec-shell .pill-red { background: rgba(239, 68, 68, .16); color: #F87171; }
+[data-coreui-theme="dark"] .exec-shell .skel { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
+/* el modal se teleporta fuera de .exec-shell */
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-input-light { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-input-light:disabled { background: #24241E; color: #8A8A80; }
+[data-coreui-theme="dark"] .text-muted { color: #8A8A80; }
 </style>

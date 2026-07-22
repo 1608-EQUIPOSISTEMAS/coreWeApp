@@ -262,4 +262,31 @@ const doughnutOptions = {
   .split-row { flex-direction: column; }
   .flex-2, .flex-1 { min-width: 100%; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .analytics-dashboard { background-color: #14140F; color: #A0A099; }
+[data-coreui-theme="dark"] .title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .subtitle { color: #A0A099; }
+[data-coreui-theme="dark"] .date-filter { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .filter-label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-text { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .kpi-card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .kpi-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .kpi-label { color: #A0A099; }
+[data-coreui-theme="dark"] .kpi-card.highlight { background: #1e1b4b; }
+[data-coreui-theme="dark"] .kpi-card.highlight .kpi-value { color: #fff; }
+[data-coreui-theme="dark"] .main-chart-section { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .section-header h3 { color: #F4F4F0; }
+[data-coreui-theme="dark"] .section-header p { color: #8A8A80; }
+[data-coreui-theme="dark"] .insight-box { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .card-header h4 { color: #F4F4F0; }
+[data-coreui-theme="dark"] .info-badge { background: rgba(59,130,246,.14); color: #60A5FA; }
+[data-coreui-theme="dark"] .data-table th { color: #8A8A80; border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .data-table td { color: #A0A099; border-bottom-color: #1F1F1A; }
+[data-coreui-theme="dark"] .font-bold { color: #F4F4F0; }
+[data-coreui-theme="dark"] .highlight-text { color: #A5B4FC; }
+[data-coreui-theme="dark"] .legend-item { color: #A0A099; }
 </style>

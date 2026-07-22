@@ -388,6 +388,36 @@
 /* Selector de hijos */
 .child-select-wrapper { display: flex; align-items: center; gap: 8px; margin-right: 30px; /* Margen para el boton de borrar */ }
 .child-order { background: var(--teal-600, #12274e); color: var(--white, #fff); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 700; flex-shrink: 0;}
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  color: #F4F4F0;
+  --white: #1A1A14;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --teal-600: #8FAADC; /* navy WE derivado claro para dark */
+  --teal-500: #8FAADC;
+  --red-600: #F87171;
+  --border: #2A2A22;
+  --text-primary: #F4F4F0;
+  --text-secondary: #A0A099;
+  --text-muted: #8A8A80;
+}
+[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; }
+[data-coreui-theme="dark"] .exec-input-light::placeholder,
+[data-coreui-theme="dark"] .exec-select-light::placeholder { color: #6A6A60; }
+[data-coreui-theme="dark"] .exec-input-light:focus,
+[data-coreui-theme="dark"] .exec-select-light:focus { box-shadow: 0 0 0 3px rgba(143,170,220,0.15); }
+[data-coreui-theme="dark"] .child-order { color: #14140F; }
+[data-coreui-theme="dark"] .version-badge { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
+[data-coreui-theme="dark"] .pill-teal { background: rgba(52,211,153,.16); color: #34D399; border-color: rgba(52,211,153,.35) !important; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.35) !important; }
+[data-coreui-theme="dark"] .bg-white { background-color: #1F1F1A !important; }
 </style>
 
 <script setup>

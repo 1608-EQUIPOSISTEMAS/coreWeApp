@@ -124,6 +124,35 @@
 .bg-slate-100 { background-color: var(--slate-100, #f1f5f9); }
 .text-slate-400 { color: var(--slate-400, #94a3b8); }
 
+/* ═══════════ DARK MODE ═══════════ */
+/* Tokens en la raíz (cubren también los .btn-exec globales internos,
+   que usan var(--border)/var(--text-secondary) y los heredan de aquí). */
+[data-coreui-theme="dark"] .exec-file-uploader {
+  --border: #2A2A22;
+  --white: #1A1A14;
+  --slate-50: #1F1F1A;
+  --slate-100: #24241E;
+  --slate-300: #3A3A33;
+  --slate-400: #8A8A80;
+  --text-primary: #F4F4F0;
+  --text-muted: #8A8A80;
+  --teal-500: #8FAADC;
+  --teal-600: #8FAADC;
+  --red-600: #F87171;
+}
+[data-coreui-theme="dark"] .exec-file-uploader.has-file {
+  border-color: #34D399;
+  background-color: rgba(16, 185, 129, 0.14);
+}
+[data-coreui-theme="dark"] .exec-file-uploader.has-error {
+  background-color: rgba(239, 68, 68, 0.14) !important;
+}
+[data-coreui-theme="dark"] .exec-file-uploader:hover:not(.has-file):not(.has-error) .icon-circle {
+  background-color: rgba(143, 170, 220, 0.14) !important;
+  color: #8FAADC !important;
+}
+[data-coreui-theme="dark"] .border-danger { border-color: rgba(248, 113, 113, 0.55) !important; }
+
 /* Animaciones */
 .anim-fade-in { animation: fadeIn 0.3s ease-in-out; }
 

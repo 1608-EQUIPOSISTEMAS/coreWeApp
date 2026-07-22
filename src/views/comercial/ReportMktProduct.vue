@@ -329,6 +329,7 @@ import {
   LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 import { ServiceKeys } from '@/services'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
@@ -488,7 +489,7 @@ const barChartData = computed(() => ({
     {
       label: 'Consultas',
       data: channelsOrder.map(ch => aggregatedByChannel.value[ch].c),
-      backgroundColor: '#e2e8f0', borderRadius: 3, borderSkipped: false
+      backgroundColor: isDark.value ? '#3A3A33' : '#e2e8f0', borderRadius: 3, borderSkipped: false
     },
     {
       label: 'Ventas',
@@ -511,7 +512,7 @@ const pctChartData = computed(() => {
     {
       type: 'line', label: 'Ref. 20%',
       data: channelLabels.map(() => 20),
-      borderColor: 'rgba(0,0,0,0.2)', borderDash: [4,3], borderWidth: 1.5,
+      borderColor: isDark.value ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,0.2)', borderDash: [4,3], borderWidth: 1.5,
       pointRadius: 0, fill: false
     }]
   }
@@ -543,7 +544,7 @@ const doughnutChartData = computed(() => {
     datasets: [{
       data: Object.values(salesByType),
       backgroundColor: ['#0f766e','#0369a1','#b45309','#7c3aed'],
-      borderWidth: 3, borderColor: '#ffffff'
+      borderWidth: 3, borderColor: isDark.value ? '#1A1A14' : '#ffffff'
     }]
   }
 })
@@ -551,35 +552,35 @@ const doughnutChartData = computed(() => {
 // ── Chart Options ──
 const baseFont = { family: 'inherit', size: 11 }
 
-const groupedBarOptions = {
+const groupedBarOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
     x: { grid: { display: false }, ticks: { font: baseFont } },
-    y: { grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
+    y: { grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { font: baseFont } }
   }
-}
+}))
 
-const rankingBarOptions = {
+const rankingBarOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } }
   },
   scales: {
-    x: { grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } },
+    x: { grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { callback: v => v + '%', font: baseFont } },
     y: { grid: { display: false }, ticks: { font: baseFont } }
   }
-}
+}))
 
-const lineOptions = {
+const lineOptions = computed(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
     x: { grid: { display: false }, ticks: { font: baseFont } },
-    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: baseFont } }
+    y: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' }, ticks: { font: baseFont } }
   }
-}
+}))
 
 const doughnutOptions = {
   responsive: true, maintainAspectRatio: false, cutout: '68%',
@@ -969,4 +970,57 @@ const doughnutOptions = {
 .bg-r2 { background-color: #fca5a5; color: #7f1d1d; }   /* 8–11%  */
 .bg-r3 { background-color: #f87171; color: #ffffff; }   /* 4–7%   */
 .bg-r4 { background-color: #dc2626; color: #ffffff; }   /* 1–3%   */
+
+/* ════════════════════════════════════════
+   DARK MODE — método 1: overrides de tokens en la clase raíz
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .exec-shell {
+  --slate-400: #8A8A80; --slate-100: #24241E; --slate-50: #1F1F1A;
+  --teal-700: #2DD4BF; --teal-600: #14B8A6; --teal-500: #2DD4BF;
+  --amber-500: #FBBF24;
+  --white: #1A1A14;
+  --text-primary: #F4F4F0; --text-secondary: #A0A099; --text-muted: #8A8A80;
+  --border: #2A2A22;
+  --gold-400: #FBBF24;
+}
+/* masthead (el global lo fuerza claro con !important) */
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .brand-eyebrow,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .filter-label,
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .inline-kpi-label { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary { background: #F4F4F0 !important; color: #14140F !important; border-color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost { background: #1A1A14 !important; color: #A0A099 !important; border-color: #2A2A22 !important; }
+[data-coreui-theme="dark"] .exec-shell .exec-masthead .btn-exec-ghost:hover { background: #24241E !important; color: #F4F4F0 !important; }
+[data-coreui-theme="dark"] .exec-shell .inline-kpi-value.accent { color: #5eead4 !important; }
+/* superficies con hex fuera de tokens */
+[data-coreui-theme="dark"] .table-shell, [data-coreui-theme="dark"] .chart-panel { box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+[data-coreui-theme="dark"] .table-panel-header { background: #1F1F1A; }
+[data-coreui-theme="dark"] .exec-shell [style*="#0f766e"] { color: #2DD4BF !important; }
+/* cabeceras de grupo (tintes pastel → tintes oscuros) */
+[data-coreui-theme="dark"] .th-teal { background: rgba(20,184,166,.12); color: #2DD4BF; border-left-color: rgba(20,184,166,.35); border-top-color: #2DD4BF; }
+[data-coreui-theme="dark"] .th-slate { background: #1F1F1A; color: #A0A099; border-left-color: #3A3A33; border-top-color: #8A8A80; }
+[data-coreui-theme="dark"] .th-amber { background: rgba(245,158,11,.12); color: #FBBF24; border-left-color: rgba(245,158,11,.35); }
+[data-coreui-theme="dark"] .th-violet { background: rgba(139,92,246,.12); color: #A78BFA; border-left-color: rgba(139,92,246,.35); }
+[data-coreui-theme="dark"] .ts-c { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ts-v { background: rgba(16,185,129,.12); color: #34D399; }
+[data-coreui-theme="dark"] .ts-p { background: rgba(59,130,246,.12); color: #60A5FA; }
+/* filas */
+[data-coreui-theme="dark"] .tbody-row td { border-bottom-color: #24241E; }
+[data-coreui-theme="dark"] .row-alt { background: rgba(255,255,255,.02); }
+[data-coreui-theme="dark"] .tbody-row:hover td { background: rgba(59,130,246,.08) !important; }
+[data-coreui-theme="dark"] .td-data { border-right-color: #24241E; }
+/* utilidades de color */
+[data-coreui-theme="dark"] .c-green { color: #34D399; }
+[data-coreui-theme="dark"] .c-blue { color: #60A5FA; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .c-teal { color: #2DD4BF; }
+[data-coreui-theme="dark"] .text-muted-cell { color: #6F6F66; }
+/* footer navy de tabla y tarjeta highlight: texto claro aunque --white sea oscuro */
+[data-coreui-theme="dark"] .tfoot-row td { color: #F4F4F0; }
+[data-coreui-theme="dark"] .kpi-top-name { color: #F4F4F0; }
+/* heatmap: tintes oscuros en los niveles pastel, se mantienen los saturados */
+[data-coreui-theme="dark"] .bg-g1 { background-color: rgba(52,211,153,.16); color: #34D399; }
+[data-coreui-theme="dark"] .bg-g2 { background-color: rgba(52,211,153,.35); color: #6EE7B7; }
+[data-coreui-theme="dark"] .bg-r1 { background-color: rgba(248,113,113,.16); color: #F87171; }
+[data-coreui-theme="dark"] .bg-r2 { background-color: rgba(248,113,113,.35); color: #FCA5A5; }
 </style>

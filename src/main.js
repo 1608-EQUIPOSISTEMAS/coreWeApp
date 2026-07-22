@@ -20,6 +20,9 @@ import restrict from '@/directives/restrict.js'
 import Toast, { POSITION } from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 
+// 📊 Chart.js: defaults reactivos al tema oscuro
+import '@/utils/chartTheme.js'
+
 async function bootstrap () {
   const app = createApp(App)
 

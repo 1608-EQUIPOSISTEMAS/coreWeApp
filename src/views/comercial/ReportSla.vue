@@ -178,10 +178,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js'
 import { Line, Bar } from 'vue-chartjs'
+import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
@@ -233,7 +235,7 @@ const hourlyFlowData = {
   ]
 }
 
-const hourlyFlowOptions = {
+const hourlyFlowOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -241,23 +243,23 @@ const hourlyFlowOptions = {
     tooltip: { mode: 'index', intersect: false }
   },
   scales: {
-    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+    y: { beginAtZero: true, grid: { color: isDark.value ? '#2A2A22' : '#f1f5f9' } },
     x: { grid: { display: false } }
   }
-}
+}))
 
 // --- 2. DATA CURVA DE PERSISTENCIA ---
-const persistenceChartData = {
+const persistenceChartData = computed(() => ({
   labels: ['1er Intento', '2do Intento', '3er Intento', '4to Intento', '5to+', 'Entrante'],
   datasets: [{
     label: 'Ventas Cerradas',
     data: [15, 45, 35, 12, 5, 25], // Mayoría en 2do y 3ero
     backgroundColor: [
-      '#94a3b8', '#3b82f6', '#2563eb', '#1d4ed8', '#0f172a', '#10b981'
+      '#94a3b8', '#3b82f6', '#2563eb', '#1d4ed8', isDark.value ? '#E5E7EB' : '#0f172a', '#10b981'
     ],
     borderRadius: 3
   }]
-}
+}))
 
 const persistenceChartOptions = {
   responsive: true,
@@ -469,4 +471,37 @@ const getScoreColor = (rate) => {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
   .split-section { grid-template-columns: 1fr; }
 }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .followup-dashboard { background-color: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .header-section { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .page-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .page-meta { color: #A0A099; }
+[data-coreui-theme="dark"] .filter-group label { color: #A0A099; }
+[data-coreui-theme="dark"] .select-clean { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-action { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .kpi-box { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-box.highlight { background: #0f172a; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .kpi-label { color: #A0A099; }
+[data-coreui-theme="dark"] .kpi-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .kpi-value.warning { color: #FBBF24; }
+[data-coreui-theme="dark"] .kpi-value.success { color: #34D399; }
+[data-coreui-theme="dark"] .text-muted { color: #8A8A80; }
+[data-coreui-theme="dark"] .negative { color: #F87171; }
+[data-coreui-theme="dark"] .section-container, [data-coreui-theme="dark"] .panel { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .chart-desc { color: #A0A099; }
+[data-coreui-theme="dark"] .panel-header p { color: #A0A099; }
+[data-coreui-theme="dark"] .insight-box { background: #24241E; border-left-color: #F4F4F0; color: #A0A099; }
+[data-coreui-theme="dark"] .compact-table th { border-bottom-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .compact-table td { border-bottom-color: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .bar-indic { background: #6F6F66; }
+[data-coreui-theme="dark"] .matrix-table th { background: #1F1F1A; border-bottom-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .matrix-table td { border-bottom-color: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .matrix-table tfoot td { background: #24241E; border-top-color: #3A3A33; }
+[data-coreui-theme="dark"] .bg-gray-light { background: #1F1F1A; }
+[data-coreui-theme="dark"] .text-dark { color: #F4F4F0; }
+[data-coreui-theme="dark"] .text-green { color: #34D399; }
+[data-coreui-theme="dark"] .text-red { color: #F87171; }
 </style>

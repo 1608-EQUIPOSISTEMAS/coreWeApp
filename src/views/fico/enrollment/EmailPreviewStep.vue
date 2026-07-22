@@ -200,4 +200,22 @@ defineExpose({ previewData, sapUsername, sapPassword, isSapOnline, sapValid })
   font-size: 13px;
 }
 .ep-error i { font-size: 24px; opacity: .6; }
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .ep-loading { color: #6F6F66; }
+[data-coreui-theme="dark"] .ep-meta { background: #1F1F1A; }
+[data-coreui-theme="dark"] .ep-meta-label { color: #8A8A80; }
+[data-coreui-theme="dark"] .ep-meta-value { color: #F4F4F0; }
+[data-coreui-theme="dark"] .ep-attachment {
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.35);
+}
+[data-coreui-theme="dark"] .ep-attachment i { color: #60A5FA; }
+[data-coreui-theme="dark"] .ep-attachment-label { color: #A0A099; }
+[data-coreui-theme="dark"] .ep-attachment-file { color: #93C5FD; }
+/* .ep-frame-wrap conserva fondo blanco: el iframe pinta el correo real (HTML claro) */
+[data-coreui-theme="dark"] .ep-frame-wrap { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .ep-error { color: #F87171; }
 </style>

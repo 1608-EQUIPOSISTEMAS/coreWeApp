@@ -474,4 +474,22 @@ function onCompanyChange(opt) {
 .btn-exec-sm { padding: .25rem .5rem; font-size: .75rem; }
 .btn-exec-xs { padding: .15rem .4rem; font-size: .72rem; }
 .px-4 { padding-left: 1rem; padding-right: 1rem; }
+
+/* ══ DARK MODE ══ */
+[data-coreui-theme="dark"] .exec-shell { background: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-masthead { background: #1A1A14; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .brand-rule { background: #60A5FA; }
+[data-coreui-theme="dark"] .brand-eyebrow { color: #A0A099; }
+[data-coreui-theme="dark"] .brand-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-card--empresa { border-color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-card__header { border-bottom-color: #24241E; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-input { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .contact-attempt-row { background: #1F1F1A; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-exec { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-exec-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+[data-coreui-theme="dark"] .btn-exec-ghost { background-color: transparent; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-exec-danger { background-color: #dc2626; border-color: #dc2626; color: #fff; }
 </style>

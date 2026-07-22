@@ -79,7 +79,7 @@
             </div>
             <div class="kfoot">
               <div class="kmeta"><span>Adopción · {{ data.usuariosHabilitados }} habilitados</span><span class="strong">{{ adopcion }}%</span></div>
-              <div class="ktrack"><i :style="{ width: Math.min(100, adopcion) + '%', background: '#12a150' }"></i></div>
+              <div class="ktrack"><i :style="{ width: Math.min(100, adopcion) + '%', background: 'var(--c-green)' }"></i></div>
             </div>
           </div>
 
@@ -147,7 +147,7 @@
               <div class="c-sub">Mediana de acciones · día hábil, últimos 30 días</div>
               <div class="hours">
                 <div v-for="h in horas" :key="h.hora" class="hcol">
-                  <div class="hbar" :style="{ height: h.pct + '%', background: h.pct >= 75 ? '#1b2a5b' : '#c9d6ec' }"
+                  <div class="hbar" :style="{ height: h.pct + '%', background: h.pct >= 75 ? 'var(--hbar-hi)' : 'var(--hbar-lo)' }"
                        :data-tip="h.hora + ':00 — ' + num(h.acciones) + ' acciones'"></div>
                 </div>
               </div>
@@ -359,7 +359,7 @@ const metaAct = computed(() => computeMeta(completos(serieAct.value, 'acciones')
 const metaIng = computed(() => computeMeta(completos(serieIng.value, 'monto')))
 const pctMetaAct = computed(() => (metaAct.value ? Math.round((proyAct.value / metaAct.value) * 100) : 0))
 const pctMetaIng = computed(() => (metaIng.value ? Math.round((proyIng.value / metaIng.value) * 100) : 0))
-const barColor = (p) => (p >= 95 ? '#12a150' : p >= 70 ? '#f0932b' : '#d64545')
+const barColor = (p) => (p >= 95 ? 'var(--c-green)' : p >= 70 ? 'var(--c-amber)' : 'var(--c-red)')
 const bajoMeta = computed(() => proyAct.value < metaAct.value)
 
 /* ── Sparkline ── */
@@ -438,8 +438,8 @@ const franjasPico = computed(() => {
 })
 
 /* ── Áreas y usuarios ── */
-const AREA_COLORS = ['#1b2a5b', '#2f6bdb', '#12a150', '#f0932b', '#94a3b8', '#7c5cb8']
-const deltaColor = (d) => (d > 0 ? '#12a150' : d < 0 ? '#d64545' : '#94a3b8')
+const AREA_COLORS = ['var(--c-navy-acc)', '#2f6bdb', 'var(--c-green)', 'var(--c-amber)', '#94a3b8', '#7c5cb8']
+const deltaColor = (d) => (d > 0 ? 'var(--c-green)' : d < 0 ? 'var(--c-red)' : '#94a3b8')
 const deltaPtsTxt = (d) => (d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${Math.abs(d)}` : '— 0')
 
 const usuariosTop = computed(() => {
@@ -455,7 +455,7 @@ const usuariosTop = computed(() => {
       initials: String(u.name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase(),
       barPct: Math.round((u.acciones / max) * 100),
       trend,
-      trendColor: trend === '↑' ? '#12a150' : trend === '↓' ? '#d64545' : '#94a3b8'
+      trendColor: trend === '↑' ? 'var(--c-green)' : trend === '↓' ? 'var(--c-red)' : '#94a3b8'
     }
   })
 })
@@ -466,11 +466,11 @@ const salud = computed(() => {
   const mods = data.value?.modulos ?? []
   const driver = mods.slice().sort((a, b) => Math.abs(b.deltaPts) - Math.abs(a.deltaPts))[0]
   const driverTxt = driver
-    ? ` El mayor movimiento viene de <b style="color:#1b2a5b">${driver.modulo}</b> (${driver.deltaPts > 0 ? '+' : ''}${driver.deltaPts} pts de participación).`
+    ? ` El mayor movimiento viene de <b style="color:var(--c-navy-acc)">${driver.modulo}</b> (${driver.deltaPts > 0 ? '+' : ''}${driver.deltaPts} pts de participación).`
     : ''
-  if (p >= 95) return { color: '#12a150', halo: '#e7f6ee', titulo: 'En camino a la meta', texto: `La actividad proyectada alcanza el <b style="color:#12703a">${p}%</b> de la meta del mes.` + driverTxt }
-  if (p >= 70) return { color: '#f0932b', halo: '#fdf0e2', titulo: 'Uso estable — 1 alerta', texto: `La actividad proyectada llega al <b style="color:#c97a1a">${p}%</b> de la meta del mes.` + driverTxt }
-  return { color: '#d64545', halo: '#fdecec', titulo: 'Bajo la meta', texto: `La actividad proyectada solo alcanza el <b style="color:#d64545">${p}%</b> de la meta del mes.` + driverTxt }
+  if (p >= 95) return { color: 'var(--c-green)', halo: 'var(--ok-soft)', titulo: 'En camino a la meta', texto: `La actividad proyectada alcanza el <b style="color:var(--c-green-deep)">${p}%</b> de la meta del mes.` + driverTxt }
+  if (p >= 70) return { color: 'var(--c-amber)', halo: 'var(--warn-soft)', titulo: 'Uso estable — 1 alerta', texto: `La actividad proyectada llega al <b style="color:var(--c-amber-deep)">${p}%</b> de la meta del mes.` + driverTxt }
+  return { color: 'var(--c-red)', halo: 'var(--bad-soft)', titulo: 'Bajo la meta', texto: `La actividad proyectada solo alcanza el <b style="color:var(--c-red)">${p}%</b> de la meta del mes.` + driverTxt }
 })
 
 const decisiones = computed(() => {
@@ -479,14 +479,14 @@ const decisiones = computed(() => {
   const caida = mods.filter((m) => m.deltaPts <= -3).sort((a, b) => a.deltaPts - b.deltaPts)[0]
   if (caida) {
     cards.push({
-      tag: 'PRIORIDAD ALTA', tagBg: '#fdecec', tagFg: '#d64545', impacto: 'Impacto ★★★',
+      tag: 'PRIORIDAD ALTA', tagBg: 'var(--bad-soft)', tagFg: 'var(--c-red)', impacto: 'Impacto ★★★',
       titulo: `Investigar la caída de ${caida.modulo}`,
       texto: `${caida.modulo} cae ${caida.deltaPts} pts de participación vs ${mesPrevNombre.value} y concentra la baja del mes. Revisar si es estacional o un bloqueo operativo.`,
       resp: `Líder ${caida.modulo}`
     })
   } else if (bajoMeta.value) {
     cards.push({
-      tag: 'PRIORIDAD ALTA', tagBg: '#fdecec', tagFg: '#d64545', impacto: 'Impacto ★★★',
+      tag: 'PRIORIDAD ALTA', tagBg: 'var(--bad-soft)', tagFg: 'var(--c-red)', impacto: 'Impacto ★★★',
       titulo: 'Cerrar la brecha contra la meta',
       texto: `La proyección del mes (${kFmt(proyAct.value)}) queda bajo la meta (${kFmt(metaAct.value)}). Revisar qué áreas pueden acelerar registro y seguimiento.`,
       resp: 'Gerencia'
@@ -495,14 +495,14 @@ const decisiones = computed(() => {
   const crece = mods.filter((m) => m.deltaPts > 0).sort((a, b) => b.deltaPts - a.deltaPts)[0]
   if (crece) {
     cards.push({
-      tag: 'OPORTUNIDAD', tagBg: '#e7f6ee', tagFg: '#12703a', impacto: 'Impacto ★★',
+      tag: 'OPORTUNIDAD', tagBg: 'var(--ok-soft)', tagFg: 'var(--c-green-deep)', impacto: 'Impacto ★★',
       titulo: `Escalar el modelo de ${crece.modulo}`,
       texto: `${crece.modulo} gana +${crece.deltaPts} pts y concentra ${crece.pct}% del uso. Documentar su flujo y replicarlo como estándar en las demás áreas.`,
       resp: 'Producto'
     })
   }
   cards.push({
-    tag: 'EFICIENCIA', tagBg: '#eef2fb', tagFg: '#2f6bdb', impacto: 'Esfuerzo bajo',
+    tag: 'EFICIENCIA', tagBg: 'var(--info-soft)', tagFg: 'var(--c-blue)', impacto: 'Esfuerzo bajo',
     titulo: 'Mover el mantenimiento',
     texto: `El uso se concentra en ${franjasPico.value}. Programar despliegues y cortes fuera de esas franjas para no golpear la operación.`,
     resp: 'TI / Infra'
@@ -522,6 +522,20 @@ const decisiones = computed(() => {
   --muted: #94a3b8;
   --muted-2: #8a93a5;
   --ink2: #64748b;
+  /* tokens inyectados desde JS (mismos valores light de siempre) */
+  --c-navy-acc: #1b2a5b;
+  --c-blue: #2f6bdb;
+  --c-green: #12a150;
+  --c-green-deep: #12703a;
+  --c-amber: #f0932b;
+  --c-amber-deep: #c97a1a;
+  --c-red: #d64545;
+  --ok-soft: #e7f6ee;
+  --warn-soft: #fdf0e2;
+  --bad-soft: #fdecec;
+  --info-soft: #eef2fb;
+  --hbar-hi: #1b2a5b;
+  --hbar-lo: #c9d6ec;
   color: #0f172a;
   padding: 2px 2px 1rem;
 }
@@ -671,4 +685,69 @@ b { color: var(--navy); }
 }
 .hbar:hover::after, .atrack > i:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
 .hbar:hover, .atrack > i:hover { filter: brightness(1.1); }
+
+/* ══════════ DARK MODE ══════════ */
+[data-coreui-theme="dark"] .admin-dash {
+  --navy: #8FAADC;
+  --border: #2A2A22;
+  --muted: #8A8A80;
+  --muted-2: #8A8A80;
+  --ink2: #A0A099;
+  --c-navy-acc: #8FAADC;
+  --c-blue: #60A5FA;
+  --c-green: #34D399;
+  --c-green-deep: #34D399;
+  --c-amber: #FBBF24;
+  --c-amber-deep: #FBBF24;
+  --c-red: #F87171;
+  --ok-soft: rgba(16, 185, 129, 0.14);
+  --warn-soft: rgba(245, 158, 11, 0.14);
+  --bad-soft: rgba(239, 68, 68, 0.14);
+  --info-soft: rgba(59, 130, 246, 0.14);
+  --hbar-hi: #8FAADC;
+  --hbar-lo: rgba(143, 170, 220, 0.28);
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .admin-dash .btn.ghost { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .admin-dash .btn.ghost:hover:not(:disabled) { color: #F4F4F0; }
+[data-coreui-theme="dark"] .admin-dash .health,
+[data-coreui-theme="dark"] .admin-dash .kcard,
+[data-coreui-theme="dark"] .admin-dash .card { background: #1A1A14; }
+[data-coreui-theme="dark"] .admin-dash .pill.ok { background: rgba(16, 185, 129, 0.14); color: #34D399; }
+[data-coreui-theme="dark"] .admin-dash .pill.bad { background: rgba(239, 68, 68, 0.14); color: #F87171; }
+[data-coreui-theme="dark"] .admin-dash .kfoot.note b,
+[data-coreui-theme="dark"] .admin-dash .kmeta .strong,
+[data-coreui-theme="dark"] .admin-dash .acc-time,
+[data-coreui-theme="dark"] .admin-dash .hnote,
+[data-coreui-theme="dark"] .admin-dash .chip { color: #C9C9C1; }
+[data-coreui-theme="dark"] .admin-dash .ktrack,
+[data-coreui-theme="dark"] .admin-dash .atrack,
+[data-coreui-theme="dark"] .admin-dash .utrack { background: #24241E; }
+[data-coreui-theme="dark"] .admin-dash .tc-alert { background: rgba(239, 68, 68, 0.12); border-top-color: rgba(239, 68, 68, 0.25); color: #F87171; }
+[data-coreui-theme="dark"] .admin-dash .acc-row,
+[data-coreui-theme="dark"] .admin-dash .utable td { border-top-color: #24241E; }
+[data-coreui-theme="dark"] .admin-dash .haxis,
+[data-coreui-theme="dark"] .admin-dash .aname .rank { color: #8A8A80; }
+[data-coreui-theme="dark"] .admin-dash .hnote { background: #1F1F1A; }
+[data-coreui-theme="dark"] .admin-dash .aname { color: #DDDDD6; }
+[data-coreui-theme="dark"] .admin-dash .uav { background: rgba(143, 170, 220, 0.16); }
+[data-coreui-theme="dark"] .admin-dash .chip { background: #24241E; }
+[data-coreui-theme="dark"] .admin-dash .dcard { background: #1F1F1A; }
+[data-coreui-theme="dark"] .admin-dash .dfoot { border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .admin-dash .skel { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
+[data-coreui-theme="dark"] .admin-dash .hbar::after,
+[data-coreui-theme="dark"] .admin-dash .atrack > i::after { background: #F4F4F0; color: #14140F; box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5); }
+/* SVG de tendencia: los colores van como atributos → se corrigen por selector de atributo */
+[data-coreui-theme="dark"] .admin-dash .trend-svg g[stroke="#eef1f6"] { stroke: #2A2A22; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg g[fill="#b6bccb"] { fill: #8A8A80; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg path[stroke="#1b2a5b"] { stroke: #8FAADC; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg circle[stroke="#1b2a5b"] { stroke: #8FAADC; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg circle[fill="#ffffff"] { fill: #1A1A14; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg circle[stroke="#ffffff"] { stroke: #1A1A14; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg text[fill="#1b2a5b"] { fill: #8FAADC; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg text[fill="#c97a1a"] { fill: #FBBF24; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg text[fill="#12703a"] { fill: #34D399; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg text[fill="#d64545"] { fill: #F87171; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg circle[fill="#d64545"] { fill: #F87171; }
+[data-coreui-theme="dark"] .admin-dash .trend-svg circle[fill="#12a150"] { fill: #34D399; }
 </style>

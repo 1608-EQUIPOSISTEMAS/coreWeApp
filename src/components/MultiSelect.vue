@@ -1046,4 +1046,93 @@ onBeforeUnmount(() => {
   padding-top: 5px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* ═══════════ DARK MODE ═══════════ */
+/* El dropdown y el preview van con <Teleport to="body">, pero Vue estampa
+   el atributo de scope también en los nodos teleportados, así que estos
+   selectores scoped aplican igual. Como el componente no usa variables CSS
+   (decisión documentada arriba), los overrides van con hex directos.
+   El .hover-preview ya es oscuro (#00102b) y funciona en ambos temas. */
+
+/* Trigger */
+[data-coreui-theme="dark"] .ms-trigger { background: #1A1A14; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .ms-trigger:hover:not(.is-disabled) { border-color: #8FAADC; background: #1F1F1A; }
+[data-coreui-theme="dark"] .ms-trigger.is-open,
+[data-coreui-theme="dark"] .ms-trigger.has-selection {
+  border-color: #8FAADC;
+  box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.15);
+}
+[data-coreui-theme="dark"] .ms-trigger.is-disabled { background: #24241E; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .placeholder-text { color: #8A8A80; }
+[data-coreui-theme="dark"] .badge-count { background: #8FAADC; color: #14140F; }
+[data-coreui-theme="dark"] .badge-label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-quick-clear { color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-quick-clear:hover { background: #24241E; color: #F87171; }
+[data-coreui-theme="dark"] .trigger-icon { color: #8A8A80; }
+[data-coreui-theme="dark"] .trigger-icon.active { color: #8FAADC; }
+[data-coreui-theme="dark"] .control-hint { color: #A0A099; }
+
+/* Dropdown (teleportado) */
+[data-coreui-theme="dark"] .ms-dropdown {
+  background: #1A1A14;
+  border-color: #3A3A33;
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+[data-coreui-theme="dark"] .dropdown-header { background: #1A1A14; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .search-input {
+  background: #1F1F1A;
+  border-color: #2A2A22;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .search-input::placeholder { color: #8A8A80; }
+[data-coreui-theme="dark"] .search-input:focus {
+  border-color: #8FAADC;
+  background: #1A1A14;
+  box-shadow: 0 0 0 2px rgba(143, 170, 220, 0.12);
+}
+[data-coreui-theme="dark"] .btn-input-clear { color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-input-clear:hover { color: #C4C4BC; }
+[data-coreui-theme="dark"] .selection-status { color: #A0A099; }
+[data-coreui-theme="dark"] .count-pill { background: rgba(143, 170, 220, 0.16); color: #8FAADC; }
+[data-coreui-theme="dark"] .btn-pill { background: #24241E; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-pill:hover:not(:disabled) { background: #8FAADC; color: #14140F; }
+[data-coreui-theme="dark"] .btn-pill.outline { background: transparent; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .btn-pill.outline:hover:not(:disabled) {
+  border-color: #F87171;
+  color: #F87171;
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .dropdown-body { scrollbar-color: #3A3A33 transparent; }
+[data-coreui-theme="dark"] .dropdown-body::-webkit-scrollbar-thumb { background: #3A3A33; }
+[data-coreui-theme="dark"] .state-container { color: #A0A099; }
+[data-coreui-theme="dark"] .spinner { border-color: #2A2A22; border-top-color: #8FAADC; }
+[data-coreui-theme="dark"] .list-row:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .list-row.is-selected {
+  background: rgba(143, 170, 220, 0.14);
+  border-left-color: #8FAADC;
+}
+[data-coreui-theme="dark"] .list-row + .list-row { border-top-color: #1F1F1A; }
+[data-coreui-theme="dark"] .checkmark { background: #1A1A14; border-color: #8A8A80; }
+[data-coreui-theme="dark"] .list-row:hover .checkmark { border-color: #8FAADC; }
+[data-coreui-theme="dark"] .custom-checkbox.is-checked .checkmark { background: #8FAADC; border-color: #8FAADC; }
+[data-coreui-theme="dark"] .custom-checkbox.is-checked .checkmark i { color: #14140F; }
+[data-coreui-theme="dark"] .row-label { color: #F4F4F0; }
+[data-coreui-theme="dark"] .list-row.is-selected .row-label { color: #8FAADC; }
+[data-coreui-theme="dark"] .row-sublabel { color: #8A8A80; }
+[data-coreui-theme="dark"] .list-row:hover .btn-only { color: #8A8A80; border-left-color: #24241E; }
+[data-coreui-theme="dark"] .btn-only:hover {
+  background: rgba(96, 165, 250, 0.14) !important;
+  color: #60A5FA !important;
+}
+[data-coreui-theme="dark"] .btn-only.is-exclusive { color: #60A5FA !important; }
+[data-coreui-theme="dark"] .dropdown-footer { background: #1F1F1A; border-top-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-cancel { background: #1A1A14; border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .btn-cancel:hover { background: #24241E; color: #F4F4F0; border-color: #8A8A80; }
+[data-coreui-theme="dark"] .btn-apply {
+  background: #8FAADC;
+  border-color: #8FAADC;
+  color: #14140F;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+[data-coreui-theme="dark"] .btn-apply:hover { background: #A9C2E8; border-color: #A9C2E8; }
 </style>
