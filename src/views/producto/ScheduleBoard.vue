@@ -67,7 +67,7 @@
             <th>SEGUIMIENTO</th>
             <th class="th-group">
               <div class="g-title">AULA / INSCRITOS</div>
-              <div class="g-cols"><span>VEN</span><span>SEG</span><span>MEM</span><span>B2B</span><span>BEC</span><span class="hot">AULA</span></div>
+              <div class="g-cols"><span>VEN</span><span>SEG</span><span>B2B</span><span>MEM</span><span>BEC</span><span class="hot">AULA</span></div>
             </th>
             <th>OBJETIVO</th>
             <th class="c-num" title="Consultas (leads)">CONS.</th>
@@ -164,8 +164,8 @@
                     <div class="aula-cell">
                       <span class="acol" :class="{ zero: !it.e.cnt_ventas }">{{ it.e.cnt_ventas ?? 0 }}</span>
                       <span class="acol" :class="{ zero: !it.e.cnt_segui }">{{ it.e.cnt_segui ?? 0 }}</span>
-                      <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
                       <span class="acol" :class="{ zero: !it.e.cnt_b2b }">{{ it.e.cnt_b2b ?? 0 }}</span>
+                      <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
                       <span class="acol bec">{{ it.e.cnt_becas ?? 0 }}</span>
                       <span class="acol total" :class="{ empty: !(it.e.cnt_aula ?? 0) }"
                         :style="(it.e.cnt_aula ?? 0) ? { background: aulaColor(it.e.cnt_aula) } : null">{{ it.e.cnt_aula ?? 0 }}</span>
