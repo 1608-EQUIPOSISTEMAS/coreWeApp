@@ -977,6 +977,13 @@
             <label class="exec-label mb-1">Estado de Matrícula</label>
             <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">{{ enrollmentData.status_label || 'Desconocido' }}</span>
           </div>
+          <!-- Categoría de entrada: solo eventos/congresos la tienen -->
+          <div class="info-block mb-3" v-if="enrollmentData.event_category_label">
+            <label class="exec-label mb-1">Categoría de Entrada</label>
+            <span class="pill event-cat-pill" :class="'is-' + (enrollmentData.event_category_alias || '').replace('we_event_category_', '')">
+              <i class="fa-solid fa-ticket me-1"></i>{{ enrollmentData.event_category_label }}
+            </span>
+          </div>
           <div class="info-block mb-3"><label class="exec-label">Asesor que Registró</label><span class="info-value"><i class="fa-solid fa-user-tie me-1 text-slate-400"></i>{{ enrollmentData.seller_name || '—' }}</span></div>
         </div>
         <div class="col-md-6 ps-3">
@@ -2718,6 +2725,17 @@ const saldoPendienteDisplay = computed(() => {
 .pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; }
 .pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--text-secondary, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
 .pill-teal   { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important; }
+
+/* Categoría de entrada de eventos: un color por tier para leerlo de un vistazo */
+.event-cat-pill            { border: 1px solid transparent; font-weight: 700; }
+.event-cat-pill.is-vip     { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
+.event-cat-pill.is-premium { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe !important; }
+.event-cat-pill.is-general { background: #e0f2fe; color: #075985; border-color: #bae6fd !important; }
+.event-cat-pill.is-virtual { background: #f1f5f9; color: #334155; border-color: #e2e8f0 !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-vip     { background: rgba(245,158,11,.16); color: #FCD34D; border-color: rgba(245,158,11,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-premium { background: rgba(139,92,246,.16); color: #C4B5FD; border-color: rgba(139,92,246,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-general { background: rgba(56,189,248,.16); color: #7DD3FC; border-color: rgba(56,189,248,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-virtual { background: rgba(148,163,184,.16); color: #CBD5E1; border-color: rgba(148,163,184,.35) !important; }
 .pill-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
 .pill-red    { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important; }
 

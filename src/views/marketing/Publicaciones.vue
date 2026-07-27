@@ -27,6 +27,10 @@
 
     <!-- Filtros -->
     <div class="filters">
+      <div class="seg sw">
+        <button type="button" :class="{ on: view === 'cal' }" @click="view = 'cal'">Calendario</button>
+        <button type="button" :class="{ on: view === 'list' }" @click="view = 'list'">Lista</button>
+      </div>
       <div class="chips">
         <button v-for="f in NETWORKS" :key="f.v" type="button"
                 :class="['chip', { on: fNetwork === f.v }]" @click="fNetwork = f.v">{{ f.t }}</button>
@@ -37,8 +41,56 @@
       </div>
     </div>
 
+    <!-- Calendario semanal: franjas horarias × días, Programado / Publicado -->
+    <div v-if="view === 'cal'" class="weeks">
+      <div v-for="(w, i) in weeks" :key="w.key" class="panel wk">
+        <div class="wk-head">
+          <span class="wk-n">SEM {{ i + 1 }}</span>
+          <span class="wk-r">{{ w.range }}</span>
+          <span class="grow"></span>
+          <span class="wk-tot">{{ w.pub }} publicadas · {{ w.tot }} en total</span>
+        </div>
+        <div class="wk-scroll">
+          <table class="cal">
+            <thead>
+              <tr>
+                <th class="hcol" rowspan="2">HORA</th>
+                <th v-for="d in w.days" :key="d.key" colspan="2"
+                    :class="['dhead', { off: !d.inMonth, today: d.isToday }]">
+                  {{ d.label }}
+                  <span v-if="d.tot" class="dbadge" :title="`${d.pub} publicadas de ${d.tot}`">{{ d.pub }}/{{ d.tot }}</span>
+                </th>
+              </tr>
+              <tr>
+                <template v-for="d in w.days" :key="'s' + d.key">
+                  <th class="sub" :class="{ off: !d.inMonth }">Programado</th>
+                  <th class="sub" :class="{ off: !d.inMonth }">Publicado</th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in SLOTS" :key="s">
+                <td class="hcol">{{ s }}</td>
+                <template v-for="d in w.days" :key="d.key + s">
+                  <td v-for="k in ['S', 'P']" :key="k" class="cell" :class="{ off: !d.inMonth }"
+                      @click="cell(d.key, s, k).length || newAt(d.key, s, k)">
+                    <button v-for="p in cell(d.key, s, k)" :key="k + p.post_id" type="button"
+                            :class="['pchip', p.network.toLowerCase(), p.status.toLowerCase()]"
+                            :title="`${p.account_name || ''} — ${p.caption || 'sin descripción'}`"
+                            @click.stop="openModal(p)">
+                      <b>{{ p.network === 'IG' ? 'IG' : 'LI' }}</b> {{ hhmm(k === 'S' ? p.scheduled_at : p.published_at) }}
+                    </button>
+                  </td>
+                </template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabla -->
-    <div class="panel">
+    <div v-if="view === 'list'" class="panel">
       <table class="tbl">
         <thead>
           <tr>
@@ -54,16 +106,26 @@
         <tbody v-else-if="!filtered.length">
           <tr><td colspan="8" class="empty">Sin publicaciones en este periodo.</td></tr>
         </tbody>
-        <tbody v-else>
-          <tr v-for="p in filtered" :key="p.post_id" :class="{ dim: p.status === 'CANCELADO' }">
+        <template v-else>
+        <tbody v-for="g in grouped" :key="g.key">
+          <tr class="dayrow">
+            <td colspan="8">
+              <span class="d-lbl">{{ g.label }}</span>
+              <span class="d-n">{{ g.items.length }} {{ g.items.length === 1 ? 'publicación' : 'publicaciones' }}</span>
+              <span v-if="g.published" class="d-ok">{{ g.published }} publicada{{ g.published === 1 ? '' : 's' }}</span>
+              <span v-if="g.ig" class="d-net ig">IG {{ g.ig }}</span>
+              <span v-if="g.li" class="d-net linkedin">LI {{ g.li }}</span>
+            </td>
+          </tr>
+          <tr v-for="p in g.items" :key="p.post_id" :class="{ dim: p.status === 'CANCELADO' }">
             <td><span :class="['net', p.network.toLowerCase()]">{{ p.network === 'IG' ? 'Instagram' : 'LinkedIn' }}</span></td>
             <td class="acc">{{ p.account_name || '—' }}</td>
             <td class="wide">
               <div class="cap" :title="p.caption || ''">{{ p.caption || '—' }}</div>
               <a v-if="p.permalink" class="lnk" :href="p.permalink" target="_blank" rel="noopener">ver publicación ↗</a>
             </td>
-            <td>{{ fdate(p.scheduled_at) }}</td>
-            <td>{{ fdate(p.published_at) }}</td>
+            <td>{{ fcell(p.scheduled_at, g.key) }}</td>
+            <td>{{ fcell(p.published_at, g.key) }}</td>
             <td><span :class="['status', p.status.toLowerCase()]">{{ STATUS_TXT[p.status] }}</span></td>
             <td><span :class="['src', p.source.toLowerCase()]">{{ p.source === 'AUTO' ? 'Auto' : 'Manual' }}</span></td>
             <td class="acts">
@@ -74,6 +136,7 @@
             </td>
           </tr>
         </tbody>
+        </template>
       </table>
     </div>
 
@@ -148,6 +211,7 @@ const syncing = ref(false)
 const saving = ref(false)
 const fNetwork = ref('')
 const fStatus = ref('')
+const view = ref('cal')
 const dlg = ref(null)
 
 const form = reactive({ post_id: null, mode: 'programar', network: 'IG', account_name: '', scheduled_at: '', published_at: '', caption: '', permalink: '', notes: '' })
@@ -161,11 +225,124 @@ const filtered = computed(() => posts.value
   .filter(p => !fStatus.value || p.status === fStatus.value))
 const pendConfirm = computed(() => posts.value.filter(needsConfirm).length)
 
+const q2 = n => String(n).padStart(2, '0')
+function dstr (d) { const t = new Date(d); return `${t.getFullYear()}-${q2(t.getMonth() + 1)}-${q2(t.getDate())}` }
+function hhmm (d) { const t = new Date(d); return `${q2(t.getHours())}:${q2(t.getMinutes())}` }
+// Día efectivo = cuándo se publicó; si aún no, cuándo está programada.
+function dayKey (p) {
+  const d = p.published_at || p.scheduled_at
+  return d ? dstr(d) : ''
+}
+const grouped = computed(() => {
+  const map = new Map()
+  for (const p of filtered.value) {
+    const k = dayKey(p)
+    if (!map.has(k)) map.set(k, [])
+    map.get(k).push(p)
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] || '9999').localeCompare(b[0] || '9999')) // sin fecha al final
+    .map(([key, items]) => ({
+      key,
+      label: key
+        ? new Date(`${key}T00:00:00`).toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long' })
+        : 'Sin fecha',
+      items,
+      published: items.filter(p => p.status === 'PUBLICADO').length,
+      ig: items.filter(p => p.network === 'IG').length,
+      li: items.filter(p => p.network === 'LINKEDIN').length
+    }))
+})
+
 function count (s) { return posts.value.filter(p => p.status === s).length }
 function needsConfirm (p) { return p.status === 'NO_PROGRAMADO' && p.confirmed !== 'Y' }
 function fdate (d) {
   if (!d) return '—'
   return new Date(d).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+// Dentro de un grupo el día ya está en la cabecera: solo la hora, salvo que caiga en otro día.
+function fcell (d, key) {
+  if (!d) return '—'
+  return dstr(d) === key ? hhmm(d) : fdate(d)
+}
+
+// ── Calendario semanal ──────────────────────────────────────────────
+// Franjas fijas del calendario de marketing (mismas de la hoja de Publicaciones).
+const SLOTS = ['07:30', '09:00', '10:00', '11:00', '12:00', '13:15', '14:30', '15:30', '16:30', '17:30', '18:00', '18:30', '19:00']
+const SLOT_MIN = SLOTS.map(s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3)))
+// Cada post cae en la última franja que empieza antes de su hora (lo de antes de 07:30 va a la primera).
+function slotOf (d) {
+  const t = new Date(d)
+  const m = t.getHours() * 60 + t.getMinutes()
+  let i = 0
+  for (let k = 0; k < SLOT_MIN.length; k++) if (m >= SLOT_MIN[k]) i = k
+  return SLOTS[i]
+}
+
+// Índice día|franja|tipo → posts. 'S' = por scheduled_at, 'P' = por published_at.
+const cellIndex = computed(() => {
+  const m = new Map()
+  const put = (d, kind, p) => {
+    const k = `${dstr(d)}|${slotOf(d)}|${kind}`
+    if (!m.has(k)) m.set(k, [])
+    m.get(k).push(p)
+  }
+  for (const p of filtered.value) {
+    if (p.scheduled_at) put(p.scheduled_at, 'S', p)
+    if (p.published_at) put(p.published_at, 'P', p)
+  }
+  return m
+})
+function cell (day, slot, kind) { return cellIndex.value.get(`${day}|${slot}|${kind}`) || [] }
+
+// Conteo por día efectivo: total y publicadas.
+const dayCount = computed(() => {
+  const m = new Map()
+  for (const g of grouped.value) m.set(g.key, { tot: g.items.length, pub: g.published })
+  return m
+})
+
+const weeks = computed(() => {
+  const [y, mo] = month.value.split('-').map(Number)
+  const last = new Date(y, mo, 0)
+  const cur = new Date(y, mo - 1, 1)
+  cur.setDate(1 - ((cur.getDay() + 6) % 7)) // retrocede al lunes de esa semana
+  const hoy = dstr(new Date())
+  const out = []
+  while (cur <= last) {
+    const days = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(cur)
+      d.setDate(cur.getDate() + i)
+      const key = dstr(d)
+      const c = dayCount.value.get(key) || { tot: 0, pub: 0 }
+      days.push({
+        key,
+        label: d.toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit' }),
+        inMonth: d.getMonth() === mo - 1,
+        isToday: key === hoy,
+        tot: c.tot,
+        pub: c.pub
+      })
+    }
+    out.push({
+      key: days[0].key,
+      days,
+      range: `${days[0].label} — ${days[6].label}`,
+      tot: days.reduce((a, d) => a + d.tot, 0),
+      pub: days.reduce((a, d) => a + d.pub, 0)
+    })
+    cur.setDate(cur.getDate() + 7)
+  }
+  return out
+})
+
+// Click en celda vacía: alta rápida con día y hora ya puestos.
+function newAt (day, slot, kind) {
+  openModal()
+  form.mode = kind === 'P' ? 'registrar' : 'programar'
+  if (kind === 'P') form.published_at = `${day}T${slot}`
+  else form.scheduled_at = `${day}T${slot}`
 }
 function shiftMonth (n) {
   const [y, m] = month.value.split('-').map(Number)
@@ -279,10 +456,45 @@ h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 0; }
 .chip.on { background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); color: #fff; }
 
 .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow-x: auto; }
+
+/* ── Calendario semanal ── */
+.seg.sw { width: auto; }
+.seg.sw button { padding: 5px 14px; font-size: 12px; }
+.weeks { display: flex; flex-direction: column; gap: 14px; }
+.wk { overflow: hidden; }
+.wk-head { display: flex; align-items: baseline; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.wk-head .grow { flex: 1; }
+.wk-n { font-weight: 800; font-size: 12px; letter-spacing: .06em; color: var(--we-navy, #002060); }
+.wk-r { font-size: 12px; color: #64748b; text-transform: capitalize; }
+.wk-tot { font-size: 11.5px; font-weight: 700; color: #64748b; }
+.wk-scroll { overflow-x: auto; }
+.cal { border-collapse: collapse; font-size: 11.5px; width: 100%; min-width: 1000px; }
+.cal th, .cal td { border: 1px solid #eef2f7; padding: 0; }
+.cal .hcol { width: 58px; min-width: 58px; text-align: center; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px; }
+.cal .dhead { padding: 5px 4px; font-size: 11.5px; font-weight: 800; color: #0f172a; text-transform: capitalize; background: #f8fafc; white-space: nowrap; }
+.cal .dhead.today { background: #eef2ff; color: var(--we-navy, #002060); }
+.cal .dhead.off, .cal .sub.off, .cal .cell.off { background: #fbfcfd; color: #94a3b8; }
+.cal .dbadge { font-size: 10px; font-weight: 700; color: #475569; background: #e2e8f0; border-radius: 999px; padding: 1px 6px; margin-left: 5px; }
+.cal .sub { padding: 3px 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: #94a3b8; text-transform: uppercase; background: #fff; }
+.cal .cell { min-width: 68px; height: 30px; vertical-align: top; padding: 2px; cursor: pointer; }
+.cal .cell:hover { background: #f8fafc; }
+.pchip { display: block; width: 100%; text-align: left; border: 1px solid transparent; border-radius: 5px; padding: 2px 5px; font-size: 10.5px; font-weight: 600; cursor: pointer; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pchip b { font-weight: 800; }
+.pchip.ig { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+.pchip.linkedin { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.pchip.cancelado { opacity: .45; text-decoration: line-through; }
+.pchip.no_programado { box-shadow: inset 3px 0 0 #ef4444; }
 .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tbl th { text-align: left; font-size: 11px; letter-spacing: .06em; color: #64748b; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
 .tbl td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 .tbl tr.dim { opacity: .45; }
+.dayrow td { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 7px 12px; }
+.d-lbl { font-weight: 800; font-size: 12.5px; color: #0f172a; text-transform: capitalize; }
+.d-n { font-size: 11.5px; font-weight: 700; color: #64748b; margin-left: 10px; }
+.d-ok { font-size: 11.5px; font-weight: 700; color: #047857; margin-left: 8px; }
+.d-net { font-size: 11px; font-weight: 700; margin-left: 8px; padding: 2px 7px; border-radius: 999px; }
+.d-net.ig { background: #fdf2f8; color: #be185d; }
+.d-net.linkedin { background: #eff6ff; color: #1d4ed8; }
 .tbl .empty { text-align: center; color: #94a3b8; padding: 28px; }
 .wide { min-width: 260px; max-width: 420px; }
 .cap { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -337,9 +549,32 @@ h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 0; }
 [data-coreui-theme="dark"] .pub-page .chip { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
 [data-coreui-theme="dark"] .pub-page .chip.on { background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); color: #fff; }
 [data-coreui-theme="dark"] .pub-page .panel { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .wk-head { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .wk-n { color: #8FAADC; }
+[data-coreui-theme="dark"] .pub-page .wk-r,
+[data-coreui-theme="dark"] .pub-page .wk-tot { color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .cal th,
+[data-coreui-theme="dark"] .pub-page .cal td { border-color: #24241E; }
+[data-coreui-theme="dark"] .pub-page .cal .hcol { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .cal .dhead { background: #1F1F1A; color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .cal .dhead.today { background: rgba(143, 170, 220, .18); color: #8FAADC; }
+[data-coreui-theme="dark"] .pub-page .cal .dhead.off,
+[data-coreui-theme="dark"] .pub-page .cal .sub.off,
+[data-coreui-theme="dark"] .pub-page .cal .cell.off { background: #171712; color: #6E6E66; }
+[data-coreui-theme="dark"] .pub-page .cal .dbadge { background: #2A2A22; color: #C9C9C1; }
+[data-coreui-theme="dark"] .pub-page .cal .sub { background: #1A1A14; color: #6E6E66; }
+[data-coreui-theme="dark"] .pub-page .cal .cell:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .pub-page .pchip.ig { background: rgba(236, 72, 153, .14); color: #F9A8D4; border-color: rgba(236, 72, 153, .3); }
+[data-coreui-theme="dark"] .pub-page .pchip.linkedin { background: rgba(59, 130, 246, .14); color: #93C5FD; border-color: rgba(59, 130, 246, .3); }
 [data-coreui-theme="dark"] .pub-page .tbl th { color: #A0A099; border-bottom-color: #2A2A22; }
 [data-coreui-theme="dark"] .pub-page .tbl td { border-bottom-color: #24241E; }
 [data-coreui-theme="dark"] .pub-page .tbl .empty { color: #8A8A80; }
+[data-coreui-theme="dark"] .pub-page .dayrow td { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .pub-page .d-lbl { color: #F4F4F0; }
+[data-coreui-theme="dark"] .pub-page .d-n { color: #A0A099; }
+[data-coreui-theme="dark"] .pub-page .d-ok { color: #34D399; }
+[data-coreui-theme="dark"] .pub-page .d-net.ig { background: rgba(236, 72, 153, .14); color: #F9A8D4; }
+[data-coreui-theme="dark"] .pub-page .d-net.linkedin { background: rgba(59, 130, 246, .14); color: #93C5FD; }
 [data-coreui-theme="dark"] .pub-page .lnk { color: #60A5FA; }
 [data-coreui-theme="dark"] .pub-page .acc { color: #C9C9C1; }
 [data-coreui-theme="dark"] .pub-page .net.ig { background: rgba(236, 72, 153, .14); color: #F9A8D4; }

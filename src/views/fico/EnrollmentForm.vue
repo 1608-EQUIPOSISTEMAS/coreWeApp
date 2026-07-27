@@ -1119,6 +1119,13 @@ function validate () {
   if (!form.email.trim()) { toast.error('Ingresa el correo.'); return false }
   if (requirePhone.value && !form.phone.trim()) { toast.error('Ingresa el telefono.'); return false }
   if (!form.program_version_id) { toast.error('Selecciona un programa.'); return false }
+  // Sin edicion el enrollment queda sin fecha de inicio, fuera del aula/cronograma
+  // y sin control de duplicados (findDuplicate filtra por program_edition_id).
+  // Condicionado a que el programa TENGA ediciones: los cursos Online (asincronicos)
+  // y las membresias no tienen, y ahi el NULL es correcto.
+  if (editionsList.value.length && !form.program_edition_id) {
+    toast.error('Selecciona una edicion.'); return false
+  }
   if (!form.client_profile) { toast.error('Selecciona un perfil (Profesional/Estudiante).'); return false }
   if (!isB2BDocumental.value && !form.is_scholarship && isInstallment.value && installments.value.length > 0 && !installmentValid.value) {
     toast.error('El total de cuotas no coincide con el saldo a financiar.'); return false

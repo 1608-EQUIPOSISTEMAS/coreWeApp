@@ -11,6 +11,9 @@ export function useLeadForm(options = {}) {
     requiresEdition  = false,
     showInscription  = true,
     isCompanyLead    = false,
+    // A donde volver tras guardar/cancelar/inscribir. Default = comercial para
+    // no cambiar el comportamiento de las vistas que ya lo asumian.
+    listRouteName    = 'ComercialListado',
   } = options
 
   // ── ROUTER / TOAST ──────────────────────────────────────────
@@ -32,6 +35,31 @@ export function useLeadForm(options = {}) {
   const storedUser     = storedUserStr ? JSON.parse(storedUserStr) : null
   const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false
   const CAT_RESCHEDULE_LEADER_ID = 5002
+
+  // ── CELULAR DE ORIGEN ────────────────────────────────────────
+  // Los celulares del asesor vienen en el JWT/localStorage (storedUser.phones).
+  // Un asesor con varios numeros elige con cual entro la consulta; con uno solo
+  // el select queda bloqueado en ese valor.
+  const sellerPhones = computed(() =>
+    Array.isArray(storedUser?.phones)
+      ? storedUser.phones
+          .filter(p => p != null && String(p).trim() !== '')
+          .map(p => ({ value: String(p), label: String(p) }))
+      : []
+  )
+  // Un lead viejo puede traer un celular que ya no esta asignado al asesor:
+  // se antepone para no perder el dato al editar.
+  const sellerPhoneOptions = computed(() => {
+    const base = sellerPhones.value
+    // `form` se declara mas abajo: guarda por si algo evalua esto durante setup.
+    let current = null
+    try { current = form?.origin_seller_phone } catch { current = null }
+    if (current && !base.some(p => p.value === String(current))) {
+      return [{ value: String(current), label: String(current) }, ...base]
+    }
+    return base
+  })
+  const sellerPhoneLocked = computed(() => sellerPhoneOptions.value.length <= 1)
 
   // ── FECHAS CONFIG ────────────────────────────────────────────
   const sevenDaysAgo = new Date()
@@ -227,6 +255,7 @@ export function useLeadForm(options = {}) {
     category_alias: null,
     program_modality_alias: null,
     fechaContactoInicial: currentHourIso(),
+    origin_seller_phone: sellerPhones.value[0]?.value ?? null,
     web: false,
     program_link: null,
     count_children: 0,
@@ -274,6 +303,8 @@ export function useLeadForm(options = {}) {
 
   // ── INSC ─────────────────────────────────────────────────────
   const insc = reactive({
+    // Categoria de entrada del evento (VIP/GENERAL/PREMIUM/VIRTUAL).
+    cat_event_category: null,
     dni: '',
     nombres: '',
     apellidos: '',
@@ -409,6 +440,39 @@ export function useLeadForm(options = {}) {
     form.category_alias !== 'we_program_type_membership'
   )
 
+  // ── CATEGORIA DE ENTRADA (eventos/congresos) ─────────────────
+  // Un congreso se vende por categoria y cada una tiene su propia tarifa, asi
+  // que al elegirla se pisan los price_* del programa y el watcher de
+  // calculatedBasePrice recalcula el monto solo.
+  const eventCategories = ref([])
+  const isEventProgram  = computed(() => form.category_alias === 'we_program_type_event')
+
+  async function loadEventCategories () {
+    if (!isEventProgram.value || !form.program_version_id) { eventCategories.value = []; return }
+    try {
+      eventCategories.value = await programService.eventCategoryList(form.program_version_id) || []
+    } catch (err) {
+      console.error('[loadEventCategories]', err)
+      eventCategories.value = []
+    }
+  }
+
+  function onEventCategoryChange (opcion) {
+    // Sin tarifa propia se conserva el precio del programa: es preferible a
+    // dejar la inscripcion en 0 por una categoria sin cargar.
+    if (!opcion?.has_price) return
+    priceManuallySet.value = false
+    form.price_student_soles       = Number(opcion.price_student_soles       || 0)
+    form.price_student_dollars     = Number(opcion.price_student_dollars     || 0)
+    form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
+    form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+  }
+
+  watch(() => [form.program_version_id, form.category_alias], () => {
+    insc.cat_event_category = null
+    loadEventCategories()
+  })
+
   const saveBlockReason = computed(() => {
     if (!validateLeadInfo())       return 'Falta completar la información del Lead (fecha de contacto, programa, etc.)'
     if (!validateContactInfo())    return 'Falta completar los Datos del Contacto (teléfono, status, país, nombre, estado del cliente)'
@@ -425,6 +489,25 @@ export function useLeadForm(options = {}) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     return maxHistoryDate < today ? today : maxHistoryDate
+  })
+
+  // Explica por que el boton INSCRIBIR no aparece. El boton se oculta en vez de
+  // deshabilitarse (comportamiento heredado de comercial), asi que sin esto el
+  // asesor no tiene forma de saber que le falta.
+  // Devuelve null cuando no hay nada que decir: sin programa elegido es
+  // demasiado pronto para exigir nada.
+  const inscriptionBlockReason = computed(() => {
+    if (!showInscription || form.enrollment_id || !form.program_version_id) return null
+    if (form.client_status !== 'we_client_person') {
+      return 'Para inscribir, "T. Contacto" debe ser Persona: las empresas no se inscriben desde aquí.'
+    }
+    if (form.status_alias !== 'we_lead_status_bought') {
+      return 'Para inscribir, el Status del lead debe ser "Pagó".'
+    }
+    if (!form.pay_date) {
+      return 'Para inscribir, falta la F. Pago en "Estado Comercial y Marketing".'
+    }
+    return null
   })
 
   // ── showInscriptionButton (Opción B: única modificación al template) ──
@@ -922,6 +1005,9 @@ export function useLeadForm(options = {}) {
       } else if (!form[field]) return false
     }
     if (requiresEdition && form.program_version_id && !form.edition_id) return false
+    // Solo se exige si el asesor tiene celulares que elegir; sin opciones no
+    // tiene sentido bloquear el guardado por un campo que no puede llenar.
+    if (sellerPhoneOptions.value.length && !form.origin_seller_phone) return false
     return true
   }
 
@@ -939,6 +1025,9 @@ export function useLeadForm(options = {}) {
     const required = ['cat_type_document', 'document', 'email', 'full_name', 'last_name', 'mother_last_name', 'cat_insc_modality', 'cat_certificate_status']
     if (!required.every(f => !!insc[f])) return false
     if (!isValidEmail(insc.email)) return false
+    // En un congreso la categoria define la tarifa: sin ella la inscripcion
+    // quedaria con un monto que no corresponde a nada.
+    if (isEventProgram.value && !insc.cat_event_category) return false
     return true
   }
 
@@ -1156,6 +1245,7 @@ export function useLeadForm(options = {}) {
         cat_client_moment:    cat_client_category,
         membership_moment_id: form.membership_moment_id,
         origin_phone:  (form.telefono || '').trim() || null,
+        origin_seller_phone: (form.origin_seller_phone || '').trim() || null,
         origin_email:  null,
         message_init_conversation: form.mensajeChat?.trim() || null,
         observations:              form.observacion?.trim() || null,
@@ -1203,12 +1293,13 @@ export function useLeadForm(options = {}) {
         ticket_payment_urls: paymentFiles,
         attachments: generalAttachments,
         agreement_id: insc.agreement_id || null,
+        cat_event_category: insc.cat_event_category || null,
       }
     }
   }
 
   // ── ACCIONES PRINCIPALES ─────────────────────────────────────
-  function cancelar() { router.push({ name: 'ComercialListado' }) }
+  function cancelar() { router.push({ name: listRouteName }) }
 
   async function guardarEfectivo() {
     if (!comercialService) return console.error('comercialService no inyectado')
@@ -1216,7 +1307,7 @@ export function useLeadForm(options = {}) {
     try {
       const payload = buildLeadPayload()
       const resp    = await comercialService.leadUpdate({ id: leadIdParam.value, ...payload })
-      if (resp.result === 1)      { toast.success(resp.message || 'Lead eliminado correctamente'); router.push({ name: 'ComercialListado' }) }
+      if (resp.result === 1)      { toast.success(resp.message || 'Lead eliminado correctamente'); router.push({ name: listRouteName }) }
       else if (resp.result === 0) { toast.error(resp.message) }
       else                        { toast.warning(resp.message) }
     } catch (err) { console.error(err); toast.error('Error inesperado al intentar eliminar el lead.') }
@@ -1244,7 +1335,7 @@ export function useLeadForm(options = {}) {
         result = resp.result; message = resp.message
         if (result === 1) { createdLeadId.value = resp.lead_id; createdPersonId.value = resp.person_id }
       }
-      if (result === 1)      { toast.success(message); router.push({ name: 'ComercialListado' }) }
+      if (result === 1)      { toast.success(message); router.push({ name: listRouteName }) }
       else if (result === 0) { toast.error(message) }
       else                   { toast.warning(message) }
     } catch (err) { console.error(err); toast.error('Error inesperado al guardar el lead.') }
@@ -1291,7 +1382,7 @@ export function useLeadForm(options = {}) {
       if (enrollResp.result === 1) {
         toast.success(enrollResp.message)
         inscInitialized.value = false; showViewModal.value = false
-        router.push({ name: 'ComercialListado' })
+        router.push({ name: listRouteName })
       } else if (enrollResp.result === 0) {
         toast.error(`${enrollResp.message} — El lead fue guardado, pero la inscripción no se registró. Inténtalo nuevamente.`, { timeout: 8000 })
       } else {
@@ -1310,6 +1401,7 @@ export function useLeadForm(options = {}) {
     console.log(l)
     Object.assign(form, {
       fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
+      origin_seller_phone:  l.origin_seller_phone ?? sellerPhones.value[0]?.value ?? null,
       query_alias:          l.query_alias ?? null,
       category_alias:       l.cat_program_type_alias || l.category_alias || null,
       program_modality_alias: l.cat_program_modality_alias || l.program_modality_alias || null,
@@ -1512,7 +1604,9 @@ export function useLeadForm(options = {}) {
     montoFinalCalculado, isOnlineProgram, saveBlockReason, minDateForNewAttempt,
     isInstallmentMode, installmentRemainder, autoNumCuotas, autoInstallmentPlan,
     reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
-    showInscriptionButton, isLiderComercial,
+    showInscriptionButton, inscriptionBlockReason, isLiderComercial,
+    sellerPhoneOptions, sellerPhoneLocked,
+    eventCategories, isEventProgram, onEventCategoryChange,
 
     // Services (needed for template fetchers)
     programService, discountService, editionService, b2bService,

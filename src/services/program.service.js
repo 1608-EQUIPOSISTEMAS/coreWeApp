@@ -20,6 +20,15 @@ export default class ProgramService {
     return response.data.items;
   }
 
+  // Categorias de entrada (VIP/GENERAL/PREMIUM/VIRTUAL) con el precio cargado
+  // para esa version de programa. Siempre devuelve las 4.
+  async eventCategoryList(program_version_id) {
+    const response = (await api.post('/program/eventcategorylist', { program_version_id }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data.items;
+  }
+
   async programGet(payload) {
     const response = (await api.post('/program/programget', payload)).data;
     console.log(response.data)

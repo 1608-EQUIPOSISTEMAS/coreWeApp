@@ -1048,6 +1048,36 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   </div>
 </div>
+
+<!-- Categoría de entrada (solo eventos/congresos) -->
+<div v-if="isEventProgram" class="insc-section insc-section--event mb-3">
+  <div class="insc-section-title">
+    <i class="fa-solid fa-ticket me-2 text-primary"></i>
+    Categoría de entrada
+  </div>
+  <div class="row g-2">
+    <div class="col-12">
+      <label class="form-label small mb-1">Categoría <span class="c-red">*</span></label>
+      <SearchSelect
+        v-model="insc.cat_event_category"
+        :items="eventCategories"
+        label-field="description"
+        value-field="cat_event_category"
+        :viewOpen="4"
+        required
+        placeholder="VIP, GENERAL, PREMIUM, VIRTUAL..."
+        class="exec-select-light w-100"
+        @change="onEventCategoryChange"
+      />
+      <div v-if="insc.cat_event_category && !eventCategories.find(c => c.cat_event_category === insc.cat_event_category)?.has_price"
+           class="small mt-1 text-warning">
+        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+        Esta categoría no tiene tarifa cargada para el programa: se mantiene el precio base. Verifica el monto.
+      </div>
+    </div>
+  </div>
+</div>
+
         <div class="insc-price-box">
           <span class="price-label">Precio Base</span>
           <div class="price-amount d-flex align-items-center">
@@ -2016,6 +2046,8 @@ price_profesional_dollars: 0,
   })
 
   const insc = reactive({
+    // Categoria de entrada del evento (VIP/GENERAL/PREMIUM/VIRTUAL).
+    cat_event_category: null,
     dni: '',
     nombres: '',
     apellidos: '',
@@ -3147,6 +3179,7 @@ cat_certificate_status,
 
       // Observaciones y archivos
       observations:         insc.observacions,
+      cat_event_category:   insc.cat_event_category || null,
       student_attachment_url: form.carnet_url || null,
       ticket_payment_urls:  paymentFiles,
       attachments:          generalAttachments
@@ -3646,6 +3679,9 @@ function validateInscriptionClientInfo() {
 const required = ['cat_type_document','document','email','full_name','last_name','mother_last_name','cat_insc_modality', 'cat_certificate_status'] // <-- ACTUALIZADO
   if (!required.every(f => !!insc[f])) return false
   if (!isValidEmail(insc.email)) return false  // ← agrega esto
+  // En un congreso la categoria define la tarifa: sin ella el monto no
+  // corresponde a nada.
+  if (isEventProgram.value && !insc.cat_event_category) return false
   return true
 }
 function validateInscriptionPaymentInfo() {
@@ -3847,6 +3883,39 @@ const calculatedBasePrice = computed(() => {
     : Number(form.price_student_soles   || 0)
 })
 const priceManuallySet = ref(false)
+
+// ── CATEGORIA DE ENTRADA (eventos/congresos) ─────────────────
+// Un congreso se vende por categoria (VIP/GENERAL/PREMIUM/VIRTUAL) y cada una
+// tiene su propia tarifa: al elegirla se pisan los price_* del programa y el
+// watch de calculatedBasePrice recalcula el monto solo.
+const eventCategories = ref([])
+const isEventProgram  = computed(() => form.category_alias === 'we_program_type_event')
+
+async function loadEventCategories () {
+  if (!isEventProgram.value || !form.program_version_id) { eventCategories.value = []; return }
+  try {
+    eventCategories.value = await programService.eventCategoryList(form.program_version_id) || []
+  } catch (err) {
+    console.error('[loadEventCategories]', err)
+    eventCategories.value = []
+  }
+}
+
+function onEventCategoryChange (opcion) {
+  // Sin tarifa propia se conserva el precio del programa: preferible a dejar la
+  // inscripcion en 0 por una categoria sin cargar.
+  if (!opcion?.has_price) return
+  priceManuallySet.value = false
+  form.price_student_soles       = Number(opcion.price_student_soles       || 0)
+  form.price_student_dollars     = Number(opcion.price_student_dollars     || 0)
+  form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
+  form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+}
+
+watch(() => [form.program_version_id, form.category_alias], () => {
+  insc.cat_event_category = null
+  loadEventCategories()
+})
 
 
 watch(calculatedBasePrice, (newPrice) => {

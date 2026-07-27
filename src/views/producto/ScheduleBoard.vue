@@ -27,7 +27,7 @@
 
       <select v-model="lineFilter" class="line-filter">
         <option value="">Todas las líneas</option>
-        <option v-for="l in businessLines" :key="l.id" :value="l.description">{{ l.description }}</option>
+        <option v-for="l in courseLines" :key="l" :value="l">{{ l }}</option>
       </select>
 
       <button type="button" class="refresh" @click="fetchAll" title="Recargar">↻</button>
@@ -35,6 +35,30 @@
 
     <!-- ════ KPIs ════ -->
     <div class="kpis">
+      <!-- inscripciones con su desglose: de qué canal sale cada alumno -->
+      <div class="kpi kpi-canales">
+        <div class="lbl"><span class="dot" style="background:var(--c-orange)"></span>Inscripciones</div>
+        <div class="val">
+          <span v-if="isLoading" class="skel-kpi" style="width:320px"></span>
+          <template v-else>
+            <b class="big">{{ kpiSums.inscritos }}</b>
+            <span class="eq">=</span>
+            <span v-for="(c, i) in AULA_CHANNELS" :key="c.key" class="chit" :title="c.desc">
+              <i v-if="i" class="sep">/</i>
+              <span class="dot" :style="{ background: c.color }"></span>{{ c.title }}<b>{{ kpiSums.ch[c.key] }}</b>
+            </span>
+          </template>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="lbl"><span class="dot" style="background:var(--c-sky)"></span>Programas</div>
+        <div class="val">
+          <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
+          <template v-else><b>{{ kpiSums.count }}</b><span>ediciones</span></template>
+        </div>
+      </div>
+
       <div class="kpi">
         <div class="lbl"><span class="dot" style="background:var(--c-purple)"></span>Ventas vs Objetivo</div>
         <div class="val">
@@ -46,13 +70,7 @@
           </template>
         </div>
       </div>
-      <div v-for="k in kpis" :key="k.label" class="kpi">
-        <div class="lbl"><span class="dot" :style="{ background: k.color }"></span>{{ k.label }}</div>
-        <div class="val">
-          <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
-          <template v-else><b>{{ k.value }}</b><span>{{ k.unit }}</span></template>
-        </div>
-      </div>
+
     </div>
 
     <!-- ════ TABLA ════ -->
@@ -377,7 +395,6 @@ import { ServiceKeys } from '@/services'
 
 const editionService = inject(ServiceKeys.Edition)
 const dashboardService = inject(ServiceKeys.Dashboard)
-const catalog = inject('catalog')
 const toast = useToast()
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -542,7 +559,12 @@ const AULA_CHANNELS = [
     desc: 'Alumnos becados: ocupan asiento pero no facturan, por eso NO suman al total de AULA.' },
 ]
 
-const businessLines = (catalog && catalog.options('we_business_line')) || []
+// Líneas = categoría del programa (BI, Excel, Proyectos, SAP…), NO we_business_line
+// (EN VIVO/ONLINE/FUNDACIÓN/B2B), que el SP del cronograma ni siquiera devuelve.
+// Se arman con lo que trae el mes: así el combo nunca ofrece una línea sin ediciones.
+const courseLines = computed(() =>
+  [...new Set(monthItemsActive.value.map(e => e.program_line_business).filter(Boolean))].sort()
+)
 
 const monthAbbr = computed(() => MABBR[selectedMonth.value - 1].toUpperCase())
 const periodLabel = computed(() => `${months[selectedMonth.value - 1]} ${selectedYear.value}`)
@@ -689,7 +711,14 @@ const displayWeeks = computed(() => filteredWeeks.value
 const kpiSums = computed(() => {
   const all = filteredWeeks.value.flatMap(w => w.items)
   const sum = k => all.reduce((s, e) => s + (e[k] ?? 0), 0)
-  return { count: all.length, ventas: sum('cnt_ventas'), objetivo: sum('meta_vacantes'), aula: sum('cnt_aula') }
+  const ch = Object.fromEntries(AULA_CHANNELS.map(c => [c.key, sum(c.key)]))
+  // Inscripciones = alumnos sentados en el aula, becados incluidos. Ojo: la
+  // columna AULA de la tabla NO suma becas (no facturan), por eso este total
+  // es mayor que la suma de esa columna.
+  return {
+    count: all.length, ventas: sum('cnt_ventas'), objetivo: sum('meta_vacantes'),
+    ch, inscritos: sum('cnt_aula') + ch.cnt_becas,
+  }
 })
 const kpiVsObjetivo = computed(() => {
   const { ventas, objetivo } = kpiSums.value
@@ -699,10 +728,6 @@ const kpiVsObjetivo = computed(() => {
   else if (pct >= 50) color = 'var(--ink)'
   return { ventas, objetivo, pct, color }
 })
-const kpis = computed(() => [
-  { label: 'Programas', value: kpiSums.value.count, unit: 'ediciones', color: 'var(--c-sky)' },
-  { label: 'En aula', value: kpiSums.value.aula, unit: 'inscritos', color: 'var(--c-orange)' },
-])
 
 // ── Resúmenes del mes (sobre TODO el mes, sin filtros de UI). Los A5
 // (cancelados) NUNCA cuentan en Categoría/Líneas/Tipos; solo aparecen en su
@@ -759,7 +784,7 @@ const typeSummary = computed(() => TYPE_DEFS.map(t => ({ ...t, n: countBy(monthI
 const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(monthItems.value, e => e.cat_segment, s.key) })))
 
 // ── Helpers de presentación ──
-function lineLabel(e) { return e.business_line_label || e.program_line_business || '—' }
+function lineLabel(e) { return e.program_line_business || '—' }
 function typeLabel(e) { return e.cat_course_category_label || e.program_type || '—' }
 // Parse local para evitar el corrimiento de un día: "2025-05-21" en local, no UTC.
 function parseLocal(v) {
@@ -866,16 +891,31 @@ onMounted(fetchAll)
 .refresh:hover { background: var(--surface-3); color: var(--ink); }
 
 /* ===== KPIs ===== */
-.kpis { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 8px 14px;
-  display: flex; align-items: baseline; gap: 10px; }
+/* Fila continua: las tarjetas se estiran para tapar el sobrante (flex-grow) en
+   vez de dejarlo como un boquete entre ellas. */
+.kpis { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 13px 16px;
+  display: flex; align-items: baseline; gap: 12px; min-width: 0; flex: 1 1 auto; }
 .kpi .lbl { display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; letter-spacing: .07em; color: var(--ink-3); text-transform: uppercase; }
 .kpi .lbl .dot { width: 7px; height: 7px; border-radius: 50%; }
 .kpi .val { display: flex; align-items: baseline; gap: 6px; margin-left: auto; }
-.kpi .val b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .val b { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .kpi .val span { font-size: 11px; color: var(--ink-3); font-weight: 600; }
 .kpi .val .vs { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-3); }
 .kpi .val .kpct { font-family: var(--font-mono); font-size: 10px; font-weight: 800; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
+
+/* Inscripciones: el total manda y el desglose lo sostiene, separado con "/"
+   para que se lea como una frase. Va primera y no crece: mide su contenido,
+   así el sobrante se lo reparten Programas y Ventas vs Objetivo. */
+.kpi-canales { flex-grow: 0; }
+.kpi-canales .val { flex-wrap: nowrap; gap: 8px; margin-left: 16px; overflow: hidden; }
+.kpi-canales .val .big { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi-canales .val .eq { font-size: 15px; font-weight: 700; color: var(--ink-3); opacity: .5; margin: 0 2px; }
+.kpi-canales .val .chit { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.kpi-canales .val .chit .dot { width: 6px; height: 6px; border-radius: 50%; }
+.kpi-canales .val .chit b { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.kpi-canales .val .chit .sep { font-style: normal; font-weight: 400; font-size: 13px; color: var(--ink-3); opacity: .35; margin-right: 4px; }
 
 /* ===== Tabla ===== */
 .crono-tbl { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);

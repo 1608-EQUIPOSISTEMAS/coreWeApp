@@ -136,7 +136,7 @@
               <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(certificatePayment.amount) }}</span>
             </div>
             <div class="ef-inicial-actions">
-              <span class="ef-cert-badge"><i class="fa-solid" :class="isReasignacion ? 'fa-shuffle' : 'fa-certificate'"></i> {{ isReasignacion ? 'Reasignación' : 'Certificar' }}</span>
+              <span class="ef-cert-badge"><i class="fa-solid" :class="adicionalMeta.icon"></i> {{ adicionalMeta.chip }}</span>
               <a v-if="certificatePayment.evidence_url" :href="certificatePayment.evidence_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
               <span v-else class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
             </div>
@@ -790,10 +790,18 @@ const adicional = reactive({
 })
 const certificatePayment = computed(() => props.detail?.additional_payments?.[0] || null)
 // El nav Adicionales aparece para becados (registran/editan su certificado) o
-// cuando ya existe un pago suelto (ej. reasignacion registrada por sistema).
+// cuando ya existe un pago suelto (reasignacion / diferencia por cambio de curso).
 const showAdicionales = computed(() => isBeca.value || !!certificatePayment.value)
+// Metadatos por tipo de pago adicional (chip, icono y titulo). Default = certificado.
+const ADICIONAL_META = {
+  we_payment_type_reassignment: { chip: 'Reasignación', icon: 'fa-shuffle', label: 'Pago de Reasignación' },
+  we_payment_type_course_change_diff: { chip: 'Cambio de curso', icon: 'fa-right-left', label: 'Pago Diferencia por Cambio de Curso' }
+}
+const adicionalMeta = computed(() =>
+  ADICIONAL_META[certificatePayment.value?.payment_type_alias] ||
+  { chip: 'Certificar', icon: 'fa-certificate', label: 'Pago de Certificado' })
 const isReasignacion = computed(() => certificatePayment.value?.payment_type_alias === 'we_payment_type_reassignment')
-const adicionalLabel = computed(() => (isReasignacion.value ? 'Pago de Reasignación' : 'Pago de Certificado'))
+const adicionalLabel = computed(() => adicionalMeta.value.label)
 const canSaveAdicional = computed(() =>
   Number(adicional.amount) > 0 && adicional.cat_currency && adicional.cat_payment_medium
 )

@@ -44,6 +44,13 @@
         <span class="eh-ic-value">{{ detail.seller_agent_name || enrollment?.seller_agent_name || '---' }}</span>
       </div>
     </div>
+    <div v-if="eventCategory" class="eh-ic">
+      <span class="eh-ic-icon ic-rose"><i class="fa-solid fa-ticket"></i></span>
+      <div>
+        <span class="eh-ic-label">Categoria de entrada</span>
+        <span class="eh-ic-value">{{ eventCategory }}</span>
+      </div>
+    </div>
     <div class="eh-ic">
       <span class="eh-ic-icon ic-amber"><i class="fa-solid fa-calendar-check"></i></span>
       <div>
@@ -84,6 +91,11 @@ const additionalInfo = computed(() => props.enrollment?.additional_info || null)
 // programs). El detalle ya trae el nombre resuelto (membership_program_name).
 const membershipName = computed(() =>
   props.detail?.membership_program_name || props.enrollment?.membership_program_name || null
+)
+// Categoria de entrada (VIP/GENERAL/PREMIUM/VIRTUAL). Solo la traen las
+// inscripciones de eventos/congresos; el resto no muestra la tarjeta.
+const eventCategory = computed(() =>
+  props.detail?.event_category_label || props.enrollment?.event_category_label || null
 )
 const editionStartDate = computed(() =>
   props.detail?.edition_start_date || props.enrollment?.edition_start_date || null
@@ -193,6 +205,7 @@ const editionStartDate = computed(() =>
 .ic-purple { background: #F5F3FF; color: #8B5CF6; }
 .ic-green { background: #F0FDF4; color: #059669; }
 .ic-amber { background: #FFF8EB; color: #D97706; }
+.ic-rose { background: #FFF1F2; color: #E11D48; }
 
 .eh-ic-label {
   display: block;
@@ -282,6 +295,7 @@ const editionStartDate = computed(() =>
 [data-coreui-theme="dark"] .ic-purple { background: rgba(139,92,246,0.16); color: #A78BFA; }
 [data-coreui-theme="dark"] .ic-green { background: rgba(16,185,129,0.16); color: #34D399; }
 [data-coreui-theme="dark"] .ic-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
+[data-coreui-theme="dark"] .ic-rose { background: rgba(225,29,72,0.16); color: #FB7185; }
 
 [data-coreui-theme="dark"] .eh-ic-label { color: #6F6F66; }
 [data-coreui-theme="dark"] .eh-ic-value { color: #F4F4F0; }
