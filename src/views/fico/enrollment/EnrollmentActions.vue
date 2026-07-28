@@ -172,11 +172,12 @@
               </div>
               <div class="eact-field">
                 <label>Nueva edicion</label>
-                <select v-model="ccEditionId" class="eact-select" :disabled="!ccProgramVersionId || ccLoadingEditions || ccIsMembershipDest" @change="onCCEditionChange">
-                  <option :value="null" disabled>{{ ccLoadingEditions ? 'Cargando...' : (ccIsMembershipDest ? 'No aplica (membresia)' : 'Seleccionar edicion...') }}</option>
+                <select v-model="ccEditionId" class="eact-select" :disabled="!ccProgramVersionId || ccLoadingEditions || ccNoEdition" @change="onCCEditionChange">
+                  <option :value="null" disabled>{{ ccLoadingEditions ? 'Cargando...' : (ccNoEdition ? 'No aplica' : 'Seleccionar edicion...') }}</option>
                   <option v-for="ed in ccEditionsList" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                 </select>
                 <small v-if="ccIsMembershipDest" class="eact-price-hint">Las membresias no tienen edicion; se activan por fecha de membresia.</small>
+                <small v-else-if="ccNoEdition" class="eact-price-hint">Este programa no tiene ediciones publicadas; el destino se crea sin edicion.</small>
               </div>
             </div>
             <div class="eact-grid-3" style="margin-top:12px">
@@ -732,6 +733,13 @@ const ccLoadingEditions = ref(false)
 // Las membresias (WE PLUS/GOLD/PLAT/BLACK) no tienen ediciones: cuando el
 // programa destino es membresia, la edicion no aplica y no debe bloquear el paso.
 const ccIsMembershipDest = ref(false)
+// Tampoco aplica edicion cuando el programa destino no tiene ediciones publicadas
+// (cursos online que se dictan on-demand): el destino se crea con
+// program_edition_id null, igual que una membresia.
+const ccNoEdition = computed(() =>
+  ccIsMembershipDest.value ||
+  (!!ccProgramVersionId.value && !ccLoadingEditions.value && ccEditionsList.value.length === 0)
+)
 
 const ccForm = reactive({
   cat_currency: null,
@@ -767,7 +775,7 @@ const ccEditionFinalPrice = computed(() => {
 const ccDiferencia = computed(() => Math.max(0, ccEditionFinalPrice.value - ccPagado.value))
 const canAdvanceCC = computed(() =>
   !!ccProgramVersionId.value &&
-  (ccIsMembershipDest.value || !!ccEditionId.value) &&
+  (ccNoEdition.value || !!ccEditionId.value) &&
   !!ccJustificacion.value.trim()
 )
 
@@ -831,8 +839,8 @@ async function handleCourseChangeConfirm () {
     await ficoService.courseChange({
       enrollment_id: enrollmentId.value,
       new_program_version_id: ccProgramVersionId.value,
-      // Membresia: sin edicion (program_edition_id null en destino).
-      new_edition_id: ccIsMembershipDest.value ? null : ccEditionId.value,
+      // Membresia o programa sin ediciones: program_edition_id null en destino.
+      new_edition_id: ccNoEdition.value ? null : ccEditionId.value,
       total_amount: ccTotalAmount.value,
       justificacion: ccJustificacion.value.trim(),
       cat_currency: ccForm.cat_currency,

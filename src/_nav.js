@@ -215,6 +215,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Eventos',
+        to: '/fundacion/eventos',
+        submodule: 'EVENTOS',
+        roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Objetivos',
         to: '/fundacion/objetivos',
         submodule: 'OBJETIVOS',

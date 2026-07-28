@@ -728,7 +728,10 @@ async function handleConfirmPayment (sapCreds = {}) {
       goBack()
       return
     }
-    toast.success('Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
+    // Un congreso no se inscribe en Odoo: el backend lo omite y lo avisa aqui.
+    toast.success(resp?.odoo_skipped
+      ? 'Pago registrado. Evento: no se inscribe en Odoo, solo se envia el correo.'
+      : 'Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
     try {
       const emailResult = await ficoService.sendConfirmationEmail(eid, sapCreds)
       if (emailResult?.success) {
@@ -834,7 +837,9 @@ async function handleConfirmPlan (sapCreds = {}) {
       goBack()
       return
     }
-    toast.success('Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
+    toast.success(resp?.odoo_skipped
+      ? 'Plan de cuotas confirmado. Evento: no se inscribe en Odoo, solo se envia el correo.'
+      : 'Plan de cuotas confirmado e inscripcion en Odoo completada.', { timeout: 4000 })
     const emailResult = await ficoService.sendConfirmationEmail(eid, sapCreds)
     if (emailResult?.success) {
       toast.info('Correo de confirmacion enviado al estudiante.', { timeout: 4000 })

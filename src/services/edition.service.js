@@ -232,4 +232,55 @@ export default class EditionService {
     return response.data
   }
 
+  // Ediciones de evento para el selector del modulo de Fundacion.
+  async eventEditionsList(q = null) {
+    const response = (await api.post('/edition/eventeditionslist', { q }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data.items || [];
+  }
+
+  // Recursos del correo de evento por edicion (banner, formularios, detalle de
+  // sesiones). Endpoints propios con SQL directo: sp_edition_update no conoce
+  // estas columnas.
+  async eventResourcesGet(edition_num_id) {
+    const response = (await api.post('/edition/eventresourcesget', { edition_num_id }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+  // Banner como data URI, solo para previsualizarlo en el modal. Los bytes no
+  // viajan en eventResourcesGet: pesan y el modal casi nunca los necesita.
+  async eventBannerGet(edition_num_id) {
+    const response = (await api.post('/edition/eventbannerget', { edition_num_id }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+  async eventResourcesSave(payload) {
+    const response = (await api.post('/edition/eventresourcessave', payload, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+  // Categorias de entrada del evento (cuales se venden, su tarifa y su grupo de
+  // WhatsApp). Cuelgan de program_version_id, pero se piden por edicion: el
+  // backend traduce.
+  async eventCategoriesGet(edition_num_id) {
+    const response = (await api.post('/edition/eventcategoriesget', { edition_num_id }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+  async eventCategoriesSave(payload) {
+    const response = (await api.post('/edition/eventcategoriessave', payload, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
 }

@@ -513,6 +513,12 @@ const routes = [
           props: true,
         },
         {
+          path: 'eventos',
+          name: 'FundacionEventos',
+          component: () => import('@/views/fundacion/Eventos.vue'),
+          meta: { submodule: 'EVENTOS', roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'] },
+        },
+        {
           path: 'objetivos',
           name: 'FundacionObjetivos',
           component: () => import('@/views/fundacion/Objetivos.vue'),
