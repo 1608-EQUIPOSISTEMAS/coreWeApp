@@ -597,10 +597,18 @@ const rpPlan = ref([])
 // Cuotas realmente pendientes del origen: excluye pagadas (ambos namespaces),
 // anuladas (4456) y las que ya tienen un pago activo aunque sigan "pendiente
 // verificacion" (ese dinero queda en el origen RP). Mismo filtro que el backend.
+//
+// sp_fico_payment_detail_get NO devuelve cat_status, solo status_alias: el filtro
+// numerico solo nunca descartaba nada. Por eso un SEG (hijo de paquete, cuota
+// unica de S/0 ya pagada) mostraba un plan de cuotas imposible de cuadrar —
+// exige montos > 0 que sumen 0 — y dejaba "Siguiente" deshabilitado para siempre.
+const PAID_ALIASES = ['we_inst_paid', 'we_payment_status_paid']
 const rpPendingCuotas = computed(() => {
   const conPago = new Set((props.detail?.payment_history || []).map(p => p.installment_id))
   return (props.detail?.installments || []).filter(i =>
     i.installment_number > 0 &&
+    Number(i.amount) > 0 &&
+    !PAID_ALIASES.includes(i.status_alias) &&
     ![4454, 2471, 4456].includes(Number(i.cat_status)) &&
     !conPago.has(i.installment_id)
   )
