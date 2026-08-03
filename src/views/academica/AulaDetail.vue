@@ -156,11 +156,17 @@ async function loadStudents() {
 }
 
 // =====================================================================
-// HISTORIAL: alumnos que estuvieron en el aula pero ya no estan en la lista
-// (retiros, cambios de curso, reprogramaciones, bajas). null = aun no cargado.
+// HISTORIAL: alumnos que NO figuran en la lista activa. null = aun no cargado.
 // =====================================================================
+// Trae DOS grupos: `left` (retiros/CC/RP/bajas) y `validated`
+// (convalidados: compraron el paquete padre pero ya llevaron este curso antes,
+// asi que nunca van a asistir). Se carga en onMounted, no al abrir el tab,
+// porque la cabecera necesita el contador de convalidados desde el inicio.
 const history = ref(null)
 const isLoadingHistory = ref(false)
+
+const historyLeft = computed(() => history.value?.left || [])
+const historyValidated = computed(() => history.value?.validated || [])
 
 async function loadHistory() {
   isLoadingHistory.value = true
@@ -169,29 +175,54 @@ async function loadHistory() {
   } catch (err) {
     console.error('Error cargando historial:', err)
     toast.error('Error cargando el historial del aula')
-    history.value = []
+    history.value = { left: [], validated: [] }
   } finally {
     isLoadingHistory.value = false
   }
 }
 
-// Motivo de salida legible. Prioriza el estado de tipo (retiro/cambio/etc);
-// luego baja manual; luego FICO no confirmado.
-const HISTORY_REASON = {
-  we_enrollment_status_retired: { label: 'Retirado', cls: 'hb-ret' },
-  we_enrollment_status_course_changed: { label: 'Cambio de curso', cls: 'hb-cc' },
-  we_enrollment_status_reprogrammed: { label: 'Reprogramado', cls: 'hb-rp' },
-  we_enrollment_status_observed: { label: 'Observado', cls: 'hb-obs' },
+// "E9-26 · 21 may - 25 jun 26": donde el convalidado SI llevo el curso.
+function validatedPrevLabel(v) {
+  if (!v.prev_edition_code && !v.prev_start_date) return null
+  const rango = [v.prev_start_date, v.prev_end_date].filter(Boolean).map(formatDate).join(' - ')
+  return [v.prev_edition_code, rango].filter(Boolean).join(' · ')
 }
+
+// Motivo de salida legible + la tarjeta en la que cae. Prioriza el estado de
+// tipo (retiro/cambio/etc); luego baja manual; luego FICO no confirmado.
+// `title` es el titulo de la tarjeta (plural) y `label` el badge de la fila.
+const HISTORY_REASON = {
+  we_enrollment_status_retired:        { key: 'ret',  label: 'Retirado',        title: 'Retirados',          icon: 'fa-user-xmark',           cls: 'hb-ret' },
+  we_enrollment_status_course_changed: { key: 'cc',   label: 'Cambio de curso', title: 'Cambios de curso',   icon: 'fa-right-left',           cls: 'hb-cc' },
+  we_enrollment_status_reprogrammed:   { key: 'rp',   label: 'Reprogramado',    title: 'Reprogramados',      icon: 'fa-calendar-day',         cls: 'hb-rp' },
+  we_enrollment_status_observed:       { key: 'obs',  label: 'Observado',       title: 'Observados',         icon: 'fa-triangle-exclamation', cls: 'hb-obs' },
+}
+const HISTORY_BAJA = { key: 'baja', label: 'Dado de baja', title: 'Dados de baja', icon: 'fa-ban', cls: 'hb-baja' }
+const HISTORY_FICO = { key: 'fico', title: 'FICO no confirmado', icon: 'fa-hourglass-half', cls: 'hb-fico' }
+const HISTORY_OTRO = { key: 'otro', title: 'Otros', icon: 'fa-circle-question', cls: 'hb-otro' }
+
 function historyReason(h) {
   const m = HISTORY_REASON[h.type_status_alias]
   if (m) return m
-  if (h.active === 'N') return { label: 'Dado de baja', cls: 'hb-baja' }
+  if (h.active === 'N') return HISTORY_BAJA
   if (h.fico_status_alias !== 'we_enrollment_status_checked') {
-    return { label: h.fico_status_label || 'FICO no confirmado', cls: 'hb-fico' }
+    return { ...HISTORY_FICO, label: h.fico_status_label || 'FICO no confirmado' }
   }
-  return { label: h.type_status_label || '--', cls: 'hb-otro' }
+  return { ...HISTORY_OTRO, label: h.type_status_label || '--' }
 }
+
+// Una tarjeta por motivo, en orden fijo: primero las salidas reales, al final
+// los casos de datos. Solo se emiten las que tienen filas.
+const HISTORY_CARD_ORDER = ['ret', 'rp', 'cc', 'obs', 'baja', 'fico', 'otro']
+const historyGroups = computed(() => {
+  const buckets = new Map()
+  for (const h of historyLeft.value) {
+    const r = historyReason(h)
+    if (!buckets.has(r.key)) buckets.set(r.key, { ...r, rows: [] })
+    buckets.get(r.key).rows.push(h)
+  }
+  return HISTORY_CARD_ORDER.map((k) => buckets.get(k)).filter(Boolean)
+})
 
 // Reglas de calculo (espejo de GRADE_RULES en Backend edition.entity.js; al
 // guardar, el backend recalcula los totales y es la fuente de verdad).
@@ -1592,6 +1623,8 @@ onMounted(async () => {
   await loadAula()
   loadStudents()
   loadGrades()
+  // El contador de convalidados vive en la cabecera, no solo en el tab.
+  loadHistory()
   // Si el deeplink trae ?tab=general o ?tab=auditoria, precargamos el audit
   // para que la vista no quede vacia esperando al primer click.
   if (activeTab.value === 'auditoria' || activeTab.value === 'general') {
@@ -1646,6 +1679,16 @@ onMounted(async () => {
             <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
             <template v-else>{{ students.length }}</template>
           </div>
+          <!-- El aula cuenta uno menos que las ventas del paquete padre cuando
+               hay convalidados. Se avisa aqui para que no parezca un descuadre. -->
+          <button
+            v-if="historyValidated.length"
+            class="hk-sub"
+            title="Compraron el paquete pero ya llevaron este curso. Ver detalle en Historial."
+            @click="switchTab('historial')"
+          >
+            +{{ historyValidated.length }} convalidado{{ historyValidated.length > 1 ? 's' : '' }}
+          </button>
         </div>
         <div class="hk">
           <div class="hk-label">Aprobados</div>
@@ -2093,44 +2136,109 @@ onMounted(async () => {
       <div v-if="isLoadingHistory" class="state-msg muted">
         <i class="fa-solid fa-spinner fa-spin"></i> Cargando historial...
       </div>
-      <div v-else-if="!history || !history.length" class="state-msg muted">
+      <div v-else-if="!historyLeft.length && !historyValidated.length" class="state-msg muted">
         <i class="fa-regular fa-folder-open"></i>
         Sin movimientos: ningun alumno se ha retirado o cambiado de este aula.
       </div>
       <div v-else class="hist-wrap">
-        <p class="hist-note">
-          Alumnos que estuvieron matriculados en esta aula pero ya no figuran en la
-          lista activa (retiros, cambios de curso, reprogramaciones, bajas).
-        </p>
-        <table class="hist-table">
-          <thead>
-            <tr>
-              <th>Alumno</th>
-              <th>DNI</th>
-              <th>Motivo</th>
-              <th>Matriculado</th>
-              <th>Fecha de salida</th>
-              <th>Realizado por</th>
-              <th>Justificacion</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="h in history" :key="h.enrollment_id">
-              <td>
-                <div class="hist-name">
-                  <span class="avatar">{{ initialsOf(h.full_name) }}</span>
-                  {{ apellidosNombres(h) }}
-                </div>
-              </td>
-              <td>{{ h.dni || '--' }}</td>
-              <td><span class="hist-badge" :class="historyReason(h).cls">{{ historyReason(h).label }}</span></td>
-              <td>{{ formatDate(h.enrolled_on) }}</td>
-              <td>{{ formatDateTime(h.left_at) }}</td>
-              <td>{{ h.performed_by || '--' }}</td>
-              <td class="hist-just">{{ h.justificacion || '--' }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- CONVALIDADOS: nunca estuvieron y nunca van a estar. Bloque propio
+             porque no tienen "fecha de salida" ni "motivo": la tabla de abajo
+             los mostraria con todo en "--" y se leeria como dato faltante. -->
+        <section v-if="historyValidated.length" class="hist-card">
+          <header class="hist-head">
+            <span class="hist-ic hb-conv"><i class="fa-solid fa-award"></i></span>
+            <h3 class="hist-title">Convalidados</h3>
+            <span class="hist-count">{{ historyValidated.length }}</span>
+          </header>
+          <!-- Mismo armazon que la Lista de Notas (att-matrix-scroll/att-matrix):
+               se reusan sus clases en vez de copiar el CSS, asi las dos tablas no
+               pueden divergir. hist-matrix solo alinea a la izquierda el texto. -->
+          <div class="att-matrix-scroll">
+            <table class="att-matrix hist-matrix">
+              <thead>
+                <tr>
+                  <th class="sticky-c1">Alumno</th>
+                  <th>Paquete</th>
+                  <th>Ya lo llevo en</th>
+                  <th>Convalidado el</th>
+                  <th>Asesor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="v in historyValidated" :key="'v' + v.validation_id">
+                  <td class="sticky-c1">
+                    <div class="student-name-cell">
+                      <span class="av-sm">{{ initialsOf(v.full_name) }}</span>
+                      <div>
+                        <div class="sn-name" :title="apellidosNombres(v)">
+                          {{ apellidosNombres(v) }}
+                          <span class="hist-badge hb-conv">Convalidado</span>
+                        </div>
+                        <div class="sn-handle">{{ v.dni || 'Sin DNI' }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ [v.parent_program_name, v.parent_edition_code].filter(Boolean).join(' ') || '--' }}</td>
+                  <!-- Sin matricula previa no es un error: la convalidacion puede
+                       venir de otra institucion o de experiencia. Se marca en ambar
+                       en vez de inventar una edicion. -->
+                  <td
+                    :class="{ 'hist-warn': !validatedPrevLabel(v) }"
+                    :title="validatedPrevLabel(v) ? '' : 'La convalidacion no apunta a ninguna matricula del ERP (otra institucion o experiencia).'"
+                  >
+                    {{ validatedPrevLabel(v) || 'Sin matricula previa en el ERP' }}
+                  </td>
+                  <td>{{ formatDate(v.validated_at) }}</td>
+                  <td class="mono">{{ v.agent_code || '--' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Una tarjeta por motivo (Retirados, Reprogramados, ...). El titulo de
+             la tarjeta ya dice el motivo, asi que no hay columna "Motivo": el
+             badge de la fila solo se conserva para los casos cuyo texto varia. -->
+        <section v-for="g in historyGroups" :key="g.key" class="hist-card">
+          <header class="hist-head">
+            <span class="hist-ic" :class="g.cls"><i class="fa-solid" :class="g.icon"></i></span>
+            <h3 class="hist-title">{{ g.title }}</h3>
+            <span class="hist-count">{{ g.rows.length }}</span>
+          </header>
+          <div class="att-matrix-scroll">
+            <table class="att-matrix hist-matrix">
+              <thead>
+                <tr>
+                  <th class="sticky-c1">Alumno</th>
+                  <th>Matriculado</th>
+                  <th>Fecha de salida</th>
+                  <th>Realizado por</th>
+                  <th>Justificacion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="h in g.rows" :key="h.enrollment_id">
+                  <td class="sticky-c1">
+                    <div class="student-name-cell">
+                      <span class="av-sm">{{ initialsOf(h.full_name) }}</span>
+                      <div>
+                        <div class="sn-name" :title="apellidosNombres(h)">
+                          {{ apellidosNombres(h) }}
+                          <span class="hist-badge" :class="g.cls">{{ historyReason(h).label }}</span>
+                        </div>
+                        <div class="sn-handle">{{ h.dni || 'Sin DNI' }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ formatDate(h.enrolled_on) }}</td>
+                  <td>{{ formatDateTime(h.left_at) }}</td>
+                  <td>{{ h.performed_by || '--' }}</td>
+                  <td class="hist-just">{{ h.justificacion || '--' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -2931,23 +3039,36 @@ onMounted(async () => {
 .tb-laptop i { margin-right: 2px; font-size: 9px; color: #0891B2; }
 
 /* HISTORIAL */
-.hist-wrap { padding: 4px 2px; }
-.hist-note { font-size: 12.5px; color: var(--ink-3); margin: 0 0 14px; }
-.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.hist-table th {
-  text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600;
-  color: var(--ink-3); text-transform: uppercase; letter-spacing: .3px;
+.hist-wrap { display: grid; gap: 16px; padding: 4px 2px; }
+.hist-card {
+  background: white; border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+}
+/* La tabla ya vive dentro de la tarjeta: pierde su borde y su radio propios. */
+.hist-card .att-matrix-scroll {
+  border: 0; border-radius: 0; background: transparent; max-height: 60vh;
+}
+.hist-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px; background: var(--bg-soft);
   border-bottom: 1px solid var(--line);
 }
-.hist-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.hist-table tbody tr:hover { background: var(--slate-soft); }
-.hist-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
-.hist-name .avatar {
-  width: 26px; height: 26px; border-radius: 50%; background: var(--slate-soft);
-  color: var(--slate-ink); display: inline-flex; align-items: center;
-  justify-content: center; font-size: 10px; font-weight: 700; flex: 0 0 auto;
+/* Reusa los colores de los badges (hb-*) para el icono de la tarjeta. */
+.hist-ic {
+  width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto;
+  display: grid; place-items: center; font-size: 11px;
 }
-.hist-just { color: var(--ink-3); max-width: 260px; }
+/* Variante de .att-matrix para tablas de texto: solo cambia la alineacion.
+   Todo lo demas (tarjeta, banda de cabecera, densidad, hover) se hereda. */
+.hist-matrix thead th,
+.hist-matrix td { text-align: left; }
+/* sticky-c1 se ancla a 38px por la columna N° de Notas, que aqui no existe. */
+.hist-matrix .sticky-c1 { left: 0; }
+.hist-matrix .sn-name { white-space: normal; }
+.hist-just {
+  color: var(--ink-3); max-width: 280px;
+  white-space: normal; /* .att-matrix pone nowrap: la justificacion es texto largo */
+}
 .hist-badge {
   display: inline-block; padding: 2px 8px; border-radius: 4px;
   font-size: 11px; font-weight: 600;
@@ -2959,6 +3080,27 @@ onMounted(async () => {
 .hb-baja { background: #F3F4F6; color: #4B5563; }
 .hb-fico { background: var(--amber-soft); color: var(--amber-ink); }
 .hb-otro { background: var(--slate-soft); color: var(--slate-ink); }
+/* Convalidado: violeta, para que no se confunda con ninguna salida del aula. */
+.hb-conv { background: #EDE9FE; color: #6D28D9; }
+
+.hist-title {
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+  text-transform: uppercase; letter-spacing: .05em; margin: 0;
+}
+.hist-count {
+  margin-left: auto; min-width: 22px; padding: 2px 9px; border-radius: 10px;
+  background: white; border: 1px solid var(--line); color: var(--ink-3);
+  font-size: 11px; font-weight: 600; text-align: center;
+}
+.hist-warn { color: var(--amber-ink); }
+
+/* Aviso de convalidados en la cabecera, bajo el KPI de Alumnos. */
+.hk-sub {
+  margin-top: 2px; padding: 0; border: 0; background: none;
+  font-size: 11px; font-weight: 600; color: #6D28D9;
+  cursor: pointer; text-decoration: underline dotted;
+}
+.hk-sub:hover { color: #4C1D95; }
 
 .td-att { padding: 3px 4px !important; text-align: center; }
 .td-part { padding: 3px 4px !important; text-align: center; }
@@ -3409,6 +3551,9 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop .sticky-c1 { background: #1B2536 !important; }
 [data-coreui-theme="dark"] .aula-detail .deliv-subrow > td { background: #1F1F1A; }
 [data-coreui-theme="dark"] .aula-detail .summary-card { background: #1A1A14; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .aula-detail .hist-card { background: #1A1A14; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .aula-detail .hist-head { background: #1F1F1A; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .aula-detail .hist-count { background: #14140F; border-color: #3A3A33; }
 [data-coreui-theme="dark"] .aula-detail .obs-textarea,
 [data-coreui-theme="dark"] .aula-detail .btn-xs { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
 [data-coreui-theme="dark"] .aula-detail .obs-textarea.ia-draft { background: #221F12; }

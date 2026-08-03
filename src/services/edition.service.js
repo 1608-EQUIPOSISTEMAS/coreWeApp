@@ -74,11 +74,13 @@ export default class EditionService {
     return response.data || []
   }
 
+  // { left: [...salieron del aula], validated: [...convalidados, nunca asisten] }
   async classroomStudentsHistory(payload) {
     const response = (await api.post('/edition/classroomstudentshistory', payload, {
       meta: { skipLoader: true }
     })).data
-    return response.data || []
+    const d = response.data || {}
+    return { left: d.left || [], validated: d.validated || [] }
   }
 
   async classroomAuditGet(payload) {

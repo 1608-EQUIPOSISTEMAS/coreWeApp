@@ -1482,7 +1482,7 @@ export function useLeadForm(options = {}) {
       } else {
         toast.error(resp?.message || 'No se pudo crear el token de pago.')
       }
-    } catch (err) { console.error(err); toast.error('Error inesperado al crear el token de pago.') }
+    } catch (err) { console.error(err); toast.error(err?.response?.data?.message || 'Error inesperado al crear el token de pago.') }
     finally { savingInsc.value = false }
   }
 
