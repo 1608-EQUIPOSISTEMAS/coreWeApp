@@ -28,6 +28,7 @@ export function useLeadForm(options = {}) {
   const discountService  = inject(ServiceKeys.Discount)
   const editionService   = inject(ServiceKeys.Edition)
   const b2bService       = inject(ServiceKeys.B2b)
+  const ficoService      = inject(ServiceKeys.Fico)
   const catalog          = inject('catalog')
 
   // ── USUARIO LOCAL ────────────────────────────────────────────
@@ -337,6 +338,7 @@ export function useLeadForm(options = {}) {
     attachments: [],
     cat_payment_channel: null,
     cat_token_provider: null,
+    token_payment_type: '',
     agreement_id: null,
   })
 
@@ -460,12 +462,19 @@ export function useLeadForm(options = {}) {
   function onEventCategoryChange (opcion) {
     // Sin tarifa propia se conserva el precio del programa: es preferible a
     // dejar la inscripcion en 0 por una categoria sin cargar.
-    if (!opcion?.has_price) return
-    priceManuallySet.value = false
-    form.price_student_soles       = Number(opcion.price_student_soles       || 0)
-    form.price_student_dollars     = Number(opcion.price_student_dollars     || 0)
-    form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
-    form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+    if (opcion?.has_price) {
+      priceManuallySet.value = false
+      form.price_student_soles       = Number(opcion.price_student_soles       || 0)
+      form.price_student_dollars     = Number(opcion.price_student_dollars     || 0)
+      form.price_profesional_soles   = Number(opcion.price_profesional_soles   || 0)
+      form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+    }
+    // Aca si corresponde avisar: ya hay categoria elegida y aun asi no hay tarifa.
+    nextTick(() => {
+      if (!calculatedBasePrice.value) {
+        toast.warning('⚠️ La categoría seleccionada no tiene Precio Base configurado. Revísala en el programa.', { timeout: 7000, position: 'bottom-right' })
+      }
+    })
   }
 
   watch(() => [form.program_version_id, form.category_alias], () => {
@@ -516,6 +525,18 @@ export function useLeadForm(options = {}) {
     !form.enrollment_id &&
     form.status_alias === 'we_lead_status_bought' &&
     !!form.pay_date &&
+    form.client_status === 'we_client_person' &&
+    !!form.program_version_id
+  )
+
+  // ── TOKEN (link de pago) ─────────────────────────────────────
+  // Mismo boton que comercial: status "Pagará" + persona + programa. A diferencia
+  // de INSCRIBIR no exige F. Pago (justamente todavia no pago).
+  const isTokenMode = ref(false)
+  const showTokenButton = computed(() =>
+    showInscription &&
+    !form.enrollment_id &&
+    form.status_alias === 'we_lead_status_will_pay' &&
     form.client_status === 'we_client_person' &&
     !!form.program_version_id
   )
@@ -1164,13 +1185,16 @@ export function useLeadForm(options = {}) {
       montoBeneficioTotal: 0, dsct_porcent_label: null, dsct_stick_label: null, dsct_benefit_label: null,
       montoDescuentoPorcentaje: 0, montoDescuentoFijo: 0, montoBeneficio: 0, montoFinal: 0, total_amount: 0,
       observacions: '', ticket_payment_urls: [], attachments: [], flag_agreement: false, b2b_contract_id: null,
-      cat_payment_channel: null, cat_token_provider: null,
+      cat_payment_channel: null, cat_token_provider: null, token_payment_type: '',
     })
     voucherTouched.value = false
     form.carnet_url = null
   }
 
-  function openInscription() {
+  function openTokenInscription() { openInscription(true) }
+
+  function openInscription(tokenMode = false) {
+    isTokenMode.value = tokenMode === true
     if (!inscInitialized.value) {
       resetInscriptionData()
       insc.full_name             = form.full_name || ''
@@ -1179,15 +1203,24 @@ export function useLeadForm(options = {}) {
       insc.selectedCurrencyAlias = 'we_currency_soles'
       insc.cat_type_payment      = 'we_payment_way_single'
       insc.cat_certificate_status = 'we_certificate_status_paid'
-      const generalChannel = paymentChannelCatalog.value.find(c => c.alias === 'we_channel_general')
-      if (generalChannel) insc.cat_payment_channel = generalChannel.id
       inscInitialized.value = true
     }
+    // El canal se fija en cada apertura: si no, abrir TOKEN y despues INSCRIBIR
+    // (o al reves) deja el canal del intento anterior.
+    const channelAliasWanted = isTokenMode.value ? 'we_channel_token' : 'we_channel_general'
+    const channel = paymentChannelCatalog.value.find(c => c.alias === channelAliasWanted)
+    if (channel) insc.cat_payment_channel = channel.id
     nextTick(() => {
       if (!priceManuallySet.value) {
         const precio = calculatedBasePrice.value
         insc.montoOriginal = precio
-        if (!precio) toast.warning('⚠️ No se pudo cargar el Precio Base. Verifique que el programa tenga precios configurados.', { timeout: 7000 })
+        // En eventos el precio lo define la categoria de entrada: al abrir el
+        // modal todavia no hay categoria elegida, asi que 0 es lo esperado y no
+        // un error. El aviso se da recien al elegir categoria (onEventCategoryChange).
+        const esperaCategoria = isEventProgram.value && !insc.cat_event_category
+        if (!precio && !esperaCategoria) {
+          toast.warning('⚠️ No se pudo cargar el Precio Base. Verifique que el programa tenga precios configurados.', { timeout: 7000, position: 'bottom-right' })
+        }
       }
       showViewModal.value = true
     })
@@ -1389,6 +1422,67 @@ export function useLeadForm(options = {}) {
         toast.warning(enrollResp.message)
       }
     } catch (err) { console.error(err); toast.error('Error inesperado al procesar la inscripción.') }
+    finally { savingInsc.value = false }
+  }
+
+  async function confirmarToken() {
+    if (!comercialService || !ficoService) return console.error('comercialService/ficoService no inyectado')
+    if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) { toast.warning('El Precio Base no está configurado.'); return }
+    if (!validateInscriptionClientInfo()) { toast.warning('Complete los campos obligatorios de la inscripción'); return }
+    if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) { toast.warning('Faltan datos obligatorios en el formulario del Lead.'); return }
+    if (!insc.token_payment_type) { toast.warning('Debe seleccionar el tipo de pago (Débito/Crédito).'); return }
+
+    savingInsc.value = true
+    try {
+      const leadPayload   = buildLeadPayload()
+      const currentLeadId = leadIdParam.value || createdLeadId.value
+      let   resolvedLeadId = currentLeadId
+
+      if (currentLeadId) {
+        const leadResp = await comercialService.leadUpdate({ id: currentLeadId, ...leadPayload })
+        if (leadResp.result === 0) { toast.error(leadResp.message);   return }
+        if (leadResp.result === 2) { toast.warning(leadResp.message); return }
+      } else {
+        const leadResp = await comercialService.leadRegister(leadPayload)
+        if (leadResp.result === 0) { toast.error(leadResp.message);   return }
+        if (leadResp.result === 2) { toast.warning(leadResp.message); return }
+        resolvedLeadId        = leadResp.lead_id
+        createdLeadId.value   = resolvedLeadId
+        createdPersonId.value = leadResp.person_id
+      }
+
+      const enrollmentPayload = buildEnrollmentPayload()
+      enrollmentPayload.inscription.lead_id = resolvedLeadId
+
+      // El monto del link es lo que el alumno paga AHORA: en cuotas eso es solo
+      // la inicial (saved_money), no el total.
+      const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
+      const tokenAmount = isInstallments
+        ? (Number(insc.saved_money) || 0)
+        : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
+
+      const resp = await ficoService.tokenCreate({
+        lead_id:      resolvedLeadId,
+        cat_provider: null,
+        payment_type: insc.token_payment_type || null,
+        amount:       tokenAmount,
+        currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
+        notes:        `Link para ${form.full_name || '---'}`,
+        advisor_observation: insc.observacions || null,
+        cat_payment_channel: insc.cat_payment_channel || null,
+        inscription_data:    enrollmentPayload
+      })
+
+      if (resp?.token_id || resp?.data?.token_id) {
+        toast.success('Token de pago creado correctamente.')
+        isTokenMode.value     = false
+        inscInitialized.value = false
+        showViewModal.value   = false
+        router.push({ name: listRouteName })
+      } else {
+        toast.error(resp?.message || 'No se pudo crear el token de pago.')
+      }
+    } catch (err) { console.error(err); toast.error('Error inesperado al crear el token de pago.') }
     finally { savingInsc.value = false }
   }
 
@@ -1605,6 +1699,7 @@ export function useLeadForm(options = {}) {
     isInstallmentMode, installmentRemainder, autoNumCuotas, autoInstallmentPlan,
     reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
     showInscriptionButton, inscriptionBlockReason, isLiderComercial,
+    isTokenMode, showTokenButton,
     sellerPhoneOptions, sellerPhoneLocked,
     eventCategories, isEventProgram, onEventCategoryChange,
 
@@ -1619,7 +1714,7 @@ export function useLeadForm(options = {}) {
 
     // Functions
     cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
-    openInscription, resetInscriptionData,
+    openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
     addContacto, removeContacto, toggleTimer, handleTypeChange,
     handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,
     onProgramaTypeChange, onProgramaChange, onEditionChange, searchEditionsFiltered,

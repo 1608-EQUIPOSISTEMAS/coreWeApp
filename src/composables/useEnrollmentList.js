@@ -102,11 +102,15 @@ export function useEnrollmentList () {
 
     if (edRes.status === 'fulfilled') {
       const ed = edRes.value
-      allEditions.value = (ed?.items || []).map(e => ({
-        id: e.edition_num_id,
-        description: `${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`,
-        program_version_id: e.program_version_id
-      }))
+      // active:'Y' no basta: una edicion cancelada sigue activa pero con
+      // segmento A5. sp_edition_list ya devuelve la etiqueta calculada.
+      allEditions.value = (ed?.items || [])
+        .filter(e => String(e.cat_segment || '').toUpperCase().trim() !== 'A5')
+        .map(e => ({
+          id: e.edition_num_id,
+          description: `${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`,
+          program_version_id: e.program_version_id
+        }))
     } else {
       console.error('[useEnrollmentList] Error cargando editions:', edRes.reason)
     }

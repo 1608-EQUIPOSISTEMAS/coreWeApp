@@ -753,7 +753,25 @@ const balance = computed(() => props.enrollment ? fmt.calcSaldo(props.enrollment
 const voucher = computed(() => props.enrollment?.payment_vouchers || null)
 const isContado = computed(() => props.enrollment ? fmt.isContado(props.enrollment) : true)
 
+// Detalle de descuentos. detail.discounts trae value y calculated_amount por
+// separado, que es lo que hace falta para los promos "Monto fijo": ahi el value
+// es el precio FINAL al que queda el curso, no lo descontado (PROMO FLASH 450
+// con value 150 sobre lista 820 descuenta 670). El texto plano del Sheet
+// (main_discount) mezcla ambos, asi que solo se usa como fallback.
 const discountLines = computed(() => {
+  const rows = props.detail?.discounts
+  if (rows?.length) {
+    return rows.map(d => {
+      const monto = `- S/. ${fmt.formatMoney(d.calculated_amount)}`
+      if (d.discount_type_alias === 'we_discount_type_percentage') {
+        return `${d.description} — ${Number(d.value)}%  ${monto}`
+      }
+      if (d.discount_type_alias === 'we_discount_type_fixed') {
+        return `${d.description} — precio fijo S/. ${fmt.formatMoney(d.value)}  ${monto}`
+      }
+      return `${d.description}  ${monto}`
+    })
+  }
   const e = props.enrollment
   if (!e) return []
   const lines = []

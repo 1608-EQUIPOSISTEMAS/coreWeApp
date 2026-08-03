@@ -1154,6 +1154,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 import DateTime12 from '@/components/DateTime12.vue'
 import { useToast } from 'vue-toastification'
+import { normalizePhoneQuery } from '@/utils/phone.js'
 
 const hasActiveRestrictions = ref(false)
 const showControlModal = ref(false)
@@ -1279,6 +1280,16 @@ const filters = reactive({
   pay_date_from: '',
   pay_date_to: '',
   pay_date_range_string: null
+})
+
+// Pegar "941 452 157" debe buscar igual que "941452157". Mismo criterio que el
+// input Telefono de /comercial/leads/new (v-restrict only:numbers, spaces:false),
+// pero este campo tambien busca por nombre: normalizePhoneQuery solo limpia si
+// lo escrito es un telefono. Los tres inputs comparten filters.q, por eso el
+// watch va aqui y no en cada uno.
+watch(() => filters.q, (v) => {
+  const limpio = normalizePhoneQuery(v)
+  if (limpio !== v) filters.q = limpio
 })
 
 // === CATÁLOGOS ===

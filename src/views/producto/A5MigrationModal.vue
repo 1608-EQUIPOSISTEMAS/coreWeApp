@@ -202,7 +202,8 @@ async function loadData () {
       availableEditions.value = (eds || [])
         .filter(ed => {
           if ((ed.edition_num_id || ed.id) === props.origin.edition_num_id) return false
-          if (ed.cat_segment_alias === 'we_segment_a5') return false
+          // Las A5 las excluye sp_edition_caller: no devuelve el segmento, asi
+          // que aqui no habia forma de filtrarlas (el guard viejo nunca disparaba).
           if (!ed.start_date) return false
           const m = String(ed.start_date).match(/^(\d{4})-(\d{2})-(\d{2})/)
           if (!m) return false

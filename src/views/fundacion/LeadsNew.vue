@@ -621,6 +621,17 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
         <button
           type="button"
+          v-if="showTokenButton"
+          class="ef-btn-token"
+          :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
+          :title="form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id ? 'Debe seleccionar una edición para programas EN VIVO' : 'Generar link/token de pago'"
+          @click="openTokenInscription()"
+        >
+          <i class="fa-solid fa-link"></i> INSCRIPCION TOKEN
+        </button>
+
+        <button
+          type="button"
           v-if="showInscriptionButton"
           class="ef-btn-warning"
           :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
@@ -1266,6 +1277,14 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
             </div>
             <div class="col-md-2">
+              <label class="exec-label">Tipo de Pago <span class="c-red">*</span></label>
+              <select v-model="insc.token_payment_type" class="exec-input-light w-100" required>
+                <option value="">Seleccionar...</option>
+                <option value="debito">Debito</option>
+                <option value="credito">Credito</option>
+              </select>
+            </div>
+            <div class="col-md-2" v-if="!isTokenMode">
               <label class="exec-label">Proveedor del Link <span class="c-red">*</span></label>
               <SearchSelect
                 v-model="insc.cat_token_provider"
@@ -1745,19 +1764,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     </div>
 
     <template #footer>
-      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false">Cerrar</button>
+      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
       <button
   class="btn-exec btn-exec-primary btn-exec-sm"
-  @click="confirmarInscripcion"
+  @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
   :disabled="
   savingInsc ||
-  form.enrollment_id ||
-  (isInstallmentMode && !installmentPlanValid) ||
-  (isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
+  (!isTokenMode && form.enrollment_id) ||
+  (!isTokenMode && isInstallmentMode && !installmentPlanValid) ||
+  (!isTokenMode && isInstallmentMode && reservaSplitEnabled && !reservaSplitValid)
 "
 >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
-        {{ savingInsc ? 'Guardando...' : 'Guardar inscripción' }}
+        {{ savingInsc ? 'Guardando...' : (isTokenMode ? 'Crear Token' : 'Guardar inscripción') }}
       </button>
     </template>
   </BaseModal>
@@ -1831,12 +1850,13 @@ const {
   isInstallmentMode, installmentRemainder, autoNumCuotas,
   reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
   showInscriptionButton, inscriptionBlockReason, isLiderComercial,
+  isTokenMode, showTokenButton,
   sellerPhoneOptions, sellerPhoneLocked,
   eventCategories, isEventProgram, onEventCategoryChange,
   programService, discountService, editionService, b2bService,
   fmt2, round2, formatDate, formatDateTime, formatDuration, isValidEmail, openURL, getBadgeClass,
   cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
-  openInscription, resetInscriptionData,
+  openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
   addContacto, removeContacto, toggleTimer, handleTypeChange,
   handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,
   onProgramaTypeChange, onProgramaChange, onEditionChange, searchEditionsFiltered,
