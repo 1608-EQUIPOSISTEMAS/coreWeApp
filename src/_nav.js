@@ -231,6 +231,23 @@ export default [
   },
   {
     component: 'CNavGroup',
+    name: 'Gerencia',
+    to: '/gerencia',
+    icon: 'cil-speedometer',
+    module: 'GERENCIA',
+    roles: ['ADMIN', 'GERENCIA'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Embudo Consultas-Ventas',
+        to: '/gerencia/embudo',
+        submodule: 'EMBUDO',
+        roles: ['ADMIN', 'GERENCIA'],
+      },
+    ],
+  },
+  {
+    component: 'CNavGroup',
     name: 'Producto',
     to: '/producto',
     icon: 'cil-layers',

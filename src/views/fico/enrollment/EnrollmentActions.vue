@@ -468,6 +468,16 @@
               <label>Motivo de la observacion <span class="eact-req">*</span></label>
               <textarea v-model="observeReason" class="eact-textarea" rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
             </div>
+            <!-- Unica salida del bloqueo por copia requerida: si el asesor la
+                 pidio por error, se baja aca y queda auditado. -->
+            <label v-if="detail?.requires_email_cc" class="eact-cc-clear">
+              <input type="checkbox" v-model="clearCcRequirement" />
+              <span>
+                <strong>Quitar el requerimiento de correo en copia</strong>
+                Esta venta esta marcada como "requiere copia" y no se puede enviar sin CC.
+                Marca esto solo si el asesor la pidio por error.
+              </span>
+            </label>
           </div>
         </template>
       </ActionStepper>
@@ -578,6 +588,7 @@ function resetAllForms () {
   retireHasRefund.value = false
   retireRefundAmount.value = 0
   observeReason.value = ''
+  clearCcRequirement.value = false
 }
 
 function filteredAccounts (entityId) {
@@ -1108,13 +1119,15 @@ async function handleEditSellerAgent () {
 
 // ── OBSERVAR INSCRIPCION ──
 const observeReason = ref('')
+const clearCcRequirement = ref(false)
 
 async function handleObserve () {
   saving.value = true
   try {
     await ficoService.rejectEnrollment({
       enrollment_id: enrollmentId.value,
-      reason: observeReason.value.trim()
+      reason: observeReason.value.trim(),
+      clear_cc_requirement: clearCcRequirement.value
     })
     toast.success('Inscripcion observada. Se notifico al asesor.')
     emit('action-completed')
@@ -1395,6 +1408,21 @@ async function handleRetire () {
 .eact-observe-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
 .eact-observe-banner p { margin: 0; }
 
+.eact-cc-clear {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.eact-cc-clear input { margin-top: 3px; flex-shrink: 0; }
+.eact-cc-clear strong { display: block; font-size: 12.5px; color: #111827; margin-bottom: 2px; }
+
 /* Plan de cuotas de la reprogramacion */
 .eact-rp-saldo { float: right; font-weight: 700; color: #92400E; text-transform: none; letter-spacing: 0; }
 .eact-rp-plan {
@@ -1524,6 +1552,8 @@ async function handleRetire () {
   color: #FBBF24;
 }
 [data-coreui-theme="dark"] .eact-observe-banner i { color: #FBBF24; }
+[data-coreui-theme="dark"] .eact-cc-clear { border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .eact-cc-clear strong { color: #F4F4F0; }
 
 [data-coreui-theme="dark"] .eact-rp-saldo { color: #FBBF24; }
 [data-coreui-theme="dark"] .eact-rp-plan { border-color: #2A2A22; }

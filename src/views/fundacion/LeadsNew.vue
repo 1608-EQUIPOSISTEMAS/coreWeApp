@@ -1066,6 +1066,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         Esta categoría no tiene tarifa cargada para el programa: se mantiene el precio base. Verifica el monto.
       </div>
     </div>
+    <!-- Asiento: cada entrada VIP tiene el suyo. Sale en el correo. -->
+    <div v-if="isVipCategory" class="col-12 col-md-6">
+      <label class="form-label small mb-1">
+        <i class="fa-solid fa-chair me-1"></i> Asiento <span class="c-red">*</span>
+      </label>
+      <input
+        v-model="insc.event_seat"
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="A-12"
+      />
+      <div class="small text-muted mt-1">Aparece en el correo de confirmación.</div>
+    </div>
   </div>
 </div>
 
@@ -1479,6 +1492,28 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       placeholder="Escribe aquí notas adicionales..."
       v-restrict="{ trim: true, max: 500 }"
     ></textarea>
+
+    <!-- Correo en copia. Marcarlo obliga a FICO a resolver el CC antes de
+         confirmar la venta: no se pide por la observación en texto libre. -->
+    <label class="cc-toggle mt-3">
+      <input type="checkbox" v-model="insc.requires_email_cc" />
+      <span>
+        <strong>Esta venta requiere correo en copia</strong>
+        FICO no podrá enviar la confirmación sin un CC.
+      </span>
+    </label>
+    <input
+      v-if="insc.requires_email_cc"
+      v-model="insc.email_cc"
+      type="text"
+      class="exec-input-light mt-2"
+      placeholder="supervisor@empresa.com, rrhh@empresa.com"
+      v-restrict="{ trim: true, max: 200 }"
+    />
+    <small v-if="insc.requires_email_cc" class="cc-help">
+      Si aún no tienes el correo, déjalo vacío: FICO lo completará antes de enviar.
+      Separa varios con coma.
+    </small>
   </div>
 
 </div>
@@ -1852,7 +1887,7 @@ const {
   showInscriptionButton, inscriptionBlockReason, isLiderComercial,
   isTokenMode, showTokenButton,
   sellerPhoneOptions, sellerPhoneLocked,
-  eventCategories, isEventProgram, onEventCategoryChange,
+  eventCategories, isEventProgram, onEventCategoryChange, isVipCategory,
   programService, discountService, editionService, b2bService,
   fmt2, round2, formatDate, formatDateTime, formatDuration, isValidEmail, openURL, getBadgeClass,
   cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
@@ -2086,6 +2121,23 @@ const {
   color: #A3A3A3;
   cursor: not-allowed;
 }
+
+/* Correo en copia solicitado por el asesor */
+.cc-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.cc-toggle input { margin-top: 2px; flex-shrink: 0; }
+.cc-toggle strong { display: block; font-size: 12.5px; color: #1A1A1A; margin-bottom: 1px; }
+.cc-help { display: block; margin-top: 5px; font-size: 11.5px; color: #9CA3AF; line-height: 1.45; }
 
 /* ═══════════════════════════════════════════════════
    BUTTONS — exec-btn flavors restyled to ef look

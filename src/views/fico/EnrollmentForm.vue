@@ -179,6 +179,30 @@
           <label>Modalidad</label>
           <SearchSelect v-model="form.cat_insc_modality" :items="catInscModality" label-field="description" value-field="id" placeholder="MODALIDAD..." />
         </div>
+        <!-- Categoria de entrada: solo eventos/congresos la tienen. Define la
+             tarifa y el grupo de WhatsApp que sale en el correo. -->
+        <div class="ef-field" v-if="isEventProgram">
+          <label>Categoria de entrada <span class="ef-req">*</span></label>
+          <SearchSelect
+            v-model="form.cat_event_category"
+            :items="eventCategories"
+            label-field="description"
+            value-field="cat_event_category"
+            placeholder="VIP / GENERAL / VIRTUAL..."
+            :disabled="!form.program_version_id"
+            @change="onEventCategoryChange"
+          />
+          <small v-if="form.cat_event_category && !eventCategories.find(c => c.cat_event_category === form.cat_event_category)?.has_price"
+                 class="ef-disc-hint">Sin tarifa configurada: se conserva el precio del programa.</small>
+        </div>
+      </div>
+      <!-- Asiento: cada entrada VIP tiene el suyo. Sale en el correo. -->
+      <div class="ef-grid-4" style="margin-top:16px" v-if="isVipCategory">
+        <div class="ef-field">
+          <label>Asiento <span class="ef-req">*</span></label>
+          <input v-model="form.event_seat" type="text" placeholder="A-12" />
+          <small class="ef-cc-help">Aparece en el correo de confirmacion.</small>
+        </div>
       </div>
     </div>
 
@@ -510,6 +534,11 @@ const form = reactive({
   program_version_id: null,
   program_edition_id: null,
   cat_insc_modality: null,
+  // Categoria de entrada del evento (VIP/GENERAL/PREMIUM/VIRTUAL). Null fuera
+  // de eventos: el SP no la conoce, se persiste con un UPDATE aparte.
+  cat_event_category: null,
+  // Asiento asignado de la entrada VIP.
+  event_seat: '',
   cat_currency: null,
   cat_payment_way: null,
   list_price: 0,
@@ -634,6 +663,41 @@ const programTypeAlias = computed(() => {
   const sel = catProgramType.find(c => c.id === form.cat_program_type)
   return sel?.alias || ''
 })
+
+// ── CATEGORIA DE ENTRADA (eventos/congresos) ─────────────────────────────
+// Un congreso se vende por categoria: cada una tiene su tarifa, su grupo de
+// WhatsApp y decide si el correo va con el detalle virtual o presencial. Misma
+// logica que comercial (useLeadForm.js), aqui con los precios de FICO.
+const eventCategories = ref([])
+const isEventProgram = computed(() => programTypeAlias.value === 'we_program_type_event')
+
+async function loadEventCategories () {
+  if (!isEventProgram.value || !form.program_version_id) { eventCategories.value = []; return }
+  try {
+    eventCategories.value = await programService.eventCategoryList(form.program_version_id) || []
+  } catch (err) {
+    console.error('[loadEventCategories]', err)
+    eventCategories.value = []
+  }
+}
+
+// Solo la entrada VIP da derecho a acompanantes: fuera de VIP el campo no se
+// muestra y lo que se haya escrito se descarta al guardar.
+const isVipCategory = computed(() => {
+  const sel = eventCategories.value.find(c => c.cat_event_category === form.cat_event_category)
+  return sel?.alias === 'we_event_category_vip'
+})
+
+function onEventCategoryChange (opcion) {
+  // Sin tarifa propia se conserva el precio del programa: mejor eso que dejar
+  // la inscripcion en 0 por una categoria a medio configurar.
+  if (opcion?.has_price) {
+    programPrices.student_soles = Number(opcion.price_student_soles || 0)
+    programPrices.student_dollars = Number(opcion.price_student_dollars || 0)
+    programPrices.profesional_soles = Number(opcion.price_profesional_soles || 0)
+    programPrices.profesional_dollars = Number(opcion.price_profesional_dollars || 0)
+  }
+}
 
 const filteredBankAccounts = computed(() => {
   if (!form.cat_business_entity) return []
@@ -815,14 +879,20 @@ async function loadPrograms () {
 function onProgramTypeChange () {
   form.program_version_id = null
   form.program_edition_id = null
+  form.cat_event_category = null
+  form.event_seat = ''
   editionsList.value = []
   programsList.value = []
+  eventCategories.value = []
   if (form.cat_program_type) loadPrograms()
 }
 
 async function onProgramChange () {
   form.program_edition_id = null
+  form.cat_event_category = null
+  form.event_seat = ''
   editionsList.value = []
+  loadEventCategories()
   if (!form.program_version_id) return
 
   const prog = programsList.value.find(p => p.program_version_id === form.program_version_id)
@@ -1126,6 +1196,11 @@ function validate () {
   if (editionsList.value.length && !form.program_edition_id) {
     toast.error('Selecciona una edicion.'); return false
   }
+  // En un congreso la categoria define la tarifa y el grupo de WhatsApp del
+  // correo: sin ella la inscripcion queda incompleta.
+  if (isEventProgram.value && eventCategories.value.length && !form.cat_event_category) {
+    toast.error('Selecciona la categoria de entrada del evento.'); return false
+  }
   if (!form.client_profile) { toast.error('Selecciona un perfil (Profesional/Estudiante).'); return false }
   if (!isB2BDocumental.value && !form.is_scholarship && isInstallment.value && installments.value.length > 0 && !installmentValid.value) {
     toast.error('El total de cuotas no coincide con el saldo a financiar.'); return false
@@ -1151,6 +1226,8 @@ async function handleSave () {
         program_version_id: form.program_version_id,
         program_edition_id: form.program_edition_id,
         cat_insc_modality: form.cat_insc_modality,
+        cat_event_category: isEventProgram.value ? form.cat_event_category : null,
+        event_seat: isVipCategory.value ? (form.event_seat || '').trim() || null : null,
         cat_payment_channel: channelGeneral.value?.id || null,
         cat_currency: form.cat_currency || catCurrency.find(c => c.alias === 'we_currency_soles')?.id || null,
         cat_payment_way: form.cat_payment_way || catPaymentWay.find(c => c.alias === 'we_payment_way_single')?.id || null,
@@ -1241,7 +1318,7 @@ function resetForm () {
     cat_type_document: catDocTypes.find(c => c.alias?.toLowerCase().includes('dni'))?.id || null,
     document_number: '', first_name: '', last_name: '', email: '', phone: '',
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
-    cat_insc_modality: null, cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
+    cat_insc_modality: null, cat_event_category: null, event_seat: '', cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
     cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
     client_profile: '', membership_program_id: null, agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
     email_cc: '',
@@ -1251,6 +1328,7 @@ function resetForm () {
   })
   installments.value = []
   editionsList.value = []
+  eventCategories.value = []
   showCcField.value = false
   discountResetKey.value++
 }

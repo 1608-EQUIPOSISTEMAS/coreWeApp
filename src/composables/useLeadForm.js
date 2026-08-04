@@ -306,6 +306,8 @@ export function useLeadForm(options = {}) {
   const insc = reactive({
     // Categoria de entrada del evento (VIP/GENERAL/PREMIUM/VIRTUAL).
     cat_event_category: null,
+    // Asiento asignado de la entrada VIP.
+    event_seat: '',
     dni: '',
     nombres: '',
     apellidos: '',
@@ -340,6 +342,11 @@ export function useLeadForm(options = {}) {
     cat_token_provider: null,
     token_payment_type: '',
     agreement_id: null,
+    // Correo en copia. `requires_email_cc` es un compromiso: si se marca, FICO no
+    // puede enviar la confirmacion con el CC vacio (solo lo libera observando la
+    // inscripcion). El correo puede ir vacio si el asesor aun no lo tiene.
+    requires_email_cc: false,
+    email_cc: '',
   })
 
   // ── COMPUTED ─────────────────────────────────────────────────
@@ -477,8 +484,16 @@ export function useLeadForm(options = {}) {
     })
   }
 
+  // Solo la entrada VIP da derecho a acompanantes: fuera de VIP el campo no se
+  // muestra y lo que se haya escrito se descarta al guardar.
+  const isVipCategory = computed(() => {
+    const sel = eventCategories.value.find(c => c.cat_event_category === insc.cat_event_category)
+    return sel?.alias === 'we_event_category_vip'
+  })
+
   watch(() => [form.program_version_id, form.category_alias], () => {
     insc.cat_event_category = null
+    insc.event_seat = ''
     loadEventCategories()
   })
 
@@ -1184,7 +1199,8 @@ export function useLeadForm(options = {}) {
       dsct_benefit_ids: [], val_porcentaje: 0, val_fijo: 0, val_beneficios: [],
       montoBeneficioTotal: 0, dsct_porcent_label: null, dsct_stick_label: null, dsct_benefit_label: null,
       montoDescuentoPorcentaje: 0, montoDescuentoFijo: 0, montoBeneficio: 0, montoFinal: 0, total_amount: 0,
-      observacions: '', ticket_payment_urls: [], attachments: [], flag_agreement: false, b2b_contract_id: null,
+      observacions: '', requires_email_cc: false, email_cc: '',
+      ticket_payment_urls: [], attachments: [], flag_agreement: false, b2b_contract_id: null,
       cat_payment_channel: null, cat_token_provider: null, token_payment_type: '',
     })
     voucherTouched.value = false
@@ -1322,11 +1338,16 @@ export function useLeadForm(options = {}) {
         dsct_benefit_ids: insc.dsct_benefit_ids.map(b => ({ value: b.value, label: b.label })),
         installment_plan: isInstallmentMode.value ? installmentPlan.value : null,
         observations: insc.observacions,
+        // Correo en copia: el flag viaja aunque el correo aun no se tenga, para
+        // que FICO no pueda confirmar la venta sin resolverlo.
+        requires_email_cc: insc.requires_email_cc === true,
+        email_cc: insc.email_cc || null,
         student_attachment_url: form.carnet_url || null,
         ticket_payment_urls: paymentFiles,
         attachments: generalAttachments,
         agreement_id: insc.agreement_id || null,
         cat_event_category: insc.cat_event_category || null,
+        event_seat: isVipCategory.value ? (insc.event_seat || '').trim() || null : null,
       }
     }
   }
@@ -1701,7 +1722,7 @@ export function useLeadForm(options = {}) {
     showInscriptionButton, inscriptionBlockReason, isLiderComercial,
     isTokenMode, showTokenButton,
     sellerPhoneOptions, sellerPhoneLocked,
-    eventCategories, isEventProgram, onEventCategoryChange,
+    eventCategories, isEventProgram, onEventCategoryChange, isVipCategory,
 
     // Services (needed for template fetchers)
     programService, discountService, editionService, b2bService,

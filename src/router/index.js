@@ -178,31 +178,17 @@ const routes = [
         path: 'gerencia',
         name: 'Gerencia',
         component: RouterViewStub,
-        redirect: { name: 'GerenciaOverview' },
-        meta: { roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
+        redirect: { name: 'GerenciaEmbudo' },
+        meta: { module: 'GERENCIA', roles: ['ADMIN', 'GERENCIA'] },
         children: [
-          // {
-          //   path: 'indicadores',
-          //   name: 'GerenciaIndicadores',
-          //   // BI ejecutivo
-          //   component: () => import('@/views/gerencia/Indicadores.vue'),
-          //   meta: { area: 'GERENCIA' },
-          // },
-          // {
-          //   path: 'reportes-ejecutivos',
-          //   name: 'GerenciaReportesEjecutivos',
-          //   // PDFs / board mensual
-          //   component: () =>
-          //     import('@/views/gerencia/ReportesEjecutivos.vue'),
-          //   meta: { area: 'GERENCIA' },
-          // },
-          // {
-          //   path: 'overview',
-          //   name: 'GerenciaOverview',
-          //   // vista resumen cross-área
-          //   component: () => import('@/views/gerencia/Overview.vue'),
-          //   meta: { area: 'GERENCIA' },
-          // },
+          {
+            path: 'embudo',
+            name: 'GerenciaEmbudo',
+            // Embudo consultas -> ventas por edición y canal. Reemplaza al Sheet
+            // "Reporte de Consultas 2026".
+            component: () => import('@/views/gerencia/Embudo.vue'),
+            meta: { submodule: 'EMBUDO', roles: ['ADMIN', 'GERENCIA'] },
+          },
         ],
       },
       // =====================

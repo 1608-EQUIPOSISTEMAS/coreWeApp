@@ -1075,6 +1075,19 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         Esta categoría no tiene tarifa cargada para el programa: se mantiene el precio base. Verifica el monto.
       </div>
     </div>
+    <!-- Asiento: cada entrada VIP tiene el suyo. Sale en el correo. -->
+    <div v-if="isVipCategory" class="col-12 col-md-6">
+      <label class="form-label small mb-1">
+        <i class="fa-solid fa-chair me-1"></i> Asiento <span class="c-red">*</span>
+      </label>
+      <input
+        v-model="insc.event_seat"
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="A-12"
+      />
+      <div class="small text-muted mt-1">Aparece en el correo de confirmación.</div>
+    </div>
   </div>
 </div>
 
@@ -1524,6 +1537,28 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       placeholder="Escribe aquí notas adicionales..."
       v-restrict="{ trim: true, max: 500 }"
     ></textarea>
+
+    <!-- Correo en copia. Marcarlo obliga a FICO a resolver el CC antes de
+         confirmar la venta: no se pide por la observación en texto libre. -->
+    <label class="cc-toggle mt-3">
+      <input type="checkbox" v-model="insc.requires_email_cc" />
+      <span>
+        <strong>Esta venta requiere correo en copia</strong>
+        FICO no podrá enviar la confirmación sin un CC.
+      </span>
+    </label>
+    <input
+      v-if="insc.requires_email_cc"
+      v-model="insc.email_cc"
+      type="text"
+      class="exec-input-light mt-2"
+      placeholder="supervisor@empresa.com, rrhh@empresa.com"
+      v-restrict="{ trim: true, max: 200 }"
+    />
+    <small v-if="insc.requires_email_cc" class="cc-help">
+      Si aún no tienes el correo, déjalo vacío: FICO lo completará antes de enviar.
+      Separa varios con coma.
+    </small>
   </div>
 
 </div>
@@ -2048,6 +2083,8 @@ price_profesional_dollars: 0,
   const insc = reactive({
     // Categoria de entrada del evento (VIP/GENERAL/PREMIUM/VIRTUAL).
     cat_event_category: null,
+    // Asiento asignado de la entrada VIP.
+    event_seat: '',
     dni: '',
     nombres: '',
     apellidos: '',
@@ -2081,6 +2118,11 @@ price_profesional_dollars: 0,
   cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
   cat_token_provider: null,
   token_payment_type: '',
+  // Correo en copia. `requires_email_cc` es un compromiso: si se marca, FICO no
+  // puede enviar la confirmacion con el CC vacio (solo lo libera observando la
+  // inscripcion). El correo puede ir vacio si el asesor aun no lo tiene.
+  requires_email_cc: false,
+  email_cc: '',
   })
 
 
@@ -2918,6 +2960,8 @@ function resetInscriptionData() {
     montoFinal: 0,
     total_amount: 0,
     observacions: '',
+    requires_email_cc: false,
+    email_cc: '',
     ticket_payment_urls: [],
     attachments: [],
     flag_agreement: false,
@@ -3179,7 +3223,12 @@ cat_certificate_status,
 
       // Observaciones y archivos
       observations:         insc.observacions,
+      // Correo en copia: el flag viaja aunque el correo aun no se tenga, para
+      // que FICO no pueda confirmar la venta sin resolverlo.
+      requires_email_cc:    insc.requires_email_cc === true,
+      email_cc:             insc.email_cc || null,
       cat_event_category:   insc.cat_event_category || null,
+      event_seat:           isVipCategory.value ? (insc.event_seat || '').trim() || null : null,
       student_attachment_url: form.carnet_url || null,
       ticket_payment_urls:  paymentFiles,
       attachments:          generalAttachments
@@ -3912,8 +3961,16 @@ function onEventCategoryChange (opcion) {
   form.price_profesional_dollars = Number(opcion.price_profesional_dollars || 0)
 }
 
+// Solo la entrada VIP da derecho a acompanantes: fuera de VIP el campo no se
+// muestra y lo que se haya escrito se descarta al guardar.
+const isVipCategory = computed(() => {
+  const sel = eventCategories.value.find(c => c.cat_event_category === insc.cat_event_category)
+  return sel?.alias === 'we_event_category_vip'
+})
+
 watch(() => [form.program_version_id, form.category_alias], () => {
   insc.cat_event_category = null
+  insc.event_seat = ''
   loadEventCategories()
 })
 
@@ -4485,6 +4542,23 @@ function toggleReschedule(contacto) {
   border-color: #A3A3A3;
   box-shadow: none;
 }
+
+/* Correo en copia solicitado por el asesor */
+.cc-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #E8E8E8;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.cc-toggle input { margin-top: 2px; flex-shrink: 0; }
+.cc-toggle strong { display: block; font-size: 12.5px; color: #1A1A1A; margin-bottom: 1px; }
+.cc-help { display: block; margin-top: 5px; font-size: 11.5px; color: #9CA3AF; line-height: 1.45; }
 .exec-textarea:disabled {
   background-color: #FAFAFA;
   color: #A3A3A3;

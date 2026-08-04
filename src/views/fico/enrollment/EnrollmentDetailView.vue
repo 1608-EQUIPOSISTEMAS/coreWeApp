@@ -953,11 +953,14 @@ async function handleSaveCuotasData () {
   }
 }
 
-async function handleRejectEnrollment (reason) {
+async function handleRejectEnrollment (payload) {
+  // Acepta el string legacy y el objeto { reason, clearCcRequirement }.
+  const reason = typeof payload === 'string' ? payload : (payload?.reason || '')
   try {
     await ficoService.rejectEnrollment({
       enrollment_id: enrollmentId.value,
-      reason: reason.trim()
+      reason: reason.trim(),
+      clear_cc_requirement: payload?.clearCcRequirement === true
     })
     toast.success('Inscripcion observada. Se notifico al asesor.')
     await refreshDetail()

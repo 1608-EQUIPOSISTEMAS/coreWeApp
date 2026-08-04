@@ -34,6 +34,13 @@ async liderList(payload) {
   const response = (await api.post('/dashboard/lider', payload)).data;
   return response.data;
 }
+  // Embudo consultas -> ventas por edición y canal (Gerencia).
+  // payload: { year, month_num } → { items, canales, totales }
+  async gerenciaFunnel(payload) {
+    const response = (await api.post('/dashboard/gerencia-funnel', payload)).data;
+    return response.data;
+  }
+
   async programGoalsList(payload) {
     const response = (await api.post('/dashboard/program-goals', payload)).data;
     return response.data;

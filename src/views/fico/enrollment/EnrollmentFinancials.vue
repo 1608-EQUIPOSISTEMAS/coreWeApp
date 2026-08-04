@@ -588,7 +588,7 @@
       v-if="showConfirmStepper"
       v-model="confirmStep"
       :steps="['Confirmar Inscripcion', 'Preview Correo']"
-      :can-advance="confirmStep === 0 ? true : sapState.valid"
+      :can-advance="confirmStep === 0 ? true : (sapState.valid && ccState.valid)"
       :loading="saving"
       confirm-label="Confirmar y Enviar"
       confirm-icon="fa-paper-plane"
@@ -624,8 +624,12 @@
           :enrollment-id="enrollmentId"
           :active="confirmStep === 1"
           :activation-date="activationDate"
+          :initial-cc="detail?.email_cc || ''"
+          :requires-cc="detail?.requires_email_cc === true"
+          :advisor-observation="detail?.advisor_observation || ''"
           collect-sap-credentials
           @update:sap="sapState = $event"
+          @update:cc="ccState = $event"
         />
       </template>
     </ActionStepper>
@@ -639,8 +643,8 @@
       :loading="savingObserve"
       confirm-label="Confirmar Observacion"
       confirm-icon="fa-eye"
-      @cancel="showObserveStepper = false; observeStep = 0; observeReason = ''"
-      @confirm="$emit('reject-enrollment', observeReason)"
+      @cancel="showObserveStepper = false; observeStep = 0; observeReason = ''; clearCcRequirement = false"
+      @confirm="$emit('reject-enrollment', { reason: observeReason, clearCcRequirement })"
     >
       <template #step-0>
         <div class="ef-observe-wrap">
@@ -655,6 +659,16 @@
             <label>Motivo de la observacion <span style="color:#DC2626">*</span></label>
             <textarea v-model="observeReason" class="ef-observe-textarea" rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
           </div>
+          <!-- Unica salida del bloqueo por copia requerida: si el asesor la
+               pidio por error, se baja aca y queda auditado. -->
+          <label v-if="detail?.requires_email_cc" class="ef-cc-clear">
+            <input type="checkbox" v-model="clearCcRequirement" />
+            <span>
+              <strong>Quitar el requerimiento de correo en copia</strong>
+              Esta venta esta marcada como "requiere copia" y no se puede enviar sin CC.
+              Marca esto solo si el asesor la pidio por error.
+            </span>
+          </label>
         </div>
       </template>
     </ActionStepper>
@@ -708,13 +722,19 @@ const emit = defineEmits([
 // online y faltan credenciales, bloqueando el boton "Confirmar y Enviar".
 const sapState = ref({ isSapOnline: false, sapUsername: '', sapPassword: '', valid: true })
 
-// Reenvia el evento de confirmacion al padre adjuntando las credenciales SAP
-// (el padre las pasa a sendConfirmationEmail). En cursos no-SAP van vacias.
+// Correo en copia que emite el EmailPreviewStep. `valid` arranca en true (una
+// venta sin requerimiento no exige nada); el preview lo pone en false cuando
+// comercial marco requires_email_cc y el campo quedo vacio.
+const ccState = ref({ cc: '', valid: true })
+
+// Reenvia el evento de confirmacion al padre adjuntando las credenciales SAP y
+// el CC (el padre los pasa a sendConfirmationEmail). En cursos no-SAP las
+// credenciales van vacias; sin copia, el cc va vacio y el backend usa el guardado.
 function onConfirmSend () {
   const sapCreds = sapState.value.isSapOnline
     ? { sapUsername: sapState.value.sapUsername, sapPassword: sapState.value.sapPassword }
     : {}
-  emit(isContado.value ? 'confirm-payment' : 'confirm-plan', sapCreds)
+  emit(isContado.value ? 'confirm-payment' : 'confirm-plan', { ...sapCreds, cc: ccState.value.cc })
 }
 
 // Habilita la edicion del monto de una cuota cuando: ya existe en BD (no _isNew),
@@ -736,6 +756,7 @@ const confirmStep = ref(0)
 const showObserveStepper = ref(false)
 const observeStep = ref(0)
 const observeReason = ref('')
+const clearCcRequirement = ref(false)
 const savingObserve = ref(false)
 
 const listPrice = computed(() => Number(props.enrollment?.list_price) || Number(props.detail?.list_price) || 0)
@@ -1534,6 +1555,14 @@ function needsEditionDecision (child) {
 .ef-observe-textarea:focus { outline: none; border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.08); }
 .ef-observe-textarea::placeholder { color: #D1D5DB; }
 
+.ef-cc-clear {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border: 1px solid #E5E7EB; border-radius: 8px;
+  font-size: 12px; color: #64748B; line-height: 1.5; cursor: pointer;
+}
+.ef-cc-clear input { margin-top: 3px; flex-shrink: 0; }
+.ef-cc-clear strong { display: block; font-size: 12.5px; color: #111827; margin-bottom: 2px; }
+
 /* Confirm summary */
 .ef-confirm-summary {
   display: flex;
@@ -1793,6 +1822,8 @@ function needsEditionDecision (child) {
   color: #F4F4F0;
 }
 [data-coreui-theme="dark"] .ef-observe-textarea::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .ef-cc-clear { border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .ef-cc-clear strong { color: #F4F4F0; }
 [data-coreui-theme="dark"] .ef-observe-textarea:focus {
   border-color: #FBBF24;
   box-shadow: 0 0 0 3px rgba(245,158,11,.16);

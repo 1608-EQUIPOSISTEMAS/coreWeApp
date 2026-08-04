@@ -78,10 +78,14 @@ export default class FicoService {
     return response.data;
   }
 
-  async sendConfirmationEmail(enrollment_id, sapCreds = {}) {
+  // `opts` viaja tal cual desde el stepper de confirmacion: credenciales SAP y
+  // el correo en copia que FICO confirmo en el preview. Sin cc explicito el
+  // backend usa el guardado en enrollments.email_cc.
+  async sendConfirmationEmail(enrollment_id, opts = {}) {
     const payload = { enrollment_id }
-    if (sapCreds.sapUsername != null) payload.sap_username = sapCreds.sapUsername
-    if (sapCreds.sapPassword != null) payload.sap_password = sapCreds.sapPassword
+    if (opts.sapUsername != null) payload.sap_username = opts.sapUsername
+    if (opts.sapPassword != null) payload.sap_password = opts.sapPassword
+    if (opts.cc) payload.cc = opts.cc
     const response = (await api.post('/fico/sendconfirmationemail', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
   }
