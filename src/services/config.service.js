@@ -34,4 +34,13 @@ export default class ConfigService {
   async permissionUpdate(payload) {
     return (await api.post('/config/permissionupdate', payload)).data;
   }
+
+  // Cursos online del Campus que entran a la membresía.
+  async membershipCourseList() {
+    return (await api.post('/config/membershipcourselist', {})).data.data;
+  }
+
+  async membershipCourseSave(channelIds) {
+    return (await api.post('/config/membershipcoursesave', { channel_ids: channelIds })).data;
+  }
 }

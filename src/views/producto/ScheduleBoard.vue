@@ -135,6 +135,7 @@
                         <div class="top">
                           <span class="lvl-badge" :style="{ background: soft(it.sc.color), color: it.sc.color }">{{ it.e.cat_segment || '—' }}</span>
                           <span class="name">{{ it.e.program_abreviature || '—' }}</span>
+                          <span v-if="isNewMet(it.e)" class="nm-badge" title="Curso con la nueva metodología">NM</span>
                         </div>
                         <div class="area">{{ lineLabel(it.e) }} · {{ typeLabel(it.e) }}</div>
                       </div>
@@ -230,7 +231,7 @@
 
     <div class="crono-foot">
       <span class="dot"></span>
-      <span>Haz clic en un curso para ver de dónde sale su AULA · Ficha / Confirmado: punto verde = Sí.</span>
+      <span>Haz clic en un curso para ver de dónde sale su AULA · Ficha / Confirmado: punto verde = Sí · <span class="nm-badge">NM</span> = curso con la nueva metodología.</span>
     </div>
 
     <!-- ════ RESÚMENES DEL MES ════ -->
@@ -368,15 +369,19 @@
                 <tr><th>CANAL</th><th>ALUMNO</th><th>ASESOR</th><th>CORREO</th><th>DETALLE</th></tr>
               </thead>
               <tbody>
-                <tr v-for="s in amStudents" :key="s.enrollment_id">
+                <tr v-for="s in amStudents" :key="s.enrollment_id" :class="{ 'row-laptop': s.has_laptop_promo }">
                   <td><span class="am-tag" :style="{ background: soft(s.ch.color), color: s.ch.color }">{{ s.ch.tag }}</span></td>
                   <td class="am-name">{{ s.full_name }}</td>
                   <td class="am-agent">{{ agentLabel(s) }}</td>
                   <td class="am-mail">{{ s.platform_user || s.email || '—' }}</td>
                   <td class="am-extra">
+                    <!-- Promo LAPTOP (descuento "LAPTOP PROMO"): el alumno trae su equipo -->
+                    <span v-if="s.has_laptop_promo" class="am-laptop" title="Esta inscripcion incluye laptop como beneficio">
+                      <i class="fa-solid fa-laptop"></i> Traerá laptop
+                    </span>
                     <template v-if="s.ch.tag === 'SEG' && s.parent_codes?.length">Viene de {{ s.parent_codes.join(', ') }}</template>
                     <template v-else-if="s.ch.tag === 'MEM' && s.membership_tier_name">{{ s.membership_tier_name }}</template>
-                    <template v-else>—</template>
+                    <template v-else-if="!s.has_laptop_promo">—</template>
                   </td>
                 </tr>
               </tbody>
@@ -785,6 +790,9 @@ const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(monthIte
 
 // ── Helpers de presentación ──
 function lineLabel(e) { return e.program_line_business || '—' }
+// Nueva metodología: el SP la manda como 'Y'/'N' (o boolean según el driver).
+// Se valida contra valores positivos, no por truthy: 'N' también es truthy.
+function isNewMet(e) { const v = e.new_methodology; return v === true || v === 1 || v === 'Y' || v === 'y' }
 function typeLabel(e) { return e.cat_course_category_label || e.program_type || '—' }
 // Parse local para evitar el corrimiento de un día: "2025-05-21" en local, no UTC.
 function parseLocal(v) {
@@ -844,6 +852,7 @@ onMounted(fetchAll)
   --c-navy: #1e3a8a;   /* A7 cerrado */
   --c-sky: #2a6fdb;    /* SEG · KPI programas */
   --c-purple: #6b5cf0; /* MEM */
+  --c-wine: #7A1F3D;   /* NM = nueva metodología */
 
   font-family: var(--font-sans);
   color: var(--ink);
@@ -976,6 +985,10 @@ tr.ed.sinmeta:hover td { background: color-mix(in oklab, var(--c-sky) 11%, var(-
 .lvl-badge { font-size: 9px; font-weight: 800; font-family: var(--font-mono); border-radius: 4px; padding: 1px 6px; flex: none; }
 .curso .name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .curso .area { font-size: 10.5px; color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* NM: píldora sólida vino. Sólida y no pastel como .lvl-badge, porque debe
+   distinguirse de un vistazo sobre los tintes de fila (meta/sinmeta/A6/A7). */
+.nm-badge { font-size: 8.5px; font-weight: 800; font-family: var(--font-mono); letter-spacing: .04em;
+  border-radius: 4px; padding: 1px 5px; flex: none; background: var(--c-wine); color: #fff; }
 
 /* cronograma: inicio resaltado (chip oscuro) · fin más claro */
 .cro { display: flex; flex-direction: column; gap: 2px; }
@@ -1109,6 +1122,10 @@ tr.skrow td { padding: 16px 12px; }
 .am-tbl .am-agent { font-family: var(--font-mono); font-weight: 700; color: var(--ink-2); white-space: nowrap; }
 .am-tbl .am-mail { color: var(--ink-2); word-break: break-all; }
 .am-tbl .am-extra { color: var(--ink-3); font-size: 12px; }
+/* Promo LAPTOP: mismos colores que la etiqueta "Traera laptop" del panel FICO */
+.am-laptop { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 10px; font-weight: 800; border-radius: 5px; padding: 2px 7px; margin-right: 6px; background: #ECFEFF; color: #155E75; border: 1px solid #A5F3FC; }
+.am-laptop i { font-size: 9px; color: #0891B2; }
+.am-tbl tr.row-laptop td { background: #ECFEFF; }
 .am-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .am-row:last-child { border-bottom: none; }
 td.doc-copy { cursor: copy; }
@@ -1194,7 +1211,11 @@ td.doc-copy { cursor: copy; }
   --c-navy: #8FA8E0;
   --c-sky: #74A4EC;
   --c-purple: #9D91F5;
+  --c-wine: #B84A6B; /* el #7A1F3D puro se pierde sobre el fondo oscuro */
 }
+[data-coreui-theme="dark"] .board-shell .am-laptop { background: rgba(8,145,178,.18); color: #67E8F9; border-color: rgba(103,232,249,.35); }
+[data-coreui-theme="dark"] .board-shell .am-laptop i { color: #22D3EE; }
+[data-coreui-theme="dark"] .board-shell .am-tbl tr.row-laptop td { background: rgba(8,145,178,.14); }
 [data-coreui-theme="dark"] .board-shell .am-overlay { background: rgba(0,0,0,.55); }
 [data-coreui-theme="dark"] .board-shell .am-card { box-shadow: 0 20px 60px -20px rgba(0,0,0,.7); }
 [data-coreui-theme="dark"] .board-shell .doc-pop { box-shadow: 0 10px 28px rgba(0,0,0,.55); }

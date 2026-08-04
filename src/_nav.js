@@ -362,6 +362,13 @@ export default [
         submodule: 'IMPORTACION',
         roles: ['ADMIN'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Cursos de Membresía',
+        to: '/configuracion/membresia-cursos',
+        submodule: 'MEMBRESIA_CURSOS',
+        roles: ['ADMIN'],
+      },
     ],
   },
 ]
