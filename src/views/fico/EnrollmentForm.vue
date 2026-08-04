@@ -678,6 +678,9 @@ async function loadEventCategories () {
   } catch (err) {
     console.error('[loadEventCategories]', err)
     eventCategories.value = []
+    // Sin aviso el select vacio se lee como "este evento no tiene categorias"
+    // y la inscripcion se guarda incompleta. Paso con un 403 de permisos.
+    toast.error('No se pudieron cargar las categorias de entrada del evento.')
   }
 }
 
