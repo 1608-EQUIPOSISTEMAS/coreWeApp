@@ -258,6 +258,23 @@ export default class EditionService {
     return response.data.items || [];
   }
 
+  // Reporte de objetivos del evento (Fundacion > Objetivos): avance real por
+  // area contra la meta manual. El area no es una columna de la BD, se deduce
+  // de como llego cada inscripcion (ver edition.repository.js).
+  async eventGoalsReport(edition_num_id) {
+    const response = (await api.post('/edition/eventgoalsreport', { edition_num_id }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
+  async eventGoalsSave(edition_num_id, goals) {
+    const response = (await api.post('/edition/eventgoalssave', { edition_num_id, goals }, {
+      meta: { skipLoader: true }
+    })).data;
+    return response.data;
+  }
+
   // Recursos del correo de evento por edicion (banner, formularios, detalle de
   // sesiones). Endpoints propios con SQL directo: sp_edition_update no conoce
   // estas columnas.
