@@ -189,6 +189,14 @@ const routes = [
             component: () => import('@/views/gerencia/Embudo.vue'),
             meta: { submodule: 'EMBUDO', roles: ['ADMIN', 'GERENCIA'] },
           },
+          {
+            path: 'reporte-completo',
+            name: 'GerenciaReporteCompleto',
+            // Antes vivía en Marketing como "Reporte Completo" (/marketing/overview).
+            // La vista no cambió, solo el módulo que la gobierna.
+            component: () => import('@/views/marketing/IngresosDiarios.vue'),
+            meta: { submodule: 'REPORTE_COMPLETO', roles: ['ADMIN', 'GERENCIA'] },
+          },
         ],
       },
       // =====================
@@ -304,16 +312,9 @@ const routes = [
         path: 'marketing',
         name: 'Marketing',
         component: RouterViewStub,
-        redirect: { name: 'MarketingIngresosDiarios' },
+        redirect: { name: 'MarketingPublicaciones' },
         meta: { module: 'MARKETING', area: 'MARKETING' },
         children: [
-          {
-            path: 'reporte/ingresos-diarios',
-            name: 'MarketingIngresosDiarios',
-            // reporte principal de ingresos por línea de negocio
-            component: () => import('@/views/marketing/IngresosDiarios.vue'),
-            meta: { submodule: 'INGRESOS_DIARIOS', area: 'MARKETING' },
-          },
           {
             path: 'publicaciones',
             name: 'MarketingPublicaciones',
@@ -321,8 +322,9 @@ const routes = [
             component: () => import('@/views/marketing/Publicaciones.vue'),
             meta: { submodule: 'PUBLICACIONES', area: 'MARKETING' },
           },
-          // ruta vieja: redirige para no romper marcadores
-          { path: 'overview', redirect: { name: 'MarketingIngresosDiarios' } },
+          // rutas viejas del "Reporte Completo": ahora vive en Gerencia
+          { path: 'overview', redirect: { name: 'GerenciaReporteCompleto' } },
+          { path: 'reporte/ingresos-diarios', redirect: { name: 'GerenciaReporteCompleto' } },
         ],
       },
       
@@ -609,6 +611,12 @@ const routes = [
       name: 'AcademicaControlEdiciones',
       component: () => import('@/views/academica/ControlEdiciones.vue'),
       meta: { module: 'ACADEMICA', submodule: 'CONTROL_EDICIONES', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
+      path: 'academica/seguimiento-b2b',
+      name: 'AcademicaSeguimientoB2B',
+      component: () => import('@/views/academica/SeguimientoB2B.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'SEGUIMIENTO_B2B', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
     {
       path: 'academica/reporte',

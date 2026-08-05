@@ -56,6 +56,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Seguimiento B2B',
+        to: '/academica/seguimiento-b2b',
+        submodule: 'SEGUIMIENTO_B2B',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Reporte Académico',
         to: '/academica/reporte',
         submodule: 'REPORTE',
@@ -244,6 +251,13 @@ export default [
         submodule: 'EMBUDO',
         roles: ['ADMIN', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Reporte Completo',
+        to: '/gerencia/reporte-completo',
+        submodule: 'REPORTE_COMPLETO',
+        roles: ['ADMIN', 'GERENCIA'],
+      },
     ],
   },
   {
@@ -288,25 +302,6 @@ export default [
         to: '/producto/links',
         submodule: 'LINKS',
         roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
-      },
-    ],
-  },
-  {
-    component: 'CNavGroup',
-    name: 'Reporte',
-    to: '/marketing',
-    icon: 'cil-chart-pie',
-    module: 'MARKETING',
-    // MARKETING ya no va hardcodeado: su acceso a Reporte se gobierna solo
-    // desde Configuración → Roles y Permisos (submódulo OVERVIEW).
-    roles: ['ADMIN', 'GERENCIA'],
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Reporte Completo',
-        to: '/marketing/overview',
-        submodule: 'OVERVIEW',
-        roles: ['ADMIN', 'GERENCIA'],
       },
     ],
   },

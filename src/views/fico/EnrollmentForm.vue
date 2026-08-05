@@ -1124,7 +1124,8 @@ function resolveAgentOrigin () {
   const cat = form.agent_category
   if (cat === 'b2b') return 'B2B'
   if (cat === 'web') return 'WEB'
-  if (cat === 'we') return 'WE'
+  // El area WE elegida (twe/fwe) es el origen real: 'TWE' / 'FWE'.
+  if (cat === 'we') return String(form.seller_agent_id || 'we').toUpperCase()
   if (cat === 'sa') return 'SA'
   return null
 }

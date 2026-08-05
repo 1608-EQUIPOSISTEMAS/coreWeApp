@@ -132,7 +132,19 @@ const days = computed(() => {
   return out
 })
 
-const totalWeek = computed(() => days.value.reduce((n, d) => n + d.classes.length, 0))
+// Resumen de la semana visible para los KPIs de la cabecera.
+const summary = computed(() => {
+  const s = { total: 0, A: 0, R: 0, T: 0, nm: 0 }
+  for (const d of days.value) {
+    for (const c of d.classes) {
+      s.total++
+      if (c.session.status) s[c.session.status]++
+      if (c.edition.new_methodology) s.nm++
+    }
+  }
+  return s
+})
+const totalWeek = computed(() => summary.value.total)
 
 const fmtShort = (ymd) => {
   if (!ymd) return ''
@@ -145,39 +157,95 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 
 <template>
   <div class="cw-shell">
-    <div class="week-head">
-      <div>
-        <div class="eyebrow">ACADÉMICA</div>
+    <header class="page-head">
+      <div class="titles">
+        <div class="eyebrow">Academica</div>
         <h1>Vista Semanal</h1>
-        <div class="sub">
+        <div class="subtitle">
           Clases dictándose cada día de la semana —
           <b>{{ totalWeek }} {{ totalWeek === 1 ? 'clase' : 'clases' }}</b>
         </div>
       </div>
-      <div class="grow" />
-      <button class="btn ghost today" :disabled="isLoading" @click="goToday">Hoy</button>
-      <div class="week-nav">
-        <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
-          <i class="fa-solid fa-chevron-left"></i>
+      <div class="actions">
+        <button class="btn" :disabled="isLoading" @click="goToday">
+          <i class="fa-regular fa-calendar-check"></i> Hoy
         </button>
-        <div class="center">
-          <div class="wk">Semana {{ week }}</div>
-          <div class="rg">{{ rangeLabel }}</div>
+        <button class="btn" :disabled="isLoading" @click="load">
+          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
+        </button>
+        <div class="week-nav">
+          <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          <div class="center">
+            <div class="wk">Semana {{ week }}</div>
+            <div class="rg">{{ rangeLabel }}</div>
+          </div>
+          <button class="arrow" :disabled="isLoading" @click="moveWeek(1)" title="Semana siguiente">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
         </div>
-        <button class="arrow" :disabled="isLoading" @click="moveWeek(1)" title="Semana siguiente">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
+      </div>
+    </header>
+
+    <div class="kpi-grid">
+      <div class="kpi" style="--bar: #2563EB">
+        <div class="k-label">
+          <span>Clases esta semana</span>
+          <i class="fa-regular fa-calendar k-icon"></i>
+        </div>
+        <div class="k-value">
+          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
+          <template v-else>{{ summary.total }}</template>
+        </div>
+        <div class="k-foot"><span>en los 7 días</span></div>
+      </div>
+      <div class="kpi" style="--bar: #10B981">
+        <div class="k-label">
+          <span>Dictadas</span>
+          <i class="fa-solid fa-check k-icon"></i>
+        </div>
+        <div class="k-value">
+          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
+          <template v-else>{{ summary.A }}</template>
+        </div>
+        <div class="k-foot"><span>{{ summary.T }} con tardanza</span></div>
+      </div>
+      <div class="kpi" style="--bar: #EF4444">
+        <div class="k-label">
+          <span>Reprogramadas</span>
+          <i class="fa-solid fa-rotate k-icon"></i>
+        </div>
+        <div class="k-value">
+          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
+          <template v-else>{{ summary.R }}</template>
+        </div>
+        <div class="k-foot"><span>movidas de fecha</span></div>
+      </div>
+      <div class="kpi" style="--bar: #0E7490">
+        <div class="k-label">
+          <span>Nueva metodología</span>
+          <i class="fa-solid fa-flask k-icon"></i>
+        </div>
+        <div class="k-value">
+          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
+          <template v-else>{{ summary.nm }}</template>
+        </div>
+        <div class="k-foot"><span>clases marcadas NM</span></div>
       </div>
     </div>
 
-    <div class="legend">
+    <div class="filter-bar">
+      <span class="bar-title">Leyenda</span>
+      <span class="divider"></span>
       <span v-for="k in ['A', 'R', 'T', '']" :key="k" class="lg">
         <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
       </span>
       <span class="lg">
         <span class="sw e-nm">NM</span>Nueva metodología
       </span>
-      <span class="lg hint">Clic en una clase para abrir su aula</span>
+      <div class="spacer"></div>
+      <span class="muted">Clic en una clase para abrir su aula</span>
     </div>
 
     <div v-if="isLoading && !data" class="empty-state">
@@ -224,104 +292,235 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap');
-
-/* Mismos tokens que ControlEdiciones.vue */
+/* Mismos tokens que Aulas.vue / ControlEdiciones.vue. La estructura sigue
+   siendo el kanban de 7 columnas; solo cambia la piel. */
 .cw-shell {
-  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --accent: #002060; /* navy corporativo WE */
-  --accent-ink: #ffffff;
+  --bg-soft: #FAFAF8;
+  --line: #E8E8E3;
+  --line-soft: #EFEFEA;
+  --ink: #14140F;
+  --ink-2: #3A3A33;
+  --ink-3: #6F6F66;
+  --ink-4: #A0A099;
+  --green: #10B981;
+  --green-soft: #ECFDF4;
+  --green-ink: #047857;
+  --amber-soft: #FEF6E1;
+  --amber-ink: #B45309;
+  --red-soft: #FEECEC;
+  --red-ink: #B91C1C;
+  --blue-soft: #ECF2FE;
+  --blue-ink: #1D4ED8;
+  --nm-soft: #ECFEFF; --nm-ink: #0E7490; /* nueva metodologia */
+  --accent: var(--we-navy, #002060);
   --surface: #ffffff;
-  --surface-2: #faf9f8;
-  --surface-3: #f1efed;
-  --border: #e8e6e3;
-  --border-strong: #d8d4d0;
-  --ink: #1b1917;
-  --ink-2: #57534e;
-  --ink-3: #8d877f;
-  --shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 1px 1px rgba(28, 25, 23, 0.03);
-  --s1-bg: #fde8e6; --s1-fg: #c0362c; /* repro */
-  --s2-bg: #fdeccb; --s2-fg: #a96208; /* tardanza */
-  --s4-bg: #d9f3df; --s4-fg: #1d7a40; /* dictada */
-  --nm-bg: #cffafe; --nm-fg: #0e7490; /* nueva metodologia */
-  font-family: var(--font-sans);
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--ink);
+  font-size: 14px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 .cw-shell button { font-family: inherit; cursor: pointer; }
 .cw-shell button:disabled { opacity: 0.55; cursor: default; }
+.spacer { flex: 1; }
+.muted { color: var(--ink-3); font-size: 12px; }
 
-/* ---------- head (identico a ControlEdiciones) ---------- */
-.week-head { display: flex; align-items: flex-end; gap: 14px; margin: 6px 2px 20px; }
-.week-head .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-3); }
-.week-head h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; margin: 4px 0 6px; }
-.week-head .sub { font-size: 14.5px; color: var(--ink-2); }
-.week-head .grow { flex: 1; }
+/* ---------- page-head ---------- */
+.page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.page-head .titles { flex: 1; min-width: 0; }
+.page-head .eyebrow {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.page-head h1 { margin: 4px 0 2px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+.page-head .subtitle { color: var(--ink-3); font-size: 13.5px; }
+.page-head .actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
-.week-nav { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; box-shadow: var(--shadow); padding: 6px; }
-.week-nav .arrow { width: 40px; height: 40px; border-radius: 10px; border: none; background: transparent; color: var(--ink-2);
-  display: grid; place-items: center; transition: 0.15s; }
-.week-nav .arrow:hover { background: var(--surface-3); color: var(--ink); }
-.week-nav .center { text-align: center; padding: 0 18px; min-width: 150px; }
-.week-nav .center .wk { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
-.week-nav .center .rg { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 1px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 12px; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-2); transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--bg-soft); border-color: #DDD; }
 
-.btn { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); border-radius: 10px;
-  padding: 7px 13px; font-size: 13px; font-weight: 600; transition: 0.15s; }
-.btn.ghost { background: transparent; }
-.btn.ghost:hover { background: var(--surface-3); }
-.btn.today { align-self: center; }
+.week-nav {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 3px;
+}
+.week-nav .arrow {
+  width: 30px; height: 34px; border-radius: 7px; border: none;
+  background: transparent; color: var(--ink-3);
+  display: grid; place-items: center; transition: 0.15s;
+}
+.week-nav .arrow:hover { background: var(--bg-soft); color: var(--ink); }
+.week-nav .center { text-align: center; padding: 0 12px; min-width: 138px; }
+.week-nav .center .wk { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.week-nav .center .rg { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 
-/* ---------- legend ---------- */
-.legend { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
-.legend .lg { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
-.legend .hint { margin-left: auto; color: var(--ink-3); font-weight: 500; }
-.sw { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11px;
-  font-weight: 800; font-family: var(--font-mono); }
+/* ---------- KPIs ---------- */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 14px 16px; border: 1px solid var(--line);
+  position: relative; overflow: hidden;
+}
+.kpi::before {
+  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
+  width: 3px; border-radius: 2px; background: var(--bar, var(--ink-4));
+}
+.kpi .k-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.kpi .k-icon { color: var(--ink-4); font-size: 14px; }
+.kpi .k-value { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; line-height: 1.1; }
+.kpi .k-foot { margin-top: 10px; font-size: 12px; color: var(--ink-3); }
 
-.e-pend { background: var(--surface-3); color: var(--ink-3); border: 1px solid var(--border); }
-.e-dictada { background: var(--s4-bg); color: var(--s4-fg); }
-.e-repro { background: var(--s1-bg); color: var(--s1-fg); }
-.e-tard { background: var(--s2-bg); color: var(--s2-fg); }
-.e-nm { background: var(--nm-bg); color: var(--nm-fg); }
+/* ---------- barra de leyenda ---------- */
+.filter-bar {
+  background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line);
+  padding: 12px 14px; margin-bottom: 14px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+}
+.filter-bar .bar-title {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.divider { width: 1px; height: 22px; background: var(--line); margin: 0 -4px; }
+.lg { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.sw {
+  width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+}
 
-/* ---------- agenda grid ---------- */
+.e-pend { background: var(--bg-soft); color: var(--ink-3); border: 1px solid var(--line); }
+.e-dictada { background: var(--green-soft); color: var(--green-ink); }
+.e-repro { background: var(--red-soft); color: var(--red-ink); }
+.e-tard { background: var(--amber-soft); color: var(--amber-ink); }
+.e-nm { background: var(--nm-soft); color: var(--nm-ink); }
+
+/* ---------- kanban de 7 dias ---------- */
 .grid-wrap { overflow-x: auto; padding-bottom: 6px; }
 .day-grid { display: grid; grid-template-columns: repeat(7, minmax(196px, 1fr)); gap: 12px; min-width: 1180px; }
-.day-col { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
-  padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 180px; }
-.day-col.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.day-col {
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 180px;
+}
+.day-col.today { border-color: var(--blue-ink); background: var(--blue-soft); }
 
-.day-head { display: flex; align-items: baseline; gap: 7px; padding: 2px 4px 6px; border-bottom: 1px solid var(--border); }
-.day-head .dn { font-size: 13px; font-weight: 800; letter-spacing: -0.005em; }
-.day-col.today .day-head .dn { color: var(--accent); }
-.day-head .dd { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
-.day-head .dc { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--accent);
-  background: rgba(107, 92, 240, 0.13); border-radius: 7px; padding: 2px 7px; }
+.day-head {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 2px 4px 8px; border-bottom: 1px solid var(--line);
+}
+.day-head .dn {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.day-col.today .day-head .dn { color: var(--blue-ink); }
+.day-head .dd { font-size: 11.5px; color: var(--ink-4); }
+.day-head .dc {
+  margin-left: auto; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px;
+}
+.day-col.today .day-head .dc { color: var(--blue-ink); border-color: transparent; }
 
-.day-empty { color: var(--ink-3); font-size: 12px; text-align: center; padding: 22px 0; }
+.day-empty { color: var(--ink-4); font-size: 12px; text-align: center; padding: 22px 0; }
 
-.cls { display: block; width: 100%; text-align: left; background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 11px; padding: 9px 11px; transition: 0.13s; }
-.cls:hover { border-color: var(--accent); background: var(--surface); }
-.cls.cls-nm { border-left: 3px solid var(--nm-fg); }
-.cls.cls-nm:hover { border-color: var(--nm-fg); }
-.cls-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.cls-top .hr { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-2); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; }
-.cls-top .sn { margin-left: auto; flex: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 800;
-  color: var(--accent); background: rgba(107, 92, 240, 0.13); border-radius: 6px; padding: 2px 6px; }
-.cls-name { font-size: 13.5px; font-weight: 700; letter-spacing: -0.005em; line-height: 1.25; }
-.cls-code { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; margin-top: 1px; }
-.cls-doc { font-size: 12px; color: var(--ink-2); font-weight: 600; margin-top: 4px; }
-.cls-badge { display: inline-flex; align-items: center; margin-top: 6px; border-radius: 7px; padding: 3px 8px;
-  font-size: 10.5px; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.02em; }
+/* tarjeta de clase: mismo lenguaje que .course-card de Aulas, en chico */
+.cls {
+  display: block; width: 100%; text-align: left;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 11px;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  position: relative; overflow: hidden;
+}
+.cls:hover { border-color: #D4D4CC; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.cls.cls-nm::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--nm-ink);
+}
+.cls.cls-nm { padding-left: 14px; }
+.cls-top { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.cls-top .hr {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cls-top .sn {
+  margin-left: auto; flex: none;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 10px; font-weight: 600; color: var(--blue-ink);
+  background: var(--blue-soft); border-radius: 999px; padding: 2px 7px;
+}
+.cls-name { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.25; }
+.cls-code { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+.cls-doc { font-size: 12px; color: var(--ink-3); margin-top: 5px; }
+.cls-badge {
+  display: inline-flex; align-items: center; margin-top: 7px;
+  border-radius: 999px; padding: 2px 8px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+}
 
-.empty-state { text-align: center; padding: 70px 20px; color: var(--ink-3); }
-.empty-state .big { font-size: 18px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
+.empty-state {
+  text-align: center; padding: 70px 20px; color: var(--ink-3);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.empty-state .big { font-size: 18px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
 
-@media (max-width: 900px) {
-  .week-head { flex-wrap: wrap; }
+/* skeleton (mismo shimmer que Aulas) */
+.skel {
+  display: block;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel-kpi { width: 56px; height: 30px; }
+
+@media (max-width: 1100px) {
+  .page-head { flex-wrap: wrap; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE
+   ════════════════════════════════════════ */
+[data-coreui-theme="dark"] .cw-shell {
+  --bg-soft: #1F1F1A;
+  --line: #2A2A22;
+  --line-soft: #1F1F1A;
+  --ink: #F4F4F0;
+  --ink-2: #D4D4CC;
+  --ink-3: #A0A099;
+  --ink-4: #6F6F66;
+  --surface: #1A1A14;
+  --green-soft: rgba(16,185,129,0.14);
+  --green-ink: #34D399;
+  --amber-soft: rgba(245,158,11,0.14);
+  --amber-ink: #FBBF24;
+  --red-soft: rgba(239,68,68,0.14);
+  --red-ink: #F87171;
+  --blue-soft: rgba(37,99,235,0.18);
+  --blue-ink: #60A5FA;
+  --nm-soft: rgba(14,116,144,0.20); --nm-ink: #67E8F9;
+  --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
+}
+[data-coreui-theme="dark"] .cw-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }
+[data-coreui-theme="dark"] .cw-shell .cls:hover { border-color: #3A3A33; }
+[data-coreui-theme="dark"] .cw-shell .skel {
+  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
+  background-size: 200% 100%;
 }
 </style>

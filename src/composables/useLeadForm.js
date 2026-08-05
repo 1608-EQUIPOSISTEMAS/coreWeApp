@@ -1349,6 +1349,9 @@ export function useLeadForm(options = {}) {
         ticket_payment_urls: paymentFiles,
         attachments: generalAttachments,
         agreement_id: insc.agreement_id || null,
+        // Toda venta nacida en el modulo de Fundacion es del canal FWE, sea quien
+        // sea el asesor que la registro (el alias sigue viajando en seller_agent_id).
+        agent_origin: businessLine === 'we_business_line_fundacion' ? 'FWE' : null,
         cat_event_category: insc.cat_event_category || null,
         event_seat: isVipCategory.value ? (insc.event_seat || '').trim() || null : null,
       }

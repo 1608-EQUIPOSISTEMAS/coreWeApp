@@ -361,7 +361,7 @@
                 />
               </div>
             </div>
-            <div class="eact-field" v-if="newAgentCategory && newAgentCategory !== 'we'">
+            <div class="eact-field" v-if="newAgentCategory && !WE_CATS.includes(newAgentCategory)">
               <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="eact-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
               <SearchSelect
                 v-model="newSellerAgentId"
@@ -371,7 +371,7 @@
                 placeholder="Buscar asesor por alias o nombre..."
               />
             </div>
-            <div v-if="newAgentCategory === 'we'" class="eact-readonly" style="font-size:12px;color:#666">
+            <div v-if="WE_CATS.includes(newAgentCategory)" class="eact-readonly" style="font-size:12px;color:#666">
               <i class="fa-solid fa-circle-info"></i> Canal WE no lleva asesor individual asignado.
             </div>
             <small v-if="agentPreview" class="eact-price-hint">
@@ -979,14 +979,21 @@ const agentCategoryOptions = [
   { id: 'comercial', label: 'Comercial (sin canal)' },
   { id: 'b2b',       label: 'B2B' },
   { id: 'web',       label: 'WEB' },
-  { id: 'we',        label: 'WE' },
+  { id: 'twe',       label: 'TWE - Talento' },
+  { id: 'fwe',       label: 'FWE - Fundacion' },
+  { id: 'we',        label: 'WE (generico)' },
   { id: 'sa',        label: 'S/A (Sin Asesor)' }
 ]
+
+// Canales WE: no llevan asesor individual, el canal ES el origen.
+const WE_CATS = ['we', 'twe', 'fwe']
 
 // Mapeo inverso: agent_origin almacenado -> categoria UI.
 function categoryFromOrigin (origin) {
   if (origin === 'B2B') return 'b2b'
   if (origin === 'WEB') return 'web'
+  if (origin === 'TWE') return 'twe'
+  if (origin === 'FWE') return 'fwe'
   if (origin === 'WE')  return 'we'
   if (origin === 'SA')  return 'sa'
   return 'comercial'
@@ -996,7 +1003,7 @@ function categoryFromOrigin (origin) {
 function originFromCategory (cat) {
   if (cat === 'b2b') return 'B2B'
   if (cat === 'web') return 'WEB'
-  if (cat === 'we')  return 'WE'
+  if (WE_CATS.includes(cat)) return cat.toUpperCase()
   if (cat === 'sa')  return 'SA'
   return null
 }
@@ -1017,7 +1024,7 @@ const currentAgentLabel = computed(() => {
 // we no usa este dropdown (no hay user_id valido para WE).
 const filteredAgentOptions = computed(() => {
   const cat = newAgentCategory.value
-  if (cat === 'we') return []
+  if (WE_CATS.includes(cat)) return []
   if (cat === 'b2b') {
     return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — B2B` }))
   }
@@ -1037,12 +1044,12 @@ const canAdvanceEditAgent = computed(() => {
   // we: no requiere asesor (siempre se persiste seller_agent_id=null).
   // sa: asesor opcional (decision: permitir combinacion 'SA + asesor').
   // comercial/b2b/web: asesor requerido.
-  if (cat !== 'we' && cat !== 'sa' && !newId) return false
+  if (!WE_CATS.includes(cat) && cat !== 'sa' && !newId) return false
 
   const oldOrigin = props.enrollment?.agent_origin || null
   const oldId    = props.enrollment?.seller_agent_id || null
   const newOrigin = originFromCategory(cat)
-  const newIdFinal = (cat === 'we') ? null : newId
+  const newIdFinal = WE_CATS.includes(cat) ? null : newId
 
   // Algo debe haber cambiado (canal o asesor) para que tenga sentido guardar.
   return Number(oldId) !== Number(newIdFinal) || oldOrigin !== newOrigin
@@ -1051,7 +1058,7 @@ const canAdvanceEditAgent = computed(() => {
 const agentPreview = computed(() => {
   const cat = newAgentCategory.value
   if (!cat) return ''
-  if (cat === 'we') return 'WE'
+  if (WE_CATS.includes(cat)) return cat.toUpperCase()
 
   const id = Number(newSellerAgentId.value)
   const u = id ? agentOptions.value.find(a => Number(a.user_id) === id) : null
@@ -1100,7 +1107,7 @@ async function handleEditSellerAgent () {
   saving.value = true
   try {
     const cat = newAgentCategory.value
-    const newId = (cat === 'we') ? null : (Number(newSellerAgentId.value) || null)
+    const newId = WE_CATS.includes(cat) ? null : (Number(newSellerAgentId.value) || null)
     await ficoService.editSellerAgent({
       enrollment_id: enrollmentId.value,
       new_seller_agent_id: newId,

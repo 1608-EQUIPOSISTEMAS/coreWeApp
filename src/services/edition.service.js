@@ -118,6 +118,22 @@ export default class EditionService {
     return response
   }
 
+  // Seguimiento B2B: aulas EN VIVO con alumnos B2B. scope 'curso' | 'todas'.
+  async b2bTrackingList(payload) {
+    const response = (await api.post('/edition/b2btrackinglist', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  // Asistencia manual del módulo B2B. No toca la Lista de Notas.
+  async b2bAttendanceSave(payload) {
+    const response = (await api.post('/edition/b2battendancesave', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response
+  }
+
   // Certificar aula en Odoo: notas → evaluaciones + certificación masiva +
   // PDFs. Puede tardar varios minutos con un aula completa.
   async classroomOdooCertify(payload) {
