@@ -159,7 +159,11 @@ async function fetch() {
     draft.value = [...saved.value]
   } catch (err) {
     console.error('Error cargando cursos de membresía:', err)
-    toast.error('No se pudieron cargar los cursos desde Odoo.')
+    // 403 no es un fallo de Odoo: culpar a Odoo mandó a buscar el problema
+    // al lado equivocado.
+    toast.error(err?.response?.status === 403
+      ? 'Tu rol no tiene permiso sobre esta lista.'
+      : 'No se pudieron cargar los cursos desde Odoo.')
     channels.value = []
   }
 }

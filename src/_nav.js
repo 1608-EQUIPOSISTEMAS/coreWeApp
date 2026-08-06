@@ -362,7 +362,7 @@ export default [
         name: 'Cursos de Membresía',
         to: '/configuracion/membresia-cursos',
         submodule: 'MEMBRESIA_CURSOS',
-        roles: ['ADMIN'],
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO'],
       },
     ],
   },

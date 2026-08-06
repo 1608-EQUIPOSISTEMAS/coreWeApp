@@ -579,7 +579,7 @@ const routes = [
           path: 'membresia-cursos',
           name: 'ConfigMembresiaCursos',
           component: () => import('@/views/configuracion/MembresiaCursos.vue'),
-          meta: { submodule: 'MEMBRESIA_CURSOS', roles: ['ADMIN'] },
+          meta: { submodule: 'MEMBRESIA_CURSOS', roles: ['ADMIN', 'FICO', 'LIDER_FICO'] },
         },
       ],
     },
