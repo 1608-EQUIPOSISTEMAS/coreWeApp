@@ -2,6 +2,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, inject, watch, nex
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
 
 export function useLeadForm(options = {}) {
   const {
@@ -758,33 +759,23 @@ export function useLeadForm(options = {}) {
   watch(
     () => [insc.montoOriginal, insc.val_porcentaje, insc.val_fijo, insc.val_beneficios, insc.dsct_porcent_id, insc.dsct_stick_id, insc.dsct_benefit_ids],
     () => {
-      const base = parseFloat(insc.montoOriginal) || 0
-      let montoPorcentaje  = round2((base * (insc.val_porcentaje || 0)) / 100)
-      let subtotalAfterPct = round2(base - montoPorcentaje)
-      let montoFijo        = 0
-      const promoTarget    = round2(parseFloat(insc.val_fijo) || 0)
-      if (insc.dsct_stick_id && promoTarget > 0) {
-        montoFijo = round2(subtotalAfterPct - promoTarget)
-        if (montoFijo < 0) montoFijo = 0
-      }
-      const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0) ? promoTarget : subtotalAfterPct
-      const montoBeneficioTotal = round2((insc.val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0))
-      const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
-      if (totalDescuentos > base) {
+      const r = computeDiscounts(insc)
+      if (r.exceedsBase) {
         toast.warning('¡Cuidado! Los descuentos superan el Precio Base.')
         insc.val_porcentaje = 0; insc.dsct_porcent_id   = null
         insc.val_fijo       = 0; insc.dsct_stick_id     = null
         insc.val_beneficios = []; insc.dsct_benefit_ids = []
         discountResetKey.value++
         insc.montoDescuentoPorcentaje = 0; insc.montoDescuentoFijo = 0
-        insc.montoBeneficioTotal = 0; insc.total_amount = base
+        insc.montoBeneficioTotal = 0; insc.beneficiosSoloBadge = false
+        insc.total_amount = r.base
         return
       }
-      insc.montoDescuentoPorcentaje = montoPorcentaje
-      insc.montoDescuentoFijo       = montoFijo
-      insc.montoBeneficioTotal      = montoBeneficioTotal
-      const final = round2(subtotalAfterStick - montoBeneficioTotal)
-      insc.total_amount = final > 0 ? Math.floor(final) : 0
+      insc.montoDescuentoPorcentaje = r.montoPorcentaje
+      insc.montoDescuentoFijo       = r.montoFijo
+      insc.montoBeneficioTotal      = r.montoBeneficioTotal
+      insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
+      insc.total_amount             = r.total_amount
     },
     { deep: true }
   )

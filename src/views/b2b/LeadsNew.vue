@@ -1463,12 +1463,17 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 Beneficio {{ insc.dsct_benefit_ids.length > 1 ? (i + 1) : '' }}
                 <small class="text-muted ms-1" style="font-size:.7rem;">{{ ben.label }}</small>
               </span>
-              <span class="value text-danger">
+              <!-- Sin saldo que descontar (beca) el beneficio se registra igual:
+                   vale por su etiqueta, no por su monto. -->
+              <span v-if="insc.beneficiosSoloBadge" class="value text-muted" style="font-size:.75rem;">
+                Solo etiqueta · incluido en la beca
+              </span>
+              <span v-else class="value text-danger">
                 - {{ selectedCurrency.symbol }} {{ fmt2(insc.val_beneficios[i] || 0) }}
               </span>
             </div>
             <!-- Total beneficios si hay más de uno -->
-            <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1" style="opacity:.7; font-size:.78rem;">
+            <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1 && !insc.beneficiosSoloBadge" style="opacity:.7; font-size:.78rem;">
               <span class="label text-muted">Subtotal beneficios</span>
               <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficioTotal) }}</span>
             </div>

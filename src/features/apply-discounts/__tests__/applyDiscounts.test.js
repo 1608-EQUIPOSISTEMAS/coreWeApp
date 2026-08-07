@@ -24,6 +24,30 @@ describe('computeDiscounts (puro)', () => {
     expect(r.total_amount).toBe(900)
   })
 
+  // Beca: el beneficio (CUENTA CLAUDE, LAPTOP) vale por su badge, no por su monto.
+  it('beca 100%: el beneficio entra en 0 y NO resetea la seleccion', () => {
+    const r = computeDiscounts({ montoOriginal: 1000, val_porcentaje: 100, val_beneficios: [100] })
+    expect(r.beneficiosSoloBadge).toBe(true)
+    expect(r.montoBeneficioTotal).toBe(0)
+    expect(r.exceedsBase).toBe(false)
+    expect(r.total_amount).toBe(0)
+  })
+
+  it('Member Black (precio base 0): mismo trato que la beca', () => {
+    const r = computeDiscounts({ montoOriginal: 0, val_beneficios: [100] })
+    expect(r.beneficiosSoloBadge).toBe(true)
+    expect(r.exceedsBase).toBe(false)
+  })
+
+  // Con saldo > 0 el beneficio descuenta normal, aunque no quepa entero: ahi
+  // sigue mandando el reseteo de siempre, no se reparte ni se recorta.
+  it('con saldo parcial NO clampa: el beneficio que no cabe dispara exceedsBase', () => {
+    const r = computeDiscounts({ montoOriginal: 1000, val_porcentaje: 94, val_beneficios: [100] })
+    expect(r.beneficiosSoloBadge).toBe(false)
+    expect(r.montoBeneficioTotal).toBe(100)
+    expect(r.exceedsBase).toBe(true)
+  })
+
   it('marca exceedsBase cuando los descuentos superan la base', () => {
     const r = computeDiscounts({ montoOriginal: 100, val_porcentaje: 50, val_beneficios: [60] })
     expect(r.totalDescuentos).toBeGreaterThan(100)

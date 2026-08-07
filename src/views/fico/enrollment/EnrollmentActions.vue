@@ -972,6 +972,9 @@ const newAgentCategory = ref(null)
 const newSellerAgentId = ref(null)
 const editAgentJustificacion = ref('')
 const agentOptions = ref([])
+// Los asesores de convenio (NY12/JF39) son users con rol B2B y sp_user_list no
+// los devuelve: hay que pedirlos aparte, igual que EnrollmentForm.vue al crear.
+const b2bAgentOptions = ref([])
 const loadingAgents = ref(false)
 
 // Espejo de agentCategoryOptions en EnrollmentForm.vue: misma identidad y orden.
@@ -1026,7 +1029,15 @@ const filteredAgentOptions = computed(() => {
   const cat = newAgentCategory.value
   if (WE_CATS.includes(cat)) return []
   if (cat === 'b2b') {
-    return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — B2B` }))
+    // Universo B2B = asesores de convenio (rol B2B) + comerciales, que tambien
+    // pueden cerrar una venta B2B ("B2B - AE30"). Dedup por user_id porque un
+    // comercial puede tener ambos roles; los de convenio van primero.
+    const byId = new Map()
+    for (const a of [...b2bAgentOptions.value, ...agentOptions.value]) {
+      const id = Number(a.user_id)
+      if (!byId.has(id)) byId.set(id, { ...a, label: `${a.alias} — B2B` })
+    }
+    return [...byId.values()]
   }
   if (cat === 'web') {
     return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — WEB` }))
@@ -1077,24 +1088,38 @@ function onAgentCategoryChange () {
   newSellerAgentId.value = null
 }
 
+function toAgentOptions (rows, keep) {
+  return (rows || [])
+    .filter(keep)
+    .map(u => {
+      const name = u.full_name
+        || [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+      return {
+        user_id: u.user_id,
+        alias: u.alias,
+        label: name ? `${u.alias} — ${name}` : u.alias
+      }
+    })
+    .sort((a, b) => a.alias.localeCompare(b.alias))
+}
+
 async function loadAgentOptions () {
   if (agentOptions.value.length > 0) return
   loadingAgents.value = true
   try {
-    const arr = await authService.userList({})
-    const users = (arr || [])
-      .filter(u => u.alias && u.active)
-      .map(u => {
-        const name = u.full_name
-          || [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
-        return {
-          user_id: u.user_id,
-          alias: u.alias,
-          label: name ? `${u.alias} — ${name}` : u.alias
-        }
+    const [arr, b2bArr] = await Promise.all([
+      authService.userList({}),
+      // Degradar en vez de romper: sin la lista de convenio el canal B2B sigue
+      // ofreciendo comerciales, que es el comportamiento previo a este fix.
+      authService.userListByRole('B2B').catch(e => {
+        console.error('[loadAgentOptions] rol B2B:', e)
+        return []
       })
-      .sort((a, b) => a.alias.localeCompare(b.alias))
-    agentOptions.value = users
+    ])
+    agentOptions.value = toAgentOptions(arr, u => u.alias && u.active)
+    // Sin filtro por `active`: sp_user_list_by_role ya acota el universo y los
+    // externos de convenio no siempre traen la bandera.
+    b2bAgentOptions.value = toAgentOptions(b2bArr, u => u.alias)
   } catch (err) {
     console.error('[loadAgentOptions]', err)
     toast.error('No se pudieron cargar los asesores.')

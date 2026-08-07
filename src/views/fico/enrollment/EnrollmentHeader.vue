@@ -51,6 +51,13 @@
         <span class="eh-ic-value">{{ eventCategory }}</span>
       </div>
     </div>
+    <div v-if="vipSeat" class="eh-ic">
+      <span class="eh-ic-icon ic-rose"><i class="fa-solid fa-chair"></i></span>
+      <div>
+        <span class="eh-ic-label">Asiento VIP</span>
+        <span class="eh-ic-value">{{ vipSeat }}</span>
+      </div>
+    </div>
     <div class="eh-ic">
       <span class="eh-ic-icon ic-amber"><i class="fa-solid fa-calendar-check"></i></span>
       <div>
@@ -97,6 +104,14 @@ const membershipName = computed(() =>
 const eventCategory = computed(() =>
   props.detail?.event_category_label || props.enrollment?.event_category_label || null
 )
+// Solo la entrada VIP tiene asiento asignado; se pregunta por el alias (no por
+// la etiqueta) igual que el correo de confirmacion, que es la otra cara de este
+// dato. Sin categoria VIP la tarjeta no aparece aunque la columna traiga valor.
+const vipSeat = computed(() => {
+  const src = props.detail?.event_category_alias ? props.detail : props.enrollment
+  if (src?.event_category_alias !== 'we_event_category_vip') return null
+  return String(src.event_seat || '').trim() || null
+})
 const editionStartDate = computed(() =>
   props.detail?.edition_start_date || props.enrollment?.edition_start_date || null
 )

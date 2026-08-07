@@ -21,7 +21,18 @@ export function computeDiscounts ({ montoOriginal, val_porcentaje, val_fijo, val
   }
   const subtotalAfterStick = (dsct_stick_id && promoTarget > 0) ? promoTarget : subtotalAfterPct
 
-  const montoBeneficioTotal = round2((val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0))
+  const sumaBeneficios = round2((val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0))
+
+  // Beca: cuando el porcentaje o la promo ya dejaron el saldo en cero, el
+  // beneficio entra por su BADGE y no por su monto. El badge (CUENTA PERSONAL,
+  // Traera laptop) es lo que avisa a Sistemas y a Logistica, y restar S/100 de
+  // un saldo 0 no tiene sentido: antes eso disparaba exceedsBase y borraba toda
+  // la seleccion, dejando al becado sin forma de registrar el beneficio.
+  // Solo aplica con saldo exactamente 0 — si queda saldo el beneficio descuenta
+  // normal y, si no cabe, exceedsBase resetea como siempre.
+  const beneficiosSoloBadge = sumaBeneficios > 0 && subtotalAfterStick === 0
+  const montoBeneficioTotal = beneficiosSoloBadge ? 0 : sumaBeneficios
+
   const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
   const exceedsBase = totalDescuentos > base
 
@@ -32,6 +43,7 @@ export function computeDiscounts ({ montoOriginal, val_porcentaje, val_fijo, val
     montoPorcentaje,
     montoFijo,
     montoBeneficioTotal,
+    beneficiosSoloBadge,
     totalDescuentos,
     exceedsBase,
     // Espejo del watcher: si excede la base, el total cae a la base (y el caller

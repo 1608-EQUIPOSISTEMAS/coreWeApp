@@ -239,9 +239,17 @@
           </label>
         </div>
       </div>
+    </div>
 
-      <div class="ef-grid-3" style="margin-top:16px" v-if="!form.is_scholarship">
-        <div class="ef-field">
+    <!-- DESCUENTOS Y BENEFICIOS -->
+    <!-- Vive FUERA de INFORMACION DE PAGO a proposito: en beca o cortesia de
+         membresia no hay pago que mostrar, pero el beneficio si se registra —
+         entra en monto 0 y vale por su etiqueta (CUENTA PERSONAL / laptop).
+         Misma regla que el SP (v_ben_solo_badge) y que computeDiscounts.js. -->
+    <div class="ef-card" v-if="!isB2BDocumental">
+      <h6 class="ef-section-title"><i class="fa-solid fa-tags"></i> DESCUENTOS Y BENEFICIOS</h6>
+      <div class="ef-grid-3">
+        <div class="ef-field" v-if="!isZeroPayment">
           <label>
             Descuento <span class="ef-optional">(opcional)</span>
             <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
@@ -261,7 +269,7 @@
             @change="onChangeDescuentoPorcentual"
           />
         </div>
-        <div class="ef-field">
+        <div class="ef-field" v-if="!isZeroPayment">
           <label>
             Promocion <span class="ef-optional">(opcional)</span>
             <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
@@ -284,20 +292,21 @@
         <div class="ef-field">
           <label>
             Beneficios <span class="ef-optional">(opcional)</span>
-            <span v-if="!form.list_price" class="ef-disc-hint">requiere precio lista</span>
+            <span v-if="!isZeroPayment && !form.list_price" class="ef-disc-hint">requiere precio lista</span>
           </label>
           <MultiSelect
             :key="`fico-dsct-benefit-${discountResetKey}`"
             v-model="form.dsct_benefit_ids"
             mode="remote"
             :debounce-ms="400"
-            :disabled="!form.list_price"
+            :disabled="!isZeroPayment && !form.list_price"
             label-key="full_label"
             value-key="id"
             :fetcher="q => discountService.discountCaller({ q, cat_discount_type: discountTypeId('we_discount_type_benefit'), cat_currency: form.cat_currency })"
             placeholder="BENEFICIOS..."
             @change="onChangeBeneficios"
           />
+          <small v-if="isZeroPayment" class="ef-cc-help">Sin pago: el beneficio se registra en 0 y solo genera la etiqueta.</small>
         </div>
       </div>
     </div>
@@ -608,6 +617,10 @@ const isB2BDocumental = computed(() => {
 const membershipOptions = ref([])
 const selectedMembership = computed(() => membershipOptions.value.find(p => p.id === form.membership_program_id) || null)
 const isMembershipBenefit = computed(() => !!selectedMembership.value && !/plus/i.test(selectedMembership.value.description || ''))
+
+// El alumno no paga (beca o cortesia de membresia): no hay descuentos de dinero
+// que aplicar, pero los beneficios se siguen registrando por su etiqueta.
+const isZeroPayment = computed(() => form.is_scholarship || isMembershipBenefit.value)
 
 // Al activar el beneficio, limpiamos pago/cuotas/descuentos para no mandar
 // montos viejos (el SP fuerza 0 igual, pero la UI no debe mostrar pago).

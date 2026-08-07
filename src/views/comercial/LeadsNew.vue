@@ -1603,12 +1603,17 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 Beneficio {{ insc.dsct_benefit_ids.length > 1 ? (i + 1) : '' }}
                 <small class="text-muted ms-1" style="font-size:.7rem;">{{ ben.label }}</small>
               </span>
-              <span class="value text-danger">
+              <!-- Sin saldo que descontar (beca) el beneficio se registra igual:
+                   vale por su etiqueta, no por su monto. -->
+              <span v-if="insc.beneficiosSoloBadge" class="value text-muted" style="font-size:.75rem;">
+                Solo etiqueta · incluido en la beca
+              </span>
+              <span v-else class="value text-danger">
                 - {{ selectedCurrency.symbol }} {{ fmt2(insc.val_beneficios[i] || 0) }}
               </span>
             </div>
             <!-- Total beneficios si hay más de uno -->
-            <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1" style="opacity:.7; font-size:.78rem;">
+            <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1 && !insc.beneficiosSoloBadge" style="opacity:.7; font-size:.78rem;">
               <span class="label text-muted">Subtotal beneficios</span>
               <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficioTotal) }}</span>
             </div>
@@ -1912,6 +1917,7 @@ import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
+import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
   const toast = useToast()
 
   import CurrencyInput from '@/components/CurrencyInput.vue'
@@ -2109,6 +2115,8 @@ price_profesional_dollars: 0,
     montoDescuentoPorcentaje: 0,
     montoDescuentoFijo: 0,
     montoBeneficioTotal: 0,
+    // Beneficio registrado sin descontar dinero (beca: el saldo ya era 0).
+    beneficiosSoloBadge: false,
     montoFinal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
@@ -2316,31 +2324,10 @@ watch(
     insc.dsct_benefit_ids,
   ],
   () => {
-    const base = parseFloat(insc.montoOriginal) || 0
-
-    // 1. Descuento porcentual
-    let montoPorcentaje   = round2((base * (insc.val_porcentaje || 0)) / 100)
-    let subtotalAfterPct  = round2(base - montoPorcentaje)
-
-    // 2. Promoción fija
-    let montoFijo = 0
-    const promoTarget = round2(parseFloat(insc.val_fijo) || 0)
-    if (insc.dsct_stick_id && promoTarget > 0) {
-      montoFijo = round2(subtotalAfterPct - promoTarget)
-      if (montoFijo < 0) montoFijo = 0
-    }
-    const subtotalAfterStick = (insc.dsct_stick_id && promoTarget > 0)
-      ? promoTarget
-      : subtotalAfterPct
-
-    // 3. Beneficios múltiples
-    const montoBeneficioTotal = round2(
-      (insc.val_beneficios || []).reduce((acc, v) => acc + (parseFloat(v) || 0), 0)
-    )
+    const r = computeDiscounts(insc)
 
     // Validación: descuentos no superan base
-    const totalDescuentos = round2(montoPorcentaje + montoFijo + montoBeneficioTotal)
-    if (totalDescuentos > base) {
+    if (r.exceedsBase) {
       toast.warning('¡Cuidado! Los descuentos superan el Precio Base.')
       insc.val_porcentaje   = 0; insc.dsct_porcent_id   = null
       insc.val_fijo         = 0; insc.dsct_stick_id     = null
@@ -2349,16 +2336,16 @@ watch(
       insc.montoDescuentoPorcentaje = 0
       insc.montoDescuentoFijo       = 0
       insc.montoBeneficioTotal      = 0
-      insc.total_amount             = base
+      insc.beneficiosSoloBadge      = false
+      insc.total_amount             = r.base
       return
     }
 
-    insc.montoDescuentoPorcentaje = montoPorcentaje
-    insc.montoDescuentoFijo       = montoFijo
-    insc.montoBeneficioTotal      = montoBeneficioTotal
-
-    const final = round2(subtotalAfterStick - montoBeneficioTotal)
-    insc.total_amount = final > 0 ? Math.floor(final) : 0
+    insc.montoDescuentoPorcentaje = r.montoPorcentaje
+    insc.montoDescuentoFijo       = r.montoFijo
+    insc.montoBeneficioTotal      = r.montoBeneficioTotal
+    insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
+    insc.total_amount             = r.total_amount
   },
   { deep: true }
 )
@@ -2951,6 +2938,7 @@ function resetInscriptionData() {
     val_fijo: 0,
     val_beneficios: [],
     montoBeneficioTotal: 0,
+    beneficiosSoloBadge: false,
     dsct_porcent_label: null,
     dsct_stick_label: null,
     dsct_benefit_label: null,

@@ -91,6 +91,8 @@ export function useLeadFormState ({ paymentChannelCatalog = ref([]) } = {}) {
     montoDescuentoPorcentaje: 0,
     montoDescuentoFijo: 0,
     montoBeneficioTotal: 0,
+    // Beneficio registrado sin descontar dinero (beca: el saldo ya era 0).
+    beneficiosSoloBadge: false,
     montoFinal: 0,
     dsct_porcent_id: null,
     dsct_stick_id: null,
