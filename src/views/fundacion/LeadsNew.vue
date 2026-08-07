@@ -16,6 +16,20 @@
     <main class="ef-body" v-if="loaded">
       <div class="ef-form-wrapper">
 
+        <!-- Banner de inscripcion observada por FICO (subsanacion) -->
+        <div v-if="observedData" class="obs-banner mb-4">
+          <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="obs-banner-body">
+            <strong>Inscripción Observada por FICO</strong>
+            <p>{{ observedData.reason }}</p>
+            <p class="obs-banner-hint">Corrige los datos del lead y luego reenviar a FICO.</p>
+          </div>
+          <button class="obs-banner-btn" :disabled="resubmitting" @click="handleResubmit">
+            <i :class="['fa-solid me-1', resubmitting ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+            {{ resubmitting ? 'Reenviando...' : 'Reenviar a FICO' }}
+          </button>
+        </div>
+
         <div class="exec-fieldset mb-4">
           <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
           <div class="row g-3">
@@ -630,11 +644,13 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           <i class="fa-solid fa-link"></i> INSCRIPCION TOKEN
         </button>
 
+        <!-- Con observacion de FICO el boton sigue habilitado aunque ya exista la
+             inscripcion: es la unica via para reabrir el modal y subsanarla. -->
         <button
           type="button"
           v-if="showInscriptionButton"
           class="ef-btn-warning"
-          :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
+          :disabled="(!!form.enrollment_id && !observedData) || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
           :title="form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id ? 'Debe seleccionar una edición para programas EN VIVO' : 'Inscribir alumno'"
           @click="openInscription()"
         >
@@ -936,6 +952,14 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   <BaseModal v-model="showViewModal" title="Inscripción del Lead" size="xl">
     <div class="insc-modal">
+      <div v-if="observedData" class="obs-banner mb-3">
+        <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="obs-banner-body">
+          <strong>Inscripción Observada por FICO</strong>
+          <p>{{ observedData.reason }}</p>
+          <p class="obs-banner-hint">Corrige los datos de la inscripción y luego reenviar a FICO.</p>
+        </div>
+      </div>
       <div class="insc-header mb-3">
         <div class="insc-info">
   <h5 class="program-title d-flex align-items-center gap-2">
@@ -1800,7 +1824,18 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <template #footer>
       <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
+      <!-- Inscripcion observada: se re-registra corregida en vez de guardar de nuevo -->
       <button
+        v-if="observedData"
+        class="btn-exec btn-exec-warning btn-exec-sm"
+        :disabled="resubmitting"
+        @click="handleResubmit"
+      >
+        <i :class="['fa-solid me-1', resubmitting ? 'fa-spinner fa-spin' : 'fa-paper-plane']"></i>
+        {{ resubmitting ? 'Reenviando...' : 'Reenviar a FICO' }}
+      </button>
+      <button
+  v-else
   class="btn-exec btn-exec-primary btn-exec-sm"
   @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
   :disabled="
@@ -1863,6 +1898,7 @@ const {
   form, insc,
   loaded, saving, savingInsc, inscInitialized, leadDataHistory,
   showViewModal, showClientHistory, showProgramDetail, showDeleteWarningModal,
+  observedData, resubmitting,
   activeHistoryTab, activeTab,
   clientHistoryLegacy, clientHistoryLeads, loadingHistory,
   searchingCustomer, searchingPhone,
@@ -1892,6 +1928,7 @@ const {
   fmt2, round2, formatDate, formatDateTime, formatDuration, isValidEmail, openURL, getBadgeClass,
   cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
   openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
+  handleResubmit,
   addContacto, removeContacto, toggleTimer, handleTypeChange,
   handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,
   onProgramaTypeChange, onProgramaChange, onEditionChange, searchEditionsFiltered,
@@ -1911,6 +1948,9 @@ const {
   requiresEdition:  false,
   showInscription:  true,
   listRouteName:    'FundacionLeads',
+  // FICO observa ventas de Fundación igual que las de Comercial: el asesor
+  // necesita el banner y el botón de reenvío para subsanarlas.
+  observedFlow:     true,
 })
 </script>
 

@@ -7,6 +7,7 @@ import { useToast } from 'vue-toastification'
 import { useNotifications } from '@/composables/useNotifications'
 import UnattendedCallsModal from '@/components/UnattendedCallsModal.vue'
 import { useSidebarStore } from '@/stores/sidebar.js'
+import { leadRouteForUser } from '@/utils/leadRouteForUser.js'
 import { ServiceKeys } from '@/services'
 import { inject } from 'vue'
 
@@ -92,7 +93,9 @@ const userInitials = computed(() => {
 
 function goToNotification(notif) {
   if (notif.lead_id) {
-    router.push({ name: 'ComercialLeadDetalle', params: { id: notif.lead_id } })
+    // El destino depende del area del usuario: Fundacion/B2B tienen su propia
+    // vista de leads y el guard bloquea la de Comercial (ver leadRouteForUser).
+    router.push({ name: leadRouteForUser(user), params: { id: notif.lead_id } })
   }
 }
 

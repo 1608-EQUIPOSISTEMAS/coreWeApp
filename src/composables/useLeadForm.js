@@ -14,6 +14,10 @@ export function useLeadForm(options = {}) {
     // A donde volver tras guardar/cancelar/inscribir. Default = comercial para
     // no cambiar el comportamiento de las vistas que ya lo asumian.
     listRouteName    = 'ComercialListado',
+    // Muestra el banner de inscripcion observada por FICO y permite subsanarla.
+    // Opt-in: solo las vistas que renderizan el banner deben activarlo, si no el
+    // modal de inscripcion se abriria solo sin explicar por que.
+    observedFlow     = false,
   } = options
 
   // ── ROUTER / TOAST ──────────────────────────────────────────
@@ -219,6 +223,9 @@ export function useLeadForm(options = {}) {
   const saving           = ref(false)
   const savingInsc       = ref(false)
   const showViewModal    = ref(false)
+  // Inscripcion observada por FICO: motivo + estado del reenvio (subsanacion).
+  const observedData     = ref(null)
+  const resubmitting     = ref(false)
   const leadDataHistory  = ref(false)
   const createdLeadId    = ref(null)
   const createdPersonId  = ref(null)
@@ -1214,7 +1221,9 @@ export function useLeadForm(options = {}) {
 
   function openInscription(tokenMode = false) {
     isTokenMode.value = tokenMode === true
-    if (!inscInitialized.value) {
+    // Con observacion se re-inicializa siempre: el asesor vuelve a cargar los
+    // datos corregidos de la inscripcion.
+    if (!inscInitialized.value || observedData.value) {
       resetInscriptionData()
       insc.full_name             = form.full_name || ''
       insc.email                 = ''
@@ -1452,6 +1461,33 @@ export function useLeadForm(options = {}) {
     finally { savingInsc.value = false }
   }
 
+  // ── SUBSANACION DE INSCRIPCION OBSERVADA ─────────────────────
+  // Espejo de views/comercial/LeadsNew.vue: si FICO observo la inscripcion del
+  // lead, se muestra el motivo y se abre el modal para corregir y reenviar.
+  async function checkObservedStatus() {
+    if (!observedFlow || !form.enrollment_id || !ficoService) return
+    try {
+      const flags = await ficoService.getEnrollmentFlags(Number(form.enrollment_id))
+      if (flags?.fico_status_alias !== 'we_enrollment_status_observed') return
+      const audit = await ficoService.getAuditLog(Number(form.enrollment_id))
+      const obs = (audit || []).find(a => a.action === 'observed')
+      observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
+      nextTick(() => openInscription())
+    } catch { /* la observacion es informativa: si falla, el lead se abre igual */ }
+  }
+
+  // Subsanar = re-registrar sobre la inscripcion observada (enrollmentRegister
+  // reconstruye el plan de pago y la devuelve a Pendiente). Llamar solo a
+  // resubmitEnrollment descartaria la correccion.
+  async function handleResubmit() {
+    resubmitting.value = true
+    try {
+      await confirmarInscripcion()
+    } finally {
+      resubmitting.value = false
+    }
+  }
+
   async function confirmarToken() {
     if (!comercialService || !ficoService) return console.error('comercialService/ficoService no inyectado')
     if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) { toast.warning('El Precio Base no está configurado.'); return }
@@ -1661,6 +1697,7 @@ export function useLeadForm(options = {}) {
 
     if (isEdit.value) {
       await loadLead(leadIdParam.value)
+      await checkObservedStatus()
       loaded.value = true
       return
     }
@@ -1698,6 +1735,7 @@ export function useLeadForm(options = {}) {
     // State refs
     loaded, saving, savingInsc, inscInitialized, leadDataHistory,
     showViewModal, showClientHistory, showProgramDetail, showDeleteWarningModal,
+    observedData, resubmitting,
     activeHistoryTab, activeTab,
     clientHistoryLegacy, clientHistoryLeads, loadingHistory,
     searchingCustomer, searchingPhone, dataSetted,
@@ -1742,6 +1780,7 @@ export function useLeadForm(options = {}) {
     // Functions
     cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
     openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
+    handleResubmit,
     addContacto, removeContacto, toggleTimer, handleTypeChange,
     handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,
     onProgramaTypeChange, onProgramaChange, onEditionChange, searchEditionsFiltered,
