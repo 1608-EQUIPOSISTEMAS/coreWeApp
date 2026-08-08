@@ -118,7 +118,7 @@
               </tr>
 
               <template v-for="it in (week.isOpen ? week.items : [])" :key="it.e.edition_num_id">
-                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta', 'segrow-' + (it.e.cat_segment || 'none').toLowerCase()]" @click="openAulaInfo(it)">
+                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta', 'segrow-' + (it.e.cat_segment || 'none').toLowerCase()]" :style="{ '--seg': it.sc.tint }" @click="openAulaInfo(it)">
                   <!-- CA / CP -->
                   <td>
                     <div class="cacp">
@@ -408,11 +408,17 @@ const MABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'O
 
 // Paleta por segmento (badge). Las líneas/tipos reales vienen de la data.
 // Colores vía tokens CSS (--c-*): en dark el <style> los aclara y todo esto se adapta solo
+// `color` = tinta del badge (tokens oscuros, legibles sobre blanco).
+// `tint` = hue vivo para el fondo de la fila: los --c-* mezclados al 13% dan un beige/gris
+// sucio (el ámbar #a96208 deja de leerse naranja); el hue saturado sí pastelea en ambos temas.
 const SEG_COLORS = {
-  A1: { color: 'var(--c-blue)' }, A2: { color: 'var(--c-amber)' },
-  A3: { color: 'var(--c-teal)' }, A4: { color: 'var(--c-orange)' },
-  A5: { color: 'var(--c-red)' }, A6: { color: 'var(--c-violet)' },
-  A7: { color: 'var(--c-navy)' }, // CERRADO: navy en tinte pastel, como el resto
+  A1: { color: 'var(--c-blue)', tint: '#3b82f6' },
+  A2: { color: 'var(--c-amber)', tint: '#f59e0b' },
+  A3: { color: 'var(--c-teal)', tint: '#14b8a6' },
+  A4: { color: 'var(--c-orange)', tint: '#f97316' },
+  A5: { color: 'var(--c-red)', tint: '#ef4444' },
+  A6: { color: 'var(--c-violet)', tint: '#7c3aed' },
+  A7: { color: 'var(--c-navy)', tint: '#1e3a8a' }, // CERRADO
 }
 const DEFAULT_SEG = { color: 'var(--ink-2)' }
 function segColor(e) { return SEG_COLORS[(e.cat_segment || '').toUpperCase()] || DEFAULT_SEG }
@@ -747,14 +753,16 @@ const TYPE_DEFS = [
 ]
 // Tintes como color-mix sobre var(--surface): el mismo valor sirve en claro y oscuro
 const tint = (c, p = 12) => `color-mix(in oklab, ${c} ${p}%, var(--surface))`
+// Sin tinte propio: cada fila se pinta con el mismo pastel del segmento en el cronograma
+// (SEG_COLORS.tint, ver segSummary). Leyenda y tabla no pueden divergir.
 const SEG_DEFS = [
-  { key: 'A1', tint: tint('var(--s4-fg)', 10), def: 'Cursos de apertura (no seguimientos: son los Diplomados, Especializaciones y PEE)' },
-  { key: 'A2', tint: tint('var(--c-amber)', 10), def: 'Cursos de seguimiento (los cursos que pertenecen a un Diplomado, Especialización o PEE)' },
+  { key: 'A1', def: 'Cursos de apertura (no seguimientos: son los Diplomados, Especializaciones y PEE)' },
+  { key: 'A2', def: 'Cursos de seguimiento (los cursos que pertenecen a un Diplomado, Especialización o PEE)' },
   { key: 'A3', def: 'Modificación de cursos aperturados: Marketing & Comercial deben realizar los cambios respectivos' },
   { key: 'A4', def: 'Modificación de cursos de seguimiento: Marketing & Comercial deben realizar los cambios respectivos' },
-  { key: 'A5', tint: tint('var(--c-red)', 9), def: 'Cursos cancelados' },
-  { key: 'A6', tint: tint('var(--c-violet)', 13), def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
-  { key: 'A7', tint: tint('var(--c-navy)', 12), def: 'Curso con vacantes completadas' },
+  { key: 'A5', def: 'Cursos cancelados' },
+  { key: 'A6', def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
+  { key: 'A7', def: 'Curso con vacantes completadas' },
 ]
 
 const monthItems = computed(() => schedules.value.flatMap(w => w.items || []))
@@ -786,7 +794,11 @@ const lineSummary = computed(() => {
 // el conteo de cancelados; en el resto de resúmenes los A5 no existen.
 const countBy = (items, fn, key) => items.filter(e => (fn(e) || '').toUpperCase().trim() === key).length
 const typeSummary = computed(() => TYPE_DEFS.map(t => ({ ...t, n: countBy(monthItemsActive.value, typeLabel, t.key) })))
-const segSummary = computed(() => SEG_DEFS.map(s => ({ ...s, n: countBy(monthItems.value, e => e.cat_segment, s.key) })))
+const segSummary = computed(() => SEG_DEFS.map(s => ({
+  ...s,
+  tint: tint(SEG_COLORS[s.key].tint, 13),
+  n: countBy(monthItems.value, e => e.cat_segment, s.key),
+})))
 
 // ── Helpers de presentación ──
 function lineLabel(e) { return e.program_line_business || '—' }
@@ -1061,11 +1073,14 @@ td.obs { color: var(--ink-3); font-size: 10.5px; font-style: italic; max-width: 
 tr.ed.fam td { background: color-mix(in oklab, var(--accent) 4%, var(--surface)); }
 tr.ed.fam:hover td { background: color-mix(in oklab, var(--accent) 8%, var(--surface-2)); }
 
-/* Tinte de fila por segmento: gana sobre el tinte de familia (va después) y sobre el
-   hover genérico de la línea 815 (por eso lleva el prefijo table.crono tbody).
-   A6 = morado pastel (aplica también a hijos) · A7 = CERRADO (pastel azul-gris + filete navy) */
-table.crono tbody tr.ed.segrow-a6 td, table.crono tbody tr.ed.segrow-a6:hover td { background: color-mix(in oklab, var(--c-violet) 14%, var(--surface)); }
-table.crono tbody tr.ed.segrow-a7 td, table.crono tbody tr.ed.segrow-a7:hover td { background: color-mix(in oklab, var(--c-navy) 13%, var(--surface)); }
+/* Tinte de fila por segmento: SIEMPRE manda el color del tipado (A1 azul, A2 ámbar,
+   A3 teal, A4 naranja, A6 violeta, A7 navy). Va después de .fam/.meta/.sinmeta y lleva
+   el prefijo table.crono tbody para ganarle también al hover genérico.
+   --seg lo pone la fila (segColor); sin segmento (.segrow-none) se queda el tinte meta/sinmeta. */
+/* 13% del hue vivo = el mismo pastel que ya tenían A6/A7. El hover no oscurece:
+   el tinte ES la identidad del segmento, no un estado. */
+table.crono tbody tr.ed:not(.segrow-none) td,
+table.crono tbody tr.ed:not(.segrow-none):hover td { background: color-mix(in oklab, var(--seg) 13%, var(--surface)); }
 table.crono tbody tr.ed.segrow-a7 td:first-child { box-shadow: inset 3px 0 0 var(--c-navy); }
 /* miembros fusionados: sin línea divisoria dentro de la familia */
 tr.ed.fused td { border-bottom-color: transparent; }
