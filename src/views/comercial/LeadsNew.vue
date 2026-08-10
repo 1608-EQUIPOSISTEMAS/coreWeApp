@@ -1213,7 +1213,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- CONVALIDACION -->
       <div class="exec-fieldset mb-3" v-if="programChildren.length > 0">
-        <h6 class="fieldset-title"><i class="fa-solid fa-rotate-right me-2"></i> Convalidacion</h6>
+        <h6 class="fieldset-title"><i class="fa-solid fa-rotate-right me-2"></i> Convalidar y Personalizar </h6>
         <label class="validation-toggle-label">
           <input type="checkbox" v-model="hasValidation" />
           Alumno tiene modulos ya cursados (convalidar)
