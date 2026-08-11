@@ -686,16 +686,20 @@ async function handleConfirmPayment (sapCreds = {}) {
       return
     }
 
-    const payload = {
-      enrollment_id: eid,
-      action: 'confirm_contado',
-      cat_currency: ficoForm.cat_currency,
-      cat_payment_medium: ficoForm.cat_payment_medium,
-      cat_business_entity: ficoForm.cat_business_entity,
-      bank_account_id: ficoForm.bank_account_id,
-      transaction_code: ficoForm.transaction_code,
-      payment_date: ficoForm.payment_date || null
-    }
+    // OS/OP: se aprueba la inscripcion sin grabar pago. Los datos bancarios ni
+    // se mandan (no existen todavia); la cuota queda pendiente en Cobranzas.
+    const payload = sapCreds.documental
+      ? { enrollment_id: eid, action: 'confirm_documental' }
+      : {
+          enrollment_id: eid,
+          action: 'confirm_contado',
+          cat_currency: ficoForm.cat_currency,
+          cat_payment_medium: ficoForm.cat_payment_medium,
+          cat_business_entity: ficoForm.cat_business_entity,
+          bank_account_id: ficoForm.bank_account_id,
+          transaction_code: ficoForm.transaction_code,
+          payment_date: ficoForm.payment_date || null
+        }
     if (isMembershipEnrollment.value && activationDate.value) {
       payload.activation_date = activationDate.value
     }
@@ -729,9 +733,13 @@ async function handleConfirmPayment (sapCreds = {}) {
       return
     }
     // Un congreso no se inscribe en Odoo: el backend lo omite y lo avisa aqui.
-    toast.success(resp?.odoo_skipped
-      ? 'Pago registrado. Evento: no se inscribe en Odoo, solo se envia el correo.'
-      : 'Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
+    if (sapCreds.documental) {
+      toast.success('Inscripcion confirmada. El pago de la OS/OP queda pendiente de cobro.', { timeout: 5000 })
+    } else {
+      toast.success(resp?.odoo_skipped
+        ? 'Pago registrado. Evento: no se inscribe en Odoo, solo se envia el correo.'
+        : 'Pago registrado e inscripcion en Odoo completada.', { timeout: 4000 })
+    }
     try {
       const emailResult = await ficoService.sendConfirmationEmail(eid, sapCreds)
       if (emailResult?.success) {
@@ -866,7 +874,17 @@ async function handleConfirmCuota (cuota) {
       bank_account_id: cuota._bank_account_id,
       transaction_code: cuota._transaction_code,
       voucher_url: cuota._voucher_url,
-      payment_date: cuota._payment_date || null
+      payment_date: cuota._payment_date || null,
+      // Pago con detraccion: el backend deriva el monto del pago restando este,
+      // y graba las dos filas de payments en la misma transaccion.
+      detraction: cuota._detraction
+        ? {
+            amount: Number(cuota._detraction.amount),
+            bank_account_id: cuota._detraction.bank_account_id,
+            transaction_code: cuota._detraction.transaction_code,
+            voucher_url: cuota._detraction._voucher_url
+          }
+        : null
     })
     toast.success(`Cuota ${cuota.installment_number} confirmada.`)
     if (res?.data?.email_sent) {

@@ -289,8 +289,123 @@
         </div>
       </div>
 
+      <!-- Cobro de una venta al contado aprobada sin pago (OS/OP). Escribe sobre
+           la cuota 1 con el mismo endpoint que las cuotas de un plan, asi que la
+           detraccion funciona aca sin codigo aparte. -->
+      <div v-if="contadoPendiente && !isEditing" class="ef-collect mt12">
+        <div class="ef-collect-head">
+          <span><i class="fa-solid fa-hand-holding-dollar"></i> Registrar el cobro</span>
+          <span class="ef-collect-amount mono">S/. {{ fmt.formatMoney(contadoPendiente.amount) }}</span>
+        </div>
+
+        <div class="ef-form-row">
+          <div class="ef-field">
+            <label>Tipo Moneda</label>
+            <select v-model="contadoPendiente._cat_currency" class="ef-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
+            </select>
+          </div>
+          <div class="ef-field">
+            <label>Medio de Pago</label>
+            <select v-model="contadoPendiente._cat_payment_medium" class="ef-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
+            </select>
+          </div>
+          <div class="ef-field">
+            <label>Entidad Empresa</label>
+            <select v-model="contadoPendiente._cat_business_entity" class="ef-select">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
+            </select>
+          </div>
+          <div class="ef-field">
+            <label>Cuenta Bancaria</label>
+            <select v-model="contadoPendiente._bank_account_id" class="ef-select" :disabled="!contadoPendiente._cat_business_entity">
+              <option :value="null">{{ contadoPendiente._cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
+              <option v-for="a in filteredAccounts(contadoPendiente._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
+            </select>
+          </div>
+          <div class="ef-field">
+            <label>N. Operacion</label>
+            <input v-model="contadoPendiente._transaction_code" class="ef-input" placeholder="Numero de operacion" />
+          </div>
+          <div class="ef-field">
+            <label>Fecha de Pago</label>
+            <input v-model="contadoPendiente._payment_date" type="date" class="ef-input" :max="todayIso" />
+          </div>
+        </div>
+
+        <div class="ef-collect-actions">
+          <label class="ef-file-btn" :class="{ done: contadoPendiente._voucher_url }">
+            <i class="fa-solid" :class="contadoPendiente._voucher_url ? 'fa-circle-check' : 'fa-cloud-arrow-up'"></i>
+            <span>{{ contadoPendiente._voucher_url ? 'Voucher cargado' : 'Subir voucher' }}</span>
+            <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, contadoPendiente)" />
+          </label>
+          <a v-if="contadoPendiente._voucher_url" :href="contadoPendiente._voucher_url" target="_blank" class="ef-file-view">Ver</a>
+
+          <label class="ef-check">
+            <input type="checkbox" :checked="!!contadoPendiente._detraction" @change="toggleDetraction(contadoPendiente)" />
+            <span>La empresa aplico detraccion <small>(dos vouchers)</small></span>
+          </label>
+
+          <button
+            class="ef-btn-primary"
+            :disabled="saving || !contadoPendiente._cat_currency || !contadoPendiente._cat_payment_medium || (!!contadoPendiente._detraction && !detractionValid(contadoPendiente))"
+            @click="$emit('confirm-cuota', contadoPendiente)"
+          >
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+            {{ saving ? 'Registrando...' : 'Registrar Pago' }}
+          </button>
+        </div>
+
+        <!-- Segundo deposito: solo se pide el monto detraido, el del pago se
+             deriva restando y por eso la suma nunca puede descuadrar. -->
+        <div v-if="contadoPendiente._detraction" class="ef-detraction-box">
+          <span class="ef-detraction-title"><i class="fa-solid fa-scissors"></i> Detraccion</span>
+          <label>
+            Monto detraido
+            <input v-model.number="contadoPendiente._detraction.amount" type="number" step="0.01" min="0" class="ef-input tr mono" placeholder="0.00" />
+          </label>
+          <label>
+            Cuenta (Banco de la Nacion)
+            <select v-model="contadoPendiente._detraction.bank_account_id" class="ef-select-sm">
+              <option :value="null">---</option>
+              <option v-for="a in filteredAccounts(contadoPendiente._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }}</option>
+            </select>
+          </label>
+          <label>
+            N. Operacion
+            <input v-model="contadoPendiente._detraction.transaction_code" class="ef-input" placeholder="---" />
+          </label>
+          <label class="ef-file-btn sm" :class="{ done: contadoPendiente._detraction._voucher_url }">
+            <i class="fa-solid" :class="contadoPendiente._detraction._voucher_url ? 'fa-circle-check' : 'fa-cloud-arrow-up'"></i>
+            <span>{{ contadoPendiente._detraction._voucher_url ? 'Cargado' : 'Voucher' }}</span>
+            <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, contadoPendiente._detraction)" />
+          </label>
+          <a v-if="contadoPendiente._detraction._voucher_url" :href="contadoPendiente._detraction._voucher_url" target="_blank" class="ef-file-view">Ver</a>
+          <span class="ef-detraction-split" :class="{ 'c-red': !detractionValid(contadoPendiente) }">
+            Pago S/. {{ fmt.formatMoney(contadoPendiente.amount - (Number(contadoPendiente._detraction.amount) || 0)) }}
+            + Detraccion S/. {{ fmt.formatMoney(Number(contadoPendiente._detraction.amount) || 0) }}
+            = S/. {{ fmt.formatMoney(contadoPendiente.amount) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- OS/OP: no hay datos bancarios que pedir todavia. FICO confirma contra
+           la orden adjunta y la cuota queda pendiente hasta que llegue el deposito. -->
+      <div v-if="mode === 'confirm' && isDocumentalSale" class="ef-doc-notice mt12">
+        <i class="fa-solid fa-file-contract"></i>
+        <span>
+          Venta con <strong>{{ detail?.b2b_doctype_label || 'orden documental' }}</strong>:
+          el pago no ha llegado. Al confirmar, el alumno accede al campus y la cuota
+          queda pendiente en Cobranzas hasta que la empresa deposite.
+        </span>
+      </div>
+
       <!-- Confirm mode fields -->
-      <div v-if="mode === 'confirm'" class="ef-form-row mt12">
+      <div v-if="mode === 'confirm' && !isDocumentalSale" class="ef-form-row mt12">
         <div class="ef-field">
           <label>Tipo Moneda</label>
           <select v-model="form.cat_currency" class="ef-select">
@@ -438,7 +553,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(c, idx) in cuotas" :key="idx" :class="fmt.cuotaRowClass(c)">
+            <template v-for="(c, idx) in cuotas" :key="idx">
+            <tr :class="fmt.cuotaRowClass(c)">
               <td class="fw700 tc">{{ c.installment_number || (idx + 1) }}</td>
               <td v-if="c._isNew || (c.status === 'paid' && isEditing)">
                 <input v-model.number="c.amount" type="number" step="0.01" class="ef-input tr mono" placeholder="0.00" />
@@ -496,14 +612,60 @@
               </td>
               <td class="tc">
                 <button
-                  v-if="c.status !== 'paid' && !fmt.isCuotaAnulada(c) && c._cat_currency && c._cat_payment_medium"
+                  v-if="canPayCuota(c)"
+                  class="ef-btn-detraction"
+                  :class="{ active: !!c._detraction }"
+                  @click="toggleDetraction(c)"
+                  title="La empresa pago con detraccion (dos vouchers)"
+                ><i class="fa-solid fa-scissors"></i></button>
+                <button
+                  v-if="canPayCuota(c) && c._cat_currency && c._cat_payment_medium"
                   class="ef-btn-confirm-cuota"
+                  :disabled="!!c._detraction && !detractionValid(c)"
                   @click="$emit('confirm-cuota', c)"
                   title="Confirmar pago de cuota"
                 ><i class="fa-solid fa-check"></i></button>
                 <button v-if="canDeleteCuota(c)" class="ef-btn-del" @click="$emit('remove-cuota', idx)" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
               </td>
             </tr>
+
+            <!-- Detraccion (SPOT): la empresa deposita el grueso en nuestra cuenta y
+                 el resto en la del Banco de la Nacion. Solo se pide el monto detraido:
+                 el del pago se deriva restando, asi la suma nunca puede descuadrar. -->
+            <tr v-if="c._detraction" class="ef-detraction-row">
+              <td></td>
+              <td colspan="10">
+                <div class="ef-detraction-box">
+                  <span class="ef-detraction-title"><i class="fa-solid fa-scissors"></i> Detraccion</span>
+                  <label>
+                    Monto detraido
+                    <input v-model.number="c._detraction.amount" type="number" step="0.01" min="0" class="ef-input tr mono" placeholder="0.00" />
+                  </label>
+                  <label>
+                    Cuenta (Banco de la Nacion)
+                    <select v-model="c._detraction.bank_account_id" class="ef-select-sm">
+                      <option :value="null">---</option>
+                      <option v-for="a in filteredAccounts(c._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    N. Operacion
+                    <input v-model="c._detraction.transaction_code" class="ef-input" placeholder="---" />
+                  </label>
+                  <label class="ef-upload-btn" title="Subir voucher de la detraccion">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, c._detraction)" />
+                  </label>
+                  <a v-if="c._detraction._voucher_url" :href="c._detraction._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher de la detraccion"><i class="fa-solid fa-image"></i></a>
+                  <span class="ef-detraction-split" :class="{ 'c-red': !detractionValid(c) }">
+                    Pago S/. {{ fmt.formatMoney(c.amount - (Number(c._detraction.amount) || 0)) }}
+                    + Detraccion S/. {{ fmt.formatMoney(Number(c._detraction.amount) || 0) }}
+                    = S/. {{ fmt.formatMoney(c.amount) }}
+                  </span>
+                </div>
+              </td>
+            </tr>
+            </template>
             <tr v-if="!cuotas.length"><td colspan="11" class="ef-empty-row">Sin cuotas programadas</td></tr>
           </tbody>
           <tfoot v-if="cuotas.length">
@@ -561,7 +723,8 @@
           :disabled="!canConfirmContado"
           @click="showConfirmStepper = true"
         >
-          <i class="fa-solid fa-check"></i> Confirmar Pago
+          <i class="fa-solid" :class="isDocumentalSale ? 'fa-file-contract' : 'fa-check'"></i>
+          {{ isDocumentalSale ? 'Confirmar Inscripcion (OS/OP)' : 'Confirmar Pago' }}
         </button>
         <button
           v-else-if="planStatus === 'borrador'"
@@ -734,7 +897,11 @@ function onConfirmSend () {
   const sapCreds = sapState.value.isSapOnline
     ? { sapUsername: sapState.value.sapUsername, sapPassword: sapState.value.sapPassword }
     : {}
-  emit(isContado.value ? 'confirm-payment' : 'confirm-plan', { ...sapCreds, cc: ccState.value.cc })
+  emit(isContado.value ? 'confirm-payment' : 'confirm-plan', {
+    ...sapCreds,
+    cc: ccState.value.cc,
+    documental: isDocumentalSale.value
+  })
 }
 
 // Habilita la edicion del monto de una cuota cuando: ya existe en BD (no _isNew),
@@ -742,7 +909,9 @@ function onConfirmSend () {
 function canEditAmount (c) {
   if (!c || c._isNew) return false
   if (c.status === 'paid' || fmt.isCuotaAnulada(c)) return false
-  if (props.planStatus === 'borrador') return false
+  // planStatus es un computed local, no un prop: leerlo como props.planStatus
+  // daba undefined y este guard nunca frenaba nada.
+  if (planStatus.value === 'borrador') return false
   return true
 }
 
@@ -769,10 +938,44 @@ const total = computed(() => {
   return Number(props.enrollment?.total_to_pay) || Number(props.detail?.net_amount) || 0
 })
 const reserva = computed(() => props.enrollment ? fmt.getReserva(props.enrollment) : 0)
-const paid = computed(() => props.enrollment ? fmt.getPagado(props.enrollment) : Number(props.detail?.amount_paid) || 0)
-const balance = computed(() => props.enrollment ? fmt.calcSaldo(props.enrollment) : Number(props.detail?.balance_due) || 0)
+// Venta al contado ya aprobada cuya cuota sigue sin cobrarse. Es el caso normal
+// de una OS/OP: FICO aprueba hoy contra la orden y la empresa deposita despues.
+// Mientras exista, el cobro esta pendiente por mas que la inscripcion figure
+// aprobada.
+//
+// _payment_id descarta las ventas viejas que SI se cobraron y solo quedaron con
+// el estado de la cuota sin actualizar (hay ~7 en produccion): ahi el dinero
+// entro, el desajuste es de estado y no toca pedir el cobro de nuevo.
+const contadoPendiente = computed(() => {
+  if (!isContado.value || props.mode === 'confirm') return null
+  return props.installments.find(i =>
+    i.status !== 'paid' && !fmt.isCuotaAnulada(i) && !i._payment_id
+  ) || null
+})
+
+// getPagado/calcSaldo dan por pagado todo contado aprobado —era cierto mientras
+// aprobar exigiera registrar el pago—. Con OS/OP hay que mirar la cuota.
+const paid = computed(() => {
+  if (contadoPendiente.value) return 0
+  return props.enrollment ? fmt.getPagado(props.enrollment) : Number(props.detail?.amount_paid) || 0
+})
+const balance = computed(() => {
+  if (contadoPendiente.value) return Number(contadoPendiente.value.amount) || 0
+  return props.enrollment ? fmt.calcSaldo(props.enrollment) : Number(props.detail?.balance_due) || 0
+})
 const voucher = computed(() => props.enrollment?.payment_vouchers || null)
 const isContado = computed(() => props.enrollment ? fmt.isContado(props.enrollment) : true)
+
+// Venta contra Orden de Servicio / de Compra: se confirma sin pago porque la
+// empresa deposita semanas despues. La carta de compromiso queda fuera: esa es
+// B2B documental sin cobro (total 0), no tiene cuota que cobrar.
+const DOCUMENTAL_DOCTYPE_ALIASES = [
+  'we_enrollment_b2b_doctype_service_order',
+  'we_enrollment_b2b_doctype_purchase_order'
+]
+const isDocumentalSale = computed(() =>
+  DOCUMENTAL_DOCTYPE_ALIASES.includes(props.detail?.b2b_doctype_alias)
+)
 
 // Detalle de descuentos. detail.discounts trae value y calculated_amount por
 // separado, que es lo que hace falta para los promos "Monto fijo": ahi el value
@@ -888,7 +1091,10 @@ async function uploadAdicionalVoucher (event) {
 }
 
 const todayIso = computed(() => new Date().toISOString().slice(0, 10))
-const canConfirmContado = computed(() => isBeca.value || (props.form.cat_currency && props.form.cat_payment_medium))
+// La OS/OP no pide moneda ni medio: no hay deposito que describir todavia.
+const canConfirmContado = computed(() =>
+  isBeca.value || isDocumentalSale.value || (props.form.cat_currency && props.form.cat_payment_medium)
+)
 const hasReschedulableCuotas = computed(() => cuotas.value.some(c => c.status !== 'paid' && Number(c.cat_status) !== 4454 && !fmt.isCuotaAnulada(c)))
 
 async function uploadVoucher (event, cuota) {
@@ -906,6 +1112,27 @@ async function uploadVoucher (event, cuota) {
     toast.error('Error al subir voucher')
   }
   event.target.value = ''
+}
+
+// Una cuota es cobrable mientras no este pagada ni anulada y el plan ya haya
+// salido de borrador (mismo criterio que el boton de subir voucher).
+function canPayCuota (c) {
+  return c.status !== 'paid' && !fmt.isCuotaAnulada(c) && planStatus.value !== 'borrador'
+}
+
+// Abre/cierra el bloque de detraccion de la fila. Al cerrarlo se descarta: si
+// quedara colgado, el confirm mandaria una detraccion vacia.
+function toggleDetraction (c) {
+  c._detraction = c._detraction
+    ? null
+    : { amount: null, transaction_code: '', bank_account_id: null, _voucher_url: null }
+}
+
+// El monto detraido tiene que dejar algo por cobrar: si se lleva la cuota
+// entera no es una detraccion, es otro problema.
+function detractionValid (c) {
+  const monto = Number(c._detraction?.amount)
+  return Number.isFinite(monto) && monto > 0 && monto < Number(c.amount)
 }
 
 function filteredAccounts (entityId) {
@@ -1629,6 +1856,136 @@ function needsEditionDecision (child) {
 .ef-edition-warn i { font-size: 11px; }
 .ef-edition-warn:hover { background: #FEE2E2; border-color: #F87171; }
 
+/* Caja de cobro de una venta al contado aprobada sin pago (OS/OP). */
+.ef-collect {
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #F8FBFF;
+}
+.ef-collect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E3A8A;
+  margin-bottom: 10px;
+}
+.ef-collect-amount { font-size: 15px; }
+.ef-collect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
+}
+.ef-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+.ef-check input { width: 15px; height: 15px; accent-color: #7C3AED; cursor: pointer; }
+.ef-check small { color: #94A3B8; }
+.ef-collect-actions .ef-btn-primary { margin-left: auto; }
+
+/* Selector de archivo con etiqueta: el .ef-upload-btn de la tabla es un cuadro
+   de 28px para el icono solo y el texto se le desborda. */
+.ef-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  padding: 7px 13px;
+  border: 1px dashed #CBD5E1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.ef-file-btn:hover { border-color: #7C3AED; color: #7C3AED; }
+.ef-file-btn.done {
+  border-style: solid;
+  border-color: #A7F3D0;
+  background: #ECFDF5;
+  color: #059669;
+}
+.ef-file-btn.sm { padding: 5px 10px; font-size: 11px; }
+.ef-file-view {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563EB;
+  text-decoration: none;
+}
+.ef-file-view:hover { text-decoration: underline; }
+
+/* Fila desplegable de detraccion: colgada de su cuota, no es una cuota mas. */
+.ef-detraction-row td { background: #F8FAFC; border-top: none; }
+.ef-detraction-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 6px 4px;
+}
+/* :not(.ef-file-btn) para no aplastar el selector de archivo, que es un label
+   pero se dibuja como boton. */
+.ef-detraction-box > label:not(.ef-file-btn) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+}
+.ef-detraction-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7C3AED;
+  white-space: nowrap;
+}
+.ef-detraction-split {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin-left: auto;
+}
+.ef-btn-detraction {
+  border: 1px solid #DDD6FE;
+  background: #F5F3FF;
+  color: #7C3AED;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-right: 3px;
+}
+.ef-btn-detraction.active { background: #7C3AED; color: #fff; border-color: #7C3AED; }
+
+/* Aviso de venta OS/OP: informativo, no es una alerta de error. */
+.ef-doc-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #1E3A8A;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+.ef-doc-notice i { margin-top: 2px; }
+
 /* ════════════════════════════════════════
    DARK MODE
    ════════════════════════════════════════ */
@@ -1848,6 +2205,38 @@ function needsEditionDecision (child) {
 [data-coreui-theme="dark"] .ef-edition-warn:hover {
   background: rgba(239,68,68,0.22);
   border-color: rgba(239,68,68,0.6);
+}
+[data-coreui-theme="dark"] .ef-collect {
+  background: rgba(96,165,250,0.08);
+  border-color: rgba(96,165,250,0.3);
+}
+[data-coreui-theme="dark"] .ef-collect-head { color: #93C5FD; }
+[data-coreui-theme="dark"] .ef-check { color: #A8A89A; }
+[data-coreui-theme="dark"] .ef-detraction-row td { background: rgba(255,255,255,0.03); }
+[data-coreui-theme="dark"] .ef-detraction-box > label:not(.ef-file-btn) { color: #8FAADC; }
+[data-coreui-theme="dark"] .ef-file-btn {
+  background: transparent;
+  border-color: rgba(143,170,220,0.4);
+  color: #A8A89A;
+}
+[data-coreui-theme="dark"] .ef-file-btn:hover { border-color: #C4B5FD; color: #C4B5FD; }
+[data-coreui-theme="dark"] .ef-file-btn.done {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.4);
+  color: #34D399;
+}
+[data-coreui-theme="dark"] .ef-file-view { color: #60A5FA; }
+[data-coreui-theme="dark"] .ef-detraction-split { color: #A8A89A; }
+[data-coreui-theme="dark"] .ef-btn-detraction {
+  background: rgba(167,139,250,0.14);
+  border-color: rgba(167,139,250,0.35);
+  color: #C4B5FD;
+}
+[data-coreui-theme="dark"] .ef-btn-detraction.active { background: #7C3AED; color: #fff; }
+[data-coreui-theme="dark"] .ef-doc-notice {
+  background: rgba(96,165,250,0.14);
+  border-color: rgba(96,165,250,0.35);
+  color: #93C5FD;
 }
 
 [data-coreui-theme="dark"] .c-green { color: #34D399; }

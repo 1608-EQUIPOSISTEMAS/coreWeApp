@@ -195,6 +195,9 @@ export function useLeadForm(options = {}) {
   const programModalityCatalog  = ref(catalog.options('we_modality'))
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
   const callingCatalog          = ref(catalog.options('we_calling'))
+  // Orden de Servicio / de Compra / Carta de compromiso. Solo las dos primeras
+  // habilitan el flujo de pago diferido (ver isDocumentalSale).
+  const b2bDoctypeCatalog       = ref(catalog.options('we_enrollment_b2b_doctype') || [])
   const attemptOriginCatalog    = ref(catalog.options('we_attempt_origin') || [])
   const membershipList          = ref([])
   const currencyCatalog         = ref(
@@ -350,6 +353,10 @@ export function useLeadForm(options = {}) {
     cat_token_provider: null,
     token_payment_type: '',
     agreement_id: null,
+    // Orden de Servicio / de Compra: la empresa paga semanas despues, asi que el
+    // asesor sube la orden en lugar del voucher y la venta nace con la inicial
+    // pendiente. Null = venta normal con pago al momento.
+    cat_b2b_doctype: null,
     // Correo en copia. `requires_email_cc` es un compromiso: si se marca, FICO no
     // puede enviar la confirmacion con el CC vacio (solo lo libera observando la
     // inscripcion). El correo puede ir vacio si el asesor aun no lo tiene.
@@ -409,6 +416,18 @@ export function useLeadForm(options = {}) {
   const isChannelToken   = computed(() => channelAlias.value === 'we_channel_token')
   const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
 
+  // Venta contra Orden de Servicio / de Compra: la empresa deposita semanas
+  // despues, asi que no hay voucher que subir hoy —se sube la orden— y la
+  // inscripcion nace con la cuota inicial pendiente. La carta de compromiso NO
+  // entra aca: esa sigue siendo B2B documental sin cobro (total 0).
+  const DOCUMENTAL_DOCTYPE_ALIASES = [
+    'we_enrollment_b2b_doctype_service_order',
+    'we_enrollment_b2b_doctype_purchase_order'
+  ]
+  const isDocumentalSale = computed(() =>
+    DOCUMENTAL_DOCTYPE_ALIASES.includes(insc.cat_b2b_doctype)
+  )
+
   const isVoucherOptional = computed(() =>
     !isChannelGeneral.value || Number(insc.val_porcentaje) === 100
   )
@@ -456,6 +475,18 @@ export function useLeadForm(options = {}) {
     form.program_modality_selected_alias === 'we_modality_online' &&
     form.category_alias !== 'we_program_type_membership'
   )
+
+  // Los Online no se financian, y una OS/OP tampoco: la empresa gira el total de
+  // una vez cuando la orden se hace efectiva.
+  const isSinglePaymentForced = computed(() => isOnlineProgram.value || isDocumentalSale.value)
+
+  // Elegir OS/OP con "cuotas" ya seleccionado dejaria el select deshabilitado
+  // pero con el valor viejo, y el SP recien rechazaria la venta al guardar.
+  watch(isDocumentalSale, (esDocumental) => {
+    if (!esDocumental) return
+    insc.cat_type_payment = 'we_payment_way_single'
+    insc.saved_money = 0
+  })
 
   // ── CATEGORIA DE ENTRADA (eventos/congresos) ─────────────────
   // Un congreso se vende por categoria y cada una tiene su propia tarifa, asi
@@ -1203,6 +1234,7 @@ export function useLeadForm(options = {}) {
       observacions: '', requires_email_cc: false, email_cc: '',
       ticket_payment_urls: [], attachments: [], flag_agreement: false, b2b_contract_id: null,
       cat_payment_channel: null, cat_token_provider: null, token_payment_type: '',
+      cat_b2b_doctype: null,
     })
     voucherTouched.value = false
     form.carnet_url = null
@@ -1333,6 +1365,11 @@ export function useLeadForm(options = {}) {
         cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
         cat_currency, cat_method_payment,
         cat_token_provider: insc.cat_token_provider,
+        // Solo tiene sentido en el canal General: es una venta a empresa que se
+        // cobra por transferencia contra la orden, no por pasarela ni token.
+        cat_b2b_doctype: isChannelGeneral.value
+          ? idByAlias(insc.cat_b2b_doctype, b2bDoctypeCatalog.value)
+          : null,
         saved_money: reservaSplitEnabled.value ? Number(reservaInmediata.value) : Number(insc.saved_money),
         list_price:   insc.montoOriginal,
         total_amount: Number(insc.total_amount),
@@ -1745,6 +1782,7 @@ export function useLeadForm(options = {}) {
     discountCatalog, paymentMethodCatalog, docTypeCatalog, programTypeCatalog,
     programModalityCatalog, inscPaymentModes, callingCatalog, attemptOriginCatalog,
     currencyCatalog, lAttempts, paymentChannelCatalog, certificateStatusCatalog, tokenProviderCatalog,
+    b2bDoctypeCatalog,
 
     // Computed
     isEdit, leadIdParam, isDeleteStatus, currentProgram, hasEditions, maxPhoneLength,
@@ -1752,6 +1790,7 @@ export function useLeadForm(options = {}) {
     isChannelGeneral, isChannelToken, isChannelWeb, isVoucherOptional,
     isMedioDisabled, filteredMediumCatalog, clientProfileType, calculatedBasePrice,
     montoFinalCalculado, isOnlineProgram, saveBlockReason, minDateForNewAttempt,
+    isDocumentalSale, isSinglePaymentForced,
     isInstallmentMode, installmentRemainder, autoNumCuotas, autoInstallmentPlan,
     reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
     showInscriptionButton, inscriptionBlockReason, isLiderComercial,

@@ -1268,6 +1268,18 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </div>
 
           <template v-if="isChannelGeneral">
+            <div class="col-md-3">
+              <label class="exec-label">Orden de Servicio / Compra</label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_b2b_doctype"
+                :items="b2bDoctypeCatalog"
+                label-field="description"
+                value-field="alias"
+                placeholder="Pago directo (default)"
+                class="exec-select-light w-100"
+              />
+            </div>
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
@@ -1280,15 +1292,22 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :viewOpen="6"
                 v-model="insc.cat_type_payment"
                 required
-                :items="isOnlineProgram
+                :items="isSinglePaymentForced
                   ? inscPaymentModes.filter(e => e.alias === 'we_payment_way_single')
                   : inscPaymentModes"
                 placeholder="M. PAGO"
                 label-field="description"
                 value-field="alias"
                 class="exec-select-light w-100"
-                :disabled="isOnlineProgram"
+                :disabled="isSinglePaymentForced"
               />
+            </div>
+            <div v-if="isDocumentalSale" class="col-12">
+              <div class="p-2 rounded border text-muted" style="font-size:.8rem; background:var(--ln-soft-bg,#fafafa);">
+                <i class="fa-solid fa-circle-info me-2 text-info"></i>
+                El pago se registra después. La inscripción nace con la inicial pendiente
+                y FICO la confirma con la orden adjunta.
+              </div>
             </div>
             <div class="col-md-3">
               <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
@@ -1472,10 +1491,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <h6 class="fieldset-title">Documentación Adjunta</h6>
     <div class="row g-3">
 
-      <!-- GENERAL: Comprobantes de pago → enrollment_attachments -->
+      <!-- GENERAL: Comprobantes de pago → enrollment_attachments.
+           Con OS/OP el adjunto es la orden, no un voucher: la plata aun no llegó. -->
       <div class="col-12" v-if="isChannelGeneral">
         <label class="exec-label mb-1">
-          Comprobante(s) de Pago
+          {{ isDocumentalSale ? 'Orden de Servicio / de Compra' : 'Comprobante(s) de Pago' }}
           <span v-if="!isVoucherOptional" class="c-red">*</span>
           <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
             Opcional · Descuento 100%
@@ -1484,7 +1504,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <MultiFileUploader
           v-model="insc.ticket_payment_urls"
           ref="voucherUploaderRef"
-          label="Clic para subir Comprobante(s)"
+          :label="isDocumentalSale ? 'Clic para subir la Orden' : 'Clic para subir Comprobante(s)'"
           accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
           :required="insc.val_porcentaje==100?false:!isVoucherOptional"
           :minFiles="1"
@@ -2126,6 +2146,10 @@ price_profesional_dollars: 0,
   cat_payment_channel: null,    // we_channel_general | we_channel_token | we_channel_web
   cat_token_provider: null,
   token_payment_type: '',
+  // Orden de Servicio / de Compra: la empresa paga semanas despues, asi que el
+  // asesor sube la orden en lugar del voucher y la venta nace con la inicial
+  // pendiente. Null = venta normal con pago al momento.
+  cat_b2b_doctype: null,
   // Correo en copia. `requires_email_cc` es un compromiso: si se marca, FICO no
   // puede enviar la confirmacion con el CC vacio (solo lo libera observando la
   // inscripcion). El correo puede ir vacio si el asesor aun no lo tiene.
@@ -2176,6 +2200,26 @@ const channelAlias = computed(() => {
 const isChannelGeneral = computed(() => channelAlias.value === 'we_channel_general')
 const isChannelToken   = computed(() => channelAlias.value === 'we_channel_token')
 const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
+
+// Venta contra Orden de Servicio / de Compra: la empresa deposita semanas
+// despues, asi que no hay voucher que subir hoy —se sube la orden— y la
+// inscripcion nace con la cuota inicial pendiente. La carta de compromiso NO
+// entra aca: esa sigue siendo B2B documental sin cobro (total 0).
+const DOCUMENTAL_DOCTYPE_ALIASES = [
+  'we_enrollment_b2b_doctype_service_order',
+  'we_enrollment_b2b_doctype_purchase_order'
+]
+const isDocumentalSale = computed(() =>
+  DOCUMENTAL_DOCTYPE_ALIASES.includes(insc.cat_b2b_doctype)
+)
+
+// Elegir OS/OP con "cuotas" ya seleccionado dejaria el select deshabilitado pero
+// con el valor viejo, y el SP recien rechazaria la venta al guardar.
+watch(isDocumentalSale, (esDocumental) => {
+  if (!esDocumental) return
+  insc.cat_type_payment = 'we_payment_way_single'
+  insc.saved_money = 0
+})
 
 // Resetear tab al abrir modal
 watch(showProgramDetail, (val) => {
@@ -2233,6 +2277,9 @@ const formatDate = (dateString) => {
   const programTypeCatalog      = ref(catalog.options('we_program_type'))
   const programModalityCatalog  = ref(catalog.options('we_modality'))
   const inscPaymentModes        = ref(catalog.options('we_payment_way'))
+  // Orden de Servicio / de Compra / Carta de compromiso. Solo las dos primeras
+  // habilitan el flujo de pago diferido (ver isDocumentalSale).
+  const b2bDoctypeCatalog       = ref(catalog.options('we_enrollment_b2b_doctype') || [])
   //we_calling
   const callingCatalog          = ref(catalog.options('we_calling'))
   const attemptOriginCatalog    = ref(catalog.options('we_attempt_origin') || [])
@@ -2958,6 +3005,7 @@ function resetInscriptionData() {
     // ← FALTABAN ESTOS DOS
     cat_payment_channel: null,
     cat_token_provider: null,
+    cat_b2b_doctype: null,
   })
 
   voucherTouched.value = false
@@ -3192,6 +3240,11 @@ cat_certificate_status,
       cat_currency,
       cat_method_payment,
       cat_token_provider:   insc.cat_token_provider,
+      // Solo tiene sentido en el canal General: es una venta a empresa que se
+      // cobra por transferencia contra la orden, no por pasarela ni token.
+      cat_b2b_doctype: isChannelGeneral.value
+        ? idByAlias(insc.cat_b2b_doctype, b2bDoctypeCatalog.value)
+        : null,
       saved_money: reservaSplitEnabled.value
   ? Number(reservaInmediata.value)
   : Number(insc.saved_money),
@@ -4312,6 +4365,10 @@ const isOnlineProgram = computed(() =>
   form.program_modality_selected_alias === 'we_modality_online' &&
   form.category_alias !== 'we_program_type_membership'
 )
+
+// Los Online no se financian, y una OS/OP tampoco: la empresa gira el total de
+// una vez cuando la orden se hace efectiva.
+const isSinglePaymentForced = computed(() => isOnlineProgram.value || isDocumentalSale.value)
 
 // Detectar rol líder (igual que isComercial que ya tienes)
 const isLiderComercial = storedUser?.roles?.includes('LIDER_COMERCIAL') ?? false

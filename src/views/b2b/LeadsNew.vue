@@ -1178,6 +1178,18 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </div>
 
           <template v-if="isChannelGeneral">
+            <div class="col-md-3">
+              <label class="exec-label">Orden de Servicio / Compra</label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_b2b_doctype"
+                :items="b2bDoctypeCatalog"
+                label-field="description"
+                value-field="alias"
+                placeholder="Pago directo (default)"
+                class="exec-select-light w-100"
+              />
+            </div>
             <div class="col-md-2">
               <label class="exec-label">Moneda <span class="c-red">*</span></label>
               <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
@@ -1190,15 +1202,22 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :viewOpen="6"
                 v-model="insc.cat_type_payment"
                 required
-                :items="isOnlineProgram
+                :items="isSinglePaymentForced
                   ? inscPaymentModes.filter(e => e.alias === 'we_payment_way_single')
                   : inscPaymentModes"
                 placeholder="M. PAGO"
                 label-field="description"
                 value-field="alias"
                 class="exec-select-light w-100"
-                :disabled="isOnlineProgram"
+                :disabled="isSinglePaymentForced"
               />
+            </div>
+            <div v-if="isDocumentalSale" class="col-12">
+              <div class="p-2 rounded border text-muted" style="font-size:.8rem; background:var(--ln-soft-bg,#fafafa);">
+                <i class="fa-solid fa-circle-info me-2 text-info"></i>
+                El pago se registra después. La inscripción nace con la inicial pendiente
+                y FICO la confirma con la orden adjunta.
+              </div>
             </div>
             <div class="col-md-3">
               <label class="exec-label">Medio de Pago <span class="c-red">*</span></label>
@@ -1354,10 +1373,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <h6 class="fieldset-title">Documentación Adjunta</h6>
     <div class="row g-3">
 
-      <!-- GENERAL: Comprobantes de pago → enrollment_attachments -->
+      <!-- GENERAL: Comprobantes de pago → enrollment_attachments.
+           Con OS/OP el adjunto es la orden, no un voucher: la plata aun no llegó. -->
       <div class="col-12" v-if="isChannelGeneral">
         <label class="exec-label mb-1">
-          Comprobante(s) de Pago
+          {{ isDocumentalSale ? 'Orden de Servicio / de Compra' : 'Comprobante(s) de Pago' }}
           <span v-if="!isVoucherOptional" class="c-red">*</span>
           <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
             Opcional · Descuento 100%
@@ -1366,7 +1386,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <MultiFileUploader
           v-model="insc.ticket_payment_urls"
           ref="voucherUploaderRef"
-          label="Clic para subir Comprobante(s)"
+          :label="isDocumentalSale ? 'Clic para subir la Orden' : 'Clic para subir Comprobante(s)'"
           accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
           :required="insc.val_porcentaje==100?false:!isVoucherOptional"
           :minFiles="1"
@@ -1787,11 +1807,13 @@ const {
   discountCatalog, paymentMethodCatalog, docTypeCatalog, programTypeCatalog,
   programModalityCatalog, inscPaymentModes, callingCatalog, attemptOriginCatalog,
   currencyCatalog, lAttempts, paymentChannelCatalog, certificateStatusCatalog, tokenProviderCatalog,
+  b2bDoctypeCatalog,
   isEdit, leadIdParam, isDeleteStatus, currentProgram, hasEditions, maxPhoneLength,
   docConfig, selectedCurrency, selectedCurrencyAlias, channelAlias,
   isChannelGeneral, isChannelToken, isChannelWeb, isVoucherOptional,
   isMedioDisabled, filteredMediumCatalog, clientProfileType, calculatedBasePrice,
   montoFinalCalculado, isOnlineProgram, saveBlockReason, minDateForNewAttempt,
+  isDocumentalSale, isSinglePaymentForced,
   isInstallmentMode, installmentRemainder, autoNumCuotas,
   reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
   showInscriptionButton, isLiderComercial,

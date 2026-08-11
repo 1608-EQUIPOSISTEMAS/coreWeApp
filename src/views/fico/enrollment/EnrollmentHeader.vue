@@ -44,6 +44,14 @@
         <span class="eh-ic-value">{{ detail.seller_agent_name || enrollment?.seller_agent_name || '---' }}</span>
       </div>
     </div>
+    <!-- OS/OP: la venta se cobra contra la orden, no con voucher al momento. -->
+    <div v-if="detail.b2b_doctype_label" class="eh-ic">
+      <span class="eh-ic-icon ic-blue"><i class="fa-solid fa-file-contract"></i></span>
+      <div>
+        <span class="eh-ic-label">Documento B2B</span>
+        <span class="eh-ic-value">{{ detail.b2b_doctype_label }}</span>
+      </div>
+    </div>
     <div v-if="eventCategory" class="eh-ic">
       <span class="eh-ic-icon ic-rose"><i class="fa-solid fa-ticket"></i></span>
       <div>
