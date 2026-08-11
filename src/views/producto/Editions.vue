@@ -189,23 +189,21 @@
                       </button>
                     </div>
                   </th>
-                  <th v-if="isAcademica" colspan="2" class="th-group th-group-e">ACADÉMICA</th>
+                  <th v-if="canSeeClassroomLinks" :colspan="CLASSROOM_LINKS.length" class="th-group th-group-e">ACADÉMICA</th>
                   <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
                   <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
                   <th colspan="3" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
-                  <th colspan="6" class="th-group th-group-c">AULA / INSCRITOS</th>
                 </tr>
 
                 <!-- FILA 2: Columnas individuales -->
                 <tr class="thead-sub">
                   <!-- Académica -->
-                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
-                    <i class="fa-brands fa-whatsapp" style="color:#25d366;"></i>
-                  </th>
-                  <th v-if="isAcademica" class="ts ts-e text-center" style="min-width:80px;">
-                    <i class="fa-solid fa-video" style="color:#6264a7;"></i> Teams
-                  </th>
+                  <template v-if="canSeeClassroomLinks">
+                    <th v-for="link in CLASSROOM_LINKS" :key="link.field" class="ts ts-e text-center" style="min-width:80px;">
+                      <i :class="link.icon" :style="{ color: link.headerColor }"></i> {{ link.header }}
+                    </th>
+                  </template>
                   <!-- Identificación -->
                   <th class="ts ts-a">
                     <div class="d-flex align-items-center justify-content-between">
@@ -270,14 +268,6 @@
                       <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
                     </div>
                   </th>
-
-                  <!-- Aula / Inscritos (contador por canal) -->
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Venta directa con asesor">VENTAS</th>
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Vino por Cambio de Curso (seguimiento)">SEGUI</th>
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Convenio B2B">B2B</th>
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Beca / 100% descuento — NO suma al aula">BECA</th>
-                  <th class="ts ts-c text-center" style="min-width:54px;" title="Ingresó vía membresía">MEMB</th>
-                  <th class="ts ts-c text-center" style="min-width:58px;" title="Total en aula = VENTAS+SEGUI+MEMB+B2B (sin becas)">AULA</th>
                 </tr>
               </thead>
 
@@ -293,7 +283,7 @@
                 <template v-else>
                 <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
                   <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
-                    <td :colspan="(isCompact ? 16 : 11) + (isAcademica ? 2 : 0) + 6" class="week-header-cell">
+                    <td :colspan="tableColCount" class="week-header-cell">
                       <div class="week-header-inner">
                         <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         <span class="week-label">Semana {{ week.schedule }}</span>
@@ -333,16 +323,20 @@
                   </td>
 
                     <!-- ACADÉMICA -->
-                    <template v-if="isAcademica">
-                      <!-- WA -->
-                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link' }">
+                    <template v-if="canSeeClassroomLinks">
+                      <td
+                        v-for="link in CLASSROOM_LINKS"
+                        :key="link.field"
+                        class="td-e td-e-lac"
+                        :class="{ 'td-e-editing': isEditingLink(e, link.field) }"
+                      >
                         <template v-if="e.program_type === 'Curso'">
-                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'whatsapp_link'" class="lac-inline-edit">
+                          <div v-if="isEditingLink(e, link.field)" class="lac-inline-edit">
                             <input
                               ref="linkInputEl"
                               class="lac-inline-input"
                               v-model="editingLink.value"
-                              placeholder="https://chat.whatsapp.com/..."
+                              :placeholder="link.placeholder"
                               type="url"
                               @keyup.enter="saveEditLink(e)"
                               @keyup.escape="cancelEditLink()"
@@ -354,50 +348,13 @@
                               <i class="fa-solid fa-xmark"></i>
                             </button>
                           </div>
-                          <div v-else class="lac-chip lac-chip--wa" :class="{ 'lac-chip--no-link': !e.whatsapp_link }">
-                            <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                          <div v-else class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
+                            <i :class="[link.icon, 'lac-chip-icon']"></i>
                             <div class="lac-chip-actions">
-                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'whatsapp_link')" title="Editar link de WhatsApp">
+                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, link.field)" :title="`Editar link de ${link.label}`">
                                 <i class="fa-solid fa-pen-to-square"></i>
                               </button>
-                              <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </a>
-                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </span>
-                            </div>
-                          </div>
-                        </template>
-                        <span v-else class="text-muted small">—</span>
-                      </td>
-                      <!-- Teams -->
-                      <td class="td-e td-e-lac" :class="{ 'td-e-editing': editingLink.id === e.edition_num_id && editingLink.field === 'teams_link' }">
-                        <template v-if="e.program_type === 'Curso'">
-                          <div v-if="editingLink.id === e.edition_num_id && editingLink.field === 'teams_link'" class="lac-inline-edit">
-                            <input
-                              ref="linkInputEl"
-                              class="lac-inline-input"
-                              v-model="editingLink.value"
-                              placeholder="https://teams.microsoft.com/..."
-                              type="url"
-                              @keyup.enter="saveEditLink(e)"
-                              @keyup.escape="cancelEditLink()"
-                            />
-                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
-                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
-                            </button>
-                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
-                              <i class="fa-solid fa-xmark"></i>
-                            </button>
-                          </div>
-                          <div v-else class="lac-chip lac-chip--teams" :class="{ 'lac-chip--no-link': !e.teams_link }">
-                            <i class="fa-solid fa-video lac-chip-icon"></i>
-                            <div class="lac-chip-actions">
-                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, 'teams_link')" title="Editar link de Teams">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                              </button>
-                              <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                              <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
                               </a>
                               <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
@@ -593,14 +550,6 @@
                         <b v-if="e.clasification">{{ e.clasification }}</b>
                       </div>
                     </td>
-
-                    <!-- Aula / Inscritos -->
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
-                    <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
-                    <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                   </tr>
                 </template>
                 </template>
@@ -642,35 +591,19 @@
 
                   </td>
 
-                  <template v-if="isAcademica">
-                    <td class="td-e td-e-lac">
+                  <!-- Mismos links que la vista mensual, pero sin edicion en linea:
+                       el listado historico (sp_edition_list) no los devuelve, asi
+                       que aca el lapiz manda al modal de la edicion. -->
+                  <template v-if="canSeeClassroomLinks">
+                    <td v-for="link in CLASSROOM_LINKS" :key="link.field" class="td-e td-e-lac">
                       <template v-if="e.program_type === 'Curso'">
-                        <div class="lac-chip lac-chip--wa">
-                          <i class="fa-brands fa-whatsapp lac-chip-icon"></i>
+                        <div class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
+                          <i :class="[link.icon, 'lac-chip-icon']"></i>
                           <div class="lac-chip-actions">
-                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de WhatsApp">
+                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" :title="`Editar link de ${link.label}`">
                               <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <a v-if="e.whatsapp_link" :href="e.whatsapp_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir grupo WhatsApp">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </a>
-                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </span>
-                          </div>
-                        </div>
-                      </template>
-                      <span v-else class="text-muted small">—</span>
-                    </td>
-                    <td class="td-e td-e-lac">
-                      <template v-if="e.program_type === 'Curso'">
-                        <div class="lac-chip lac-chip--teams">
-                          <i class="fa-solid fa-video lac-chip-icon"></i>
-                          <div class="lac-chip-actions">
-                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" title="Editar link de Teams">
-                              <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <a v-if="e.teams_link" :href="e.teams_link" target="_blank" class="lac-chip-btn lac-chip-btn--go" title="Abrir reunión Teams">
+                            <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`">
                               <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                             <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
@@ -793,14 +726,6 @@
                       <b v-if="e.clasification">{{ e.clasification }}</b>
                     </div>
                   </td>
-
-                  <!-- Aula / Inscritos -->
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_ventas }">{{ e.cnt_ventas ?? 0 }}</td>
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_segui }">{{ e.cnt_segui ?? 0 }}</td>
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_b2b }">{{ e.cnt_b2b ?? 0 }}</td>
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_becas }" style="opacity:.75;">{{ e.cnt_becas ?? 0 }}</td>
-                  <td class="td-aula text-center small" :class="{ 'text-muted': !e.cnt_memb }">{{ e.cnt_memb ?? 0 }}</td>
-                  <td class="td-aula text-center fw-bold" style="color:var(--gold-400);">{{ e.cnt_aula ?? 0 }}</td>
                 </tr>
                 </template>
               </tbody>
@@ -1299,14 +1224,21 @@
           </div>
           <div class="status-card" v-if="currentEdition && isCourse">
             <div class="status-card__header"><i class="fa-brands fa-whatsapp me-2" style="color:#25d366;"></i>Links Académicos</div>
+            <!-- Solo lectura fuera de ADMIN/PRODUCTO porque el modal guarda con
+                 sp_edition_update, que exige esos roles. Academica edita estos
+                 mismos links con el lapiz de la tabla, que va por su endpoint. -->
             <div class="status-card__body">
-              <div class="mb-2">
-                <label class="form-label-sm"><i class="fa-brands fa-whatsapp me-1" style="color:#25d366;"></i>WhatsApp Link</label>
-                <input type="url" class="form-control form-control-sm" v-model="modalForm.whatsapp_link" placeholder="https://chat.whatsapp.com/..." :readonly="!$hasRole(['ACADEMICA'])" />
-              </div>
-              <div>
-                <label class="form-label-sm"><i class="fa-solid fa-video me-1" style="color:#6264a7;"></i>Teams Link</label>
-                <input type="url" class="form-control form-control-sm" v-model="modalForm.teams_link" placeholder="https://teams.microsoft.com/..." :readonly="!$hasRole(['ACADEMICA'])" />
+              <div v-for="link in CLASSROOM_LINKS" :key="link.field" class="mb-2">
+                <label class="form-label-sm">
+                  <i :class="[link.icon, 'me-1']" :style="{ color: link.headerColor }"></i>{{ link.modalLabel }}
+                </label>
+                <input
+                  type="url"
+                  class="form-control form-control-sm"
+                  v-model="modalForm[link.field]"
+                  :placeholder="link.placeholder"
+                  :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
+                />
               </div>
             </div>
           </div>
@@ -1959,6 +1891,10 @@
 .lac-chip--wa:hover { background: #f0fdf4; border-color: #bbf7d0; }
 .lac-chip--teams { color: #6264a7; }
 .lac-chip--teams:hover { background: #f5f3ff; border-color: #ddd6fe; }
+.lac-chip--ficha { color: #d97706; }
+.lac-chip--ficha:hover { background: #fffbeb; border-color: #fde68a; }
+.lac-chip--notas { color: #0284c7; }
+.lac-chip--notas:hover { background: #f0f9ff; border-color: #bae6fd; }
 .lac-chip--no-link { color: var(--slate-300, #cbd5e1) !important; }
 .lac-chip--no-link:hover { background: var(--slate-50, #f8fafc); border-color: var(--slate-200, #e2e8f0); }
 
@@ -2006,6 +1942,8 @@
 .lac-chip-btn--go { color: var(--slate-500, #64748b); }
 .lac-chip--wa .lac-chip-btn--go:hover { background: #dcfce7; color: #16a34a; }
 .lac-chip--teams .lac-chip-btn--go:hover { background: #ede9fe; color: #6264a7; }
+.lac-chip--ficha .lac-chip-btn--go:hover { background: #fef3c7; color: #d97706; }
+.lac-chip--notas .lac-chip-btn--go:hover { background: #e0f2fe; color: #0284c7; }
 .lac-chip-btn--empty { opacity: .3; cursor: not-allowed; }
 .lac-chip-btn--empty:hover { transform: none; background: transparent; }
 
@@ -2518,11 +2456,17 @@ tr[class*="row-segment-"]:hover .td-d {
 [data-coreui-theme="dark"] .lac-chip--wa:hover { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.35); }
 [data-coreui-theme="dark"] .lac-chip--teams { color: #A5B4FC; }
 [data-coreui-theme="dark"] .lac-chip--teams:hover { background: rgba(165,180,252,.12); border-color: rgba(165,180,252,.35); }
+[data-coreui-theme="dark"] .lac-chip--ficha { color: #FCD34D; }
+[data-coreui-theme="dark"] .lac-chip--ficha:hover { background: rgba(252,211,77,.12); border-color: rgba(252,211,77,.35); }
+[data-coreui-theme="dark"] .lac-chip--notas { color: #7DD3FC; }
+[data-coreui-theme="dark"] .lac-chip--notas:hover { background: rgba(125,211,252,.12); border-color: rgba(125,211,252,.35); }
 [data-coreui-theme="dark"] .lac-chip--no-link { color: #5A5A50 !important; }
 [data-coreui-theme="dark"] .lac-chip--no-link:hover { background: #24241E; border-color: #3A3A33; }
 [data-coreui-theme="dark"] .lac-chip-btn--edit:hover { background: #24241E; color: #8FAADC; }
 [data-coreui-theme="dark"] .lac-chip--wa .lac-chip-btn--go:hover { background: rgba(74,222,128,.2); color: #4ADE80; }
 [data-coreui-theme="dark"] .lac-chip--teams .lac-chip-btn--go:hover { background: rgba(165,180,252,.2); color: #A5B4FC; }
+[data-coreui-theme="dark"] .lac-chip--ficha .lac-chip-btn--go:hover { background: rgba(252,211,77,.2); color: #FCD34D; }
+[data-coreui-theme="dark"] .lac-chip--notas .lac-chip-btn--go:hover { background: rgba(125,211,252,.2); color: #7DD3FC; }
 [data-coreui-theme="dark"] .lac-inline-input { background: #14140F; }
 [data-coreui-theme="dark"] .lac-inline-btn--save { background: rgba(74,222,128,.16); color: #4ADE80; }
 [data-coreui-theme="dark"] .lac-inline-btn--cancel { background: rgba(239,68,68,.16); color: #F87171; }
@@ -2722,6 +2666,12 @@ const catalog = inject('catalog')
 const toast = useToast()
 const { proxy } = getCurrentInstance()
 const isAcademica = computed(() => proxy.$hasRole(['ACADEMICA']))
+// Quien ve las columnas de links del aula. Va aparte de isAcademica: ese decide
+// permisos de edicion (switches, auditoria, filtros), no que columnas se pintan.
+// Misma lista que el gate de /edition/classroomlinkssave en el backend.
+const canSeeClassroomLinks = computed(() =>
+  proxy.$hasRole(['ADMIN', 'PRODUCTO', 'LIDER_PRODUCTO', 'ACADEMICA', 'LIDER_ACADEMICA'])
+)
 
 // ── Filtros rápidos (ACADEMICA) ──────────────────────────────
 // 'all' | 'courses' | 'programs'
@@ -2733,15 +2683,37 @@ function cycleVista() {
 }
 const onlyActivos = ref(false)
 // ── Inline link edit (ACADEMICA) ─────────────────────────────
+// Los links del aula que viven en program_editions. El orden manda las columnas
+// del grupo ACADEMICA y `field` es la columna real: el SP de update solo escribe
+// las claves que viajan en el JSON, asi que agregar un link aqui + en la BD +
+// en editionUpdateSchema alcanza. Un quinto link NO deberia tocar el markup.
+const CLASSROOM_LINKS = [
+  { field: 'whatsapp_link', header: '',      label: 'WhatsApp',          modalLabel: 'WhatsApp Link',   icon: 'fa-brands fa-whatsapp',  chipClass: 'lac-chip--wa',    headerColor: '#25d366', placeholder: 'https://chat.whatsapp.com/...' },
+  { field: 'teams_link',    header: 'Teams', label: 'Teams',             modalLabel: 'Teams Link',      icon: 'fa-solid fa-video',      chipClass: 'lac-chip--teams', headerColor: '#6264a7', placeholder: 'https://teams.microsoft.com/...' },
+  { field: 'ficha_link',    header: 'Ficha', label: 'la ficha',          modalLabel: 'Ficha',           icon: 'fa-solid fa-file-lines', chipClass: 'lac-chip--ficha', headerColor: '#d97706', placeholder: 'https://...' },
+  { field: 'grades_link',   header: 'Notas', label: 'la lista de notas', modalLabel: 'Lista de Notas',  icon: 'fa-solid fa-list-ol',    chipClass: 'lac-chip--notas', headerColor: '#0284c7', placeholder: 'https://...' }
+]
+
+// Los mismos campos, vacios, para inicializar y limpiar el formulario del modal.
+const linksVacios = () => Object.fromEntries(CLASSROOM_LINKS.map(({ field }) => [field, '']))
+
 const linkInputEl   = ref(null)
 const savingLinkId  = ref(null)
 const editingLink   = reactive({ id: null, field: null, value: '' })
+
+const isEditingLink = (edition, field) =>
+  editingLink.id === edition.edition_num_id && editingLink.field === field
 
 function startEditLink(edition, field) {
   editingLink.id    = edition.edition_num_id
   editingLink.field = field
   editingLink.value = edition[field] || ''
-  nextTick(() => { if (linkInputEl.value) linkInputEl.value.focus() })
+  // El input vive dentro de v-for, asi que Vue entrega un array de refs. Solo
+  // hay una celda en edicion a la vez: la primera es la buena.
+  nextTick(() => {
+    const input = Array.isArray(linkInputEl.value) ? linkInputEl.value[0] : linkInputEl.value
+    input?.focus()
+  })
 }
 
 function cancelEditLink() {
@@ -2758,31 +2730,19 @@ async function saveEditLink(edition) {
 
   savingLinkId.value = id
   try {
-    const currentData = await editionService.editionGet({ id })
-    if (!currentData) { toast.error('Error al sincronizar'); return }
-
-    const payload = {
-      expedient:       currentData.expedient       ? 'Y' : 'N',
-      upgrade:         currentData.upgrade          ? 'Y' : 'N',
-      preconfirmation: currentData.preconfirmation  ? 'Y' : 'N',
-      confirmation:    currentData.confirmation     ? 'Y' : 'N',
-      new_methodology: currentData.new_methodology === 'Y' ? 'Y' : 'N',
-      notes:           currentData.notes            || '',
-      whatsapp_link:   field === 'whatsapp_link' ? value : (currentData.whatsapp_link || null),
-      teams_link:      field === 'teams_link'    ? value : (currentData.teams_link    || null),
-    }
-
-    const resp = await editionService.editionUpdate({ id, edition: payload })
-    if (resp?.result === 1) {
+    // Solo viaja el link editado. El endpoint no toca ninguna otra columna, asi
+    // que no hay que releer la edicion ni reenviar el resto del formulario.
+    const { updated } = await editionService.classroomLinksSave({ edition_num_id: id, [field]: value })
+    if (updated) {
       edition[field] = value
       toast.success('Link actualizado', { timeout: 1500 })
       cancelEditLink()
     } else {
-      toast.error(resp?.message || 'Error al guardar')
+      toast.error('No se encontró la edición')
     }
   } catch (err) {
     console.error(err)
-    toast.error('Error al guardar el link')
+    toast.error(err?.response?.data?.message || 'Error al guardar el link')
   } finally {
     savingLinkId.value = null
   }
@@ -2791,7 +2751,7 @@ async function saveEditLink(edition) {
 
 const date = ref();
 const isCompact = ref(true)
-const tableColCount = computed(() => (isCompact.value ? 17 : 12) + (isAcademica.value ? 2 : 0) + 6)
+const tableColCount = computed(() => (isCompact.value ? 17 : 12) + (canSeeClassroomLinks.value ? CLASSROOM_LINKS.length : 0))
 // --- ESTADOS GENERALES ---
 const dense = ref(false)
 const schedules = ref([])
@@ -3687,8 +3647,7 @@ const modalForm = reactive({
   confirmation: false,
   active: false,
   notes: '',
-  whatsapp_link: '',
-  teams_link: '',
+  ...linksVacios(),
   program_version_children: []
 })
 
@@ -3761,8 +3720,7 @@ function resetModalForm() {
   modalForm.cat_type_program_alias = null
   modalForm.cat_day_combination_id = null
   modalForm.cat_hour_combination_id = null
-  modalForm.whatsapp_link = ''
-  modalForm.teams_link = ''
+  Object.assign(modalForm, linksVacios())
   modalForm.program_version_children = []
 }
 
@@ -3904,8 +3862,7 @@ async function openEditModal(edition) {
     modalForm.preconfirmation = !!data.preconfirmation
     modalForm.confirmation = !!data.confirmation
     modalForm.notes = data.notes || ''
-    modalForm.whatsapp_link = data.whatsapp_link || ''
-    modalForm.teams_link = data.teams_link || ''
+    for (const { field } of CLASSROOM_LINKS) modalForm[field] = data[field] || ''
     modalForm.sessions = data.sessions || null
 
     // Alias UI
@@ -4011,8 +3968,7 @@ async function persistEditionUpdate() {
         preconfirmation: modalForm.preconfirmation ? 'Y' : 'N',
         confirmation: modalForm.confirmation ? 'Y' : 'N',
         notes: modalForm.notes,
-        whatsapp_link: modalForm.whatsapp_link || null,
-        teams_link: modalForm.teams_link || null,
+        ...Object.fromEntries(CLASSROOM_LINKS.map(({ field }) => [field, modalForm[field] || null])),
         active: modalForm.active ? 'Y' : 'N',
       }
 

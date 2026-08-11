@@ -1216,7 +1216,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <h6 class="fieldset-title"><i class="fa-solid fa-rotate-right me-2"></i> Convalidar y Personalizar </h6>
         <label class="validation-toggle-label">
           <input type="checkbox" v-model="hasValidation" />
-          Alumno tiene modulos ya cursados (convalidar)
+          Convalidar modulos ya cursados o elegir otra edicion para alguno
         </label>
         <div v-if="hasValidation" class="mt-3">
           <div v-for="child in programChildren" :key="child.child_program_version_id" class="validation-row">
@@ -3276,13 +3276,19 @@ cat_certificate_status,
     }
   }
 
-  if (hasValidation.value && validatedChildren.value.length > 0) {
-    payload.validations = {
-      enabled: true,
-      validated_children: validatedChildren.value,
-      custom_editions: Object.fromEntries(
-        Object.entries(customEditionIds).filter(([k, v]) => customEditionMode[k] === 'custom' && v)
-      )
+  // Se envia si hay convalidados O si hay ediciones personalizadas: "el modulo 1
+  // lo lleva en octubre" es una instruccion valida sin convalidar nada, y antes
+  // se perdia porque el payload solo salia con convalidados.
+  if (hasValidation.value) {
+    const customEditions = Object.fromEntries(
+      Object.entries(customEditionIds).filter(([k, v]) => customEditionMode[k] === 'custom' && v)
+    )
+    if (validatedChildren.value.length > 0 || Object.keys(customEditions).length > 0) {
+      payload.validations = {
+        enabled: true,
+        validated_children: validatedChildren.value,
+        custom_editions: customEditions
+      }
     }
   }
 

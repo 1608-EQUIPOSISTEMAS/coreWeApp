@@ -38,6 +38,14 @@ export default class EditionService {
   async editionUpdate(payload) {
     return (await api.post('/edition/editionupdate', payload)).data;
   }
+
+  // Links del aula (WhatsApp / Teams / Ficha / Lista de notas) de una edicion.
+  // Va aparte de editionUpdate: ese endpoint reescribe la edicion entera y solo
+  // lo pueden usar ADMIN/PRODUCTO. Solo viajan los links a cambiar.
+  async classroomLinksSave(payload) {
+    const response = (await api.post('/edition/classroomlinkssave', payload)).data
+    return response.data
+  }
   
   // Vista Semanal Academica: aulas en curso por dia con nº de sesion.
   async weeklySessions(payload) {

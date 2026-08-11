@@ -164,7 +164,89 @@
         </div>
 
         <!-- ═══════════════════════════════════════
-             SECCIÓN 3: PROGRAMAS Y FINANCIEROS
+             SECCIÓN 3: ACCESOS Y CARPETAS DE CLASE
+             Solo en edición: sp_instructor_register no los conoce
+        ════════════════════════════════════════ -->
+        <div class="exec-fieldset mb-4" v-if="isEdit">
+          <h6 class="fieldset-title">
+            <i class="fa-solid fa-key me-2" style="color: var(--amber-500);"></i> Accesos y Carpetas de Clase
+          </h6>
+          <div class="row g-3">
+            <template v-for="acceso in ACCESOS" :key="acceso.user">
+              <div class="col-md-3">
+                <label class="exec-label">Usuario {{ acceso.label }}</label>
+                <div class="input-group-custom">
+                  <i :class="[acceso.icon, 'input-icon']" :style="{ color: acceso.color }"></i>
+                  <!-- autocomplete off: el navegador ofrece las credenciales de
+                       quien esta editando, no las del docente. -->
+                  <input v-model.trim="form[acceso.user]" type="text" autocomplete="off" class="exec-input-light w-100 icon-padded" :placeholder="acceso.placeholder" />
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="exec-label">Contraseña {{ acceso.label }}</label>
+                <div class="input-group-custom">
+                  <input
+                    v-model.trim="form[acceso.pass]"
+                    :type="claveVisible[acceso.pass] ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    class="exec-input-light w-100 pe-5"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    class="input-eye"
+                    @click="claveVisible[acceso.pass] = !claveVisible[acceso.pass]"
+                    :title="claveVisible[acceso.pass] ? 'Ocultar' : 'Mostrar'"
+                  >
+                    <i :class="claveVisible[acceso.pass] ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-4 mb-3 pb-2 border-top pt-3">
+            <label class="exec-label mb-0">
+              Carpetas de clase
+              <span class="text-muted fw-normal text-lowercase"> — {{ form.class_folders.length }} agregada(s)</span>
+            </label>
+            <button type="button" class="btn-exec btn-exec-outline text-primary border-primary btn-sm" @click="addClassFolder">
+              <i class="fa-solid fa-plus me-1"></i> Agregar Carpeta
+            </button>
+          </div>
+
+          <div v-if="form.class_folders.length === 0" class="empty-state">
+            <p class="mb-0">Sin carpetas de clase. Agrega tantas como necesite el docente.</p>
+          </div>
+
+          <div v-for="(folder, index) in form.class_folders" :key="'folder-'+index" class="row g-2 align-items-end mb-2">
+            <div class="col-md-4">
+              <label class="exec-label" v-if="index === 0">Nombre</label>
+              <input v-model.trim="folder.label" type="text" class="exec-input-light w-100" :placeholder="`Carpeta ${index + 1}`" />
+            </div>
+            <div class="col-md-7">
+              <label class="exec-label" v-if="index === 0">Link</label>
+              <input v-model.trim="folder.folder_url" type="url" class="exec-input-light w-100" placeholder="https://drive.google.com/..." />
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+              <a
+                v-if="folder.folder_url"
+                :href="folder.folder_url"
+                target="_blank"
+                class="btn-exec btn-exec-ghost btn-sm"
+                title="Abrir carpeta"
+              >
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
+              <button type="button" class="btn-exec btn-exec-ghost btn-sm text-danger" @click="form.class_folders.splice(index, 1)" title="Quitar carpeta">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             SECCIÓN 4: PROGRAMAS Y FINANCIEROS
              Solo en edición
         ════════════════════════════════════════ -->
         <div class="row g-4" v-if="isEdit">
@@ -367,6 +449,17 @@
 .input-icon { position: absolute; left: 12px; color: var(--slate-400, #94a3b8); font-size: 13px; }
 .icon-padded { padding-left: 32px; }
 
+/* ── Mostrar / ocultar contraseña ── */
+.input-eye {
+  position: absolute; right: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: none; background: transparent; border-radius: 4px;
+  color: var(--slate-400, #94a3b8); font-size: 13px; cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.input-eye:hover { color: var(--teal-500, #12274e); background: var(--slate-100, #f1f5f9); }
+
 /* ── Textarea ── */
 .exec-textarea {
   background: var(--white, #fff);
@@ -482,6 +575,11 @@ const form = reactive({
   linkedin:          null,   // → Odoo social_linkedin
   cv_url:            null,
   cv_documents_url:  null,
+  odoo_username:     null,   // usuario con el que entra a Odoo, no la FK odoo_user_id
+  odoo_password:     null,
+  teams_username:    null,
+  teams_password:    null,
+  class_folders:     [],     // lista variable: el guardado reemplaza la lista completa
   financials:        [],
   programs:          []
 })
@@ -511,6 +609,15 @@ const isValid = computed(() =>
   !!form.email
 )
 
+/* ── Accesos del docente ──
+   Las contraseñas se guardan y se muestran en claro a proposito: sirven para
+   dictarselas al docente, no para autenticarlo contra este sistema. */
+const ACCESOS = [
+  { user: 'odoo_username',  pass: 'odoo_password',  label: 'Odoo',  icon: 'fa-solid fa-cube',  color: '#714B67', placeholder: 'usuario.odoo' },
+  { user: 'teams_username', pass: 'teams_password', label: 'Teams', icon: 'fa-solid fa-video', color: '#6264a7', placeholder: 'docente@weeducacion.com' }
+]
+const claveVisible = reactive({ odoo_password: false, teams_password: false })
+
 /* ── Gestión de listas dinámicas ── */
 function addFinancialItem () {
   form.financials.push({
@@ -523,6 +630,10 @@ function addFinancialItem () {
     observations:    ''
   })
   uploading.financials[form.financials.length - 1] = false
+}
+
+function addClassFolder () {
+  form.class_folders.push({ label: '', folder_url: '' })
 }
 
 function addProgramItem () {
@@ -561,8 +672,19 @@ async function loadData (id) {
       profile_summary:   data.profile_summary   ?? null,
       linkedin:          data.linkedin          ?? null,
       cv_url:            data.cv_url            || null,
-      cv_documents_url:  data.cv_documents_url  || null
+      cv_documents_url:  data.cv_documents_url  || null,
+      odoo_username:     data.odoo_username     ?? null,
+      odoo_password:     data.odoo_password     ?? null,
+      teams_username:    data.teams_username    ?? null,
+      teams_password:    data.teams_password    ?? null
     })
+
+    if (Array.isArray(data.class_folders)) {
+      form.class_folders = data.class_folders.map(f => ({
+        label:      f.label      || '',
+        folder_url: f.folder_url || ''
+      }))
+    }
 
     if (Array.isArray(data.financials)) {
       form.financials = data.financials.map(f => ({
@@ -615,6 +737,15 @@ function buildPayload () {
       profile_resume:      form.profile_resume     ?? null,
       cv_url:              form.cv_url             ?? null,
       cv_documents_url:    form.cv_documents_url   ?? null,
+      odoo_username:       form.odoo_username      ?? null,
+      odoo_password:       form.odoo_password      ?? null,
+      teams_username:      form.teams_username     ?? null,
+      teams_password:      form.teams_password     ?? null,
+      // Se manda la lista completa (el SP la reemplaza) y sin las filas a medio
+      // llenar: una carpeta sin link no es una carpeta.
+      class_folders: form.class_folders
+        .filter(f => f.folder_url?.trim())
+        .map(f => ({ label: f.label?.trim() || null, folder_url: f.folder_url.trim() })),
       financials: form.financials.map(f => ({
         instructor_financial_id: f.instructor_financial_id || null,
         attachments:             f.attachments             || [],
