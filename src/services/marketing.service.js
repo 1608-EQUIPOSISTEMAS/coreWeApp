@@ -27,4 +27,22 @@ export default class MarketingService {
   async syncSocialPosts () {
     return (await api.post('/marketing/social-posts/sync')).data.data
   }
+
+  // ── Crecimiento RRSS ──
+  async socialAccounts () {
+    return (await api.get('/marketing/social-accounts')).data.data
+  }
+
+  async socialGrowth (params) { // { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD', brand? }
+    return (await api.get('/marketing/social-growth', { params })).data.data
+  }
+
+  // Carga manual de las cuentas sin API (LinkedIn, grupos de FB, WhatsApp).
+  async saveSocialGrowth (payload) { // { account_id, week_start, followers }
+    return (await api.put('/marketing/social-growth', payload)).data.data
+  }
+
+  async syncSocialGrowth () {
+    return (await api.post('/marketing/social-growth/sync')).data.data
+  }
 }

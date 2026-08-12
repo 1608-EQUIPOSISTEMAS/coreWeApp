@@ -320,6 +320,13 @@ export default [
         submodule: 'PUBLICACIONES',
         roles: ['ADMIN', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Crecimiento RRSS',
+        to: '/marketing/crecimiento',
+        submodule: 'CRECIMIENTO',
+        roles: ['ADMIN', 'GERENCIA'],
+      },
     ],
   },
   {

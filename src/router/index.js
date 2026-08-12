@@ -322,6 +322,13 @@ const routes = [
             component: () => import('@/views/marketing/Publicaciones.vue'),
             meta: { submodule: 'PUBLICACIONES', area: 'MARKETING' },
           },
+          {
+            path: 'crecimiento',
+            name: 'MarketingCrecimiento',
+            // seguidores por marca y red; reemplaza la hoja "Reporte Crecimiento de RRSS"
+            component: () => import('@/views/marketing/CrecimientoRRSS.vue'),
+            meta: { submodule: 'CRECIMIENTO', area: 'MARKETING' },
+          },
           // rutas viejas del "Reporte Completo": ahora vive en Gerencia
           { path: 'overview', redirect: { name: 'GerenciaReporteCompleto' } },
           { path: 'reporte/ingresos-diarios', redirect: { name: 'GerenciaReporteCompleto' } },
