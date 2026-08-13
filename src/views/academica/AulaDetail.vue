@@ -519,7 +519,7 @@ function exportNotasCsv() {
     return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   const header = [
-    'N', 'Apellidos y nombres', 'Email', 'DNI', 'Ocup.', 'Mod.', 'Seguimiento', 'B2B', 'Beca', 'Membresia',
+    'N', 'Apellidos y nombres', 'Email', 'Celular', 'DNI', 'Ocup.', 'Mod.', 'Seguimiento', 'B2B', 'Beca', 'Membresia',
     ...sessionNumbers.value.map((n) => `Test S${n}`), 'TEST',
     ...sessionNumbers.value.map((n) => `Part. S${n}`), 'PTS',
     'PARCIAL', 'FINAL', 'NOTA FINAL', 'RESULTADO', 'GRUPO', 'OBSERVACION',
@@ -533,6 +533,9 @@ function exportNotasCsv() {
       String(idx + 1).padStart(2, '0'),
       apellidosNombres(s),
       s.email || '',
+      // ponytail: Excel se come el "+51" y los ceros a la izquierda si lo lee
+      // como numero; el prefijo tab lo fuerza a texto.
+      s.phone ? `\t${s.phone}` : '',
       s.dni || '',
       ocupLabel(s),
       modalityLabel(s),

@@ -3,6 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
+import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
 
 export function useLeadForm(options = {}) {
   const {
@@ -1500,7 +1501,9 @@ export function useLeadForm(options = {}) {
       const audit = await ficoService.getAuditLog(Number(form.enrollment_id))
       const obs = (audit || []).find(a => a.action === 'observed')
       observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
-      nextTick(() => openInscription())
+      await nextTick()
+      openInscription()
+      await restoreObservedChannel(insc, flags, paymentChannelCatalog.value)
     } catch { /* la observacion es informativa: si falla, el lead se abre igual */ }
   }
 

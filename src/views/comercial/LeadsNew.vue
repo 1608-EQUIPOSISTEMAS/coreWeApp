@@ -1938,6 +1938,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
+import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
   const toast = useToast()
 
   import CurrencyInput from '@/components/CurrencyInput.vue'
@@ -2666,7 +2667,9 @@ watch(() => insc.cat_type_document, (newVal) => {
         const audit = await ficoService.getAuditLog(Number(form.enrollment_id))
         const obs = (audit || []).find(a => a.action === 'observed')
         observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
-        nextTick(() => openInscription())
+        await nextTick()
+        openInscription()
+        await restoreObservedChannel(insc, flags, paymentChannelCatalog.value)
       }
     } catch { /* ignore */ }
   }

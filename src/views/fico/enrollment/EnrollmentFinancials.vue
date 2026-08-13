@@ -237,9 +237,11 @@
           <span class="ef-bar-label">Monto</span>
           <span class="fw700 mono" style="font-size:16px">S/. {{ fmt.formatMoney(total) }}</span>
         </div>
-        <div>
-          <a v-if="voucher" :href="voucher" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
-          <span v-else class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
+        <div class="ef-voucher-links">
+          <a v-for="(url, i) in voucherUrls" :key="url" :href="url" target="_blank" class="ef-voucher-link">
+            <i class="fa-solid fa-image"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
+          </a>
+          <span v-if="!voucherUrls.length" class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
         </div>
       </div>
 
@@ -467,7 +469,9 @@
               <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
             </div>
             <div class="ef-inicial-actions">
-              <a v-if="voucher" :href="voucher" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
+              <a v-for="(url, i) in voucherUrls" :key="url" :href="url" target="_blank" class="ef-voucher-link">
+                <i class="fa-solid fa-image"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
+              </a>
             </div>
           </div>
           <div class="ef-form-row mt12">
@@ -841,7 +845,7 @@
 <script setup>
 import { ref, reactive, computed, inject, watch } from 'vue'
 import { ServiceKeys } from '@/services'
-import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
+import { useEnrollmentFormatters, splitVoucherUrls } from '@/composables/useEnrollmentFormatters'
 import { useToast } from 'vue-toastification'
 import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
@@ -963,7 +967,7 @@ const balance = computed(() => {
   if (contadoPendiente.value) return Number(contadoPendiente.value.amount) || 0
   return props.enrollment ? fmt.calcSaldo(props.enrollment) : Number(props.detail?.balance_due) || 0
 })
-const voucher = computed(() => props.enrollment?.payment_vouchers || null)
+const voucherUrls = computed(() => splitVoucherUrls(props.enrollment?.payment_vouchers))
 const isContado = computed(() => props.enrollment ? fmt.isContado(props.enrollment) : true)
 
 // Venta contra Orden de Servicio / de Compra: se confirma sin pago porque la
@@ -1351,6 +1355,7 @@ function needsEditionDecision (child) {
   transition: background .2s ease;
 }
 .ef-voucher-link:hover { background: #EBEBEB; }
+.ef-voucher-links { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .ef-voucher-sm { color: #737373; font-size: 14px; text-decoration: none; transition: color .2s ease; margin-right: 6px; }
 .ef-voucher-sm:hover { color: #1A1A1A; }

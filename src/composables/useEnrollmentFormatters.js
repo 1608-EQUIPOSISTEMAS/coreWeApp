@@ -1,3 +1,10 @@
+// Un pago puede traer varios comprobantes y la vista los devuelve concatenados
+// en un solo texto (`payment_vouchers`), a veces sin separador:
+// "https://a/1.jpghttps://b/2.jpg". Cortamos en cada "http" para no abrir la
+// cadena entera como una sola URL (404).
+export const splitVoucherUrls = v =>
+  String(v || '').match(/https?:\/\/(?:(?!https?:\/\/)[^\s,;|])+/g) || []
+
 export function useEnrollmentFormatters () {
 
   const formatMoney = v => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
