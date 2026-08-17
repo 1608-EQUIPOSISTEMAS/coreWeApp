@@ -85,7 +85,7 @@
                 <span v-else-if="!editingEdition[child.child_program_version_id]"
                   class="ef-edition-link"
                   @click="editingEdition[child.child_program_version_id] = true">
-                  {{ getCustomEditionLabel(child) || sameEditionLabel() }}
+                  {{ getCustomEditionLabel(child) || treeEditionLabel(child) }}
                   <i class="fa-solid fa-pen" style="font-size:10px;margin-left:4px;opacity:.4"></i>
                 </span>
                 <select v-if="editingEdition[child.child_program_version_id]" class="ef-select-sm" style="min-width:200px"
@@ -93,7 +93,7 @@
                   @change="$emit('change-edition', { childVersionId: child.child_program_version_id, editionId: Number($event.target.value) || null }); editingEdition[child.child_program_version_id] = false"
                   @blur="editingEdition[child.child_program_version_id] = false">
                   <option :value="null" :disabled="!isInParentTree(child)">
-                    {{ isInParentTree(child) ? sameEditionLabel() : 'Seleccionar edicion...' }}
+                    {{ isInParentTree(child) ? treeEditionLabel(child) : 'Seleccionar edicion...' }}
                   </option>
                   <option v-for="ed in child.editions" :key="ed.edition_id" :value="ed.edition_id">
                     {{ ed.code }} - {{ formatEdDate(ed.start_date) }}
@@ -846,6 +846,7 @@
 import { ref, reactive, computed, inject, watch } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters, splitVoucherUrls } from '@/composables/useEnrollmentFormatters'
+import { childEditionLabel } from '@/utils/childEdition'
 import { useToast } from 'vue-toastification'
 import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
@@ -1174,23 +1175,17 @@ function getCustomEditionId (childVersionId) {
   return val?.custom_edition_id || null
 }
 
-// Fecha de la edicion del enrollment padre (la que se usaria para "misma edicion").
-// Se obtiene desde props.detail.start_date o props.enrollment.start_date.
-function getParentEditionDate () {
-  return props.detail?.start_date || props.enrollment?.start_date || null
-}
-
 function formatEdDate (d) {
   if (!d) return ''
   return fmt.formatDate(d)
 }
 
-// Etiqueta para mostrar en columna Edicion cuando NO se eligio una distinta.
-// Devuelve "Misma edicion (DD/MM/YYYY)" usando la fecha del enrollment padre.
-function sameEditionLabel () {
-  const d = getParentEditionDate()
-  if (!d) return 'Misma edicion'
-  return `Misma edicion (${formatEdDate(d)})`
+// Etiqueta de la columna Edicion cuando NO se eligio una distinta: la edicion que
+// el arbol del padre le da a ESTE modulo, con su fecha. Antes decia "Misma
+// edicion" para toda la tabla, que ademas de no dar fecha era falso: los modulos
+// de un diplomado arrancan en fechas distintas.
+function treeEditionLabel (child) {
+  return childEditionLabel(child, formatEdDate) || 'Sin edicion programada'
 }
 
 // Indica si la edicion del padre incluye este modulo en su arbol.

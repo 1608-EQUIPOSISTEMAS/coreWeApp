@@ -37,6 +37,16 @@ export default class MarketingService {
     return (await api.get('/marketing/social-growth', { params })).data.data
   }
 
+  // Objetivo anual de seguidores por marca. followers_goal es el total a alcanzar
+  // al 31/12, no el crecimiento del año.
+  async socialGoals (year) {
+    return (await api.get('/marketing/social-goals', { params: { year } })).data.data
+  }
+
+  async saveSocialGoal (payload) { // { brand, year, followers_goal }
+    return (await api.put('/marketing/social-goals', payload)).data.data
+  }
+
   // Carga manual de las cuentas sin API (LinkedIn, grupos de FB, WhatsApp).
   async saveSocialGrowth (payload) { // { account_id, week_start, followers }
     return (await api.put('/marketing/social-growth', payload)).data.data

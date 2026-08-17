@@ -353,7 +353,10 @@ export function useLeadForm(options = {}) {
     cat_payment_channel: null,
     cat_token_provider: null,
     token_payment_type: '',
-    agreement_id: null,
+    // El contrato B2B que respalda la venta (convenio, trato corporativo, in
+    // house...). Antes esto se llamaba agreement_id y viajaba a un campo que el
+    // SP nunca leia: la venta perdia el vinculo con el contrato que la pago.
+    b2b_contract_id: null,
     // Orden de Servicio / de Compra: la empresa paga semanas despues, asi que el
     // asesor sube la orden en lugar del voucher y la venta nace con la inicial
     // pendiente. Null = venta normal con pago al momento.
@@ -1386,7 +1389,7 @@ export function useLeadForm(options = {}) {
         student_attachment_url: form.carnet_url || null,
         ticket_payment_urls: paymentFiles,
         attachments: generalAttachments,
-        agreement_id: insc.agreement_id || null,
+        b2b_contract_id: insc.b2b_contract_id || null,
         // Toda venta nacida en el modulo de Fundacion es del canal FWE, sea quien
         // sea el asesor que la registro (el alias sigue viajando en seller_agent_id).
         agent_origin: businessLine === 'we_business_line_fundacion' ? 'FWE' : null,

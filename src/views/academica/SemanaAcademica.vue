@@ -170,9 +170,6 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
         <button class="btn" :disabled="isLoading" @click="goToday">
           <i class="fa-regular fa-calendar-check"></i> Hoy
         </button>
-        <button class="btn" :disabled="isLoading" @click="load">
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
-        </button>
         <div class="week-nav">
           <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
             <i class="fa-solid fa-chevron-left"></i>

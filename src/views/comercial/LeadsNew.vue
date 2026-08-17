@@ -3618,7 +3618,7 @@ async function loadTokenForEdit (tokenId) {
     insc.dsct_stick_id       = d.dsct_stick_id       || null
     insc.dsct_stick_label    = d.dsct_stick_label    || null
     insc.dsct_benefit_ids    = d.dsct_benefit_ids    || []
-    insc.agreement_id        = d.agreement_id        || null
+    insc.b2b_contract_id     = d.b2b_contract_id     || null
     insc.token_payment_type  = token.payment_type    || null
 
     // Los descuentos necesitan el valor numerico (val_porcentaje/val_fijo/val_beneficios)

@@ -1,5 +1,111 @@
 import { describe, it, expect } from 'vitest'
-import { isoWeekStart, sparkPoints } from '../useSocialGrowth.js'
+import {
+  buildColumns, isoWeekStart, lastPointUpTo, monthEnd, sparkPoints, todayLocal
+} from '../useSocialGrowth.js'
+
+describe('buildColumns', () => {
+  const HOY = '2026-08-14'
+
+  it('un rango corto sale por semanas, empezando en el lunes', () => {
+    const cols = buildColumns('2026-08-03', '2026-08-14', HOY)
+    expect(cols.map(c => c.kind)).toEqual(['week', 'week'])
+    expect(cols.map(c => c.boundary)).toEqual(['2026-08-03', '2026-08-10'])
+    expect(cols[0].label).toBe('03/08')
+  })
+
+  it('los presets de 7 y 30 días quedan en semanas', () => {
+    expect(buildColumns('2026-08-08', '2026-08-14', HOY).every(c => c.kind === 'week')).toBe(true)
+    expect(buildColumns('2026-07-16', '2026-08-14', HOY).every(c => c.kind === 'week')).toBe(true)
+  })
+
+  it('pasa a meses cuando el rango supera las 26 semanas', () => {
+    // El corte existe para que "el último año" no devuelva 52 columnas.
+    const cols = buildColumns('2026-01-01', '2026-08-14', HOY)
+    expect(cols.every(c => c.kind === 'month')).toBe(true)
+    expect(cols.map(c => c.label)).toEqual(
+      ['Ene 26', 'Feb 26', 'Mar 26', 'Abr 26', 'May 26', 'Jun 26', 'Jul 26', 'Ago 26'])
+  })
+
+  it('las columnas de meses cierran en el último día del mes', () => {
+    const cols = buildColumns('2026-01-01', '2026-08-14', HOY)
+    expect(cols[0].boundary).toBe('2026-01-31')
+    expect(cols[1].boundary).toBe('2026-02-28')
+  })
+
+  it('cruza el cambio de año sin repetir meses', () => {
+    const cols = buildColumns('2025-11-01', '2026-08-14', HOY)
+    expect(cols[0].label).toBe('Nov 25')
+    expect(cols[2].label).toBe('Ene 26')
+    expect(new Set(cols.map(c => c.key)).size).toBe(cols.length)
+  })
+
+  it('marca como futuras las columnas que todavía no llegaron', () => {
+    const cols = buildColumns('2026-01-01', '2026-12-31', HOY)
+    expect(cols.find(c => c.label === 'Ago 26').future).toBe(false)
+    expect(cols.find(c => c.label === 'Sep 26').future).toBe(true)
+  })
+
+  it('un rango inválido o incompleto no rompe: devuelve vacío', () => {
+    expect(buildColumns(null, '2026-08-14', HOY)).toEqual([])
+    expect(buildColumns('2026-08-14', null, HOY)).toEqual([])
+    expect(buildColumns('2026-08-14', '2026-08-01', HOY)).toEqual([])
+  })
+})
+
+describe('monthEnd', () => {
+  it('da el último día de cada mes', () => {
+    expect(monthEnd(2026, 1)).toBe('2026-01-31')
+    expect(monthEnd(2026, 8)).toBe('2026-08-31')
+    expect(monthEnd(2026, 4)).toBe('2026-04-30')
+  })
+
+  it('resuelve febrero bisiesto', () => {
+    expect(monthEnd(2026, 2)).toBe('2026-02-28')
+    expect(monthEnd(2028, 2)).toBe('2028-02-29')
+  })
+
+  it('diciembre no se pasa al año siguiente', () => {
+    // Date.UTC(2026, 12, 0) desborda a enero de 2027 si el offset está mal.
+    expect(monthEnd(2026, 12)).toBe('2026-12-31')
+  })
+})
+
+describe('todayLocal', () => {
+  it('usa el calendario local y no UTC', () => {
+    // 31/12 a las 21:00 en un huso al oeste de Greenwich ya es 01/01 en UTC:
+    // con toISOString() a secas el año entero se correría un día.
+    const local = new Date(2026, 11, 31, 21, 0, 0)
+    expect(todayLocal(local)).toBe('2026-12-31')
+  })
+})
+
+const puntos = (...semanas) =>
+  new Map(semanas.map(([week_start, followers]) => [week_start, { week_start, followers }]))
+
+describe('lastPointUpTo', () => {
+  it('toma la medición más reciente que no pase de la semana pedida', () => {
+    const p = puntos(['2026-07-27', 100], ['2026-08-03', 200], ['2026-08-10', 300])
+    expect(lastPointUpTo(p, '2026-08-03').followers).toBe(200)
+  })
+
+  it('arrastra el último valor conocido cuando la semana no se midió', () => {
+    // Es la regla que sostiene el total por marca: una semana sin cargar no
+    // significa que la cuenta perdiera a todos sus seguidores.
+    const p = puntos(['2026-07-27', 100])
+    expect(lastPointUpTo(p, '2026-08-10').followers).toBe(100)
+  })
+
+  it('no mira hacia el futuro', () => {
+    // Si mirara adelante, retroceder de semana con las flechas mostraría datos
+    // que en ese momento todavía no existían.
+    const p = puntos(['2026-08-10', 300])
+    expect(lastPointUpTo(p, '2026-08-03')).toBeNull()
+  })
+
+  it('sin mediciones devuelve null y no 0', () => {
+    expect(lastPointUpTo(new Map(), '2026-08-10')).toBeNull()
+  })
+})
 
 describe('isoWeekStart', () => {
   it('lleva cualquier día de la semana a su lunes', () => {

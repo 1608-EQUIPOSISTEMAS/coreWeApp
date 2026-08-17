@@ -1114,14 +1114,14 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   </div>
   <div class="row g-2">
     <div class="col-12">
-      <label class="form-label small mb-1">Convenio activo vinculado <span class="text-muted">(opcional)</span></label>
+      <label class="form-label small mb-1">Contrato B2B vinculado <span class="text-muted">(opcional)</span></label>
       <SearchSelect
-        v-model="insc.agreement_id"
+        v-model="insc.b2b_contract_id"
         mode="remote"
-        :fetcher="q => b2bService.agreementListActive({ company_id: form.company_id || undefined, q, size: 50 }).then(r => (r.items || []).map(a => ({ ...a, _label: a.company_name + (a.end_date ? ' · hasta ' + a.end_date.slice(0,10).split('-').reverse().join('/') : ' · Indefinido') })))"
+        :fetcher="q => b2bService.contractListActive({ company_id: form.company_id || undefined, q, size: 50 }).then(r => (r.items || []).map(a => ({ ...a, _label: a.company_name + ' · ' + a.contract_type_label + (a.end_date ? ' · hasta ' + a.end_date.slice(0,10).split('-').reverse().join('/') : ' · Indefinido') })))"
         label-field="_label"
-        value-field="agreement_id"
-        placeholder="Buscar convenio activo..."
+        value-field="contract_id"
+        placeholder="Buscar contrato activo..."
         :nullable="true"
         class="exec-select-light w-100"
       />

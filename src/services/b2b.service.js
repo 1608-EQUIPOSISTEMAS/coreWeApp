@@ -62,27 +62,16 @@ export default class B2bService {
     return (await this.api.post('/b2b/contractupdate', payload)).data
   }
 
-  // ── Convenios ─────────────────────────────────────────
-  async agreementList(payload) {
-    const res = await this.api.post('/b2b/agreementlist', payload)
-    return res.data.data
+  // Convierte en inscripciones los cupos del contrato que aún no lo son.
+  // Devuelve el detalle por beneficiario: los que rebotan traen el motivo.
+  async contractEnroll(payload) {
+    return (await this.api.post('/b2b/contractenroll', payload)).data
   }
 
-  async agreementGet(payload) {
-    const res = await this.api.post('/b2b/agreementget', payload)
-    return res.data.data
-  }
-
-  async agreementRegister(payload) {
-    return (await this.api.post('/b2b/agreementregister', payload)).data
-  }
-
-  async agreementUpdate(payload) {
-    return (await this.api.post('/b2b/agreementupdate', payload)).data
-  }
-
-  async agreementListActive(payload) {
-    const res = await this.api.post('/b2b/agreementlist', { ...payload, status: 'active' })
+  // Contratos vigentes, para vincular una venta al trato que la respalda.
+  // Un convenio es un contrato con tipo CONVENIO: no hay endpoint aparte.
+  async contractListActive(payload) {
+    const res = await this.api.post('/b2b/contractlist', { ...payload, status: 'active' })
     return res.data.data
   }
 }

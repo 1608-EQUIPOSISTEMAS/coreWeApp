@@ -855,10 +855,6 @@ function openAula(id) {
         >
           <i class="fa-solid fa-file-arrow-down"></i> Exportar
         </button>
-        <button class="btn-ghost" :disabled="isLoading" @click="loadReport">
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i>
-          Sincronizar
-        </button>
       </div>
     </div>
 

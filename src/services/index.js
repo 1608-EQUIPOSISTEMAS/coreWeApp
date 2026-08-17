@@ -6,7 +6,6 @@ import InstructorService from './instructor.service'
 import EditionService from './edition.service'
 import CustomerService from './customer.service'
 import AuthService from './auth.service'
-import CorporateAgreementService from './corporateAgreement.service'
 import IntegrationService from './integration.service'
 import FicoService from './fico';
 import DashboardService from './dashboard.service'
@@ -30,7 +29,6 @@ export const ServiceKeys = {
   Edition: Symbol('EditionService'),
   Customer: Symbol('CustomerService'),
   Auth:      Symbol('AuthService'),
-  CorporateAgreement: Symbol('CorporateAgreementService'),
   Integration: Symbol('IntegrationService'),
 Notification: Symbol('NotificationService'),
   Fico: Symbol('FicoService'),
@@ -51,7 +49,6 @@ export function createServices() {
     [ServiceKeys.Instructor]: new InstructorService(api),
     [ServiceKeys.Edition]: new EditionService(api),
     [ServiceKeys.Auth]:      new AuthService(api),
-    [ServiceKeys.CorporateAgreement]: new CorporateAgreementService(api),
     [ServiceKeys.Integration]: new IntegrationService(api),
     [ServiceKeys.Fico]: new FicoService(api),
 [ServiceKeys.Notification]: new NotificationService(),

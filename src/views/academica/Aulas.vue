@@ -269,9 +269,6 @@ const statusPillClass = (s) =>
         <button class="btn">
           <i class="fa-solid fa-download"></i> Exportar
         </button>
-        <button class="btn" :disabled="isLoading" @click="loadCourses">
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
-        </button>
         <button class="btn primary">
           <i class="fa-solid fa-plus"></i> Nueva aula
         </button>

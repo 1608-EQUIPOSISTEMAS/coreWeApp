@@ -2971,8 +2971,9 @@ onMounted(async () => {
   text-align: center; border-bottom: 1px solid var(--line);
 }
 .att-matrix thead .th-groups th { border-bottom: 1px solid var(--line-soft); }
-.att-matrix .th-group-att { background: #ECF8F2 !important; color: var(--green-ink); }
-.att-matrix .th-group-part { background: #FEF6E1 !important; color: var(--amber-ink); }
+/* Tokens, no hex: los *-soft ya se invierten en el bloque dark de abajo. */
+.att-matrix .th-group-att { background: var(--green-soft) !important; color: var(--green-ink); }
+.att-matrix .th-group-part { background: var(--amber-soft) !important; color: var(--amber-ink); }
 .att-matrix .th-session { padding: 4px 6px; font-size: 9.5px; }
 .att-matrix .th-summary { min-width: 70px; }
 .att-matrix .sticky-c0 {
@@ -3111,7 +3112,7 @@ onMounted(async () => {
 .td-summary { text-align: center; }
 
 /* LISTA DE NOTAS */
-.att-matrix .th-group-pi { background: #EEF2FB !important; color: var(--blue-ink); }
+.att-matrix .th-group-pi { background: var(--blue-soft) !important; color: var(--blue-ink); }
 .att-matrix .th-total { font-weight: 700; }
 .td-total { text-align: center; font-weight: 600; background: #FBFBF7; }
 .td-center { text-align: center; }
@@ -3543,6 +3544,10 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c2 { background: #1F1F1A; }
 [data-coreui-theme="dark"] .aula-detail .grade-input { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
 [data-coreui-theme="dark"] .aula-detail .td-total { background: #1F1F1A; }
+[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover td,
+[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c0,
+[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c1,
+[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c2 { background: #22221C; }
 [data-coreui-theme="dark"] .aula-detail .row-debt td,
 [data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c0,
 [data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c1 { background: #1B2536 !important; }

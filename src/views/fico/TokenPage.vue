@@ -87,61 +87,76 @@
             <th style="width:90px">Creado</th>
             <th>Alumno / Contacto</th>
             <th>Programa / Edicion</th>
-            <th class="tc" style="width:100px">
-              <div class="th-flex">
-                <span>Tipo</span>
-                <ColumnFilterDropdown
-                  column-label="Tipo"
-                  :all-items="tokens"
-                  :value-extractor="t => t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'"
-                  v-model="colFilters.tipo"
-                />
-              </div>
-            </th>
-            <th class="tc" style="width:120px">
-              <div class="th-flex">
-                <span>Proveedor</span>
-                <ColumnFilterDropdown
-                  column-label="Proveedor"
-                  :all-items="tokens"
-                  :value-extractor="t => t.provider_name || '(Sin proveedor)'"
-                  v-model="colFilters.proveedor"
-                />
-              </div>
-            </th>
+            <th class="tc" style="width:100px">Tipo</th>
+            <th class="tc" style="width:120px">Proveedor</th>
             <th class="tr" style="width:100px">Monto</th>
             <th class="tc" style="width:110px">Estado</th>
             <th style="width:170px">Link</th>
-            <th style="width:130px">
-              <div class="th-flex">
-                <span>Asesor</span>
-                <ColumnFilterDropdown
-                  column-label="Asesor"
-                  :all-items="tokens"
-                  :value-extractor="t => t.requested_by_name || t.created_by_name || '(Sin asesor)'"
-                  v-model="colFilters.asesor"
-                />
-              </div>
-            </th>
+            <th style="width:130px">Asesor</th>
             <th style="width:90px">Fecha pago</th>
             <th class="tc" style="width:170px">Acciones</th>
           </tr>
+          <!-- Toda columna filtra desde esta fila: ningun control vive en el
+               encabezado. Texto -> caja de escribir, categoria -> desplegable,
+               fecha -> calendario de rango, dinero -> piso (>=). -->
           <tr class="ect-filters">
             <td v-if="selectionMode"></td>
-            <td></td>
+            <td>
+              <BaseDatePicker
+                v-model="colFilters.creado"
+                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                placeholder="Creado..."
+              />
+            </td>
             <td>
               <input v-model="colFilters.alumno" class="filter-input" placeholder="Buscar..." />
             </td>
             <td>
               <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
             </td>
+            <td class="tc">
+              <ColumnFilterDropdown
+                column-label="Tipo"
+                :all-items="tokens"
+                :value-extractor="t => t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'"
+                v-model="colFilters.tipo"
+              />
+            </td>
+            <td class="tc">
+              <ColumnFilterDropdown
+                column-label="Proveedor"
+                :all-items="tokens"
+                :value-extractor="t => t.provider_name || '(Sin proveedor)'"
+                v-model="colFilters.proveedor"
+              />
+            </td>
+            <td>
+              <input v-model="colFilters.montoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
+            </td>
+            <td class="tc">
+              <ColumnFilterDropdown
+                column-label="Estado"
+                :all-items="tokens"
+                :value-extractor="t => statusConfig[t.status]?.label || t.status"
+                v-model="colFilters.estado"
+              />
+            </td>
             <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td class="tc">
+              <ColumnFilterDropdown
+                column-label="Asesor"
+                :all-items="tokens"
+                :value-extractor="t => t.requested_by_name || t.created_by_name || '(Sin asesor)'"
+                v-model="colFilters.asesor"
+              />
+            </td>
+            <td>
+              <BaseDatePicker
+                v-model="colFilters.fechaPago"
+                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+                placeholder="F. Pago..."
+              />
+            </td>
             <td class="tc">
               <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
                 <i class="fa-solid fa-eraser"></i>
@@ -445,7 +460,9 @@ import api from '@/services/api'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import TokenFilterModal from './TokenFilterModal.vue'
+import { inDateRange } from '@/utils/dateRange'
 import { confirmAction } from '@/composables/useConfirm'
 import { ServiceKeys } from '@/services'
 
@@ -500,16 +517,22 @@ const filterStatus = ref('')
 const searchQuery = ref('')
 const pagination = ref({ page: 1, size: 25, total: 0 })
 
-const colFilters = ref({
+const emptyColFilters = () => ({
+  creado: '',
   alumno: '',
   programa: '',
   tipo: [],
   proveedor: [],
-  asesor: []
+  montoMin: '',
+  estado: [],
+  asesor: [],
+  fechaPago: ''
 })
 
+const colFilters = ref(emptyColFilters())
+
 function clearColFilters () {
-  colFilters.value = { alumno: '', programa: '', tipo: [], proveedor: [], asesor: [] }
+  colFilters.value = emptyColFilters()
 }
 
 // === Filtros avanzados (modal) ===
@@ -654,6 +677,18 @@ const filteredTokens = computed(() => {
       const ases = t.requested_by_name || t.created_by_name || '(Sin asesor)'
       if (!cf.asesor.includes(ases)) return false
     }
+    if (cf.estado.length) {
+      const estado = statusConfig[t.status]?.label || t.status
+      if (!cf.estado.includes(estado)) return false
+    }
+    if (cf.creado.trim() && !inDateRange(t.created_at, cf.creado)) return false
+    // La fecha de pago es la ultima actualizacion, y solo cuenta como tal
+    // cuando el token ya se pago o se confirmo (igual que en la celda).
+    if (cf.fechaPago.trim()) {
+      const pagado = t.status === 'paid' || t.status === 'confirmed'
+      if (!pagado || !inDateRange(t.updated_at, cf.fechaPago)) return false
+    }
+    if (cf.montoMin !== '' && Number(t.amount || 0) < Number(cf.montoMin)) return false
     return true
   })
 })
@@ -1910,16 +1945,6 @@ onUnmounted(() => {
   .tp-selbar { left: 16px; right: 16px; transform: none; flex-direction: column; align-items: stretch; }
 }
 
-/* ---- header flex (label + filter trigger) ---- */
-.th-flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-.tc .th-flex { justify-content: center; }
-.tc .th-flex > span { flex: 1; text-align: center; }
-
 /* ---- column filter row ---- */
 .ect-filters { background: var(--e-bg-subtle); }
 .ect-filters td {
@@ -1947,6 +1972,38 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
 }
 .filter-input::placeholder { color: var(--e-text-muted); }
+.filter-input.tr { text-align: right; }
+
+/* Las flechitas del input number no caben en 30px y tapan el monto. */
+.filter-input[type="number"] { -moz-appearance: textfield; }
+.filter-input[type="number"]::-webkit-outer-spin-button,
+.filter-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* flatpickr renderiza su propio input (altInput) fuera del alcance de
+   .filter-input: hay que igualarlo a mano o la fila queda despareja. */
+.ect-filters :deep(.exec-flatpickr-input) {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--e-border-strong);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--e-text);
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+  transition: all .2s ease;
+}
+.ect-filters :deep(.exec-flatpickr-input::placeholder) { color: var(--e-text-muted); }
+.ect-filters :deep(.exec-flatpickr-input:focus) {
+  border-color: var(--e-accent);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+}
+
 .filter-clear {
   width: 28px;
   height: 28px;
@@ -2006,13 +2063,16 @@ onUnmounted(() => {
 [data-coreui-theme="dark"] .token-page .ect-filters,
 [data-coreui-theme="dark"] .token-page .ect-filters td { background: #1F1F1A; border-bottom-color: #2A2A22; }
 [data-coreui-theme="dark"] .token-page .filter-input,
-[data-coreui-theme="dark"] .token-page .filter-select {
+[data-coreui-theme="dark"] .token-page .filter-select,
+[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input) {
   background: #14140F;
   border-color: #2A2A22;
   color: #F4F4F0;
 }
-[data-coreui-theme="dark"] .token-page .filter-input::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .token-page .filter-input::placeholder,
+[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #6F6F66; }
 [data-coreui-theme="dark"] .token-page .filter-input:focus,
+[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input:focus),
 [data-coreui-theme="dark"] .token-page .filter-select:focus {
   border-color: #34D399;
   box-shadow: 0 0 0 3px rgba(16,185,129,0.18);

@@ -27,6 +27,20 @@
         Cargando alumnos vigentes...
       </div>
 
+      <!-- Error de carga. Va ANTES del estado vacio a proposito: una lista que no
+           se pudo cargar NO es una lista vacia. Cuando ambos casos se veian igual,
+           un fallo del endpoint mostraba "sin alumnos" y dejaba cancelar ediciones
+           que si tenian gente adentro. -->
+      <div v-else-if="loadError" class="a5-empty">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="a5-empty-title">No se pudo verificar si hay alumnos</div>
+        <div class="a5-empty-sub">
+          Falló la consulta de inscripciones vigentes, así que no se puede cancelar la edición.
+          Reintenta; si sigue fallando, avisa a sistemas.
+        </div>
+        <button type="button" class="a5-btn-ghost mt-2" @click="loadData">Reintentar</button>
+      </div>
+
       <!-- Sin alumnos -->
       <div v-else-if="enrollments.length === 0" class="a5-empty">
         <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
@@ -101,7 +115,7 @@
 
         <div class="a5-warning">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          Las inscripciones originales quedaran en <b>RP (Reprogramada)</b>. Se crearan inscripciones nuevas en estado <b>"Pendiente a revisar"</b> con asesor <b>S/A</b>. No se enviaran correos ni se modificara Odoo hasta que cada migracion sea aprobada individualmente.
+          Cada alumno se reprograma con el mismo flujo <b>RP</b> de FICO: la inscripcion original queda en <b>RP (Reprogramada)</b> conservando lo pagado, y nace una nueva en la edicion destino en estado <b>ACT</b> con sus modulos de seguimiento. Se inscribe en Odoo y <b>se le envia el correo de confirmacion a cada alumno</b>.
         </div>
       </template>
     </div>
@@ -111,7 +125,7 @@
       <button
         v-if="enrollments.length === 0"
         class="a5-btn-confirm"
-        :disabled="saving"
+        :disabled="saving || loading || loadError"
         @click="handleSubmitEmpty"
       >
         <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
@@ -164,6 +178,9 @@ const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 
 const loading = ref(false)
+// Distingue "no hay alumnos" de "no pude averiguarlo": con el segundo caso la
+// cancelacion queda bloqueada (ver el bloque de error en el template).
+const loadError = ref(false)
 const loadingEditions = ref(false)
 const saving = ref(false)
 const showConfirm = ref(false)
@@ -189,6 +206,7 @@ watch(() => props.visible, async (v) => {
 async function loadData () {
   if (!props.origin?.edition_num_id) return
   loading.value = true
+  loadError.value = false
   loadingEditions.value = true
   try {
     enrollments.value = await editionService.a5PendingEnrollments(props.origin.edition_num_id)
@@ -225,6 +243,8 @@ async function loadData () {
     }
   } catch (err) {
     console.error('[A5Migration] loadData error:', err)
+    loadError.value = true
+    enrollments.value = []
     toast.error('Error cargando datos de migracion.')
   } finally {
     loading.value = false
@@ -241,6 +261,7 @@ function applyBulkTarget () {
 
 function resetState () {
   enrollments.value = []
+  loadError.value = false
   availableEditions.value = []
   bulkTargetId.value = null
   justificacion.value = ''
@@ -259,7 +280,10 @@ function handleSubmit () {
 }
 
 async function handleSubmitEmpty () {
-  // Sin alumnos: solo cambia segmento a A5 directamente via editionUpdate del caller
+  // Sin alumnos: solo cambia segmento a A5 directamente via editionUpdate del caller.
+  // Guarda por si el boton se habilita de otra forma: sin lista confirmada no se
+  // cancela nada (el backend igual lo rechaza, esto solo evita el viaje).
+  if (loadError.value || loading.value) return
   emit('completed', { migrated: 0, applyA5: true })
   emit('update:visible', false)
 }

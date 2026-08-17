@@ -71,7 +71,7 @@ const routes = [
             path: 'tokens',
             name: 'ficoTokens',
             component: () => import('@/views/fico/TokenPage.vue'),
-            meta: { submodule: 'TOKENS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'] },
+            meta: { submodule: 'TOKENS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'B2B', 'GERENCIA'] },
           },
           {
             path: 'cobranzas',
@@ -263,45 +263,8 @@ const routes = [
             component: () => import('@/views/b2b/contracts/Form.vue'),
             meta: { submodule: 'CONTRATOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
           },
-          {
-            path: 'agreements',
-            name: 'B2BAgreements',
-            component: () => import('@/views/b2b/agreements/Index.vue'),
-            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
-          {
-            path: 'agreements/new',
-            name: 'B2BAgreementNew',
-            component: () => import('@/views/b2b/agreements/Form.vue'),
-            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
-          {
-            path: 'agreements/:id',
-            name: 'B2BAgreementEdit',
-            component: () => import('@/views/b2b/agreements/Form.vue'),
-            meta: { submodule: 'CONVENIOS', roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
-          {
-            path: 'agreement',
-            name: 'BusinessAgreement',
-            // panel general
-            component: () => import('@/views/b2b/corporateAgreement.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
-          {
-            path: 'agreement/new',
-            name: 'BusinessAgreementNew',
-            // panel general
-            component: () => import('@/views/b2b/corporateAgreementForm.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
-          {
-            path: 'agreement/:id',
-            name: 'BusinessAgreementEdit',
-            // panel general
-            component: () => import('@/views/b2b/corporateAgreementForm.vue'),
-            meta: { roles: ['ADMIN', 'B2B', 'GERENCIA'] },
-          },
+          // Convenios dejo de ser un modulo propio (2026-08-17): un convenio es
+          // un contrato con tipo CONVENIO, y sus % de descuento cuelgan de el.
         ],
       },
 

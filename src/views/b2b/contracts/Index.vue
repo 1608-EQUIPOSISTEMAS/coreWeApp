@@ -38,6 +38,11 @@
               <th>Empresa</th>
               <th>Tipo de Contrato</th>
               <th>Nombre del Contrato</th>
+              <th class="ta-right">Monto</th>
+              <th class="ta-right">Pagado</th>
+              <th class="ta-right">Saldo</th>
+              <th class="ta-center">Cupos</th>
+              <th class="ta-center">F. Cierre</th>
               <th class="ta-center">F. Inicio</th>
               <th class="ta-center">F. Fin</th>
               <th class="ta-center">Estado</th>
@@ -65,6 +70,23 @@
 
               <td class="minW">{{ item.contract_name || '—' }}</td>
 
+              <td class="ta-right mono small nowrap">{{ money(item.total_amount, item.currency_alias) }}</td>
+              <td class="ta-right mono small nowrap">{{ money(item.paid_amount, item.currency_alias) }}</td>
+              <td class="ta-right mono small nowrap" :class="{ 'saldo-deuda': Number(item.pending_amount) > 0 }">
+                {{ money(item.pending_amount, item.currency_alias) }}
+              </td>
+
+              <td class="ta-center nowrap">
+                <span class="badge" :class="Number(item.seats_available) < 0 ? 'badge-danger' : 'badge-neutral'">
+                  {{ item.seats_assigned }}/{{ item.number_of_licenses || 0 }}
+                </span>
+                <small class="text-muted d-block" v-if="Number(item.seats_enrolled) > 0">
+                  {{ item.seats_enrolled }} inscritos
+                </small>
+              </td>
+
+              <td class="ta-center mono small">{{ item.close_date ? formatDate(item.close_date) : '—' }}</td>
+
               <td class="ta-center mono small">{{ formatDate(item.start_date) }}</td>
 
               <td class="ta-center mono small">
@@ -77,10 +99,10 @@
             </tr>
 
             <tr v-if="!loading && !contracts.length">
-              <td colspan="7" class="empty-state">Sin resultados.</td>
+              <td colspan="12" class="empty-state">Sin resultados.</td>
             </tr>
             <tr v-if="loading">
-              <td colspan="7" class="empty-state">Cargando...</td>
+              <td colspan="12" class="empty-state">Cargando...</td>
             </tr>
           </tbody>
         </table>
@@ -251,6 +273,14 @@ function formatDate(value) {
   return `${d}/${m}/${y}`
 }
 
+// El simbolo sale del alias del catalogo de moneda, no de la plaza del navegador:
+// un contrato en USD tiene que leerse en USD aunque el usuario este en Peru.
+function money(value, currencyAlias) {
+  if (value === null || value === undefined || value === '') return '—'
+  const simbolo = currencyAlias === 'we_currency_dollars' ? '$' : 'S/'
+  return `${simbolo} ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 // Navegación
 function goNew() { router.push({ name: 'B2BContractNew' }) }
 function editContract(item) { router.push({ name: 'B2BContractEdit', params: { id: item.contract_id } }) }
@@ -303,6 +333,7 @@ onMounted(() => { rebuildChips(); fetchContracts() })
 .ta-center { text-align: center; }
 .nowrap { white-space: nowrap; }
 .mono { font-family: monospace; font-size: .82rem; }
+.saldo-deuda { color: #b45309; font-weight: 600; }
 .name { font-weight: 600; color: #111827; }
 .small { font-size: .8rem; }
 .muted { color: #6b7280; }
@@ -342,6 +373,7 @@ onMounted(() => { rebuildChips(); fetchContracts() })
 [data-coreui-theme="dark"] .badge-neutral { background: #24241E; color: #F4F4F0; border-color: #2A2A22; }
 [data-coreui-theme="dark"] .badge-success { background: rgba(16,185,129,.14); color: #34D399; border-color: rgba(16,185,129,.3); }
 [data-coreui-theme="dark"] .badge-warning { background: rgba(245,158,11,.14); color: #FBBF24; border-color: rgba(245,158,11,.3); }
+[data-coreui-theme="dark"] .saldo-deuda { color: #FBBF24; }
 [data-coreui-theme="dark"] .badge-danger { background: rgba(239,68,68,.14); color: #F87171; border-color: rgba(239,68,68,.3); }
 [data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
 [data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }

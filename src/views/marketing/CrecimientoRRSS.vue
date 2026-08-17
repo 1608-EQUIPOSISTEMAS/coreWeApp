@@ -8,22 +8,27 @@
       <div class="grow"></div>
       <div class="seg">
         <button type="button" :class="{ on: view === 'carga' }" @click="view = 'carga'">Carga</button>
-        <button type="button" :class="{ on: view === 'resumen' }" @click="view = 'resumen'">
-          {{ weeks.length }} semanas
-        </button>
+        <button type="button" :class="{ on: view === 'resumen' }" @click="view = 'resumen'">Resumen</button>
       </div>
-      <div class="period-nav">
+      <!-- Las flechas de semana solo tienen sentido en la carga, que es una
+           rutina semanal; el resumen se mueve por rango de fechas. -->
+      <div v-if="view === 'carga'" class="period-nav">
         <button class="arrow" type="button" title="Semana anterior" @click="shiftPeriod(-1)">‹</button>
         <span class="lbl">{{ weekLabel(currentWeek) }}</span>
         <button class="arrow" type="button" title="Semana siguiente" @click="shiftPeriod(1)">›</button>
       </div>
-      <button class="btn primary" type="button" :disabled="syncing" @click="sync">
-        {{ syncing ? 'Sincronizando…' : '⟳ Sincronizar' }}
-      </button>
+      <template v-else>
+        <!-- La granularidad no se elige, la decide el ancho del rango: se muestra
+             para que no parezca que la tabla cambió sola. -->
+        <span class="grouping">por {{ grouping }}</span>
+        <DateRangePicker :model-value="range" @update:model-value="setRange" />
+      </template>
     </div>
 
     <div v-if="loading" class="empty">Cargando…</div>
-    <div v-else-if="!total" class="empty">
+    <!-- El vacío se mide contra `rows` y no contra `total`: `total` cuenta solo
+         la cola manual, y quedaría en 0 el día que todas las redes tengan API. -->
+    <div v-else-if="!rows.length" class="empty">
       Todavía no hay cuentas dadas de alta. Corré <code>node scripts/seed-social-accounts.mjs</code>.
     </div>
 
@@ -32,11 +37,15 @@
       <div class="stats">
         <div class="st">
           <span class="n">{{ fmt(grandTotal) }}</span>
-          <span class="l">Seguidores en total</span>
+          <span class="l">Seguidores al cierre del período</span>
         </div>
-        <div class="st" :class="grandGrowth >= 0 ? 'ok' : 'bad'">
-          <span class="n">{{ grandGrowth >= 0 ? '+' : '' }}{{ fmt(grandGrowth) }}</span>
-          <span class="l">Esta semana</span>
+        <div class="st">
+          <span class="n">{{ grandGoal ? fmt(grandGoal) : '—' }}</span>
+          <span class="l">Objetivo {{ goalYear }}</span>
+        </div>
+        <div v-if="grandGoalPct !== null" class="st" :class="grandGoalPct >= 100 ? 'ok' : ''">
+          <span class="n">{{ grandGoalPct }}%</span>
+          <span class="l">Avance del objetivo</span>
         </div>
         <div class="st" :class="{ warn: pendingCount }">
           <span class="n">{{ pendingCount }}</span>
@@ -44,22 +53,41 @@
         </div>
       </div>
 
-      <div v-for="group in brands" :key="group.brand" class="panel">
+      <div v-for="group in brands" :key="group.brand" class="panel" :data-brand="brandSlot(group.brand)">
         <div class="b-head">
           <span class="b-name">{{ group.brand }}</span>
           <span class="grow"></span>
           <span class="b-tot">
-            {{ group.totals[group.totals.length - 1] === null
-              ? 'sin datos'
-              : `${fmt(group.totals[group.totals.length - 1])} seguidores` }}
+            {{ group.reached === null ? 'sin datos' : `${fmt(group.reached)} seguidores` }}
           </span>
+          <label class="b-goal" :title="`Objetivo de seguidores de ${group.brand} para ${goalYear}`">
+            <span>Objetivo {{ goalYear }}</span>
+            <input
+              type="number"
+              min="1"
+              inputmode="numeric"
+              placeholder="—"
+              :value="group.goal ?? ''"
+              :disabled="saving"
+              @keydown.enter.prevent="$event.target.blur()"
+              @change="saveGoal(group.brand, $event.target.value)"
+            />
+          </label>
+          <span v-if="group.goalPct !== null" :class="['b-pct', { ok: group.goalPct >= 100 }]">
+            {{ group.goalPct }}%
+          </span>
+        </div>
+        <div v-if="group.goalPct !== null" class="b-bar">
+          <!-- La barra se corta en 100% pero el número de arriba no: superar el
+               objetivo tiene que verse, y una barra más larga que su riel no. -->
+          <div class="fill" :style="{ width: Math.min(group.goalPct, 100) + '%' }"></div>
         </div>
         <div class="t-scroll">
           <table class="grid">
             <thead>
               <tr>
                 <th class="acc">Cuenta</th>
-                <th v-for="w in weeks" :key="w" :class="{ now: w === currentWeek }">{{ weekLabel(w) }}</th>
+                <th v-for="c in columns" :key="c.key" :class="{ future: c.future }">{{ c.label }}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,17 +96,14 @@
                   <span class="a-net">{{ row.label }}</span>
                   <span class="a-nom">{{ row.display_name }}</span>
                 </th>
-                <td v-for="w in weeks" :key="w" :class="{ now: w === currentWeek }">
-                  <template v-if="row.points.get(w)">
-                    <span class="n">{{ fmt(row.points.get(w).followers) }}</span>
-                    <span
-                      v-if="row.points.get(w).growth !== null"
-                      :class="['d', row.points.get(w).growth >= 0 ? 'up' : 'down']"
-                    >
-                      {{ row.points.get(w).growth >= 0 ? '+' : '' }}{{ fmt(row.points.get(w).growth) }}
+                <td v-for="(cell, i) in row.cells" :key="columns[i].key" :class="{ future: columns[i].future }">
+                  <template v-if="cell">
+                    <span class="n">{{ fmt(cell.followers) }}</span>
+                    <span v-if="cell.growth !== null" :class="['d', cell.growth >= 0 ? 'up' : 'down']">
+                      {{ cell.growth >= 0 ? '+' : '' }}{{ fmt(cell.growth) }}
                       <em
-                        v-if="row.points.get(w).weeks_spanned > 1"
-                        :title="`Acumulado de ${row.points.get(w).weeks_spanned} semanas: faltan mediciones intermedias`"
+                        v-if="cell.weeks_spanned > 1"
+                        :title="`Acumulado de ${cell.weeks_spanned} semanas: faltan mediciones intermedias`"
                       >*</em>
                     </span>
                   </template>
@@ -87,7 +112,7 @@
               </tr>
               <tr class="tot">
                 <th class="acc">Total {{ group.brand }}</th>
-                <td v-for="(t, i) in group.totals" :key="i" :class="{ now: weeks[i] === currentWeek }">
+                <td v-for="(t, i) in group.totals" :key="columns[i].key" :class="{ future: columns[i].future }">
                   <span :class="t === null ? 'none' : 'n'">{{ fmt(t) }}</span>
                 </td>
               </tr>
@@ -217,6 +242,14 @@
           </div>
         </div>
       </section>
+
+      <!-- Sin cuentas manuales no hay nada que cargar a mano: sin esto el panel
+           derecho se dibuja vacío porque `active` es null. -->
+      <section v-else class="focus">
+        <div class="eyebrow accent">Nada que cargar</div>
+        <h2>Todas las cuentas se leen por API</h2>
+        <p class="f-sub">Los seguidores de esta semana los trae el cron. Mirá la evolución en «Resumen».</p>
+      </section>
     </div>
   </div>
 </template>
@@ -224,17 +257,36 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useSocialGrowth } from '@/composables/useSocialGrowth.js'
+import DateRangePicker from '@/components/DateRangePicker.vue'
 
 const {
-  queue, brands, weeks, active, activeIndex, activeHistory, activeSpark, activeRecent, activePace,
-  currentWeek, previousWeek, total, pendingCount, progressPct,
-  loading, syncing, saving,
-  load, saveActive, skipActive, focusAccount, sync, shiftPeriod
+  rows, queue, brands, columns, active, activeIndex, activeHistory, activeSpark, activeRecent, activePace,
+  currentWeek, previousWeek, range, goalYear, total, pendingCount, progressPct,
+  loading, saving,
+  load, saveActive, skipActive, focusAccount, shiftPeriod, setRange, saveGoal
 } = useSocialGrowth()
 
 // "carga" es el trabajo semanal cuenta por cuenta; "resumen" es la evolución de
 // varias semanas. Comparten datos y ruta, así que es un solo permiso.
 const view = ref('carga')
+
+// Un color fijo por marca para distinguir los paneles de un vistazo. El slot va
+// atado al NOMBRE y no a la posición: el resumen se ordena por seguidores, así
+// que por índice dos marcas intercambiarían color al cruzarse en el ranking y se
+// leería como un cambio de tendencia que nunca pasó.
+// Los hex viven en el CSS porque cada tono tiene su propio paso para el modo
+// oscuro y acá no sabemos qué tema está activo.
+const BRAND_SLOT = {
+  'WE EDUCACION': 1,
+  'WE ONLINE': 2,
+  'WE FOR BUSINESS': 3,
+  'IIM': 4,
+  'HR LATAM': 5,
+  'WE INMOBILIARIA': 6
+}
+// Una marca nueva cae en el slot 0 (gris) en vez de robarle el color a otra: se
+// nota que falta darla de alta acá, en lugar de disfrazarse de una existente.
+const brandSlot = brand => BRAND_SLOT[brand] ?? 0
 
 const NUM = new Intl.NumberFormat('es-PE')
 const fmt = n => (n === null || n === undefined ? '—' : NUM.format(n))
@@ -251,12 +303,16 @@ const draftDelta = computed(() => {
   return Number(value) - active.value.previous.followers
 })
 
-const grandTotal = computed(() =>
-  brands.value.reduce((sum, g) => sum + (g.totals[g.totals.length - 1] || 0), 0))
+// Qué está mirando la matriz: lo dice el ancho del rango, no un selector.
+const grouping = computed(() => (columns.value[0]?.kind === 'month' ? 'meses' : 'semanas'))
 
-const grandGrowth = computed(() =>
-  brands.value.reduce((sum, g) => sum + g.rows.reduce(
-    (acc, row) => acc + (row.points.get(currentWeek.value)?.growth || 0), 0), 0))
+const grandTotal = computed(() => brands.value.reduce((sum, g) => sum + (g.reached || 0), 0))
+const grandGoal = computed(() => brands.value.reduce((sum, g) => sum + (g.goal || 0), 0))
+
+// Solo se muestra si hay al menos un objetivo cargado: un 0% con todas las metas
+// vacías se lee como "no avanzamos nada", cuando nadie fijó una meta todavía.
+const grandGoalPct = computed(() =>
+  grandGoal.value ? Math.round(grandTotal.value / grandGoal.value * 100) : null)
 
 // Al cambiar de cuenta el input arranca con lo ya cargado (para corregir) y toma
 // el foco, que es lo que hace que la cola se pueda recorrer sin tocar el mouse.
@@ -330,6 +386,12 @@ h1 { font-size: 22px; font-weight: 800; color: var(--gro-ink); margin: 2px 0 0; 
 .empty { background: var(--gro-surface); border: 1px solid var(--gro-border); border-radius: 28px; padding: 30px; text-align: center; color: var(--gro-faint); font-size: 13px; }
 .empty code { background: var(--gro-panel); border-radius: 5px; padding: 1px 6px; }
 
+.grouping { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gro-faint); background: var(--gro-panel); border: 1px solid var(--gro-border); border-radius: 999px; padding: 5px 11px; }
+.filters { display: flex; gap: 8px; }
+.filters label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--gro-faint); text-transform: uppercase; letter-spacing: .06em; }
+.filters select { border: 1px solid var(--gro-border); background: var(--gro-surface); color: var(--gro-ink); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.filters select:disabled { opacity: .55; }
+
 .seg { display: flex; gap: 4px; background: var(--gro-panel); border: 1px solid var(--gro-border); border-radius: 999px; padding: 4px; }
 .seg button { border: none; background: transparent; border-radius: 999px; padding: 7px 16px; font-weight: 700; font-size: 12.5px; color: var(--gro-muted); cursor: pointer; }
 .seg button.on { background: var(--gro-accent); color: #fff; }
@@ -343,11 +405,33 @@ h1 { font-size: 22px; font-weight: 800; color: var(--gro-ink); margin: 2px 0 0; 
 .st.bad .n { color: var(--gro-down); }
 .st.warn .n { color: #b45309; }
 
-.panel { background: var(--gro-surface); border: 1px solid var(--gro-border); border-radius: 28px; overflow: hidden; margin-bottom: 14px; }
+/* Color categórico por marca. Paleta validada con el validador de la guía de
+   dataviz: son los slots 1-6 en su orden fijo, que resultó el subconjunto con la
+   mejor separación de los 28 posibles, en claro y en oscuro a la vez.
+   El color es refuerzo, NUNCA el único identificador: el nombre de la marca está
+   escrito al lado. Ninguna combinación de 6 despega del piso all-pairs, y por eso
+   la etiqueta visible no es opcional. */
+.panel { background: var(--gro-surface); border: 1px solid var(--gro-border); border-left: 5px solid var(--brand, var(--gro-accent)); border-radius: 28px; overflow: hidden; margin-bottom: 14px; }
+.panel[data-brand="1"] { --brand: #2a78d6; }
+.panel[data-brand="2"] { --brand: #eb6834; }
+.panel[data-brand="3"] { --brand: #1baf7a; }
+.panel[data-brand="4"] { --brand: #eda100; }
+.panel[data-brand="5"] { --brand: #e87ba4; }
+.panel[data-brand="6"] { --brand: #008300; }
+.panel[data-brand="0"] { --brand: var(--gro-dim); }
 .b-head { display: flex; align-items: baseline; gap: 10px; padding: 11px 18px; border-bottom: 1px solid var(--gro-border); background: var(--gro-panel); }
 .b-head .grow { flex: 1; }
-.b-name { font-weight: 800; font-size: 12px; letter-spacing: .06em; color: var(--gro-accent); }
+.b-name { font-weight: 800; font-size: 12px; letter-spacing: .06em; color: var(--brand, var(--gro-accent)); }
 .b-tot { font-size: 11.5px; font-weight: 700; color: var(--gro-faint); font-variant-numeric: tabular-nums; }
+.b-goal { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gro-faint); }
+.b-goal input { width: 96px; border: 1px solid var(--gro-border); background: var(--gro-surface); color: var(--gro-ink); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.b-goal input:focus { outline: 2px solid var(--brand, var(--gro-accent)); outline-offset: 1px; }
+.b-pct { font-size: 12px; font-weight: 800; color: var(--gro-faint); font-variant-numeric: tabular-nums; }
+.b-pct.ok { color: var(--gro-up); }
+/* La barra usa el color de la marca, que ya distingue el panel; el verde queda
+   reservado para el 100% alcanzado y no compite con la identidad. */
+.b-bar { height: 4px; background: var(--gro-track); }
+.b-bar .fill { height: 100%; background: var(--brand, var(--gro-accent)); transition: width .25s ease; }
 
 /* La tabla scrollea dentro del panel: la página nunca scrollea de lado. */
 .t-scroll { overflow-x: auto; }
@@ -364,6 +448,9 @@ h1 { font-size: 22px; font-weight: 800; color: var(--gro-ink); margin: 2px 0 0; 
 .a-net { font-weight: 800; color: var(--gro-ink); }
 .a-nom { color: var(--gro-faint); margin-left: 6px; }
 .grid .now { background: var(--gro-panel); }
+/* Los meses que todavía no llegaron se atenúan en vez de ocultarse: se ve que el
+   año tiene 12 columnas y cuántas faltan por vivir. */
+.grid .future { opacity: .4; }
 .grid .n { font-weight: 700; color: var(--gro-ink); font-variant-numeric: tabular-nums; }
 .grid .d { display: block; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .grid .d.up { color: var(--gro-up); }
@@ -463,6 +550,16 @@ h2 { font-size: 30px; font-weight: 800; line-height: 1.15; margin: 10px 0 0; col
   --gro-down-bg: rgba(248, 113, 113, .14);
   --gro-line: #8FAADC;
 }
+/* Los mismos 6 hues re-escalonados para el fondo oscuro: no es un flip
+   automático, cada paso se validó contra la superficie #1A1A14. */
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="1"] { --brand: #3987e5; }
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="2"] { --brand: #d95926; }
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="3"] { --brand: #199e70; }
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="4"] { --brand: #c98500; }
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="5"] { --brand: #d55181; }
+/* El verde no cambia de paso: en oscuro ya pasa contraste, y aclararlo lo pega
+   al aqua del slot 3 (probado: peor par 7.8 contra 10.6). */
+[data-coreui-theme="dark"] .gro-page .panel[data-brand="6"] { --brand: #008300; }
 [data-coreui-theme="dark"] .gro-page .btn.primary,
 [data-coreui-theme="dark"] .gro-page .dot.on { color: #14140F; }
 [data-coreui-theme="dark"] .gro-page .dot.done { color: #14140F; }

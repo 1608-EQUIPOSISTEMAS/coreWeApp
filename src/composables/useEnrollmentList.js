@@ -2,6 +2,8 @@ import { ref, reactive, computed, watch, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import { useTablePersistence } from '@/composables/useTablePersistence'
+import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
+import { inDateRange } from '@/utils/dateRange'
 
 export function useEnrollmentList () {
   const ficoService = inject(ServiceKeys.Fico)
@@ -167,18 +169,27 @@ export function useEnrollmentList () {
 
   const { saveState } = useTablePersistence('fico_enrollments_state_v3', filters, pagin)
 
-  const colFilters = reactive({
+  // Fabrica y no constante: los arrays se recrean en cada limpieza, si no
+  // "Limpiar" dejaria a colFilters apuntando a los mismos arrays una y otra vez.
+  const emptyColFilters = () => ({
+    fRegistro: '',
     alumno: '',
     programa: '',
     fPago: '',
     agente: [],
     tipoPago: [],
+    montoMin: '',
+    inicialMin: '',
+    pagadoMin: '',
+    saldoMin: '',
     estado: []
   })
+
+  const colFilters = reactive(emptyColFilters())
   let _colDebounce = null
 
   function clearColFilters () {
-    Object.assign(colFilters, { alumno: '', programa: '', fPago: '', agente: [], tipoPago: [], estado: [] })
+    Object.assign(colFilters, emptyColFilters())
     filters.q = ''
     pagin.value.page = 1
     fetchEnrollments()
@@ -211,18 +222,32 @@ export function useEnrollmentList () {
   const uniqueAgents = computed(() => [...new Set(enrollments.value.map(e => e.seller_agent_name).filter(Boolean))].sort())
   const uniqueEstados = computed(() => [...new Set(enrollments.value.map(e => e.confirmation || 'Pendiente').filter(Boolean))].sort())
 
+  // Las columnas de dinero filtran por piso (>=) porque es lo que FICO pregunta
+  // ("saldos de mas de 500"). ponytail: si algun dia hace falta el techo, va un
+  // gemelo `...Max` y se comparan los dos, no un parser de "1000-2000".
+  const fmt = useEnrollmentFormatters()
+  const MONEY_COLUMNS = [
+    ['montoMin', e => Number(e.total_to_pay) || 0],
+    ['inicialMin', fmt.getReserva],
+    ['pagadoMin', fmt.getPagado],
+    ['saldoMin', fmt.calcSaldo]
+  ]
+
   const filteredEnrollments = computed(() => {
     let list = enrollments.value
     if (colFilters.agente.length) list = list.filter(e => colFilters.agente.includes(e.seller_agent_name || '(Vacío)'))
-    if (colFilters.fPago?.trim()) {
-      const q = colFilters.fPago.trim().toLowerCase()
-      list = list.filter(e => (e.pay_date || '').toLowerCase().includes(q))
-    }
+    if (colFilters.fRegistro?.trim()) list = list.filter(e => inDateRange(e.registration_date, colFilters.fRegistro))
+    if (colFilters.fPago?.trim()) list = list.filter(e => inDateRange(e.pay_date, colFilters.fPago))
     if (colFilters.tipoPago.length) {
       list = list.filter(e => {
         const tipo = (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'
         return colFilters.tipoPago.includes(tipo)
       })
+    }
+    for (const [key, valueOf] of MONEY_COLUMNS) {
+      const min = Number(colFilters[key])
+      if (colFilters[key] === '' || Number.isNaN(min)) continue
+      list = list.filter(e => valueOf(e) >= min)
     }
     // colFilters.estado ya no filtra aqui — es server-side via filters.confirmations
     return list

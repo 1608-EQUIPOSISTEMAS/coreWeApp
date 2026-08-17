@@ -99,17 +99,7 @@
             <table class="exec-table">
               <thead>
                 <tr class="thead-group">
-                  <th class="th-cat" rowspan="3">
-                    <div class="d-flex flex-column align-items-center justify-content-center h-100 gap-2">
-                      <span>CAT.</span>
-                      <ColumnFilterDropdown
-                        column-label="Categoría"
-                        :all-items="processedData"
-                        :value-extractor="item => item.catg"
-                        v-model="columnFilters.catg"
-                      />
-                    </div>
-                  </th>
+                  <th class="th-cat" rowspan="3">CAT.</th>
                   <th colspan="6" class="th-group th-group-a sticky-group-a" rowspan="2">DATOS DEL PROGRAMA</th>
                   <th colspan="6" class="th-group th-group-b" rowspan="2">OBJETIVOS &amp; RESULTADOS</th>
                   <th :colspan="currentDynamicColumnsFlat.length || 1" class="th-group th-group-c">
@@ -134,31 +124,11 @@
 
                 <tr class="thead-sub">
                   <th class="ts ts-a text-center sticky-num" >#</th>
-                  <th class="ts ts-a sticky-linea" >
-                    <div class="d-flex align-items-center justify-content-between gap-1">
-                      <span>LÍNEA</span>
-                      <ColumnFilterDropdown column-label="Línea" :all-items="processedData" :value-extractor="item => item.linea" v-model="columnFilters.linea" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a td-prog sticky-prog">
-                    <div class="d-flex align-items-center justify-content-between gap-1">
-                      <span>PROGRAMA</span>
-                      <ColumnFilterDropdown column-label="Programa" :all-items="processedData" :value-extractor="item => item.programa" v-model="columnFilters.programa" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a sticky-tipo">
-                    <div class="d-flex align-items-center justify-content-between gap-1">
-                      <span>TIPO</span>
-                      <ColumnFilterDropdown column-label="Tipo" :all-items="processedData" :value-extractor="item => item.tipo" v-model="columnFilters.tipo" />
-                    </div>
-                  </th>
+                  <th class="ts ts-a sticky-linea">LÍNEA</th>
+                  <th class="ts ts-a td-prog sticky-prog">PROGRAMA</th>
+                  <th class="ts ts-a sticky-tipo">TIPO</th>
                   <th class="ts ts-a text-center sticky-ini">INICIO</th>
-                  <th class="ts ts-a sticky-ed">
-                    <div class="d-flex align-items-center justify-content-between gap-1">
-                      <span>ED.</span>
-                      <ColumnFilterDropdown column-label="Edición" :all-items="processedData" :value-extractor="item => item.edicion" v-model="columnFilters.edicion" />
-                    </div>
-                  </th>
+                  <th class="ts ts-a sticky-ed">ED.</th>
 
                   <th class="ts ts-b text-right">META S/.</th>
                   <th class="ts ts-b text-right">VENTA S/.</th>
@@ -176,6 +146,34 @@
                     <span class="col-dyn-sub"># / %</span>
                   </th>
                   <th v-if="currentDynamicColumnsFlat.length === 0" class="ts ts-c text-center text-muted">—</th>
+                </tr>
+
+                <!-- FILA 4: Filtros — toda columna filtra desde aca, ningun
+                     control vive en el encabezado. La celda de CAT. va aparte
+                     porque su <th> solo abarca las 3 primeras filas. -->
+                <tr class="thead-filter">
+                  <td class="tf td-cat">
+                    <ColumnFilterDropdown column-label="Categoría" :all-items="processedData" :value-extractor="item => item.catg" v-model="columnFilters.catg" />
+                  </td>
+                  <td class="tf sticky-num"></td>
+                  <td class="tf sticky-linea">
+                    <ColumnFilterDropdown column-label="Línea" :all-items="processedData" :value-extractor="item => item.linea" v-model="columnFilters.linea" />
+                  </td>
+                  <td class="tf sticky-prog">
+                    <ColumnFilterDropdown column-label="Programa" :all-items="processedData" :value-extractor="item => item.programa" v-model="columnFilters.programa" />
+                  </td>
+                  <td class="tf sticky-tipo">
+                    <ColumnFilterDropdown column-label="Tipo" :all-items="processedData" :value-extractor="item => item.tipo" v-model="columnFilters.tipo" />
+                  </td>
+                  <td class="tf sticky-ini">
+                    <BaseDatePicker v-model="columnFilters.inicio" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Inicio..." />
+                  </td>
+                  <td class="tf sticky-ed">
+                    <ColumnFilterDropdown column-label="Edición" :all-items="processedData" :value-extractor="item => item.edicion" v-model="columnFilters.edicion" />
+                  </td>
+
+                  <td class="tf" colspan="6"></td>
+                  <td class="tf" :colspan="currentDynamicColumnsFlat.length || 1"></td>
                 </tr>
               </thead>
 
@@ -410,7 +408,9 @@ import {
   LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler
 } from 'chart.js'
 import { Bar, Doughnut, Scatter } from 'vue-chartjs'
-import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue' // <-- IMPORTANTE
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
+import { inDateRange } from '@/utils/dateRange'
 import { isDark } from '@/utils/chartTheme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, Filler)
@@ -426,13 +426,18 @@ const filters = ref({ year: 2026, month: 1 })
 const rawData = ref([])
 
 // === ESTADO DE FILTROS DE COLUMNA ===
-const columnFilters = reactive({
+// `inicio` guarda el rango de flatpickr ("2026-08-01 a 2026-08-14"); el resto,
+// la lista de valores elegidos.
+const emptyColumnFilters = () => ({
   catg: [],
   linea: [],
   programa: [],
   tipo: [],
+  inicio: '',
   edicion: []
 })
+
+const columnFilters = reactive(emptyColumnFilters())
 
 const metricGroupDefinitions = {
   clientes:  { title: 'CLIENTES',        field: 'breakdown_clientes' },
@@ -449,7 +454,7 @@ async function loadData() {
   isLoading.value = true
 
   // Limpiar filtros rápidos de columna al cambiar de mes/año
-  Object.keys(columnFilters).forEach(k => columnFilters[k] = [])
+  Object.assign(columnFilters, emptyColumnFilters())
 
   try {
     const payload = { year: filters.value.year, month_num: filters.value.month }
@@ -538,6 +543,7 @@ const filteredProcessedData = computed(() => {
     if (columnFilters.programa.length && !columnFilters.programa.includes(row.programa)) return false;
     if (columnFilters.tipo.length && !columnFilters.tipo.includes(row.tipo)) return false;
     if (columnFilters.edicion.length && !columnFilters.edicion.includes(row.edicion)) return false;
+    if (columnFilters.inicio && !inDateRange(row.fecha, columnFilters.inicio)) return false;
     return true;
   })
 })
@@ -963,6 +969,30 @@ const bcgChartOptions = computed(() => {
   border-bottom: 2px solid var(--border, #e2e8f0);
 }
 
+/* ── Fila de filtros de columna ── */
+.thead-filter .tf {
+  padding: 5px 6px;
+  background: #f0f7ff;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+  vertical-align: middle;
+}
+/* flatpickr renderiza su propio input (altInput), fuera del alcance de los
+   estilos del trigger: hay que igualarlo a mano o la fila queda despareja. */
+.thead-filter :deep(.exec-flatpickr-input) {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+}
+.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #002060; }
+
 .ts-a { background: #f0f7ff; color: #3b82f6; border-left: 1px solid #dbeafe; }
 .ts-b {
   background: #fefce8;
@@ -1325,6 +1355,13 @@ thead .sticky-ed   { background: #f0f7ff !important; }
 [data-coreui-theme="dark"] thead .sticky-tipo,
 [data-coreui-theme="dark"] thead .sticky-ini,
 [data-coreui-theme="dark"] thead .sticky-ed { background: #1E212A !important; }
+[data-coreui-theme="dark"] .thead-filter .tf { background: #1E212A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input) {
+  background: #14140F;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #8FAADC; }
 [data-coreui-theme="dark"] .sticky-group-a { background: #1E212A !important; }
 [data-coreui-theme="dark"] .tbody-row .sticky-num,
 [data-coreui-theme="dark"] .tbody-row .sticky-linea,

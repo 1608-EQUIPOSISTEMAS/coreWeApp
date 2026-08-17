@@ -11,9 +11,6 @@
         <span class="lbl">{{ monthLabel }}</span>
         <button class="arrow" type="button" @click="shiftMonth(1)">›</button>
       </div>
-      <button class="btn ghost" type="button" :disabled="syncing" @click="syncNow">
-        {{ syncing ? 'Sincronizando…' : '⟳ Sincronizar' }}
-      </button>
       <button class="btn primary" type="button" @click="openModal()">+ Nueva publicación</button>
     </div>
 
@@ -207,7 +204,6 @@ const today = new Date()
 const month = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
 const posts = ref([])
 const loading = ref(true)
-const syncing = ref(false)
 const saving = ref(false)
 const fNetwork = ref('')
 const fStatus = ref('')
@@ -363,17 +359,6 @@ async function load () {
   try {
     posts.value = await marketing.socialPosts({ month: month.value })
   } finally { loading.value = false }
-}
-
-async function syncNow () {
-  syncing.value = true
-  try {
-    const r = await marketing.syncSocialPosts()
-    if (r?.ig_skip && r?.li_skip) {
-      alert('Sincronización automática aún sin configurar (faltan credenciales de las APIs). El registro manual funciona normal.')
-    }
-    await load()
-  } finally { syncing.value = false }
 }
 
 function openModal (p) {

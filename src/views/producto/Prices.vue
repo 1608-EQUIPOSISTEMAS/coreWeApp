@@ -11,11 +11,6 @@
           </div>
         </div>
 
-        <div class="masthead-actions">
-          <button class="btn-exec btn-exec-outline" style="border-color: rgba(255,255,255,0.2); color: white;" @click="fetchPrograms" title="Recargar datos">
-            <i class="fa-solid fa-rotate-right me-1"></i> Recargar
-          </button>
-        </div>
       </div>
     </header>
 
@@ -418,7 +413,6 @@ const currencyDollars = computed(() => {
 .brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px; }
 .brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white); }
 
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
 .btn-exec { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; height: 38px;}
 .btn-exec-primary { background: var(--teal-600); color: var(--white); }
 .btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }

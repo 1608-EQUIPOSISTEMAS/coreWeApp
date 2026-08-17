@@ -7,69 +7,81 @@
           <th style="width:120px">F. Registro</th>
           <th>Alumno / Documento</th>
           <th>Programa / Edicion</th>
-          <th style="width:90px">
-            <div class="th-flex">
-              <span>Agente</span>
-              <ColumnFilterDropdown
-                column-label="Agente"
-                :all-items="enrollments"
-                :value-extractor="e => e.seller_agent_name || '(Vacío)'"
-                v-model="colFilters.agente"
-              />
-            </div>
-          </th>
+          <th style="width:90px">Agente</th>
           <th style="width:85px">F. Pago</th>
-          <th class="tc" style="width:100px">
-            <div class="th-flex">
-              <span>Tipo Pago</span>
-              <ColumnFilterDropdown
-                column-label="Tipo Pago"
-                :all-items="enrollments"
-                :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'"
-                v-model="colFilters.tipoPago"
-              />
-            </div>
-          </th>
+          <th class="tc" style="width:100px">Tipo Pago</th>
           <th class="tr" style="width:95px">Monto Neto</th>
           <th class="tr" style="width:80px">Inicial</th>
           <th class="tr" style="width:80px">Pagado</th>
           <th class="tr" style="width:85px">Saldo</th>
-          <th class="tc" style="width:145px">
-            <div class="th-flex">
-              <span>Estado FICO</span>
-              <ColumnFilterDropdown
-                column-label="Estado FICO"
-                :all-items="enrollments"
-                :value-extractor="e => e.confirmation || 'Pendiente'"
-                :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']"
-                v-model="colFilters.estado"
-              />
-            </div>
-          </th>
+          <th class="tc" style="width:145px">Estado FICO</th>
         </tr>
+        <!-- Toda columna filtra desde esta fila: ningun control vive en el
+             encabezado. Texto -> caja de escribir, categoria -> desplegable,
+             dinero -> piso (>=). -->
         <tr class="ect-filters">
           <td class="tc">
             <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
               <i class="fa-solid fa-eraser"></i>
             </button>
           </td>
-          <td></td>
+          <td>
+            <BaseDatePicker
+              v-model="colFilters.fRegistro"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              placeholder="F. Registro..."
+            />
+          </td>
           <td>
             <input v-model="colFilters.alumno" class="filter-input" placeholder="Buscar..." />
           </td>
           <td>
             <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
           </td>
-          <td></td>
-          <td>
-            <input v-model="colFilters.fPago" class="filter-input" placeholder="Buscar..." />
+          <td class="tc">
+            <ColumnFilterDropdown
+              column-label="Agente"
+              :all-items="enrollments"
+              :value-extractor="e => e.seller_agent_name || '(Vacío)'"
+              v-model="colFilters.agente"
+            />
           </td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
+          <td>
+            <BaseDatePicker
+              v-model="colFilters.fPago"
+              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
+              placeholder="F. Pago..."
+            />
+          </td>
+          <td class="tc">
+            <ColumnFilterDropdown
+              column-label="Tipo Pago"
+              :all-items="enrollments"
+              :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'"
+              v-model="colFilters.tipoPago"
+            />
+          </td>
+          <td>
+            <input v-model="colFilters.montoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
+          </td>
+          <td>
+            <input v-model="colFilters.inicialMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
+          </td>
+          <td>
+            <input v-model="colFilters.pagadoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
+          </td>
+          <td>
+            <input v-model="colFilters.saldoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
+          </td>
+          <td class="tc">
+            <ColumnFilterDropdown
+              column-label="Estado FICO"
+              :all-items="enrollments"
+              :value-extractor="e => e.confirmation || 'Pendiente'"
+              :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']"
+              v-model="colFilters.estado"
+            />
+          </td>
         </tr>
       </thead>
       <tbody>
@@ -178,6 +190,7 @@
 import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
 
 const props = defineProps({
   enrollments: { type: Array, default: () => [] },
@@ -269,15 +282,6 @@ function clearColFilters () {
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
-.th-flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-.tc .th-flex { justify-content: center; }
-.tc .th-flex > span { flex: 1; text-align: center; }
-
 /* ---- filter row ---- */
 .ect-filters {
   background: #FAFAFA;
@@ -305,25 +309,37 @@ function clearColFilters () {
   box-shadow: 0 0 0 3px rgba(13,148,136,.06);
 }
 .filter-input::placeholder { color: #C4C4C4; }
+.filter-input.tr { text-align: right; }
 
-.filter-select {
+/* flatpickr renderiza su propio input (altInput) fuera del alcance de .filter-input,
+   asi que hay que igualarlo a mano para que la fila no quede despareja. */
+.ect-filters :deep(.exec-flatpickr-input) {
   width: 100%;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid #E8E8E8;
   border-radius: 6px;
   font-size: 12px;
+  font-family: inherit;
   color: #1A1A1A;
   background: #fff;
-  cursor: pointer;
-  transition: all .2s ease;
-  appearance: auto;
-  font-family: inherit;
-}
-.filter-select:focus {
+  box-sizing: border-box;
   outline: none;
+  transition: all .2s ease;
+}
+.ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #C4C4C4; }
+.ect-filters :deep(.exec-flatpickr-input:focus) {
   border-color: #0D9488;
   box-shadow: 0 0 0 3px rgba(13,148,136,.06);
+}
+
+/* Las flechitas del input number no caben en 30px de alto y encima tapan el
+   monto. Se escribe la cifra, no se sube de a uno. */
+.filter-input[type="number"] { -moz-appearance: textfield; }
+.filter-input[type="number"]::-webkit-outer-spin-button,
+.filter-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .filter-clear {
@@ -652,14 +668,15 @@ function clearColFilters () {
   border-bottom-color: #2A2A22;
 }
 [data-coreui-theme="dark"] .filter-input,
-[data-coreui-theme="dark"] .filter-select {
+[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input) {
   background: #14140F;
   border-color: #2A2A22;
   color: #F4F4F0;
 }
-[data-coreui-theme="dark"] .filter-input::placeholder { color: #6F6F66; }
+[data-coreui-theme="dark"] .filter-input::placeholder,
+[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #6F6F66; }
 [data-coreui-theme="dark"] .filter-input:focus,
-[data-coreui-theme="dark"] .filter-select:focus {
+[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input:focus) {
   border-color: #34D399;
   box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
 }

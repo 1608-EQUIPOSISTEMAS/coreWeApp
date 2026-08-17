@@ -23,7 +23,7 @@ function baseInsc (over = {}) {
     document: '123', full_name: 'Ana', last_name: 'Diaz', mother_last_name: 'Ruiz', email: 'a@b.com',
     montoOriginal: 1000, total_amount: 900, saved_money: 100,
     dsct_porcent_id: null, dsct_porcent_label: null, dsct_stick_id: null, dsct_stick_label: null,
-    dsct_benefit_ids: [{ value: 9, label: 'Beca' }], observacions: 'obs', agreement_id: null,
+    dsct_benefit_ids: [{ value: 9, label: 'Beca' }], observacions: 'obs', b2b_contract_id: null,
     ticket_payment_urls: [{ url: '/uploads/x.pdf' }], attachments: [], ...over
   }
 }

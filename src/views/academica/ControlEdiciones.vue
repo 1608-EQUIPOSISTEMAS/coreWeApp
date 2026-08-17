@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -88,35 +89,30 @@ const maxSessions = computed(() =>
   editions.value.reduce((m, e) => Math.max(m, e.sessions.length), 0)
 )
 
-// Filtros por columna (texto: contiene, sin distinguir tildes/mayusculas;
-// Frecuencia: select de combinaciones dia+horario existentes).
-const filters = ref({ curso: '', docente: '', ns: '', freq: '', actual: '', repros: '', tard: '' })
+// Filtros por columna: texto = contiene (sin distinguir tildes ni mayusculas),
+// el resto = lista de valores elegidos en el desplegable.
+const filters = ref({ curso: '', docente: '', ns: [], freq: [], actual: [], repros: [], tard: [] })
 const norm = (v) =>
   String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const freqLabel = (e) => [e.day_label, e.hour_label].filter(Boolean).join(' · ') || '—'
+
+// Repros y tardanzas no se filtran por su numero exacto (nadie busca "3
+// reprogramaciones") sino por tenerlas o no.
+const countLabel = (field) => (e) => (e[field] === 0 ? '0' : '1+')
+
 const filteredEditions = computed(() => {
   const f = filters.value
   return editions.value.filter((e) => {
     if (f.curso && !(norm(e.abbreviation).includes(norm(f.curso)) || norm(e.specific_code).includes(norm(f.curso)))) return false
     if (f.docente && !norm(e.instructor).includes(norm(f.docente))) return false
-    if (f.ns && String(e.total_sessions) !== f.ns) return false
-    if (f.freq && freqLabel(e) !== f.freq) return false
-    if (f.actual && e.current_label !== f.actual) return false
-    if (f.repros && (f.repros === '0' ? e.repro_count !== 0 : e.repro_count === 0)) return false
-    if (f.tard && (f.tard === '0' ? e.tardy_count !== 0 : e.tardy_count === 0)) return false
+    if (f.ns.length && !f.ns.includes(String(e.total_sessions))) return false
+    if (f.freq.length && !f.freq.includes(freqLabel(e))) return false
+    if (f.actual.length && !f.actual.includes(e.current_label || '(Vacío)')) return false
+    if (f.repros.length && !f.repros.includes(countLabel('repro_count')(e))) return false
+    if (f.tard.length && !f.tard.includes(countLabel('tardy_count')(e))) return false
     return true
   })
 })
-const nsOptions = computed(() =>
-  [...new Set(editions.value.map((e) => e.total_sessions))].sort((a, b) => a - b)
-)
-const freqOptions = computed(() =>
-  [...new Set(editions.value.map(freqLabel))].sort((a, b) => a.localeCompare(b, 'es'))
-)
-const actualOptions = computed(() =>
-  [...new Set(editions.value.map((e) => e.current_label).filter(Boolean))]
-    .sort((a, b) => String(a).localeCompare(String(b), 'es', { numeric: true }))
-)
 
 // Una sesion "es de la semana" si su fecha efectiva cae en el rango visible.
 const inWeek = (s) =>
@@ -225,9 +221,6 @@ function confirmRepro() {
         </div>
       </div>
       <div class="actions">
-        <button class="btn" :disabled="isLoading" @click="load">
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
-        </button>
         <div class="week-nav">
           <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
             <i class="fa-solid fa-chevron-left"></i>
@@ -332,43 +325,54 @@ function confirmRepro() {
             <th class="num" title="Reprogramaciones">Repros</th>
             <th class="num" title="Tardanzas">Tard.</th>
           </tr>
+          <!-- Toda columna filtra desde esta fila: texto -> caja de escribir,
+               categoria -> desplegable. Las opciones salen de `editions` (todas)
+               y no de las filtradas, si no se irian achicando solas. -->
           <tr class="flt-row">
             <th class="col-curso">
               <input v-model.trim="filters.curso" class="flt" type="text" placeholder="Curso / código…" />
             </th>
             <th><input v-model.trim="filters.docente" class="flt" type="text" placeholder="Docente…" /></th>
             <th>
-              <select v-model="filters.ns" class="flt">
-                <option value="">—</option>
-                <option v-for="o in nsOptions" :key="o" :value="String(o)">{{ o }}</option>
-              </select>
+              <ColumnFilterDropdown
+                column-label="#S"
+                :all-items="editions"
+                :value-extractor="e => String(e.total_sessions)"
+                v-model="filters.ns"
+              />
             </th>
             <th>
-              <select v-model="filters.freq" class="flt">
-                <option value="">—</option>
-                <option v-for="o in freqOptions" :key="o" :value="o">{{ o }}</option>
-              </select>
+              <ColumnFilterDropdown
+                column-label="Frecuencia"
+                :all-items="editions"
+                :value-extractor="freqLabel"
+                v-model="filters.freq"
+              />
             </th>
             <th :colspan="maxSessions"></th>
             <th>
-              <select v-model="filters.actual" class="flt">
-                <option value="">—</option>
-                <option v-for="o in actualOptions" :key="o" :value="o">{{ o }}</option>
-              </select>
+              <ColumnFilterDropdown
+                column-label="Actual"
+                :all-items="editions"
+                :value-extractor="e => e.current_label || '(Vacío)'"
+                v-model="filters.actual"
+              />
             </th>
             <th>
-              <select v-model="filters.repros" class="flt">
-                <option value="">—</option>
-                <option value="0">0</option>
-                <option value="1+">1+</option>
-              </select>
+              <ColumnFilterDropdown
+                column-label="Repros"
+                :all-items="editions"
+                :value-extractor="countLabel('repro_count')"
+                v-model="filters.repros"
+              />
             </th>
             <th>
-              <select v-model="filters.tard" class="flt">
-                <option value="">—</option>
-                <option value="0">0</option>
-                <option value="1+">1+</option>
-              </select>
+              <ColumnFilterDropdown
+                column-label="Tard."
+                :all-items="editions"
+                :value-extractor="countLabel('tardy_count')"
+                v-model="filters.tard"
+              />
             </th>
           </tr>
         </thead>
@@ -641,7 +645,6 @@ table.week thead th.col-curso { z-index: 7; background: var(--bg-soft); }
 }
 .flt::placeholder { color: var(--ink-4); }
 .flt:focus { outline: none; border-color: var(--accent); }
-select.flt { cursor: pointer; }
 .no-match { text-align: center; color: var(--ink-3); padding: 28px 0 !important; font-size: 13px; }
 
 table.week tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }

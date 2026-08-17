@@ -217,11 +217,6 @@ function summarize(att, totalSessions) {
           Alumnos de convenios corporativos en aulas En Vivo - {{ AULAS.length }} aulas con matricula B2B
         </div>
       </div>
-      <div class="actions">
-        <button class="btn" :disabled="isLoading" @click="load">
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isLoading }"></i> Sincronizar
-        </button>
-      </div>
     </header>
 
     <div class="kpi-grid">

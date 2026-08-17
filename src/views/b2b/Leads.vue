@@ -1,76 +1,84 @@
 <template>
-  <div class="exec-shell list-shell">
-<header class="exec-masthead" :class="{ 'masthead--compact': toolbarCollapsed }">
-  <div class="masthead-inner">
-    <div class="masthead-brand">
-      <div class="brand-rule" :class="{ 'brand-rule--sm': toolbarCollapsed }"></div>
-      <div class="brand-text">
-        <span class="brand-eyebrow" v-show="!toolbarCollapsed">B2B</span>
-        <h1 class="brand-title">
-          <span v-if="!toolbarCollapsed">Leads B2B</span>
-          <span v-else class="brand-title--inline">
-            <span class="brand-eyebrow--inline">CRM</span>
-            Leads B2B
+  <div class="leads-page">
+    <header class="ep-masthead">
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">B2B</span>
+        <h1 class="ep-title">Listado de Leads</h1>
+        <span class="ep-subtitle">Gestión de leads y oportunidades</span>
+      </div>
+      <div class="ep-masthead-actions">
+        <div class="ep-view-toggle">
+          <button :class="['ep-toggle-btn', { 'is-active': !isCompact }]" @click="isCompact = false">
+            <i class="fa-solid fa-table-columns"></i> Expandida
+          </button>
+          <button :class="['ep-toggle-btn', { 'is-active': isCompact }]" @click="isCompact = true">
+            <i class="fa-solid fa-list"></i> Compacta
+          </button>
+        </div>
+        <button
+          class="ep-btn-control"
+          :class="hasActiveRestrictions ? 'ep-btn-danger' : ''"
+          @click="openControlModal"
+          :title="isB2B ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
+        >
+          <i class="fa-solid" :class="isB2B ? 'fa-user-lock' : 'fa-shield-halved'"></i>
+          <span>{{ isB2B ? 'Mis Permisos' : 'Control' }}</span>
+        </button>
+        <button class="ep-btn-new" @click="goNew" v-if="!hasActiveRestrictions">
+          <i class="fa-solid fa-plus"></i> Nuevo Lead
+        </button>
+      </div>
+    </header>
+    <main class="ep-body">
+
+      <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
+        <div class="ep-filter-bar-main">
+          <div class="ep-quick-row">
+            <nav class="ep-tabs" aria-label="Vistas rapidas">
+              <button
+                v-for="v in quickViews"
+                :key="v.key"
+                :class="['ep-tab', { 'is-active': activeQuickView === v.key, 'is-highlight': v.highlight }]"
+                :title="v.title"
+                @click="applyQuickView(v.key)"
+              >
+                <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+              </button>
+            </nav>
+            <div class="ep-quick-order" title="Ordenar resultados">
+              <i class="fa-solid fa-arrow-down-wide-short ep-quick-order-icon"></i>
+              <SearchSelect
+                v-model="filters.order_by"
+                :items="filtroOrden"
+                label-field="description"
+                value-field="value"
+                placeholder="Ordenar..."
+                class="ss-quick"
+                @update:model-value="onOrderChange"
+              />
+            </div>
+          </div>
+          <div class="ep-toolbar">
+            <BasePagination
+              v-model="pagin"
+              @open-filters="openFilterModal"
+              @change="handlePaginationChange"
+            />
+          </div>
+        </div>
+        <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
+          <span class="ep-filter-strip-badge">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            Filtros activos
+            <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
           </span>
-        </h1>
-      </div>
-    </div>
-
-    <button
-      class="focus-toggle-btn"
-      :class="{ 'focus-toggle-btn--active': toolbarCollapsed }"
-      @click="toolbarCollapsed = !toolbarCollapsed"
-      :title="toolbarCollapsed ? 'Expandir barra' : 'Modo enfocado'"
-    >
-      <i class="fa-solid" :class="toolbarCollapsed ? 'fa-maximize' : 'fa-minimize'"></i>
-      <span v-show="!toolbarCollapsed">Enfocar</span>
-    </button>
-  </div>
-</header>
-    <main class="exec-body">
-
-<div class="toolbar-chips mb-2" v-show="!toolbarCollapsed">
-        <BaseFilterChips
-          :items="activeFilterChips"
-          @remove="clearFilter"
-          @clear-all="clearFilters"
-        />
-      </div>
-
-<div class="exec-toolbar" v-show="!toolbarCollapsed">
-        <div class="toolbar-pagination">
-          <BasePagination
-            v-model="pagin"
-            @open-filters="openFilterModal"
-            @change="handlePaginationChange"
+          <BaseFilterChips
+            :items="activeFilterChips"
+            @remove="clearFilter"
+            @clear-all="clearFilters"
           />
         </div>
-        <div class="toolbar-actions">
-          <button
-            class="btn-exec"
-            :class="hasActiveRestrictions ? 'btn-exec-danger pulse-alert' : 'btn-exec-ghost'"
-            @click="openControlModal"
-            :title="isB2B ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
-          >
-            <i class="fa-solid" :class="isB2B ? 'fa-user-lock' : 'fa-shield-halved'"></i>
-            <span>{{ isB2B ? 'Mis Permisos' : 'Control' }}</span>
-          </button>
-
-          <button
-            class="btn-exec"
-            :class="isCompact ? 'btn-exec-active' : 'btn-exec-ghost'"
-            @click="isCompact = !isCompact"
-            title="Alternar entre vista agrupada y vista detallada por columnas"
-          >
-            <i class="fa-solid" :class="isCompact ? 'fa-list' : 'fa-table-columns'"></i>
-            <span>Compactado</span>
-          </button>
-
-          <button class="btn-exec btn-exec-primary" @click="goNew" v-if="!hasActiveRestrictions">
-            <i class="fa-solid fa-plus"></i> Nuevo Lead
-          </button>
-        </div>
-      </div>
+      </section>
 
       <div class="table-shell">
         <div class="table-responsive-custom">
@@ -87,15 +95,13 @@
   <th class="ts ts-c">F. Pago</th>
   <th class="ts ts-c">Nivel Interés</th>
   <th class="ts ts-c">Registro</th>
+  <th class="ts ts-c">Cel. Origen</th>
   <th class="ts ts-c">Canal Pago</th>
   <th class="ts ts-c text-center">Seguimiento</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
     <div class="hf-actions-group">
-      <button v-if="toolbarCollapsed && !hasActiveRestrictions" class="hf-new-btn" @click="goNew" title="Nuevo Lead">
-        <i class="fa-solid fa-plus"></i>
-      </button>
       <button v-if="activeFilterChips.length" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -128,6 +134,9 @@
   <th class="tf">
     <MultiSelect v-if="!isB2B" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
     <span v-else class="text-muted" style="font-size:10px;">—</span>
+  </th>
+  <th class="tf">
+    <MultiSelect v-model="filters.origin_seller_phones" :items="originPhoneOptions" label-key="description" value-key="id" placeholder="Cel. origen..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -174,7 +183,7 @@
 
   <!-- D. LEAD -->
   <th
-    :colspan="colGroups.lead ? 7 : 1"
+    :colspan="colGroups.lead ? 8 : 1"
     class="tg-header tg-lead"
     :class="{ 'tg-collapsed': !colGroups.lead }"
     @click="colGroups.lead = !colGroups.lead"
@@ -188,7 +197,7 @@
   </th>
 
 <th
-  :colspan="colGroups.asesor ? 4 : 1"
+  :colspan="colGroups.asesor ? 5 : 1"
   class="tg-header tg-asesor"
   :class="{ 'tg-collapsed': !colGroups.asesor }"
   @click="colGroups.asesor = !colGroups.asesor"
@@ -222,7 +231,7 @@
   <th v-show="colGroups.cliente" class="ts ts-c">E. Cliente</th>
   <th v-show="colGroups.cliente" class="ts ts-c">Member</th>
   <th v-if="!colGroups.cliente" class="ts ts-c tg-placeholder-cell"></th>
-  <!-- D. LEAD (7 cols) -->
+  <!-- D. LEAD (8 cols) -->
   <th v-show="colGroups.lead" class="ts ts-c">Status</th>
   <th v-show="colGroups.lead" class="ts ts-c">F. Pago</th>
   <th v-show="colGroups.lead" class="ts ts-c">Interés</th>
@@ -230,11 +239,13 @@
   <th v-show="colGroups.lead" class="ts ts-c">Medio</th>
   <th v-show="colGroups.lead" class="ts ts-c">Palabra MKT</th>
   <th v-show="colGroups.lead" class="ts ts-c">Estrategia</th>
+  <th v-show="colGroups.lead" class="ts ts-c">Observaciones</th>
   <th v-if="!colGroups.lead" class="ts ts-c tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR (4 cols) -->
+  <!-- D. ASESOR (5 cols) -->
   <th v-show="colGroups.asesor" class="ts ts-c">Asesor/Usuario</th>
   <th v-show="colGroups.asesor" class="ts ts-c">F. Registro</th>
+  <th v-show="colGroups.asesor" class="ts ts-c">Cel. Origen</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Canal Pago</th>
   <th v-show="colGroups.asesor" class="ts ts-c text-center">Seguimiento</th>
   <th v-if="!colGroups.asesor" class="ts ts-c tg-placeholder-cell"></th>
@@ -244,9 +255,6 @@
 <tr v-if="isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
     <div class="hf-actions-group">
-      <button v-if="toolbarCollapsed && !hasActiveRestrictions" class="hf-new-btn" @click="goNew" title="Nuevo Lead">
-        <i class="fa-solid fa-plus"></i>
-      </button>
       <button v-if="activeFilterChips.length" class="hf-clear-btn" @click="clearFilters" title="Limpiar filtros">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -277,7 +285,18 @@
   <!-- D. CLIENTE filtros -->
   <th v-show="colGroups.cliente" class="tf"></th><!-- Nombre -->
   <th v-show="colGroups.cliente" class="tf">
-    <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+    <div class="hf-phone-cell">
+      <input v-model="filters.q" type="text" class="hf-input" placeholder="Tel / Nombre..." @input="debouncedInlineFilter" />
+      <button
+        class="hf-copy-btn"
+        type="button"
+        :disabled="isCopyingPhones"
+        title="Copiar telefonos de los leads filtrados"
+        @click.stop="copyFilteredPhones"
+      >
+        <i class="fa-solid" :class="isCopyingPhones ? 'fa-spinner fa-spin' : 'fa-copy'"></i>
+      </button>
+    </div>
   </th>
   <th v-show="colGroups.cliente" class="tf">
     <MultiSelect v-model="filters.prospect_situation_ids" :items="withNull(filtroProspectSituation)" label-key="variable_1" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -290,7 +309,7 @@
   </th>
   <th v-if="!colGroups.cliente" class="tf tg-placeholder-cell"></th>
 
-   <!-- D. LEAD filtros (7 cols) -->
+   <!-- D. LEAD filtros (8 cols) -->
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Status..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -310,14 +329,18 @@
   <th v-show="colGroups.lead" class="tf">
     <MultiSelect v-model="filters.strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Estrategia..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+  <th v-show="colGroups.lead" class="tf"></th><!-- Observaciones (texto libre, sin filtro inline) -->
   <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR filtros (4 cols) -->
+  <!-- D. ASESOR filtros (5 cols) -->
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-if="!isB2B" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <BaseDatePicker v-model="filters.created_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" class="hf-input" placeholder="F. Registro..." @on-change="(dates, dateStr) => { handleDateFilterChange(dateStr, 'created'); triggerInlineFilter() }" />
+  </th>
+  <th v-show="colGroups.asesor" class="tf">
+    <MultiSelect v-model="filters.origin_seller_phones" :items="originPhoneOptions" label-key="description" value-key="id" placeholder="Cel. origen..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -342,6 +365,7 @@
                   <td><div class="sk-cell" style="width:60px"></div></td>
                   <td><div class="sk-cell" style="width:55px"></div></td>
                   <td><div class="sk-cell" style="width:90px"></div></td>
+                  <td><div class="sk-cell" style="width:80px"></div></td>
                   <td><div class="sk-cell" style="width:70px"></div></td>
                   <td><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
                 </tr>
@@ -351,10 +375,8 @@
                 v-for="l in leadsRaw"
                 :key="l.id"
                 class="tbody-row"
-                :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-                @mousedown.left="startPress(l)"
-                @mouseup="cancelPress"
-                @mouseleave="cancelPress"
+                :class="rowClassForStatus(l.cat_status_alias)"
+                @click="openFollowModal(l)"
               >
                 <td class="td-a text-center nowrap"> 
                     <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
@@ -401,6 +423,7 @@
                     <div class="text-muted x-small">{{ l.system_registration_date }}</div>
                   </div>
                 </td>
+                <td class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.description || '—' }}</td>
                 <td class="td-a text-center" style="min-width:140px">
                   <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
@@ -411,7 +434,7 @@
                 </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="12" class="empty-state">
+                <td colspan="13" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -428,9 +451,9 @@
       <td v-if="!colGroups.programa"></td>
       <td v-show="colGroups.cliente" v-for="c in 5" :key="'cl'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.cliente"></td>
-      <td v-show="colGroups.lead" v-for="c in 7" :key="'l'+c"><div class="sk-cell"></div></td>
+      <td v-show="colGroups.lead" v-for="c in 8" :key="'l'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.lead"></td>
-      <td v-show="colGroups.asesor" v-for="c in 4" :key="'a'+c"><div class="sk-cell"></div></td>
+      <td v-show="colGroups.asesor" v-for="c in 5" :key="'a'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.asesor"></td>
     </tr>
   </template>
@@ -439,10 +462,8 @@
     v-for="l in leadsRaw"
     :key="l.id"
     class="tbody-row"
-    :class="[rowClassForStatus(l.cat_status_alias), { 'row-pressing': pressingRowId === l.id }]"
-    @mousedown.left="startPress(l)"
-    @mouseup="cancelPress"
-    @mouseleave="cancelPress"
+    :class="rowClassForStatus(l.cat_status_alias)"
+    @click="openFollowModal(l)"
   >
     <!-- Acciones (siempre visible) -->
     <td class="td-a text-center nowrap"> 
@@ -500,6 +521,7 @@
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
+    <td v-show="colGroups.lead" class="td-a small text-muted obs-cell" :title="l.observations || ''">{{ l.observations || '—' }}</td>
     <td v-if="!colGroups.lead" class="td-a tg-placeholder-cell">
       <div class="tg-collapsed-hint tg-hint-lead">
         <span class="tg-hint-line tg-hint-main">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
@@ -510,6 +532,7 @@
     <!-- ── D. ASESOR ── -->
     <td v-show="colGroups.asesor" class="td-a small">{{ l.user_registration_label }}</td>
     <td v-show="colGroups.asesor" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
       <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
@@ -538,118 +561,131 @@
   </div>
 
 
-  <BaseModal v-model="showFollowModal" title="Gestión de Seguimiento" size="xl">
-    <div v-if="selectedFollowLead" class="exec-modal-body">
-      <div class="modal-lead-strip">
-        <div class="d-flex align-items-center gap-3">
-          <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
-          <div>
-            <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-            <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
-              <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
-              
-              <div class="d-flex align-items-center">
-                <i class="fa-solid fa-bullseye me-2"></i>
-                <SearchSelect
-                  v-model="selectedFollowLead.cat_status_alias"
-                  :items="filtroPipeline"
-                  label-field="description"
-                  value-field="alias"
-                  placeholder="Cambiar estado..."
-                  class="exec-select-light"
-                  style="min-width: 160px; height: 32px;"
-                />
+  <Teleport to="body">
+    <Transition name="downbar">
+      <div v-if="showFollowModal" class="downbar-overlay" @click.self="showFollowModal = false">
+        <div class="downbar-panel" role="dialog" aria-modal="true">
+          <header class="downbar-header">
+            <div class="downbar-grabber" aria-hidden="true"></div>
+            <h5 class="downbar-title">Gestión de Seguimiento</h5>
+            <button class="downbar-close" @click="showFollowModal = false" title="Cerrar">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </header>
+
+          <div class="downbar-body" v-if="selectedFollowLead">
+            <div class="modal-lead-strip">
+              <div class="d-flex align-items-center gap-3">
+                <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
+                <div>
+                  <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+                  <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
+                    <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
+
+                    <div class="d-flex align-items-center">
+                      <i class="fa-solid fa-bullseye me-2"></i>
+                      <SearchSelect
+                        v-model="selectedFollowLead.cat_status_alias"
+                        :items="filtroPipeline"
+                        label-field="description"
+                        value-field="alias"
+                        placeholder="Cambiar estado..."
+                        class="exec-select-light"
+                        style="min-width: 160px; height: 32px;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
+                <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
+              </button>
+            </div>
+            <div v-if="isLoadingFollow" class="exec-loader py-4">
+              <div class="loader-ring"></div>
+              <p class="text-muted small mt-2 fw-600">Cargando historial...</p>
+            </div>
+            <div v-else class="p-3 scroll-area">
+              <div v-if="editableHistory.length > 0" class="table-shell" style="overflow-x: auto;">
+                <table class="exec-table" style="min-width: 1100px;">
+                  <thead>
+                    <tr class="thead-sub">
+                      <th class="ts ts-c text-center" style="width: 46px;">#</th>
+                      <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
+                      <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
+                      <th class="ts ts-c" style="min-width: 280px;">Fecha / Hora</th>
+                      <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
+                      <th class="ts ts-c" style="min-width: 190px;">Observación</th>
+                      <th class="ts ts-c" style="min-width: 150px;">Registrado por</th>
+                      <th class="ts ts-c" style="min-width: 150px;">Modificado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{ 'row-highlight': !attempt.id }">
+                      <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ attempt.attempt_number ?? '—' }}</td>
+                      <td class="td-a align-top pt-2" style="min-width: 230px;">
+                        <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required @update:model-value="(val) => handleTypeChange(attempt, val)" />
+                        <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
+                          <span class="pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
+                            <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
+                            {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
+                          </span>
+                        </div>
+                        <div v-else class="mt-2 text-truncate text-center" style="font-size: 10px;">
+                          <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2" style="min-width: 230px;">
+                        <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
+                        <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
+                          <i class="fa-regular fa-paper-plane me-2"></i>
+                          <span>Mensaje / Gestión</span>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}" />
+                      </td>
+                      <td class="td-a align-top text-center pt-2">
+                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
+                          <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="toggleTimer(attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
+                            <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
+                          </button>
+                          <div class="text-mono fw-700 timer-display" :class="attempt.timerActive ? 'timer-display--active' : ''">{{ formatDuration(attempt.contact_duration) }}</div>
+                        </div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
+                        <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
+                      </td>
+                      <td class="td-a align-top pt-2">
+                        <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">{{ attempt.user_modification_label }}</div>
+                        <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="empty-state">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <p>No hay historial previo. Agrega el primer intento.</p>
               </div>
             </div>
           </div>
-        </div>
-        <button class="btn-exec btn-exec-primary" @click="addLocalAttempt">
-          <i class="fa-solid fa-plus me-1"></i> Nuevo Intento
-        </button>
-      </div>
-      <div v-if="isLoadingFollow" class="exec-loader py-4">
-        <div class="loader-ring"></div>
-        <p class="text-muted small mt-2 fw-600">Cargando historial...</p>
-      </div>
-      <div v-else class="p-3 scroll-area">
-        <div v-if="editableHistory.length > 0" class="table-shell" style="overflow-x: auto;">
-          <table class="exec-table" style="min-width: 1100px;">
-            <thead>
-              <tr class="thead-sub">
-                <th class="ts ts-c text-center" style="width: 46px;">#</th>
-                <th class="ts ts-c" style="min-width: 175px;">Tipo / Origen</th>
-                <th class="ts ts-c" style="min-width: 155px;">Resultado</th>
-                <th class="ts ts-c" style="min-width: 280px;">Fecha / Hora</th>
-                <th class="ts ts-c text-center" style="min-width: 130px;">Duración</th>
-                <th class="ts ts-c" style="min-width: 190px;">Observación</th>
-                <th class="ts ts-c" style="min-width: 150px;">Registrado por</th>
-                <th class="ts ts-c" style="min-width: 150px;">Modificado por</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(attempt, idx) in editableHistory" :key="idx" class="tbody-row" :class="{ 'row-highlight': !attempt.id }">
-                <td class="td-a text-center fw-700 text-muted align-top pt-3">{{ attempt.attempt_number ?? '—' }}</td>
-                <td class="td-a align-top pt-2" style="min-width: 230px;">
-                  <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required @update:model-value="(val) => handleTypeChange(attempt, val)" />
-                  <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
-                    <span class="pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
-                      <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
-                      {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
-                    </span>
-                  </div>
-                  <div v-else class="mt-2 text-truncate text-center" style="font-size: 10px;">
-                    <span class="text-muted"><i class="fa-solid fa-asterisk me-1"></i>Nuevo (Manual)</span>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2" style="min-width: 230px;">
-                  <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
-                  <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
-                    <i class="fa-regular fa-paper-plane me-2"></i>
-                    <span>Mensaje / Gestión</span>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}" />
-                </td>
-                <td class="td-a align-top text-center pt-2">
-                  <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
-                    <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="toggleTimer(attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
-                      <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
-                    </button>
-                    <div class="text-mono fw-700 timer-display" :class="attempt.timerActive ? 'timer-display--active' : ''">{{ formatDuration(attempt.contact_duration) }}</div>
-                  </div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
-                  <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
-                </td>
-                <td class="td-a align-top pt-2">
-                  <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">{{ attempt.user_modification_label }}</div>
-                  <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="empty-state">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <p>No hay historial previo. Agrega el primer intento.</p>
+
+          <footer class="downbar-footer">
+            <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
+            <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
+              <i class="fa-solid fa-save me-1"></i>
+              {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
+            </button>
+          </footer>
         </div>
       </div>
-    </div>
-    <template #footer>
-      <div class="d-flex justify-content-between w-100">
-        <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
-        <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
-          <i class="fa-solid fa-save me-1"></i>
-          {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
-        </button>
-      </div>
-    </template>
-  </BaseModal>
+    </Transition>
+  </Teleport>
 
 
   <BaseModal v-model="showFilterModal" title="Filtros Avanzados" size="xl">
@@ -775,7 +811,7 @@
         <table class="exec-table">
           <thead>
             <tr class="thead-group">
-              <th rowspan="2" class="th-cat sticky-col" style="min-width: 200px;">Asesor Comercial</th>
+              <th rowspan="2" class="th-cat sticky-col" style="min-width: 200px;">Asesor B2B</th>
               <th colspan="3" class="th-group th-group-a text-center">PROGRAMAS</th>
               <th colspan="8" class="th-group th-group-b text-center">GLOBAL</th>
             </tr>
@@ -898,6 +934,18 @@
       <p class="text-muted small mt-2 fw-600">Cargando información financiera...</p>
     </div>
     <div v-else-if="enrollmentData" class="px-4 py-3">
+      <!-- Banner de observacion FICO -->
+      <div v-if="enrollmentObserved" class="obs-enroll-banner mb-4">
+        <div class="obs-enroll-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="obs-enroll-body">
+          <strong>Inscripcion Observada por FICO</strong>
+          <p>{{ enrollmentObserved.reason }}</p>
+        </div>
+        <button class="obs-enroll-btn" :disabled="resubmittingEnrollment" @click="handleResubmitFromModal">
+          <i class="fa-solid" :class="resubmittingEnrollment ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+          {{ resubmittingEnrollment ? 'Reenviando...' : 'Reenviar a FICO' }}
+        </button>
+      </div>
       <div class="enrollment-header mb-4">
         <div>
           <h6 class="enrollment-title">{{ enrollmentData.abbreviation }}</h6>
@@ -928,6 +976,13 @@
           <div class="info-block mb-3">
             <label class="exec-label mb-1">Estado de Matrícula</label>
             <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">{{ enrollmentData.status_label || 'Desconocido' }}</span>
+          </div>
+          <!-- Categoría de entrada: solo eventos/congresos la tienen -->
+          <div class="info-block mb-3" v-if="enrollmentData.event_category_label">
+            <label class="exec-label mb-1">Categoría de Entrada</label>
+            <span class="pill event-cat-pill" :class="'is-' + (enrollmentData.event_category_alias || '').replace('we_event_category_', '')">
+              <i class="fa-solid fa-ticket me-1"></i>{{ enrollmentData.event_category_label }}
+            </span>
           </div>
           <div class="info-block mb-3"><label class="exec-label">Asesor que Registró</label><span class="info-value"><i class="fa-solid fa-user-tie me-1 text-slate-400"></i>{{ enrollmentData.seller_name || '—' }}</span></div>
         </div>
@@ -967,12 +1022,12 @@
             </div>
             <div class="d-flex justify-content-between mb-2 c-green">
               <span class="fw-600" style="font-size:12px;">Pagado:</span>
-              <span class="fw-700" style="font-size:13px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_paid) }}</span>
+              <span class="fw-700" style="font-size:13px;">{{ formatMoney(enrollmentData.currency_symbol, totalPaidDisplay) }}</span>
             </div>
             <hr class="my-2" style="border-color:#dcfce7;">
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-700 text-dark" style="font-size:12.5px;">Saldo Pendiente:</span>
-              <span class="fw-700" style="font-size:18px;" :class="enrollmentData.pending_amount > 0 ? 'c-red' : 'c-green'">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.pending_amount) }}</span>
+              <span class="fw-700" style="font-size:18px;" :class="saldoPendienteDisplay > 0 ? 'c-red' : 'c-green'">{{ formatMoney(enrollmentData.currency_symbol, saldoPendienteDisplay) }}</span>
             </div>
           </div>
         </div>
@@ -1024,9 +1079,10 @@
               >
                 <!-- # -->
                 <td class="td-a text-center fw-700 text-muted">
-                  <span v-if="cuota.is_reserva" 
-                        class="pill pill-slate" 
-                        style="background:#dbeafe;color:#1e40af;font-size:9px;">R</span>
+                  <span v-if="cuota.is_reserva"
+                        class="pill pill-slate"
+                        title="Adelanto / Pago Inicial"
+                        style="background:#dbeafe;color:#1e40af;font-size:9px;">INI</span>
                   <span v-else>{{ cuota.installment_number }}</span>
                 </td>
 
@@ -1108,9 +1164,9 @@ const router = useRouter()
 const route = useRoute()
 const comercialService = inject(ServiceKeys.Comercial)
 const authService = inject(ServiceKeys.Auth)
+const ficoService = inject(ServiceKeys.Fico)
 const catalog = inject('catalog')
 const programService = inject(ServiceKeys.Program)
-const businessLineId = ref(null)
 const filtroProgramasEspec = ref(catalog.options('we_programs') || [])
 const filtroProspectSituation = ref(catalog.options('we_prospect_situation') || [])
 
@@ -1121,28 +1177,41 @@ const isCompact = ref(true)
 const dense = ref(false)
 const activeFilterChips = ref([])
 const leadsRaw = ref([])
-// Flag de carga para el skeleton de la tabla (mismo patrón que comercial/Leads.vue)
 const isTableLoading = ref(false)
 const filtroOwners = ref([])
 const pagin = ref({ size: 25, page: 1, total: 0 })
+const activeQuickView = ref(null)
+
+// Vistas rapidas: atajos a combinaciones frecuentes de filtros. La fecha se
+// recalcula en cada click (no se memoiza) para que "Alta Prioridad" y
+// "Prox. inicio" siempre usen "hoy" real, no la hora en que se cargo la pagina.
+const quickViews = [
+  { key: 'all',        label: 'Todos',          icon: 'fa-list',         highlight: true, title: 'Limpiar todos los filtros' },
+  { key: 'priority',   label: 'Alta Prioridad', icon: 'fa-bolt',         title: 'Edicion proxima (14d), interes bajo, estados activos' },
+  { key: 'follow',     label: 'Seguimiento',    icon: 'fa-phone',        title: 'Pendientes de contacto' },
+  { key: 'will_pay',   label: 'Pagara',         icon: 'fa-coins',        title: 'Leads que comprometieron pago' }
+]
 
 // === LONG PRESS ===
-const pressingRowId = ref(null)
-let pressTimer = null
-
 // === PERMISOS ===
 const storedUserStr = localStorage.getItem('user')
 const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
+const B2B_ROLES = ['B2B']
 const isB2B = storedUser?.roles?.includes('B2B') &&
-              !storedUser?.roles?.includes('ADMIN') &&
-              !storedUser?.roles?.includes('GERENCIA');
+                    !storedUser?.roles?.includes('ADMIN') &&
+                    !storedUser?.roles?.includes('GERENCIA');
 const currentUserId = storedUser?.user_id;
+
+// Unico scope de este modulo: la vista es identica a /comercial/leads pero
+// el SP solo devuelve leads de la linea de negocio B2B. Se resuelve por
+// alias en onMounted (no hardcodear el id de catalogo).
+const businessLineId = ref(null)
 
 // ═══════════════════════════════════════════════════════════════
 // GRUPOS DE COLUMNAS COLAPSABLES (solo vista compacta)
 // ═══════════════════════════════════════════════════════════════
 
-const COL_GROUPS_KEY = 'crm_leads_b2b_col_groups_v1'
+const COL_GROUPS_KEY = 'crm_leads_b2b_col_groups_v2'
 const colGroups = reactive({
   programa: true,
   cliente: true,
@@ -1171,6 +1240,8 @@ watch(colGroups, (val) => {
 // === FILTROS ===
 const filters = reactive({
   q: '',
+  origin_seller_phone: '',
+  origin_seller_phones: [],
   program_text: '',
   estado: null,
   web: null,
@@ -1218,6 +1289,11 @@ const filters = reactive({
 // === CATÁLOGOS ===
 const filtroTiposPrograma = ref(catalog.options('we_program_type') || [])
 const filtroPaymentChannel = ref(catalog.options('we_payment_channel') || [])
+// Telefonos unicos del cel.origen. Se carga una vez al montar el componente
+// desde el endpoint /comercial/sellerphones, que devuelve TODOS los celulares
+// historicos con su owner (no solo los de la pagina visible). Antes era un
+// computed sobre leadsRaw y un asesor con leads en otra pagina no aparecia.
+const originPhoneOptions = ref([])
 const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
@@ -1236,9 +1312,10 @@ const filtroPaises = ref(catalog.options('we_country') || [])
 const filtroFicoStatus = ref(catalog.options('we_enrollment_status'))
 const filtroProfile = ref(catalog.options('we_profile') || [])
 const filtroOrden = [
-  { value: 0, description: 'Fecha de Registro (Más recientes)' },
-  { value: 1, description: 'Fecha Inicio Edición (Próximos)' },
-  { value: 2, description: 'Fecha de Pago (Próximos)' }
+  { value: 0, description: 'Fecha de Registro' },
+  { value: 1, description: 'Fecha Inicio Edición' },
+  { value: 2, description: 'Fecha de Pago' },
+  { value: 4, description: 'Fecha de Contacto' }
 ]
 const filtroCurrency = ref(
   catalog.options('we_currency', {
@@ -1307,6 +1384,7 @@ async function parseQueryAndApply() {
   if (!hasQueryParams) return false
   clearFilters(false)
   if (q.q)              filters.q            = q.q
+  if (q.origin_seller_phone) filters.origin_seller_phone = q.origin_seller_phone
   if (q.program_text)   filters.program_text  = q.program_text
   if (q.web)            filters.web           = q.web
   if (q.b2b)            filters.b2b           = q.b2b
@@ -1634,6 +1712,16 @@ function rebuildChips() {
     chips.push({ key, label: labels.length === 1 ? `${labelPrefix}: ${labels[0]}` : `${labelPrefix}: ${labels.length} sel.`, text: `${labelPrefix}: ${labels.join(', ')}`, details: labels })
   }
   if (filters.q)            chips.push({ key: 'q',            label: `Buscar: "${filters.q}"` })
+  if (filters.origin_seller_phone) chips.push({ key: 'origin_seller_phone', label: `Cel. Origen: "${filters.origin_seller_phone}"` })
+  if (Array.isArray(filters.origin_seller_phones) && filters.origin_seller_phones.length > 0) {
+    const phones = filters.origin_seller_phones.map(p => p?.label || p?.value || p).filter(Boolean)
+    chips.push({
+      key: 'origin_seller_phones',
+      label: phones.length === 1 ? `Cel. Origen: ${phones[0]}` : `Cel. Origen: ${phones.length} sel.`,
+      text: `Cel. Origen: ${phones.join(', ')}`,
+      details: phones
+    })
+  }
   if (filters.program_text) chips.push({ key: 'program_text', label: `Prog: "${filters.program_text}"` })
   if (filters.web)          chips.push({ key: 'web',          label: `Web: ${filters.web === 'Y' ? 'Sí' : 'No'}` })
   if (filters.b2b)          chips.push({ key: 'b2b',          label: `B2B: ${filters.b2b === 'Y' ? 'Sí' : 'No'}` })
@@ -1673,57 +1761,78 @@ function rebuildChips() {
 }
 
 // === API ===
+// Traduce el estado reactivo de `filters` al payload que espera el SP.
+// Fuente unica de verdad: la tabla paginada y la exportacion/copia masiva
+// reusan este mismo objeto para garantizar que ambas ven el mismo universo.
+function buildLeadPayload() {
+  const getIds = (arr) => {
+    if (!Array.isArray(arr)) return []
+    return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
+  }
+  // El SP actual filtra por una sola string. Si hay multiples telefonos
+  // seleccionados, aplicamos el primero (degraded mode). Para filtro real
+  // multi-phone hay que extender el SP con array support.
+  const phonesArr = getIds(filters.origin_seller_phones)
+  const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
+  const phoneFromInput = filters.origin_seller_phone?.trim() || null
+  // A diferencia de Fundacion, aqui NO se fuerza el universo a los usuarios con
+  // rol B2B: cat_business_line_id ya deja la vista en la linea B2B, y filtrar
+  // ademas por dueno esconderia los leads B2B que registro un ADMIN o un asesor
+  // de otra area. El asesor B2B queda acotado a lo suyo en onMounted.
+  const ownerIds = getIds(filters.owner_user_ids)
+  return {
+    cat_business_line_id: businessLineId.value,
+    q:                   filters.q             || null,
+    origin_seller_phone: phoneFromMulti || phoneFromInput,
+    program_text:        filters.program_text  || null,
+    web:                 filters.web           || null,
+    b2b:                 filters.b2b           || null,
+    order_by:            filters.order_by ?? 0,
+    payment_channel_ids: getIds(filters.payment_channel_ids),
+    from_date:           filters.rangoFechas?.start        || null,
+    membership_moment_ids: getIds(filters.membership_moment_ids),
+    to_date:             filters.rangoFechas?.end          || null,
+    updated_from:        filters.rangoModificacion?.start  || null,
+    updated_to:          filters.rangoModificacion?.end    || null,
+    pay_date_from:       filters.pay_date_from             || null,
+    pay_date_to:         filters.pay_date_to               || null,
+    edition_start_from:  filters.edition_start_from        || null,
+    edition_start_to:    filters.edition_start_to          || null,
+    fico_status_ids:            getIds(filters.fico_status_ids),
+    profile_ids:                getIds(filters.profile_ids),
+    currency_ids:               getIds(filters.currency_ids),
+    inscription_modality_ids:   getIds(filters.inscription_modality_ids),
+    installment_status_ids:     getIds(filters.installment_status_ids),
+    payment_method_ids:         getIds(filters.payment_method_ids),
+    first_contact_from: filters.first_contact_from || null,
+    first_contact_to:   filters.first_contact_to   || null,
+    settlement_status_ids:      getIds(filters.settlement_status_ids),
+    owner_user_ids:      ownerIds,
+    status_lead_ids:     getIds(filters.status_lead_ids),
+    last_follow_ids:     getIds(filters.last_follow_ids),
+    program_version_ids: getIds(filters.program_version_ids),
+    prospect_situation_ids: getIds(filters.prospect_situation_ids),
+    interest_level_ids:  getIds(filters.interest_level_ids),
+    channel_ids:         getIds(filters.channel_ids),
+    query_ids:           getIds(filters.query_ids),
+    type_program_ids:    getIds(filters.type_program_ids),
+    attempt_origin_ids:  getIds(filters.attempt_origin_ids),
+    model_modality_ids:  getIds(filters.model_modality_ids),
+    strategy_ids:        getIds(filters.strategy_ids),
+    word_ids:            getIds(filters.word_ids),
+    medium_contact_ids:  getIds(filters.medium_contact_ids),
+    code_country_ids:    getIds(filters.code_country_ids),
+    moment_ids:          getIds(filters.moment_ids),
+  }
+}
+
 async function fetchLeads() {
   isTableLoading.value = true
   try {
-    const getIds = (arr) => {
-      if (!Array.isArray(arr)) return []
-      return arr.map(item => (typeof item === 'object' && item !== null) ? item.value : item)
-    }
     const { items, total: t } = await comercialService.leadList({
-      cat_business_line_id: businessLineId.value,
-      q:                   filters.q             || null,
-      page:                pagin.value.page,
-      size:                pagin.value.size,
-      program_text:        filters.program_text  || null,
-      web:                 filters.web           || null,
-      b2b:                 filters.b2b           || null,
-      order_by:            filters.order_by ?? 0,
-      payment_channel_ids: getIds(filters.payment_channel_ids),
-      from_date:           filters.rangoFechas?.start        || null,
-      membership_moment_ids: getIds(filters.membership_moment_ids),
-      to_date:             filters.rangoFechas?.end          || null,
-      updated_from:        filters.rangoModificacion?.start  || null,
-      updated_to:          filters.rangoModificacion?.end    || null,
-      pay_date_from:       filters.pay_date_from             || null,
-      pay_date_to:         filters.pay_date_to               || null,
-      edition_start_from:  filters.edition_start_from        || null,
-      edition_start_to:    filters.edition_start_to          || null,
-      fico_status_ids:            getIds(filters.fico_status_ids),
-      profile_ids:                getIds(filters.profile_ids),
-      currency_ids:               getIds(filters.currency_ids),
-      inscription_modality_ids:   getIds(filters.inscription_modality_ids),
-      installment_status_ids:     getIds(filters.installment_status_ids),
-      payment_method_ids:         getIds(filters.payment_method_ids),
-      first_contact_from: filters.first_contact_from || null,
-      first_contact_to:   filters.first_contact_to   || null,
-      settlement_status_ids:      getIds(filters.settlement_status_ids),
-      owner_user_ids:      getIds(filters.owner_user_ids),
-      status_lead_ids:     getIds(filters.status_lead_ids),
-      last_follow_ids:     getIds(filters.last_follow_ids),
-      program_version_ids: getIds(filters.program_version_ids),
-      prospect_situation_ids: getIds(filters.prospect_situation_ids),
-      interest_level_ids:  getIds(filters.interest_level_ids),
-      channel_ids:         getIds(filters.channel_ids),
-      query_ids:           getIds(filters.query_ids),
-      type_program_ids:    getIds(filters.type_program_ids),
-      attempt_origin_ids:  getIds(filters.attempt_origin_ids),
-      model_modality_ids:  getIds(filters.model_modality_ids),
-      strategy_ids:        getIds(filters.strategy_ids),
-      word_ids:            getIds(filters.word_ids),
-      medium_contact_ids:  getIds(filters.medium_contact_ids),
-      code_country_ids:    getIds(filters.code_country_ids),
-      moment_ids:          getIds(filters.moment_ids),
+      ...buildLeadPayload(),
+      page: pagin.value.page,
+      size: pagin.value.size,
     })
     leadsRaw.value = items || []
     pagin.value.total = Number(t || 0)
@@ -1737,14 +1846,64 @@ async function fetchLeads() {
   }
 }
 
+const isCopyingPhones = ref(false)
+
+// Copia al portapapeles los telefonos de TODOS los leads que cumplen los
+// filtros activos (no solo la pagina visible). Pedimos el universo completo
+// con size = total y normalizamos a solo digitos (51902218391) para que el
+// pegado en herramientas de envio masivo no arrastre prefijos ni formato.
+async function copyFilteredPhones() {
+  if (isCopyingPhones.value) return
+  isCopyingPhones.value = true
+  try {
+    const { items } = await comercialService.leadList({
+      ...buildLeadPayload(),
+      page: 1,
+      size: pagin.value.total || 10000,
+    })
+    const phones = [...new Set(
+      (items || [])
+        .map(l => String(l.origin_phone || '').replace(/\D/g, ''))
+        .filter(Boolean),
+    )]
+    if (!phones.length) {
+      toast.info('No hay telefonos para copiar con los filtros actuales.')
+      return
+    }
+    const text = phones.join('\n')
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback para contextos sin Clipboard API.
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    toast.success(`${phones.length} telefono${phones.length === 1 ? '' : 's'} copiado${phones.length === 1 ? '' : 's'} al portapapeles.`)
+  } catch (e) {
+    console.error('Error copiando telefonos:', e)
+    toast.error('No se pudieron copiar los telefonos.')
+  } finally {
+    isCopyingPhones.value = false
+  }
+}
+
 const showEnrollmentModal = ref(false)
 const enrollmentData = ref(null)
 const isLoadingEnrollment = ref(false)
+const enrollmentObserved = ref(null)
+const resubmittingEnrollment = ref(false)
 
 async function openEnrollmentModal(enrollmentId) {
   if (!enrollmentId) return;
   isLoadingEnrollment.value = true;
   enrollmentData.value = null;
+  enrollmentObserved.value = null;
   showEnrollmentModal.value = true;
   try {
     const response = await comercialService.enrollmentGet({ enrollment_id: enrollmentId });
@@ -1752,6 +1911,13 @@ async function openEnrollmentModal(enrollmentId) {
     if (!data || !data.enrollment_id) { toast.error("No se encontraron datos para esta matrícula"); showEnrollmentModal.value = false; return; }
     data.files_list = (data.files_list || []).filter(f => f !== null);
     enrollmentData.value = data;
+
+    const flags = await ficoService.getEnrollmentFlags(Number(enrollmentId))
+    if (flags?.fico_status_alias === 'we_enrollment_status_observed') {
+      const audit = await ficoService.getAuditLog(Number(enrollmentId))
+      const obs = (audit || []).find(a => a.action === 'observed')
+      enrollmentObserved.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle', enrollmentId: Number(enrollmentId) }
+    }
   } catch (error) {
     console.error(error);
     toast.error("No se pudo cargar la información de la matrícula");
@@ -1761,19 +1927,25 @@ async function openEnrollmentModal(enrollmentId) {
   }
 }
 
-// === EVENTOS UI ===
-function startPress(lead) {
-  pressingRowId.value = lead.id
-  pressTimer = setTimeout(() => { openFollowModal(lead); cancelPress() }, 1000)
+async function handleResubmitFromModal () {
+  if (!enrollmentObserved.value) return
+  resubmittingEnrollment.value = true
+  try {
+    await ficoService.resubmitEnrollment({ enrollment_id: enrollmentObserved.value.enrollmentId })
+    toast.success('Inscripcion reenviada a FICO correctamente.')
+    enrollmentObserved.value = null
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al reenviar inscripcion.')
+  } finally {
+    resubmittingEnrollment.value = false
+  }
 }
-function cancelPress() {
-  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
-  pressingRowId.value = null
-}
+
 
 function clearFilters(reload = true) {
   Object.assign(filters, {
-    q: '', program_text: '', estado: null, web: null, b2b: null,
+    q: '', origin_seller_phone: '', origin_seller_phones: [], program_text: '', estado: null, web: null, b2b: null,
     owner_user_ids: [], status_lead_ids: [], last_follow_ids: [], order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
@@ -1782,7 +1954,7 @@ function clearFilters(reload = true) {
     rangoFechas: { start: '', end: '' }, rangoModificacion: { start: '', end: '' },
     created_range_string: null, updated_range_string: null, attempt_origin_ids: [],
     edition_range_string: null, edition_start_from: '', edition_start_to: '',
-    pay_date_from: '', pay_date_to: '', pay_date_range_string: null,
+    pay_date_from: '', pay_date_to: '', pay_date_range_string: null, order_by: 0,
     fico_status_ids: [], profile_ids: [], currency_ids: [],membership_moment_ids: [],
     inscription_modality_ids: [], installment_status_ids: [], program_version_ids: [],
     first_contact_range_string: null, first_contact_from: '', first_contact_to: '',
@@ -1790,6 +1962,7 @@ function clearFilters(reload = true) {
   })
   if (isB2B && currentUserId) filters.owner_user_ids = [currentUserId]
   if (reload === true || typeof reload !== 'boolean') {
+    activeQuickView.value = null
     pagin.value.page = 1
     localStorage.removeItem('crm_leads_b2b_filter_state_v1')
     rebuildChips()
@@ -1797,28 +1970,93 @@ function clearFilters(reload = true) {
   }
 }
 
+// Vistas rapidas: resuelven IDs de catalogo por alias (no se hardcodean numeros)
+// y entregan al filtro el shape `{ value, label }` que rebuildChips/fetchLeads esperan.
+function isoDayOffset(days = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function resolveByAlias(catalogRef, aliases) {
+  const items = catalogRef.value || []
+  return aliases
+    .map(a => items.find(i => i.alias === a))
+    .filter(Boolean)
+    .map(i => ({ value: i.id, label: i.description }))
+}
+
+function applyQuickView(key) {
+  // clearFilters(false) deja owner_user_ids = [currentUserId] si es comercial,
+  // por lo que las vistas rapidas tambien respetan la restriccion del asesor.
+  clearFilters(false)
+  activeQuickView.value = key
+
+  if (key === 'priority') {
+    const from = isoDayOffset(0)
+    const to   = isoDayOffset(14)
+    filters.edition_start_from = from
+    filters.edition_start_to   = to
+    filters.edition_range_string = `${from} a ${to}`
+    filters.interest_level_ids = resolveByAlias(filtroInterest, ['we_lead_interest_low'])
+    filters.status_lead_ids = resolveByAlias(filtroPipeline, [
+      'we_lead_status_atendido',
+      'we_lead_status_interesado',
+      'we_lead_status_unique',
+      'we_lead_status_will_pay',
+      'we_lead_status_proximo'
+    ])
+  } else if (key === 'follow') {
+    filters.last_follow_ids = resolveByAlias(filtroFollow, ['we_calling_pending'])
+  } else if (key === 'will_pay') {
+    filters.status_lead_ids = resolveByAlias(filtroPipeline, ['we_lead_status_will_pay'])
+  } else if (key === 'next_start') {
+    const from = isoDayOffset(0)
+    const to   = isoDayOffset(7)
+    filters.edition_start_from = from
+    filters.edition_start_to   = to
+    filters.edition_range_string = `${from} a ${to}`
+  }
+  // 'all' no aplica filtros adicionales — clearFilters ya limpio todo.
+
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchLeads()
+}
+
+// Este modulo solo muestra las consultas de B2B: sus asesores son los
+// usuarios con rol B2B. El SP de listado no sabe de
+// roles, asi que traducimos rol -> user_ids aqui y lo mandamos como
+// owner_user_ids (ver buildLeadPayload).
 async function loadOwners() {
   try {
-    const arr = await authService.userList({})
-    filtroOwners.value = arr.map(u => {
+    const lists = await Promise.all(
+      B2B_ROLES.map(r => authService.userListByRole(r).catch(() => [])),
+    )
+    const byId = new Map()
+    for (const u of lists.flat()) {
       const fName = (u.first_name || '').trim()
       const lName = (u.last_name || '').trim()
       let fullName = fName
       if (lName) fullName += ` ${lName.charAt(0)}.`
-      const desc = fullName.trim() || `Usuario ${u.user_id}`
-      return { id: u.user_id, description: desc }
-    })
+      byId.set(u.user_id, { id: u.user_id, description: fullName.trim() || `Usuario ${u.user_id}` })
+    }
+    filtroOwners.value = [...byId.values()]
   } catch (e) { console.error(e) }
 }
 
 function openFilterModal() { showFilterModal.value = true }
-function applyFilters() { showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
+function applyFilters() { activeQuickView.value = null; showFilterModal.value = false; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function clearFilter(key) {
+  activeQuickView.value = null
   if (key === 'rangoFechas') { filters.rangoFechas = { start: '', end: '' }; filters.created_range_string = null }
   else if (key === 'pay_date') { filters.pay_date_from = ''; filters.pay_date_to = ''; filters.pay_date_range_string = null }
   else if (key === 'order_by') { filters.order_by = 0 }
   else if (key === 'edition_start') { filters.edition_start_from = ''; filters.edition_start_to = ''; filters.edition_range_string = null }
   else if (key === 'first_contact') { filters.first_contact_from = ''; filters.first_contact_to = ''; filters.first_contact_range_string = null }
+  else if (key === 'origin_seller_phone') { filters.origin_seller_phone = '' }
+  else if (key === 'origin_seller_phones') { filters.origin_seller_phones = [] }
   else if (Array.isArray(filters[key])) { filters[key] = [] }
   else { filters[key] = null }
   applyFilters()
@@ -1904,18 +2142,35 @@ onMounted(async () => {
     filters.owner_user_ids = [currentUserId]
     checkMyRestrictions()
   }
-  loadOwners()
+  loadOwners()   // solo llena el combo de asesores: no bloquea el primer fetch
+  loadOriginPhones()
   await parseQueryAndApply()
   rebuildChips()
   fetchLeads()
 })
 
+async function loadOriginPhones () {
+  try {
+    const list = await comercialService.sellerPhonesList()
+    originPhoneOptions.value = Array.isArray(list) ? list : []
+  } catch (err) {
+    console.error('[loadOriginPhones] No se pudo cargar el listado de celulares:', err)
+  }
+}
+
 let inlineFilterTimer = null
-function triggerInlineFilter() { pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
+function triggerInlineFilter() { activeQuickView.value = null; pagin.value.page = 1; saveState(); rebuildChips(); fetchLeads() }
 function debouncedInlineFilter() { clearTimeout(inlineFilterTimer); inlineFilterTimer = setTimeout(() => triggerInlineFilter(), 400) }
 
-const toolbarCollapsed = ref(localStorage.getItem('crm_leads_b2b_toolbar_collapsed') === 'true')
-watch(toolbarCollapsed, (val) => { localStorage.setItem('crm_leads_b2b_toolbar_collapsed', val) })
+// Orden: cambia presentacion, no "que" se filtra. Por eso NO reseteamos
+// activeQuickView — el usuario sigue viendo la misma vista, solo reordenada.
+function onOrderChange() {
+  pagin.value.page = 1
+  saveState()
+  rebuildChips()
+  fetchLeads()
+}
+
 
 const filteredCallingByType = (catTypeAttempt) => {
   if (catTypeAttempt === 'we_attempt_call') return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
@@ -1970,37 +2225,371 @@ const totalPlanSum = computed(() => {
     .toFixed(2)
 })
 
+// Pagado real: el SP no siempre suma el inicial/reserva cuando ya se confirmo
+// Este computed consolida: si existe cuota reserva en estado paid, se incluye en el total
+const totalPaidDisplay = computed(() => {
+  const data = enrollmentData.value
+  if (!data) return 0
+  const spPaid = Number(data.total_paid) || 0
+  const reservaRow = (data.installment_plan || []).find(c => c.is_reserva)
+  const reservaPaid = reservaRow && reservaRow.status_alias === 'we_payment_status_paid'
+    ? Number(reservaRow.amount) || 0
+    : 0
+  return Math.max(spPaid, reservaPaid)
+})
+
+const saldoPendienteDisplay = computed(() => {
+  const data = enrollmentData.value
+  if (!data) return 0
+  return Math.max(0, Number(data.total_amount || 0) - Number(totalPaidDisplay.value || 0))
+})
+
 </script>
 
 
 <style scoped>
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
+/* ═══════════════════════════════════════════════════
+   LAYOUT — diseño basado en EnrollmentPage
+   ═══════════════════════════════════════════════════ */
+.leads-page {
+  --e-bg: #FFFFFF;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
+
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--e-text);
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  font-size: 13px;
+}
+
+/* === Masthead === */
+.ep-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
+.ep-breadcrumb {
+  font-size: 11px;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.ep-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--e-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.ep-subtitle {
+  font-size: 13.5px;
+  color: var(--e-text-secondary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
+
+/* View toggle */
+.ep-view-toggle { display: flex; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
+.ep-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+  color: var(--e-text-secondary); background: transparent;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-toggle-btn.is-active { background: var(--e-bg-subtle); color: var(--e-text); font-weight: 600; }
+.ep-toggle-btn:not(.is-active):hover { color: var(--e-text); }
+
+/* Control button */
+.ep-btn-control {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-control:hover { border-color: var(--e-border-strong); background: var(--e-bg-subtle); }
+.ep-btn-control.ep-btn-danger {
+  background: rgba(220, 38, 38, 0.06);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+  animation: pulseRed 2s infinite;
+}
+.ep-btn-control i { font-size: 11px; }
+
+/* New button */
+.ep-btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--we-navy, #002060);
+  border: none; border-radius: 8px; cursor: pointer;
+  transition: background .2s ease; font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
+.ep-btn-new i { font-size: 11px; }
+
+/* === Body === */
+.ep-body { padding: 0; }
+
+/* === Filter bar section === */
+.ep-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 14px;
+}
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  font-size: 13px;
-  color: var(--text-primary, #0f172a);
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.ep-toolbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 16px; flex-wrap: wrap;
+  flex: 1 1 auto;
 }
 
-.exec-masthead {
-  background: var(--navy-900, #0f172a);
+/* ── Vistas rapidas ───────────────────────────────────────────── */
+.ep-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.ep-quick-order {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.ep-quick-order-icon {
+  font-size: 11px;
+  color: var(--e-text-secondary);
+}
+.ss-quick {
+  width: 230px;
+}
+.ss-quick :deep(.searchselect-control) {
+  min-height: 32px;
+  padding: 0.15rem 2.25rem 0.15rem 0.6rem;
+  border-radius: 8px;
+}
+.ss-quick :deep(.searchselect-input),
+.ss-quick :deep(.ss-locked-label) {
+  font-size: 12.5px;
+}
+.ep-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.ep-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--e-text-secondary);
+  background: var(--e-bg-subtle);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ep-tab i { font-size: 11px; opacity: 0.7; }
+.ep-tab:hover {
+  color: var(--e-text);
+  background: #F5F5F5;
+}
+.ep-tab.is-active {
+  color: var(--e-accent);
+  background: var(--e-accent-soft);
+  border-color: rgba(16, 185, 129, 0.25);
+  font-weight: 600;
+}
+.ep-tab.is-active i { opacity: 1; }
+.ep-tab.is-highlight i { opacity: 1; }
+.ep-tab.is-highlight::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--e-accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
   color: #fff;
-  border-bottom: 1px solid var(--navy-700, #334155);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  transition: padding .2s ease;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; transition: padding .2s ease; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; transition: height .2s ease, width .2s ease; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: #fff; transition: font-size .2s ease; }
+.ep-filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
+.ep-filter-strip :deep(.active-filters .label) { display: none; }
 
-.exec-body { flex: 1; padding: 20px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
-.toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* === Dark mode === */
+[data-coreui-theme="dark"] .leads-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16, 185, 129, 0.16);
+}
+[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .leads-page .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .leads-page .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .ep-tab.is-active {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.32);
+}
+[data-coreui-theme="dark"] .leads-page .ep-filter-strip-badge { color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .ep-view-toggle { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .ep-toggle-btn.is-active { background: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-control { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .leads-page .ep-btn-new:hover { background: #E4E4DD; }
+
+/* Dark mode — compact group headers */
+[data-coreui-theme="dark"] .leads-page .thead-colgroup { background: #1F1F1A; }
+[data-coreui-theme="dark"] .leads-page .tg-fixed { background: #1F1F1A; border-right-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .tg-header { background: #1A1A14; border-right-color: #2A2A22; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .tg-header:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .leads-page .tg-programa { color: #60a5fa; }
+[data-coreui-theme="dark"] .leads-page .tg-cliente  { color: #34d399; }
+[data-coreui-theme="dark"] .leads-page .tg-lead     { color: #fbbf24; }
+[data-coreui-theme="dark"] .leads-page .tg-asesor   { color: #a78bfa; }
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-programa,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-cliente,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-lead,
+[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-asesor { background: #1A1A14; }
+[data-coreui-theme="dark"] .leads-page .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .thead-filter .tf { background: #1F1F1A; border-bottom-color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .table-shell { background: #1A1A14; border-color: #2A2A22; }
+
+/* Dark mode — table body rows */
+[data-coreui-theme="dark"] .leads-page .tbody-row td {
+  color: #E4E4DD;
+  border-bottom-color: #2A2A22;
+  background: #1A1A14;
+}
+[data-coreui-theme="dark"] .leads-page .tbody-row:hover td { background: #232319; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-dark,
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted {
+  color: #E4E4DD !important;
+}
+[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted { color: #A0A099 !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .accent-text { color: #34D399; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pay-date-cell { color: #34D399; }
+
+/* Status row backgrounds (override the light pastel backgrounds) */
+[data-coreui-theme="dark"] .leads-page .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-blue > td     { background: rgba(59, 130, 246, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-emerald > td  { background: rgba(13, 148, 136, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-yellow > td   { background: rgba(245, 158, 11, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-gray > td     { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .row-red > td      { background: rgba(239, 68, 68, 0.10); }
+[data-coreui-theme="dark"] .leads-page .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
+
+/* Hover override for colored rows */
+[data-coreui-theme="dark"] .leads-page .row-inscrito:hover > td { background: rgba(16, 185, 129, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-blue:hover > td     { background: rgba(59, 130, 246, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-emerald:hover > td  { background: rgba(13, 148, 136, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-yellow:hover > td   { background: rgba(245, 158, 11, 0.18); }
+[data-coreui-theme="dark"] .leads-page .row-gray:hover > td     { background: #2A2A22; }
+[data-coreui-theme="dark"] .leads-page .row-red:hover > td      { background: rgba(239, 68, 68, 0.18); }
+
+/* Compact-mode collapsed-group hint cells */
+[data-coreui-theme="dark"] .leads-page .tg-hint-programa { background: rgba(37, 99, 235, 0.15); color: #60a5fa; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-cliente  { background: rgba(5, 150, 105, 0.15);  color: #34d399; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-lead     { background: rgba(217, 119, 6, 0.15);  color: #fbbf24; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-asesor   { background: rgba(124, 58, 237, 0.15); color: #a78bfa; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-main { color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-strong { color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page .tg-hint-muted { color: #A0A099; }
+
+/* Pills inside rows */
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
+[data-coreui-theme="dark"] .leads-page .tbody-row .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
+
+/* Action icon buttons in rows */
+[data-coreui-theme="dark"] .leads-page .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .leads-page .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
 
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
@@ -2017,73 +2606,60 @@ const totalPlanSum = computed(() => {
 .btn-exec-outline { background: #fff; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
 .btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); border-color: var(--slate-400, #94a3b8); }
 
-.table-shell { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.04); overflow: visible; }
-.table-responsive-custom { width: 100%; overflow-x: auto; border-radius: 6px; }
+.table-shell { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+.table-responsive-custom { width: 100%; overflow-x: auto; overflow-y: visible; border-radius: 8px; }
 .exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); text-align: left; background: #fafbfc; color: var(--text-secondary, #475569); white-space: nowrap; }
+.thead-sub .ts { padding: 5px 10px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #E5E7EB; text-align: left; background: #FAFAFA; color: #6B7280; white-space: nowrap; }
 .thead-sub .ts.text-center { text-align: center; }
 
 /* ═══════════════════════════════════════════════════════════════
-   GRUPOS DE COLUMNAS COLAPSABLES
+   GRUPOS DE COLUMNAS COLAPSABLES — estilo EnrollmentExpandedTable
    ═══════════════════════════════════════════════════════════════ */
 .thead-colgroup {
-  background: #0f172a;
+  background: #FAFAFA;
 }
 
 .tg-fixed {
   width: 80px;
   min-width: 80px;
-  background: #0f172a;
-  border-right: 1px solid #1e293b;
+  background: #FAFAFA;
+  border-right: 1px solid #E5E7EB;
 }
 
 .tg-header {
   padding: 0;
   cursor: pointer;
   user-select: none;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid #E5E7EB;
+  border-bottom: 1px solid #E5E7EB;
+  background: #fff;
   transition: background 0.15s;
   white-space: nowrap;
 }
 
+.tg-header:hover { background: #F9FAFB; }
+
 .tg-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 14px;
-  font-size: 10px;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.tg-icon { font-size: 9px; opacity: 0.8; }
-.tg-text { flex: 1; text-align: center; }
-.tg-chevron { font-size: 8px; opacity: 0.7; transition: transform 0.2s; }
+.tg-icon { font-size: 9px; opacity: 0.7; }
+.tg-text { }
+.tg-chevron { font-size: 8px; transition: transform 0.2s; opacity: 0.55; }
 
-/* Colores por grupo */
-.tg-programa {
-  background: #1e3a5f;
-  color: #93c5fd;
-  border-bottom: 2px solid #3b82f6;
-}
-.tg-programa:hover { background: #1d4ed8; color: #dbeafe; }
-
-.tg-cliente {
-  background: #1a3a2a;
-  color: #86efac;
-  border-bottom: 2px solid #22c55e;
-}
-.tg-cliente:hover { background: #166534; color: #dcfce7; }
-
-.tg-lead {
-  background: #3b2a1a;
-  color: #fcd34d;
-  border-bottom: 2px solid #f59e0b;
-}
-.tg-lead:hover { background: #92400e; color: #fef3c7; }
+/* Colores por grupo — borde izquierdo de acento */
+.tg-programa { border-left: 2px solid #2563eb; color: #1e40af; }
+.tg-cliente  { border-left: 2px solid #059669; color: #065f46; }
+.tg-lead     { border-left: 2px solid #d97706; color: #92400e; }
+.tg-asesor   { border-left: 2px solid #7c3aed; color: #5b21b6; }
 
 /* Estado colapsado */
 .tg-collapsed {
@@ -2095,7 +2671,7 @@ const totalPlanSum = computed(() => {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   font-size: 9px;
-  max-height: 80px;
+  max-height: 60px;
   overflow: hidden;
 }
 .tg-collapsed .tg-label {
@@ -2103,9 +2679,10 @@ const totalPlanSum = computed(() => {
   padding: 8px 4px;
   gap: 4px;
 }
-.tg-collapsed.tg-programa { background: #1e3a5f; }
-.tg-collapsed.tg-cliente  { background: #1a3a2a; }
-.tg-collapsed.tg-lead     { background: #3b2a1a; }
+.tg-collapsed.tg-programa,
+.tg-collapsed.tg-cliente,
+.tg-collapsed.tg-lead,
+.tg-collapsed.tg-asesor { background: #fff; }
 
 /* Celda placeholder cuando grupo está colapsado */
 .tg-placeholder-cell {
@@ -2126,9 +2703,9 @@ const totalPlanSum = computed(() => {
   width: 100%;
 }
 
-.tg-hint-programa { color: #3b82f6; background: #eff6ff; }
-.tg-hint-cliente  { color: #22c55e; background: #f0fdf4; }
-.tg-hint-lead     { color: #f59e0b; background: #fffbeb; }
+.tg-hint-programa { color: #2563eb; background: #eff6ff; }
+.tg-hint-cliente  { color: #059669; background: #f0fdf4; }
+.tg-hint-lead     { color: #d97706; background: #fffbeb; }
 /* ═══════════════════════════════════════════════════════════════ */
 
 .thead-group .th-cat { background: var(--navy-900, #0f172a); color: var(--slate-300, #cbd5e1); padding: 10px 14px; border-right: 2px solid #334155; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; }
@@ -2151,9 +2728,6 @@ const totalPlanSum = computed(() => {
 .row-red      { border-left: 3px solid #ef4444; } .row-red > td       { background: #fef2f2; }
 .row-highlight > td { background: #eff6ff !important; }
 
-.tbody-row::after { content: ""; position: absolute; left: 0; bottom: 0; top: 0; height: 100%; width: 0%; background: rgba(20,184,166,.13); transition: width .3s ease-out; pointer-events: none; z-index: 5; }
-.row-pressing::after { width: 100%; transition: width 1s linear; }
-
 .td-a { border-left: 1px solid transparent; }
 .td-b { border-left: 1px solid transparent; }
 .td-cat { padding-left: 14px; border-right: 2px solid #1e293b; background: var(--navy-900, #0f172a) !important; color: #fff !important; }
@@ -2171,6 +2745,17 @@ const totalPlanSum = computed(() => {
 .pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; }
 .pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--text-secondary, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
 .pill-teal   { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important; }
+
+/* Categoría de entrada de eventos: un color por tier para leerlo de un vistazo */
+.event-cat-pill            { border: 1px solid transparent; font-weight: 700; }
+.event-cat-pill.is-vip     { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
+.event-cat-pill.is-premium { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe !important; }
+.event-cat-pill.is-general { background: #e0f2fe; color: #075985; border-color: #bae6fd !important; }
+.event-cat-pill.is-virtual { background: #f1f5f9; color: #334155; border-color: #e2e8f0 !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-vip     { background: rgba(245,158,11,.16); color: #FCD34D; border-color: rgba(245,158,11,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-premium { background: rgba(139,92,246,.16); color: #C4B5FD; border-color: rgba(139,92,246,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-general { background: rgba(56,189,248,.16); color: #7DD3FC; border-color: rgba(56,189,248,.35) !important; }
+[data-coreui-theme="dark"] .event-cat-pill.is-virtual { background: rgba(148,163,184,.16); color: #CBD5E1; border-color: rgba(148,163,184,.35) !important; }
 .pill-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
 .pill-red    { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important; }
 
@@ -2186,6 +2771,15 @@ const totalPlanSum = computed(() => {
 .compact-table .ts { padding: 6px 10px; font-size: 10px; }
 .compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 .compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
+.compact-table .obs-cell {
+  min-width: 180px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+  cursor: help;
+}
 
 .exec-fieldset { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
 .fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
@@ -2271,42 +2865,94 @@ const totalPlanSum = computed(() => {
 /* ═══════════════════════════════════════════════════════════════ */
 
 /* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
-.thead-filter .tf { padding: 5px 6px; background: #f0f4f8; border-bottom: 2px solid var(--teal-500, #14b8a6); vertical-align: middle; position: relative; }
+.thead-filter .tf { padding: 5px 6px; background: #FAFAFA; border-bottom: 2px solid #0D9488; vertical-align: middle; position: relative; }
 .hf-input { width: 100%; height: 28px; padding: 3px 8px; font-size: 11px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
 .hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20, 184, 166, .15); }
 .hf-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 10.5px; }
-.hf-multiselect { --ms-font-size: 11px; --ms-line-height: 1.3; --ms-min-height: 28px; --ms-py: 2px; --ms-px: 6px; --ms-tag-py: 1px; --ms-tag-px: 4px; --ms-tag-font-size: 9.5px; --ms-border-color: var(--border, #e2e8f0); --ms-border-color-active: var(--teal-500, #14b8a6); --ms-ring-color: rgba(20, 184, 166, .15); font-size: 11px; }
+.hf-phone-cell { display: flex; align-items: center; gap: 4px; }
+.hf-phone-cell .hf-input { flex: 1; min-width: 0; }
+.hf-copy-btn {
+  flex-shrink: 0; width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border, #e2e8f0); border-radius: 4px;
+  background: #fff; color: var(--slate-400, #94a3b8); cursor: pointer;
+  font-size: 11px; transition: border-color .15s, color .15s, background .15s;
+}
+.hf-copy-btn:hover:not(:disabled) {
+  border-color: var(--teal-500, #14b8a6);
+  color: var(--teal-500, #14b8a6); background: #f0fdfa;
+}
+.hf-copy-btn:disabled { opacity: .55; cursor: not-allowed; }
+.hf-multiselect { font-size: 11px; }
+.thead-filter .hf-multiselect :deep(.ms-trigger) {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-color: var(--border, #e2e8f0);
+  border-radius: 4px;
+  gap: 4px;
+}
+.thead-filter .hf-multiselect :deep(.ms-trigger:hover:not(.is-disabled)) {
+  border-color: var(--slate-400, #94a3b8);
+  background: #fff;
+}
+.thead-filter .hf-multiselect :deep(.ms-trigger.is-open),
+.thead-filter .hf-multiselect :deep(.ms-trigger.has-selection) {
+  border-color: var(--teal-500, #14b8a6);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15);
+}
+.thead-filter .hf-multiselect :deep(.placeholder-text),
+.thead-filter .hf-multiselect :deep(.value-text) {
+  font-size: 10.5px;
+  color: var(--slate-400, #94a3b8);
+  font-family: inherit;
+}
+.thead-filter .hf-multiselect :deep(.value-text) {
+  color: var(--text-primary, #0f172a);
+}
+.thead-filter .hf-multiselect :deep(.trigger-icon) {
+  font-size: 10px;
+}
 .hf-clear-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 auto; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer; font-size: 11px; transition: all .15s; }
 .hf-clear-btn:hover { background: #fee2e2; border-color: #f87171; }
-.thead-filter .flatpickr-input { height: 28px !important; font-size: 10.5px !important; padding: 3px 7px !important; }
-.thead-sub .ts { border-bottom: 1px solid var(--border, #e2e8f0); }
+.thead-filter :deep(.exec-flatpickr-input) {
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 10.5px !important;
+  padding: 0 8px !important;
+  font-family: inherit !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  color: var(--text-primary, #0f172a) !important;
+  box-sizing: border-box !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  outline: none !important;
+}
+.thead-filter :deep(.exec-flatpickr-input::placeholder) {
+  color: var(--slate-400, #94a3b8) !important;
+  font-size: 10.5px !important;
+}
+.thead-filter :deep(.exec-flatpickr-input:focus) {
+  border-color: var(--teal-500, #14b8a6) !important;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15) !important;
+}
+.thead-sub .ts { border-bottom: 1px solid #E5E7EB; }
 /* ═══════════════════════════════════════════════════════════════ */
 
-/* ══ FOCUS MODE TOGGLE ════════════════════════════════════════ */
-.focus-toggle-btn { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.07); color: var(--slate-300, #cbd5e1); transition: all 0.15s; white-space: nowrap; }
-.focus-toggle-btn:hover { background: rgba(255, 255, 255, 0.13); color: #fff; border-color: rgba(255, 255, 255, 0.25); }
-.exec-toolbar, .toolbar-chips { transition: opacity 0.2s ease; }
+/* ══ HEADER FILTER ACTIONS ════════════════════════════════════ */
 .tf-actions-cell { text-align: center; }
 .hf-actions-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.hf-new-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 auto; border: 1px solid #bbf7d0; border-radius: 4px; background: #f0fdf4; color: #15803d; cursor: pointer; font-size: 11px; font-weight: 700; transition: all 0.15s; }
-.hf-new-btn:hover { background: #dcfce7; border-color: #86efac; color: #166534; }
-
-/* ══ MASTHEAD COMPACT ═════════════════════════════════════════ */
-.masthead--compact .masthead-inner { padding: 6px 28px; }
-.brand-rule--sm { height: 24px !important; width: 3px !important; }
-.masthead--compact .brand-title { font-size: 14px; letter-spacing: .01em; }
-.brand-eyebrow--inline { font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--teal-500, #14b8a6); margin-right: 6px; vertical-align: middle; }
-.focus-toggle-btn--active { background: var(--teal-500, #14b8a6) !important; color: #fff !important; border-color: var(--teal-500, #14b8a6) !important; padding: 5px 10px; font-size: 11px; }
 /* ═════════════════════════════════════════════════════════════ */
 
 /* Últimas celdas del thead-filter — dropdown abre a la izquierda */
 .thead-filter .tf:nth-last-child(-n+3) :deep(.multiselect-dropdown) { left: auto !important; right: 0 !important; }
 
 @media (max-width: 768px) {
-  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px 16px; }
-  .exec-toolbar { flex-direction: column-reverse; align-items: stretch; }
-  .toolbar-actions { justify-content: flex-end; }
-  .exec-body { padding: 16px 12px; }
+  .leads-page { padding: 16px 12px; }
+  .ep-masthead { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .ep-masthead-actions { flex-wrap: wrap; }
 }
 
 
@@ -2329,163 +2975,154 @@ const totalPlanSum = computed(() => {
 .tg-hint-lead     { background: #fffbeb; }
 .tg-hint-asesor   { background: #f5f3ff; }
 
-/* AÑADIR colores del grupo D. ASESOR */
-.tg-asesor {
-  background: #2e1a47;
-  color: #c4b5fd;
-  border-bottom: 2px solid #8b5cf6;
+.tg-hint-asesor { color: #7c3aed; background: #f5f3ff; }
+
+.obs-enroll-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px; background: #FFFBEB;
+  border: 1px solid #FDE68A; border-left: 4px solid #F59E0B; border-radius: 8px;
 }
-.tg-asesor:hover { background: #5b21b6; color: #ede9fe; }
+.obs-enroll-icon { font-size: 22px; color: #F59E0B; flex-shrink: 0; }
+.obs-enroll-body { flex: 1; }
+.obs-enroll-body strong { display: block; font-size: 13px; color: #92400E; margin-bottom: 3px; }
+.obs-enroll-body p { margin: 0; font-size: 12px; color: #B45309; line-height: 1.5; }
+.obs-enroll-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; font-size: 12.5px; font-weight: 600;
+  background: #0D9488; color: #fff; border: none; border-radius: 6px;
+  cursor: pointer; font-family: inherit; flex-shrink: 0; transition: opacity .15s;
+}
+.obs-enroll-btn:hover { opacity: .9; }
+.obs-enroll-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.tg-collapsed.tg-asesor { background: #2e1a47; }
+/* ═══════════════════════════════════════════════════
+   DOWNBAR — bottom sheet (slides up from bottom)
+   ═══════════════════════════════════════════════════ */
+.downbar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1055;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
 
-.tg-hint-asesor { color: #6d28d9; }
+.downbar-panel {
+  background: #fff;
+  width: 100%;
+  max-width: 1400px;
+  max-height: 88vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
 
-/* === Dark mode === */
-[data-coreui-theme="dark"] .exec-shell { background: #14140F; color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .exec-shell .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .exec-shell .btn-exec-active { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .table-shell { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
-[data-coreui-theme="dark"] .exec-shell .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
+.downbar-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid #F0F0F0;
+  flex-shrink: 0;
+}
 
-/* Dark mode — filtros inline en cabecera */
-[data-coreui-theme="dark"] .exec-shell .thead-filter .tf { background: #1F1F1A; }
-[data-coreui-theme="dark"] .exec-shell .hf-input { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .hf-input::placeholder { color: #8A8A80; }
-[data-coreui-theme="dark"] .exec-shell .hf-multiselect { --ms-border-color: #2A2A22; }
-[data-coreui-theme="dark"] .exec-shell .hf-clear-btn { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.4); color: #F87171; }
-[data-coreui-theme="dark"] .exec-shell .hf-clear-btn:hover { background: rgba(239, 68, 68, 0.24); border-color: #F87171; }
-[data-coreui-theme="dark"] .exec-shell .hf-new-btn { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.4); color: #34D399; }
-[data-coreui-theme="dark"] .exec-shell .hf-new-btn:hover { background: rgba(16, 185, 129, 0.24); border-color: rgba(16, 185, 129, 0.55); color: #6EE7B7; }
+.downbar-grabber {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 4px;
+  background: #E5E7EB;
+  border-radius: 999px;
+}
 
-/* Dark mode — celdas hint de grupos colapsados */
-[data-coreui-theme="dark"] .exec-shell .tg-hint-programa { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-cliente  { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-lead     { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-asesor   { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-main { color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-strong { color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .tg-hint-muted { color: #A0A099; }
+.downbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
 
-/* Dark mode — filas de la tabla */
-[data-coreui-theme="dark"] .exec-shell .tbody-row td { color: #E4E4DD; border-bottom-color: #2A2A22; background: #1A1A14; }
-[data-coreui-theme="dark"] .exec-shell .tbody-row:hover td { background: #232319; }
-[data-coreui-theme="dark"] .exec-shell .text-dark { color: #E4E4DD !important; }
-[data-coreui-theme="dark"] .exec-shell .text-muted { color: #A0A099 !important; }
-[data-coreui-theme="dark"] .exec-shell .accent-text { color: #34D399; }
-[data-coreui-theme="dark"] .exec-shell .pay-date-cell { color: #34D399; }
-[data-coreui-theme="dark"] .exec-shell .c-green { color: #34D399; }
-[data-coreui-theme="dark"] .exec-shell .c-red { color: #F87171; }
+.downbar-close {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid #E8E8E8;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #737373;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+}
+.downbar-close:hover {
+  background: #FAFAFA;
+  border-color: #D4D4D4;
+  color: #1A1A1A;
+}
 
-/* Dark mode — fondos de fila por estado (pasteles claros) */
-[data-coreui-theme="dark"] .exec-shell .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
-[data-coreui-theme="dark"] .exec-shell .row-blue > td     { background: rgba(59, 130, 246, 0.10); }
-[data-coreui-theme="dark"] .exec-shell .row-emerald > td  { background: rgba(13, 148, 136, 0.10); }
-[data-coreui-theme="dark"] .exec-shell .row-yellow > td   { background: rgba(245, 158, 11, 0.10); }
-[data-coreui-theme="dark"] .exec-shell .row-gray > td     { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .exec-shell .row-red > td      { background: rgba(239, 68, 68, 0.10); }
-[data-coreui-theme="dark"] .exec-shell .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
-[data-coreui-theme="dark"] .exec-shell .row-inscrito:hover > td { background: rgba(16, 185, 129, 0.18); }
-[data-coreui-theme="dark"] .exec-shell .row-blue:hover > td     { background: rgba(59, 130, 246, 0.18); }
-[data-coreui-theme="dark"] .exec-shell .row-emerald:hover > td  { background: rgba(13, 148, 136, 0.18); }
-[data-coreui-theme="dark"] .exec-shell .row-yellow:hover > td   { background: rgba(245, 158, 11, 0.18); }
-[data-coreui-theme="dark"] .exec-shell .row-gray:hover > td     { background: #2A2A22; }
-[data-coreui-theme="dark"] .exec-shell .row-red:hover > td      { background: rgba(239, 68, 68, 0.18); }
+.downbar-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0;
+}
 
-/* Dark mode — pills y botones de icono */
-[data-coreui-theme="dark"] .exec-shell .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
-[data-coreui-theme="dark"] .exec-shell .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
-[data-coreui-theme="dark"] .exec-shell .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
-[data-coreui-theme="dark"] .exec-shell .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
-[data-coreui-theme="dark"] .exec-shell .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .exec-shell .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
+.downbar-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #F0F0F0;
+  background: #FAFAFA;
+  flex-shrink: 0;
+}
 
-/* Dark mode — estado vacío y skeleton */
-[data-coreui-theme="dark"] .exec-shell .empty-state { color: #8A8A80; }
-[data-coreui-theme="dark"] .exec-shell .empty-state svg { color: #3A3A33; }
-[data-coreui-theme="dark"] .exec-shell .skeleton-row td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .exec-shell .sk-cell { background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%); background-size: 200% 100%; }
+/* Slide-up animation */
+.downbar-enter-active,
+.downbar-leave-active {
+  transition: opacity 0.25s ease;
+}
+.downbar-enter-active .downbar-panel,
+.downbar-leave-active .downbar-panel {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.downbar-enter-from,
+.downbar-leave-to {
+  opacity: 0;
+}
+.downbar-enter-from .downbar-panel,
+.downbar-leave-to .downbar-panel {
+  transform: translateY(100%);
+}
 
-/* === Dark mode — contenido de modales (BaseModal teleporta a <body>: fuera de .exec-shell,
-   por eso estos selectores van sin el prefijo. Mismo casco #1A1A14 de BaseModal) === */
-[data-coreui-theme="dark"] .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
-[data-coreui-theme="dark"] .exec-input-light,
-[data-coreui-theme="dark"] .exec-select-light,
-[data-coreui-theme="dark"] .exec-textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-input-light:disabled,
-[data-coreui-theme="dark"] .exec-select-light:disabled,
-[data-coreui-theme="dark"] .exec-textarea:disabled { background: #24241E; color: #8A8A80; }
-[data-coreui-theme="dark"] .btn-exec-outline { background: #1A1A14; color: #A0A099; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #1F1F1A; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .table-shell { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
-[data-coreui-theme="dark"] .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .tbody-row td { color: #E4E4DD; border-bottom-color: #2A2A22; background: #1A1A14; }
-[data-coreui-theme="dark"] .tbody-row:hover td { background: #232319; }
-[data-coreui-theme="dark"] .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
-[data-coreui-theme="dark"] .row-blue > td { background: rgba(59, 130, 246, 0.10); }
-[data-coreui-theme="dark"] .row-red > td { background: rgba(239, 68, 68, 0.10); }
-[data-coreui-theme="dark"] .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
-[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
-[data-coreui-theme="dark"] .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
-[data-coreui-theme="dark"] .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
-[data-coreui-theme="dark"] .text-dark { color: #E4E4DD !important; }
-[data-coreui-theme="dark"] .text-muted { color: #A0A099 !important; }
-[data-coreui-theme="dark"] .text-slate-400 { color: #8A8A80; }
-[data-coreui-theme="dark"] .accent-text { color: #34D399; }
-[data-coreui-theme="dark"] .c-green { color: #34D399; }
-[data-coreui-theme="dark"] .c-red { color: #F87171; }
-[data-coreui-theme="dark"] .pay-date-cell { color: #34D399; }
-[data-coreui-theme="dark"] .empty-state { color: #8A8A80; }
-[data-coreui-theme="dark"] .empty-state svg { color: #3A3A33; }
+/* Dark mode */
+[data-coreui-theme="dark"] .downbar-overlay { background: rgba(0, 0, 0, 0.6); }
+[data-coreui-theme="dark"] .downbar-panel { background: #1A1A14; box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5); }
+[data-coreui-theme="dark"] .downbar-header { border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .downbar-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .downbar-grabber { background: #2A2A22; }
+[data-coreui-theme="dark"] .downbar-close { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .downbar-close:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .downbar-footer { background: #1F1F1A; border-top-color: #2A2A22; }
 
-/* Dark modales — Gestión de Seguimiento */
-[data-coreui-theme="dark"] .modal-lead-strip { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .lead-avatar { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border-color: rgba(59, 130, 246, 0.35); }
-[data-coreui-theme="dark"] .timer-btn--start { background: rgba(16, 185, 129, 0.18); color: #34D399; }
-[data-coreui-theme="dark"] .timer-btn--start:hover { background: rgba(16, 185, 129, 0.28); }
-[data-coreui-theme="dark"] .timer-btn--stop { background: rgba(239, 68, 68, 0.18); color: #F87171; }
-[data-coreui-theme="dark"] .timer-btn--stop:hover { background: rgba(239, 68, 68, 0.28); }
-[data-coreui-theme="dark"] .timer-display { color: #A0A099; }
-[data-coreui-theme="dark"] .timer-display--active { color: #F87171; }
-[data-coreui-theme="dark"] .scroll-area { scrollbar-color: #3A3A33 transparent; }
-[data-coreui-theme="dark"] .scroll-area::-webkit-scrollbar-thumb { background: #3A3A33; }
-
-/* Dark modales — Panel de Control / Mis Permisos */
-[data-coreui-theme="dark"] .exec-alert.alert-info { background: rgba(59, 130, 246, 0.14); color: #93C5FD; border-color: #60A5FA; }
-[data-coreui-theme="dark"] .exec-alert.alert-warning { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-color: #FBBF24; }
-[data-coreui-theme="dark"] .exec-alert.alert-success { background: rgba(34, 197, 94, 0.14); color: #4ADE80; border-color: #4ADE80; }
-[data-coreui-theme="dark"] .exec-alert-banner.banner-danger { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.4); color: #F87171; }
-[data-coreui-theme="dark"] .exec-alert-banner.banner-success { background: rgba(34, 197, 94, 0.14); border-color: rgba(34, 197, 94, 0.4); color: #4ADE80; }
-[data-coreui-theme="dark"] .banner-text { color: #D4D4CC; }
-[data-coreui-theme="dark"] .control-table-wrapper tbody .sticky-col { background: #1A1A14; }
-[data-coreui-theme="dark"] .th-group { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .th-group-a { background: rgba(59, 130, 246, 0.15); color: #93C5FD; border-left-color: rgba(59, 130, 246, 0.35); }
-[data-coreui-theme="dark"] .th-group-b { background: rgba(34, 197, 94, 0.15); color: #86EFAC; border-left-color: rgba(34, 197, 94, 0.35); }
-[data-coreui-theme="dark"] .ts-a { background: rgba(59, 130, 246, 0.08); color: #60A5FA; border-left-color: rgba(59, 130, 246, 0.25); }
-[data-coreui-theme="dark"] .ts-b { background: rgba(34, 197, 94, 0.08); color: #4ADE80; border-left-color: rgba(34, 197, 94, 0.25); }
-[data-coreui-theme="dark"] .exec-input-light[style*="#f8fafc"] { background: #1F1F1A !important; color: #8A8A80 !important; }
-
-/* Dark modales — Detalle de Matrícula */
-[data-coreui-theme="dark"] .enrollment-header { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .enrollment-title { color: #2DD4BF; }
-[data-coreui-theme="dark"] .enrollment-sub { color: #8A8A80; }
-[data-coreui-theme="dark"] .info-value { color: #F4F4F0; }
-[data-coreui-theme="dark"] .finance-card { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .finance-card hr { border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .file-item { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .file-item:hover { border-color: #2DD4BF; }
-[data-coreui-theme="dark"] .file-icon { background: #24241E; }
-[data-coreui-theme="dark"] .loader-ring { border-color: #2A2A22; border-top-color: #2DD4BF; }
-[data-coreui-theme="dark"] .pill[style*="#eff6ff"],
-[data-coreui-theme="dark"] .pill[style*="#dbeafe"] { background: rgba(59, 130, 246, 0.2) !important; color: #93C5FD !important; }
-[data-coreui-theme="dark"] span[style*="#1d4ed8"] { color: #60A5FA !important; }
-[data-coreui-theme="dark"] .exec-table tfoot tr[style*="#f8fafc"] { background: #1F1F1A !important; border-top-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .exec-table tfoot td[style*="#475569"] { color: #A0A099 !important; }
+@media (max-width: 768px) {
+  .downbar-panel { max-height: 92vh; border-radius: 14px 14px 0 0; }
+  .downbar-header { padding: 16px 16px 12px; }
+  .downbar-footer { padding: 12px 16px; }
+}
 
 </style>

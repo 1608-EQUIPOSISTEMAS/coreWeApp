@@ -113,13 +113,6 @@ export default [
         submodule: 'CONTRATOS',
         roles: ['ADMIN', 'B2B', 'GERENCIA'],
       },
-      {
-        component: 'CNavItem',
-        name: 'Convenios',
-        to: '/business/agreements',
-        submodule: 'CONVENIOS',
-        roles: ['ADMIN', 'B2B', 'GERENCIA'],
-      },
     ],
   },
   {
@@ -180,7 +173,9 @@ export default [
     to: '/fico',
     icon: 'cil-calculator',
     module: 'FICO',
-    roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
+    // B2B entra solo por "Tokens de Pago": el grupo tiene que abrirse para el rol
+    // o el hijo nunca se renderiza, aunque su propia lista de roles lo permita.
+    roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'B2B', 'GERENCIA'],
     items: [
       {
         component: 'CNavItem',
@@ -194,7 +189,7 @@ export default [
         name: 'Tokens de Pago',
         to: '/fico/tokens',
         submodule: 'TOKENS',
-        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'GERENCIA'],
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'LIDER_COMERCIAL', 'COMERCIAL', 'B2B', 'GERENCIA'],
       },
       {
         component: 'CNavItem',

@@ -205,36 +205,11 @@
                     </th>
                   </template>
                   <!-- Identificación -->
-                  <th class="ts ts-a">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>PROGRAMA</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a" v-if="!isCompact">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>DETALLE</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a" v-if="isCompact">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>LÍNEA</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.business_line_label || item.program_line_business" v-model="columnFilters.line" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a" v-if="isCompact">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>TIPADO</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
-                  <th class="ts ts-a text-center" v-if="isCompact">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>SEG.</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
+                  <th class="ts ts-a">PROGRAMA</th>
+                  <th class="ts ts-a" v-if="!isCompact">DETALLE</th>
+                  <th class="ts ts-a" v-if="isCompact">LÍNEA</th>
+                  <th class="ts ts-a" v-if="isCompact">TIPADO</th>
+                  <th class="ts ts-a text-center" v-if="isCompact">SEG.</th>
                   <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
 
                   <!-- Cronograma -->
@@ -243,12 +218,7 @@
                   <th class="ts ts-b text-center">F. FIN</th>
                   <th class="ts ts-b" v-if="isCompact">DÍAS CLASE</th>
                   <th class="ts ts-b">HORARIO</th>
-                  <th class="ts ts-b">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>DOCENTE</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
+                  <th class="ts ts-b">DOCENTE</th>
 
                   <!-- Seguimiento -->
                   <th class="ts ts-c text-center" style="min-width:120px;max-width:200px">FICHA / MEJORA</th>
@@ -256,18 +226,60 @@
                   <th class="ts ts-c text-center" style="min-width:64px;" title="Nueva Metodología">N. MET.</th>
 
                   <!-- Referencia -->
-                  <th class="ts ts-d">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>OBSERVACIÓN</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
-                  <th class="ts ts-d">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <span>EDICIÓN</span>
-                      <ColumnFilterDropdown v-if="!hasActiveFilters" column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" @apply="applyColumnFilters" />
-                    </div>
-                  </th>
+                  <th class="ts ts-d">OBSERVACIÓN</th>
+                  <th class="ts ts-d">EDICIÓN</th>
+                </tr>
+
+                <!-- FILA 3: Filtros — toda columna filtra desde aca, ningun
+                     control vive en el encabezado. Solo aplica a la vista
+                     mensual: en modo historico manda el modal de filtros. -->
+                <tr v-if="!hasActiveFilters" class="thead-filter">
+                  <td class="tf"></td><!-- acciones: el th de arriba solo abarca 2 filas -->
+
+                  <template v-if="canSeeClassroomLinks">
+                    <td v-for="link in CLASSROOM_LINKS" :key="'f-' + link.field" class="tf"></td>
+                  </template>
+
+                  <td class="tf">
+                    <ColumnFilterDropdown column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" />
+                  </td>
+                  <td class="tf" v-if="!isCompact">
+                    <ColumnFilterDropdown column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" />
+                  </td>
+                  <td class="tf" v-if="isCompact">
+                    <ColumnFilterDropdown column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.business_line_label || item.program_line_business" v-model="columnFilters.line" />
+                  </td>
+                  <td class="tf" v-if="isCompact">
+                    <ColumnFilterDropdown column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" />
+                  </td>
+                  <td class="tf" v-if="isCompact">
+                    <ColumnFilterDropdown column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" />
+                  </td>
+                  <td class="tf" v-if="isCompact"></td><!-- D.A. -->
+
+                  <td class="tf">
+                    <BaseDatePicker v-model="columnFilters.start_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Inicio..." />
+                  </td>
+                  <td class="tf" v-if="isCompact"></td><!-- D.P. -->
+                  <td class="tf">
+                    <BaseDatePicker v-model="columnFilters.end_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Fin..." />
+                  </td>
+                  <td class="tf" v-if="isCompact"></td><!-- DÍAS CLASE -->
+                  <td class="tf"></td><!-- HORARIO -->
+                  <td class="tf">
+                    <ColumnFilterDropdown column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" />
+                  </td>
+
+                  <td class="tf"></td><!-- FICHA / MEJORA -->
+                  <td class="tf"></td><!-- CONFIRM. -->
+                  <td class="tf"></td><!-- N. MET. -->
+
+                  <td class="tf">
+                    <ColumnFilterDropdown column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" />
+                  </td>
+                  <td class="tf">
+                    <ColumnFilterDropdown column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" />
+                  </td>
                 </tr>
               </thead>
 
@@ -1797,6 +1809,30 @@
 .ts-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 1px solid var(--col-c-border); }
 .ts-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 1px solid var(--col-d-border); }
 
+/* ── Fila 3: Filtros de columna ── */
+.thead-filter .tf {
+  padding: 5px 6px;
+  background: var(--bg-subtle, #f8fafc);
+  border-bottom: 2px solid var(--border);
+  vertical-align: middle;
+}
+/* flatpickr renderiza su propio input (altInput), fuera del alcance de los
+   estilos del trigger: hay que igualarlo a mano o la fila queda despareja. */
+.thead-filter :deep(.exec-flatpickr-input) {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+}
+.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #002060; }
+
 /* ── Encabezado de Semana ── */
 .week-header-row { cursor: pointer; }
 .week-header-row:hover .week-header-cell { filter: brightness(0.97); }
@@ -2439,6 +2475,13 @@ tr[class*="row-segment-"]:hover .td-d {
 
 /* ── Tabla principal ── */
 [data-coreui-theme="dark"] .th-act { background: #24242E; }
+[data-coreui-theme="dark"] .thead-filter .tf { background: #1F1F1A; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input) {
+  background: #14140F;
+  border-color: #3A3A33;
+  color: #F4F4F0;
+}
+[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #8FAADC; }
 [data-coreui-theme="dark"] .th-group-e { background: #251F33; color: #C4B5FD; border-left-color: #3A3050; }
 [data-coreui-theme="dark"] .ts-e { background: #211D2E; color: #C4B5FD; border-left-color: #3A3050; }
 [data-coreui-theme="dark"] .td-e { background: #1D1A26; border-left-color: #2A2438; }
@@ -2614,29 +2657,62 @@ import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import MultiSelect from '@/components/MultiSelect.vue';
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
+import { inDateRange } from '@/utils/dateRange';
 import CurrencyInput from '@/components/CurrencyInput.vue' // Ajusta la ruta si es necesario
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 const showMonthlyGoalsModal = ref(false)
 const activeGoalsList = ref([])
 const currentEditionId = ref(null)
 
-// Estado para los filtros de columna (reemplaza localFilters)
+// Estado para los filtros de columna (reemplaza localFilters).
+// Los de fecha guardan el rango de flatpickr ("2026-08-01 a 2026-08-14"), los
+// demas una lista de valores elegidos. `.length` sirve para ambos: por eso
+// `hayFiltroDeColumna` puede preguntar lo mismo a un string y a un array.
 const columnFilters = reactive({
   program: [],
   detail: [],
   line: [],
   type: [],
   segment: [],
-  da: [],
-  start_date: [],
-  dp: [],
-  end_date: [],
-  schedule: [],
+  start_date: '',
+  end_date: '',
   instructor: [],
   notes: [],
   edition_code: [],
   business_line: []
 })
+
+const hayFiltroDeColumna = () => Object.values(columnFilters).some(v => v.length > 0)
+
+// Un item pasa si pasa TODOS los filtros. Vive una sola vez porque lo consumen
+// filteredSchedules (la vista mensual) y effectiveItems (KPIs y resumen): eran
+// dos copias identicas del mismo if-chain, listas para divergir.
+function matchesColumnFilters (item) {
+  const getValue = val => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
+
+  if (columnFilters.program.length && !columnFilters.program.includes(getValue(item.program_abreviature))) return false
+
+  if (columnFilters.detail.length) {
+    const detalle = `${item.version_code} ${item.cat_segment}`
+    if (!columnFilters.detail.some(filtro => detalle.includes(filtro))) return false
+  }
+
+  if (columnFilters.line.length && !columnFilters.line.includes(getValue(item.program_line_business))) return false
+  if (columnFilters.business_line.length && !columnFilters.business_line.includes(item.business_line_id)) return false
+  if (columnFilters.type.length && !columnFilters.type.includes(getValue(item.cat_course_category_label))) return false
+  if (columnFilters.segment.length && !columnFilters.segment.includes(getValue(item.cat_segment))) return false
+  if (columnFilters.start_date && !inDateRange(item.start_date, columnFilters.start_date)) return false
+  if (columnFilters.end_date && !inDateRange(item.end_date, columnFilters.end_date)) return false
+  if (columnFilters.instructor.length && !columnFilters.instructor.includes(getValue(item.instructor))) return false
+  if (columnFilters.notes.length && !columnFilters.notes.includes(getValue(item.notes))) return false
+
+  if (columnFilters.edition_code.length) {
+    const codigo = `${item.global_code} ${item.specific_code}`.trim()
+    if (!columnFilters.edition_code.some(filtro => codigo.includes(filtro))) return false
+  }
+
+  return true
+}
 
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -2909,64 +2985,8 @@ const effectiveItems = computed(() => {
 
   // 2. Aplicar filtros de columna si NO estamos en modo histórico
   // (en modo histórico no aplican los filtros de columna, solo los del modal)
-  if (!hasActiveFilters.value) {
-    const hasColumnFilter = Object.values(columnFilters).some(arr => arr.length > 0)
-
-    if (hasColumnFilter) {
-      items = items.filter(item => {
-        // Reutilizar la misma lógica de filteredSchedules
-        const getValue = (val) => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
-
-        // Programa
-        if (columnFilters.program.length > 0) {
-          if (!columnFilters.program.includes(getValue(item.program_abreviature))) return false
-        }
-
-        // Detalle
-        if (columnFilters.detail.length > 0) {
-          const detailValue = `${item.version_code} ${item.cat_segment}`
-          if (!columnFilters.detail.some(filter => detailValue.includes(filter))) return false
-        }
-
-        // Línea
-        if (columnFilters.line.length > 0) {
-          if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
-        }
-
-        // Línea de Negocio
-        if (columnFilters.business_line.length > 0) {
-          if (!columnFilters.business_line.includes(item.business_line_id)) return false
-        }
-
-        // Tipado
-        if (columnFilters.type.length > 0) {
-          if (!columnFilters.type.includes(getValue(item.cat_course_category_label))) return false
-        }
-
-        // Segmento
-        if (columnFilters.segment.length > 0) {
-          if (!columnFilters.segment.includes(getValue(item.cat_segment))) return false
-        }
-
-        // Docente
-        if (columnFilters.instructor.length > 0) {
-          if (!columnFilters.instructor.includes(getValue(item.instructor))) return false
-        }
-
-        // Notas
-        if (columnFilters.notes.length > 0) {
-          if (!columnFilters.notes.includes(getValue(item.notes))) return false
-        }
-
-        // Código de Edición
-        if (columnFilters.edition_code.length > 0) {
-          const codeValue = `${item.global_code} ${item.specific_code}`.trim()
-          if (!columnFilters.edition_code.some(filter => codeValue.includes(filter))) return false
-        }
-
-        return true
-      })
-    }
+  if (!hasActiveFilters.value && hayFiltroDeColumna()) {
+    items = items.filter(matchesColumnFilters)
   }
 
   return items
@@ -3920,13 +3940,12 @@ function openA5Migration() {
 }
 
 async function handleA5Completed({ migrated, applyA5 }) {
-  // Si applyA5=true (caso sin alumnos) el modal pide que ejecutemos el update
-  // normal para cambiar el segmento. Si migrated>0 el SP ya cambio el cat_segment.
-  if (applyA5) {
-    await persistEditionUpdate()
-  } else {
-    toast.success(`Migracion completada: ${migrated} inscripcion(es) movidas`)
-  }
+  // El backend ya dejo la edicion en A5 (haya migrado o no), pero igual se guarda
+  // el formulario: el usuario pudo cambiar docente, horario o vacantes en la misma
+  // pasada y antes esos cambios se perdian en silencio cuando habia migracion.
+  // Ya no choca con la guarda del backend: post-migracion no quedan alumnos vivos.
+  if (!applyA5) toast.success(`Migracion completada: ${migrated} inscripcion(es) movidas`)
+  await persistEditionUpdate()
   showFormModal.value = false
   fetchSchedule()
 }
@@ -4801,19 +4820,10 @@ const allScheduleItems = computed(() => {
   return schedules.value.flatMap(week => week.items || [])
 })
 
-// Función para aplicar filtros de columna
-function applyColumnFilters() {
-  // Los filtros ya están aplicados reactivamente gracias al v-model
-  // Esta función se puede usar para acciones adicionales si es necesario
-  console.log('Filtros aplicados:', columnFilters)
-}
-
-// Modificar el computed filteredSchedules para usar los nuevos filtros
 const filteredSchedules = computed(() => {
   if (!schedules.value || schedules.value.length === 0) return []
 
-  // Verificar si hay algún filtro activo
-  const hasFilter = Object.values(columnFilters).some(arr => arr.length > 0)
+  const hasFilter = hayFiltroDeColumna()
 
   const isActive = (item) => (item.active === true || item.active === 'Y') && item.cat_segment !== 'A5'
 
@@ -4831,63 +4841,10 @@ const filteredSchedules = computed(() => {
 
   if (!hasFilter) return baseSchedules
 
-  return baseSchedules.map(week => {
-    const filteredItems = (week.items || []).filter(item => {
-      // Helper para obtener valor comparable
-      const getValue = (val) => (val === null || val === undefined ? '(Vacío)' : String(val).trim())
-
-      // 1. Programa
-      if (columnFilters.program.length > 0) {
-        if (!columnFilters.program.includes(getValue(item.program_abreviature))) return false
-      }
-
-      // 2. Detalle (combina varios campos)
-      if (columnFilters.detail.length > 0) {
-        const detailValue = `${item.version_code} ${item.cat_segment}`
-        if (!columnFilters.detail.some(filter => detailValue.includes(filter))) return false
-      }
-
-      // 3. Línea
-      if (columnFilters.line.length > 0) {
-        if (!columnFilters.line.includes(getValue(item.program_line_business))) return false
-      }
-
-      // 3b. Línea de Negocio
-      if (columnFilters.business_line.length > 0) {
-        if (!columnFilters.business_line.includes(item.business_line_id)) return false
-      }
-
-      // 4. Tipado
-      if (columnFilters.type.length > 0) {
-        if (!columnFilters.type.includes(getValue(item.cat_course_category_label))) return false
-      }
-
-      // 5. Segmento
-      if (columnFilters.segment.length > 0) {
-        if (!columnFilters.segment.includes(getValue(item.cat_segment))) return false
-      }
-
-      // 6. Docente
-      if (columnFilters.instructor.length > 0) {
-        if (!columnFilters.instructor.includes(getValue(item.instructor))) return false
-      }
-
-      // 7. Notas
-      if (columnFilters.notes.length > 0) {
-        if (!columnFilters.notes.includes(getValue(item.notes))) return false
-      }
-
-      // 8. Código de Edición
-      if (columnFilters.edition_code.length > 0) {
-        const codeValue = `${item.global_code} ${item.specific_code}`.trim()
-        if (!columnFilters.edition_code.some(filter => codeValue.includes(filter))) return false
-      }
-
-      return true
-    })
-
-    return { ...week, items: filteredItems }
-  })
+  return baseSchedules.map(week => ({
+    ...week,
+    items: (week.items || []).filter(matchesColumnFilters)
+  }))
 })
 
 

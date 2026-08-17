@@ -101,7 +101,7 @@ export function useLeadFormState ({ paymentChannelCatalog = ref([]) } = {}) {
     attachments: [],
     cat_payment_channel: null,
     cat_token_provider: null,
-    agreement_id: null
+    b2b_contract_id: null
   })
 
   const channelAlias = computed(() => {

@@ -65,7 +65,7 @@ export function buildEnrollmentPayload ({
       student_attachment_url: form.carnet_url || null,
       ticket_payment_urls: paymentFiles,
       attachments: generalAttachments,
-      agreement_id: insc.agreement_id || null
+      b2b_contract_id: insc.b2b_contract_id || null
     }
   }
 }
