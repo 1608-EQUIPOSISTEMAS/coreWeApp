@@ -1197,6 +1197,7 @@ const quickViews = [
 const storedUserStr = localStorage.getItem('user')
 const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
 const B2B_ROLES = ['B2B']
+const b2bOwnerIds = ref([])
 const isB2B = storedUser?.roles?.includes('B2B') &&
                     !storedUser?.roles?.includes('ADMIN') &&
                     !storedUser?.roles?.includes('GERENCIA');
@@ -1775,11 +1776,15 @@ function buildLeadPayload() {
   const phonesArr = getIds(filters.origin_seller_phones)
   const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
   const phoneFromInput = filters.origin_seller_phone?.trim() || null
-  // A diferencia de Fundacion, aqui NO se fuerza el universo a los usuarios con
-  // rol B2B: cat_business_line_id ya deja la vista en la linea B2B, y filtrar
-  // ademas por dueno esconderia los leads B2B que registro un ADMIN o un asesor
-  // de otra area. El asesor B2B queda acotado a lo suyo en onMounted.
-  const ownerIds = getIds(filters.owner_user_ids)
+  // Sin seleccion explicita de asesor, el universo son los usuarios con rol B2B:
+  // esta vista NO muestra registros de asesores de otras areas, aunque la linea
+  // de negocio del lead sea B2B.
+  // ponytail: fail-closed — si loadOwners falla mandamos [-1] (no matchea nada)
+  // antes que abrir la vista a los leads de toda la empresa.
+  const pickedOwners = getIds(filters.owner_user_ids)
+  const ownerIds = pickedOwners.length
+    ? pickedOwners
+    : (b2bOwnerIds.value.length ? b2bOwnerIds.value : [-1])
   return {
     cat_business_line_id: businessLineId.value,
     q:                   filters.q             || null,
@@ -2042,6 +2047,7 @@ async function loadOwners() {
       if (lName) fullName += ` ${lName.charAt(0)}.`
       byId.set(u.user_id, { id: u.user_id, description: fullName.trim() || `Usuario ${u.user_id}` })
     }
+    b2bOwnerIds.value = [...byId.keys()]
     filtroOwners.value = [...byId.values()]
   } catch (e) { console.error(e) }
 }
@@ -2142,7 +2148,7 @@ onMounted(async () => {
     filters.owner_user_ids = [currentUserId]
     checkMyRestrictions()
   }
-  loadOwners()   // solo llena el combo de asesores: no bloquea el primer fetch
+  await loadOwners()   // fetchLeads necesita b2bOwnerIds ya resuelto
   loadOriginPhones()
   await parseQueryAndApply()
   rebuildChips()
