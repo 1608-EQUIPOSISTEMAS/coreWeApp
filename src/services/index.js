@@ -16,6 +16,7 @@ import BotService from './bot.service'
 import ConfigService from './config.service'
 import ImportService from './import.service'
 import MarketingService from './marketing.service'
+import ReprogramacionService from './reprogramacion.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -37,7 +38,8 @@ Notification: Symbol('NotificationService'),
   Bot: Symbol('BotService'),
   Config: Symbol('ConfigService'),
   Import: Symbol('ImportService'),
-  Marketing: Symbol('MarketingService')
+  Marketing: Symbol('MarketingService'),
+  Reprogramacion: Symbol('ReprogramacionService')
 }
 
 export function createServices() {
@@ -57,6 +59,7 @@ export function createServices() {
     [ServiceKeys.Bot]: new BotService(api),
     [ServiceKeys.Config]: new ConfigService(api),
     [ServiceKeys.Import]: new ImportService(api),
-    [ServiceKeys.Marketing]: new MarketingService(api)
+    [ServiceKeys.Marketing]: new MarketingService(api),
+    [ServiceKeys.Reprogramacion]: new ReprogramacionService(api)
   }
 }

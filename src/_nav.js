@@ -75,6 +75,15 @@ export default [
         submodule: 'BOT',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
       },
+      {
+        // Flujo a cuatro manos: Academica elige el destino y FICO lo firma, por
+        // eso FICO ve esta opcion aunque el grupo sea Academica.
+        component: 'CNavItem',
+        name: 'Reprogramaciones',
+        to: '/academica/reprogramaciones',
+        submodule: 'REPROGRAMACIONES',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'],
+      },
     ],
   },
   {

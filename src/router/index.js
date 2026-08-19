@@ -595,6 +595,12 @@ const routes = [
       meta: { module: 'ACADEMICA', submodule: 'REPORTE', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
     },
     {
+      path: 'academica/reprogramaciones',
+      name: 'AcademicaReprogramaciones',
+      component: () => import('@/views/academica/Reprogramaciones.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'REPROGRAMACIONES', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'] },
+    },
+    {
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),
