@@ -1203,6 +1203,20 @@ const isComercial = storedUser?.roles?.includes('COMERCIAL') &&
                     !storedUser?.roles?.includes('GERENCIA');
 const currentUserId = storedUser?.user_id;
 
+// Comercial no ve las consultas ni las ventas de Fundacion ni de B2B: cada area
+// tiene su propia pantalla (/fundacion/leads, /b2b/leads). El SP no sabe de
+// roles y solo filtra por inclusion (owner_user_ids), asi que hay que armar el
+// universo de asesores aqui.
+//
+// `userList` trae los usuarios con rol COMERCIAL incluidos los inactivos (535
+// leads siguen a nombre de asesores que ya no estan); a esos se les suman los
+// roles que tambien registran consultas. La resta de OWNER_ROLES_AJENOS es la
+// guarda: si algun dia un usuario de Fundacion recibe ademas el rol COMERCIAL,
+// sus leads no deben reaparecer en esta pantalla.
+const OWNER_ROLES_EXTRA = ['LIDER_COMERCIAL', 'ADMIN', 'GERENCIA']
+const OWNER_ROLES_AJENOS = ['FUNDACION', 'LIDER_FUNDACION', 'B2B']
+const comercialOwnerIds = ref([])
+
 // ═══════════════════════════════════════════════════════════════
 // GRUPOS DE COLUMNAS COLAPSABLES (solo vista compacta)
 // ═══════════════════════════════════════════════════════════════
@@ -1781,6 +1795,12 @@ function buildLeadPayload() {
   const phonesArr = getIds(filters.origin_seller_phones)
   const phoneFromMulti = phonesArr.length > 0 ? String(phonesArr[0]) : null
   const phoneFromInput = filters.origin_seller_phone?.trim() || null
+  // Sin asesor elegido el universo es Comercial, no "todos": ver loadOwners. Fail-closed con [-1] (no matchea nada) si loadOwners
+  // fallo, antes que abrir la vista a los leads de Fundacion y B2B.
+  const pickedOwners = getIds(filters.owner_user_ids)
+  const ownerIds = pickedOwners.length
+    ? pickedOwners
+    : (comercialOwnerIds.value.length ? comercialOwnerIds.value : [-1])
   return {
     q:                   filters.q             || null,
     origin_seller_phone: phoneFromMulti || phoneFromInput,
@@ -1807,7 +1827,7 @@ function buildLeadPayload() {
     first_contact_from: filters.first_contact_from || null,
     first_contact_to:   filters.first_contact_to   || null,
     settlement_status_ids:      getIds(filters.settlement_status_ids),
-    owner_user_ids:      getIds(filters.owner_user_ids),
+    owner_user_ids:      ownerIds,
     status_lead_ids:     getIds(filters.status_lead_ids),
     last_follow_ids:     getIds(filters.last_follow_ids),
     program_version_ids: getIds(filters.program_version_ids),
@@ -2027,15 +2047,24 @@ function applyQuickView(key) {
 
 async function loadOwners() {
   try {
-    const arr = await authService.userList({})
-    filtroOwners.value = arr.map(u => {
+    const porRol = (rol) => authService.userListByRole(rol).catch(() => [])
+    const [comerciales, extra, ajenos] = await Promise.all([
+      authService.userList({}),
+      Promise.all(OWNER_ROLES_EXTRA.map(porRol)),
+      Promise.all(OWNER_ROLES_AJENOS.map(porRol)),
+    ])
+    const excluidos = new Set(ajenos.flat().map(u => u.user_id))
+    const byId = new Map()
+    for (const u of [...comerciales, ...extra.flat()]) {
+      if (excluidos.has(u.user_id) || byId.has(u.user_id)) continue
       const fName = (u.first_name || '').trim()
       const lName = (u.last_name || '').trim()
       let fullName = fName
       if (lName) fullName += ` ${lName.charAt(0)}.`
-      const desc = fullName.trim() || `Usuario ${u.user_id}`
-      return { id: u.user_id, description: desc }
-    })
+      byId.set(u.user_id, { id: u.user_id, description: fullName.trim() || `Usuario ${u.user_id}` })
+    }
+    filtroOwners.value = [...byId.values()]
+    comercialOwnerIds.value = [...byId.keys()]
   } catch (e) { console.error(e) }
 }
 
@@ -2133,7 +2162,7 @@ onMounted(async () => {
     filters.owner_user_ids = [currentUserId]
     checkMyRestrictions()
   }
-  loadOwners()
+  await loadOwners()   // fetchLeads necesita comercialOwnerIds ya resuelto
   loadOriginPhones()
   await parseQueryAndApply()
   rebuildChips()

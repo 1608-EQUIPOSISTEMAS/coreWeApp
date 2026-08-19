@@ -1,483 +1,530 @@
 <template>
-  <div class="container-fluid px-3 py-3 lead-form">
-    <div class="card shadow-sm border-0">
+  <div class="exec-shell form-shell">
 
-      <div class="card-header border-0 pb-3 pt-3 d-flex flex-wrap justify-content-between align-items-start">
-        <div class="pe-3">
-          <div class="h3">{{ isEdit ? 'Editar Contrato' : 'Nuevo Contrato B2B' }}</div>
-          <div class="text-muted small" v-if="isEdit">ID: <span class="fw-bold">{{ idParam }}</span></div>
+    <header class="exec-masthead">
+      <div class="masthead-inner">
+        <div class="masthead-brand">
+          <div class="brand-rule"></div>
+          <div class="brand-text">
+            <span class="brand-eyebrow">B2B · Contratos</span>
+            <h1 class="brand-title">{{ isEdit ? 'Editar Contrato' : 'Nuevo Contrato B2B' }}</h1>
+          </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-outline btn-sm" @click="cancelar">Cancelar</button>
-          <button class="btn btn-primary btn-sm" :disabled="!isValid || saving" @click="guardar">
-            <i class="fa-solid fa-save me-1"></i>
+        <div class="masthead-actions">
+          <span v-if="isEdit" class="masthead-id">ID {{ idParam }}</span>
+          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
+            <i class="fa-solid fa-arrow-left"></i> Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-exec btn-exec-primary px-4"
+            :disabled="!isValid || saving"
+            @click="guardar"
+          >
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
             {{ saving ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
       </div>
+    </header>
 
-      <div class="card-body pt-4 pb-4" v-if="loaded">
+    <main class="exec-body pb-5" v-if="loaded">
+      <div class="exec-form-grid">
 
-        <!-- ── Datos del Contrato ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Datos del Contrato</span>
-          </div>
-          <div class="row g-3 form-section__body">
+        <!-- ══ COLUMNA IZQUIERDA ══ -->
+        <div class="col-left">
 
-            <div class="col-md-6">
-              <label class="form-label mb-1">Empresa <span class="required-star">*</span></label>
-              <SearchSelect
-                v-model="form.company_id"
-                mode="remote"
-                :fetcher="q => b2bService.companyList({ q, page: 1, size: 20 }).then(r => r.items || [])"
-                label-field="razon_social"
-                value-field="company_id"
-                placeholder="BUSCAR EMPRESA..."
-                :model-label="form.company_label"
-                @change="opt => { form.company_label = opt ? opt.razon_social : '' }"
-                required
-              />
+          <div class="exec-card exec-card--empresa mb-4">
+            <div class="exec-card__header">
+              <i class="fa-solid fa-file-signature me-2 text-primary"></i>
+              <span>Datos del Contrato</span>
             </div>
+            <div class="exec-card__body">
+              <div class="row g-3">
 
-            <div class="col-md-3">
-              <label class="form-label mb-1">Tipo de Contrato <span class="required-star">*</span></label>
-              <SearchSelect
-                v-model="form.cat_contract_type"
-                :items="catalogs.contractTypeList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-                :model-label="form.contract_type_label"
-                @change="opt => { form.contract_type_label = opt ? opt.description : ''; form.contract_type_alias = opt ? opt.alias : null }"
-                required
-              />
-            </div>
+                <div class="col-12">
+                  <label class="exec-label">Empresa <span class="c-red">*</span></label>
+                  <SearchSelect
+                    v-model="form.company_id"
+                    mode="remote"
+                    :fetcher="q => b2bService.companyList({ q, page: 1, size: 20 }).then(r => r.items || [])"
+                    label-field="razon_social"
+                    value-field="company_id"
+                    placeholder="BUSCAR EMPRESA..."
+                    :model-label="form.company_label"
+                    @change="opt => { form.company_label = opt ? opt.razon_social : '' }"
+                    class="exec-select-light w-100"
+                    required
+                  />
+                </div>
 
-            <div class="col-md-3 d-flex flex-column justify-content-end">
-              <label class="form-label mb-1">Estado</label>
-              <div class="d-flex align-items-center gap-2 py-2">
-                <label class="form-switch">
-                  <input type="checkbox" v-model="form.active" />
-                  <span></span>
-                </label>
-                <span class="small">{{ form.active ? 'Activo' : 'Inactivo / Cancelado' }}</span>
+                <div class="col-md-6">
+                  <label class="exec-label">Tipo de Contrato <span class="c-red">*</span></label>
+                  <SearchSelect
+                    v-model="form.cat_contract_type"
+                    :items="catalogs.contractTypeList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="Seleccionar..."
+                    :model-label="form.contract_type_label"
+                    @change="opt => { form.contract_type_label = opt ? opt.description : ''; form.contract_type_alias = opt ? opt.alias : null }"
+                    class="exec-select-light w-100"
+                    required
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="exec-label">Estado</label>
+                  <div class="switch-row">
+                    <label class="form-switch">
+                      <input type="checkbox" v-model="form.active" />
+                      <span></span>
+                    </label>
+                    <span class="switch-text">{{ form.active ? 'Activo' : 'Inactivo / Cancelado' }}</span>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <label class="exec-label">Nombre del Contrato <span class="c-red">*</span></label>
+                  <input
+                    v-model.trim="form.contract_name"
+                    type="text"
+                    class="exec-input w-100"
+                    placeholder="Ej. CONTRATO MARCO 2026 - EMPRESA S.A.C."
+                    v-restrict="'upper|max:200'"
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="exec-label">Fecha Inicio <span class="c-red">*</span></label>
+                  <input v-model="form.start_date" type="date" class="exec-input w-100" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="exec-label">Fecha Fin</label>
+                  <input v-model="form.end_date" type="date" class="exec-input w-100" />
+                  <small class="exec-hint">Vacío = indefinido</small>
+                </div>
+
+                <div class="col-12">
+                  <label class="exec-label">Descripción</label>
+                  <textarea
+                    v-model.trim="form.description"
+                    class="exec-input w-100"
+                    rows="2"
+                    placeholder="Describe el alcance y condiciones generales del contrato..."
+                  ></textarea>
+                </div>
+
               </div>
             </div>
-
-            <div class="col-md-8">
-              <label class="form-label mb-1">Nombre del Contrato <span class="required-star">*</span></label>
-              <input
-                v-model.trim="form.contract_name"
-                type="text"
-                class="form-control"
-                placeholder="Ej. CONTRATO MARCO 2026 - EMPRESA S.A.C."
-                v-restrict="'upper|max:200'"
-              />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Fecha Inicio <span class="required-star">*</span></label>
-              <input v-model="form.start_date" type="date" class="form-control" />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Fecha Fin</label>
-              <input v-model="form.end_date" type="date" class="form-control" />
-              <small class="text-muted">Vacío = indefinido</small>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label mb-1">Descripción</label>
-              <textarea
-                v-model.trim="form.description"
-                class="form-control"
-                rows="2"
-                placeholder="Describe el alcance y condiciones generales del contrato..."
-              ></textarea>
-            </div>
-
           </div>
-        </section>
 
-        <!-- ── Datos Comerciales ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Datos Comerciales</span>
-          </div>
-          <div class="row g-3 form-section__body">
-
-            <div class="col-md-3">
-              <label class="form-label mb-1">Tipo de Cliente</label>
-              <SearchSelect
-                v-model="form.cat_client_type"
-                :items="catalogs.clientTypeList"
-                label-field="description"
-                value-field="id"
-                placeholder="B2B Nacional / Internacional / Estado"
-              />
+          <div class="exec-card mb-4">
+            <div class="exec-card__header">
+              <i class="fa-solid fa-briefcase me-2 text-muted"></i>
+              <span>Datos Comerciales</span>
             </div>
+            <div class="exec-card__body">
+              <div class="row g-3">
 
-            <div class="col-md-3">
-              <label class="form-label mb-1">Modalidad</label>
-              <SearchSelect
-                v-model="form.cat_modality"
-                :items="catalogs.modalityList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-              />
-            </div>
+                <div class="col-md-6">
+                  <label class="exec-label">Tipo de Cliente</label>
+                  <SearchSelect
+                    v-model="form.cat_client_type"
+                    :items="catalogs.clientTypeList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="B2B Nacional / Internacional / Estado"
+                    class="exec-select-light w-100"
+                  />
+                </div>
 
-            <div class="col-md-4">
-              <label class="form-label mb-1">Programa Vendido</label>
-              <SearchSelect
-                v-model="form.program_version_id"
-                mode="remote"
-                :fetcher="buscarProgramas"
-                label-field="description"
-                value-field="id"
-                sublabel-field="label_ui"
-                placeholder="BUSCAR PROGRAMA..."
-                :cache="false"
-                :model-label="form.program_label"
-                @change="opt => { form.program_label = opt ? opt.description : '' }"
-              />
-              <small class="text-muted">Opcional: si el trato es una bolsa de cupos, cada beneficiario lleva su curso.</small>
-            </div>
+                <div class="col-md-6">
+                  <label class="exec-label">Modalidad</label>
+                  <SearchSelect
+                    v-model="form.cat_modality"
+                    :items="catalogs.modalityList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="Seleccionar..."
+                    class="exec-select-light w-100"
+                  />
+                </div>
 
-            <div class="col-md-2">
-              <label class="form-label mb-1">País</label>
-              <input v-model.trim="form.country" type="text" class="form-control" placeholder="PERÚ" v-restrict="'upper|max:60'" />
-            </div>
+                <div class="col-md-8">
+                  <label class="exec-label">Programa Vendido</label>
+                  <SearchSelect
+                    v-model="form.program_version_id"
+                    mode="remote"
+                    :fetcher="buscarProgramas"
+                    label-field="description"
+                    value-field="id"
+                    sublabel-field="label_ui"
+                    placeholder="BUSCAR PROGRAMA..."
+                    :cache="false"
+                    :model-label="form.program_label"
+                    @change="opt => { form.program_label = opt ? opt.description : '' }"
+                    class="exec-select-light w-100"
+                  />
+                  <small class="exec-hint">Opcional: si el trato es una bolsa de cupos, cada beneficiario lleva su curso.</small>
+                </div>
 
-          </div>
-        </section>
+                <div class="col-md-4">
+                  <label class="exec-label">País</label>
+                  <input v-model.trim="form.country" type="text" class="exec-input w-100" placeholder="PERÚ" v-restrict="'upper|max:60'" />
+                </div>
 
-        <!-- ── Registro de Plata ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Registro de Plata</span>
-          </div>
-          <div class="row g-3 form-section__body">
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Moneda</label>
-              <SearchSelect
-                v-model="form.cat_currency"
-                :items="catalogs.currencyList"
-                label-field="description"
-                value-field="id"
-                placeholder="PEN / USD"
-              />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Monto Total</label>
-              <input v-model.number="form.total_amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Importe Pagado</label>
-              <input v-model.number="form.paid_amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Saldo</label>
-              <div class="form-control saldo" :class="{ 'saldo--deuda': saldo > 0, 'saldo--exceso': saldo < 0 }">
-                {{ fmt(saldo) }}
               </div>
             </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Condición de Pago</label>
-              <SearchSelect
-                v-model="form.cat_payment_terms"
-                :items="catalogs.paymentTermsList"
-                label-field="description"
-                value-field="id"
-                placeholder="Contado / Crédito"
-              />
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label mb-1">Equivalente en Soles</label>
-              <input v-model.number="form.paid_amount_pen" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
-              <small class="text-muted">Solo si cobró en dólares.</small>
-            </div>
-
           </div>
-        </section>
 
-        <!-- ── Hitos Comerciales ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Hitos Comerciales</span>
-          </div>
-          <div class="row g-3 form-section__body">
+          <div class="exec-card mb-4">
+            <div class="exec-card__header">
+              <i class="fa-solid fa-flag-checkered me-2 text-muted"></i>
+              <span>Hitos Comerciales</span>
+            </div>
+            <div class="exec-card__body">
+              <div class="row g-3">
 
-            <div class="col-md-2">
-              <label class="form-label mb-1">F. Consulta</label>
-              <input v-model="form.consultation_date" type="date" class="form-control" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label mb-1">F. Cierre</label>
-              <input v-model="form.close_date" type="date" class="form-control" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label mb-1">F. Pago</label>
-              <input v-model="form.payment_date" type="date" class="form-control" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label mb-1">F. Confirmación</label>
-              <input v-model="form.confirmation_sent_date" type="date" class="form-control" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label mb-1">F. Factura</label>
-              <input v-model="form.invoice_date" type="date" class="form-control" />
-            </div>
+                <div class="col-md-4">
+                  <label class="exec-label">F. Consulta</label>
+                  <input v-model="form.consultation_date" type="date" class="exec-input w-100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="exec-label">F. Cierre</label>
+                  <input v-model="form.close_date" type="date" class="exec-input w-100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="exec-label">F. Pago</label>
+                  <input v-model="form.payment_date" type="date" class="exec-input w-100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="exec-label">F. Confirmación</label>
+                  <input v-model="form.confirmation_sent_date" type="date" class="exec-input w-100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="exec-label">F. Factura</label>
+                  <input v-model="form.invoice_date" type="date" class="exec-input w-100" />
+                </div>
 
-            <div class="col-md-2 d-flex flex-column justify-content-end">
-              <div class="rangos">
-                <span :title="'Días entre la consulta y el cierre'">C→C <b>{{ rangoCierre ?? '—' }}</b></span>
-                <span :title="'Días entre el cierre y el pago'">C→P <b>{{ rangoPago ?? '—' }}</b></span>
+                <div class="col-md-4 d-flex flex-column justify-content-end">
+                  <div class="rangos">
+                    <span title="Días entre la consulta y el cierre">C→C <b>{{ rangoCierre ?? '—' }}</b></span>
+                    <span title="Días entre el cierre y el pago">C→P <b>{{ rangoPago ?? '—' }}</b></span>
+                  </div>
+                </div>
+
               </div>
             </div>
-
-          </div>
-        </section>
-
-        <!-- ── Descuentos del convenio (solo cuando aplica) ── -->
-        <section v-if="esConvenio" class="form-section mb-4">
-          <div class="form-section__header d-flex justify-content-between align-items-center">
-            <span class="form-section__title">Descuentos del Convenio</span>
-            <button class="btn btn-outline btn-sm" @click="agregarDescuento" type="button">
-              <i class="fa-solid fa-plus me-1"></i> Agregar descuento
-            </button>
-          </div>
-          <div class="small text-muted mb-2">
-            Porcentaje que se aplica a los alumnos de esta empresa. Dejar tipo y modalidad vacíos = aplica a todo.
           </div>
 
-          <div v-if="!form.discounts.length" class="text-muted small py-2 px-1">
-            Sin descuentos definidos.
+        </div>
+
+        <!-- ══ COLUMNA DERECHA ══ -->
+        <div class="col-right">
+
+          <div class="exec-card exec-card--plata mb-4">
+            <div class="exec-card__header">
+              <i class="fa-solid fa-sack-dollar me-2 text-success"></i>
+              <span>Registro de Plata</span>
+            </div>
+            <div class="exec-card__body">
+              <div class="row g-3">
+
+                <div class="col-md-4">
+                  <label class="exec-label">Moneda</label>
+                  <SearchSelect
+                    v-model="form.cat_currency"
+                    :items="catalogs.currencyList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="PEN / USD"
+                    class="exec-select-light w-100"
+                  />
+                </div>
+
+                <div class="col-md-4">
+                  <label class="exec-label">Monto Total</label>
+                  <input v-model.number="form.total_amount" type="number" step="0.01" min="0" class="exec-input w-100" placeholder="0.00" />
+                </div>
+
+                <div class="col-md-4">
+                  <label class="exec-label">Importe Pagado</label>
+                  <input v-model.number="form.paid_amount" type="number" step="0.01" min="0" class="exec-input w-100" placeholder="0.00" />
+                </div>
+
+                <div class="col-md-4">
+                  <label class="exec-label">Saldo</label>
+                  <div class="exec-input saldo" :class="{ 'saldo--deuda': saldo > 0, 'saldo--exceso': saldo < 0 }">
+                    {{ fmt(saldo) }}
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="exec-label">Condición de Pago</label>
+                  <SearchSelect
+                    v-model="form.cat_payment_terms"
+                    :items="catalogs.paymentTermsList"
+                    label-field="description"
+                    value-field="id"
+                    placeholder="Contado / Crédito"
+                    class="exec-select-light w-100"
+                  />
+                </div>
+
+                <div class="col-md-4">
+                  <label class="exec-label">Equivalente en Soles</label>
+                  <input v-model.number="form.paid_amount_pen" type="number" step="0.01" min="0" class="exec-input w-100" placeholder="0.00" />
+                  <small class="exec-hint">Solo si cobró en dólares.</small>
+                </div>
+
+              </div>
+            </div>
           </div>
 
-          <div v-for="(d, i) in form.discounts" :key="'d' + i" class="row g-2 align-items-end mb-2">
-            <div class="col-md-4">
-              <label class="form-label mb-0 small">Tipo de Programa</label>
-              <SearchSelect v-model="d.cat_type_program" :items="catalogs.programTypeList" label-field="description" value-field="id" placeholder="Todos" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label mb-0 small">Modalidad</label>
-              <SearchSelect v-model="d.cat_model_modality" :items="catalogs.modalityList" label-field="description" value-field="id" placeholder="Todas" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label mb-0 small">% Descuento <span class="required-star">*</span></label>
-              <input v-model.number="d.discount_pct" type="number" step="0.01" min="0" max="100" class="form-control" placeholder="0" />
-            </div>
-            <div class="col-md-1">
-              <button class="btn btn-outline btn-sm text-danger w-100" @click="form.discounts.splice(i, 1)" type="button">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- ── Beneficiarios (el reparto de cupos) ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header d-flex justify-content-between align-items-center">
-            <span class="form-section__title">Cupos y Beneficiarios</span>
-            <div class="d-flex gap-2">
-              <button class="btn btn-outline btn-sm" @click="mostrarPegado = !mostrarPegado" type="button">
-                <i class="fa-solid fa-paste me-1"></i> Pegar lista
-              </button>
-              <button class="btn btn-outline btn-sm" @click="agregarBeneficiario" type="button">
-                <i class="fa-solid fa-plus me-1"></i> Agregar
-              </button>
-              <button
-                class="btn btn-primary btn-sm"
-                :disabled="enviando || saving || !cuposPorEnviar"
-                :title="cuposPorEnviar
-                  ? `Crea la inscripción de ${cuposPorEnviar} cupo(s) en FICO`
-                  : 'No hay cupos pendientes: asigna alumnos con su curso'"
-                @click="enviarAFico"
-                type="button"
-              >
-                <i class="fa-solid fa-paper-plane me-1"></i>
-                {{ enviando ? 'Enviando…' : `Enviar a FICO (${cuposPorEnviar})` }}
-              </button>
-            </div>
-          </div>
-
-          <div v-if="resultadoEnvio" class="envio-resultado mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <b>
-                {{ resultadoEnvio.enrolled }} inscrito(s) ·
-                {{ resultadoEnvio.rejected }} sin enviar ·
-                {{ resultadoEnvio.skipped }} ya estaban
-              </b>
-              <button class="btn btn-outline btn-sm" @click="resultadoEnvio = null" type="button">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-            <div v-for="fila in resultadoEnvio.detail" :key="fila.beneficiary_id" class="envio-fila">
-              <span class="pill" :class="fila.estado === 'creado' ? 'pill-ok' : fila.estado === 'ya_matriculado' ? 'pill-pend' : 'pill-err'">
-                {{ fila.estado.replace('_', ' ') }}
+          <!-- Solo el convenio reparte % de descuento a los alumnos de la empresa. -->
+          <div v-if="esConvenio" class="exec-card mb-4">
+            <div class="exec-card__header exec-card__header--split">
+              <span>
+                <i class="fa-solid fa-percent me-2 text-muted"></i>
+                Descuentos del Convenio
               </span>
-              <span class="envio-nombre">{{ fila.full_name }}</span>
-              <span class="text-muted small">{{ fila.mensaje }}</span>
-            </div>
-          </div>
-
-          <div class="row g-3 mb-3">
-            <div class="col-md-3">
-              <label class="form-label mb-1">Cupos Comprados</label>
-              <input v-model.number="form.number_of_licenses" type="number" min="0" class="form-control" placeholder="0" />
-            </div>
-            <div class="col-md-9 d-flex align-items-end">
-              <div class="cupos-resumen" :class="{ 'cupos-resumen--exceso': cuposLibres < 0 }">
-                <span><b>{{ form.beneficiaries.length }}</b> asignados</span>
-                <span><b>{{ cuposLibres }}</b> libres</span>
-                <span><b>{{ matriculados }}</b> ya inscritos por FICO</span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="mostrarPegado" class="pegado mb-3">
-            <label class="form-label mb-1">Pega una fila por alumno: <code>nombres, apellidos, documento, correo, teléfono</code></label>
-            <textarea v-model="textoPegado" class="form-control" rows="4" placeholder="JUAN CARLOS, PEREZ GOMEZ, 40506070, juan@empresa.com, 999888777"></textarea>
-            <div class="d-flex gap-2 mt-2">
-              <button class="btn btn-primary btn-sm" @click="importarPegado" type="button">
-                Agregar {{ filasPegadas.length }} beneficiario(s)
+              <button class="btn-exec btn-exec-sm" @click="agregarDescuento" type="button">
+                <i class="fa-solid fa-plus"></i> Agregar
               </button>
-              <button class="btn btn-outline btn-sm" @click="mostrarPegado = false; textoPegado = ''" type="button">Cancelar</button>
             </div>
-          </div>
+            <div class="exec-card__body">
+              <p class="exec-hint mb-2">
+                Porcentaje que se aplica a los alumnos de esta empresa. Dejar tipo y modalidad vacíos = aplica a todo.
+              </p>
 
-          <div v-if="!form.beneficiaries.length" class="text-muted small py-2 px-1">
-            Sin beneficiarios. Agrega los alumnos que la empresa quiere matricular.
-          </div>
+              <p v-if="!form.discounts.length" class="exec-empty">Sin descuentos definidos.</p>
 
-          <div class="tabla-scroll" v-else>
-            <table class="tabla-beneficiarios">
-              <thead>
-                <tr>
-                  <th style="min-width:170px">Nombres <span class="required-star">*</span></th>
-                  <th style="min-width:170px">Apellidos <span class="required-star">*</span></th>
-                  <th style="min-width:120px">Documento</th>
-                  <th style="min-width:200px">Correo</th>
-                  <th style="min-width:120px">Teléfono</th>
-                  <th style="min-width:240px">Programa</th>
-                  <th style="min-width:90px">Estado</th>
-                  <th style="width:44px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(b, i) in form.beneficiaries" :key="'b' + i">
-                  <td>
-                    <input v-model.trim="b.first_name" class="form-control" v-restrict="'upper|max:150'" />
-                    <!-- El nombre que traía la hoja: quien migró no sabía si venía
-                         "NOMBRES APELLIDOS" o al revés, así que lo separa el asesor. -->
-                    <small v-if="b.full_name && !b.first_name && !b.last_name" class="hint-nombre">
-                      {{ b.full_name }}
-                    </small>
-                  </td>
-                  <td><input v-model.trim="b.last_name" class="form-control" v-restrict="'upper|max:150'" /></td>
-                  <td><input v-model.trim="b.document_number" class="form-control" v-restrict="'max:20'" /></td>
-                  <td><input v-model.trim="b.email" type="email" class="form-control" v-restrict="'max:120'" /></td>
-                  <td><input v-model.trim="b.phone" class="form-control" v-restrict="'max:20'" /></td>
-                  <td>
-                    <SearchSelect
-                      v-model="b.program_version_id"
-                      mode="remote"
-                      :fetcher="buscarProgramas"
-                      label-field="description"
-                      value-field="id"
-                      sublabel-field="label_ui"
-                      placeholder="Programa del contrato"
-                      :cache="false"
-                      :model-label="b.program_label"
-                      @change="opt => { b.program_label = opt ? opt.description : '' }"
-                    />
-                  </td>
-                  <td>
-                    <span v-if="b.enrollment_id" class="pill pill-ok" title="Ya tiene inscripción">Inscrito</span>
-                    <span v-else class="pill pill-pend">Pendiente</span>
-                  </td>
-                  <td>
-                    <button
-                      class="btn btn-outline btn-sm text-danger"
-                      :disabled="!!b.enrollment_id"
-                      :title="b.enrollment_id ? 'Ya está inscrito: anula la inscripción desde FICO' : 'Quitar'"
-                      @click="quitarBeneficiario(i)"
-                      type="button"
-                    >
-                      <i class="fa-solid fa-xmark"></i>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- ── Documento Oficial & Notas ── -->
-        <section class="form-section mb-4">
-          <div class="form-section__header">
-            <span class="form-section__title">Documento y Observaciones</span>
-          </div>
-          <div class="row g-3 form-section__body">
-
-            <div class="col-12">
-              <label class="form-label mb-1">
-                <i class="fa-solid fa-file-contract me-1 text-primary"></i>
-                URL Orden de Compra / Documento Oficial
-              </label>
-              <div class="input-group">
-                <span class="input-group-text">
-                  <i class="fa-solid fa-link text-primary"></i>
-                </span>
-                <input
-                  v-model.trim="form.purchase_order_url"
-                  type="url"
-                  class="form-control"
-                  placeholder="https://drive.google.com/... o https://sharepoint.com/..."
-                  v-restrict="'max:500'"
-                />
-                <a
-                  v-if="form.purchase_order_url"
-                  :href="form.purchase_order_url"
-                  target="_blank"
-                  class="btn btn-outline btn-sm"
-                  title="Abrir documento"
-                >
-                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>
+              <div v-for="(d, i) in form.discounts" :key="'d' + i" class="row g-2 align-items-end mb-2">
+                <div class="col-md-4">
+                  <label class="exec-label">Tipo de Programa</label>
+                  <SearchSelect v-model="d.cat_type_program" :items="catalogs.programTypeList" label-field="description" value-field="id" placeholder="Todos" class="exec-select-light w-100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="exec-label">Modalidad</label>
+                  <SearchSelect v-model="d.cat_model_modality" :items="catalogs.modalityList" label-field="description" value-field="id" placeholder="Todas" class="exec-select-light w-100" />
+                </div>
+                <div class="col-md-3">
+                  <label class="exec-label">% Descuento <span class="c-red">*</span></label>
+                  <input v-model.number="d.discount_pct" type="number" step="0.01" min="0" max="100" class="exec-input w-100" placeholder="0" />
+                </div>
+                <div class="col-md-1">
+                  <button class="btn-exec btn-exec-xs btn-exec-danger w-100" @click="form.discounts.splice(i, 1)" type="button">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
               </div>
-              <small class="text-muted">Pega el enlace al contrato firmado (Drive, SharePoint, etc.)</small>
             </div>
-
-            <div class="col-12">
-              <label class="form-label mb-1">Notas Internas</label>
-              <textarea
-                v-model.trim="form.notes"
-                class="form-control"
-                rows="3"
-                placeholder="Notas internas, condiciones especiales, recordatorios..."
-              ></textarea>
-            </div>
-
           </div>
-        </section>
+
+          <div class="exec-card mb-4">
+            <div class="exec-card__header">
+              <i class="fa-solid fa-file-contract me-2 text-muted"></i>
+              <span>Documento y Observaciones</span>
+            </div>
+            <div class="exec-card__body">
+              <div class="row g-3">
+
+                <div class="col-12">
+                  <label class="exec-label">URL Orden de Compra / Documento Oficial</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-link"></i></span>
+                    <input
+                      v-model.trim="form.purchase_order_url"
+                      type="url"
+                      class="exec-input"
+                      placeholder="https://drive.google.com/... o https://sharepoint.com/..."
+                      v-restrict="'max:500'"
+                    />
+                    <a
+                      v-if="form.purchase_order_url"
+                      :href="form.purchase_order_url"
+                      target="_blank"
+                      class="btn-exec btn-exec-sm"
+                      title="Abrir documento"
+                    >
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                  </div>
+                  <small class="exec-hint">Pega el enlace al contrato firmado (Drive, SharePoint, etc.)</small>
+                </div>
+
+                <div class="col-12">
+                  <label class="exec-label">Notas Internas</label>
+                  <textarea
+                    v-model.trim="form.notes"
+                    class="exec-input w-100"
+                    rows="3"
+                    placeholder="Notas internas, condiciones especiales, recordatorios..."
+                  ></textarea>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ══ ANCHO COMPLETO: el reparto de cupos ══ -->
+        <div class="col-full">
+          <div class="exec-card mb-4">
+            <div class="exec-card__header exec-card__header--split">
+              <span>
+                <i class="fa-solid fa-users me-2 text-muted"></i>
+                Cupos y Beneficiarios
+              </span>
+              <div class="d-flex gap-2">
+                <button class="btn-exec btn-exec-sm" @click="mostrarPegado = !mostrarPegado" type="button">
+                  <i class="fa-solid fa-paste"></i> Pegar lista
+                </button>
+                <button class="btn-exec btn-exec-sm" @click="agregarBeneficiario" type="button">
+                  <i class="fa-solid fa-plus"></i> Agregar
+                </button>
+                <button
+                  class="btn-exec btn-exec-sm btn-exec-primary"
+                  :disabled="enviando || saving || !cuposPorEnviar"
+                  :title="cuposPorEnviar
+                    ? `Crea la inscripción de ${cuposPorEnviar} cupo(s) en FICO`
+                    : 'No hay cupos pendientes: asigna alumnos con su curso'"
+                  @click="enviarAFico"
+                  type="button"
+                >
+                  <i class="fa-solid fa-paper-plane"></i>
+                  {{ enviando ? 'Enviando…' : `Enviar a FICO (${cuposPorEnviar})` }}
+                </button>
+              </div>
+            </div>
+            <div class="exec-card__body">
+
+              <div v-if="resultadoEnvio" class="envio-resultado mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <b>
+                    {{ resultadoEnvio.enrolled }} inscrito(s) ·
+                    {{ resultadoEnvio.rejected }} sin enviar ·
+                    {{ resultadoEnvio.skipped }} ya estaban
+                  </b>
+                  <button class="btn-exec btn-exec-xs" @click="resultadoEnvio = null" type="button">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div v-for="fila in resultadoEnvio.detail" :key="fila.beneficiary_id" class="envio-fila">
+                  <span class="pill" :class="fila.estado === 'creado' ? 'pill-ok' : fila.estado === 'ya_matriculado' ? 'pill-pend' : 'pill-err'">
+                    {{ fila.estado.replace('_', ' ') }}
+                  </span>
+                  <span class="envio-nombre">{{ fila.full_name }}</span>
+                  <span class="exec-hint">{{ fila.mensaje }}</span>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                  <label class="exec-label">Cupos Comprados</label>
+                  <input v-model.number="form.number_of_licenses" type="number" min="0" class="exec-input w-100" placeholder="0" />
+                </div>
+                <div class="col-md-9 d-flex align-items-end">
+                  <div class="cupos-resumen" :class="{ 'cupos-resumen--exceso': cuposLibres < 0 }">
+                    <span><b>{{ form.beneficiaries.length }}</b> asignados</span>
+                    <span><b>{{ cuposLibres }}</b> libres</span>
+                    <span><b>{{ matriculados }}</b> ya inscritos por FICO</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="mostrarPegado" class="pegado mb-3">
+                <label class="exec-label">Pega una fila por alumno: <code>nombres, apellidos, documento, correo, teléfono</code></label>
+                <textarea v-model="textoPegado" class="exec-input w-100" rows="4" placeholder="JUAN CARLOS, PEREZ GOMEZ, 40506070, juan@empresa.com, 999888777"></textarea>
+                <div class="d-flex gap-2 mt-2">
+                  <button class="btn-exec btn-exec-sm btn-exec-primary" @click="importarPegado" type="button">
+                    Agregar {{ filasPegadas.length }} beneficiario(s)
+                  </button>
+                  <button class="btn-exec btn-exec-sm" @click="mostrarPegado = false; textoPegado = ''" type="button">Cancelar</button>
+                </div>
+              </div>
+
+              <p v-if="!form.beneficiaries.length" class="exec-empty">
+                Sin beneficiarios. Agrega los alumnos que la empresa quiere matricular.
+              </p>
+
+              <div class="tabla-scroll" v-else>
+                <table class="tabla-beneficiarios">
+                  <thead>
+                    <tr>
+                      <th style="min-width:170px">Nombres <span class="c-red">*</span></th>
+                      <th style="min-width:170px">Apellidos <span class="c-red">*</span></th>
+                      <th style="min-width:120px">Documento</th>
+                      <th style="min-width:200px">Correo</th>
+                      <th style="min-width:120px">Teléfono</th>
+                      <th style="min-width:240px">Programa</th>
+                      <th style="min-width:90px">Estado</th>
+                      <th style="width:44px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(b, i) in form.beneficiaries" :key="'b' + i">
+                      <td>
+                        <input v-model.trim="b.first_name" class="exec-input w-100" v-restrict="'upper|max:150'" />
+                        <!-- El nombre que traía la hoja: quien migró no sabía si venía
+                             "NOMBRES APELLIDOS" o al revés, así que lo separa el asesor. -->
+                        <small v-if="b.full_name && !b.first_name && !b.last_name" class="hint-nombre">
+                          {{ b.full_name }}
+                        </small>
+                      </td>
+                      <td><input v-model.trim="b.last_name" class="exec-input w-100" v-restrict="'upper|max:150'" /></td>
+                      <td><input v-model.trim="b.document_number" class="exec-input w-100" v-restrict="'max:20'" /></td>
+                      <td><input v-model.trim="b.email" type="email" class="exec-input w-100" v-restrict="'max:120'" /></td>
+                      <td><input v-model.trim="b.phone" class="exec-input w-100" v-restrict="'max:20'" /></td>
+                      <td>
+                        <SearchSelect
+                          v-model="b.program_version_id"
+                          mode="remote"
+                          :fetcher="buscarProgramas"
+                          label-field="description"
+                          value-field="id"
+                          sublabel-field="label_ui"
+                          placeholder="Programa del contrato"
+                          :cache="false"
+                          :model-label="b.program_label"
+                          @change="opt => { b.program_label = opt ? opt.description : '' }"
+                          class="exec-select-light w-100"
+                        />
+                      </td>
+                      <td>
+                        <span v-if="b.enrollment_id" class="pill pill-ok" title="Ya tiene inscripción">Inscrito</span>
+                        <span v-else class="pill pill-pend">Pendiente</span>
+                      </td>
+                      <td>
+                        <button
+                          class="btn-exec btn-exec-xs btn-exec-danger"
+                          :disabled="!!b.enrollment_id"
+                          :title="b.enrollment_id ? 'Ya está inscrito: anula la inscripción desde FICO' : 'Quitar'"
+                          @click="quitarBeneficiario(i)"
+                          type="button"
+                        >
+                          <i class="fa-solid fa-xmark"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </div>
 
       </div>
+    </main>
 
-      <div v-else class="card-body py-5 text-center text-muted">
-        Cargando...
-      </div>
+    <main class="exec-body" v-else>
+      <div class="exec-card exec-card--loading">Cargando...</div>
+    </main>
 
-    </div>
   </div>
 </template>
 
@@ -810,32 +857,46 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.lead-form { font-size: 0.95rem; color: #111827; }
-.card-header { background-color: #ffffff; border-bottom: 1px solid #e5e7eb !important; }
-.required-star { color: #dc2626; font-weight: 600; margin-left: .15rem; }
+.exec-shell { background: var(--slate-50, #f8fafc); min-height: 100vh; display: flex; flex-direction: column; }
+.exec-masthead { background: #fff; border-bottom: 1px solid #e5e7eb; padding: .75rem 1.25rem; }
+.masthead-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.masthead-brand { display: flex; align-items: center; gap: .75rem; }
+.brand-rule { width: 4px; height: 2rem; background: #3b82f6; border-radius: 2px; }
+.brand-eyebrow { font-size: .7rem; font-weight: 600; text-transform: uppercase; color: #6b7280; display: block; }
+.brand-title { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 0; }
+.masthead-actions { display: flex; gap: .5rem; align-items: center; }
+.masthead-id { font-size: .72rem; font-weight: 600; color: #6b7280; font-family: 'IBM Plex Mono', monospace; }
+.exec-body { flex: 1; padding: 1.25rem; }
+.exec-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+/* La tabla de beneficiarios necesita las dos columnas: es una hoja, no un campo. */
+.col-full { grid-column: 1 / -1; }
+@media (max-width: 900px) { .exec-form-grid { grid-template-columns: 1fr; } }
+.exec-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; }
+.exec-card--empresa { border-color: #3b82f6; border-left-width: 3px; }
+.exec-card--plata { border-color: #16a34a; border-left-width: 3px; }
+.exec-card--loading { padding: 2.5rem; text-align: center; color: #6b7280; }
+.exec-card__header { padding: .65rem 1rem; border-bottom: 1px solid #f3f4f6; font-size: .8rem; font-weight: 600; color: #374151; display: flex; align-items: center; }
+.exec-card__header--split { justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.exec-card__body { padding: 1rem; }
+.exec-label { font-size: .8rem; font-weight: 500; color: #374151; display: block; margin-bottom: .25rem; }
+.exec-input { border: 1px solid #e5e7eb; border-radius: .375rem; padding: .4rem .6rem; font-size: .875rem; width: 100%; background: #fff; color: #111827; }
+.exec-hint { display: block; font-size: .75rem; color: #6b7280; }
+.exec-empty { font-size: .8rem; color: #9ca3af; margin: 0; }
+.c-red { color: #dc2626; }
 
-.form-section__header { display: flex; align-items: center; margin-bottom: 1rem; position: relative; padding-left: .75rem; }
-.form-section__header::before { content: ""; position: absolute; left: 0; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background-color: #3b82f6; }
-.form-section__title { font-size: .8rem; font-weight: 600; color: #111827; text-transform: uppercase; letter-spacing: .03em; }
-
-.form-switch { position: relative; width: 42px; height: 24px; display: inline-block; }
+.switch-row { display: flex; align-items: center; gap: .5rem; padding-top: .3rem; }
+.switch-text { font-size: .8rem; color: #374151; }
+.form-switch { position: relative; width: 42px; height: 24px; display: inline-block; flex: 0 0 auto; }
 .form-switch input { display: none; }
 .form-switch span { position: absolute; inset: 0; background: #e5e7eb; border-radius: 9999px; transition: .2s; cursor: pointer; }
 .form-switch span::after { content: ''; width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
 .form-switch input:checked + span { background: #3b82f6; }
 .form-switch input:checked + span::after { left: 21px; }
 
-.btn { display: inline-flex; align-items: center; font-size: .8rem; font-weight: 500; border-radius: .375rem; padding: .4rem .75rem; border: 1px solid #d1d5db; background-color: #fff; cursor: pointer; color: #374151; text-decoration: none; }
-.btn[disabled] { opacity: .4; cursor: not-allowed; }
-.btn-sm { padding: .25rem .6rem; font-size: .78rem; }
-.btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
-.btn-outline { background-color: #fff; border-color: #d1d5db; color: #374151; }
-.form-control { border: 1px solid #e5e7eb; border-radius: .375rem; padding: .4rem .6rem; width: 100%; font-size: .875rem; }
-.form-label { font-size: .85rem; font-weight: 500; color: #374151; display: block; }
 .input-group { display: flex; }
-.input-group-text { background: #f9fafb; border: 1px solid #e5e7eb; border-right: none; padding: .4rem .6rem; border-radius: .375rem 0 0 .375rem; display: flex; align-items: center; }
-.input-group .form-control { border-radius: 0; }
-.input-group .btn-sm { border-radius: 0 .375rem .375rem 0; border-left: none; }
+.input-group-text { background: #f9fafb; border: 1px solid #e5e7eb; border-right: none; padding: .4rem .6rem; border-radius: .375rem 0 0 .375rem; display: flex; align-items: center; color: #2563eb; }
+.input-group .exec-input { border-radius: 0; }
+.input-group .btn-exec { border-radius: 0 .375rem .375rem 0; border-left: none; }
 
 /* Saldo y cupos */
 .saldo { background: #f9fafb; font-weight: 600; text-align: right; }
@@ -850,9 +911,9 @@ onMounted(async () => {
 /* Tabla de beneficiarios */
 .tabla-scroll { overflow-x: auto; }
 .tabla-beneficiarios { width: 100%; border-collapse: collapse; }
-.tabla-beneficiarios th { font-size: .75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; padding: .35rem .4rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.tabla-beneficiarios th { font-size: .72rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; padding: .35rem .4rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
 .tabla-beneficiarios td { padding: .25rem .4rem; vertical-align: middle; }
-.pill { font-size: .72rem; padding: .15rem .5rem; border-radius: .5rem; border: 1px solid transparent; white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; font-size: .72rem; padding: .15rem .5rem; border-radius: .5rem; border: 1px solid transparent; white-space: nowrap; }
 .pill-ok { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
 .pill-pend { background: #fef3c7; color: #b45309; border-color: #fde68a; }
 .pill-err { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
@@ -861,23 +922,40 @@ onMounted(async () => {
 .hint-nombre { display: block; font-size: .7rem; color: #9ca3af; padding: .1rem .2rem 0; }
 
 /* Resultado del envío a FICO */
-.envio-resultado { border: 1px solid #e5e7eb; border-radius: .6rem; padding: .7rem .8rem; background: #f9fafb; }
+.envio-resultado { border: 1px solid #e5e7eb; border-radius: .5rem; padding: .7rem .8rem; background: #f9fafb; }
 .envio-fila { display: flex; align-items: center; gap: .5rem; padding: .18rem 0; }
 .envio-nombre { font-size: .82rem; font-weight: 500; }
 
+.btn-exec { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 500; border-radius: .375rem; padding: .4rem .75rem; border: 1px solid #d1d5db; background-color: #fff; cursor: pointer; color: #374151; text-decoration: none; }
+.btn-exec[disabled] { opacity: .4; cursor: not-allowed; }
+.btn-exec-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+.btn-exec-ghost { background-color: transparent; border-color: #d1d5db; color: #374151; }
+.btn-exec-danger { background-color: #dc2626; border-color: #dc2626; color: #fff; }
+.btn-exec-sm { padding: .25rem .5rem; font-size: .75rem; }
+.btn-exec-xs { padding: .15rem .4rem; font-size: .72rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+
 /* ══ DARK MODE ══ */
-[data-coreui-theme="dark"] .lead-form { color: #F4F4F0; }
-[data-coreui-theme="dark"] .card-header { background-color: #1A1A14; border-bottom: 1px solid #2A2A22 !important; }
-[data-coreui-theme="dark"] .required-star { color: #F87171; }
-[data-coreui-theme="dark"] .form-section__title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-shell { background: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-masthead { background: #1A1A14; border-bottom-color: #2A2A22; }
+[data-coreui-theme="dark"] .brand-rule { background: #60A5FA; }
+[data-coreui-theme="dark"] .brand-eyebrow { color: #A0A099; }
+[data-coreui-theme="dark"] .brand-title { color: #F4F4F0; }
+[data-coreui-theme="dark"] .masthead-id { color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-card { background: #1A1A14; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .exec-card--empresa { border-color: #60A5FA; }
+[data-coreui-theme="dark"] .exec-card--plata { border-color: #4ADE80; }
+[data-coreui-theme="dark"] .exec-card--loading { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-card__header { border-bottom-color: #24241E; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
+[data-coreui-theme="dark"] .exec-input { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .exec-hint { color: #8A8A80; }
+[data-coreui-theme="dark"] .exec-empty { color: #8A8A80; }
+[data-coreui-theme="dark"] .c-red { color: #F87171; }
+[data-coreui-theme="dark"] .switch-text { color: #F4F4F0; }
 [data-coreui-theme="dark"] .form-switch span { background: #3A3A33; }
 [data-coreui-theme="dark"] .form-switch input:checked + span { background: #3b82f6; }
-[data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
-[data-coreui-theme="dark"] .btn-outline { background-color: #1A1A14; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .form-control { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .form-label { color: #A0A099; }
-[data-coreui-theme="dark"] .input-group-text { background: #1F1F1A; border-color: #3A3A33; color: #A0A099; }
+[data-coreui-theme="dark"] .input-group-text { background: #1F1F1A; border-color: #3A3A33; color: #60A5FA; }
 [data-coreui-theme="dark"] .saldo { background: #1F1F1A; }
 [data-coreui-theme="dark"] .saldo--deuda { color: #FBBF24; }
 [data-coreui-theme="dark"] .saldo--exceso { color: #F87171; }
@@ -892,4 +970,8 @@ onMounted(async () => {
 [data-coreui-theme="dark"] .pill-err { background: rgba(248,113,113,.14); color: #F87171; border-color: rgba(248,113,113,.3); }
 [data-coreui-theme="dark"] .hint-nombre { color: #6B6B63; }
 [data-coreui-theme="dark"] .envio-resultado { background: #1F1F18; border-color: #2A2A22; }
+[data-coreui-theme="dark"] .btn-exec { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-exec-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
+[data-coreui-theme="dark"] .btn-exec-ghost { background-color: transparent; border-color: #3A3A33; color: #F4F4F0; }
+[data-coreui-theme="dark"] .btn-exec-danger { background-color: #dc2626; border-color: #dc2626; color: #fff; }
 </style>

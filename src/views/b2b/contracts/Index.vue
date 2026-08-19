@@ -1,384 +1,413 @@
 <template>
-  <div class="card leads-card">
-    <div class="card-header">
-      <div class="title">
-        Contratos B2B
-        <span class="sub">Listado</span>
+  <div class="contracts-page">
+    <header class="ep-masthead">
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">B2B</span>
+        <h1 class="ep-title">Contratos</h1>
+        <span class="ep-subtitle">Acuerdos, cupos y cobranza</span>
       </div>
-      <div class="actions-bar">
-        <button class="btn btn-outline" @click="openFilterModal">
-          <i class="fa-solid fa-filter me-1"></i> Filtros
-        </button>
-        <button class="btn btn-primary" @click="goNew">
-          + Nuevo Contrato
+      <div class="ep-masthead-actions">
+        <button class="ep-btn-new" @click="list.goNew()">
+          <i class="fa-solid fa-plus"></i> Nuevo contrato
         </button>
       </div>
-    </div>
+    </header>
 
-    <div class="card-body">
-      <!-- Chips de filtros activos -->
-      <div v-if="activeFilterChips.length" class="active-filters">
-        <span class="label">Filtros:</span>
-        <button
-          v-for="chip in activeFilterChips"
-          :key="chip.key"
-          class="chip"
-          @click="clearFilter(chip.key)"
+    <!-- KPIs -->
+    <section class="ep-section">
+      <div class="ep-kpis">
+        <article
+          v-for="k in kpiCards"
+          :key="k.key"
+          class="ep-kpi"
+          :class="[`ep-kpi-${k.color}`, { 'is-active': list.activeViewKey.value === k.viewKey }]"
+          @click="list.applySavedView(k.viewKey)"
         >
-          {{ chip.text }} <span class="x">×</span>
-        </button>
-        <button class="chip clear-all" @click="clearFilters">Limpiar todo</button>
+          <div class="ep-kpi-head">
+            <span class="ep-kpi-label">{{ k.label }}</span>
+            <i class="fa-solid ep-kpi-icon" :class="k.icon"></i>
+          </div>
+          <div class="ep-kpi-main">
+            <span v-if="list.isLoading.value" class="sk-kpi"></span>
+            <span v-else class="ep-kpi-value">{{ k.value }}</span>
+          </div>
+          <span class="ep-kpi-foot">{{ k.foot }}</span>
+        </article>
       </div>
+    </section>
 
-      <div class="table-responsive">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="ta-right">Acciones</th>
-              <th>Empresa</th>
-              <th>Tipo de Contrato</th>
-              <th>Nombre del Contrato</th>
-              <th class="ta-right">Monto</th>
-              <th class="ta-right">Pagado</th>
-              <th class="ta-right">Saldo</th>
-              <th class="ta-center">Cupos</th>
-              <th class="ta-center">F. Cierre</th>
-              <th class="ta-center">F. Inicio</th>
-              <th class="ta-center">F. Fin</th>
-              <th class="ta-center">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in contracts" :key="item.contract_id">
-              <td class="ta-right nowrap">
-                <button class="btn btn-outline btn-sm me-1" @click="viewDetail(item)" title="Ver detalle">
-                  <i class="fa-solid fa-eye text-info"></i>
-                </button>
-                <button class="btn btn-outline btn-sm" @click="editContract(item)" title="Editar">
-                  <i class="fa-solid fa-pen-to-square text-warning"></i>
-                </button>
-              </td>
+    <!-- Vistas rápidas + toolbar -->
+    <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': list.activeFilterChips.value.length > 0 }">
+      <div class="ep-filter-bar-main">
+        <nav class="ep-tabs" aria-label="Vistas rapidas">
+          <button
+            v-for="v in list.savedViews.value"
+            :key="v.key"
+            :class="['ep-tab', { 'is-active': list.activeViewKey.value === v.key, 'is-highlight': v.highlight }]"
+            @click="list.applySavedView(v.key)"
+          >
+            <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+          </button>
+        </nav>
 
-              <td class="minW">
-                <div class="name">{{ item.company_name }}</div>
-                <small class="text-muted mono" v-if="item.document_number">{{ item.document_number }}</small>
-              </td>
-
-              <td>
-                <span class="badge badge-neutral">{{ item.contract_type_label || '—' }}</span>
-              </td>
-
-              <td class="minW">{{ item.contract_name || '—' }}</td>
-
-              <td class="ta-right mono small nowrap">{{ money(item.total_amount, item.currency_alias) }}</td>
-              <td class="ta-right mono small nowrap">{{ money(item.paid_amount, item.currency_alias) }}</td>
-              <td class="ta-right mono small nowrap" :class="{ 'saldo-deuda': Number(item.pending_amount) > 0 }">
-                {{ money(item.pending_amount, item.currency_alias) }}
-              </td>
-
-              <td class="ta-center nowrap">
-                <span class="badge" :class="Number(item.seats_available) < 0 ? 'badge-danger' : 'badge-neutral'">
-                  {{ item.seats_assigned }}/{{ item.number_of_licenses || 0 }}
-                </span>
-                <small class="text-muted d-block" v-if="Number(item.seats_enrolled) > 0">
-                  {{ item.seats_enrolled }} inscritos
-                </small>
-              </td>
-
-              <td class="ta-center mono small">{{ item.close_date ? formatDate(item.close_date) : '—' }}</td>
-
-              <td class="ta-center mono small">{{ formatDate(item.start_date) }}</td>
-
-              <td class="ta-center mono small">
-                {{ item.end_date ? formatDate(item.end_date) : '—' }}
-              </td>
-
-              <td class="ta-center">
-                <span class="badge" :class="statusClass(item)">{{ statusLabel(item) }}</span>
-              </td>
-            </tr>
-
-            <tr v-if="!loading && !contracts.length">
-              <td colspan="12" class="empty-state">Sin resultados.</td>
-            </tr>
-            <tr v-if="loading">
-              <td colspan="12" class="empty-state">Cargando...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pagination-bar">
-        <div class="page-size">
-          <label>Tamaño</label>
-          <select v-model.number="pagin.size" @change="resetToFirstPage">
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-          </select>
-        </div>
-        <div class="pager">
-          <button class="btn btn-outline btn-sm" :disabled="pagin.page === 1" @click="prevPage">‹ Anterior</button>
-          <span class="muted">Página {{ pagin.page }} de {{ totalPages }}</span>
-          <button class="btn btn-outline btn-sm" :disabled="pagin.page === totalPages" @click="nextPage">Siguiente ›</button>
+        <div class="ep-toolbar">
+          <BasePagination
+            v-model="list.pagin.value"
+            hide-filters
+            :emit-refresh="true"
+            @change="list.handlePaginationChange"
+            @refresh="list.fetchContracts"
+          />
         </div>
       </div>
-    </div>
+
+      <div v-if="list.activeFilterChips.value.length > 0" class="ep-filter-strip">
+        <span class="ep-filter-strip-badge">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+          Filtros activos
+          <span class="ep-filter-strip-count">{{ list.activeFilterChips.value.length }}</span>
+        </span>
+        <BaseFilterChips
+          :items="list.activeFilterChips.value"
+          @remove="list.clearFilter"
+          @clear-all="list.clearFilters"
+        />
+      </div>
+    </section>
+
+    <ContractsTable
+      :contracts="list.pagedContracts.value"
+      :col-filters="list.colFilters"
+      :is-loading="list.isLoading.value"
+      :selected-id="list.selectedContract.value?.contract_id"
+      @select-row="list.selectContract"
+      @edit="list.editContract"
+      @view-company="list.viewCompany"
+      @clear-col-filters="list.clearColFilters"
+    />
   </div>
-
-  <!-- Modal de filtros -->
-  <BaseModal v-model="showFilterModal" title="Filtros de contratos" size="md">
-    <div class="px-3 py-2">
-      <div class="row g-3">
-        <div class="col-12">
-          <label class="form-label">Empresa</label>
-          <input
-            v-model.trim="filters.q"
-            type="text"
-            class="form-control"
-            placeholder="Nombre o RUC de empresa..."
-            @keyup.enter="applyFilters"
-          />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Tipo de Contrato</label>
-          <SearchSelect
-            v-model="filters.cat_contract_type"
-            :items="catalogs.contractTypeList"
-            label-field="description"
-            value-field="id"
-            placeholder="Todos los tipos..."
-          />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Estado</label>
-          <SearchSelect
-            v-model="filters.status"
-            :items="statusOptions"
-            label-field="description"
-            value-field="value"
-            placeholder="Todos los estados..."
-          />
-        </div>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="d-flex justify-content-between w-100">
-        <button class="btn btn-outline btn-sm" @click="clearFilters">Limpiar</button>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline btn-sm" @click="showFilterModal = false">Cerrar</button>
-          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar</button>
-        </div>
-      </div>
-    </template>
-  </BaseModal>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, inject } from 'vue'
-import { useRouter } from 'vue-router'
-import BaseModal from '@/components/BaseModal.vue'
-import SearchSelect from '@/components/SearchSelect.vue'
-import { ServiceKeys } from '@/services'
+import { computed, onMounted, watch } from 'vue'
+import BasePagination from '@/components/BasePagination.vue'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import ContractsTable from './ContractsTable.vue'
+import { useContractList } from '@/composables/useContractList'
 
-const router = useRouter()
-const b2bService = inject(ServiceKeys.B2b)
-const catalog = inject('catalog')
+const list = useContractList()
 
-// UI
-const showFilterModal = ref(false)
-const loading = ref(false)
-function openFilterModal() { showFilterModal.value = true }
-
-// Catálogos
-const catalogs = ref({
-  contractTypeList: catalog?.options('we_b2b_contract') || [],
+// La plata de la cartera no se convierte entre monedas: si hay saldo en dolares
+// se muestra aparte en el pie, nunca sumado a los soles con un tipo de cambio
+// que el front no tiene por que conocer.
+const kpiCards = computed(() => {
+  const k = list.kpis.value
+  const soles = n => 'S/ ' + Number(n || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 })
+  return [
+    {
+      key: 'total', viewKey: 'all', label: 'Contratos', icon: 'fa-file-signature', color: 'indigo',
+      value: k.total.toLocaleString('es-PE'),
+      foot: 'Contratos registrados'
+    },
+    {
+      key: 'active', viewKey: 'active', label: 'Vigentes', icon: 'fa-circle-check', color: 'green',
+      value: k.active.toLocaleString('es-PE'),
+      foot: k.total ? `${Math.round((k.active / k.total) * 100)}% de la cartera` : 'Sin contratos'
+    },
+    {
+      key: 'balance', viewKey: 'with_balance', label: 'Por cobrar', icon: 'fa-coins', color: 'amber',
+      value: soles(k.pendingPen),
+      foot: k.pendingUsd > 0
+        ? `+ $ ${Number(k.pendingUsd).toLocaleString('es-PE', { maximumFractionDigits: 0 })} en dólares`
+        : 'Saldo pendiente en soles'
+    },
+    {
+      key: 'seats', viewKey: 'free_seats', label: 'Cupos libres', icon: 'fa-chair', color: 'teal',
+      value: k.freeSeats.toLocaleString('es-PE'),
+      foot: 'Comprados sin beneficiario'
+    }
+  ]
 })
 
-const statusOptions = [
-  { value: 'active', description: 'Activo' },
-  { value: 'expired', description: 'Vencido' },
-  { value: 'cancelled', description: 'Cancelado' },
-]
+// El paginador no sabe cuantas filas sobrevivieron al filtro, hay que decirselo.
+// Y si el filtro deja menos paginas que la actual, hay que retroceder o la tabla
+// queda en blanco sobre una pagina que ya no existe.
+watch(list.totalFiltered, total => {
+  list.pagin.value.total = total
+  const lastPage = Math.max(1, Math.ceil(total / list.pagin.value.size))
+  if (list.pagin.value.page > lastPage) list.pagin.value.page = lastPage
+}, { immediate: true })
 
-// Tabla + paginación
-const contracts = ref([])
-const pagin = ref({ size: 25, page: 1, total: 0 })
-const totalPages = computed(() => Math.max(1, Math.ceil((pagin.value.total || 0) / pagin.value.size)))
-
-function resetToFirstPage() { pagin.value.page = 1; fetchContracts() }
-function nextPage() { if (pagin.value.page < totalPages.value) { pagin.value.page++; fetchContracts() } }
-function prevPage() { if (pagin.value.page > 1) { pagin.value.page--; fetchContracts() } }
-
-// Filtros
-const filters = reactive({ q: '', cat_contract_type: null, status: null })
-const activeFilterChips = ref([])
-
-function rebuildChips() {
-  const chips = []
-  if (filters.q) chips.push({ key: 'q', text: `Empresa: ${filters.q}` })
-  if (filters.cat_contract_type) {
-    const found = catalogs.value.contractTypeList.find(c => c.id === filters.cat_contract_type)
-    chips.push({ key: 'cat_contract_type', text: `Tipo: ${found?.description || filters.cat_contract_type}` })
-  }
-  if (filters.status) {
-    const found = statusOptions.find(s => s.value === filters.status)
-    chips.push({ key: 'status', text: `Estado: ${found?.description || filters.status}` })
-  }
-  activeFilterChips.value = chips
-}
-
-function clearFilter(key) {
-  filters[key] = key === 'q' ? '' : null
-  applyFilters()
-}
-
-function clearFilters() {
-  filters.q = ''
-  filters.cat_contract_type = null
-  filters.status = null
-  pagin.value.page = 1
-  rebuildChips()
-  fetchContracts()
-}
-
-function applyFilters() {
-  showFilterModal.value = false
-  pagin.value.page = 1
-  rebuildChips()
-  fetchContracts()
-}
-
-// Helpers de estado
-function statusLabel(item) {
-  if (item.status) return { active: 'Activo', expired: 'Vencido', cancelled: 'Cancelado' }[item.status] ?? item.status
-  if (item.active === 'N') return 'Cancelado'
-  if (item.end_date && item.end_date < new Date().toISOString().slice(0, 10)) return 'Vencido'
-  return 'Activo'
-}
-
-function statusClass(item) {
-  const label = statusLabel(item)
-  if (label === 'Activo') return 'badge-success'
-  if (label === 'Vencido') return 'badge-warning'
-  return 'badge-danger'
-}
-
-function formatDate(value) {
-  if (!value) return '—'
-  const [y, m, d] = String(value).split('T')[0].split('-')
-  return `${d}/${m}/${y}`
-}
-
-// El simbolo sale del alias del catalogo de moneda, no de la plaza del navegador:
-// un contrato en USD tiene que leerse en USD aunque el usuario este en Peru.
-function money(value, currencyAlias) {
-  if (value === null || value === undefined || value === '') return '—'
-  const simbolo = currencyAlias === 'we_currency_dollars' ? '$' : 'S/'
-  return `${simbolo} ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-// Navegación
-function goNew() { router.push({ name: 'B2BContractNew' }) }
-function editContract(item) { router.push({ name: 'B2BContractEdit', params: { id: item.contract_id } }) }
-function viewDetail(item) { router.push({ name: 'B2BContractEdit', params: { id: item.contract_id } }) }
-
-// Backend
-async function fetchContracts() {
-  loading.value = true
-  try {
-    const { items, total, page, size } = await b2bService.contractList({
-      q: filters.q || null,
-      cat_contract_type: filters.cat_contract_type || null,
-      status: filters.status || null,
-      page: pagin.value.page,
-      size: pagin.value.size,
-    })
-    contracts.value = items || []
-    pagin.value.total = Number(total || 0)
-    pagin.value.page = Number(page || pagin.value.page)
-    pagin.value.size = Number(size || pagin.value.size)
-  } catch (err) {
-    console.error('Error cargando contratos:', err)
-    contracts.value = []
-    pagin.value.total = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => { rebuildChips(); fetchContracts() })
+onMounted(async () => {
+  await list.fetchContracts()
+  list.applyQueryFilters()
+})
 </script>
 
 <style scoped>
-.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); margin-bottom: 1.5rem; }
-.card-header { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }
-.title { font-weight: 600; font-size: 1rem; color: #111827; display: flex; align-items: baseline; gap: .5rem; }
-.title .sub { font-weight: 500; font-size: .8rem; color: #6b7280; }
-.actions-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.card-body { padding: 1rem 1.25rem; }
-.active-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; align-items: center; }
-.active-filters .label { font-size: .8rem; color: #6b7280; margin-right: .25rem; }
-.chip { background: #f3f4f6; border: 1px solid #e5e7eb; color: #374151; border-radius: 999px; padding: .2rem .6rem; font-size: .75rem; cursor: pointer; }
-.chip .x { margin-left: .35rem; color: #6b7280; }
-.chip.clear-all { background: #fff; }
-.table-responsive { width: 100%; overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.table thead th { position: sticky; top: 0; background-color: #f9fafb; text-align: left; font-weight: 600; white-space: nowrap; padding: .6rem .75rem; border-bottom: 1px solid #e5e7eb; }
-.table td { padding: .6rem .75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-.ta-right { text-align: right; }
-.ta-center { text-align: center; }
-.nowrap { white-space: nowrap; }
-.mono { font-family: monospace; font-size: .82rem; }
-.saldo-deuda { color: #b45309; font-weight: 600; }
-.name { font-weight: 600; color: #111827; }
-.small { font-size: .8rem; }
-.muted { color: #6b7280; }
-.empty-state { text-align: center; padding: 1.5rem; color: #6b7280; font-style: italic; }
-.badge { display: inline-block; padding: .2rem .5rem; font-size: .72rem; border-radius: .5rem; border: 1px solid transparent; white-space: nowrap; }
-.badge-neutral { background: #f3f4f6; color: #374151; border-color: #e5e7eb; }
-.badge-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-.badge-warning { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
-.badge-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-.btn { display: inline-flex; align-items: center; font-size: .8rem; font-weight: 500; border-radius: .375rem; padding: .4rem .75rem; border: 1px solid #d1d5db; background-color: #fff; cursor: pointer; color: #374151; }
-.btn[disabled] { opacity: .4; cursor: not-allowed; }
-.btn-sm { padding: .25rem .5rem; font-size: .75rem; }
-.btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
-.btn-outline { background-color: #fff; border-color: #d1d5db; color: #374151; }
-.pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding-top: 1rem; font-size: .8rem; flex-wrap: wrap; }
-.page-size { display: inline-flex; align-items: center; gap: .4rem; }
-.page-size select { border: 1px solid #d1d5db; border-radius: .375rem; padding: .25rem .4rem; background: #fff; }
-.pager { display: inline-flex; align-items: center; gap: .5rem; }
-.minW { min-width: 160px; }
-.form-control { border: 1px solid #e5e7eb; border-radius: .375rem; padding: .4rem .6rem; width: 100%; font-size: .875rem; }
-.form-label { font-size: .85rem; font-weight: 500; color: #374151; display: block; margin-bottom: .3rem; }
+.contracts-page {
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
 
-/* ══ DARK MODE ══ */
-[data-coreui-theme="dark"] .card { background: #1A1A14; border-color: #2A2A22; box-shadow: 0 1px 2px rgba(0,0,0,.4); color: #F4F4F0; }
-[data-coreui-theme="dark"] .card-header { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .title .sub { color: #A0A099; }
-[data-coreui-theme="dark"] .active-filters .label { color: #A0A099; }
-[data-coreui-theme="dark"] .chip { background: #24241E; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .chip .x { color: #A0A099; }
-[data-coreui-theme="dark"] .chip.clear-all { background: #1A1A14; }
-[data-coreui-theme="dark"] .table thead th { background-color: #1F1F1A; color: #F4F4F0; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .table td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .muted { color: #A0A099; }
-[data-coreui-theme="dark"] .empty-state { color: #A0A099; }
-[data-coreui-theme="dark"] .badge-neutral { background: #24241E; color: #F4F4F0; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .badge-success { background: rgba(16,185,129,.14); color: #34D399; border-color: rgba(16,185,129,.3); }
-[data-coreui-theme="dark"] .badge-warning { background: rgba(245,158,11,.14); color: #FBBF24; border-color: rgba(245,158,11,.3); }
-[data-coreui-theme="dark"] .saldo-deuda { color: #FBBF24; }
-[data-coreui-theme="dark"] .badge-danger { background: rgba(239,68,68,.14); color: #F87171; border-color: rgba(239,68,68,.3); }
-[data-coreui-theme="dark"] .btn { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .btn-primary { background-color: #2563eb; border-color: #2563eb; color: #fff; }
-[data-coreui-theme="dark"] .btn-outline { background-color: #1A1A14; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .page-size select { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .form-control { background-color: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .form-label { color: #A0A099; }
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--e-text);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* === Masthead === */
+.ep-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
+.ep-breadcrumb {
+  font-size: 11px;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.ep-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--e-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.ep-subtitle { font-size: 13.5px; color: var(--e-text-secondary); margin-top: 2px; }
+.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
+.ep-btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; box-sizing: border-box; padding: 0 18px;
+  font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--we-navy, #002060);
+  border: none; border-radius: 8px; cursor: pointer;
+  transition: background .2s ease; font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
+.ep-btn-new i { font-size: 11px; }
+
+/* === Section wrapper === */
+.ep-section { background: transparent; border: none; padding: 0; margin-bottom: 14px; }
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.ep-section.ep-filter-bar .ep-tabs { flex: 0 1 auto; }
+.ep-section.ep-filter-bar .ep-toolbar { flex: 1 1 auto; justify-content: flex-end; }
+
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ep-filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
+.ep-filter-strip :deep(.active-filters .label) { display: none; }
+
+/* === KPI cards === */
+.ep-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ep-kpi {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.ep-kpi:hover {
+  border-color: var(--e-border-strong);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.04);
+}
+/* La tarjeta es el atajo a su vista: marcarla cierra el circulo de "hice clic en
+   Por cobrar y la tabla quedo filtrada por eso". */
+.ep-kpi.is-active { border-color: currentColor; }
+.ep-kpi::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: currentColor;
+}
+.ep-kpi-head { display: flex; justify-content: space-between; align-items: center; }
+.ep-kpi-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ep-kpi-icon { font-size: 12px; color: currentColor; opacity: 0.65; }
+.ep-kpi-main { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ep-kpi-value {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--e-text);
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ep-kpi-foot {
+  font-size: 11px; color: var(--e-text-muted);
+  border-top: 1px solid var(--e-border);
+  padding-top: 8px; margin-top: 2px;
+}
+
+.ep-kpi-indigo { color: #6366F1; }
+.ep-kpi-amber  { color: #D97706; }
+.ep-kpi-green  { color: #10B981; }
+.ep-kpi-teal   { color: #0D9488; }
+
+.sk-kpi {
+  display: block;
+  width: 92px; height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #F5F5F5 25%, #EBEBEB 50%, #F5F5F5 75%);
+  background-size: 200% 100%;
+  animation: kpi-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes kpi-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* === Tabs === */
+.ep-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.ep-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--e-text-secondary);
+  background: var(--e-bg-subtle);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ep-tab i { font-size: 11px; opacity: 0.7; }
+.ep-tab:hover { color: var(--e-text); background: #F5F5F5; }
+.ep-tab.is-active {
+  color: var(--e-accent);
+  background: var(--e-accent-soft);
+  border-color: rgba(16, 185, 129, 0.25);
+  font-weight: 600;
+}
+.ep-tab.is-active i { opacity: 1; }
+.ep-tab.is-highlight::before {
+  content: '';
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--e-accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* === Toolbar === */
+.ep-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; }
+
+/* === Responsive === */
+@media (max-width: 1280px) {
+  .ep-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .ep-masthead { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .ep-kpis { grid-template-columns: 1fr; }
+}
+
+/* ════════ DARK MODE ════════ */
+[data-coreui-theme="dark"] .contracts-page {
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16,185,129,0.16);
+}
+[data-coreui-theme="dark"] .contracts-page .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .contracts-page .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .contracts-page .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .contracts-page .ep-filter-strip-badge { color: #34D399; }
+[data-coreui-theme="dark"] .contracts-page .ep-kpi { background: #1A1A14; }
+[data-coreui-theme="dark"] .contracts-page .ep-kpi:hover {
+  border-color: #3A3A33;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.35);
+}
+[data-coreui-theme="dark"] .contracts-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .contracts-page .ep-btn-new:hover { background: #E4E4DD; }
+[data-coreui-theme="dark"] .contracts-page .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .contracts-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .contracts-page .sk-kpi {
+  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
+  background-size: 200% 100%;
+}
 </style>

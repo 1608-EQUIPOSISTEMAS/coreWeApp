@@ -1,39 +1,73 @@
 <template>
-  <div class="exec-shell list-shell">
-
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">B2B</span>
-            <h1 class="brand-title">Leads Empresas</h1>
-          </div>
-        </div>
-        <div class="masthead-actions">
-          <button class="btn-exec btn-exec-ghost" @click="goNew">
-            <i class="fa-solid fa-plus"></i> Nuevo Lead Empresa
-          </button>
-        </div>
+  <div class="leads-page">
+    <header class="ep-masthead">
+      <div class="ep-masthead-left">
+        <span class="ep-breadcrumb">B2B</span>
+        <h1 class="ep-title">Leads de Empresas</h1>
+        <span class="ep-subtitle">Contactos y oportunidades corporativas</span>
+      </div>
+      <div class="ep-masthead-actions">
+        <button class="ep-btn-control" @click="openFilterModal" title="Filtros avanzados">
+          <i class="fa-solid fa-filter"></i>
+          <span>Filtros</span>
+        </button>
+        <button class="ep-btn-new" @click="goNew">
+          <i class="fa-solid fa-plus"></i> Nuevo Lead
+        </button>
       </div>
     </header>
 
-    <main class="exec-body">
+    <main class="ep-body">
 
-      <div class="toolbar-chips mb-2" v-if="activeFilterChips.length">
-        <BaseFilterChips :items="activeFilterChips" @remove="clearFilter" @clear-all="clearFilters" />
-      </div>
+      <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
+        <div class="ep-filter-bar-main">
+          <div class="ep-quick-row">
+            <nav class="ep-tabs" aria-label="Vistas rapidas">
+              <button
+                v-for="v in quickViews"
+                :key="v.key"
+                :class="['ep-tab', { 'is-active': activeQuickView === v.key, 'is-highlight': v.highlight }]"
+                :title="v.title"
+                @click="applyQuickView(v.key)"
+              >
+                <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+              </button>
+            </nav>
+            <div class="ep-quick-order" title="Ordenar resultados">
+              <i class="fa-solid fa-arrow-down-wide-short ep-quick-order-icon"></i>
+              <SearchSelect
+                v-model="filters.order_by"
+                :items="filtroOrden"
+                label-field="description"
+                value-field="value"
+                placeholder="Ordenar..."
+                class="ss-quick"
+                @update:model-value="onOrderChange"
+              />
+            </div>
+          </div>
+          <div class="ep-toolbar">
+            <BasePagination
+              v-model="pagin"
+              @open-filters="openFilterModal"
+              @change="handlePaginationChange"
+            />
+          </div>
+        </div>
 
-      <div class="exec-toolbar">
-        <div class="toolbar-pagination">
-          <BasePagination v-model="pagin" @open-filters="openFilterModal" @change="handlePaginationChange" />
+        <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
+          <span class="ep-filter-strip-badge">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            Filtros activos
+            <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
+          </span>
+          <BaseFilterChips
+            :items="activeFilterChips"
+            @remove="clearFilter"
+            @clear-all="clearFilters"
+          />
         </div>
-        <div class="toolbar-actions">
-          <button class="btn-exec btn-exec-outline" @click="openFilterModal">
-            <i class="fa-solid fa-filter"></i> Filtros
-          </button>
-        </div>
-      </div>
+      </section>
 
       <div class="table-shell">
         <div class="table-responsive-custom">
@@ -164,6 +198,7 @@ import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
+import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
 const router = useRouter()
@@ -193,6 +228,7 @@ const pagin = ref({ page: 1, size: 25, total: 0 })
 // Filtros inline
 const filters = reactive({
   q: '',
+  order_by: 0,
   company_q: '',
   status_lead_ids: [],
   program_version_ids: [],
@@ -218,7 +254,11 @@ function clearFilter(key) {
   fetchLeads()
 }
 
-function clearFilters() {
+// Dejar los filtros en cero SIN ir al servidor: las vistas rapidas resetean y
+// despues arman su propio filtro, y un fetch en el medio seria un viaje al
+// pedo cuyo resultado se descarta al instante.
+function resetFilters() {
+  activeQuickView.value = 'all'
   filters.q = ''
   filters.company_q = ''
   filters.status_lead_ids = []
@@ -227,6 +267,10 @@ function clearFilters() {
   filters.last_follow_ids = []
   filtersDraft.q = ''
   filtersDraft.company_q = ''
+}
+
+function clearFilters() {
+  resetFilters()
   rebuildChips()
   fetchLeads()
 }
@@ -254,6 +298,55 @@ function openFilterModal() {
 
 function handlePaginationChange() { fetchLeads() }
 
+// === Vistas rapidas ===
+// Mismo contrato que /b2b/leads: la pestaña no filtra en memoria, arma el filtro
+// del SP a partir del ALIAS del catalogo. El id numerico cambia entre entornos;
+// el alias no.
+const quickViews = [
+  { key: 'all',       label: 'Todos',       icon: 'fa-list',        highlight: true, title: 'Limpiar todos los filtros' },
+  { key: 'follow',    label: 'Seguimiento', icon: 'fa-phone',       title: 'Pendientes de contacto' },
+  { key: 'will_pay',  label: 'Pagará',      icon: 'fa-coins',       title: 'Leads que comprometieron pago' },
+  { key: 'hot',       label: 'Interés alto', icon: 'fa-fire',       title: 'Nivel de interes alto' }
+]
+const activeQuickView = ref('all')
+
+const filtroOrden = [
+  { value: 0, description: 'Fecha de Registro' },
+  { value: 2, description: 'Fecha de Pago' },
+  { value: 4, description: 'Fecha de Contacto' }
+]
+
+function resolveByAlias(catalogRef, aliases) {
+  const items = catalogRef.value || []
+  return aliases
+    .map(a => items.find(i => i.alias === a))
+    .filter(Boolean)
+    .map(i => ({ value: i.id, label: i.description }))
+}
+
+function applyQuickView(key) {
+  resetFilters()
+  activeQuickView.value = key
+
+  if (key === 'follow') {
+    filters.last_follow_ids = resolveByAlias(followCatalog, ['we_calling_pending'])
+  } else if (key === 'will_pay') {
+    filters.status_lead_ids = resolveByAlias(leadStatusCatalog, ['we_lead_status_will_pay'])
+  } else if (key === 'hot') {
+    filters.interest_level_ids = resolveByAlias(leadInterestCatalog, ['we_lead_interest_high'])
+  }
+
+  pagin.value.page = 1
+  rebuildChips()
+  fetchLeads()
+}
+
+function onOrderChange() {
+  pagin.value.page = 1
+  rebuildChips()
+  fetchLeads()
+}
+
 // Navegación
 function goNew() { router.push({ name: 'B2BCompanyLeadNew' }) }
 function editLead(l) { router.push({ name: 'B2BCompanyLeadEdit', params: { id: l.lead_id } }) }
@@ -280,6 +373,7 @@ async function fetchLeads() {
     const { items, total: t, page: p } = await b2bService.companyLeadList({
       q: filters.q || null,
       company_q: filters.company_q || null,
+      order_by: filters.order_by ?? 0,
       page: pagin.value.page,
       size: pagin.value.size,
       status_lead_ids: getIds(filters.status_lead_ids),
@@ -309,43 +403,178 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+.leads-page {
+  --e-bg: #FFFFFF;
+  --e-bg-subtle: #FAFAF8;
+  --e-border: #E8E8E3;
+  --e-border-strong: #D4D4CC;
+  --e-text: #14140F;
+  --e-text-secondary: #6F6F66;
+  --e-text-muted: #A0A099;
+  --e-accent: #10B981;
+  --e-accent-soft: #ECFDF4;
+
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--e-text);
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 28px;
   font-size: 13px;
-  color: var(--text-primary, #0f172a);
 }
 
 /* ══ MASTHEAD ═══════════════════════════════════════════════════ */
-.exec-masthead {
-  background: var(--navy-900, #0f172a);
-  color: #fff;
-  border-bottom: 1px solid var(--navy-700, #334155);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.ep-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
 }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #14b8a6); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: #fff; }
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
+.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
+.ep-breadcrumb {
+  font-size: 11px;
+  color: var(--e-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.ep-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--e-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.ep-subtitle { font-size: 13.5px; color: var(--e-text-secondary); font-weight: 400; margin-top: 2px; }
+.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
+.ep-btn-control {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+  color: var(--e-text); background: #fff;
+  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
+  transition: all .2s ease; font-family: inherit;
+}
+.ep-btn-control:hover { border-color: var(--e-border-strong); background: var(--e-bg-subtle); }
+.ep-btn-control i { font-size: 11px; }
+.ep-btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--we-navy, #002060);
+  border: none; border-radius: 8px; cursor: pointer;
+  transition: background .2s ease; font-family: inherit;
+  letter-spacing: -0.01em;
+}
+.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
+.ep-btn-new i { font-size: 11px; }
 
-/* ══ BODY ════════════════════════════════════════════════════════ */
-.exec-body { flex: 1; padding: 20px 28px; }
-.exec-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
-.toolbar-actions { display: flex; align-items: center; gap: 10px; }
+/* ══ BODY + BARRA DE FILTROS ═════════════════════════════════════ */
+.ep-body { padding: 0; }
+.ep-section { background: transparent; border: none; padding: 0; margin-bottom: 14px; }
+.ep-section.ep-filter-bar {
+  background: #fff;
+  border: 1px solid var(--e-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+.ep-filter-bar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.ep-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; flex: 1 1 auto; }
+.ep-quick-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 0 1 auto; }
+.ep-quick-order { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.ep-quick-order-icon { font-size: 11px; color: var(--e-text-secondary); }
+.ss-quick { width: 230px; }
+.ss-quick :deep(.searchselect-control) { min-height: 32px; padding: 0.15rem 2.25rem 0.15rem 0.6rem; border-radius: 8px; }
+.ss-quick :deep(.searchselect-input),
+.ss-quick :deep(.ss-locked-label) { font-size: 12.5px; }
+
+.ep-tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 1 auto; }
+.ep-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--e-text-secondary);
+  background: var(--e-bg-subtle);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ep-tab i { font-size: 11px; opacity: 0.7; }
+.ep-tab:hover { color: var(--e-text); background: #F5F5F5; }
+.ep-tab.is-active {
+  color: var(--e-accent);
+  background: var(--e-accent-soft);
+  border-color: rgba(16, 185, 129, 0.25);
+  font-weight: 600;
+}
+.ep-tab.is-active i { opacity: 1; }
+.ep-tab.is-highlight i { opacity: 1; }
+.ep-tab.is-highlight::before {
+  content: '';
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--e-accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ep-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--e-border);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
+}
+.ep-filter-strip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ep-filter-strip-badge i { font-size: 11px; }
+.ep-filter-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: var(--e-accent);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ep-filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
+.ep-filter-strip :deep(.active-filters .label) { display: none; }
 
 /* ══ BOTONES ═════════════════════════════════════════════════════ */
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
 .btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
 .btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
-.btn-exec-ghost { background: rgba(255,255,255,.07); color: var(--slate-300, #cbd5e1); border-color: rgba(255,255,255,.12); }
-.btn-exec-ghost:hover:not(:disabled) { background: rgba(255,255,255,.13); color: #fff; }
 .btn-exec-outline { background: #fff; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
 .btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); border-color: var(--slate-400, #94a3b8); }
 .btn-exec-sm { padding: 5px 10px; font-size: 11.5px; }
@@ -414,14 +643,40 @@ onMounted(() => {
 .exec-input-light:focus { outline: none; border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 3px rgba(20,184,166,.1); }
 
 @media (max-width: 768px) {
-  .masthead-inner { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px 16px; }
-  .exec-toolbar { flex-direction: column-reverse; align-items: stretch; }
-  .exec-body { padding: 16px 12px; }
+  .leads-page { padding: 16px 12px; }
+  .ep-masthead { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .ep-filter-bar-main { flex-direction: column; align-items: stretch; }
+  .ss-quick { width: 100%; }
 }
 
 /* ══ DARK MODE ═══════════════════════════════════════════════════ */
 /* El masthead navy (#0f172a) con texto blanco ya funciona en dark: no se toca. */
-[data-coreui-theme="dark"] .exec-shell { background: #14140F; color: #F4F4F0; }
+[data-coreui-theme="dark"] .leads-page {
+  --e-bg: #1A1A14;
+  --e-bg-subtle: #1F1F1A;
+  --e-border: #2A2A22;
+  --e-border-strong: #3A3A33;
+  --e-text: #F4F4F0;
+  --e-text-secondary: #A0A099;
+  --e-text-muted: #6F6F66;
+  --e-accent-soft: rgba(16,185,129,0.16);
+  background: #14140F;
+}
+[data-coreui-theme="dark"] .ep-section.ep-filter-bar { background: #1A1A14; }
+[data-coreui-theme="dark"] .ep-section.ep-filter-bar.is-filtered {
+  border-color: rgba(52, 211, 153, 0.32);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+[data-coreui-theme="dark"] .ep-filter-strip {
+  border-top-color: #2A2A22;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
+}
+[data-coreui-theme="dark"] .ep-filter-strip-badge { color: #34D399; }
+[data-coreui-theme="dark"] .ep-btn-control { background: #1A1A14; }
+[data-coreui-theme="dark"] .ep-btn-new { background: #F4F4F0; color: #14140F; }
+[data-coreui-theme="dark"] .ep-btn-new:hover { background: #E4E4DD; }
+[data-coreui-theme="dark"] .ep-tab { background: #1F1F1A; color: #A0A099; }
+[data-coreui-theme="dark"] .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
 [data-coreui-theme="dark"] .btn-exec-outline { background: #1F1F1A; border-color: #3A3A33; color: #F4F4F0; }
 [data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; border-color: #3A3A33; }
 [data-coreui-theme="dark"] .btn-icon { border-color: #3A3A33; color: #A0A099; }
