@@ -1978,6 +1978,7 @@ const {
   // FICO observa ventas de B2B igual que las de Comercial: el asesor
   // necesita el banner y el botón de reenvío para subsanarlas.
   observedFlow:     true,
+  defaultChatMessage: '-',
 })
 </script>
 

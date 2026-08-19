@@ -20,6 +20,9 @@ export function useLeadForm(options = {}) {
     // Opt-in: solo las vistas que renderizan el banner deben activarlo, si no el
     // modal de inscripcion se abriria solo sin explicar por que.
     observedFlow     = false,
+    // B2B no arranca la consulta por chat: el campo es obligatorio pero no
+    // aplica, asi que la vista lo precarga con un guion.
+    defaultChatMessage = '',
   } = options
 
   // ── ROUTER / TOAST ──────────────────────────────────────────
@@ -300,7 +303,7 @@ export function useLeadForm(options = {}) {
     pay_date: null,
     nivel_alias: null,
     prox_medium_alias: null,
-    mensajeChat: '',
+    mensajeChat: defaultChatMessage,
     canal_alias: null,
     medium_alias: null,
     key_word_alias: null,
