@@ -13,36 +13,44 @@
 
     <!-- Action buttons (when no action is active) -->
     <div v-if="!activeAction" class="eact-buttons">
-      <button
-        v-if="isPendingReview"
-        class="eact-btn eact-btn-approve"
-        @click="startAction('approveMigration')"
-      >
-        <i class="fa-solid fa-circle-check"></i> Aprobar Migracion
-        <span class="eact-tag eact-tag-approve">PR</span>
-      </button>
-      <button class="eact-btn" @click="startAction('rp')">
-        <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion
-        <span class="eact-tag">RP</span>
-      </button>
-      <button class="eact-btn" @click="startAction('cc')">
-        <i class="fa-solid fa-right-left"></i> Cambio de Curso
-        <span class="eact-tag eact-tag-cc">CC</span>
-      </button>
-      <div class="eact-sep"></div>
+      <template v-if="!isModalityOnlyRole">
+        <button
+          v-if="isPendingReview"
+          class="eact-btn eact-btn-approve"
+          @click="startAction('approveMigration')"
+        >
+          <i class="fa-solid fa-circle-check"></i> Aprobar Migracion
+          <span class="eact-tag eact-tag-approve">PR</span>
+        </button>
+        <template v-if="canManageEnrollment">
+          <button class="eact-btn" @click="startAction('rp')">
+            <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion
+            <span class="eact-tag">RP</span>
+          </button>
+          <button class="eact-btn" @click="startAction('cc')">
+            <i class="fa-solid fa-right-left"></i> Cambio de Curso
+            <span class="eact-tag eact-tag-cc">CC</span>
+          </button>
+        </template>
+        <div class="eact-sep"></div>
+      </template>
       <button class="eact-btn" @click="startAction('modality')">
         <i class="fa-solid fa-shuffle"></i> Cambiar Modalidad
       </button>
-      <button class="eact-btn" @click="startAction('editStudent')">
-        <i class="fa-solid fa-user-pen"></i> Editar Alumno
-      </button>
-      <button v-if="canEditAgent" class="eact-btn" @click="startAction('editSellerAgent')">
-        <i class="fa-solid fa-user-tie"></i> Editar Asesor
-      </button>
-      <div class="eact-sep"></div>
-      <button class="eact-btn eact-btn-danger" @click="startAction('retire')">
-        <i class="fa-solid fa-user-slash"></i> Retirar Alumno
-      </button>
+      <template v-if="!isModalityOnlyRole">
+        <button class="eact-btn" @click="startAction('editStudent')">
+          <i class="fa-solid fa-user-pen"></i> Editar Alumno
+        </button>
+        <template v-if="canManageEnrollment">
+          <button class="eact-btn" @click="startAction('editSellerAgent')">
+            <i class="fa-solid fa-user-tie"></i> Editar Asesor
+          </button>
+          <div class="eact-sep"></div>
+          <button class="eact-btn eact-btn-danger" @click="startAction('retire')">
+            <i class="fa-solid fa-user-slash"></i> Retirar Alumno
+          </button>
+        </template>
+      </template>
     </div>
 
     <!-- Active action with stepper -->
@@ -519,7 +527,15 @@ const fmt = useEnrollmentFormatters()
 
 const instance = getCurrentInstance()
 const $hasRole = instance?.appContext?.config?.globalProperties?.$hasRole || (() => false)
-const canEditAgent = computed(() => $hasRole(['ADMIN', 'FICO', 'LIDER_FICO']))
+// RP, CC, retiro y reasignacion de asesor son de FICO. Espeja FICO_ACTION_ROLES
+// del backend (enrollment.routes.js): sin esto el boton se ve y el POST devuelve 403.
+const canManageEnrollment = computed(() => $hasRole(['ADMIN', 'FICO', 'LIDER_FICO']))
+// Academica entra a la inscripcion solo para corregir la modalidad del alumno.
+// Se excluye a quien ademas tenga rol FICO/ADMIN para no recortarle acciones
+// que si le tocan.
+const isModalityOnlyRole = computed(() =>
+  $hasRole(['ACADEMICA', 'LIDER_ACADEMICA']) && !canManageEnrollment.value
+)
 
 const enrollmentId = computed(() => Number(props.enrollment?.enrollment_id))
 const activeAction = ref(null)
