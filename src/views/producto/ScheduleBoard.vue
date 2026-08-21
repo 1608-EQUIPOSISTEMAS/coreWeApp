@@ -603,7 +603,9 @@ async function fetchAll() {
     ;(leads || []).forEach(l => { consByEd[l.edition_num_id] = l.consultas })
 
     weeks.forEach(w => (w.items || []).forEach(e => {
-      e.meta_vacantes = goalByEd[e.edition_num_id] || 0
+      // Los congresos/eventos llevan su propia meta en Fundacion > Objetivos:
+      // no compiten contra el objetivo de vacantes del cronograma.
+      e.meta_vacantes = isEvent(e) ? 0 : (goalByEd[e.edition_num_id] || 0)
       e.consultas = consByEd[e.edition_num_id] ?? 0
       e.vf = (e.cnt_ventas ?? 0) - e.meta_vacantes
     }))
@@ -801,6 +803,7 @@ const segSummary = computed(() => SEG_DEFS.map(s => ({
 })))
 
 // ── Helpers de presentación ──
+function isEvent(e) { return e.program_type_alias === 'we_program_type_event' }
 function lineLabel(e) { return e.program_line_business || '—' }
 // Nueva metodología: el SP la manda como 'Y'/'N' (o boolean según el driver).
 // Se valida contra valores positivos, no por truthy: 'N' también es truthy.
