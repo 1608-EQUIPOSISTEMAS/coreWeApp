@@ -1077,6 +1077,10 @@ async function searchCustomerByDocument () {
     if (response && response.result === 1) {
       form.first_name = response.first_name || ''
       form.last_name = response.last_name || ''
+      // El formulario tiene UN solo campo "Apellidos": se muestran paterno +
+      // materno juntos. Al guardar, fn_last_name_sin_materno (BD) le vuelve a
+      // quitar la cola; si no, last_name se queda con los dos y el materno sale
+      // repetido en todo concat_ws(first_name, last_name, mother_last_name).
       if (response.mother_last_name) form.last_name += ' ' + response.mother_last_name
       form.email = response.email || ''
       form.phone = response.phone || form.phone
