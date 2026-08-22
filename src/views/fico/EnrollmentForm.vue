@@ -197,7 +197,7 @@
         </div>
       </div>
       <!-- Asiento: cada entrada VIP tiene el suyo. Sale en el correo. -->
-      <div class="ef-grid-4" style="margin-top:16px" v-if="isVipCategory">
+      <div class="ef-grid-4" style="margin-top:16px" v-if="hasAssignedSeat">
         <div class="ef-field">
           <label>Asiento <span class="ef-req">*</span></label>
           <input v-model="form.event_seat" type="text" placeholder="A-12" />
@@ -697,11 +697,13 @@ async function loadEventCategories () {
   }
 }
 
-// Solo la entrada VIP da derecho a acompanantes: fuera de VIP el campo no se
-// muestra y lo que se haya escrito se descarta al guardar.
-const isVipCategory = computed(() => {
+// Solo se sienta con asiento asignado la entrada VIP y el ponente (que va a la
+// zona VIP sin pagar entrada). En el resto el campo no se muestra y lo que se
+// haya escrito se descarta al guardar.
+const SEATED_CATEGORY_ALIASES = ['we_event_category_vip', 'we_event_category_ponente']
+const hasAssignedSeat = computed(() => {
   const sel = eventCategories.value.find(c => c.cat_event_category === form.cat_event_category)
-  return sel?.alias === 'we_event_category_vip'
+  return SEATED_CATEGORY_ALIASES.includes(sel?.alias)
 })
 
 function onEventCategoryChange (opcion) {
@@ -1248,7 +1250,7 @@ async function handleSave () {
         program_edition_id: form.program_edition_id,
         cat_insc_modality: form.cat_insc_modality,
         cat_event_category: isEventProgram.value ? form.cat_event_category : null,
-        event_seat: isVipCategory.value ? (form.event_seat || '').trim() || null : null,
+        event_seat: hasAssignedSeat.value ? (form.event_seat || '').trim() || null : null,
         cat_payment_channel: channelGeneral.value?.id || null,
         cat_currency: form.cat_currency || catCurrency.find(c => c.alias === 'we_currency_soles')?.id || null,
         cat_payment_way: form.cat_payment_way || catPaymentWay.find(c => c.alias === 'we_payment_way_single')?.id || null,

@@ -723,12 +723,19 @@ const displayWeeks = computed(() => filteredWeeks.value
 // ── KPIs (sobre lo filtrado): ventas vs objetivo (juntos, para compararlos), programas y aula ──
 const kpiSums = computed(() => {
   const all = filteredWeeks.value.flatMap(w => w.items)
-  const sum = k => all.reduce((s, e) => s + (e[k] ?? 0), 0)
+  // Los congresos/eventos quedan fuera de los totales, igual que ya lo estaban
+  // en el objetivo (meta_vacantes sale en 0 para ellos): su meta y sus
+  // asistentes se llevan en Fundación > Objetivos, no compiten con las aulas.
+  // Contarlos aquí inflaba Inscripciones con cientos de asistentes de congreso.
+  // Siguen listados en la tabla: esto solo los saca de los KPIs.
+  const aulas = all.filter(e => !isEvent(e))
+  const sum = k => aulas.reduce((s, e) => s + (e[k] ?? 0), 0)
   const ch = Object.fromEntries(AULA_CHANNELS.map(c => [c.key, sum(c.key)]))
   // Inscripciones = alumnos sentados en el aula, becados incluidos. Ojo: la
   // columna AULA de la tabla NO suma becas (no facturan), por eso este total
   // es mayor que la suma de esa columna.
   return {
+    // count SI cuenta los eventos: es cuántas filas hay en la tabla de abajo.
     count: all.length, ventas: sum('cnt_ventas'), objetivo: sum('meta_vacantes'),
     ch, inscritos: sum('cnt_aula') + ch.cnt_becas,
   }
