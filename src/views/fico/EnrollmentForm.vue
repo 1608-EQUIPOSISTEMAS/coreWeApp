@@ -207,7 +207,7 @@
     </div>
 
     <!-- INFORMACION DE PAGO -->
-    <div class="ef-card" v-if="!isB2BDocumental && !isMembershipBenefit">
+    <div class="ef-card" v-if="!isB2BDocumental && !isMembershipBenefit && !isSpeakerTicket">
       <h6 class="ef-section-title"><i class="fa-solid fa-credit-card"></i> INFORMACION DE PAGO</h6>
       <div class="ef-grid-4">
         <div class="ef-field">
@@ -246,7 +246,7 @@
          membresia no hay pago que mostrar, pero el beneficio si se registra —
          entra en monto 0 y vale por su etiqueta (CUENTA PERSONAL / laptop).
          Misma regla que el SP (v_ben_solo_badge) y que computeDiscounts.js. -->
-    <div class="ef-card" v-if="!isB2BDocumental">
+    <div class="ef-card" v-if="!isB2BDocumental && !isSpeakerTicket">
       <h6 class="ef-section-title"><i class="fa-solid fa-tags"></i> DESCUENTOS Y BENEFICIOS</h6>
       <div class="ef-grid-3">
         <div class="ef-field" v-if="!isZeroPayment">
@@ -312,7 +312,7 @@
     </div>
 
     <!-- DATOS DEL PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
+    <div class="ef-card" v-if="!hidesPaymentDetails">
       <h6 class="ef-section-title"><i class="fa-solid fa-money-check-dollar"></i> DATOS DEL PAGO</h6>
       <div class="ef-grid-3">
         <div class="ef-field">
@@ -344,7 +344,7 @@
     </div>
 
     <!-- PLAN DE CUOTAS -->
-    <div class="ef-card" v-if="isInstallment && !form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
+    <div class="ef-card" v-if="isInstallment && !hidesPaymentDetails">
       <h6 class="ef-section-title"><i class="fa-solid fa-calendar-days"></i> PLAN DE CUOTAS</h6>
 
       <div class="ef-grid-3" style="margin-bottom:16px">
@@ -399,7 +399,7 @@
     </div>
 
     <!-- COMPROBANTE DE PAGO -->
-    <div class="ef-card" v-if="!form.is_scholarship && !isB2BDocumental && !isMembershipBenefit">
+    <div class="ef-card" v-if="!hidesPaymentDetails">
       <h6 class="ef-section-title"><i class="fa-solid fa-cloud-arrow-up"></i> COMPROBANTE DE PAGO</h6>
       <MultiFileUploader
         v-model="form.ticket_payment_urls"
@@ -438,6 +438,11 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import {
+  isSpeakerCategory,
+  hasAssignedSeat as isSeatedCategory,
+  resolveEnrollmentAmounts
+} from '@/features/event-ticket/eventTicket.js'
 
 const router = useRouter()
 const toast = useToast()
@@ -622,10 +627,10 @@ const isMembershipBenefit = computed(() => !!selectedMembership.value && !/plus/
 // que aplicar, pero los beneficios se siguen registrando por su etiqueta.
 const isZeroPayment = computed(() => form.is_scholarship || isMembershipBenefit.value)
 
-// Al activar el beneficio, limpiamos pago/cuotas/descuentos para no mandar
+// Beca, cortesia de membresia y ponente de congreso terminan igual: no hay
+// nada que cobrar. Se borra lo que se haya escrito de pago para no mandar
 // montos viejos (el SP fuerza 0 igual, pero la UI no debe mostrar pago).
-watch(isMembershipBenefit, (benefit) => {
-  if (!benefit) return
+function clearPaymentData () {
   form.total_amount = 0
   form.saved_money = 0
   form.cat_payment_way = null
@@ -639,6 +644,10 @@ watch(isMembershipBenefit, (benefit) => {
   form.dsct_stick_id = null; form.dsct_stick_label = null; form.val_fijo = 0
   form.dsct_benefit_ids = []; form.val_beneficios = []
   discountResetKey.value++
+}
+
+watch(isMembershipBenefit, (benefit) => {
+  if (benefit) clearPaymentData()
 })
 
 watch(() => form.seller_agent_id, (val) => {
@@ -700,11 +709,29 @@ async function loadEventCategories () {
 // Solo se sienta con asiento asignado la entrada VIP y el ponente (que va a la
 // zona VIP sin pagar entrada). En el resto el campo no se muestra y lo que se
 // haya escrito se descarta al guardar.
-const SEATED_CATEGORY_ALIASES = ['we_event_category_vip', 'we_event_category_ponente']
-const hasAssignedSeat = computed(() => {
-  const sel = eventCategories.value.find(c => c.cat_event_category === form.cat_event_category)
-  return SEATED_CATEGORY_ALIASES.includes(sel?.alias)
+const selectedEventCategory = computed(
+  () => eventCategories.value.find(c => c.cat_event_category === form.cat_event_category) || null
+)
+const hasAssignedSeat = computed(() => isSeatedCategory(selectedEventCategory.value?.alias))
+
+// El ponente es invitado del congreso, no cliente: entra con tarifa 0 y no hay
+// nada que cobrarle, ni cuotas, ni comprobante, ni descuentos sobre cero.
+const isSpeakerTicket = computed(() => isSpeakerCategory(selectedEventCategory.value?.alias))
+
+watch(isSpeakerTicket, (esPonente) => {
+  if (!esPonente) return
+  clearPaymentData()
+  // La tarifa 0 de la categoria no baja el precio sola: el watch de
+  // calculatedBasePrice solo pisa list_price cuando el precio es > 0, para no
+  // borrarlo mientras el usuario todavia no elige moneda o perfil.
+  form.list_price = 0
 })
+
+// Quien no paga no ve la cobranza: beca, cortesia de membresia, ponente y el
+// B2B documental (que lo factura la empresa).
+const hidesPaymentDetails = computed(() =>
+  form.is_scholarship || isB2BDocumental.value || isMembershipBenefit.value || isSpeakerTicket.value
+)
 
 function onEventCategoryChange (opcion) {
   // Sin tarifa propia se conserva el precio del programa: mejor eso que dejar
@@ -1041,19 +1068,7 @@ const webAgentsList = computed(() => {
 
 function onScholarshipToggle () {
   if (form.is_scholarship) {
-    form.total_amount = 0
-    form.saved_money = 0
-    form.cat_payment_way = null
-    form.cat_payment_medium = null
-    form.cat_business_entity = null
-    form.bank_account_id = null
-    form.transaction_code = ''
-    form.ticket_payment_urls = []
-    installments.value = []
-    form.dsct_porcent_id = null; form.dsct_porcent_label = null; form.val_porcentaje = 0
-    form.dsct_stick_id = null; form.dsct_stick_label = null; form.val_fijo = 0
-    form.dsct_benefit_ids = []; form.val_beneficios = []
-    discountResetKey.value++
+    clearPaymentData()
   } else if (calculatedBasePrice.value > 0) {
     form.total_amount = calculatedBasePrice.value
     form.list_price = calculatedBasePrice.value
@@ -1254,8 +1269,12 @@ async function handleSave () {
         cat_payment_channel: channelGeneral.value?.id || null,
         cat_currency: form.cat_currency || catCurrency.find(c => c.alias === 'we_currency_soles')?.id || null,
         cat_payment_way: form.cat_payment_way || catPaymentWay.find(c => c.alias === 'we_payment_way_single')?.id || null,
-        list_price: form.list_price || 0,
-        total_amount: isMembershipBenefit.value ? 0 : (form.total_amount || 0),
+        ...resolveEnrollmentAmounts({
+          listPrice: form.list_price,
+          totalAmount: form.total_amount,
+          isSpeakerTicket: isSpeakerTicket.value,
+          isMembershipBenefit: isMembershipBenefit.value
+        }),
         is_membership_benefit: isMembershipBenefit.value,
         saved_money: form.saved_money || 0,
         seller_agent_id: resolveAgentId(),

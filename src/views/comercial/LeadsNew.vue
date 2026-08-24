@@ -288,6 +288,23 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               />
             </div>
 
+            <!-- La empresa solo aplica a convenios/corporativo: es lo que
+                 alimenta la columna EMPRESA de la hoja "7. Convenios". -->
+            <div v-if="['we_prospect_situation_corporate','we_prospect_situation_convenios'].includes(form.ocupacion_alias)" class="col-6 col-md-3">
+              <label class="exec-label">Empresa vinculada</label>
+              <SearchSelect
+                v-model="form.company_id"
+                mode="remote"
+                :fetcher="q => b2bService.companyList({ search: q, size: 20 }).then(r => r.items || [])"
+                label-field="razon_social"
+                value-field="company_id"
+                :nullable="true"
+                placeholder="Buscar empresa..."
+                :model-label="form.company_label"
+                class="exec-select-light w-100"
+              />
+            </div>
+
             <div class="col-6 col-md-3">
               <label class="exec-label">País <span class="c-red">*</span></label>
               <SearchSelect
@@ -1994,6 +2011,7 @@ const dateLimitConfig = {
   const discountService = inject(ServiceKeys.Discount)
   const editionService = inject(ServiceKeys.Edition)
   const ficoService      = inject(ServiceKeys.Fico)
+  const b2bService       = inject(ServiceKeys.B2b)
   const catalog          = inject('catalog')
 
 const programChildren = ref([])
@@ -2088,6 +2106,8 @@ price_profesional_dollars: 0,
     status_alias: null,
     country_alias: null,
     ocupacion_alias: null,
+    company_id: null,
+    company_label: '',
     bot: false,
     pay_date: null,
     nivel_alias: null,
@@ -2485,6 +2505,8 @@ function normalizeDateTime(v) {
       status_alias:   l.status_alias,
       country_alias:  l.country_alias,
       ocupacion_alias: l.ocupacion_alias,
+      company_id: l.company_id ?? null,
+      company_label: l.company_name ?? '',
       client_status: l.client_status,
       client_status_label: l.client_status_label,
       membership_moment_id: l.membership_moment_id,
@@ -2619,6 +2641,8 @@ watch(() => insc.cat_type_document, (newVal) => {
               client_status: originalData.client_status,
               client_status_label: originalData.client_status_label,
               ocupacion_alias: originalData.ocupacion_alias,
+              company_id: originalData.company_id ?? null,
+              company_label: originalData.company_name ?? '',
               bot: false,
               active: true,
               program_label: originalData.program_label ?? null,
@@ -3134,6 +3158,7 @@ function formatDateTime(isoString) {
         cat_frecuency_word,
         cat_type_strategy,
         cat_prospect_situation,
+        company_id: form.company_id || null,
         cat_client_moment: cat_client_category,
         membership_moment_id: form.membership_moment_id,
         origin_phone: (form.telefono || '').trim() || null,
