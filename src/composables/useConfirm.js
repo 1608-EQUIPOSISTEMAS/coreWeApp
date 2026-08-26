@@ -19,10 +19,16 @@ const baseConfig = {
 /**
  * Confirm dialog con estilo alineado al design system v2.
  * Devuelve true si el usuario confirma, false si cancela.
+ *
+ * `html` es la alternativa a `text` cuando el mensaje necesita estructura
+ * (varios parrafos, una cifra resaltada). SweetAlert escribe `text` como
+ * textContent, asi que ahi los saltos de linea no se ven. Solo se le pasa
+ * markup propio: nunca dato del usuario sin escapar.
  */
 export async function confirmAction ({
   title,
   text,
+  html,
   confirmText = 'Confirmar',
   cancelText  = 'Cancelar',
   icon        = 'question',
@@ -31,7 +37,7 @@ export async function confirmAction ({
   const res = await Swal.fire({
     ...baseConfig,
     title,
-    text,
+    ...(html ? { html } : { text }),
     icon,
     showCancelButton: true,
     confirmButtonText: confirmText,

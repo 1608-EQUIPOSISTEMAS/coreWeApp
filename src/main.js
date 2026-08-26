@@ -79,6 +79,7 @@ app.provide(ServiceKeys.Config, services[ServiceKeys.Config])
 app.provide(ServiceKeys.Import, services[ServiceKeys.Import])
 app.provide(ServiceKeys.Marketing, services[ServiceKeys.Marketing])
 app.provide(ServiceKeys.Reprogramacion, services[ServiceKeys.Reprogramacion])
+app.provide(ServiceKeys.SchedulePlan, services[ServiceKeys.SchedulePlan])
 
 
   app.config.globalProperties.$hasRole = (roles) => {

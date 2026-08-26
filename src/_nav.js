@@ -295,6 +295,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Planificación',
+        to: '/producto/planificacion',
+        submodule: 'PLANIFICACION',
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Lista de Precios',
         to: '/producto/precios',
         submodule: 'PRECIOS',

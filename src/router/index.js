@@ -145,6 +145,15 @@ const routes = [
             meta: { submodule: 'CRONOGRAMA', roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'LIDER_COMERCIAL', 'GERENCIA', 'ACADEMICA'] },
           },
           {
+            path: 'planificacion',
+            name: 'SchedulePlanner',
+            // Cronograma borrador: arma la programacion de un anio futuro sin
+            // tocar program_editions. Mismos roles que el cronograma real,
+            // porque publicar crea ediciones de verdad.
+            component: () => import('@/views/producto/SchedulePlanner.vue'),
+            meta: { submodule: 'PLANIFICACION', roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'GERENCIA'] },
+          },
+          {
             path: 'cronograma-vista',
             name: 'ScheduleBoard',
             // Vista de solo lectura del cronograma: visible para TODOS los roles.

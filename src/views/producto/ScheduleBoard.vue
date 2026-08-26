@@ -4,7 +4,13 @@
     <header class="crono-head">
       <div class="month-badge">{{ monthAbbr }}</div>
       <div class="crono-title">
-        <div class="eyebrow">VISTA DE SOLO LECTURA · CRONOGRAMA</div>
+        <!-- El aviso de simulación va en el título y no en un tooltip: esta
+             vista es idéntica a la real y se usa para presentar, así que tiene
+             que ser imposible confundir un plan con la programación vigente. -->
+        <div class="eyebrow" :class="{ 'is-sim': isPlanPreview }">
+          <template v-if="isPlanPreview">SIMULACIÓN · NO ES EL CRONOGRAMA REAL{{ planName ? ` · ${planName}` : '' }}</template>
+          <template v-else>VISTA DE SOLO LECTURA · CRONOGRAMA</template>
+        </div>
         <h1>{{ periodLabel }}</h1>
       </div>
       <div class="grow"></div>
@@ -395,15 +401,30 @@
 
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue'
+import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 
 const editionService = inject(ServiceKeys.Edition)
 const dashboardService = inject(ServiceKeys.Dashboard)
+const schedulePlanService = inject(ServiceKeys.SchedulePlan)
 const toast = useToast()
 
+// ── Modo simulación ────────────────────────────────────────────────────────
+// Con ?plan=<id> la vista pinta un escenario de Producto > Planificación en vez
+// del cronograma real. Es la MISMA vista a propósito: el sentido de la
+// simulación es ver el 2027 con la misma cara que tendrá el día que se publique,
+// y una copia del componente se habría desincronizado a la primera semana.
+const route = useRoute()
+const planId = Number(route.query.plan) || null
+const isPlanPreview = computed(() => !!planId)
+const planName = ref('')
+
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-const years = [2024, 2025, 2026]
+// Ventana de años derivada del año en curso: la lista fija se quedó corta el
+// 1-ene y dejó fuera los planes a futuro (2027).
+const CURRENT_YEAR = new Date().getFullYear()
+const years = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i)
 const MABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 // Paleta por segmento (badge). Las líneas/tipos reales vienen de la data.
@@ -427,8 +448,10 @@ function segColor(e) { return SEG_COLORS[(e.cat_segment || '').toUpperCase()] ||
 const soft = c => `color-mix(in oklab, ${c} 11%, transparent)`
 
 const today = new Date()
-const selectedMonth = ref(today.getMonth() + 1)
-const selectedYear = ref(today.getFullYear())
+// En simulación el mes/año los manda el planner (?m=&y=): abrir siempre en el
+// mes actual mostraría un 2027 vacío y parecería que el plan no se guardó.
+const selectedMonth = ref(Number(route.query.m) || today.getMonth() + 1)
+const selectedYear = ref(Number(route.query.y) || today.getFullYear())
 const schedules = ref([])
 const isLoading = ref(false)
 const search = ref('')
@@ -453,8 +476,11 @@ function openAulaInfo(it) {
   amTab.value = 'info'
   // Sin permiso de Alumnos no se pide la lista (trae correos): con [] el tab
   // Información cae a los contadores de la fila.
-  amStudents.value = canSeeStudents ? null : []
-  if (canSeeStudents) loadStudents(it.e.edition_num_id)
+  // En simulación tampoco: la edición no existe todavía, así que no hay aula
+  // que consultar (edition_num_id viaja en null).
+  const conAula = canSeeStudents && !isPlanPreview.value && it.e?.edition_num_id
+  amStudents.value = conAula ? null : []
+  if (conAula) loadStudents(it.e.edition_num_id)
 }
 
 function showStudentsTab() { amTab.value = 'alumnos' }
@@ -582,6 +608,7 @@ const periodLabel = computed(() => `${months[selectedMonth.value - 1]} ${selecte
 
 // ── Carga: ediciones del mes + objetivos + consultas, fusionados por edición ──
 async function fetchAll() {
+  if (isPlanPreview.value) return fetchPlanMonth()
   isLoading.value = true
   try {
     const { items } = await editionService.editionByWeekList({
@@ -615,6 +642,27 @@ async function fetchAll() {
   } catch (err) {
     console.error('Error cargando cronograma:', err)
     toast.error('No se pudo cargar el cronograma')
+    schedules.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Un mes del escenario. No pide objetivos ni consultas: una edición que todavía
+// no existe no tiene ventas ni leads, y mostrar los del año pasado haría creer
+// que el plan ya está vendido. Los contadores quedan en 0 a propósito.
+async function fetchPlanMonth() {
+  isLoading.value = true
+  try {
+    const { plan, items } = await schedulePlanService.previewMonth({
+      planId, month: selectedMonth.value, year: selectedYear.value
+    })
+    planName.value = plan?.name || ''
+    schedules.value = Array.isArray(items) ? items : []
+    closedWeeks.value = {}
+  } catch (err) {
+    console.error('Error cargando la simulación:', err)
+    toast.error('No se pudo cargar el plan')
     schedules.value = []
   } finally {
     isLoading.value = false
@@ -897,6 +945,9 @@ onMounted(fetchAll)
 }
 .month-badge::before { left: 10px; } .month-badge::after { right: 10px; }
 .crono-title .eyebrow { font-size: 9.5px; font-weight: 700; letter-spacing: .13em; color: var(--ink-3); }
+/* Simulación: mismo lugar, color de advertencia. Sale del token naranja del
+   tablero, así que también se lee en dark. */
+.crono-title .eyebrow.is-sim { color: var(--c-orange); }
 .crono-title h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.015em; margin: 1px 0 0; }
 .crono-head .grow, .week-bar .grow { flex: 1; }
 
