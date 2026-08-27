@@ -371,12 +371,15 @@
       <div
         v-if="selectionMode && selectionSummary.count >= 2"
         class="tp-selbar"
-        :class="{ 'is-over-limit': selectionSummary.overLimit }"
+        :class="{ 'is-over-limit': selectionSummary.overLimit || selectionSummary.overCount }"
       >
         <div class="tp-selbar-info">
-          <strong>{{ selectionSummary.count }} tokens seleccionados</strong>
+          <strong>{{ selectionSummary.count }} de {{ MAX_TOKENS_PER_GROUP }} tokens seleccionados</strong>
           <span>
             Total: <strong>{{ selectionSummary.currency }} {{ formatMoney(selectionSummary.total) }}</strong>
+            <span v-if="selectionSummary.overCount" class="tp-selbar-warn">
+              · El limite de agrupacion es de {{ MAX_TOKENS_PER_GROUP }} tokens por grupo
+            </span>
             <span v-if="selectionSummary.overLimit" class="tp-selbar-warn">
               · Supera el limite de {{ selectionSummary.currency }} {{ MAX_GROUP_AMOUNT }}
             </span>
@@ -384,7 +387,7 @@
         </div>
         <button
           class="ep-btn-new"
-          :disabled="selectionSummary.overLimit"
+          :disabled="selectionSummary.overLimit || selectionSummary.overCount"
           @click="submitGroup"
         >
           <i class="fa-solid fa-object-group"></i> Agrupar en un solo link
@@ -744,20 +747,33 @@ function isSelectable (t) {
     && Number(t?.requested_by) === Number(currentUserId)
 }
 
+// Espejo de las constantes de token.entity.js en el backend. La validacion real
+// vive alla; aca solo evitamos que el asesor arme una seleccion que el servidor
+// va a rechazar despues.
+const MAX_GROUP_AMOUNT = 3000
+const MAX_TOKENS_PER_GROUP = 10
+
 function toggleTokenSelection (t) {
   if (!isSelectable(t)) return
   const s = new Set(selectedTokenIds.value)
-  s.has(t.token_id) ? s.delete(t.token_id) : s.add(t.token_id)
+  if (s.has(t.token_id)) {
+    s.delete(t.token_id)
+  } else {
+    if (s.size >= MAX_TOKENS_PER_GROUP) {
+      toast.error(`El limite de agrupacion es de ${MAX_TOKENS_PER_GROUP} tokens por grupo`)
+      return
+    }
+    s.add(t.token_id)
+  }
   selectedTokenIds.value = s
 }
-
-const MAX_GROUP_AMOUNT = 3000
 
 const selectionSummary = computed(() => {
   const items = tokens.value.filter(t => selectedTokenIds.value.has(t.token_id))
   const total = items.reduce((s, t) => s + Number(t.amount || 0), 0)
   const overLimit = total > MAX_GROUP_AMOUNT
-  return { items, count: items.length, currency: items[0]?.currency || '', total, overLimit }
+  const overCount = items.length > MAX_TOKENS_PER_GROUP
+  return { items, count: items.length, currency: items[0]?.currency || '', total, overLimit, overCount }
 })
 
 const isEditingLink = computed(() => !!linkToken.value?.payment_url)
@@ -1004,6 +1020,10 @@ async function deleteToken (t) {
 async function submitGroup () {
   const s = selectionSummary.value
   if (s.count < 2) return
+  if (s.overCount) {
+    toast.error(`El limite de agrupacion es de ${MAX_TOKENS_PER_GROUP} tokens por grupo (seleccionaste ${s.count})`)
+    return
+  }
   try {
     await api.post('/token/group', { token_ids: Array.from(selectedTokenIds.value) })
     toast.success(`${s.count} tokens agrupados en un solo link`)
