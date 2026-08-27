@@ -57,7 +57,6 @@ const ROUTE_LABELS = {
   academica: 'Académica',
   aulas: 'Aulas',
   bot: 'Bot Académico',
-  marketing: 'Reporte',
   overview: 'Reporte Completo',
   general: 'General',
   cliente: 'Cliente',

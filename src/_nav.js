@@ -317,30 +317,6 @@ export default [
     ],
   },
   {
-    component: 'CNavGroup',
-    name: 'Marketing',
-    to: '/marketing/publicaciones',
-    icon: 'cil-layers',
-    module: 'MARKETING',
-    roles: ['ADMIN', 'GERENCIA'],
-    items: [
-      {
-        component: 'CNavItem',
-        name: 'Publicaciones RRSS',
-        to: '/marketing/publicaciones',
-        submodule: 'PUBLICACIONES',
-        roles: ['ADMIN', 'GERENCIA'],
-      },
-      {
-        component: 'CNavItem',
-        name: 'Crecimiento RRSS',
-        to: '/marketing/crecimiento',
-        submodule: 'CRECIMIENTO',
-        roles: ['ADMIN', 'GERENCIA'],
-      },
-    ],
-  },
-  {
     component: 'CNavTitle',
     name: 'Administración',
     roles: ['ADMIN'],

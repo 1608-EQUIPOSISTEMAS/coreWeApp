@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import DateRangePicker from '@/components/DateRangePicker.vue'
+import { isoWeekOf } from '@/utils/isoWeek'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -177,7 +178,10 @@ async function loadReport() {
   }
 }
 
-onMounted(loadReport)
+onMounted(() => {
+  loadReport()
+  loadFollowup()
+})
 
 // =====================================================================
 // FILTROS
@@ -439,11 +443,6 @@ const scoreAverages = computed(() => {
 // Posicion horizontal (%) de un marcador en la escala 0-20.
 function scalePos(n) {
   return Math.min(97, Math.max(3, (n / RUBRIC_TOTAL_ITEMS) * 100))
-}
-
-function gapOf(a) {
-  if (!Number.isFinite(a.aiAvg20) || !Number.isFinite(a.manualAvg20)) return null
-  return Math.abs(a.manualAvg20 - a.aiAvg20)
 }
 
 // =====================================================================
@@ -743,6 +742,115 @@ const decisions = computed(() => {
 })
 
 // =====================================================================
+// SEGUIMIENTO DOCENTES — matriz semana x sesion
+// =====================================================================
+// El agregado por aula responde "que tan buena es el aula"; esta matriz
+// responde "que sesion, de que semana, llego con auditoria". El cronograma
+// S1..Sn lo deriva el backend (mismo motor del Control de Ediciones) porque
+// depende de feriados y de las reprogramaciones, que no viajan en el reporte.
+const sessionsByEdition = ref(new Map())
+
+async function loadFollowup() {
+  try {
+    const data = await editionService.teacherFollowup({
+      date_start: period.value.start,
+      date_end: period.value.end,
+    })
+    sessionsByEdition.value = new Map(
+      (data?.editions || []).map((e) => [Number(e.edition_num_id), e.sessions || []]),
+    )
+  } catch (err) {
+    // El resto del reporte sigue siendo utilizable sin la matriz, asi que no
+    // tumbamos la vista; el error igual queda visible para no depurar a ciegas.
+    console.error('Error cargando el seguimiento por sesion:', err)
+    sessionsByEdition.value = new Map()
+  }
+}
+
+watch(() => [period.value.start, period.value.end], loadFollowup)
+
+function dayMonth(ymd) {
+  if (!ymd) return ''
+  const [, m, d] = String(ymd).slice(0, 10).split('-')
+  return `${Number(d)}/${Number(m)}`
+}
+
+// Iconos de gestion del Control de Ediciones. Sin marcar no es "no dictada":
+// es "sin gestionar", y por eso lleva su propio simbolo neutro.
+const SESSION_STATUS_ICON = { A: 'fa-check', T: 'fa-clock', R: 'fa-rotate' }
+const SESSION_STATUS_LABEL = { A: 'dictada', T: 'con tardanza', R: 'reprogramada' }
+
+// La matriz es un calendario: manda la fecha de inicio, no la criticidad
+// (que es el criterio de `sorted`, el que alimenta export y decisiones).
+const chronological = computed(() =>
+  [...filtered.value].sort(
+    (a, b) =>
+      (a.startDate || '').localeCompare(b.startDate || '') ||
+      a.name.localeCompare(b.name, 'es'),
+  ),
+)
+
+function sessionsOf(aula) {
+  return sessionsByEdition.value.get(Number(aula.id)) || []
+}
+
+// Ancho de la matriz = curso mas largo de la pagina. Cada aula pinta solo sus
+// sesiones y deja el resto de su fila en blanco.
+const sessionColumns = computed(() => {
+  const max = paged.value.reduce(
+    (n, a) => Math.max(n, sessionsOf(a).length, a.sessionsTotal || 0),
+    0,
+  )
+  return Array.from({ length: max }, (_, i) => i + 1)
+})
+
+function sessionCell(aula, n) {
+  const s = sessionsOf(aula)[n - 1]
+  if (!s) return null
+  const note = consolidatedScore(s.ai_20, s.manual_20)
+  const audited = note != null
+  return {
+    date: dayMonth(s.date),
+    status: s.status,
+    icon: SESSION_STATUS_ICON[s.status] || 'fa-minus',
+    audited,
+    note,
+    noteClass: score20Class(note),
+    title: `S${n} · ${s.date} · ${SESSION_STATUS_LABEL[s.status] || 'sin gestionar'}` +
+      (audited ? ` · ${fmt20(note)}/20` : ' · sin auditoría'),
+  }
+}
+
+// Filas agrupadas por semana ISO de inicio, en el orden en que ya vienen
+// (cronologico), asi cada grupo es un bloque contiguo con su rowspan.
+const weekGroups = computed(() => {
+  const cols = sessionColumns.value
+  const groups = []
+  let current = null
+  for (const a of paged.value) {
+    const wk = a.startDate ? isoWeekOf(a.startDate) : null
+    const key = wk ? wk.key : 'sin-fecha'
+    if (!current || current.key !== key) {
+      current = {
+        key,
+        label: wk ? `SEM ${wk.week}` : 'SIN FECHA',
+        range: wk ? `${dayMonth(wk.monday)} - ${dayMonth(wk.sunday)}` : '',
+        rows: [],
+      }
+      groups.push(current)
+    }
+    const cells = cols.map((n) => sessionCell(a, n))
+    current.rows.push({
+      aula: a,
+      cells,
+      audited: cells.filter((c) => c?.audited).length,
+      scheduled: cells.filter(Boolean).length,
+    })
+  }
+  return groups
+})
+
+// =====================================================================
 // PAGINACION DEL DETALLE
 // =====================================================================
 // OJO con el orden: watch(filtered) evalua `filtered` inmediatamente en el
@@ -750,9 +858,9 @@ const decisions = computed(() => {
 // vivir DESPUES de esas declaraciones o revienta con TDZ (pagina en blanco).
 const PAGE_SIZE = 12
 const page = ref(1)
-const totalPages = computed(() => Math.max(1, Math.ceil(sorted.value.length / PAGE_SIZE)))
+const totalPages = computed(() => Math.max(1, Math.ceil(chronological.value.length / PAGE_SIZE)))
 const paged = computed(() =>
-  sorted.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE),
+  chronological.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE),
 )
 // Cualquier cambio de filtros/periodo regenera `filtered`: volver a la pagina 1
 // evita quedar parado en una pagina que ya no existe.
@@ -776,7 +884,7 @@ const pagerPages = computed(() => {
 })
 
 const pagerInfo = computed(() => {
-  const n = sorted.value.length
+  const n = chronological.value.length
   if (!n) return ''
   const from = (page.value - 1) * PAGE_SIZE + 1
   const to = Math.min(page.value * PAGE_SIZE, n)
@@ -1264,80 +1372,93 @@ function openAula(id) {
           </div>
         </div>
       </div>
-      <table class="detail-table">
-        <thead>
-          <tr>
-            <th class="th-first">AULA</th>
-            <th>DOCENTE</th>
-            <th>COBERTURA</th>
-            <th class="th-center">NOTA IA</th>
-            <th class="th-center">MANUAL</th>
-            <th class="th-center">BRECHA</th>
-            <th class="th-center">CONSOLIDADA</th>
-            <th>VEREDICTO</th>
-            <th class="th-last">ÚLT. ACT.</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="isLoading">
-            <td colspan="9" class="state-msg">
-              <i class="fa-solid fa-spinner fa-spin"></i> Cargando reporte...
-            </td>
-          </tr>
-          <tr v-else-if="!sorted.length">
-            <td colspan="9" class="state-msg">
-              <i class="fa-regular fa-folder-open"></i>
-              Ninguna aula coincide con los filtros aplicados.
-            </td>
-          </tr>
-          <tr
-            v-for="a in paged"
-            v-else
-            :key="a.id"
-            class="row-clickable"
-            @click="openAula(a.id)"
-          >
-            <td class="td-first">
-              <div class="aula-cell">
-                <span class="aula-code">{{ a.code }}</span>
-                <span class="aula-name">{{ a.name }}</span>
-                <span class="aula-edition">{{ a.edition }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="teacher-cell">
-                <span class="avatar">{{ a.teacherInitials }}</span>
-                <span class="teacher-name">{{ a.teacher }}</span>
-              </div>
-            </td>
-            <td class="td-cov">
-              <span class="cov-mini" :title="`IA: ${a.sessionsAi} / ${a.sessionsTotal}`">
-                <i class="fa-solid fa-robot"></i> {{ a.sessionsAi }}/{{ a.sessionsTotal }}
-              </span>
-              <span class="cov-mini" :title="`Manual: ${a.sessionsManual} / ${a.sessionsTotal}`">
-                <i class="fa-solid fa-clipboard-check"></i> {{ a.sessionsManual }}/{{ a.sessionsTotal }}
-              </span>
-            </td>
-            <td class="td-center num-ia">{{ a.aiAvg20 != null ? fmt20(a.aiAvg20) : '--' }}</td>
-            <td class="td-center num-man">{{ a.manualAvg20 != null ? fmt20(a.manualAvg20) : '--' }}</td>
-            <td class="td-center">
-              <span
-                v-if="gapOf(a) != null"
-                class="gap-pill"
-                :class="{ big: gapOf(a) > GAP_THRESHOLD }"
-              >{{ gapOf(a).toFixed(1) }}</span>
-              <span v-else class="dim">--</span>
-            </td>
-            <td class="td-center num-cons" :class="a.verdictClass">
-              {{ a.consolidated20 != null ? fmt20(a.consolidated20) : '--' }}
-            </td>
-            <td>
-              <span class="verdict-pill" :class="a.verdictClass">{{ a.verdict }}</span>
-            </td>
-            <td class="td-last td-rel">{{ a.lastActivityRel || '--' }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="fu-scroll">
+        <table class="detail-table fu-table">
+          <thead>
+            <tr class="fu-grouprow">
+              <th class="th-first" colspan="5">DATOS</th>
+              <th class="fu-gr-audit" :colspan="Math.max(1, sessionColumns.length)">
+                AUDITORÍAS POR SESIÓN
+              </th>
+            </tr>
+            <tr>
+              <th class="th-first fu-th-week">SEMANA</th>
+              <th>F. INICIO</th>
+              <th>CURSO</th>
+              <th>DOCENTE</th>
+              <th class="th-center">AUDIT.</th>
+              <th v-for="n in sessionColumns" :key="n" class="th-center fu-th-s">S{{ n }}</th>
+              <th v-if="!sessionColumns.length" class="th-center">—</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="isLoading">
+              <td :colspan="5 + Math.max(1, sessionColumns.length)" class="state-msg">
+                <i class="fa-solid fa-spinner fa-spin"></i> Cargando reporte...
+              </td>
+            </tr>
+            <tr v-else-if="!chronological.length">
+              <td :colspan="5 + Math.max(1, sessionColumns.length)" class="state-msg">
+                <i class="fa-regular fa-folder-open"></i>
+                Ninguna aula coincide con los filtros aplicados.
+              </td>
+            </tr>
+            <template v-else>
+              <template v-for="g in weekGroups" :key="g.key">
+                <tr
+                  v-for="(r, i) in g.rows"
+                  :key="r.aula.id"
+                  class="row-clickable"
+                  @click="openAula(r.aula.id)"
+                >
+                  <td v-if="i === 0" :rowspan="g.rows.length" class="td-first fu-week">
+                    <span class="fu-week-num">{{ g.label }}</span>
+                    <span class="fu-week-range">{{ g.range }}</span>
+                  </td>
+                  <td class="fu-date">{{ dayMonth(r.aula.startDate) || '--' }}</td>
+                  <td>
+                    <div class="aula-cell">
+                      <span class="aula-name">{{ r.aula.name }}</span>
+                      <span class="aula-edition">{{ r.aula.code }} · {{ r.aula.edition }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="teacher-cell">
+                      <span class="avatar">{{ r.aula.teacherInitials }}</span>
+                      <span class="teacher-name">{{ r.aula.teacher }}</span>
+                    </div>
+                  </td>
+                  <td class="td-center">
+                    <span
+                      class="fu-cov"
+                      :class="{ on: r.audited > 0 }"
+                      :title="`${r.audited} de ${r.scheduled || r.aula.sessionsTotal} sesiones con auditoría`"
+                    >{{ r.audited }}/{{ r.scheduled || r.aula.sessionsTotal }}</span>
+                  </td>
+                  <td
+                    v-for="(c, k) in r.cells"
+                    :key="k"
+                    class="fu-cell"
+                    :class="{ 'fu-on': c?.audited, 'fu-off': c && !c.audited }"
+                    :title="c?.title"
+                  >
+                    <template v-if="c">
+                      <span class="fu-c-date">{{ c.date }}</span>
+                      <span v-if="c.audited" class="fu-c-note" :class="c.noteClass">
+                        {{ fmt20(c.note) }}
+                      </span>
+                      <span v-else class="fu-c-flag" :class="`fu-st-${c.status || 'none'}`">
+                        <i class="fa-solid" :class="c.icon"></i>
+                      </span>
+                    </template>
+                  </td>
+                  <td v-if="!r.cells.length" class="fu-cell fu-nosched">sin cronograma</td>
+                </tr>
+              </template>
+            </template>
+          </tbody>
+        </table>
+      </div>
       <div v-if="totalPages > 1" class="table-pager">
         <span class="pager-info">{{ pagerInfo }}</span>
         <div class="pager-controls">
@@ -1358,10 +1479,14 @@ function openAula(id) {
         </div>
       </div>
       <div class="table-foot">
-        Consolidada = {{ Math.round(CONSOLIDATED_WEIGHT_IA * 100) }}% IA +
-        {{ Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100) }}% rúbrica manual ·
-        Brecha = |manual − IA|. Meta institucional: {{ META_20.toFixed(1) }} / 20.
-        Las aulas SIN EVALUAR no se promedian en el KPI institucional.
+        Semana ISO de inicio del curso · fecha de cada sesión con su
+        reprogramación aplicada. Nota = {{ Math.round(CONSOLIDATED_WEIGHT_IA * 100) }}% IA +
+        {{ Math.round(CONSOLIDATED_WEIGHT_MANUAL * 100) }}% rúbrica manual, meta
+        {{ META_20.toFixed(1) }} / 20. Sin nota = sesión sin auditoría
+        (<i class="fa-solid fa-check"></i> dictada ·
+        <i class="fa-solid fa-rotate"></i> reprogramada ·
+        <i class="fa-solid fa-clock"></i> tardanza ·
+        <i class="fa-solid fa-minus"></i> sin gestionar).
       </div>
     </div>
   </div>
@@ -1925,6 +2050,51 @@ function openAula(id) {
   border-top: 1px solid var(--line-soft);
 }
 
+/* ============ MATRIZ SEGUIMIENTO DOCENTES ============ */
+/* La matriz crece con el curso mas largo de la pagina: scroll horizontal
+   propio para que el body de la vista nunca se desborde. */
+.fu-scroll { overflow-x: auto; }
+.fu-table { min-width: 100%; }
+.fu-table th, .fu-table td { white-space: nowrap; }
+.fu-grouprow th {
+  padding: 8px; border-bottom: 1px solid var(--line);
+  font-size: 10px; letter-spacing: .12em; text-align: center;
+}
+.fu-grouprow .th-first { text-align: left; }
+.fu-gr-audit { color: var(--blue); }
+.fu-th-week { width: 108px; }
+.fu-th-s { min-width: 62px; }
+.fu-table td { padding: 10px 8px; vertical-align: middle; }
+
+/* Cabecera de semana: una celda con rowspan por bloque, como el Sheet. */
+.fu-week {
+  background: #fafbfd; border-left: 3px solid var(--navy);
+  text-align: center; line-height: 1.25;
+}
+.fu-week-num { display: block; font-weight: 800; color: var(--navy); font-size: 13px; }
+.fu-week-range { display: block; font-size: 11px; color: var(--mut); }
+.fu-date { font-weight: 700; color: var(--slate); font-variant-numeric: tabular-nums; }
+
+.fu-cov {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: #f1f5f9; color: var(--slate-2);
+}
+.fu-cov.on { background: var(--blue-soft); color: var(--blue); }
+
+.fu-cell { text-align: center; line-height: 1.2; }
+.fu-c-date { display: block; font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.fu-c-note {
+  display: block; margin-top: 2px; font-weight: 800; font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.fu-c-flag { display: block; margin-top: 2px; font-size: 11px; color: var(--mut-2); }
+.fu-st-A { color: var(--green); }
+.fu-st-R { color: var(--amber); }
+.fu-st-T { color: var(--red); }
+.fu-on { background: rgba(47, 107, 219, .06); }
+.fu-nosched { font-size: 12px; color: var(--mut-2); font-style: italic; }
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1100px) {
   .hero { grid-template-columns: 1fr; }
@@ -1999,6 +2169,9 @@ function openAula(id) {
 [data-coreui-theme="dark"] .rpt .decision,
 [data-coreui-theme="dark"] .rpt .gap-stat { background: #1F1F1A; }
 [data-coreui-theme="dark"] .rpt .detail-table thead tr { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .fu-week { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rpt .fu-cov { background: #24241E; }
+[data-coreui-theme="dark"] .rpt .fu-on { background: rgba(143, 170, 220, .10); }
 [data-coreui-theme="dark"] .rpt .sm-tip,
 [data-coreui-theme="dark"] .rpt .donut-tip { background: #1F1F1A; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
 [data-coreui-theme="dark"] .rpt .sm-dot { border-color: #1A1A14; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }

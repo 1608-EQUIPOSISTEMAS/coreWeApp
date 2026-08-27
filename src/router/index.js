@@ -202,8 +202,9 @@ const routes = [
             path: 'reporte-completo',
             name: 'GerenciaReporteCompleto',
             // Antes vivía en Marketing como "Reporte Completo" (/marketing/overview).
-            // La vista no cambió, solo el módulo que la gobierna.
-            component: () => import('@/views/marketing/IngresosDiarios.vue'),
+            // Al eliminarse el módulo Marketing (2026-08-26) la vista se mudó a
+            // views/gerencia/; el contenido no cambió.
+            component: () => import('@/views/gerencia/IngresosDiarios.vue'),
             meta: { submodule: 'REPORTE_COMPLETO', roles: ['ADMIN', 'GERENCIA'] },
           },
         ],
@@ -277,36 +278,6 @@ const routes = [
         ],
       },
 
-      // =====================
-      // MARKETING
-      // =====================
-      {
-        path: 'marketing',
-        name: 'Marketing',
-        component: RouterViewStub,
-        redirect: { name: 'MarketingPublicaciones' },
-        meta: { module: 'MARKETING', area: 'MARKETING' },
-        children: [
-          {
-            path: 'publicaciones',
-            name: 'MarketingPublicaciones',
-            // calendario/registro de publicaciones RRSS (IG / LinkedIn)
-            component: () => import('@/views/marketing/Publicaciones.vue'),
-            meta: { submodule: 'PUBLICACIONES', area: 'MARKETING' },
-          },
-          {
-            path: 'crecimiento',
-            name: 'MarketingCrecimiento',
-            // seguidores por marca y red; reemplaza la hoja "Reporte Crecimiento de RRSS"
-            component: () => import('@/views/marketing/CrecimientoRRSS.vue'),
-            meta: { submodule: 'CRECIMIENTO', area: 'MARKETING' },
-          },
-          // rutas viejas del "Reporte Completo": ahora vive en Gerencia
-          { path: 'overview', redirect: { name: 'GerenciaReporteCompleto' } },
-          { path: 'reporte/ingresos-diarios', redirect: { name: 'GerenciaReporteCompleto' } },
-        ],
-      },
-      
       // =====================
       // CLIENTE
       // =====================

@@ -162,6 +162,15 @@ export default class EditionService {
     return response.data || []
   }
 
+  // Seguimiento Docentes del Reporte Academico: cronograma S1..Sn derivado
+  // (con reprogramaciones) + nota de auditoria por sesion, para el rango.
+  async teacherFollowup(payload) {
+    const response = (await api.post('/edition/teacherfollowup', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || { editions: [] }
+  }
+
   // Recomendaciones IA del Reporte Academico (Ollama local). El backend hace
   // hasta 2 intentos de ~60s; sin loader global (la carta muestra el suyo).
   async reportRecommendations(payload) {
