@@ -80,6 +80,7 @@ const ROLE_LABELS = {
   ADMIN: 'Administrador',
   COMERCIAL: 'Comercial',
   LIDER_COMERCIAL: 'Líder Comercial',
+  LIDER_B2B: 'Líder B2B',
   PRODUCTO: 'Producto',
   'LIDER GERENCIA': 'Líder Gerencia',
 }

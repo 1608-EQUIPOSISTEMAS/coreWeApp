@@ -142,7 +142,7 @@
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
-    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
 </tr>
 
@@ -346,7 +346,7 @@
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
-    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-if="!colGroups.asesor" class="tf tg-placeholder-cell"></th>
 </tr>
@@ -712,7 +712,7 @@
         <h6 class="fieldset-title">Estado, Origen y Ubicación</h6>
         <div class="row g-3">
           <div class="col-md-3 col-6"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></div>
-          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Origen de Intento</label><MultiSelect v-model="filters.attempt_origin_ids" :items="filtroAttemptOrigin" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Nivel de Interés</label><MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">País</label><MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -1214,7 +1214,7 @@ const currentUserId = storedUser?.user_id;
 // guarda: si algun dia un usuario de Fundacion recibe ademas el rol COMERCIAL,
 // sus leads no deben reaparecer en esta pantalla.
 const OWNER_ROLES_EXTRA = ['LIDER_COMERCIAL', 'ADMIN', 'GERENCIA']
-const OWNER_ROLES_AJENOS = ['FUNDACION', 'LIDER_FUNDACION', 'B2B']
+const OWNER_ROLES_AJENOS = ['FUNDACION', 'LIDER_FUNDACION', 'B2B', 'LIDER_B2B']
 const comercialOwnerIds = ref([])
 
 // ═══════════════════════════════════════════════════════════════
@@ -1318,6 +1318,10 @@ const filtroModalidad = ref(catalog.options('we_modality') || [])
 const filtroPipeline = ref(catalog.options('we_lead_status') || [])
 const filtroCanales = ref(catalog.options('we_social_media') || [])
 const filtroFollow = ref(catalog.options('we_calling') || [])
+// Centinela -1 = leads sin seguimiento (la columna los pinta como "—"). El
+// backend ya lo desdobla en include_null_follow (splitNullSentinel). Solo va en
+// los filtros del listado, NO en las restricciones por asesor.
+const filtroFollowConVacio = computed(() => [{ id: -1, description: '—' }, ...filtroFollow.value])
 const filtroAttemptOrigin = ref(catalog.options('we_attempt_origin') || [])
 const attemptOriginCatalog = ref(catalog.options('we_attempt_origin') || [])
 const filtroMoment = ref(catalog.options('we_moment') || [])

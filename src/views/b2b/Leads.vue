@@ -1154,6 +1154,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 import DateTime12 from '@/components/DateTime12.vue'
 import { useToast } from 'vue-toastification'
+import { isAdvisorScopedToOwnLeads } from '@/utils/leadOwnerScope.js'
 
 const hasActiveRestrictions = ref(false)
 const showControlModal = ref(false)
@@ -1196,11 +1197,11 @@ const quickViews = [
 // === PERMISOS ===
 const storedUserStr = localStorage.getItem('user')
 const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
-const B2B_ROLES = ['B2B']
+const B2B_ROLES = ['B2B', 'LIDER_B2B']
 const b2bOwnerIds = ref([])
-const isB2B = storedUser?.roles?.includes('B2B') &&
-                    !storedUser?.roles?.includes('ADMIN') &&
-                    !storedUser?.roles?.includes('GERENCIA');
+// isB2B = asesor acotado a SUS leads (fuerza owner_user_ids = [yo] y esconde el
+// filtro de asesor). LIDER_B2B queda fuera: ve todos los asesores del area.
+const isB2B = isAdvisorScopedToOwnLeads(storedUser?.roles, 'B2B')
 const currentUserId = storedUser?.user_id;
 
 // Unico scope de este modulo: la vista es identica a /comercial/leads pero
