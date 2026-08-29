@@ -30,7 +30,7 @@
 
           <th
             class="eet-group-header eet-grp-program"
-            :colspan="cg.program ? 4 : 1"
+            :colspan="cg.program ? programCols : 1"
             @click="toggle('program')"
           >
             <span class="eet-group-label">
@@ -90,7 +90,11 @@
             <th class="eet-col-header">Tipo Prog.</th>
             <th class="eet-col-header">Mod. Prog.</th>
             <th class="eet-col-header">Programa</th>
-            <th class="eet-col-header">Edicion</th>
+            <th class="eet-col-header">ED</th>
+            <template v-for="n in childCols" :key="'ch-' + n">
+              <th class="eet-col-header">CURSO {{ n }}</th>
+              <th class="eet-col-header">FI {{ n }}</th>
+            </template>
           </template>
           <th v-else class="eet-col-header eet-collapsed-hint">...</th>
 
@@ -144,7 +148,7 @@
             <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
 
             <template v-if="cg.program">
-              <td v-for="c in 4" :key="'skpr-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+              <td v-for="c in programCols" :key="'skpr-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
             </template>
             <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
 
@@ -208,6 +212,14 @@
               </span>
             </td>
             <td class="eet-cell">{{ e.edition_code || '\u2014' }}</td>
+            <template v-for="n in childCols" :key="'cc-' + n">
+              <td class="eet-cell eet-cell-course" :title="childAt(e, n)?.course_full_name">
+                {{ childAt(e, n)?.course_name || '\u2014' }}
+              </td>
+              <td class="eet-cell eet-cell-date" :title="childAt(e, n)?.edition_code">
+                {{ fmt.formatDate(childAt(e, n)?.start_date) }}
+              </td>
+            </template>
           </template>
           <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
 
@@ -291,11 +303,24 @@ function toggle (key) {
   cg[key] = !cg[key]
 }
 
+// Un paquete (diplomado/especializacion) se vende como una fila padre con un
+// hijo por curso. Se muestran en pares CURSO n / FI n, igual que la hoja de
+// calculo de FICO. El ancho lo fija la fila con mas hijos de la pagina actual:
+// una pagina sin paquetes no paga columnas vacias.
+const childCols = computed(
+  () => props.enrollments.reduce((max, e) => Math.max(max, e.children?.length || 0), 0)
+)
+
+// Tipo Prog. + Mod. Prog. + Programa + ED, mas el par de cada curso hijo.
+const programCols = computed(() => 4 + childCols.value * 2)
+
+const childAt = (e, n) => e.children?.[n - 1]
+
 const totalCols = computed(() => {
   let n = 1 // action col
   n += cg.identity ? 4 : 1
   n += cg.profile ? 5 : 1
-  n += cg.program ? 4 : 1
+  n += cg.program ? programCols.value : 1
   n += cg.finance ? 14 : 1
   n += cg.installments ? 16 : 1
   return n
@@ -465,6 +490,10 @@ const totalCols = computed(() => {
 
 .eet-cell-program {
   max-width: 220px;
+}
+
+.eet-cell-course {
+  max-width: 150px;
 }
 
 .eet-validation-badge {

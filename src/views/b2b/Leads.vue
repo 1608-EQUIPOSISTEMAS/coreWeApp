@@ -1360,7 +1360,12 @@ const extractIds = (arr) => {
 };
 
 // === PERSISTENCIA ===
-const { saveState } = useTablePersistence('crm_leads_b2b_filter_state_v1', filters, pagin)
+// v2 (2026-08-28): el blob guardado sobrevive a un cambio de rol. Un asesor que
+// pasa a LIDER_B2B se quedaba con el owner_user_ids = [el mismo] que la vista le
+// forzaba de asesor, asi que seguia sin ver a sus compañeros. useTablePersistence
+// restaura en su propio onMounted, ANTES del de esta vista, y nada lo limpia:
+// subir la version descarta el estado viejo una sola vez.
+const { saveState } = useTablePersistence('crm_leads_b2b_filter_state_v2', filters, pagin)
 
 // === VARIABLES MODAL FOLLOW ===
 const editableHistory = ref([])
@@ -1844,7 +1849,11 @@ async function fetchLeads() {
     pagin.value.total = Number(t || 0)
     if (filtroOwners.value.length === 0 && items?.length > 0) await loadOwners()
   } catch (e) {
+    // Un 403 o un fallo de red se veia igual que "no hay leads": tabla vacia y
+    // 0 de 0. Eso disfrazo un problema de permisos del rol LIDER_B2B, asi que
+    // el error se muestra en vez de tragarselo.
     console.error('Error cargando leads:', e)
+    toast.error(`No se pudieron cargar los leads: ${e?.response?.data?.message || e.message}`)
     leadsRaw.value = []
     pagin.value.total = 0
   } finally {
@@ -1970,7 +1979,7 @@ function clearFilters(reload = true) {
   if (reload === true || typeof reload !== 'boolean') {
     activeQuickView.value = null
     pagin.value.page = 1
-    localStorage.removeItem('crm_leads_b2b_filter_state_v1')
+    localStorage.removeItem('crm_leads_b2b_filter_state_v2')
     rebuildChips()
     fetchLeads()
   }
@@ -2050,7 +2059,15 @@ async function loadOwners() {
     }
     b2bOwnerIds.value = [...byId.keys()]
     filtroOwners.value = [...byId.values()]
-  } catch (e) { console.error(e) }
+    // Sin universo de asesores buildLeadPayload cae al fail-closed [-1] y la
+    // tabla sale vacia sin decir por que. Mejor avisar que fingir que no hay leads.
+    if (b2bOwnerIds.value.length === 0) {
+      toast.error('No se pudo cargar la lista de asesores B2B: el listado saldra vacio.')
+    }
+  } catch (e) {
+    console.error(e)
+    toast.error(`No se pudo cargar la lista de asesores B2B: ${e?.response?.data?.message || e.message}`)
+  }
 }
 
 function openFilterModal() { showFilterModal.value = true }
