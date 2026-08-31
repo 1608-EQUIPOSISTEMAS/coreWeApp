@@ -14,12 +14,14 @@ export default class ReprogramacionService {
   }
 
   // Academica elige el destino. dest_edition_id puede ir null si el destino no
-  // tiene ediciones (membresia o programa online).
-  async propose ({ enrollmentId, destProgramVersionId, destEditionId }) {
+  // tiene ediciones (membresia o programa online). Con refund = true no va
+  // destino: el alumno pidio su plata de vuelta.
+  async propose ({ enrollmentId, destProgramVersionId, destEditionId, refund = false }) {
     return (await api.post('/reprogramacion/propose', {
       enrollment_id: enrollmentId,
-      dest_program_version_id: destProgramVersionId,
-      dest_edition_id: destEditionId ?? null
+      dest_program_version_id: refund ? null : destProgramVersionId,
+      dest_edition_id: refund ? null : (destEditionId ?? null),
+      refund
     })).data.data
   }
 

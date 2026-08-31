@@ -99,7 +99,11 @@
             </div>
           </td>
           <td>
-            <template v-if="f.dest_program_version_id">
+            <template v-if="esReembolso(f)">
+              <span class="status-pill danger"><span class="dot"></span>Reembolso</span>
+              <div class="sub">no se reubica</div>
+            </template>
+            <template v-else-if="f.dest_program_version_id">
               <div class="small bold">{{ f.destino_programa }}</div>
               <div class="sub">
                 <span class="code">{{ f.destino_codigo || 's/e' }}</span> {{ fecha(f.destino_inicio) }}
@@ -134,6 +138,18 @@
         <div class="sub">compro {{ actual.programa }}</div>
         </div>
 
+        <label class="opcion" :class="{ on: pideReembolso }">
+          <input v-model="pideReembolso" type="checkbox" />
+          <div>
+            <div class="bold small">El alumno pide reembolso</div>
+            <div class="sub">
+              No se reubica a ningun lado y no se le quita nada: la venta queda como esta y el
+              caso solo registra en el historial que se le devolvio su dinero.
+            </div>
+          </div>
+        </label>
+
+        <template v-if="!pideReembolso">
         <label class="lbl">Programa destino</label>
         <SearchSelect
           v-model="destProgramVersionId"
@@ -171,11 +187,12 @@
             {{ ed.specific_code }} &middot; {{ fecha(ed.start_date) }}
           </option>
         </select>
+        </template>
       </div>
       <template #footer>
         <button class="btn" @click="modalDestino = false">Cancelar</button>
-        <button class="btn primary" :disabled="!destProgramVersionId || rpSinEdicion || guardando" @click="guardarDestino">
-          Guardar destino
+        <button class="btn primary" :disabled="!puedeGuardarDestino" @click="guardarDestino">
+          {{ pideReembolso ? 'Marcar reembolso' : 'Guardar destino' }}
         </button>
       </template>
     </BaseModal>
@@ -201,10 +218,19 @@
       <div v-if="actual" class="rp-shell modal-body">
         <div class="alumno-head">
         <div class="bold">{{ actual.apellidos }}, {{ actual.nombres }}</div>
-        <div class="sub">{{ actual.dest_kind === 'RP' ? 'Reprogramacion' : 'Cambio de curso' }}</div>
+        <div class="sub">{{ tipoDeCaso(actual) }}</div>
         </div>
 
-        <div class="salto">
+        <div v-if="esReembolso(actual)" class="aviso danger">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <div>
+            <b>El alumno pidio reembolso.</b>
+            Aceptar NO toca la inscripcion ni Odoo: la venta se queda como esta y el caso solo
+            deja constancia en el historial de que se le devolvio su dinero.
+          </div>
+        </div>
+
+        <div v-else class="salto">
           <div class="salto-lado">
             <div class="sub">DE</div>
             <div class="bold small">{{ actual.programa }}</div>
@@ -220,7 +246,29 @@
 
         <div v-if="actual.contact_notes" class="cita">“{{ actual.contact_notes }}”</div>
 
-        <div class="aviso warn">
+        <!-- FICO firma con el saldo a la vista: la RP arrastra las cuotas pendientes
+             al destino, el CC no, y en los dos casos el plan se ajusta desde FICO. -->
+        <div class="cuotas">
+          <div>
+            <div class="sub">CUOTAS PENDIENTES</div>
+            <div class="bold small">
+              {{ cuotas.cantidad }} cuota(s) &middot; {{ soles(cuotas.monto) }}
+            </div>
+          </div>
+          <a class="btn sm" :href="linkFico(actual.enrollment_id)" target="_blank" rel="noopener">
+            <i class="fa-solid fa-pen-to-square"></i> Editar cuotas en FICO
+          </a>
+        </div>
+
+        <div v-if="!esReembolso(actual) && !cuotas.cantidad" class="aviso warn">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <div>
+            Esta venta no tiene cuotas por pagar: el destino nace al contado. Si el alumno necesita
+            un plan de cuotas, armaselo en FICO despues de mover.
+          </div>
+        </div>
+
+        <div v-if="!esReembolso(actual)" class="aviso warn">
           <i class="fa-solid fa-circle-info"></i>
           <div>
             Aceptar mueve la inscripcion en el ERP, lo inscribe en el aula nueva de Odoo, lo saca de
@@ -234,7 +282,7 @@
       <template #footer>
         <button class="btn" :disabled="guardando" @click="rechazar">Rechazar</button>
         <button class="btn primary" :disabled="guardando" @click="aceptar">
-          {{ guardando ? 'Ejecutando...' : 'Aceptar y mover' }}
+          {{ guardando ? 'Ejecutando...' : (esReembolso(actual) ? 'Aprobar reembolso' : 'Aceptar y mover') }}
         </button>
       </template>
     </BaseModal>
@@ -243,6 +291,7 @@
 
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -251,6 +300,10 @@ import { ServiceKeys } from '@/services'
 const servicio = inject(ServiceKeys.Reprogramacion)
 const programas = inject(ServiceKeys.Program)
 const toast = useToast()
+const router = useRouter()
+
+// dest_kind lo deriva el backend. 'RF' = el alumno pidio su plata de vuelta.
+const REEMBOLSO = 'RF'
 
 const ESTADOS = [
   { key: 'detectado',  label: 'Sin tomar',   clase: 'neutral' },
@@ -277,6 +330,7 @@ const destProgramVersionId = ref(null)
 // llega ya elegido: sin esto pinta el id crudo ("86") en vez del programa.
 const destProgramLabel = ref('')
 const destEditionId = ref(null)
+const pideReembolso = ref(false)
 const ediciones = ref([])
 const cargandoEdiciones = ref(false)
 const notaContacto = ref('')
@@ -284,8 +338,19 @@ const notaVeredicto = ref('')
 
 // Sin fila en la BD el caso existe igual: es un afectado que nadie tomo.
 const estadoDe = f => f.status || 'detectado'
-const estadoLabel = f => ESTADOS.find(e => e.key === estadoDe(f))?.label || estadoDe(f)
+const esReembolso = f => f?.dest_kind === REEMBOLSO
+// Un reembolso aceptado no es un "Reubicado": el alumno se fue con su plata.
+const estadoLabel = f => (esReembolso(f) && estadoDe(f) === 'aceptado')
+  ? 'Reembolsado'
+  : (ESTADOS.find(e => e.key === estadoDe(f))?.label || estadoDe(f))
 const estadoClase = f => ESTADOS.find(e => e.key === estadoDe(f))?.clase || 'neutral'
+
+const tipoDeCaso = f => esReembolso(f)
+  ? 'Reembolso'
+  : (f.dest_kind === 'RP' ? 'Reprogramacion' : 'Cambio de curso')
+
+const soles = v => `S/ ${Number(v || 0).toFixed(2)}`
+const linkFico = id => router.resolve({ name: 'enrollmentDetail', params: { id } }).href
 
 
 const esCambioDeCurso = computed(() =>
@@ -297,6 +362,14 @@ const esCambioDeCurso = computed(() =>
 const rpSinEdicion = computed(() =>
   !!destProgramVersionId.value && !esCambioDeCurso.value &&
   !cargandoEdiciones.value && !ediciones.value.length)
+
+const puedeGuardarDestino = computed(() => {
+  if (guardando.value) return false
+  return pideReembolso.value || (!!destProgramVersionId.value && !rpSinEdicion.value)
+})
+
+// El backend manda el conteo con la MISMA regla que usa la RP para trasladarlas.
+const cuotas = computed(() => actual.value?.cuotas_pendientes || { cantidad: 0, monto: 0 })
 
 const etiquetaEdicionVacia = computed(() => {
   if (cargandoEdiciones.value) return 'Cargando ediciones...'
@@ -372,6 +445,7 @@ function alCambiarPrograma (programa) {
 
 function abrirDestino (f) {
   actual.value = f
+  pideReembolso.value = esReembolso(f)
   destProgramVersionId.value = f.dest_program_version_id || f.program_version_id
   destProgramLabel.value = f.dest_program_version_id ? (f.destino_programa || '') : (f.programa || '')
   destEditionId.value = f.dest_edition_id || null
@@ -412,8 +486,9 @@ async function guardarDestino () {
   const ok = await conGuardado(() => servicio.propose({
     enrollmentId: actual.value.enrollment_id,
     destProgramVersionId: destProgramVersionId.value,
-    destEditionId: destEditionId.value
-  }), 'Destino guardado')
+    destEditionId: destEditionId.value,
+    refund: pideReembolso.value
+  }), pideReembolso.value ? 'Marcado como reembolso' : 'Destino guardado')
   if (ok) modalDestino.value = false
 }
 
@@ -426,10 +501,11 @@ async function guardarContacto () {
 }
 
 async function aceptar () {
+  const esRF = esReembolso(actual.value)
   const ok = await conGuardado(() => servicio.accept({
     enrollmentId: actual.value.enrollment_id,
     notes: notaVeredicto.value
-  }), 'Alumno reubicado')
+  }), esRF ? 'Reembolso registrado en el historial' : 'Alumno reubicado')
   if (ok) modalVeredicto.value = false
 }
 
@@ -658,6 +734,19 @@ onMounted(cargar)
   font-size: 12.5px; color: var(--ink-2); font-style: italic;
   border-left: 3px solid var(--line); padding: 4px 0 4px 10px; margin-top: 10px;
 }
+.opcion {
+  display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 6px;
+}
+.opcion:hover { background: var(--bg-soft); }
+.opcion.on { background: var(--red-soft); border-color: transparent; color: var(--red-ink); }
+.opcion.on .sub { color: var(--red-ink); opacity: 0.85; }
+.opcion input { margin-top: 2px; accent-color: var(--red-ink); }
+.cuotas {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+}
+.cuotas .btn { text-decoration: none; margin-left: 0; }
 
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -685,7 +774,11 @@ onMounted(cargar)
 [data-coreui-theme="dark"] .rp-shell .code { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
 [data-coreui-theme="dark"] .rp-shell .alumno-head { background: #1F1F1A; }
 [data-coreui-theme="dark"] .rp-shell .sel { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .rp-shell .salto { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .rp-shell .salto,
+[data-coreui-theme="dark"] .rp-shell .opcion,
+[data-coreui-theme="dark"] .rp-shell .cuotas { border-color: #2A2A22; }
+[data-coreui-theme="dark"] .rp-shell .opcion:hover { background: #1F1F1A; }
+[data-coreui-theme="dark"] .rp-shell .opcion.on { background: rgba(185,28,28,0.18); color: #FCA5A5; }
 [data-coreui-theme="dark"] .rp-shell .skel {
   background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
   background-size: 200% 100%;
