@@ -99,8 +99,10 @@
             </div>
           </td>
           <td>
-            <template v-if="esReembolso(f)">
-              <span class="status-pill danger"><span class="dot"></span>Reembolso</span>
+            <template v-if="cierre(f)">
+              <span class="status-pill" :class="cierre(f).clase">
+                <span class="dot"></span>{{ cierre(f).pill }}
+              </span>
               <div class="sub">no se reubica</div>
             </template>
             <template v-else-if="f.dest_program_version_id">
@@ -122,7 +124,7 @@
           </td>
           <td class="right nowrap">
             <button class="btn sm" @click="abrirDestino(f)">Destino</button>
-            <button class="btn sm" :disabled="!f.dest_program_version_id" @click="abrirContacto(f)">Contactar</button>
+            <button class="btn sm" :disabled="!f.dest_program_version_id && !cierre(f)" @click="abrirContacto(f)">Contactar</button>
             <button class="btn sm primary" :disabled="f.status !== 'contactado'" @click="abrirVeredicto(f)">Veredicto</button>
           </td>
         </tr>
@@ -138,18 +140,21 @@
         <div class="sub">compro {{ actual.programa }}</div>
         </div>
 
-        <label class="opcion" :class="{ on: pideReembolso }">
-          <input v-model="pideReembolso" type="checkbox" />
+        <label class="lbl">¿Que hacemos con el?</label>
+        <label
+          v-for="s in SALIDAS"
+          :key="s.key"
+          class="opcion"
+          :class="[{ on: salida === s.key }, s.clase]"
+        >
+          <input v-model="salida" type="radio" :value="s.key" />
           <div>
-            <div class="bold small">El alumno pide reembolso</div>
-            <div class="sub">
-              No se reubica a ningun lado y no se le quita nada: la venta queda como esta y el
-              caso solo registra en el historial que se le devolvio su dinero.
-            </div>
+            <div class="bold small">{{ s.label }}</div>
+            <div class="sub">{{ s.detalle }}</div>
           </div>
         </label>
 
-        <template v-if="!pideReembolso">
+        <template v-if="salida === 'reubicar'">
         <label class="lbl">Programa destino</label>
         <SearchSelect
           v-model="destProgramVersionId"
@@ -192,7 +197,7 @@
       <template #footer>
         <button class="btn" @click="modalDestino = false">Cancelar</button>
         <button class="btn primary" :disabled="!puedeGuardarDestino" @click="guardarDestino">
-          {{ pideReembolso ? 'Marcar reembolso' : 'Guardar destino' }}
+          {{ salidaActual.accion }}
         </button>
       </template>
     </BaseModal>
@@ -221,12 +226,11 @@
         <div class="sub">{{ tipoDeCaso(actual) }}</div>
         </div>
 
-        <div v-if="esReembolso(actual)" class="aviso danger">
-          <i class="fa-solid fa-hand-holding-dollar"></i>
+        <div v-if="cierre(actual)" class="aviso" :class="cierre(actual).clase">
+          <i class="fa-solid" :class="cierre(actual).icono"></i>
           <div>
-            <b>El alumno pidio reembolso.</b>
-            Aceptar NO toca la inscripcion ni Odoo: la venta se queda como esta y el caso solo
-            deja constancia en el historial de que se le devolvio su dinero.
+            <b>{{ cierre(actual).titulo }}</b>
+            {{ cierre(actual).detalle }}
           </div>
         </div>
 
@@ -260,7 +264,7 @@
           </a>
         </div>
 
-        <div v-if="!esReembolso(actual) && !cuotas.cantidad" class="aviso warn">
+        <div v-if="!cierre(actual) && !cuotas.cantidad" class="aviso warn">
           <i class="fa-solid fa-circle-exclamation"></i>
           <div>
             Esta venta no tiene cuotas por pagar: el destino nace al contado. Si el alumno necesita
@@ -268,7 +272,7 @@
           </div>
         </div>
 
-        <div v-if="!esReembolso(actual)" class="aviso warn">
+        <div v-if="!cierre(actual)" class="aviso warn">
           <i class="fa-solid fa-circle-info"></i>
           <div>
             Aceptar mueve la inscripcion en el ERP, lo inscribe en el aula nueva de Odoo, lo saca de
@@ -282,7 +286,7 @@
       <template #footer>
         <button class="btn" :disabled="guardando" @click="rechazar">Rechazar</button>
         <button class="btn primary" :disabled="guardando" @click="aceptar">
-          {{ guardando ? 'Ejecutando...' : (esReembolso(actual) ? 'Aprobar reembolso' : 'Aceptar y mover') }}
+          {{ guardando ? 'Ejecutando...' : (cierre(actual)?.accion || 'Aceptar y mover') }}
         </button>
       </template>
     </BaseModal>
@@ -302,8 +306,55 @@ const programas = inject(ServiceKeys.Program)
 const toast = useToast()
 const router = useRouter()
 
-// dest_kind lo deriva el backend. 'RF' = el alumno pidio su plata de vuelta.
-const REEMBOLSO = 'RF'
+// Las tres cosas que Academica puede decidir. 'reubicar' es la de siempre; las
+// otras dos cierran el caso sin mandarlo a ningun programa nuevo.
+const SALIDAS = [
+  {
+    key: 'reubicar',
+    label: 'Reubicarlo',
+    detalle: 'Se va a otra edicion del mismo programa, o a otro programa.',
+    accion: 'Guardar destino',
+    clase: ''
+  },
+  {
+    key: 'reserva',
+    label: 'Reservar vacante',
+    detalle: 'Se retira de la edicion pero su dinero se queda a su favor hasta que se vuelva a inscribir.',
+    accion: 'Marcar vacante reservada',
+    clase: 'azul'
+  },
+  {
+    key: 'reembolso',
+    label: 'Reembolso',
+    detalle: 'No se le quita nada: solo queda registrado en el historial que se le devolvio su dinero.',
+    accion: 'Marcar reembolso',
+    clase: 'rojo'
+  }
+]
+
+// dest_kind lo deriva el backend. Estos dos cierran el caso sin destino.
+const CIERRES = {
+  RF: {
+    pill: 'Reembolso',
+    hecho: 'Reembolsado',
+    clase: 'danger',
+    icono: 'fa-hand-holding-dollar',
+    titulo: 'El alumno pidio reembolso.',
+    detalle: 'Aceptar NO toca la inscripcion ni Odoo: la venta se queda como esta y el caso solo deja constancia en el historial de que se le devolvio su dinero.',
+    accion: 'Aprobar reembolso'
+  },
+  RV: {
+    pill: 'Vacante reservada',
+    hecho: 'Vacante reservada',
+    clase: 'info',
+    icono: 'fa-bookmark',
+    titulo: 'El alumno reserva su vacante.',
+    detalle: 'Aceptar lo retira de la edicion: se le cancelan las cuotas pendientes, salen sus modulos y se lo saca del aula en Odoo. Sin devolucion — su pago queda a su favor hasta que se vuelva a inscribir.',
+    accion: 'Reservar vacante'
+  }
+}
+const cierre = f => CIERRES[f?.dest_kind] || null
+const SALIDA_POR_KIND = { RV: 'reserva', RF: 'reembolso' }
 
 const ESTADOS = [
   { key: 'detectado',  label: 'Sin tomar',   clase: 'neutral' },
@@ -330,7 +381,7 @@ const destProgramVersionId = ref(null)
 // llega ya elegido: sin esto pinta el id crudo ("86") en vez del programa.
 const destProgramLabel = ref('')
 const destEditionId = ref(null)
-const pideReembolso = ref(false)
+const salida = ref('reubicar')
 const ediciones = ref([])
 const cargandoEdiciones = ref(false)
 const notaContacto = ref('')
@@ -338,16 +389,14 @@ const notaVeredicto = ref('')
 
 // Sin fila en la BD el caso existe igual: es un afectado que nadie tomo.
 const estadoDe = f => f.status || 'detectado'
-const esReembolso = f => f?.dest_kind === REEMBOLSO
-// Un reembolso aceptado no es un "Reubicado": el alumno se fue con su plata.
-const estadoLabel = f => (esReembolso(f) && estadoDe(f) === 'aceptado')
-  ? 'Reembolsado'
+// Un caso cerrado sin destino no es un "Reubicado": el alumno no se movio.
+const estadoLabel = f => (cierre(f) && estadoDe(f) === 'aceptado')
+  ? cierre(f).hecho
   : (ESTADOS.find(e => e.key === estadoDe(f))?.label || estadoDe(f))
 const estadoClase = f => ESTADOS.find(e => e.key === estadoDe(f))?.clase || 'neutral'
 
-const tipoDeCaso = f => esReembolso(f)
-  ? 'Reembolso'
-  : (f.dest_kind === 'RP' ? 'Reprogramacion' : 'Cambio de curso')
+const tipoDeCaso = f => cierre(f)?.pill
+  || (f.dest_kind === 'RP' ? 'Reprogramacion' : 'Cambio de curso')
 
 const soles = v => `S/ ${Number(v || 0).toFixed(2)}`
 const linkFico = id => router.resolve({ name: 'enrollmentDetail', params: { id } }).href
@@ -363,9 +412,14 @@ const rpSinEdicion = computed(() =>
   !!destProgramVersionId.value && !esCambioDeCurso.value &&
   !cargandoEdiciones.value && !ediciones.value.length)
 
+const salidaActual = computed(() =>
+  SALIDAS.find(s => s.key === salida.value) || SALIDAS[0])
+
 const puedeGuardarDestino = computed(() => {
   if (guardando.value) return false
-  return pideReembolso.value || (!!destProgramVersionId.value && !rpSinEdicion.value)
+  // Solo la reubicacion necesita un destino valido; las otras dos se guardan solas.
+  if (salida.value !== 'reubicar') return true
+  return !!destProgramVersionId.value && !rpSinEdicion.value
 })
 
 // El backend manda el conteo con la MISMA regla que usa la RP para trasladarlas.
@@ -445,7 +499,7 @@ function alCambiarPrograma (programa) {
 
 function abrirDestino (f) {
   actual.value = f
-  pideReembolso.value = esReembolso(f)
+  salida.value = SALIDA_POR_KIND[f.dest_kind] || 'reubicar'
   destProgramVersionId.value = f.dest_program_version_id || f.program_version_id
   destProgramLabel.value = f.dest_program_version_id ? (f.destino_programa || '') : (f.programa || '')
   destEditionId.value = f.dest_edition_id || null
@@ -487,8 +541,8 @@ async function guardarDestino () {
     enrollmentId: actual.value.enrollment_id,
     destProgramVersionId: destProgramVersionId.value,
     destEditionId: destEditionId.value,
-    refund: pideReembolso.value
-  }), pideReembolso.value ? 'Marcado como reembolso' : 'Destino guardado')
+    salida: salida.value
+  }), `${salidaActual.value.label}: guardado`)
   if (ok) modalDestino.value = false
 }
 
@@ -501,11 +555,11 @@ async function guardarContacto () {
 }
 
 async function aceptar () {
-  const esRF = esReembolso(actual.value)
+  const salidaFinal = cierre(actual.value)
   const ok = await conGuardado(() => servicio.accept({
     enrollmentId: actual.value.enrollment_id,
     notes: notaVeredicto.value
-  }), esRF ? 'Reembolso registrado en el historial' : 'Alumno reubicado')
+  }), salidaFinal ? `${salidaFinal.hecho}: registrado` : 'Alumno reubicado')
   if (ok) modalVeredicto.value = false
 }
 
@@ -739,9 +793,11 @@ onMounted(cargar)
   border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 6px;
 }
 .opcion:hover { background: var(--bg-soft); }
-.opcion.on { background: var(--red-soft); border-color: transparent; color: var(--red-ink); }
-.opcion.on .sub { color: var(--red-ink); opacity: 0.85; }
-.opcion input { margin-top: 2px; accent-color: var(--red-ink); }
+.opcion.on { background: var(--bg-soft); border-color: var(--ink-4); }
+.opcion.on.azul { background: var(--blue-soft); border-color: transparent; color: var(--blue-ink); }
+.opcion.on.rojo { background: var(--red-soft); border-color: transparent; color: var(--red-ink); }
+.opcion.on .sub { color: inherit; opacity: 0.8; }
+.opcion input { margin-top: 3px; }
 .cuotas {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 12px;
@@ -778,7 +834,9 @@ onMounted(cargar)
 [data-coreui-theme="dark"] .rp-shell .opcion,
 [data-coreui-theme="dark"] .rp-shell .cuotas { border-color: #2A2A22; }
 [data-coreui-theme="dark"] .rp-shell .opcion:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .rp-shell .opcion.on { background: rgba(185,28,28,0.18); color: #FCA5A5; }
+[data-coreui-theme="dark"] .rp-shell .opcion.on { background: #24241C; border-color: #4A4A40; }
+[data-coreui-theme="dark"] .rp-shell .opcion.on.azul { background: rgba(29,78,216,0.22); color: #93B4FD; }
+[data-coreui-theme="dark"] .rp-shell .opcion.on.rojo { background: rgba(185,28,28,0.18); color: #FCA5A5; }
 [data-coreui-theme="dark"] .rp-shell .skel {
   background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
   background-size: 200% 100%;

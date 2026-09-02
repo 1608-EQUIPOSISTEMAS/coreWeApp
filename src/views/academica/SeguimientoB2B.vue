@@ -21,9 +21,10 @@ const ESTADOS = {
   P: { key: 'pres', label: 'Presente', short: 'P' },
   T: { key: 'tard', label: 'Tardanza', short: 'T' },
   F: { key: 'falta', label: 'Falta', short: 'F' },
+  J: { key: 'just', label: 'Justificado', short: 'J' },
 }
 // Orden del popover "Marcar sesion" (mismo patron que Control de Ediciones).
-const ORDER = ['', 'P', 'T', 'F']
+const ORDER = ['', 'P', 'T', 'F', 'J']
 
 // Barra superior de la tarjeta + avatar del docente. Mismo color que el badge
 // de estado (ver badgeClass): Proximo en ambar, no en azul.
@@ -145,26 +146,45 @@ const savingKey = ref(null)
 const cellKey = (s, n) => `${s.enrollment_id}:${n}`
 const markOf = (s, n) => s.attendance?.[String(n)] || ''
 const estadoOf = (s, n) => ESTADOS[markOf(s, n)]
+// Motivo escrito por academica al justificar. Solo las celdas 'J' tienen uno.
+const noteOf = (s, n) => s.attendance_notes?.[String(n)] || ''
 
-// Popover "Marcar sesion": { aula, student, n, top, left }
+// Popover "Marcar sesion": { aula, student, n, top, left, asking }
+// `asking` = el segundo paso, donde academica escribe el motivo de la 'J'.
 const pop = ref(null)
+const motivo = ref('')
 
 function openPop(event, aula, student, n) {
   const r = event.currentTarget.getBoundingClientRect()
   pop.value = {
-    aula, student, n,
-    top: Math.min(r.bottom + 6, window.innerHeight - 220),
-    left: Math.min(r.left, window.innerWidth - 210),
+    aula, student, n, asking: false,
+    top: Math.min(r.bottom + 6, window.innerHeight - 280),
+    left: Math.min(r.left, window.innerWidth - 270),
   }
 }
 
 function pick(status) {
   const { aula, student, n } = pop.value
+  // Justificar no se guarda de un clic: el modulo existe para que academica
+  // DIGA por que. El popover pasa al paso del motivo en vez de cerrarse.
+  if (status === 'J') {
+    motivo.value = noteOf(student, n)
+    pop.value = { ...pop.value, asking: true }
+    return
+  }
   pop.value = null
   if (status !== markOf(student, n)) setMark(aula, student, n, status)
 }
 
-async function setMark(aula, student, n, next) {
+function saveJustification() {
+  const texto = motivo.value.trim()
+  if (!texto) return
+  const { aula, student, n } = pop.value
+  pop.value = null
+  setMark(aula, student, n, 'J', texto)
+}
+
+async function setMark(aula, student, n, next, note = null) {
   const key = cellKey(student, n)
   if (savingKey.value === key) return
   savingKey.value = key
@@ -174,6 +194,7 @@ async function setMark(aula, student, n, next) {
       program_edition_id: aula.edition_num_id,
       session_number: n,
       status: next || null,
+      note,
       user_id: currentUserId.value,
     })
     // Se actualiza recien tras confirmar el guardado. Objeto nuevo para que
@@ -182,6 +203,11 @@ async function setMark(aula, student, n, next) {
     if (next) att[String(n)] = next
     else delete att[String(n)]
     student.attendance = att
+    // El motivo vive solo mientras la sesion siga justificada.
+    const notes = { ...(student.attendance_notes || {}) }
+    if (next === 'J') notes[String(n)] = note
+    else delete notes[String(n)]
+    student.attendance_notes = notes
     student.summary = summarize(att, aula.total_sessions)
   } catch (err) {
     console.error('Error guardando asistencia B2B:', err)
@@ -191,6 +217,23 @@ async function setMark(aula, student, n, next) {
   }
 }
 
+// Popup de SOLO LECTURA con la justificacion. Va en hover y no en clic
+// porque el clic de la celda ya es "marcar sesion".
+const tip = ref(null)
+
+function showTip(event, student, n) {
+  const text = noteOf(student, n)
+  if (!text) return
+  const r = event.currentTarget.getBoundingClientRect()
+  tip.value = {
+    text, n,
+    top: Math.min(r.bottom + 6, window.innerHeight - 160),
+    left: Math.max(8, Math.min(r.left - 100, window.innerWidth - 300)),
+  }
+}
+
+const hideTip = () => { tip.value = null }
+
 // Espejo de b2bAttendanceSummary del backend: se recalcula en el cliente para
 // no recargar toda la lista por cada clic. Si cambia la regla alla, cambia aca.
 function summarize(att, totalSessions) {
@@ -198,11 +241,13 @@ function summarize(att, totalSessions) {
   const present = marks.filter((s) => s === 'P').length
   const tardy = marks.filter((s) => s === 'T').length
   const absent = marks.filter((s) => s === 'F').length
-  const taken = present + tardy + absent
+  const justified = marks.filter((s) => s === 'J').length
+  const taken = present + tardy + absent + justified
   return {
-    present, tardy, absent, taken,
+    present, tardy, absent, justified, taken,
     pending: Math.max(0, (Number(totalSessions) || 0) - taken),
-    pct: taken ? Math.round(((present + tardy) / taken) * 100) : null,
+    // La justificada NO penaliza: cuenta como asistida igual que la tardanza.
+    pct: taken ? Math.round(((present + tardy + justified) / taken) * 100) : null,
   }
 }
 </script>
@@ -274,7 +319,7 @@ function summarize(att, totalSessions) {
       <div class="spacer"></div>
       <span class="muted">{{ filtered.length }} aulas - {{ totalAlumnos }} alumnos</span>
       <span class="divider"></span>
-      <span v-for="k in ['P', 'T', 'F', '']" :key="k" class="legend">
+      <span v-for="k in ['P', 'T', 'F', 'J', '']" :key="k" class="legend">
         <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
       </span>
     </div>
@@ -379,6 +424,8 @@ function summarize(att, totalSessions) {
                     :disabled="savingKey === cellKey(st, s.session_number)"
                     :title="`S${s.session_number} - ${fmtShort(s.date)} - ${estadoOf(st, s.session_number).label} (clic para marcar)`"
                     @click="openPop($event, c, st, s.session_number)"
+                    @mouseenter="showTip($event, st, s.session_number)"
+                    @mouseleave="hideTip"
                   >
                     {{ estadoOf(st, s.session_number).short }}
                   </button>
@@ -408,7 +455,9 @@ function summarize(att, totalSessions) {
 
     <div class="page-foot" v-if="!isLoading && filtered.length">
       <i class="fa-solid fa-circle-info"></i>
-      Clic en una celda para marcar Sin marcar / Presente / Tardanza / Falta. Esta asistencia es
+      Clic en una celda para marcar Sin marcar / Presente / Tardanza / Falta / Justificado.
+      La justificacion pide un motivo y se lee pasando el cursor por la celda <b>J</b>; no baja el
+      porcentaje de asistencia ni cuenta como falta. Esta asistencia es
       exclusiva del modulo B2B: no se escribe ni se lee en la Lista de Notas. La columna
       <b>Nota final</b> si viene de la Lista de Notas y aqui es de solo lectura.
     </div>
@@ -417,22 +466,47 @@ function summarize(att, totalSessions) {
     <template v-if="pop">
       <div class="pop-backdrop" @click="pop = null" @contextmenu.prevent="pop = null" />
       <div class="pop" :style="{ top: pop.top + 'px', left: pop.left + 'px' }">
-        <div class="pop-h">MARCAR SESION {{ pop.n }}</div>
-        <button
-          v-for="k in ORDER"
-          :key="k"
-          class="pop-opt"
-          :class="{ on: markOf(pop.student, pop.n) === k }"
-          @click="pick(k)"
-        >
-          <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>
-          {{ ESTADOS[k].label }}
-          <span v-if="markOf(pop.student, pop.n) === k" class="ck">
-            <i class="fa-solid fa-check"></i>
-          </span>
-        </button>
+        <template v-if="pop.asking">
+          <div class="pop-h">JUSTIFICAR SESION {{ pop.n }}</div>
+          <textarea
+            v-model="motivo"
+            class="pop-ta"
+            rows="3"
+            maxlength="500"
+            autofocus
+            placeholder="Motivo de la justificacion (lo vera quien pase por la celda)"
+          ></textarea>
+          <div class="pop-actions">
+            <button class="pop-btn" @click="pop = null">Cancelar</button>
+            <button class="pop-btn primary" :disabled="!motivo.trim()" @click="saveJustification">
+              Guardar
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <div class="pop-h">MARCAR SESION {{ pop.n }}</div>
+          <button
+            v-for="k in ORDER"
+            :key="k"
+            class="pop-opt"
+            :class="{ on: markOf(pop.student, pop.n) === k }"
+            @click="pick(k)"
+          >
+            <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>
+            {{ ESTADOS[k].label }}
+            <span v-if="markOf(pop.student, pop.n) === k" class="ck">
+              <i class="fa-solid fa-check"></i>
+            </span>
+          </button>
+        </template>
       </div>
     </template>
+
+    <!-- Justificacion en hover: solo lectura, sin backdrop (no bloquea el clic) -->
+    <div v-if="tip" class="tip" :style="{ top: tip.top + 'px', left: tip.left + 'px' }">
+      <div class="tip-h"><span class="sw e-just">J</span> Justificacion S{{ tip.n }}</div>
+      <p class="tip-b">{{ tip.text }}</p>
+    </div>
   </div>
 </template>
 
@@ -568,6 +642,7 @@ function summarize(att, totalSessions) {
 .e-pres { background: var(--green-soft); color: var(--green-ink); }
 .e-tard { background: var(--amber-soft); color: var(--amber-ink); }
 .e-falta { background: var(--red-soft); color: var(--red-ink); }
+.e-just { background: var(--blue-soft); color: var(--blue-ink); }
 
 /* Badges de cabecera. Rectangulo redondeado compacto: sin icono, sin punto y
    sin border-radius de pildora — eso era lo que los hacia anchos y blandos. */
@@ -767,6 +842,33 @@ td.s-cell { padding: 5px 4px; }
 .pop-opt:hover { background: var(--bg-soft); }
 .pop-opt.on { background: var(--bg-soft); font-weight: 500; }
 .pop-opt .ck { margin-left: auto; color: var(--we-navy, #002060); display: flex; }
+.pop-ta {
+  width: 100%; min-width: 240px; resize: vertical; margin: 0 0 6px;
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  font-family: inherit; font-size: 13px; color: var(--ink); background: transparent;
+}
+.pop-ta:focus { outline: none; border-color: var(--we-navy, #002060); }
+.pop-actions { display: flex; justify-content: flex-end; gap: 6px; padding: 0 0 2px; }
+.pop-btn {
+  border: 1px solid var(--line); background: transparent; border-radius: 8px;
+  padding: 6px 12px; font-family: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer;
+}
+.pop-btn:hover { background: var(--bg-soft); }
+.pop-btn.primary { background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); color: #fff; }
+.pop-btn.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* popup de la justificacion (hover, solo lectura) */
+.tip {
+  position: fixed; z-index: 1092; max-width: 280px;
+  background: var(--pop-bg, #fff); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 10px 30px -12px rgba(20,20,15,0.22); padding: 10px 12px; color: var(--ink);
+  pointer-events: none;
+}
+.tip-h {
+  display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
+}
+.tip-b { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; }
 
 /* ════════════════════════════════════════
    DARK MODE
@@ -790,7 +892,12 @@ td.s-cell { padding: 5px 4px; }
   --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
   --pop-bg: #1A1A14;
 }
-[data-coreui-theme="dark"] .aulas-shell .pop { box-shadow: 0 10px 30px -12px rgba(0,0,0,0.6); }
+[data-coreui-theme="dark"] .aulas-shell .pop,
+[data-coreui-theme="dark"] .aulas-shell .tip { box-shadow: 0 10px 30px -12px rgba(0,0,0,0.6); }
+[data-coreui-theme="dark"] .aulas-shell .pop-ta { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
+[data-coreui-theme="dark"] .aulas-shell .pop-btn { border-color: #2A2A22; color: #D4D4CC; }
+[data-coreui-theme="dark"] .aulas-shell .pop-btn:hover { background: #2A2A22; }
+[data-coreui-theme="dark"] .aulas-shell .pop-btn.primary { background: #8FAADC; border-color: #8FAADC; color: #14140F; }
 [data-coreui-theme="dark"] .aulas-shell .pop-opt .ck { color: #8FAADC; }
 [data-coreui-theme="dark"] .aulas-shell .btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
 [data-coreui-theme="dark"] .aulas-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }
