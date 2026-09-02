@@ -531,6 +531,17 @@ const routes = [
           component: () => import('@/views/configuracion/MembresiaCursos.vue'),
           meta: { submodule: 'MEMBRESIA_CURSOS', roles: ['ADMIN', 'FICO', 'LIDER_FICO'] },
         },
+        {
+          // Los líderes entran solo aquí; el backend acota la bitácora a su área.
+          path: 'auditoria',
+          name: 'ConfigAuditoria',
+          component: () => import('@/views/configuracion/Auditoria.vue'),
+          meta: {
+            submodule: 'AUDITORIA',
+            roles: ['ADMIN', 'LIDER_COMERCIAL', 'LIDER_FICO', 'LIDER_ACADEMICA',
+                    'LIDER_PRODUCTO', 'LIDER_FUNDACION', 'LIDER_B2B'],
+          },
+        },
       ],
     },
 

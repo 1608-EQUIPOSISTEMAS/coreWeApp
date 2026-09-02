@@ -550,7 +550,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <label class="exec-label d-lg-none">T. Resultado</label>
               
               <SearchSelect
-                v-if="c.cat_type_attempt === 'we_attempt_call'"
                 v-model="c.calling_alias"
                 :viewOpen="6"
                 :items="callingCatalog"
@@ -563,10 +562,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias!=null"
               />
 
-              <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
-                <i class="fa-regular fa-paper-plane me-2"></i>
-                <span>Mensaje / Gestión</span>
-              </div>
             </div>
 
             <div class="attempt-row__obs">
@@ -2753,11 +2748,11 @@ function handleTypeChange(contacto, newVal) {
   // 1. Asignar valor
   contacto.cat_type_attempt = newVal;
 
-  // 2. Lógica: Si NO es llamada
+  // 2. El tipo de respuesta se pide para todo intento (llamada, WhatsApp o
+  //    mensaje): arranca pendiente en los tres, solo la llamada cronometra.
+  contacto.calling_alias = 'we_calling_pending';
+
   if (newVal !== 'we_attempt_call') {
-    // Forzamos el resultado a 'Mensaje / Gestión'
-    contacto.calling_alias = 'we_calling_message'; 
-    
     // Detenemos cronómetro si estaba activo y reseteamos duración
     if (contacto.timerActive) {
         clearInterval(contacto.timerId);
@@ -2765,9 +2760,6 @@ function handleTypeChange(contacto, newVal) {
         contacto.timerId = null;
     }
     contacto.contact_duration = 0;
-  } else {
-    // Si vuelve a ser llamada, lo ponemos en Pendiente
-    contacto.calling_alias = 'we_calling_pending';
   }
 }
 

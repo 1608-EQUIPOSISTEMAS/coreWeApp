@@ -59,12 +59,12 @@ export function useManageContactAttempts (form) {
 
   function handleTypeChange (contacto, newVal) {
     contacto.cat_type_attempt = newVal
+    // El tipo de respuesta se pide para todo intento (llamada, WhatsApp o mensaje),
+    // asi que arranca pendiente en los tres; solo la llamada cronometra.
+    contacto.calling_alias = 'we_calling_pending'
     if (newVal !== 'we_attempt_call') {
-      contacto.calling_alias = 'we_calling_message'
       if (contacto.timerActive) { clearInterval(contacto.timerId); contacto.timerActive = false; contacto.timerId = null }
       contacto.contact_duration = 0
-    } else {
-      contacto.calling_alias = 'we_calling_pending'
     }
   }
 

@@ -106,7 +106,6 @@
       <div class="attempt-row__result">
         <label class="exec-label d-lg-none">T. Resultado</label>
         <SearchSelect
-          v-if="c.cat_type_attempt === 'we_attempt_call'"
           v-model="c.calling_alias"
           :viewOpen="6"
           :items="callingCatalog"
@@ -118,10 +117,6 @@
           class="exec-select-light w-100"
           :disabled="c.calling_alias != 'we_calling_pending' && c.calling_alias != null"
         />
-        <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
-          <i class="fa-regular fa-paper-plane me-2"></i>
-          <span>Mensaje / Gestión</span>
-        </div>
       </div>
 
       <div class="attempt-row__obs">

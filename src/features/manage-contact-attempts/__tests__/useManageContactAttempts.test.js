@@ -41,12 +41,12 @@ describe('useManageContactAttempts CRUD', () => {
     wrapper.unmount()
   })
 
-  it('handleTypeChange a mensaje detiene timer, calling_message y duracion 0', () => {
+  it('handleTypeChange a mensaje detiene timer, deja la respuesta pendiente y duracion 0', () => {
     const form = reactive({ contactos: [] })
     const { api, wrapper } = withAttempts(form)
     const c = { cat_type_attempt: 'we_attempt_call', calling_alias: 'we_calling_pending', timerActive: false, timerId: null, contact_duration: 40 }
     api.handleTypeChange(c, 'we_attempt_whatsapp')
-    expect(c.calling_alias).toBe('we_calling_message')
+    expect(c.calling_alias).toBe('we_calling_pending')
     expect(c.contact_duration).toBe(0)
     api.handleTypeChange(c, 'we_attempt_call')
     expect(c.calling_alias).toBe('we_calling_pending')

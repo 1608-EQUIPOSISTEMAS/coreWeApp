@@ -43,4 +43,11 @@ export default class ConfigService {
   async membershipCourseSave(channelIds) {
     return (await api.post('/config/membershipcoursesave', { channel_ids: channelIds })).data;
   }
+
+  // Bitácora de auditoría. Vive bajo /api/audit (módulo propio en el backend)
+  // pero se expone aquí porque la vista cuelga de Configuración: un servicio
+  // nuevo son tres archivos y un app.provide fácil de olvidar.
+  async auditLog(filters) {
+    return (await api.post('/audit/loglist', filters)).data.data;
+  }
 }

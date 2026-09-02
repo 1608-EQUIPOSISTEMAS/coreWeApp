@@ -5,6 +5,14 @@
 //      - grupo:  `module` (código en tabla modules)
 //      - hijo:   `submodule` (código en tabla submodules, dentro del módulo del grupo)
 // Un hijo con `submodule` solo se abre por matriz si el rol tiene ese submódulo.
+// Administración se abre a los líderes por Auditoría: cada uno ve la bitácora
+// de su área. Los demás hijos del grupo siguen siendo solo ADMIN, y
+// useFilteredNav oculta el grupo entero si no queda ningún hijo visible.
+const ADMIN_Y_LIDERES = [
+  'ADMIN', 'LIDER_COMERCIAL', 'LIDER_FICO', 'LIDER_ACADEMICA',
+  'LIDER_PRODUCTO', 'LIDER_FUNDACION', 'LIDER_B2B',
+]
+
 export default [
   {
     component: 'CNavItem',
@@ -319,7 +327,7 @@ export default [
   {
     component: 'CNavTitle',
     name: 'Administración',
-    roles: ['ADMIN'],
+    roles: ADMIN_Y_LIDERES,
     module: 'CONFIGURACION',
   },
   {
@@ -328,7 +336,7 @@ export default [
     to: '/configuracion',
     icon: 'cil-settings',
     module: 'CONFIGURACION',
-    roles: ['ADMIN'],
+    roles: ADMIN_Y_LIDERES,
     items: [
       {
         component: 'CNavItem',
@@ -357,6 +365,13 @@ export default [
         to: '/configuracion/membresia-cursos',
         submodule: 'MEMBRESIA_CURSOS',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Auditoría',
+        to: '/configuracion/auditoria',
+        submodule: 'AUDITORIA',
+        roles: ADMIN_Y_LIDERES,
       },
     ],
   },
