@@ -85,9 +85,13 @@ export function useEnrollmentList () {
     // programVersionCaller es publico (sin role gate); programVersionList requiere
     // ALL_PRODUCTO/ALL_COMERCIAL y rompe para usuarios FICO puros. Cada catalogo
     // se carga de forma independiente para que el fallo de uno no anule el otro.
+    // Sin filtro de `active`: este es un catalogo de BUSQUEDA, no de alta. Media
+    // decena de versiones viejas siguen con inscripciones vivas (p.ej. PY-EZ-03,
+    // dada de baja, tiene la edicion E28 del 23/05) y con active:'Y' la version
+    // no aparecia, asi que sus ediciones eran inalcanzables en la cascada.
     const [pvRes, edRes] = await Promise.allSettled([
-      programService.programVersionCaller({ active: 'Y' }),
-      editionService.editionList({ active: 'Y', size: 5000 })
+      programService.programVersionCaller({}),
+      editionService.editionList({ size: 5000 })
     ])
 
     if (pvRes.status === 'fulfilled') {
@@ -104,13 +108,16 @@ export function useEnrollmentList () {
 
     if (edRes.status === 'fulfilled') {
       const ed = edRes.value
-      // active:'Y' no basta: una edicion cancelada sigue activa pero con
-      // segmento A5. sp_edition_list ya devuelve la etiqueta calculada.
+      // Lo unico que se esconde son las ediciones CANCELADAS: siguen con
+      // active='Y' y se reconocen por el segmento A5, que sp_edition_list ya
+      // devuelve calculado.
       allEditions.value = (ed?.items || [])
         .filter(e => String(e.cat_segment || '').toUpperCase().trim() !== 'A5')
         .map(e => ({
           id: e.edition_num_id,
-          description: `${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`,
+          // El programa va en la etiqueta: sin programa elegido se listan TODAS
+          // las ediciones y el codigo+fecha solo no distingue una de otra.
+          description: `${e.program_abreviature || ''} ${e.global_code || 'E?'} - ${fmtStartDate(e.start_date)}`.trim(),
           program_version_id: e.program_version_id
         }))
     } else {
@@ -138,10 +145,12 @@ export function useEnrollmentList () {
     })
   })
 
-  // filtroEdiciones depende de los programas elegidos. Sin programa, sin opciones.
+  // filtroEdiciones se recorta al programa elegido; sin programa se ofrecen
+  // todas (el MultiSelect tiene buscador, y obligar a elegir programa primero
+  // escondia ediciones de versiones viejas).
   const filtroEdiciones = computed(() => {
     const pvIds = idsFrom(filters.program_version_ids)
-    if (pvIds.length === 0) return []
+    if (pvIds.length === 0) return allEditions.value
     return allEditions.value.filter(e => pvIds.includes(e.program_version_id))
   })
 

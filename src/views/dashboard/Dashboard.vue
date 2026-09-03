@@ -1,7 +1,7 @@
 <template>
   <div class="admin-dash">
-    <!-- Otros roles: dashboard anterior -->
-    <DashboardLegacy v-if="!isAdmin" />
+    <!-- Líderes y colaboradores: su panel de equipo / su día a día -->
+    <TeamDashboard v-if="!isAdmin" />
 
     <template v-else>
       <!-- Header -->
@@ -273,7 +273,7 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { ServiceKeys } from '@/services'
-import DashboardLegacy from './DashboardLegacy.vue'
+import TeamDashboard from './TeamDashboard.vue'
 
 const dashboardService = inject(ServiceKeys.Dashboard)
 

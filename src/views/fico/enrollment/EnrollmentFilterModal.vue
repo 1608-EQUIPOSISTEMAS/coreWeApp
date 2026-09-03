@@ -41,7 +41,7 @@
           </div>
           <div class="flt-field">
             <label>Edicion</label>
-            <MultiSelect v-model="filters.edition_num_ids" :items="filtroEdiciones" label-key="description" value-key="id" :placeholder="filtroEdiciones.length === 0 ? 'Selecciona un programa primero...' : 'Todas las ediciones...'" :disabled="filtroEdiciones.length === 0" />
+            <MultiSelect v-model="filters.edition_num_ids" :items="filtroEdiciones" label-key="description" value-key="id" placeholder="Todas las ediciones..." />
           </div>
         </div>
       </fieldset>

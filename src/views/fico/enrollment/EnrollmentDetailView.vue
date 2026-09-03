@@ -657,6 +657,21 @@ async function handleSaveEdit (justificacion) {
   }
 }
 
+// Toda membresia sale por la cola del backend (job membership_activation): el
+// worker inscribe en Odoo y manda la bienvenida con reintentos. Esta pantalla NO
+// debe disparar el correo, o el alumno recibe sus credenciales dos veces.
+// Devuelve true cuando ya se avisó y el caller solo tiene que salir.
+function announceQueuedMembership (resp, encabezado) {
+  if (!resp?.membership_queued) return false
+  toast.success(
+    resp.membership_deferred
+      ? `${encabezado} Activacion programada para ${fmt.formatDate(resp.activation_date)} (9am).`
+      : `${encabezado} El correo de bienvenida sale en unos segundos.`,
+    { timeout: 6000 }
+  )
+  return true
+}
+
 async function handleConfirmPayment (sapCreds = {}) {
   savingFinancials.value = true
   try {
@@ -723,12 +738,7 @@ async function handleConfirmPayment (sapCreds = {}) {
       savingFinancials.value = false
       return
     }
-    // Membresia diferida: el backend encolo el job, NO disparamos correo aqui.
-    if (resp?.membership_deferred) {
-      toast.success(
-        `Pago confirmado. Activacion programada para ${fmt.formatDate(resp.activation_date)} (9am).`,
-        { timeout: 6000 }
-      )
+    if (announceQueuedMembership(resp, 'Pago confirmado.')) {
       goBack()
       return
     }
@@ -837,11 +847,7 @@ async function handleConfirmPlan (sapCreds = {}) {
       savingFinancials.value = false
       return
     }
-    if (resp?.membership_deferred) {
-      toast.success(
-        `Plan confirmado. Activacion programada para ${fmt.formatDate(resp.activation_date)} (9am).`,
-        { timeout: 6000 }
-      )
+    if (announceQueuedMembership(resp, 'Plan confirmado.')) {
       goBack()
       return
     }

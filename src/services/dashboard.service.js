@@ -8,6 +8,14 @@ export default class DashboardService {
     return response.data;
   }
 
+  // Panel de equipo. El alcance (área o solo yo) lo decide el backend con los
+  // roles del token, por eso no lleva payload: mandarle uno sería fingir que
+  // el cliente puede elegir a quién audita.
+  async teamSummary() {
+    const response = (await api.post('/dashboard/team-summary', {})).data;
+    return response.data;
+  }
+
   /**
    * Obtiene el listado de métricas del dashboard basado en filtros de tiempo.
    * @param {Object} payload - { year, month, period }
