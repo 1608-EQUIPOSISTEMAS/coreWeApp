@@ -480,7 +480,11 @@ async function certifyInOdoo() {
     const warn = []
     if (d.students_with_debt?.length) warn.push(`<b>Excluidos por deuda pendiente (no se certifican):</b> ${d.students_with_debt.join(', ')}`)
     if (d.grades_missing?.length) warn.push(`<b>No encontrados en Odoo (ni por nombre):</b> ${d.grades_missing.join(', ')}`)
-    if (d.score_mismatches?.length) warn.push(`<b>Notas que Odoo recalculó distinto:</b><br>${d.score_mismatches.join('<br>')}`)
+    // La nota oficial es la de Odoo: que recalcule NO es una advertencia, por eso
+    // va aparte de `warn` (si no, el diálogo salía en amarillo en cada certificación).
+    const notaOficial = d.score_mismatches?.length
+      ? `<b>Nota oficial con la que certificó Odoo:</b><br>${d.score_mismatches.join('<br>')}`
+      : ''
     if (d.pdf_errors?.length) warn.push(`<b>PDFs con error:</b><br>${d.pdf_errors.join('<br>')}`)
     Swal.fire({
       icon: warn.length ? 'warning' : 'success',
@@ -495,6 +499,7 @@ async function certifyInOdoo() {
           ${d.matched_by_name ? `<p><b>Vinculados por nombre (sin id previo):</b> ${d.matched_by_name}</p>` : ''}
           ${d.already_certified ? `<p><b>Ya tenían certificado (no se duplican):</b> ${d.already_certified}</p>` : ''}
           <p><b>Certificados del grupo:</b> ${d.certificates_total} · <b>PDFs generados ahora:</b> ${d.pdfs_generated}</p>
+          ${notaOficial ? `<hr><p>${notaOficial}</p>` : ''}
           ${warn.length ? `<hr><p>${warn.join('</p><p>')}</p>` : ''}
         </div>`,
       width: 640,
@@ -1822,7 +1827,7 @@ onMounted(async () => {
               <th class="th-group-pi" colspan="3">Proyecto integrador &middot; 6+8/20</th>
               <th rowspan="2" class="th-summary">Nota final</th>
               <th rowspan="2">Resultado</th>
-              <th rowspan="2">Cert.</th>
+              <th rowspan="2" title="N&deg; del certificado emitido en Odoo">Cert. Odoo</th>
             </tr>
             <tr>
               <th v-for="n in sessionNumbers" :key="'t' + n" class="th-session att">S{{ n }}</th>
@@ -1948,7 +1953,7 @@ onMounted(async () => {
                     v-if="certCodeOf(s)"
                     class="cert-pill"
                     :title="'Certificado emitido en Odoo: ' + certCodeOf(s)"
-                  ><i class="fa-solid fa-certificate"></i> {{ certCodeOf(s) }}</span>
+                  ><i class="fa-solid fa-certificate"></i> N&deg; {{ certCodeOf(s) }}</span>
                   <span v-else class="muted small">--</span>
                 </td>
               </tr>
@@ -2048,6 +2053,18 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
+
+      <!-- Leyenda fija: estas dos preguntas llegaban por chat en cada aula
+           ("que es este numero?" y "por que el ERP dice 18.6 y Odoo 20?").
+           Va visible bajo la tabla, no en un title: el usuario manda captura,
+           y en una captura el tooltip no sale. -->
+      <p v-if="students.length" class="grades-note">
+        <b>Cert. Odoo</b> = N&deg; del certificado ya emitido en Odoo. Un <b>--</b> significa que ese alumno todavia no tiene certificado
+        (desaprobado, con deuda pendiente, o el aula aun no se certifico).
+        &middot; <b>Nota final</b> = acta interna del ERP: incluye los tests de sesion, y la <b>sesion sin test cargado cuenta 0</b>,
+        asi que baja mientras falten quizzes por cargar. El certificado se emite con la <b>nota oficial de Odoo</b>, que solo
+        promedia parcial, final y participacion: por eso suele ser mas alta que esta.
+      </p>
 
       <!-- Resumenes del formato oficial -->
       <div v-if="students.length" class="summary-grid">
@@ -2917,6 +2934,7 @@ onMounted(async () => {
 .chip.active { background: var(--green-soft); color: var(--green-ink); border-color: #C8EFD8; font-weight: 500; }
 .chip .dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
 .legend { display: flex; gap: 12px; }
+.grades-note { margin: 10px 2px 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); }
 .lg { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-3); }
 .btn {
   display: inline-flex; align-items: center; gap: 6px;

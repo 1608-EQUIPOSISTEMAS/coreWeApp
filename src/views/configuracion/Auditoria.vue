@@ -14,9 +14,6 @@
             <span class="inline-kpi-label">Alcance</span>
             <span class="inline-kpi-value accent">{{ scopeLabel }}</span>
           </div>
-          <button class="btn-exec btn-exec-primary" :disabled="isLoading" @click="reload">
-            <i class="fa-solid fa-rotate"></i> Actualizar
-          </button>
         </div>
       </div>
     </header>
@@ -96,7 +93,7 @@
 
               <tbody v-else>
                 <tr v-for="row in rows" :key="row.id">
-                  <td class="col-when text-mono">{{ formatDateTime(row.created_at) }}</td>
+                  <td class="col-when text-mono">{{ fmt.formatDateTime(row.created_at) }}</td>
                   <td class="col-who">{{ row.user_alias }}</td>
                   <td class="col-what"><span class="pill" :class="actionClass(row.action)">{{ actionLabel(row.action) }}</span></td>
                   <td class="col-where">{{ row.table_label }}</td>
@@ -137,7 +134,11 @@
 import { ref, reactive, computed, watch, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 
+// Mismo formateador que FICO/Inscripciones: la fecha llega ya armada como
+// 'DD/MM/YYYY HH:MM' desde el backend y formatDateTime la respeta tal cual.
+const fmt = useEnrollmentFormatters()
 const toast = useToast()
 const configService = inject(ServiceKeys.Config)
 
@@ -177,13 +178,6 @@ function actionClass (code) {
 // los UPDATE. La celda dice qué pasó en vez de quedarse en blanco.
 function noDiffLabel (action) {
   return { INSERT: 'Registro creado', DELETE: 'Registro eliminado', LOGIN: 'Inicio de sesión' }[action] || 'Sin detalle'
-}
-
-function formatDateTime (iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PE', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
 }
 
 // Los valores del diff son jsonb crudo: number, string, null u objeto.
@@ -268,8 +262,6 @@ onMounted(load)
 
 .btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all .15s; white-space: nowrap; }
 .btn-exec:disabled { opacity: .5; cursor: default; }
-.btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
-.btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
 .btn-exec-ghost { background: #fff; color: var(--text-primary, #0f172a); border-color: var(--border, #e2e8f0); }
 .btn-exec-ghost:hover:not(:disabled) { border-color: var(--slate-400, #94a3b8); }
 .btn-link { background: none; border: none; color: var(--teal-600, #0d9488); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
@@ -341,8 +333,6 @@ onMounted(load)
   --text-secondary: #A0A099;
   --text-muted: #8A8A80;
 }
-[data-coreui-theme="dark"] .exec-shell .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-shell .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
 [data-coreui-theme="dark"] .exec-shell .btn-exec-ghost { background: #1F1F1A; }
 [data-coreui-theme="dark"] .exec-shell .btn-link { color: #2DD4BF; }
 [data-coreui-theme="dark"] .exec-shell .detail-panel { background: #1A1A14; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
