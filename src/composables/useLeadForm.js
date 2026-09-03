@@ -4,6 +4,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
+import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 
 export function useLeadForm(options = {}) {
   const {
@@ -427,13 +428,7 @@ export function useLeadForm(options = {}) {
   // despues, asi que no hay voucher que subir hoy —se sube la orden— y la
   // inscripcion nace con la cuota inicial pendiente. La carta de compromiso NO
   // entra aca: esa sigue siendo B2B documental sin cobro (total 0).
-  const DOCUMENTAL_DOCTYPE_ALIASES = [
-    'we_enrollment_b2b_doctype_service_order',
-    'we_enrollment_b2b_doctype_purchase_order'
-  ]
-  const isDocumentalSale = computed(() =>
-    DOCUMENTAL_DOCTYPE_ALIASES.includes(insc.cat_b2b_doctype)
-  )
+  const isDocumentalSale = computed(() => isDocPendingDoctype(insc.cat_b2b_doctype))
 
   const isVoucherOptional = computed(() =>
     !isChannelGeneral.value || Number(insc.val_porcentaje) === 100

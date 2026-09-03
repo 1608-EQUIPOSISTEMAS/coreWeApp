@@ -207,7 +207,7 @@
     </div>
 
     <!-- INFORMACION DE PAGO -->
-    <div class="ef-card" v-if="!isB2BDocumental && !isMembershipBenefit && !isSpeakerTicket">
+    <div class="ef-card" v-if="!isB2BWithoutCharge && !isMembershipBenefit && !isSpeakerTicket">
       <h6 class="ef-section-title"><i class="fa-solid fa-credit-card"></i> INFORMACION DE PAGO</h6>
       <div class="ef-grid-4">
         <div class="ef-field">
@@ -246,7 +246,7 @@
          membresia no hay pago que mostrar, pero el beneficio si se registra —
          entra en monto 0 y vale por su etiqueta (CUENTA PERSONAL / laptop).
          Misma regla que el SP (v_ben_solo_badge) y que computeDiscounts.js. -->
-    <div class="ef-card" v-if="!isB2BDocumental && !isSpeakerTicket">
+    <div class="ef-card" v-if="!isB2BWithoutCharge && !isSpeakerTicket">
       <h6 class="ef-section-title"><i class="fa-solid fa-tags"></i> DESCUENTOS Y BENEFICIOS</h6>
       <div class="ef-grid-3">
         <div class="ef-field" v-if="!isZeroPayment">
@@ -438,6 +438,7 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 import {
   isSpeakerCategory,
   hasAssignedSeat as isSeatedCategory,
@@ -610,6 +611,17 @@ function clearCcField () {
 const isB2BDocumental = computed(() => {
   return form.agent_category === 'b2b' && !form.seller_agent_id && !!form.cat_b2b_doctype
 })
+
+// Orden de Servicio / de Compra: la empresa SI paga, solo que semanas despues.
+// La venta necesita su precio real (el SP la rechaza con precio 0) y nace con la
+// cuota inicial pendiente. La carta de compromiso, en cambio, sigue siendo
+// documental sin cobro. Misma lista que useLeadForm.js y que el SP.
+const isB2BDocPending = computed(() =>
+  isB2BDocumental.value &&
+  isDocPendingDoctype(catB2BDoctype.find(d => d.id === form.cat_b2b_doctype)?.alias)
+)
+// El unico B2B que de verdad entra en cero: la carta de compromiso.
+const isB2BWithoutCharge = computed(() => isB2BDocumental.value && !isB2BDocPending.value)
 
 // Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
 // programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
@@ -786,7 +798,7 @@ const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100
 watch(
   () => [form.list_price, form.val_porcentaje, form.val_fijo, form.val_beneficios, form.dsct_porcent_id, form.dsct_stick_id],
   () => {
-    if (form.is_scholarship || isB2BDocumental.value || isMembershipBenefit.value) return
+    if (form.is_scholarship || isB2BWithoutCharge.value || isMembershipBenefit.value) return
     const base = Number(form.list_price) || 0
     const montoPorcentaje = round2((base * (form.val_porcentaje || 0)) / 100)
     const subtotalAfterPct = round2(base - montoPorcentaje)
@@ -1240,6 +1252,11 @@ function validate () {
     toast.error('Selecciona la categoria de entrada del evento.'); return false
   }
   if (!form.client_profile) { toast.error('Selecciona un perfil (Profesional/Estudiante).'); return false }
+  // El SP rechaza el plan de cuotas con OS/OP: la empresa paga el total cuando
+  // llega la orden, no en partes.
+  if (isB2BDocPending.value && isInstallment.value) {
+    toast.error('Una venta con OS/OP se registra al contado: la empresa paga el total cuando llega la orden.'); return false
+  }
   if (!isB2BDocumental.value && !form.is_scholarship && isInstallment.value && installments.value.length > 0 && !installmentValid.value) {
     toast.error('El total de cuotas no coincide con el saldo a financiar.'); return false
   }

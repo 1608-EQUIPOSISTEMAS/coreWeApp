@@ -1951,6 +1951,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 import FileUploader from '@/components/FileUploader.vue'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
+import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   const toast = useToast()
 
   import CurrencyInput from '@/components/CurrencyInput.vue'
@@ -2221,13 +2222,7 @@ const isChannelWeb     = computed(() => channelAlias.value === 'we_channel_web')
 // despues, asi que no hay voucher que subir hoy —se sube la orden— y la
 // inscripcion nace con la cuota inicial pendiente. La carta de compromiso NO
 // entra aca: esa sigue siendo B2B documental sin cobro (total 0).
-const DOCUMENTAL_DOCTYPE_ALIASES = [
-  'we_enrollment_b2b_doctype_service_order',
-  'we_enrollment_b2b_doctype_purchase_order'
-]
-const isDocumentalSale = computed(() =>
-  DOCUMENTAL_DOCTYPE_ALIASES.includes(insc.cat_b2b_doctype)
-)
+const isDocumentalSale = computed(() => isDocPendingDoctype(insc.cat_b2b_doctype))
 
 // Elegir OS/OP con "cuotas" ya seleccionado dejaria el select deshabilitado pero
 // con el valor viejo, y el SP recien rechazaria la venta al guardar.
