@@ -251,10 +251,8 @@ export default class EditionService {
     return response.items || [];
   }
 
-  async a5MigrationExecute(payload) {
-    const response = (await api.post('/edition/a5migrationexecute', payload, {
-      timeout: 60000
-    })).data;
+  async a5CancelAndHandOff(payload) {
+    const response = (await api.post('/edition/a5cancelandhandoff', payload)).data;
     return response;
   }
 

@@ -2,7 +2,7 @@
   <BaseModal
     :modelValue="visible"
     @update:modelValue="handleClose"
-    title="Cancelar edicion y migrar alumnos"
+    title="Cancelar edicion y proponer destino"
     size="xl"
   >
     <div class="a5-body" v-if="visible">
@@ -48,11 +48,11 @@
         <div class="a5-empty-sub">Esta edicion no tiene inscripciones vigentes. Puedes cancelarla directamente.</div>
       </div>
 
-      <!-- Tabla migracion -->
+      <!-- Tabla de destinos propuestos -->
       <template v-else>
         <!-- Bulk action -->
         <div class="a5-bulk-bar">
-          <span class="a5-bulk-label">Asignar la misma edicion destino a todos:</span>
+          <span class="a5-bulk-label">Proponer la misma edicion destino para todos:</span>
           <select class="a5-bulk-select" v-model="bulkTargetId" :disabled="loadingEditions">
             <option :value="null">— Seleccionar —</option>
             <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
@@ -68,11 +68,11 @@
                 <th style="width:22%;">Programa</th>
                 <th class="text-center" style="width:8%;">Tipo</th>
                 <th class="text-end" style="width:10%;">Monto pag.</th>
-                <th style="width:26%;">Edicion destino</th>
+                <th style="width:26%;">Destino propuesto</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(e, i) in enrollments" :key="e.enrollment_id" :class="{ 'a5-row-warn': !selections[e.enrollment_id] }">
+              <tr v-for="e in enrollments" :key="e.enrollment_id" :class="{ 'a5-row-warn': needsTarget(e) && !selections[e.enrollment_id] }">
                 <td>
                   <div class="a5-stu-name">{{ e.full_name }}</div>
                   <div class="a5-stu-doc">{{ e.document_number }}</div>
@@ -92,10 +92,13 @@
                   <span class="a5-amt">{{ formatAmount(e.amount_paid) }}</span>
                 </td>
                 <td>
-                  <select class="a5-row-select" v-model="selections[e.enrollment_id]">
+                  <select v-if="needsTarget(e)" class="a5-row-select" v-model="selections[e.enrollment_id]">
                     <option :value="null">— Seleccionar —</option>
                     <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                   </select>
+                  <!-- Un modulo de paquete no lleva destino propio: el caso vive en
+                       su venta y mover la venta le vuelve a crear los modulos. -->
+                  <span v-else class="a5-child-note">Viaja con su venta del paquete</span>
                 </td>
               </tr>
             </tbody>
@@ -109,13 +112,16 @@
             v-model="justificacion"
             class="a5-textarea"
             rows="3"
-            placeholder="Motivo de la cancelacion y migracion (visible en historial de cada inscripcion)..."
+            placeholder="Motivo de la cancelacion (lo ve Academica al contactar al alumno)..."
           ></textarea>
         </div>
 
         <div class="a5-warning">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          Cada alumno se reprograma con el mismo flujo <b>RP</b> de FICO: la inscripcion original queda en <b>RP (Reprogramada)</b> conservando lo pagado, y nace una nueva en la edicion destino en estado <b>ACT</b> con sus modulos de seguimiento. Se inscribe en Odoo y <b>se le envia el correo de confirmacion a cada alumno</b>.
+          <i class="fa-solid fa-circle-info"></i>
+          <b>No se mueve a nadie todavia.</b> La edicion queda cancelada y sus alumnos pasan a
+          <b>Academica &rsaquo; Reprogramaciones</b> con este destino marcado como propuesta de Producto.
+          Academica contacta a cada alumno para confirmarlo (o cambiarlo por otra edicion, reserva de vacante
+          o reembolso) y recien el <b>veredicto de FICO</b> ejecuta el movimiento, Odoo y el correo.
         </div>
       </template>
     </div>
@@ -129,7 +135,7 @@
         @click="handleSubmitEmpty"
       >
         <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        Cancelar edicion sin migrar
+        Cancelar edicion
       </button>
       <button
         v-else
@@ -138,7 +144,7 @@
         @click="handleSubmit"
       >
         <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        Migrar {{ enrollments.length }} y cancelar
+        Cancelar y derivar {{ enrollments.length }} a Reprogramaciones
       </button>
     </template>
 
@@ -147,12 +153,13 @@
       <div class="a5-confirm-box">
         <div class="a5-confirm-title">Confirmar cancelacion</div>
         <div class="a5-confirm-text">
-          Vas a mover <b>{{ enrollments.length }}</b> inscripcion(es) y marcar la edicion <b>{{ origin?.global_code }}</b> como <b>A5</b>.<br/><br/>
-          Esta accion <b>no se puede revertir automaticamente</b>.
+          Vas a marcar la edicion <b>{{ origin?.global_code }}</b> como <b>A5</b> y derivar
+          <b>{{ enrollments.length }}</b> inscripcion(es) a Reprogramaciones con el destino propuesto.<br/><br/>
+          Los alumnos <b>no se mueven aun</b>: no se envia ningun correo hasta que FICO de el veredicto.
         </div>
         <div class="a5-confirm-actions">
           <button class="a5-btn-cancel" @click="showConfirm = false">Volver</button>
-          <button class="a5-btn-confirm" @click="executeMigration">Confirmar</button>
+          <button class="a5-btn-confirm" @click="cancelarYDerivar">Confirmar</button>
         </div>
       </div>
     </div>
@@ -191,10 +198,19 @@ const selections = reactive({})
 const bulkTargetId = ref(null)
 const justificacion = ref('')
 
+// Un modulo de un paquete (hijo) no lleva destino propio: su caso vive en la
+// venta del paquete y mover esa venta le vuelve a crear los modulos en el
+// destino. Pedirle destino aqui seria guardar una propuesta inejecutable.
+function needsTarget (e) {
+  return !e.is_child
+}
+
+const ventas = computed(() => enrollments.value.filter(needsTarget))
+
 const canConfirm = computed(() => {
   if (justificacion.value.trim().length === 0) return false
   if (enrollments.value.length === 0) return false
-  return enrollments.value.every(e => selections[e.enrollment_id])
+  return ventas.value.every(e => selections[e.enrollment_id])
 })
 
 watch(() => props.visible, async (v) => {
@@ -238,7 +254,7 @@ async function loadData () {
 
     // Default inteligente: pre-seleccionar la edicion mas proxima
     const defaultId = availableEditions.value[0]?.id || null
-    for (const e of enrollments.value) {
+    for (const e of ventas.value) {
       selections[e.enrollment_id] = defaultId
     }
   } catch (err) {
@@ -254,7 +270,7 @@ async function loadData () {
 
 function applyBulkTarget () {
   if (!bulkTargetId.value) return
-  for (const e of enrollments.value) {
+  for (const e of ventas.value) {
     selections[e.enrollment_id] = bulkTargetId.value
   }
 }
@@ -288,7 +304,7 @@ async function handleSubmitEmpty () {
   emit('update:visible', false)
 }
 
-async function executeMigration () {
+async function cancelarYDerivar () {
   showConfirm.value = false
   saving.value = true
   try {
@@ -297,22 +313,22 @@ async function executeMigration () {
       a5_segment_id: props.a5SegmentId,
       justificacion: justificacion.value.trim(),
       user_id: props.userId,
-      migrations: enrollments.value.map(e => ({
+      migrations: ventas.value.map(e => ({
         enrollment_id: e.enrollment_id,
         target_edition_id: selections[e.enrollment_id]
       }))
     }
-    const resp = await editionService.a5MigrationExecute(payload)
+    const resp = await editionService.a5CancelAndHandOff(payload)
     if (resp?.result === 1) {
-      toast.success(resp.message || 'Migracion completada')
+      toast.success(resp.message || 'Edicion cancelada y derivada a Reprogramaciones')
       emit('completed', { migrated: resp.migrated_count, applyA5: false })
       emit('update:visible', false)
     } else {
-      toast.error(resp?.message || 'Error al migrar')
+      toast.error(resp?.message || 'Error al cancelar la edicion')
     }
   } catch (err) {
-    console.error('[A5Migration] execute error:', err)
-    toast.error(err?.response?.data?.message || err?.message || 'Error al migrar')
+    console.error('[A5Migration] handoff error:', err)
+    toast.error(err?.response?.data?.message || err?.message || 'Error al cancelar la edicion')
   } finally {
     saving.value = false
   }
@@ -395,6 +411,8 @@ function formatAmount (n) {
 .a5-pill-parent { background: #DBEAFE; color: #1E40AF; }
 .a5-pill-child { background: #E0E7FF; color: #4338CA; }
 
+.a5-child-note { font-size: 11px; color: #9CA3AF; font-style: italic; }
+
 .a5-row-select {
   width: 100%; border: 1px solid #D1D5DB; border-radius: 6px;
   padding: 6px 8px; font-size: 12px; background: #fff;
@@ -470,6 +488,7 @@ function formatAmount (n) {
 [data-coreui-theme="dark"] .a5-stu-doc { color: #8A8A80; }
 [data-coreui-theme="dark"] .a5-prog-name { color: #D0D0C8; }
 [data-coreui-theme="dark"] .a5-prog-sub { color: #8A8A80; }
+[data-coreui-theme="dark"] .a5-child-note { color: #8A8A80; }
 [data-coreui-theme="dark"] .a5-amt { color: #34D399; }
 [data-coreui-theme="dark"] .a5-pill-parent { background: rgba(59,130,246,.2); color: #93C5FD; }
 [data-coreui-theme="dark"] .a5-pill-child { background: rgba(99,102,241,.2); color: #C7D2FE; }

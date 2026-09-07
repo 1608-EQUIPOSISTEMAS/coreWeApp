@@ -361,11 +361,11 @@ function hasAnyGrade(d) {
 }
 const hasDebt = (s) => Number(s.fin_overdue) > 0
 const ocupLabel = (s) => (s.profile_alias === 'we_profile_student' ? 'E' : 'P')
-// B2B: la decision vive en el backend (is_b2b de classroomStudentsList),
-// que aplica la MISMA regla que el contador del cronograma: doctype B2B, o
-// canal B2B con asesor convenio (NY12/JF39) o sin asesor. Un comercial con
-// codigo B2B es VENTA — por eso ya no se mira agent_origin aca (fix 17/07:
-// la lista contaba 3 B2B donde el cronograma contaba 1).
+// B2B: la decision vive en el backend (is_b2b de classroomStudentsList), que
+// aplica la MISMA regla que el contador del cronograma: canal 'B2B' con
+// cualquier asesor, o documento OS/OP con asesor de convenios (NY12/JF39) o sin
+// asesor. Por eso ya no se mira agent_origin aca (fix 17/07: la lista contaba
+// 3 B2B donde el cronograma contaba 1).
 const isB2bStudent = (s) => s.is_b2b === true
 // Etiqueta estilo FICO: "B2B - JF39" (origen + codigo de asesor) cuando hay
 // ambos; "B2B" cuando solo hay doctype.

@@ -63,7 +63,8 @@
             <input
               v-model="form.document_number"
               type="text"
-              :placeholder="docConfig.isNumeric ? `Max. ${docConfig.maxLength} digitos` : `Max. ${docConfig.maxLength} caracteres`"
+              :disabled="noDocument"
+              :placeholder="noDocument ? 'Sin documento' : (docConfig.isNumeric ? `Max. ${docConfig.maxLength} digitos` : `Max. ${docConfig.maxLength} caracteres`)"
               :maxlength="docConfig.maxLength"
               @keyup.enter="searchCustomerByDocument"
               @input="onDocumentInput"
@@ -72,7 +73,11 @@
               <i class="fa-solid" :class="searchingCustomer ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
             </button>
           </div>
-          <small v-if="form.document_number && docConfig.isNumeric && form.document_number.length !== docConfig.maxLength" class="ef-hint-warn">
+          <label class="ef-nodoc">
+            <input type="checkbox" v-model="noDocument" />
+            No proporciono documento
+          </label>
+          <small v-if="!noDocument && form.document_number && docConfig.isNumeric && form.document_number.length !== docConfig.maxLength" class="ef-hint-warn">
             Se esperan {{ docConfig.maxLength }} digitos
           </small>
         </div>
@@ -1152,8 +1157,21 @@ async function searchSunat () {
   }
 }
 
+// Salida limpia para el alumno que no entrega su documento. Existe porque la
+// alternativa que se usaba era rellenar el campo con ceros, y un documento en
+// ceros no identifica a nadie pero el ERP lo trataba como valido: seis alumnos
+// distintos terminaron dentro de una sola ficha (caso 07/09/26). Sin documento
+// se manda NULL, que es lo que la regla de identidad sabe interpretar.
+const noDocument = ref(false)
+
+watch(noDocument, (sinDocumento) => {
+  if (!sinDocumento) return
+  form.document_number = ''
+  form.cat_type_document = null
+})
+
 const requireDocument = computed(() => {
-  return !['b2b', 'web'].includes(form.agent_category)
+  return !noDocument.value && !['b2b', 'web'].includes(form.agent_category)
 })
 
 const requirePhone = computed(() => {
@@ -1920,6 +1938,19 @@ function goBack () { router.back() }
   margin-top: 2px;
 }
 
+.ef-nodoc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+.ef-nodoc input { cursor: pointer; margin: 0; }
+
 .ef-footer-actions {
   display: flex;
   justify-content: flex-end;
@@ -2099,6 +2130,8 @@ function goBack () { router.back() }
 }
 
 [data-coreui-theme="dark"] .ef-hint-warn { color: #FBBF24; }
+
+[data-coreui-theme="dark"] .ef-nodoc { color: #9CA3AF; }
 
 [data-coreui-theme="dark"] .ef-req { color: #F87171; }
 </style>

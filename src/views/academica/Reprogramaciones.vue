@@ -111,6 +111,12 @@
                 <span class="code">{{ f.destino_codigo || 's/e' }}</span> {{ fecha(f.destino_inicio) }}
                 <span class="status-pill" :class="f.dest_kind === 'RP' ? 'info' : 'purple'">{{ f.dest_kind }}</span>
               </div>
+              <!-- Producto propone el destino al cancelar la edicion, pero no
+                   hablo con el alumno: hasta que Academica confirme, esto es una
+                   sugerencia y no una decision. -->
+              <div v-if="f.proposed_source === 'producto'" class="sub origen-producto">
+                <i class="fa-solid fa-lightbulb"></i> propuesto por Producto &middot; falta confirmar
+              </div>
             </template>
             <span v-else class="sub">— sin elegir —</span>
           </td>
@@ -610,6 +616,7 @@ onMounted(cargar)
 .muted { color: var(--ink-3); font-size: 12px; }
 .small { font-size: 12.5px; }
 .sub { font-size: 11px; color: var(--ink-3); }
+.origen-producto { color: var(--amber-ink); margin-top: 2px; }
 .bold { font-weight: 600; }
 .right { text-align: right; }
 .nowrap { white-space: nowrap; }
