@@ -73,8 +73,8 @@
           </div>
         </template>
 
-        <!-- ── Resto de roles: botones de acción normales ── -->
-        <div v-if="!isAcademica" class="masthead-actions">
+        <!-- ── Botones de accion. ACADEMICA solo ve Historial. ── -->
+        <div class="masthead-actions">
           <button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Objetivos
@@ -83,17 +83,17 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
             Historial
           </button>
-          <button type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
+          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtros
             <span v-if="hasActiveFilters" class="btn-exec-dot"></span>
           </button>
-          <button type="button" class="btn-exec" :class="hasColumnFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showMetaModal = true">
+          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasColumnFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showMetaModal = true">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
             Resumen
             <span v-if="hasColumnFilters" class="btn-exec-dot"></span>
           </button>
-          <button type="button" class="btn-exec btn-exec-primary" :class="{ 'btn-exec-ghost': !isCompact }" @click="isCompact = !isCompact">
+          <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-primary" :class="{ 'btn-exec-ghost': !isCompact }" @click="isCompact = !isCompact">
             <svg v-if="isCompact" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
             <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>
             {{ isCompact ? 'Normal' : 'Compacto' }}

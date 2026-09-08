@@ -209,6 +209,12 @@
           <small class="ef-cc-help">Aparece en el correo de confirmacion.</small>
         </div>
       </div>
+      <!-- Curso SAP online: el alumno necesita el acceso al servidor, y este es
+           el unico momento en que alguien lo escribe. Mismo bloque que usa el
+           envio del panel de detalle y el preview de RP/CC. -->
+      <div style="margin-top:16px" v-if="isSapOnline">
+        <SapCredentialsFields v-model:username="sapUsername" v-model:password="sapPassword" />
+      </div>
     </div>
 
     <!-- INFORMACION DE PAGO -->
@@ -443,6 +449,8 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import SapCredentialsFields from '@/views/fico/enrollment/SapCredentialsFields.vue'
+import { isSapCredentialsValid } from '@/views/fico/enrollment/sapCredentials.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 import {
   isSpeakerCategory,
@@ -710,6 +718,20 @@ const programTypeAlias = computed(() => {
 const eventCategories = ref([])
 const isEventProgram = computed(() => programTypeAlias.value === 'we_program_type_event')
 
+// ── CREDENCIALES SAP (cursos SAP online) ─────────────────────────────────
+// Misma condicion que el backend (is_sap_online): categoria SAP + modalidad
+// online del PROGRAMA, no la modalidad de inscripcion. Los ids se resuelven por
+// alias porque el catalogo se cachea en localStorage y los numeros no son fijos.
+const sapUsername = ref('')
+const sapPassword = ref('')
+const sapCategoryId = catalog.options('we_program_category').find(c => c.alias === 'we_program_category_sap')?.id ?? null
+const onlineModalityId = catalog.options('we_modality').find(c => c.alias === 'we_modality_online')?.id ?? null
+const isSapOnline = computed(() => {
+  const prog = programsList.value.find(p => p.program_version_id === form.program_version_id)
+  if (!prog || !sapCategoryId || !onlineModalityId) return false
+  return prog.cat_category === sapCategoryId && prog.cat_model_modality === onlineModalityId
+})
+
 async function loadEventCategories () {
   if (!isEventProgram.value || !form.program_version_id) { eventCategories.value = []; return }
   try {
@@ -953,6 +975,9 @@ async function onProgramChange () {
   form.program_edition_id = null
   form.cat_event_category = null
   form.event_seat = ''
+  // Credenciales del servidor anterior: son por curso, no por alumno.
+  sapUsername.value = ''
+  sapPassword.value = ''
   editionsList.value = []
   loadEventCategories()
   if (!form.program_version_id) return
@@ -1269,6 +1294,11 @@ function validate () {
   if (isEventProgram.value && eventCategories.value.length && !form.cat_event_category) {
     toast.error('Selecciona la categoria de entrada del evento.'); return false
   }
+  // El correo del registro directo lo manda la cola: si las credenciales no van
+  // en el payload, nadie las vuelve a pedir y el alumno se queda sin acceso.
+  if (isSapOnline.value && !isSapCredentialsValid(sapUsername.value, sapPassword.value)) {
+    toast.error('Ingresa el usuario y la contrasena SAP: este curso los envia en el correo.'); return false
+  }
   if (!form.client_profile) { toast.error('Selecciona un perfil (Profesional/Estudiante).'); return false }
   // El SP rechaza el plan de cuotas con OS/OP: la empresa paga el total cuando
   // llega la orden, no en partes.
@@ -1300,6 +1330,8 @@ async function handleSave () {
         program_edition_id: form.program_edition_id,
         cat_insc_modality: form.cat_insc_modality,
         cat_event_category: isEventProgram.value ? form.cat_event_category : null,
+        sap_username: isSapOnline.value ? sapUsername.value.trim() : null,
+        sap_password: isSapOnline.value ? sapPassword.value.trim() : null,
         event_seat: hasAssignedSeat.value ? (form.event_seat || '').trim() || null : null,
         cat_payment_channel: channelGeneral.value?.id || null,
         cat_currency: form.cat_currency || catCurrency.find(c => c.alias === 'we_currency_soles')?.id || null,
@@ -1406,6 +1438,8 @@ function resetForm () {
   installments.value = []
   editionsList.value = []
   eventCategories.value = []
+  sapUsername.value = ''
+  sapPassword.value = ''
   showCcField.value = false
   discountResetKey.value++
 }

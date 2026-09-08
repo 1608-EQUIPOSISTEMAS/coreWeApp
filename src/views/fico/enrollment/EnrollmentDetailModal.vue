@@ -456,7 +456,7 @@
             </div>
             <p v-if="isActivationDeferred" class="edm-hint-deferred">
               <i class="fa-solid fa-clock"></i>
-              <span>El correo de bienvenida y acceso Odoo se enviaran el <strong>{{ fmt.formatDate(activationDate) }}</strong> a las 9am (Lima).</span>
+              <span>El correo de bienvenida sale hoy con sus credenciales; el acceso a los cursos se habilita el <strong>{{ fmt.formatDate(activationDate) }}</strong> a las 9am (Lima).</span>
             </p>
             <p v-else class="edm-hint-immediate">
               <i class="fa-solid fa-bolt"></i>

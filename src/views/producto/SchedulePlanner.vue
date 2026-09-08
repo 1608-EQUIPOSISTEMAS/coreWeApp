@@ -110,7 +110,7 @@
                     </div>
                   </th>
                   <th colspan="2" class="th-group th-group-a">IDENTIFICACIÓN</th>
-                  <th colspan="4" class="th-group th-group-b">CRONOGRAMA</th>
+                  <th colspan="6" class="th-group th-group-b">CRONOGRAMA</th>
                   <th colspan="3" class="th-group th-group-c">SEGUIMIENTO</th>
                   <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
                 </tr>
@@ -120,7 +120,9 @@
                   <th class="ts ts-a">PROGRAMA</th>
                   <th class="ts ts-a">DETALLE</th>
 
+                  <th class="ts ts-b text-center" title="Días desde la edición anterior del mismo programa">D.A.</th>
                   <th class="ts ts-b text-center">F. INICIO</th>
+                  <th class="ts ts-b text-center" title="Días hasta la siguiente edición del mismo programa">D.P.</th>
                   <th class="ts ts-b text-center">F. FIN</th>
                   <th class="ts ts-b">HORARIO</th>
                   <th class="ts ts-b">DOCENTE</th>
@@ -142,7 +144,9 @@
                   <td class="tf">
                     <ColumnFilterDropdown column-label="Detalle" :all-items="monthItems" :value-extractor="(i) => `${i.version_code || ''} ${i.cat_segment_label || i.cat_segment || ''}`" v-model="columnFilters.detail" />
                   </td>
+                  <td class="tf"></td><!-- D.A. -->
                   <td class="tf"></td>
+                  <td class="tf"></td><!-- D.P. -->
                   <td class="tf"></td>
                   <td class="tf"></td>
                   <td class="tf">
@@ -192,10 +196,12 @@
                       <div class="small text-muted">{{ e.program_type ? 'Tipo: ' + e.program_type : '' }}</div>
                       <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
                     </td>
+                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'antes')">{{ brecha(e, 'antes') }}</span></td>
                     <td class="td-b">
                       <div class="date-link">{{ formatDate(e.start_date) }}</div>
                       <div class="small text-muted">{{ dayLabel(e.start_date) }}</div>
                     </td>
+                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'despues')">{{ brecha(e, 'despues') }}</span></td>
                     <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
                     <td class="td-b">
                       <div class="small fw-600 text-dark">{{ dayCombLabel(e) || '—' }}</div>
@@ -292,10 +298,12 @@
                     </td>
 
                     <!-- CRONOGRAMA -->
+                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'antes')">{{ brecha(e, 'antes') }}</span></td>
                     <td class="td-b">
                       <div class="date-link">{{ formatDate(e.start_date) }}</div>
                       <div class="small text-muted">{{ dayLabel(e.start_date) }}</div>
                     </td>
+                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'despues')">{{ brecha(e, 'despues') }}</span></td>
                     <td class="td-b text-center">
                       <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
                     </td>
@@ -571,6 +579,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import { confirmAction } from '@/composables/useConfirm'
+import { editionGapsByUid, DIAS_MINIMOS_ENTRE_EDICIONES } from '@/features/schedule-plan/editionGaps'
 
 const planService = inject(ServiceKeys.SchedulePlan)
 const programService = inject(ServiceKeys.Program)
@@ -580,8 +589,8 @@ const toast = useToast()
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-// Acciones + IDENTIFICACIÓN(2) + CRONOGRAMA(4) + SEGUIMIENTO(3) + REFERENCIA(2)
-const COL_COUNT = 12
+// Acciones + IDENTIFICACIÓN(2) + CRONOGRAMA(6) + SEGUIMIENTO(3) + REFERENCIA(2)
+const COL_COUNT = 14
 const SEMANAS_POR_MES = 6
 
 const catalogs = {
@@ -646,6 +655,19 @@ function weekOfMonth (iso) {
 const monthKey = computed(() => `${plan.value?.year}-${String(month.value).padStart(2, '0')}`)
 
 const porFecha = (a, b) => String(a.start_date).localeCompare(String(b.start_date))
+
+// D.A. / D.P.: los días entre ediciones del mismo programa que el cronograma real
+// muestra desde calc_da/calc_dp. Se recalculan solos al mover una edición.
+const brechasPorUid = computed(() => editionGapsByUid(plan.value?.items || []))
+
+// Sin edición vecina no hay brecha: "—" y no 0, que se leería como "el mismo día".
+const brecha = (item, lado) => brechasPorUid.value[item.uid]?.[lado] ?? '—'
+
+const brechaClass = (item, lado) => {
+  const dias = brechasPorUid.value[item.uid]?.[lado]
+  if (dias == null) return 'gap-none'
+  return dias < DIAS_MINIMOS_ENTRE_EDICIONES ? 'gap-tight' : 'gap-ok'
+}
 
 // Lo que el plan programa para el mes: arranca dentro de él, igual que en el
 // cronograma real (una edición vive en el mes en que empieza).
@@ -1461,6 +1483,15 @@ onMounted(loadPlans)
 .pill-teal   { background: #ccfbf1; color: #0f766e; }
 .pill-slate  { background: #f1f5f9; color: #475569; }
 
+/* Semáforo de D.A. / D.P.: rojo = las dos ediciones se pisan. */
+.gap-chip {
+  display: inline-block; min-width: 30px; padding: 2px 6px; border-radius: 3px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.gap-tight { background: #fee2e2; color: #b91c1c; }
+.gap-ok    { background: #ecfdf5; color: #047857; }
+.gap-none  { color: #94a3b8; }
+
 /* Segmento pill */
 .seg-pill {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1597,6 +1628,9 @@ tr[class*="row-segment-"]:hover .td-d {
 [data-coreui-theme="dark"] .pill-teal { background: rgba(45,212,191,.18); color: #5EEAD4; }
 [data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; }
 [data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .gap-tight { background: rgba(239,68,68,.16); color: #F87171; }
+[data-coreui-theme="dark"] .gap-ok    { background: rgba(52,211,153,.14); color: #6EE7B7; }
+[data-coreui-theme="dark"] .gap-none  { color: #6B6B63; }
 [data-coreui-theme="dark"] .seg-a1 { background: rgba(59,130,246,.25); color: #93C5FD; }
 [data-coreui-theme="dark"] .seg-a2 { background: rgba(249,115,22,.25); color: #FDBA74; }
 [data-coreui-theme="dark"] .seg-a3 { background: rgba(234,179,8,.25); color: #FDE047; }
