@@ -41,18 +41,33 @@ const savingKey = ref(null)
 // Popover "Marcar sesion": { edition, session, top, left, mode: 'pick'|'date', dateVal }
 const pop = ref(null)
 
+// Dos caras de la misma semana: 'curso' gestiona sesion por sesion las aulas en
+// marcha; 'cierre' lista las que TERMINAN y su checklist de cierre. Comparten
+// navegacion, filtros de texto y consulta; cambian columnas y guardado.
+const mode = ref('curso')
+const closureData = ref(null)
+
 async function load() {
   isLoading.value = true
   pop.value = null
   try {
-    data.value = await editionService.weeklyControl({ year: year.value, week: week.value })
+    const semana = { year: year.value, week: week.value }
+    if (mode.value === 'cierre') closureData.value = await editionService.weeklyClosures(semana)
+    else data.value = await editionService.weeklyControl(semana)
   } catch (err) {
     console.error('Error cargando control de ediciones:', err)
     toast.error('Error al cargar el control de ediciones')
-    data.value = null
+    if (mode.value === 'cierre') closureData.value = null
+    else data.value = null
   } finally {
     isLoading.value = false
   }
+}
+
+function setMode(next) {
+  if (mode.value === next) return
+  mode.value = next
+  load()
 }
 
 // Un anio ISO tiene 53 semanas si empieza en jueves (o miercoles si es bisiesto).
@@ -77,10 +92,14 @@ function moveWeek(delta) {
 
 onMounted(load)
 
+// El rango sale del dataset que se esta viendo: en 'cierre' el otro se queda en
+// la semana vieja porque moveWeek solo recarga el activo.
+const activeData = computed(() => (mode.value === 'cierre' ? closureData.value : data.value))
+
 const rangeLabel = computed(() => {
-  if (!data.value) return ''
-  const s = parseLocal(data.value.date_start)
-  const e = parseLocal(data.value.date_end)
+  if (!activeData.value) return ''
+  const s = parseLocal(activeData.value.date_start)
+  const e = parseLocal(activeData.value.date_end)
   return `${s.getDate()} ${MONTHS[s.getMonth()]} al ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`
 })
 
@@ -91,7 +110,7 @@ const maxSessions = computed(() =>
 
 // Filtros por columna: texto = contiene (sin distinguir tildes ni mayusculas),
 // el resto = lista de valores elegidos en el desplegable.
-const filters = ref({ curso: '', docente: '', ns: [], freq: [], actual: [], repros: [], tard: [] })
+const filters = ref({ curso: '', codigo: '', docente: '', ns: [], freq: [], actual: [], repros: [], tard: [] })
 const norm = (v) =>
   String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const freqLabel = (e) => [e.day_label, e.hour_label].filter(Boolean).join(' · ') || '—'
@@ -100,11 +119,20 @@ const freqLabel = (e) => [e.day_label, e.hour_label].filter(Boolean).join(' · '
 // reprogramaciones") sino por tenerlas o no.
 const countLabel = (field) => (e) => (e[field] === 0 ? '0' : '1+')
 
+// Los tres filtros de texto valen para las dos tablas: es la misma aula, solo
+// cambia lo que se muestra de ella.
+const matchesText = (e) => {
+  const f = filters.value
+  if (f.curso && !(norm(e.abbreviation).includes(norm(f.curso)) || norm(e.specific_code).includes(norm(f.curso)))) return false
+  if (f.codigo && !norm(e.class_code).includes(norm(f.codigo))) return false
+  if (f.docente && !norm(e.instructor).includes(norm(f.docente))) return false
+  return true
+}
+
 const filteredEditions = computed(() => {
   const f = filters.value
   return editions.value.filter((e) => {
-    if (f.curso && !(norm(e.abbreviation).includes(norm(f.curso)) || norm(e.specific_code).includes(norm(f.curso)))) return false
-    if (f.docente && !norm(e.instructor).includes(norm(f.docente))) return false
+    if (!matchesText(e)) return false
     if (f.ns.length && !f.ns.includes(String(e.total_sessions))) return false
     if (f.freq.length && !f.freq.includes(freqLabel(e))) return false
     if (f.actual.length && !f.actual.includes(e.current_label || '(Vacío)')) return false
@@ -113,6 +141,38 @@ const filteredEditions = computed(() => {
     return true
   })
 })
+
+// ---------- cierre de cursos ----------
+// Las etiquetas y el orden de las casillas los manda el backend (CLOSURE_CHECKS):
+// agregar una tarea no toca esta vista.
+const checkDefs = computed(() => closureData.value?.checks || [])
+const closures = computed(() => closureData.value?.editions || [])
+const filteredClosures = computed(() => closures.value.filter(matchesText))
+
+const closureSummary = computed(() => {
+  const total = filteredClosures.value.length
+  const listos = filteredClosures.value.filter((e) => e.done_count === checkDefs.value.length).length
+  const tareas = filteredClosures.value.reduce((a, e) => a + e.done_count, 0)
+  return { total, listos, pendientes: total - listos, tareas }
+})
+
+async function toggleCheck(row, field) {
+  savingKey.value = `${row.edition_num_id}:${field}`
+  try {
+    const updated = await editionService.closureSave({
+      edition_num_id: row.edition_num_id,
+      field,
+      value: !row.checks[field]
+    })
+    const idx = closures.value.findIndex((x) => x.edition_num_id === row.edition_num_id)
+    if (updated && idx !== -1) closureData.value.editions.splice(idx, 1, updated)
+  } catch (err) {
+    console.error('Error guardando el cierre:', err)
+    toast.error(err.response?.data?.message || 'No se pudo guardar la tarea de cierre')
+  } finally {
+    savingKey.value = null
+  }
+}
 
 // Una sesion "es de la semana" si su fecha efectiva cae en el rango visible.
 const inWeek = (s) =>
@@ -214,13 +274,26 @@ function confirmRepro() {
       <div class="titles">
         <div class="eyebrow">Academica</div>
         <h1>Control de Ediciones</h1>
-        <div class="subtitle">
+        <div v-if="mode === 'cierre'" class="subtitle">
+          Aulas que cierran en la semana y su checklist —
+          <b>{{ filteredClosures.length }} {{ filteredClosures.length === 1 ? 'cierre' : 'cierres' }}</b>
+          <template v-if="filteredClosures.length !== closures.length"> de {{ closures.length }}</template>
+        </div>
+        <div v-else class="subtitle">
           Gestión por sesión de las aulas en curso en la semana —
           <b>{{ filteredEditions.length }} {{ filteredEditions.length === 1 ? 'aula' : 'aulas' }}</b>
           <template v-if="filteredEditions.length !== editions.length"> de {{ editions.length }}</template>
         </div>
       </div>
       <div class="actions">
+        <div class="mode-switch">
+          <button :class="{ on: mode === 'curso' }" :disabled="isLoading" @click="setMode('curso')">
+            En curso
+          </button>
+          <button :class="{ on: mode === 'cierre' }" :disabled="isLoading" @click="setMode('cierre')">
+            Cierres
+          </button>
+        </div>
         <div class="week-nav">
           <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
             <i class="fa-solid fa-chevron-left"></i>
@@ -236,6 +309,7 @@ function confirmRepro() {
       </div>
     </header>
 
+    <template v-if="mode === 'curso'">
     <div class="kpi-grid">
       <div class="kpi" style="--bar: #2563EB">
         <div class="k-label">
@@ -318,6 +392,7 @@ function confirmRepro() {
           <tr>
             <th class="col-curso">Curso</th>
             <th>Docente</th>
+            <th class="col-cod">Código</th>
             <th class="num">#S</th>
             <th>Frecuencia</th>
             <th v-for="n in maxSessions" :key="n" class="s-col">S{{ n }}</th>
@@ -333,6 +408,9 @@ function confirmRepro() {
               <input v-model.trim="filters.curso" class="flt" type="text" placeholder="Curso / código…" />
             </th>
             <th><input v-model.trim="filters.docente" class="flt" type="text" placeholder="Docente…" /></th>
+            <th class="col-cod">
+              <input v-model.trim="filters.codigo" class="flt" type="text" placeholder="Código…" />
+            </th>
             <th>
               <ColumnFilterDropdown
                 column-label="#S"
@@ -378,7 +456,7 @@ function confirmRepro() {
         </thead>
         <tbody>
           <tr v-if="!filteredEditions.length">
-            <td :colspan="maxSessions + 7" class="no-match">
+            <td :colspan="maxSessions + 8" class="no-match">
               Ningún aula coincide con los filtros
             </td>
           </tr>
@@ -392,6 +470,9 @@ function confirmRepro() {
                 <span class="doc-av">{{ initials(e.instructor) || '·' }}</span>
                 <span class="doc-name">{{ e.instructor || '—' }}</span>
               </div>
+            </td>
+            <td class="col-cod">
+              <span class="cod-pill">{{ e.class_code || '—' }}</span>
             </td>
             <td class="nS">{{ e.total_sessions }}</td>
             <td>
@@ -445,6 +526,130 @@ function confirmRepro() {
       <i class="fa-solid fa-circle" style="font-size: 7px; color: var(--accent)"></i>
       Celda resaltada = sesión actual de cada curso (la primera aún no dictada). Haz clic en cualquier sesión para marcar su estado.
     </div>
+    </template>
+
+    <!-- ============ CIERRE DE CURSOS ============ -->
+    <template v-else>
+      <div class="kpi-grid">
+        <div class="kpi" style="--bar: #2563EB">
+          <div class="k-label">
+            <span>Cierres esta semana</span>
+            <i class="fa-regular fa-flag k-icon"></i>
+          </div>
+          <div class="k-value">
+            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
+            <template v-else>{{ closureSummary.total }}</template>
+          </div>
+          <div class="k-foot"><span>aulas que terminan</span></div>
+        </div>
+        <div class="kpi" style="--bar: #10B981">
+          <div class="k-label">
+            <span>Cerradas</span>
+            <i class="fa-solid fa-check k-icon"></i>
+          </div>
+          <div class="k-value">
+            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
+            <template v-else>{{ closureSummary.listos }}</template>
+          </div>
+          <div class="k-foot"><span>con las {{ checkDefs.length }} tareas hechas</span></div>
+        </div>
+        <div class="kpi" style="--bar: #F59E0B">
+          <div class="k-label">
+            <span>Pendientes</span>
+            <i class="fa-regular fa-clock k-icon"></i>
+          </div>
+          <div class="k-value">
+            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
+            <template v-else>{{ closureSummary.pendientes }}</template>
+          </div>
+          <div class="k-foot"><span>les falta alguna tarea</span></div>
+        </div>
+        <div class="kpi" style="--bar: #A0A099">
+          <div class="k-label">
+            <span>Tareas hechas</span>
+            <i class="fa-solid fa-list-check k-icon"></i>
+          </div>
+          <div class="k-value">
+            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
+            <template v-else>{{ closureSummary.tareas }}</template>
+          </div>
+          <div class="k-foot"><span>de {{ closureSummary.total * checkDefs.length }}</span></div>
+        </div>
+      </div>
+
+      <div v-if="isLoading && !closureData" class="empty-state">
+        <i class="fa-solid fa-arrows-rotate fa-spin"></i> Cargando…
+      </div>
+      <div v-else-if="!closures.length" class="empty-state">
+        <div class="big">Ningún aula cierra esta semana</div>
+        Usa la flecha › para revisar los cierres de la semana que viene
+      </div>
+
+      <div v-else class="tbl-wrap">
+        <table class="week">
+          <thead>
+            <tr>
+              <th class="col-curso">Curso</th>
+              <th class="col-cod">Código</th>
+              <th>Docente</th>
+              <th class="num">Cierra</th>
+              <th v-for="c in checkDefs" :key="c.field" class="chk-col">{{ c.label }}</th>
+              <th class="num">Avance</th>
+            </tr>
+            <tr class="flt-row">
+              <th class="col-curso">
+                <input v-model.trim="filters.curso" class="flt" type="text" placeholder="Curso / código…" />
+              </th>
+              <th class="col-cod">
+                <input v-model.trim="filters.codigo" class="flt" type="text" placeholder="Código…" />
+              </th>
+              <th><input v-model.trim="filters.docente" class="flt" type="text" placeholder="Docente…" /></th>
+              <th :colspan="checkDefs.length + 2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!filteredClosures.length">
+              <td :colspan="checkDefs.length + 5" class="no-match">
+                Ningún cierre coincide con los filtros
+              </td>
+            </tr>
+            <tr v-for="e in filteredClosures" :key="e.edition_num_id">
+              <td class="col-curso">
+                <div class="curso-name">{{ e.abbreviation }}</div>
+                <div class="curso-ed">{{ e.specific_code }}</div>
+              </td>
+              <td class="col-cod"><span class="cod-pill">{{ e.class_code || '—' }}</span></td>
+              <td>
+                <div class="doc-cell">
+                  <span class="doc-av">{{ initials(e.instructor) || '·' }}</span>
+                  <span class="doc-name">{{ e.instructor || '—' }}</span>
+                </div>
+              </td>
+              <td class="num"><span class="cur-pill">{{ fmtShort(e.closing_date) }}</span></td>
+              <td v-for="c in checkDefs" :key="c.field" class="chk-cell">
+                <button
+                  class="chk"
+                  :class="{ on: e.checks[c.field] }"
+                  :disabled="savingKey === `${e.edition_num_id}:${c.field}`"
+                  :title="c.label"
+                  @click="toggleCheck(e, c.field)"
+                >
+                  <i :class="e.checks[c.field] ? 'fa-solid fa-check' : 'fa-regular fa-square'"></i>
+                </button>
+              </td>
+              <td class="cnt" :class="e.done_count === checkDefs.length ? 'zero' : 'warm'">
+                {{ e.done_count }}/{{ checkDefs.length }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="week-foot" v-if="closures.length">
+        <i class="fa-solid fa-circle" style="font-size: 7px; color: var(--accent)"></i>
+        La fecha de cierre es la última sesión con reprogramaciones aplicadas, no el fin planificado.
+      </div>
+    </template>
 
     <!-- Popover MARCAR SESIÓN -->
     <template v-if="pop">
@@ -653,6 +858,31 @@ table.week tbody tr:hover td, table.week tbody tr:hover .col-curso { background:
 
 .curso-name { font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em; }
 .curso-ed { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.col-cod { width: 124px; }
+.cod-pill { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+
+/* switch En curso | Cierres */
+.mode-switch {
+  display: inline-flex; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px; gap: 2px;
+}
+.mode-switch button {
+  border: 0; background: transparent; color: var(--ink-3);
+  font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.mode-switch button.on { background: var(--accent); color: #fff; box-shadow: var(--shadow-md); }
+
+/* casillas del cierre */
+.chk-col { width: 92px; font-size: 10.5px !important; line-height: 1.25; }
+.chk-cell { text-align: center; }
+.chk {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-4);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.chk:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.chk.on { background: var(--green-soft); border-color: var(--green); color: var(--green-ink); }
 .doc-cell { display: flex; align-items: center; gap: 8px; }
 .doc-av {
   width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff;

@@ -3,7 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
-import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
+import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 
 export function useLeadForm(options = {}) {
@@ -1504,7 +1504,24 @@ export function useLeadForm(options = {}) {
       observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
       await nextTick()
       openInscription()
-      await restoreObservedChannel(insc, flags, paymentChannelCatalog.value)
+      // Sin await entre openInscription y la parte sincrona del restore: ver el
+      // mismo comentario en views/comercial/LeadsNew.vue.
+      await restoreObservedInscription({
+        insc,
+        flags,
+        catalogs: {
+          docType: docTypeCatalog.value,
+          inscModalidades: inscModalidades.value,
+          inscPaymentModes: inscPaymentModes.value,
+          currency: currencyCatalog.value,
+          certificateStatus: certificateStatusCatalog.value,
+          paymentMethod: paymentMethodCatalog.value,
+          paymentChannels: paymentChannelCatalog.value
+        },
+        aliasById,
+        installments: { manualMode, numCuotasManual, editableInstallments },
+        onPriceRestored: () => { priceManuallySet.value = true }
+      })
     } catch { /* la observacion es informativa: si falla, el lead se abre igual */ }
   }
 

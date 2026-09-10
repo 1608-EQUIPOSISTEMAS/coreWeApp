@@ -59,6 +59,20 @@ export default class EditionService {
     return response.data
   }
 
+  // Cierre de cursos: aulas que terminan en la semana + checklist de cierre.
+  async weeklyClosures(payload) {
+    const response = (await api.post('/edition/weeklyclosures', payload)).data
+    return response.data
+  }
+
+  // Marca/desmarca una tarea del cierre y devuelve la fila recalculada.
+  async closureSave(payload) {
+    const response = (await api.post('/edition/closuresave', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data
+  }
+
   // Guarda estado de una sesion (A/R/T + fecha reprogramada) y devuelve la
   // fila recalculada del aula. Sin loader global: el guardado es por celda.
   async sessionControlSave(payload) {

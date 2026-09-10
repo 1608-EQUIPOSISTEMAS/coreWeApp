@@ -617,23 +617,22 @@ async function fetchAll() {
       selectedYear: selectedYear.value
     })
     const weeks = Array.isArray(items) ? items : []
-    const ids = weeks.flatMap(w => (w.items || []).map(e => e.edition_num_id)).filter(Boolean)
 
-    const [goals, leads] = await Promise.all([
-      dashboardService.programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value }).catch(() => ({ items: [] })),
-      ids.length ? dashboardService.leadsPerEditionList({ edition_ids: ids }).catch(() => []) : Promise.resolve([])
-    ])
+    // Las consultas NO se piden aparte: editionByWeekList ya trae cnt_consultas
+    // (los cinco estados que negocio llama consulta). El /leads-per-edition del
+    // dashboard cuenta ademas Eliminado, Cerrado y Prox. Inicio, y su resultado
+    // se escribia en e.consultas, campo que la tabla ni siquiera pinta.
+    const goals = await dashboardService
+      .programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value })
+      .catch(() => ({ items: [] }))
 
     const goalByEd = {}
     ;(goals.items || []).forEach(g => { goalByEd[g.edition_id] = Number(g.meta_vacantes || 0) })
-    const consByEd = {}
-    ;(leads || []).forEach(l => { consByEd[l.edition_num_id] = l.consultas })
 
     weeks.forEach(w => (w.items || []).forEach(e => {
       // Los congresos/eventos llevan su propia meta en Fundacion > Objetivos:
       // no compiten contra el objetivo de vacantes del cronograma.
       e.meta_vacantes = isEvent(e) ? 0 : (goalByEd[e.edition_num_id] || 0)
-      e.consultas = consByEd[e.edition_num_id] ?? 0
       e.vf = (e.cnt_ventas ?? 0) - e.meta_vacantes
     }))
 

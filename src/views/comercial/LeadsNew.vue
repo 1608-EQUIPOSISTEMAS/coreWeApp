@@ -1950,7 +1950,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
-import { restoreObservedChannel } from '@/features/enroll-lead/restoreObservedChannel.js'
+import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   const toast = useToast()
 
@@ -2683,7 +2683,26 @@ watch(() => insc.cat_type_document, (newVal) => {
         observedData.value = { reason: obs?.justificacion || obs?.details || 'Observacion sin detalle' }
         await nextTick()
         openInscription()
-        await restoreObservedChannel(insc, flags, paymentChannelCatalog.value)
+        // Sin await entre openInscription y la parte sincrona del restore:
+        // openInscription deja programado un nextTick que pisa el precio con el
+        // de la lista (0 para muchos programas) y avisa por toast. El restore
+        // marca priceManuallySet antes de que ese callback corra.
+        await restoreObservedInscription({
+          insc,
+          flags,
+          catalogs: {
+            docType: docTypeCatalog.value,
+            inscModalidades: inscModalidades.value,
+            inscPaymentModes: inscPaymentModes.value,
+            currency: currencyCatalog.value,
+            certificateStatus: certificateStatusCatalog.value,
+            paymentMethod: paymentMethodCatalog.value,
+            paymentChannels: paymentChannelCatalog.value
+          },
+          aliasById,
+          installments: { manualMode, numCuotasManual, editableInstallments },
+          onPriceRestored: () => { priceManuallySet.value = true }
+        })
       }
     } catch { /* ignore */ }
   }
