@@ -21,6 +21,19 @@ export default class AuthService {
     return response.data;
   }
 
+  // Universo de asesores de convenio: el rol raso B2B mas el de lider. Pedir un
+  // solo alias dejaba fuera al que solo tiene LIDER_B2B, que tambien cierra
+  // ventas de convenio (mismo agujero que tenia sp_user_list con
+  // LIDER_COMERCIAL). Sin catch: quien llama decide si degrada o avisa.
+  async userListB2B() {
+    const listas = await Promise.all(
+      ['B2B', 'LIDER_B2B'].map(rol => this.userListByRole(rol))
+    );
+    const porId = new Map();
+    for (const u of listas.flat()) if (!porId.has(u.user_id)) porId.set(u.user_id, u);
+    return [...porId.values()];
+  }
+
 
   // src/services/AuthService.js (Vue)
   async login(credentials) {

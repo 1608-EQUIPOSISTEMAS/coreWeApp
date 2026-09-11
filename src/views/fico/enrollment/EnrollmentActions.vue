@@ -988,8 +988,9 @@ const newAgentCategory = ref(null)
 const newSellerAgentId = ref(null)
 const editAgentJustificacion = ref('')
 const agentOptions = ref([])
-// Los asesores de convenio (NY12/JF39) son users con rol B2B y sp_user_list no
-// los devuelve: hay que pedirlos aparte, igual que EnrollmentForm.vue al crear.
+// Los asesores de convenio (NY12/JF39) son users con rol B2B o LIDER_B2B y
+// sp_user_list no los devuelve: hay que pedirlos aparte, igual que
+// EnrollmentForm.vue al crear.
 const b2bAgentOptions = ref([])
 const loadingAgents = ref(false)
 
@@ -1127,8 +1128,8 @@ async function loadAgentOptions () {
       authService.userList({}),
       // Degradar en vez de romper: sin la lista de convenio el canal B2B sigue
       // ofreciendo comerciales, que es el comportamiento previo a este fix.
-      authService.userListByRole('B2B').catch(e => {
-        console.error('[loadAgentOptions] rol B2B:', e)
+      authService.userListB2B().catch(e => {
+        console.error('[loadAgentOptions] roles B2B:', e)
         return []
       })
     ])

@@ -23,7 +23,15 @@ const router = useRouter()
 const toast = useToast()
 const sidebar = useSidebarStore()
 const integrationService = inject(ServiceKeys.Integration)
+const configService = inject(ServiceKeys.Config)
 const catalog = inject('catalog')
+
+// Las opciones de este menú no modifican ninguna fila (o modifican un Sheet, no
+// la BD), así que los triggers de auditoría no las ven: se reportan a mano para
+// que aparezcan en Configuración → Auditoría.
+function audit(action) {
+  return configService.recordSystemAction(action)
+}
 
 const { notifications, unreadCount, onOpenBell, modal5pm } = useNotifications()
 
@@ -114,6 +122,7 @@ onUnmounted(() => syncChannel.close())
 async function syncCatalog() {
   try {
     toast.info('Sincronizando catálogo...')
+    await audit('CATALOG_REFRESH')
     await catalog.refresh()
     localStorage.removeItem('membershipList')
     await catalog.membershipList({ active: true })
@@ -128,6 +137,7 @@ async function syncCatalog() {
 
 async function updateBase() {
   try {
+    await audit('UPDATE_BASE')
     const response = await integrationService.updateLeadBase()
     if (response && response.ok) {
       toast.success(`Base actualizada. Registros generados: ${response.data.rows_generated}`)
@@ -142,6 +152,7 @@ async function updateBase() {
 
 async function syncRprospectosToSheet() {
   try {
+    await audit('SYNC_PROSPECTOS')
     const response = await integrationService.syncRprospectos()
     if (response && response.ok) toast.success('GOOGLE SHEET PROSPECTOS SINCRONIZADOS')
     else throw new Error(response?.message || 'Error desconocido')
@@ -153,6 +164,7 @@ async function syncRprospectosToSheet() {
 
 async function syncScheduleToSheet() {
   try {
+    await audit('SYNC_PLANEAMIENTO')
     const response = await integrationService.syncScheduleToSheet()
     if (response && response.ok) toast.success('GOOGLE SHEET PLANEAMIENTO SINCRONIZADO')
     else throw new Error(response?.message || 'Error desconocido')
@@ -162,7 +174,10 @@ async function syncScheduleToSheet() {
   }
 }
 
-function logout() {
+// El registro va ANTES de borrar el token: sin token el endpoint responde 401 y
+// el cierre de sesión no quedaría en la bitácora.
+async function logout() {
+  await audit('LOGOUT')
   localStorage.removeItem('user')
   localStorage.removeItem('token')
   window.location.reload()

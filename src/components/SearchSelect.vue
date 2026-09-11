@@ -556,38 +556,42 @@ function handleWindowScrollOrResize () {
   updateDropdownPosition()
 }
 
-watch(
-  () => props.modelValue,
-  val => {
-    const toTag = o => ({
-      value: o?.[props.valueField],
-      label: o?.[props.labelField],
-      raw: o
-    })
+// Traduce el valor del v-model a la etiqueta visible. Sin item que lo respalde
+// cae al valor crudo, que es lo unico que se puede mostrar.
+function resolveSelection (val) {
+  if (val === null || val === undefined || val === '') {
+    selectedList.value = []
+    searchText.value = ''
+    return
+  }
 
-    if (val === null || val === undefined || val === '') {
-      selectedList.value = []
-      searchText.value = ''
-      return
-    }
+  const source = isRemote.value
+    ? remoteItems.value.concat(safeItems.value)
+    : safeItems.value
 
-    const source = isRemote.value
-      ? remoteItems.value.concat(safeItems.value)
-      : safeItems.value
+  const match = source.find(o => o?.[props.valueField] === val)
 
-    const match = source.find(o => o?.[props.valueField] === val)
+  if (match) {
+    selectedList.value = [{
+      value: match[props.valueField],
+      label: match[props.labelField],
+      raw: match
+    }]
+  } else {
+    selectedList.value = [{ value: val, label: props.modelLabel || String(val), raw: null }]
+  }
+  searchText.value = selectedList.value[0].label ?? ''
+}
 
-    if (match) {
-      selectedList.value = [toTag(match)]
-      searchText.value = selectedList.value[0]?.label ?? ''
-    } else {
-      const lbl = props.modelLabel || String(val)
-      selectedList.value = [{ value: val, label: lbl, raw: null }]
-      searchText.value = lbl
-    }
-  },
-  { immediate: true }
-)
+watch(() => props.modelValue, resolveSelection, { immediate: true })
+
+// Los items suelen llegar despues del v-model (la vista precarga el valor y
+// recien entonces pide el catalogo al backend): sin esto el control se queda
+// mostrando el id crudo — "2" en vez de "AE30 — WEB". Solo reintenta mientras la
+// seleccion no tenga item detras, asi que no pisa lo que el usuario ya eligio.
+watch(safeItems, () => {
+  if (selectedList.value[0]?.raw == null) resolveSelection(props.modelValue)
+})
 
 function handleClickOutside (e) {
   if (!wrapperEl.value) return

@@ -1054,7 +1054,7 @@ async function loadAgents () {
 
 async function loadB2BAgents () {
   try {
-    const users = await authService.userListByRole('B2B')
+    const users = await authService.userListB2B()
     b2bAgentsListRef.value = (users || []).map(u => ({
       id: u.user_id,
       alias: u.alias || '',

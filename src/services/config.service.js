@@ -50,4 +50,15 @@ export default class ConfigService {
   async auditLog(filters) {
     return (await api.post('/audit/loglist', filters)).data.data;
   }
+
+  // Acciones del menú de usuario (cerrar sesión, los tres sync). No cambian
+  // ninguna fila, así que ningún trigger las ve: hay que reportarlas.
+  // Best-effort: fallar auditando no puede impedir la acción del usuario.
+  async recordSystemAction(action) {
+    try {
+      await api.post('/audit/action', { action });
+    } catch (error) {
+      console.error('No se pudo auditar la acción', action, error);
+    }
+  }
 }

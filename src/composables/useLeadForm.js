@@ -2,7 +2,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, inject, watch, nex
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
-import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
+import { computeDiscounts, chargedTotal } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 
@@ -790,7 +790,7 @@ export function useLeadForm(options = {}) {
   watch(() => insc.selectedCurrencyAlias, () => {})
 
   watch(
-    () => [insc.montoOriginal, insc.val_porcentaje, insc.val_fijo, insc.val_beneficios, insc.dsct_porcent_id, insc.dsct_stick_id, insc.dsct_benefit_ids],
+    () => [insc.montoOriginal, insc.val_porcentaje, insc.val_fijo, insc.val_beneficios, insc.dsct_porcent_id, insc.dsct_stick_id, insc.dsct_benefit_ids, form.ocupacion_alias],
     () => {
       const r = computeDiscounts(insc)
       if (r.exceedsBase) {
@@ -808,7 +808,7 @@ export function useLeadForm(options = {}) {
       insc.montoDescuentoFijo       = r.montoFijo
       insc.montoBeneficioTotal      = r.montoBeneficioTotal
       insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
-      insc.total_amount             = r.total_amount
+      insc.total_amount             = chargedTotal(r, form.ocupacion_alias)
     },
     { deep: true }
   )

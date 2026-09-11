@@ -187,6 +187,14 @@ const ACTIONS = [
   { code: 'UPDATE', label: 'Edición', icon: 'fa-pen', tone: 'pill-amber' },
   { code: 'DELETE', label: 'Borrado', icon: 'fa-trash', tone: 'pill-red' },
   { code: 'LOGIN', label: 'Acceso', icon: 'fa-right-to-bracket', tone: 'pill-slate' },
+  // Acciones del menú de usuario. No tocan ninguna fila, las reporta AppHeader
+  // contra /audit/action; los códigos son la lista blanca SYSTEM_ACTIONS.
+  { code: 'LOGOUT', label: 'Cierre de sesión', icon: 'fa-right-from-bracket', tone: 'pill-slate' },
+  { code: 'UPDATE_BASE', label: 'Base de asesor', icon: 'fa-cloud-arrow-down', tone: 'pill-slate' },
+  { code: 'SYNC_PROSPECTOS', label: 'Sync Prospectos', icon: 'fa-file-export', tone: 'pill-slate' },
+  { code: 'SYNC_PLANEAMIENTO', label: 'Sync Planeamiento', icon: 'fa-calendar-days', tone: 'pill-slate' },
+  { code: 'CATALOG_REFRESH', label: 'Actualizar sistema', icon: 'fa-rotate', tone: 'pill-slate' },
+  { code: 'SYNC_FICO', label: 'Sync Ventas FICO', icon: 'fa-cloud-arrow-up', tone: 'pill-slate' },
 ]
 
 const PAGE_SIZES = [25, 50, 100, 200]
@@ -280,9 +288,22 @@ function actionIcon (code) {
 }
 
 // INSERT y DELETE no traen diff: fn_audit_changes solo llena changed_fields en
-// los UPDATE. La celda dice qué pasó en vez de quedarse en blanco.
+// los UPDATE. Las acciones de menú tampoco, porque no cambian ninguna fila.
+// La celda dice qué pasó en vez de quedarse en blanco.
+const NO_DIFF_LABELS = {
+  INSERT: 'Registro creado',
+  DELETE: 'Registro eliminado',
+  LOGIN: 'Inicio de sesión',
+  LOGOUT: 'Cerró sesión',
+  UPDATE_BASE: 'Actualizó su base de asesor',
+  SYNC_PROSPECTOS: 'Envió Prospectos a Google Sheets',
+  SYNC_PLANEAMIENTO: 'Envió Planeamiento a Google Sheets',
+  CATALOG_REFRESH: 'Refrescó el catálogo del sistema',
+  SYNC_FICO: 'Sincronizó las ventas FICO a Google Sheets',
+}
+
 function noDiffLabel (action) {
-  return { INSERT: 'Registro creado', DELETE: 'Registro eliminado', LOGIN: 'Inicio de sesión' }[action] || 'Sin detalle'
+  return NO_DIFF_LABELS[action] || 'Sin detalle'
 }
 
 // El backend ya manda el valor en español (nombre del catálogo, alias del

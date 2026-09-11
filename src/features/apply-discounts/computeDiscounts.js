@@ -37,6 +37,7 @@ export function computeDiscounts ({ montoOriginal, val_porcentaje, val_fijo, val
   const exceedsBase = totalDescuentos > base
 
   const finalAmount = round2(subtotalAfterStick - montoBeneficioTotal)
+  const exactTotal = finalAmount > 0 ? finalAmount : 0
 
   return {
     base,
@@ -46,8 +47,23 @@ export function computeDiscounts ({ montoOriginal, val_porcentaje, val_fijo, val
     beneficiosSoloBadge,
     totalDescuentos,
     exceedsBase,
+    exactTotal: exceedsBase ? base : exactTotal,
     // Espejo del watcher: si excede la base, el total cae a la base (y el caller
     // resetea los descuentos). Si no, se trunca a entero (Math.floor).
-    total_amount: exceedsBase ? base : (finalAmount > 0 ? Math.floor(finalAmount) : 0)
+    total_amount: exceedsBase ? base : Math.floor(exactTotal)
   }
+}
+
+const B2B_PROSPECT_SITUATIONS = ['we_prospect_situation_corporate', 'we_prospect_situation_convenios']
+
+// Total a cobrar segun el canal. B2B cobra al centimo: la empresa paga el monto
+// exacto de su factura (65% de 730 = 205.50) y truncarlo registraba un pago que
+// no ocurrio. El resto de canales sigue en soles enteros. Espejo del SP
+// sp_comercial_enrollment_register (v_agent_origin = 'B2B', que sale de la misma
+// situacion del prospecto): si los dos lados divergen, su guard de discrepancia
+// rechaza la venta.
+export function chargedTotal (discounts, prospectSituationAlias) {
+  return B2B_PROSPECT_SITUATIONS.includes(prospectSituationAlias)
+    ? discounts.exactTotal
+    : discounts.total_amount
 }
