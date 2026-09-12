@@ -369,7 +369,29 @@
                 />
               </div>
             </div>
-            <div class="eact-field" v-if="newAgentCategory && !WE_CATS.includes(newAgentCategory)">
+            <!-- Canal WEB: el asesor no se elige de la lista completa, se elige
+                 la consulta que YA registro para este alumno y este programa.
+                 Sin consulta no hay trazabilidad y el match queda bloqueado. -->
+            <div class="eact-field" v-if="newAgentCategory === 'web'">
+              <label>Consulta del asesor <span class="eact-req">*</span></label>
+              <div v-if="loadingWebCandidates" class="eact-readonly" style="font-size:12px;color:#666">
+                <i class="fa-solid fa-spinner fa-spin"></i> Buscando consultas con el telefono del alumno...
+              </div>
+              <SearchSelect
+                v-else-if="webCandidates.length"
+                v-model="webMatchLeadId"
+                :items="webCandidates"
+                label-field="label"
+                value-field="lead_id"
+                placeholder="Buscar consulta por asesor..."
+              />
+              <div v-else class="eact-readonly" style="font-size:12px;color:#b02a37">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Ningun asesor registro una consulta con el telefono del alumno para este programa.
+                El asesor debe registrarla antes de que se le pueda atribuir la venta.
+              </div>
+            </div>
+            <div class="eact-field" v-else-if="newAgentCategory && !WE_CATS.includes(newAgentCategory)">
               <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="eact-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
               <SearchSelect
                 v-model="newSellerAgentId"
@@ -571,6 +593,9 @@ function startAction (action) {
     newAgentCategory.value = categoryFromOrigin(props.enrollment?.agent_origin)
     newSellerAgentId.value = props.enrollment?.seller_agent_id || null
     loadAgentOptions()
+    // Una venta ya clasificada como WEB abre con la categoria puesta, sin pasar
+    // por onAgentCategoryChange: hay que pedir las consultas igual.
+    if (newAgentCategory.value === 'web') loadWebCandidates()
   }
 }
 
@@ -599,6 +624,8 @@ function resetAllForms () {
   editStudentJustificacion.value = ''
   newSellerAgentId.value = null
   newAgentCategory.value = null
+  webMatchLeadId.value = null
+  webCandidates.value = []
   editAgentJustificacion.value = ''
   retireReason.value = ''
   retireHasRefund.value = false
@@ -988,6 +1015,11 @@ const newAgentCategory = ref(null)
 const newSellerAgentId = ref(null)
 const editAgentJustificacion = ref('')
 const agentOptions = ref([])
+// Match WEB: consultas ya registradas por un asesor para este alumno y este
+// programa. Reemplazan al dropdown de asesores cuando el canal es WEB.
+const webMatchLeadId = ref(null)
+const webCandidates = ref([])
+const loadingWebCandidates = ref(false)
 // Los asesores de convenio (NY12/JF39) son users con rol B2B o LIDER_B2B y
 // sp_user_list no los devuelve: hay que pedirlos aparte, igual que
 // EnrollmentForm.vue al crear.
@@ -1040,8 +1072,9 @@ const currentAgentLabel = computed(() => {
 })
 
 // Filtra y reetiqueta el universo de asesores segun la categoria activa.
-// b2b -> 'ALIAS — B2B', web -> 'ALIAS — WEB', resto -> 'ALIAS — Nombre' (default).
-// we no usa este dropdown (no hay user_id valido para WE).
+// b2b -> 'ALIAS — B2B', resto -> 'ALIAS — Nombre' (default).
+// we no usa este dropdown (no hay user_id valido para WE); web tampoco: ahi se
+// elige la consulta del asesor, no el asesor.
 const filteredAgentOptions = computed(() => {
   const cat = newAgentCategory.value
   if (WE_CATS.includes(cat)) return []
@@ -1056,9 +1089,7 @@ const filteredAgentOptions = computed(() => {
     }
     return [...byId.values()]
   }
-  if (cat === 'web') {
-    return agentOptions.value.map(a => ({ ...a, label: `${a.alias} — WEB` }))
-  }
+  // 'web' no pasa por aqui: elige consulta, no asesor (ver webCandidates).
   return agentOptions.value
 })
 
@@ -1069,9 +1100,12 @@ const canAdvanceEditAgent = computed(() => {
   const cat = newAgentCategory.value
   const newId = Number(newSellerAgentId.value) || null
 
+  // web: el asesor sale de la consulta elegida, no de la lista de asesores.
+  if (cat === 'web') return !!webMatchLeadId.value
+
   // we: no requiere asesor (siempre se persiste seller_agent_id=null).
   // sa: asesor opcional (decision: permitir combinacion 'SA + asesor').
-  // comercial/b2b/web: asesor requerido.
+  // comercial/b2b: asesor requerido.
   if (!WE_CATS.includes(cat) && cat !== 'sa' && !newId) return false
 
   const oldOrigin = props.enrollment?.agent_origin || null
@@ -1088,9 +1122,10 @@ const agentPreview = computed(() => {
   if (!cat) return ''
   if (WE_CATS.includes(cat)) return cat.toUpperCase()
 
-  const id = Number(newSellerAgentId.value)
-  const u = id ? agentOptions.value.find(a => Number(a.user_id) === id) : null
   const origin = originFromCategory(cat)
+  const u = cat === 'web'
+    ? webCandidates.value.find(c => Number(c.lead_id) === Number(webMatchLeadId.value))
+    : agentOptions.value.find(a => Number(a.user_id) === Number(newSellerAgentId.value))
 
   if (!u) {
     // Sin asesor + canal: muestra solo el canal (SA o nada).
@@ -1099,10 +1134,45 @@ const agentPreview = computed(() => {
   return origin ? `${origin} - ${u.alias}` : u.alias
 })
 
+// Asesor efectivo: en el canal WEB lo dicta el dueno de la consulta elegida;
+// en el resto, el dropdown de asesores.
+const selectedAgentId = computed(() => {
+  if (newAgentCategory.value !== 'web') return Number(newSellerAgentId.value) || null
+  const c = webCandidates.value.find(x => Number(x.lead_id) === Number(webMatchLeadId.value))
+  return c ? Number(c.user_id) : null
+})
+
 function onAgentCategoryChange () {
   // Al cambiar canal, descarta la seleccion previa para forzar al usuario a
   // elegir un asesor del nuevo universo. Evita combinaciones residuales.
   newSellerAgentId.value = null
+  webMatchLeadId.value = null
+  if (newAgentCategory.value === 'web') loadWebCandidates()
+}
+
+async function loadWebCandidates () {
+  loadingWebCandidates.value = true
+  try {
+    const rows = await ficoService.webMatchCandidates(enrollmentId.value)
+    webCandidates.value = (rows || []).map(c => ({
+      ...c,
+      // El programa va en la etiqueta porque el match cruza por curso, no por
+      // version: la consulta puede estar registrada contra otra version del
+      // mismo curso y FICO tiene que poder verlo antes de confirmar.
+      label: `${c.alias} — ${c.full_name} · ${c.lead_program || 'sin programa'} · consulta del ${fmtLeadDate(c.lead_date)} · ${c.lead_status || 'sin estado'}`
+    }))
+  } catch (err) {
+    console.error('[loadWebCandidates]', err)
+    webCandidates.value = []
+    toast.error('No se pudieron cargar las consultas del alumno.')
+  } finally {
+    loadingWebCandidates.value = false
+  }
+}
+
+function fmtLeadDate (iso) {
+  if (!iso) return 's/f'
+  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
 }
 
 function toAgentOptions (rows, keep) {
@@ -1149,14 +1219,15 @@ async function handleEditSellerAgent () {
   saving.value = true
   try {
     const cat = newAgentCategory.value
-    const newId = WE_CATS.includes(cat) ? null : (Number(newSellerAgentId.value) || null)
-    await ficoService.editSellerAgent({
+    const newId = WE_CATS.includes(cat) ? null : selectedAgentId.value
+    const data = await ficoService.editSellerAgent({
       enrollment_id: enrollmentId.value,
       new_seller_agent_id: newId,
       new_agent_origin: originFromCategory(cat),
+      lead_id: cat === 'web' ? Number(webMatchLeadId.value) || null : null,
       justificacion: editAgentJustificacion.value.trim()
     })
-    toast.success('Asesor actualizado correctamente.')
+    toast.success(data?.message || 'Asesor actualizado correctamente.')
     emit('action-completed')
   } catch (err) {
     console.error(err)

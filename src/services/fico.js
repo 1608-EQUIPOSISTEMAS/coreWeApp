@@ -173,6 +173,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Consultas de asesor que habilitan el match WEB de esta venta.
+  async webMatchCandidates(enrollment_id) {
+    const response = (await api.post('/fico/webmatchcandidates', { enrollment_id })).data;
+    return response.data;
+  }
+
   async getCollections(payload) {
     const response = (await api.post('/fico/collections', payload)).data;
     return response.data;
