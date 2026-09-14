@@ -4,6 +4,22 @@
     <TeamDashboard v-if="!isAdmin" />
 
     <template v-else>
+      <nav class="vista-tabs" aria-label="Paneles">
+        <button
+          v-for="v in VISTAS"
+          :key="v.key"
+          type="button"
+          :class="['vista-tab', { activa: vista === v.key }]"
+          @click="vista = v.key"
+        >
+          {{ v.label }}
+        </button>
+      </nav>
+
+      <!-- :key remonta el panel al cambiar de pestaña para que recargue con el nuevo alcance -->
+      <TeamDashboard v-if="vista !== VISTA_USO" :key="vista" :view-as="vista" />
+
+    <template v-else>
       <!-- Header -->
       <div class="dc-head">
         <div>
@@ -267,6 +283,7 @@
         <p>{{ error }}</p>
       </div>
     </template>
+    </template>
   </div>
 </template>
 
@@ -281,6 +298,21 @@ const user = JSON.parse(localStorage.getItem('user') || '{}')
 const roles = user.roles || []
 // Solo ADMIN ve el dashboard de uso; el resto ve el dashboard anterior.
 const isAdmin = roles.includes('ADMIN')
+
+// ADMIN no tiene área propia: ve el uso del sistema y, con estas pestañas, el
+// mismo panel que ve cada líder. La clave es el rol de líder que el backend
+// acepta en view_as (AREA_OF_LEADER).
+const VISTA_USO = 'USO'
+const VISTAS = [
+  { key: VISTA_USO, label: 'Uso del sistema' },
+  { key: 'LIDER_FICO', label: 'FICO' },
+  { key: 'LIDER_COMERCIAL', label: 'Comercial' },
+  { key: 'LIDER_ACADEMICA', label: 'Académica' },
+  { key: 'LIDER_PRODUCTO', label: 'Producto' },
+  { key: 'LIDER_FUNDACION', label: 'Fundación' },
+  { key: 'LIDER_B2B', label: 'B2B' },
+]
+const vista = ref(VISTA_USO)
 
 const data = ref(null)
 const loading = ref(false)
@@ -512,6 +544,16 @@ const decisiones = computed(() => {
 </script>
 
 <style scoped>
+.vista-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 2px 18px; }
+.vista-tab {
+  height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid #e6e9f0;
+  background: #fff; color: #64748b; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.vista-tab:hover { color: #1b2a5b; }
+.vista-tab.activa { background: #1b2a5b; border-color: #1b2a5b; color: #fff; }
+[data-coreui-theme="dark"] .vista-tab { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
+[data-coreui-theme="dark"] .vista-tab.activa { background: #8FAADC; border-color: #8FAADC; color: #1A1A14; }
+
 .admin-dash {
   --navy: #1b2a5b;
   --blue: #2f6bdb;

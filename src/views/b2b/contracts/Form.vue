@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="contractForm" class="exec-shell form-shell">
 
     <header class="exec-masthead">
       <div class="masthead-inner">
@@ -92,12 +92,13 @@
                     class="exec-input w-100"
                     placeholder="Ej. CONTRATO MARCO 2026 - EMPRESA S.A.C."
                     v-restrict="'upper|max:200'"
+                    required
                   />
                 </div>
 
                 <div class="col-md-6">
                   <label class="exec-label">Fecha Inicio <span class="c-red">*</span></label>
-                  <input v-model="form.start_date" type="date" class="exec-input w-100" />
+                  <input v-model="form.start_date" type="date" class="exec-input w-100" required />
                 </div>
 
                 <div class="col-md-6">
@@ -312,7 +313,7 @@
                 </div>
                 <div class="col-md-3">
                   <label class="exec-label">% Descuento <span class="c-red">*</span></label>
-                  <input v-model.number="d.discount_pct" type="number" step="0.01" min="0" max="100" class="exec-input w-100" placeholder="0" />
+                  <input v-model.number="d.discount_pct" type="number" step="0.01" min="0" max="100" class="exec-input w-100" placeholder="0" required />
                 </div>
                 <div class="col-md-1">
                   <button class="btn-exec btn-exec-xs btn-exec-danger w-100" @click="form.discounts.splice(i, 1)" type="button">
@@ -468,14 +469,14 @@
                   <tbody>
                     <tr v-for="(b, i) in form.beneficiaries" :key="'b' + i">
                       <td>
-                        <input v-model.trim="b.first_name" class="exec-input w-100" v-restrict="'upper|max:150'" />
+                        <input v-model.trim="b.first_name" class="exec-input w-100" v-restrict="'upper|max:150'" required />
                         <!-- El nombre que traía la hoja: quien migró no sabía si venía
                              "NOMBRES APELLIDOS" o al revés, así que lo separa el asesor. -->
                         <small v-if="b.full_name && !b.first_name && !b.last_name" class="hint-nombre">
                           {{ b.full_name }}
                         </small>
                       </td>
-                      <td><input v-model.trim="b.last_name" class="exec-input w-100" v-restrict="'upper|max:150'" /></td>
+                      <td><input v-model.trim="b.last_name" class="exec-input w-100" v-restrict="'upper|max:150'" required /></td>
                       <td><input v-model.trim="b.document_number" class="exec-input w-100" v-restrict="'max:20'" /></td>
                       <td><input v-model.trim="b.email" type="email" class="exec-input w-100" v-restrict="'max:120'" /></td>
                       <td><input v-model.trim="b.phone" class="exec-input w-100" v-restrict="'max:20'" /></td>
@@ -532,6 +533,7 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
@@ -733,7 +735,12 @@ async function loadData(id) {
 // Persiste y devuelve el id del contrato, o null si no se pudo. Lo comparten
 // "Guardar" y "Enviar a FICO": mandar cupos leyendo la BD sin guardar antes
 // enviaría los nombres viejos.
+// En persistir (y no en guardar) para que también lo respete enviarAFico.
+const contractForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(contractForm)
+
 async function persistir() {
+  if (!requiredFieldsFilled()) return null
   if (!isValid.value) {
     toast.warning('Completa los obligatorios: empresa, tipo, nombre, fecha inicio y los nombres y apellidos de cada beneficiario.')
     return null

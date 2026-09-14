@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <main class="ef-body" v-if="loaded">
+    <main ref="leadFormRoot" class="ef-body" v-if="loaded">
       <div class="ef-form-wrapper">
 
         <!-- Banner de inscripcion observada -->
@@ -81,6 +81,7 @@
                 value-field="alias"
 
                 placeholder="CATEGORÍA..."
+                required
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
@@ -98,6 +99,7 @@
                 :viewOpen="6"
                 value-field="alias"
                 placeholder="MODALIDAD..."
+                required
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
@@ -127,6 +129,7 @@
       :viewOpen="6"
       :model-label="form.program_label"
       placeholder="Buscar programa…"
+      required
       :minChars="0"
       :cache="false"
       class="w-100"
@@ -161,6 +164,7 @@
   value-field="edition_num_id"
   :viewOpen="6"
   placeholder="Buscar Edición…"
+  required
   :model-label="form.edition_label"
   :minChars="0"
   :cache="false"
@@ -401,6 +405,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 label-field="description"
                 value-field="alias"
                 placeholder="MKT..."
+                required
                 class="exec-select-light w-100"
               />
             </div>
@@ -944,7 +949,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
 
   <BaseModal v-model="showViewModal" title="Inscripcion del Lead" size="xl">
-    <div class="insc-modal">
+    <div ref="inscriptionFormRoot" class="insc-modal">
       <div v-if="observedData" class="obs-banner mb-3">
         <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <div class="obs-banner-body">
@@ -1097,6 +1102,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         type="text"
         class="form-control form-control-sm"
         placeholder="A-12"
+        required
       />
       <div class="small text-muted mt-1">Aparece en el correo de confirmación.</div>
     </div>
@@ -1958,6 +1964,7 @@ import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   import BaseModal from '@/components/BaseModal.vue'
   import SearchSelect from '@/components/SearchSelect.vue'
   import DateTime12 from '@/components/DateTime12.vue'
+  import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
   import { ServiceKeys } from '@/services'
 
@@ -3329,8 +3336,17 @@ cat_certificate_status,
   return payload
 }
 
+// Lo que se pinta obligatorio vacío bloquea el guardado. El modal de inscripción
+// desmonta sus campos al cerrarse: cerrado, no hay nada pintado que revisar.
+const leadFormRoot = ref(null)
+const inscriptionFormRoot = ref(null)
+const leadFieldsFilled = useRequiredFieldsGuard(leadFormRoot)
+const inscriptionGuard = useRequiredFieldsGuard(inscriptionFormRoot)
+const inscriptionFieldsFilled = () => !inscriptionFormRoot.value || inscriptionGuard()
+
 async function confirmarInscripcion() {
    if (!comercialService) return console.error('comercialService no inyectado')
+   if (!inscriptionFieldsFilled() || !leadFieldsFilled()) return
 
 
    if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
@@ -3448,6 +3464,7 @@ if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha
 
 async function confirmarToken() {
   if (!comercialService) return
+  if (!inscriptionFieldsFilled() || !leadFieldsFilled()) return
   if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
     toast.warning('El Precio Base no esta configurado.')
     return
@@ -3568,6 +3585,7 @@ async function guardar() {
     console.log('[guardar] edition_id:', form.edition_id, '| edition_label:', form.edition_label)
 
   if (!comercialService) return console.error('comercialService no inyectado')
+  if (!leadFieldsFilled()) return
   if (isDeleteStatus.value) {
     showDeleteWarningModal.value = true
     return
@@ -3702,6 +3720,7 @@ async function loadTokenForEdit (tokenId) {
 }
 
 async function confirmarEdicionToken () {
+  if (!inscriptionFieldsFilled()) return
   savingInsc.value = true
   try {
     const enrollmentPayload = buildEnrollmentPayload()

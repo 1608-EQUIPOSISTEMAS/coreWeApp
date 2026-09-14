@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="companyForm" class="exec-shell form-shell">
 
     <header class="exec-masthead">
       <div class="masthead-inner">
@@ -49,6 +49,7 @@
                     class="exec-input w-100"
                     placeholder="EMPRESA S.A.C."
                     v-restrict="'upper|max:200'"
+                    required
                   />
                 </div>
 
@@ -60,6 +61,7 @@
                     class="exec-input w-100"
                     placeholder="20XXXXXXXXX"
                     v-restrict="'max:20'"
+                    required
                   />
                 </div>
 
@@ -208,7 +210,7 @@
                 <div class="row g-2">
                   <div class="col-md-6">
                     <label class="exec-label">Nombre <span class="c-red">*</span></label>
-                    <input v-model.trim="contact.contact_name" type="text" class="exec-input w-100" placeholder="Juan Pérez" />
+                    <input v-model.trim="contact.contact_name" type="text" class="exec-input w-100" placeholder="Juan Pérez" required />
                   </div>
                   <div class="col-md-6">
                     <label class="exec-label">Cargo</label>
@@ -244,6 +246,7 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
@@ -359,7 +362,11 @@ async function loadData(id) {
 
 // ── Guardar ──────────────────────────────────────────────
 
+const companyForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(companyForm)
+
 async function guardar() {
+  if (!requiredFieldsFilled()) return
   if (!isValid.value) {
     toast.warning('Completa los campos obligatorios.')
     return

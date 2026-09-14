@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="instructorForm" class="exec-shell form-shell">
     <header class="exec-masthead">
       <div class="masthead-inner">
         <div class="masthead-brand">
@@ -91,7 +91,7 @@
             </div>
             <div class="col-md-4">
               <label class="exec-label">Correo <span class="c-red">*</span></label>
-              <input v-model.trim="form.email" type="email" class="exec-input-light w-100" placeholder="correo@ejemplo.com" />
+              <input v-model.trim="form.email" type="email" class="exec-input-light w-100" placeholder="correo@ejemplo.com" required />
             </div>
             <div class="col-md-4">
               <label class="exec-label">Teléfono</label>
@@ -518,6 +518,7 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 import SearchSelect from '@/components/SearchSelect.vue'
 import FileUploader from '@/components/FileUploader.vue'
@@ -768,8 +769,12 @@ function buildPayload () {
   return payload
 }
 
+const instructorForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(instructorForm)
+
 /* ── Guardar ── */
 async function guardar () {
+  if (!requiredFieldsFilled()) return
   if (!isValid.value) {
     toast.warning('Complete los campos obligatorios (*)')
     return

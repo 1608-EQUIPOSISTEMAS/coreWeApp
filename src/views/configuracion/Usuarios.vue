@@ -102,15 +102,15 @@
 
   <!-- Modal crear / editar usuario -->
   <BaseModal v-model="showModal" :title="editingId ? `Editar Usuario — ${form.alias}` : 'Nuevo Usuario'" size="lg">
-    <div class="px-3 py-2">
+    <div ref="userForm" class="px-3 py-2">
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <label class="exec-label">Alias *</label>
-          <input v-model.trim="form.alias" type="text" class="exec-input-light w-100" placeholder="AE30" maxlength="20" style="text-transform: uppercase" />
+          <input v-model.trim="form.alias" type="text" class="exec-input-light w-100" placeholder="AE30" maxlength="20" style="text-transform: uppercase" required />
         </div>
         <div class="col-12 col-md-4">
           <label class="exec-label">Nombre *</label>
-          <input v-model.trim="form.first_name" type="text" class="exec-input-light w-100" placeholder="Nombre" />
+          <input v-model.trim="form.first_name" type="text" class="exec-input-light w-100" placeholder="Nombre" required />
         </div>
         <div class="col-12 col-md-4">
           <label class="exec-label">Apellidos</label>
@@ -122,7 +122,7 @@
         </div>
         <div class="col-12 col-md-6">
           <label class="exec-label">{{ editingId ? 'Nueva contraseña (vacío = no cambiar)' : 'Contraseña *' }}</label>
-          <input v-model="form.password" type="password" class="exec-input-light w-100" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          <input v-model="form.password" type="password" class="exec-input-light w-100" placeholder="Mínimo 6 caracteres" autocomplete="new-password" :required="!editingId" />
         </div>
 
         <div class="col-12">
@@ -180,6 +180,7 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/BaseModal.vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
@@ -270,7 +271,11 @@ function addPhone() {
   phoneDraft.value = ''
 }
 
+const userForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(userForm)
+
 async function save() {
+  if (!requiredFieldsFilled()) return
   if (!form.alias || !form.first_name) {
     toast.warning('Alias y nombre son obligatorios.')
     return

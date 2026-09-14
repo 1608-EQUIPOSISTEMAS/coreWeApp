@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid px-3 py-3">
+  <div ref="discountForm" class="container-fluid px-3 py-3">
     <div class="card shadow-sm border-0">
       <div class="card-header border-0 pb-3 pt-3 d-flex flex-wrap justify-content-between align-items-start">
         <div class="pe-3">
@@ -261,6 +261,7 @@ import { useToast } from 'vue-toastification'
 /* Componentes */
 import SearchSelect from '@/components/SearchSelect.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import CurrencyInput from '@/components/CurrencyInput.vue' 
 import { ServiceKeys } from '@/services'
 
@@ -457,7 +458,11 @@ async function loadData(id) {
   }
 }
 
+const discountForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(discountForm)
+
 async function guardar() {
+  if (!requiredFieldsFilled()) return
   if (!isValid.value) return
   saving.value = true
   try {

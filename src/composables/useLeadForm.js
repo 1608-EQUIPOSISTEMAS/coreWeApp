@@ -24,6 +24,12 @@ export function useLeadForm(options = {}) {
     // B2B no arranca la consulta por chat: el campo es obligatorio pero no
     // aplica, asi que la vista lo precarga con un guion.
     defaultChatMessage = '',
+    // Guards de obligatorios armados por la vista con useRequiredFieldsGuard:
+    // leen el DOM, así que viven en la vista y llegan inyectados. El default no
+    // bloquea porque hay consumidores que no renderizan este formulario
+    // (company-leads/Form.vue).
+    leadFieldsFilled        = () => true,
+    inscriptionFieldsFilled = () => true,
   } = options
 
   // ── ROUTER / TOAST ──────────────────────────────────────────
@@ -1421,6 +1427,7 @@ export function useLeadForm(options = {}) {
   async function guardar() {
     console.log('[guardar] edition_id:', form.edition_id, '| edition_label:', form.edition_label)
     if (!comercialService) return console.error('comercialService no inyectado')
+    if (!leadFieldsFilled()) return
     if (isDeleteStatus.value) { showDeleteWarningModal.value = true; return }
     saving.value = true
     try {
@@ -1443,6 +1450,7 @@ export function useLeadForm(options = {}) {
 
   async function confirmarInscripcion() {
     if (!comercialService) return console.error('comercialService no inyectado')
+    if (!inscriptionFieldsFilled() || !leadFieldsFilled()) return
     if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) { toast.warning('El Precio Base no está configurado. No se puede procesar la inscripción.'); return }
     if (!validateInscriptionClientInfo() || !validateInscriptionPaymentInfo()) {
       if (insc.email && !isValidEmail(insc.email)) { toast.warning('El correo no tiene formato válido · ej: nombre@dominio.com') }
@@ -1539,6 +1547,7 @@ export function useLeadForm(options = {}) {
 
   async function confirmarToken() {
     if (!comercialService || !ficoService) return console.error('comercialService/ficoService no inyectado')
+    if (!inscriptionFieldsFilled() || !leadFieldsFilled()) return
     if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) { toast.warning('El Precio Base no está configurado.'); return }
     if (!validateInscriptionClientInfo()) { toast.warning('Complete los campos obligatorios de la inscripción'); return }
     if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) { toast.warning('Faltan datos obligatorios en el formulario del Lead.'); return }

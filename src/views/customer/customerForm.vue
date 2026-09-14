@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="customerForm" class="exec-shell form-shell">
 
     <header class="exec-masthead">
       <div class="masthead-inner">
@@ -55,11 +55,11 @@
               <template v-if="!isCompany">
                 <div class="col-md-4">
                   <label class="exec-label">Nombres <span class="c-red">*</span></label>
-                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="exec-input w-100" placeholder="NOMBRES" />
+                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.first_name" type="text" class="exec-input w-100" placeholder="NOMBRES" required />
                 </div>
                 <div class="col-md-4">
                   <label class="exec-label">Apellido Paterno <span class="c-red">*</span></label>
-                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="exec-input w-100" placeholder="A. PATERNO" />
+                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.last_name" type="text" class="exec-input w-100" placeholder="A. PATERNO" required />
                 </div>
                 <div class="col-md-4">
                   <label class="exec-label">Apellido Materno</label>
@@ -67,14 +67,14 @@
                 </div> 
                 <div class="col-md-4">
                   <label class="exec-label">Tipo Documento <span class="c-red">*</span></label>
-                  <SearchSelect v-model="form.cat_type_document" :items="catalogs.documentTypeList" label-field="description" value-field="id" placeholder="SELECCIONAR..." class="exec-select-light w-100" />
+                  <SearchSelect v-model="form.cat_type_document" :items="catalogs.documentTypeList" label-field="description" value-field="id" placeholder="SELECCIONAR..." class="exec-select-light w-100" required />
                 </div>
               </template>
 
               <template v-else>
                 <div class="col-md-6">
                   <label class="exec-label">Razón Social <span class="c-red">*</span></label>
-                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_social" type="text" class="exec-input w-100" placeholder="RAZÓN SOCIAL" />
+                  <input autocomplete="nope" v-restrict="{ transform: 'upper' }" v-model.trim="form.razon_social" type="text" class="exec-input w-100" placeholder="RAZÓN SOCIAL" required />
                 </div>
                 <div class="col-md-6">
                   <label class="exec-label">Razón Comercial</label>
@@ -107,7 +107,7 @@
               <div class="col-md-4">
                 <label class="exec-label">N° Documento <span class="c-red">*</span></label>
                 <div class="input-sunat">
-                  <input autocomplete="nope" v-model.trim="form.document_number" type="text" class="exec-input text-mono" v-restrict="{ only: 'numbers' }" placeholder="NUMERO" />
+                  <input autocomplete="nope" v-model.trim="form.document_number" type="text" class="exec-input text-mono" v-restrict="{ only: 'numbers' }" placeholder="NUMERO" required />
                   <button type="button" class="btn-sunat" @click="searchSunat" :disabled="!form.document_number || searchingSunat" title="Buscar en SUNAT">
                     <i class="fa-solid" :class="searchingSunat ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
                     <span>SUNAT</span>
@@ -386,6 +386,7 @@ import { useRouter, useRoute } from 'vue-router'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 const toast = useToast()
 const router = useRouter()
@@ -610,7 +611,11 @@ async function loadData(id) {
 }
 
 // ── Guardar ───────────────────────────────────────────────
+const customerForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(customerForm)
+
 async function guardar() {
+  if (!requiredFieldsFilled()) return
   if (!isValid.value) { toast.warning('Complete los campos obligatorios.'); return }
   saving.value = true
   try {

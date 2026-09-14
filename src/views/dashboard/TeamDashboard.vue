@@ -2,9 +2,10 @@
   <div class="team-dash">
     <div class="td-head">
       <div>
-        <div class="eyebrow">{{ scope.isLeader ? 'PANEL DE EQUIPO' : 'MI DÍA A DÍA' }} · SISTEMA INTERNO</div>
+        <div v-if="!data?.resultados" class="eyebrow">MI DÍA A DÍA · SISTEMA INTERNO</div>
         <h1>{{ scope.area }}</h1>
-        <div class="sub">Actualizado {{ fechaHoy }} · actividad de {{ mesActualNombre }}</div>
+        <div v-if="data?.resultados" class="sub">Actualizado a las {{ actualizado }}</div>
+        <div v-else class="sub">Actualizado {{ fechaHoy }} · actividad de {{ mesActualNombre }}</div>
       </div>
       <div class="grow"></div>
       <button class="btn ghost" type="button" :disabled="loading" @click="load">
@@ -16,8 +17,16 @@
     <div v-if="error" class="alerta">{{ error }}</div>
     <div v-else-if="loading && !data" class="alerta neutro">Cargando tu panel…</div>
 
-    <template v-if="data">
-      <!-- KPIs -->
+    <!-- Líder (o ADMIN mirando un área): solo impacto. El uso del ERP lo ve el
+         ADMIN en "Uso del sistema"; aquí confundía al líder. -->
+    <template v-if="data?.resultados">
+      <TeamResults :resultados="data.resultados" />
+      <TeamCorrections :correcciones="data.correcciones" />
+    </template>
+
+    <!-- Colaborador: su propio uso del ERP, como siempre. -->
+    <template v-else-if="data">
+      <!-- KPIs de uso -->
       <div class="kpis">
         <div class="kcard">
           <div class="klbl">ACCIONES · {{ mesActualNombre.toUpperCase() }}</div>
@@ -88,64 +97,6 @@
         </div>
       </div>
 
-      <!-- Objetivos: solo las áreas que los tienen cargados en la BD -->
-      <div v-if="data.metas.length" class="card">
-        <div class="c-title">Objetivos del mes</div>
-        <div class="c-sub">Meta de matrículas por asesor · fuente: metas comerciales</div>
-        <div v-for="m in data.metas" :key="m.user_id" class="mrow">
-          <div class="mname">{{ m.name }} <span class="malias">{{ m.alias }}</span></div>
-          <div class="mtrack"><i :style="{ width: Math.min(100, pctDe(m.logrado, m.objetivo)) + '%', background: barColor(pctDe(m.logrado, m.objetivo)) }"></i></div>
-          <div class="mval">{{ m.logrado }} <span class="mmeta">/ {{ m.objetivo }}</span></div>
-          <div class="mpct" :class="claseMeta(pctDe(m.logrado, m.objetivo))">{{ pctDe(m.logrado, m.objetivo) }}%</div>
-        </div>
-      </div>
-
-      <!-- Equipo -->
-      <div v-if="scope.isLeader" class="card">
-        <div class="c-title">Colaboradores</div>
-        <div class="c-sub">Horario de trabajo y carga del mes · ordenado por actividad</div>
-        <div class="tabla-scroll">
-          <table class="tabla">
-            <thead>
-              <tr>
-                <th>Colaborador</th>
-                <th>Arranque típico</th>
-                <th>Hoy</th>
-                <th>Días activos</th>
-                <th>Acciones del mes</th>
-                <th>Trabaja en</th>
-                <th>Última señal</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in equipo" :key="p.user_id" :class="{ inactivo: !p.acciones && !p.acciones_prev }">
-                <td>
-                  <div class="pname">{{ p.name }}</div>
-                  <div class="palias">{{ p.alias }}</div>
-                </td>
-                <td>
-                  <span v-if="p.hora_tipica" class="hora" :class="tonoArranque(p.hora_tipica)">{{ p.hora_tipica }}</span>
-                  <span v-else class="nd">sin registro</span>
-                </td>
-                <td>
-                  <span v-if="p.inicio_hoy" class="hoy">{{ p.inicio_hoy }} – {{ p.ultimo_hoy }}</span>
-                  <span v-else class="nd">no ha entrado</span>
-                </td>
-                <td class="cnum">{{ p.dias_activos }}</td>
-                <td>
-                  <div class="acc">
-                    <span class="cnum">{{ num(p.acciones) }}</span>
-                    <div class="atrack"><i :style="{ width: pctDe(p.acciones, maxAcciones) + '%' }"></i></div>
-                  </div>
-                </td>
-                <td><span v-if="p.tabla_top" class="chip">{{ etiqueta(p.tabla_top) }}</span><span v-else class="nd">—</span></td>
-                <td class="nd">{{ p.ultima_actividad ?? 'nunca' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- Movimientos -->
       <div class="card">
         <div class="c-title">{{ scope.isLeader ? 'Últimos movimientos del equipo' : 'Mis últimos movimientos' }}</div>
@@ -166,20 +117,27 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { ServiceKeys } from '@/services'
+import TeamCorrections from './TeamCorrections.vue'
+import TeamResults from './TeamResults.vue'
+
+// viewAs solo lo pasa Dashboard.vue cuando un ADMIN elige el panel de un líder.
+const props = defineProps({ viewAs: { type: String, default: null } })
 
 const dashboardService = inject(ServiceKeys.Dashboard)
 
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
+const actualizado = ref('')
 
 async function load () {
   loading.value = true
   error.value = ''
   try {
-    data.value = await dashboardService.teamSummary()
+    data.value = await dashboardService.teamSummary(props.viewAs)
+    actualizado.value = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
   } catch (e) {
     console.error('teamSummary:', e)
     error.value = e?.response?.data?.message || 'No se pudo cargar el panel.'
@@ -187,7 +145,15 @@ async function load () {
     loading.value = false
   }
 }
-onMounted(load)
+// El ritmo del día ("enviadas hoy vs lo típico a esta hora") envejece solo: el
+// panel se refresca cada 5 minutos para que el líder no tenga que recargar.
+const REFRESCO_MS = 5 * 60 * 1000
+let refresco = null
+onMounted(() => {
+  load()
+  refresco = setInterval(load, REFRESCO_MS)
+})
+onUnmounted(() => clearInterval(refresco))
 
 const ACCIONES = { INSERT: 'creó', UPDATE: 'editó', DELETE: 'eliminó', LOGIN: 'ingresó a' }
 
@@ -198,7 +164,6 @@ const pctDe = (v, total) => (total ? Math.round((v / total) * 100) : 0)
 const fechaHoy = new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
 const mesActualNombre = MESES[new Date().getMonth()]
 const barColor = (p) => (p >= 90 ? 'var(--td-green)' : p >= 60 ? 'var(--td-amber)' : 'var(--td-red)')
-const claseMeta = (p) => (p >= 90 ? 'ok' : p >= 60 ? 'warn' : 'bad')
 
 /* ── Derivados ── */
 const scope = computed(() => data.value?.scope ?? { area: '', isLeader: false })
@@ -216,7 +181,6 @@ const pctActivos = computed(() => (scope.value.isLeader
   ? pctDe(activosHoy.value, equipo.value.length)
   : pctDe(yo.value?.dias_activos ?? 0, diasHabilesTranscurridos())))
 
-const maxAcciones = computed(() => Math.max(1, ...equipo.value.map(p => p.acciones)))
 const maxTabla = computed(() => Math.max(1, ...(data.value?.porTabla ?? []).map(t => t.acciones)))
 const maxHora = computed(() => Math.max(1, ...horas.value.map(h => h.acciones)))
 const alturaHora = (n) => Math.max(3, Math.round((n / maxHora.value) * 100)) + '%'
@@ -240,16 +204,6 @@ const horaEquipo = computed(() => {
   return `${String(Math.floor(medio / 60)).padStart(2, '0')}:${String(medio % 60).padStart(2, '0')}`
 })
 
-// El semáforo del arranque es RELATIVO al propio equipo, no contra un horario
-// de oficina: el ERP no sabe el turno de nadie, y marcar "tarde" contra una hora
-// inventada sería acusar a alguien con un dato que no tenemos. Quien arranca más
-// de una hora después de la mediana de su equipo se destaca, nada más.
-function tonoArranque (horaTipica) {
-  if (!horaEquipo.value) return ''
-  const aMinutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3))
-  return aMinutos(horaTipica) - aMinutos(horaEquipo.value) > 60 ? 'tarde' : ''
-}
-
 // Días hábiles del mes ya transcurridos: el denominador honesto de "días
 // activos" (contra los 30 del mes daría siempre un porcentaje ridículo).
 function diasHabilesTranscurridos () {
@@ -260,13 +214,6 @@ function diasHabilesTranscurridos () {
     if (dia !== 0 && dia !== 6) habiles++
   }
   return Math.max(1, habiles)
-}
-
-// El backend ya manda la etiqueta en porTabla y movimientos; la columna
-// "Trabaja en" del equipo trae el nombre crudo de la tabla, así que se traduce
-// con lo que ya vino en vez de pedir un diccionario aparte.
-function etiqueta (tableName) {
-  return data.value?.porTabla.find(t => t.table_name === tableName)?.label ?? tableName
 }
 </script>
 
@@ -306,8 +253,8 @@ function etiqueta (tableName) {
 .kmain { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 6px; }
 .knum { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--td-navy); }
 .knote { font-size: 12px; color: var(--td-muted); }
-.ktrack, .atrack, .ttrack, .mtrack { height: 6px; border-radius: 999px; background: #eef1f6; overflow: hidden; }
-.ktrack i, .atrack i, .ttrack i, .mtrack i { display: block; height: 100%; border-radius: 999px; background: var(--td-navy); }
+.ktrack, .ttrack { height: 6px; border-radius: 999px; background: #eef1f6; overflow: hidden; }
+.ktrack i, .ttrack i { display: block; height: 100%; border-radius: 999px; background: var(--td-navy); }
 .pill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .pill.ok { background: #e7f6ee; color: #12703a; }
 .pill.bad { background: #fdecec; color: var(--td-red); }
@@ -331,29 +278,6 @@ function etiqueta (tableName) {
 .tdelta { font-size: 11px; font-weight: 700; margin-left: 4px; }
 .tdelta.ok { color: #12703a; }
 .tdelta.bad { color: var(--td-red); }
-
-.mrow { display: grid; grid-template-columns: 1fr 140px 90px 52px; align-items: center; gap: 12px; margin-bottom: 11px; }
-.mname { font-size: 13.5px; font-weight: 600; color: var(--td-navy); }
-.malias { font-size: 11.5px; font-weight: 500; color: var(--td-muted); margin-left: 6px; }
-.mval { font-size: 13px; font-weight: 700; color: var(--td-navy); text-align: right; }
-.mmeta { font-weight: 500; color: var(--td-muted); }
-.mpct { font-size: 12.5px; font-weight: 700; text-align: right; }
-.mpct.ok { color: #12703a; } .mpct.warn { color: #c97a1a; } .mpct.bad { color: var(--td-red); }
-
-.tabla-scroll { overflow-x: auto; }
-.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tabla th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--td-muted); padding: 0 12px 10px 0; white-space: nowrap; }
-.tabla td { padding: 11px 12px 11px 0; border-top: 1px solid var(--td-border); vertical-align: middle; }
-.tabla tr.inactivo { opacity: 0.5; }
-.pname { font-weight: 600; color: var(--td-navy); }
-.palias { font-size: 11.5px; color: var(--td-muted); }
-.cnum { font-weight: 700; color: var(--td-navy); }
-.nd { color: var(--td-muted); font-size: 12.5px; }
-.hora { font-weight: 700; color: var(--td-navy); }
-.hora.tarde { color: var(--td-amber); }
-.hoy { font-weight: 600; color: #12703a; }
-.acc { display: flex; align-items: center; gap: 10px; min-width: 130px; }
-.acc .atrack { flex: 1; }
 
 .mov { display: flex; align-items: baseline; gap: 9px; padding: 8px 0; border-top: 1px solid var(--td-border); font-size: 13px; flex-wrap: wrap; }
 .mhora { color: var(--td-muted); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 82px; }
@@ -381,18 +305,13 @@ function etiqueta (tableName) {
 }
 [data-coreui-theme="dark"] .team-dash .btn.ghost { background: #1F1F1A; color: #A0A099; }
 [data-coreui-theme="dark"] .team-dash .ktrack,
-[data-coreui-theme="dark"] .team-dash .atrack,
-[data-coreui-theme="dark"] .team-dash .ttrack,
-[data-coreui-theme="dark"] .team-dash .mtrack { background: #24241E; }
+[data-coreui-theme="dark"] .team-dash .ttrack { background: #24241E; }
 [data-coreui-theme="dark"] .team-dash .chip,
 [data-coreui-theme="dark"] .team-dash .alerta.neutro { background: rgba(143, 170, 220, 0.12); color: #C9C9C1; }
 [data-coreui-theme="dark"] .team-dash .pill.ok { background: rgba(16, 185, 129, 0.14); color: #34D399; }
 [data-coreui-theme="dark"] .team-dash .pill.bad,
 [data-coreui-theme="dark"] .team-dash .alerta { background: rgba(239, 68, 68, 0.14); color: #F87171; }
-[data-coreui-theme="dark"] .team-dash .hoy,
 [data-coreui-theme="dark"] .team-dash .a-insert,
-[data-coreui-theme="dark"] .team-dash .tdelta.ok,
-[data-coreui-theme="dark"] .team-dash .mpct.ok { color: #34D399; }
-[data-coreui-theme="dark"] .team-dash .mpct.warn,
+[data-coreui-theme="dark"] .team-dash .tdelta.ok { color: #34D399; }
 [data-coreui-theme="dark"] .team-dash .a-update { color: #E9B872; }
 </style>

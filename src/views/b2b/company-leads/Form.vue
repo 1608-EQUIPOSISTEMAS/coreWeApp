@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="companyLeadForm" class="exec-shell form-shell">
 
     <header class="exec-masthead">
       <div class="masthead-inner">
@@ -20,7 +20,7 @@
             v-if="!form.enrollment_id"
             type="button"
             class="btn-exec btn-exec-primary px-4"
-            @click="guardar"
+            @click="saveLead"
             :disabled="saving || (!isEdit && !!saveBlockReason)"
             :title="!isEdit && saveBlockReason ? saveBlockReason : 'Guardar lead'"
           >
@@ -54,6 +54,7 @@
                     value-field="id"
                     placeholder="Ej: CONVENIO, IN HOUSE..."
                     class="exec-select-light w-100"
+                    required
                   />
                 </div>
                 
@@ -69,6 +70,7 @@
                     :model-label="form.company_label"
                     @change="onCompanyChange"
                     class="exec-select-light w-100"
+                    required
                   />
                 </div>
 
@@ -80,6 +82,7 @@
                     class="exec-input w-100"
                     placeholder="Ej: Juan Pérez - Gerente RRHH..."
                     v-restrict="'upper|max:200'"
+                    required
                   />
                 </div>
 
@@ -106,6 +109,7 @@
                     placeholder="SELECCIONAR..."
                     class="exec-select-light w-100"
                     @change="onStatusChange"
+                    required
                   />
                 </div>
 
@@ -385,9 +389,10 @@
 </template>
 
 <script setup>
-import { inject, computed, watch } from 'vue'
+import { ref, inject, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLeadForm } from '@/composables/useLeadForm'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import SearchSelect from '@/components/SearchSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import DateTime12 from '@/components/DateTime12.vue'
@@ -437,6 +442,16 @@ watch(() => form.cat_contract_type, () => {
 })
 
 function cancelarCompany() { router.push({ name: 'B2BCompanyLeads' }) }
+
+// El guard va aquí y no en useLeadForm.guardar: ese composable no conoce el DOM
+// de cada pantalla que lo usa.
+const companyLeadForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(companyLeadForm)
+
+function saveLead() {
+  if (!requiredFieldsFilled()) return
+  guardar()
+}
 
 function onCompanyChange(opt) {
   if (opt) {

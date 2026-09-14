@@ -9,10 +9,11 @@ export default class DashboardService {
   }
 
   // Panel de equipo. El alcance (área o solo yo) lo decide el backend con los
-  // roles del token, por eso no lleva payload: mandarle uno sería fingir que
-  // el cliente puede elegir a quién audita.
-  async teamSummary() {
-    const response = (await api.post('/dashboard/team-summary', {})).data;
+  // roles del token. viewAs ('LIDER_FICO', ...) solo lo respeta para ADMIN, que
+  // lo usa desde las pestañas de Dashboard.vue para ver el panel de cada líder.
+  async teamSummary(viewAs) {
+    const payload = viewAs ? { view_as: viewAs } : {};
+    const response = (await api.post('/dashboard/team-summary', payload)).data;
     return response.data;
   }
 

@@ -54,7 +54,7 @@
     </div>
 
     <!-- Active action with stepper -->
-    <div v-if="activeAction" class="eact-active">
+    <div v-if="activeAction" ref="activeActionForm" class="eact-active">
       <!-- REPROGRAMAR EDICION -->
       <ActionStepper
         v-if="activeAction === 'rp'"
@@ -118,7 +118,7 @@
             </div>
             <div class="eact-field">
               <label>Justificacion <span class="eact-req">*</span></label>
-              <textarea v-model="rpJustificacion" class="eact-textarea" rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
+              <textarea v-model="rpJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
             </div>
           </div>
         </template>
@@ -239,7 +239,7 @@
 
             <div class="eact-field" style="margin-top:14px">
               <label>Justificacion <span class="eact-req">*</span></label>
-              <textarea v-model="ccJustificacion" class="eact-textarea" rows="3" placeholder="Motivo del cambio de curso..."></textarea>
+              <textarea v-model="ccJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo del cambio de curso..."></textarea>
             </div>
           </div>
         </template>
@@ -365,6 +365,7 @@
                   label-field="label"
                   value-field="id"
                   placeholder="Seleccionar canal..."
+                  required
                   @update:modelValue="onAgentCategoryChange"
                 />
               </div>
@@ -384,6 +385,7 @@
                 label-field="label"
                 value-field="lead_id"
                 placeholder="Buscar consulta por asesor..."
+                required
               />
               <div v-else class="eact-readonly" style="font-size:12px;color:#b02a37">
                 <i class="fa-solid fa-triangle-exclamation"></i>
@@ -399,6 +401,7 @@
                 label-field="label"
                 value-field="user_id"
                 placeholder="Buscar asesor por alias o nombre..."
+                :required="newAgentCategory !== 'sa'"
               />
             </div>
             <div v-if="WE_CATS.includes(newAgentCategory)" class="eact-readonly" style="font-size:12px;color:#666">
@@ -431,7 +434,7 @@
           <div class="eact-form">
             <div class="eact-field">
               <label>Motivo del retiro <span class="eact-req">*</span></label>
-              <textarea v-model="retireReason" class="eact-textarea eact-textarea-danger" rows="3" placeholder="Explica el motivo del retiro..."></textarea>
+              <textarea v-model="retireReason" class="eact-textarea eact-textarea-danger" required rows="3" placeholder="Explica el motivo del retiro..."></textarea>
             </div>
             <div class="eact-refund-row">
               <label class="eact-checkbox-label">
@@ -496,7 +499,7 @@
             </div>
             <div class="eact-field">
               <label>Motivo de la observacion <span class="eact-req">*</span></label>
-              <textarea v-model="observeReason" class="eact-textarea" rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
+              <textarea v-model="observeReason" class="eact-textarea" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
             </div>
             <!-- Unica salida del bloqueo por copia requerida: si el asesor la
                  pidio por error, se baja aca y queda auditado. -->
@@ -520,6 +523,7 @@ import { ref, reactive, computed, watch, inject, getCurrentInstance } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -565,6 +569,10 @@ const stepperStep = ref(0)
 const saving = ref(false)
 const hasEmailStep = ref(true)
 const emailPreviewRef = ref(null)
+// Un solo contenedor basta: cada accion vive en su ActionStepper con v-if, asi
+// que adentro solo esta el formulario activo (y su preview con credenciales SAP).
+const activeActionForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(activeActionForm)
 
 // Identificacion de inscripcion proveniente de migracion A5.
 // replaces_enrollment_id: vinculo trazable hacia la inscripcion original (RP).
@@ -756,6 +764,7 @@ function isWithinReprogramWindow (startDate) {
 }
 
 async function handleReprogramConfirm () {
+  if (!requiredFieldsFilled()) return
   saving.value = true
   try {
     const payload = {
@@ -896,6 +905,7 @@ function onCCEditionChange () {
 }
 
 async function handleCourseChangeConfirm () {
+  if (!requiredFieldsFilled()) return
   saving.value = true
   try {
     await ficoService.courseChange({
@@ -1216,6 +1226,7 @@ async function loadAgentOptions () {
 }
 
 async function handleEditSellerAgent () {
+  if (!requiredFieldsFilled()) return
   saving.value = true
   try {
     const cat = newAgentCategory.value
@@ -1242,6 +1253,7 @@ const observeReason = ref('')
 const clearCcRequirement = ref(false)
 
 async function handleObserve () {
+  if (!requiredFieldsFilled()) return
   saving.value = true
   try {
     await ficoService.rejectEnrollment({
@@ -1280,6 +1292,7 @@ const retireHasRefund = ref(false)
 const retireRefundAmount = ref(0)
 
 async function handleRetire () {
+  if (!requiredFieldsFilled()) return
   saving.value = true
   try {
     await ficoService.retireEnrollment({

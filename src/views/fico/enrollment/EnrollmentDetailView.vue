@@ -180,6 +180,8 @@
             @change-edition="handleChangeEdition"
             @open-reschedule="rescheduleVisible = true"
             @edit-cuota-amount="openEditAmount"
+            @correct-initial="openCorrectInitial"
+            @revert-cuota="openRevert"
           />
 
           <EnrollmentActions
@@ -222,6 +224,21 @@
       @submit="handleEditAmountSubmit"
     />
 
+    <EditInstallmentAmountModal
+      v-model:visible="correctInitialVisible"
+      :installment="correctInitialTarget"
+      :saving="savingCorrectInitial"
+      title="Corregir pago inicial"
+      @submit="handleCorrectInitialSubmit"
+    />
+
+    <RevertInstallmentModal
+      v-model:visible="revertVisible"
+      :installment="revertTarget"
+      :saving="savingRevert"
+      @submit="handleRevertSubmit"
+    />
+
     <AddInstallmentModal
       v-model:visible="addInstallmentVisible"
       :next-number="nextInstallmentNumber"
@@ -246,6 +263,7 @@ import EnrollmentActions from './EnrollmentActions.vue'
 import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
 import RescheduleInstallmentsModal from './RescheduleInstallmentsModal.vue'
 import EditInstallmentAmountModal from './EditInstallmentAmountModal.vue'
+import RevertInstallmentModal from './RevertInstallmentModal.vue'
 import AddInstallmentModal from './AddInstallmentModal.vue'
 
 const props = defineProps({
@@ -358,6 +376,12 @@ const rescheduleVisible = ref(false)
 const editAmountVisible = ref(false)
 const editAmountTarget = ref(null)
 const savingEditAmount = ref(false)
+const correctInitialVisible = ref(false)
+const correctInitialTarget = ref(null)
+const savingCorrectInitial = ref(false)
+const revertVisible = ref(false)
+const revertTarget = ref(null)
+const savingRevert = ref(false)
 const addInstallmentVisible = ref(false)
 const savingAddInstallment = ref(false)
 const nextInstallmentNumber = computed(() => {
@@ -1022,6 +1046,66 @@ async function handleEditAmountSubmit (payload) {
     toast.error(err?.response?.data?.error || 'No se pudo editar el monto.')
   } finally {
     savingEditAmount.value = false
+  }
+}
+
+// El backend corrige la BD pero no puede deshacer lo que ya salio (correo,
+// Odoo): esos avisos se muestran aparte y con mas tiempo para que se lean.
+function showCorrectionWarnings (result) {
+  for (const warning of result?.warnings || []) toast.warning(warning, { timeout: 9000 })
+}
+
+function openCorrectInitial (inicial) {
+  if (!inicial?.installment_id) return
+  correctInitialTarget.value = inicial
+  correctInitialVisible.value = true
+}
+
+async function handleCorrectInitialSubmit (payload) {
+  savingCorrectInitial.value = true
+  try {
+    const result = await ficoService.correctInitialPayment({
+      enrollment_id: enrollmentId.value,
+      new_amount: payload.new_amount,
+      justificacion: payload.justificacion
+    })
+    toast.success('Pago inicial corregido.')
+    showCorrectionWarnings(result)
+    correctInitialVisible.value = false
+    correctInitialTarget.value = null
+    await refreshDetail()
+  } catch (err) {
+    console.error('[correctInitialPayment]', err)
+    toast.error(err?.response?.data?.error || 'No se pudo corregir el pago inicial.')
+  } finally {
+    savingCorrectInitial.value = false
+  }
+}
+
+function openRevert (cuota) {
+  if (!cuota?.installment_id) return
+  revertTarget.value = cuota
+  revertVisible.value = true
+}
+
+async function handleRevertSubmit (payload) {
+  savingRevert.value = true
+  try {
+    const result = await ficoService.revertInstallmentPayment({
+      enrollment_id: enrollmentId.value,
+      installment_id: payload.installment_id,
+      justificacion: payload.justificacion
+    })
+    toast.success('Cuota devuelta a pendiente.')
+    showCorrectionWarnings(result)
+    revertVisible.value = false
+    revertTarget.value = null
+    await refreshDetail()
+  } catch (err) {
+    console.error('[revertInstallmentPayment]', err)
+    toast.error(err?.response?.data?.error || 'No se pudo revertir la cuota.')
+  } finally {
+    savingRevert.value = false
   }
 }
 

@@ -186,7 +186,7 @@
           <span class="esp-modal-icon esp-modal-icon-sap"><i class="fa-solid fa-server"></i></span>
           <h3>Credenciales SAP</h3>
         </header>
-        <div class="esp-modal-body">
+        <div ref="sapModalBody" class="esp-modal-body">
           <p class="esp-modal-lead">
             Este es un curso <strong>SAP online</strong>. Escribe el usuario y la contraseña del
             servidor SAP que se enviarán a <strong>{{ enrollment.student_full_name }}</strong>.
@@ -264,6 +264,7 @@ import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { ServiceKeys } from '@/services'
 import SapCredentialsFields from './SapCredentialsFields.vue'
 import { isSapCredentialsValid } from './sapCredentials.js'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 const props = defineProps({
   enrollment: { type: Object, default: null }
@@ -355,6 +356,8 @@ const sapUsername = ref('')
 const sapPassword = ref('')
 const sendingSap = ref(false)
 const sapValid = computed(() => isSapCredentialsValid(sapUsername.value, sapPassword.value))
+const sapModalBody = ref(null)
+const sapFieldsFilled = useRequiredFieldsGuard(sapModalBody)
 
 // Reenviar confirmacion: si es SAP online, primero pide credenciales; si no,
 // envia directo como siempre.
@@ -374,7 +377,7 @@ function closeSapModal () {
 }
 
 async function sendSapConfirmation () {
-  if (!sapValid.value || sendingSap.value) return
+  if (!sapFieldsFilled() || !sapValid.value || sendingSap.value) return
   const id = props.enrollment?.enrollment_id
   if (!id) return
   sendingSap.value = true

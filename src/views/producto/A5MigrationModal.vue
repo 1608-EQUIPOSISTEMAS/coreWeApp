@@ -5,7 +5,7 @@
     title="Cancelar edicion y proponer destino"
     size="xl"
   >
-    <div class="a5-body" v-if="visible">
+    <div ref="migrationForm" class="a5-body" v-if="visible">
       <!-- Resumen edicion origen -->
       <div class="a5-origin-card">
         <div class="a5-origin-icon">
@@ -113,6 +113,7 @@
             class="a5-textarea"
             rows="3"
             placeholder="Motivo de la cancelacion (lo ve Academica al contactar al alumno)..."
+            required
           ></textarea>
         </div>
 
@@ -171,6 +172,7 @@ import { ref, reactive, computed, watch, inject } from 'vue'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -290,7 +292,11 @@ function handleClose () {
   emit('update:visible', false)
 }
 
+const migrationForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(migrationForm)
+
 function handleSubmit () {
+  if (!requiredFieldsFilled()) return
   if (!canConfirm.value) return
   showConfirm.value = true
 }

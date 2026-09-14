@@ -15,6 +15,7 @@
           type="text"
           class="sapc-input"
           placeholder="Ej. SAP_4001"
+          required
           autocomplete="off"
           spellcheck="false"
         />
@@ -26,6 +27,7 @@
           type="text"
           class="sapc-input"
           placeholder="Contraseña del servidor"
+          required
           autocomplete="off"
           spellcheck="false"
         />

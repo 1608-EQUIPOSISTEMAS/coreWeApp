@@ -159,14 +159,14 @@
 
   <!-- Modal nuevo rol -->
   <BaseModal v-model="showRoleModal" title="Nuevo Rol" size="sm">
-    <div class="px-3 py-2">
+    <div ref="newRoleForm" class="px-3 py-2">
       <div class="mb-3">
         <label class="exec-label">Descripción *</label>
-        <input v-model.trim="roleForm.description" type="text" class="exec-input-light w-100" placeholder="Ej: Líder de Marketing" />
+        <input v-model.trim="roleForm.description" type="text" class="exec-input-light w-100" placeholder="Ej: Líder de Marketing" required />
       </div>
       <div class="mb-2">
         <label class="exec-label">Alias * (identificador técnico, no se puede cambiar después)</label>
-        <input v-model.trim="roleForm.alias" type="text" class="exec-input-light w-100 text-mono" placeholder="LIDER_MARKETING" maxlength="40" style="text-transform: uppercase" />
+        <input v-model.trim="roleForm.alias" type="text" class="exec-input-light w-100 text-mono" placeholder="LIDER_MARKETING" maxlength="40" style="text-transform: uppercase" required />
         <div class="text-muted small mt-1">Solo letras, números y guión bajo. Vista previa: <strong class="text-mono">{{ aliasPreview || '—' }}</strong></div>
       </div>
     </div>
@@ -183,6 +183,7 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/BaseModal.vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import { ServiceKeys } from '@/services'
 
 const toast = useToast()
@@ -304,7 +305,11 @@ function openNewRole() {
   showRoleModal.value = true
 }
 
+const newRoleForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(newRoleForm)
+
 async function saveNewRole() {
+  if (!requiredFieldsFilled()) return
   if (!roleForm.description || !aliasPreview.value) {
     toast.warning('Descripción y alias son obligatorios.')
     return

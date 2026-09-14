@@ -2,13 +2,17 @@
   <BaseModal
     :modelValue="visible"
     @update:modelValue="onClose"
-    title="Editar monto de cuota"
+    :title="title"
     size="sm"
   >
     <div class="eia-body" v-if="installment">
       <div class="eia-meta">
-        <div class="eia-meta-pill">Cuota #{{ installment.installment_number }}</div>
-        <div class="eia-meta-line">
+        <div class="eia-meta-pill">{{ isInitial ? 'Pago inicial' : `Cuota #${installment.installment_number}` }}</div>
+        <div v-if="isInitial" class="eia-meta-line">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>El total y el descuento de la venta se ajustan con la diferencia</span>
+        </div>
+        <div v-else class="eia-meta-line">
           <i class="fa-regular fa-calendar"></i>
           <span>Vence el {{ formatDate(installment.due_date) }}</span>
         </div>
@@ -78,10 +82,15 @@ import BaseModal from '@/components/BaseModal.vue'
 const props = defineProps({
   visible: { type: Boolean, default: false },
   installment: { type: Object, default: null },
-  saving: { type: Boolean, default: false }
+  saving: { type: Boolean, default: false },
+  title: { type: String, default: 'Editar monto de cuota' }
 })
 
 const emit = defineEmits(['update:visible', 'submit'])
+
+// La cuota 0 no tiene vencimiento propio que mostrar; lo util es avisar que
+// corregirla mueve tambien el total de la venta.
+const isInitial = computed(() => props.installment?.installment_number === 0)
 
 const newAmount = ref(null)
 const justificacion = ref('')

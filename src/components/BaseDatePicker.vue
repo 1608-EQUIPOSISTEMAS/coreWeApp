@@ -1,5 +1,5 @@
 <template>
-  <div class="base-datepicker-wrapper position-relative">
+  <div class="base-datepicker-wrapper position-relative" :class="{ 'has-error': required && !disabled && !model }">
     <flat-pickr
       v-model="model"
       :config="finalConfig"
@@ -158,8 +158,10 @@ function clearDate() {
   border-color: var(--border, #e2e8f0) !important;
 }
 
-/* Validación Visual */
-:deep(.exec-flatpickr-input:required:invalid:not(:placeholder-shown)) {
+/* Validación Visual
+   Por clase y no por :invalid: en modo rango el input visible es readonly y un
+   readonly no entra en la validación nativa, así que :invalid nunca aplicaría. */
+.has-error :deep(.exec-flatpickr-input) {
   border-color: var(--red-600, #dc2626) !important;
 }
 
@@ -211,7 +213,7 @@ function clearDate() {
   color: #8A8A80 !important;
   border-color: #2A2A22 !important;
 }
-[data-coreui-theme="dark"] .base-datepicker-wrapper :deep(.exec-flatpickr-input:required:invalid:not(:placeholder-shown)) {
+[data-coreui-theme="dark"] .base-datepicker-wrapper.has-error :deep(.exec-flatpickr-input) {
   border-color: #F87171 !important;
 }
 [data-coreui-theme="dark"] .btn-clear { color: #8A8A80; }

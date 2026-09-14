@@ -1,5 +1,5 @@
 <template>
-  <div class="ef-page">
+  <div ref="enrollmentForm" class="ef-page">
     <div class="ef-page-header">
       <div class="ef-page-header-left">
         <span class="ef-breadcrumb">FICO</span>
@@ -16,11 +16,11 @@
       <div class="ef-grid-3">
         <div class="ef-field">
           <label>Categoria <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.agent_category" :items="agentCategoryOptions" label-field="label" value-field="id" placeholder="Seleccionar..." @update:modelValue="form.seller_agent_id = null" />
+          <SearchSelect v-model="form.agent_category" :items="agentCategoryOptions" label-field="label" value-field="id" placeholder="Seleccionar..." required @update:modelValue="form.seller_agent_id = null" />
         </div>
         <div class="ef-field" v-if="form.agent_category === 'comercial'">
           <label>Asesor <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Buscar asesor..." />
+          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Buscar asesor..." required />
         </div>
         <div class="ef-field" v-else-if="form.agent_category === 'b2b'">
           <label>Asesor B2B <span class="ef-optional">(opcional)</span></label>
@@ -32,7 +32,7 @@
         </div>
         <div class="ef-field" v-else-if="form.agent_category === 'we'">
           <label>Area WE <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.seller_agent_id" :items="weAreaOptions" label-field="label" value-field="id" placeholder="Seleccionar..." />
+          <SearchSelect v-model="form.seller_agent_id" :items="weAreaOptions" label-field="label" value-field="id" placeholder="Seleccionar..." required />
         </div>
         <div class="ef-field" v-if="form.agent_category === 'b2b' && !form.seller_agent_id">
           <label>Tipo de Inscripcion B2B</label>
@@ -51,7 +51,7 @@
       <div class="ef-grid-3">
         <div class="ef-field">
           <label>Tipo Documento <span v-if="requireDocument" class="ef-req">*</span></label>
-          <SearchSelect v-model="form.cat_type_document" :items="catDocTypes" label-field="description" value-field="id" placeholder="DOC..." />
+          <SearchSelect v-model="form.cat_type_document" :items="catDocTypes" label-field="description" value-field="id" placeholder="DOC..." :required="requireDocument" />
         </div>
         <div class="ef-field">
           <label>
@@ -62,6 +62,7 @@
           <div class="ef-input-with-btn">
             <input
               v-model="form.document_number"
+              :required="requireDocument"
               type="text"
               :disabled="noDocument"
               :placeholder="noDocument ? 'Sin documento' : (docConfig.isNumeric ? `Max. ${docConfig.maxLength} digitos` : `Max. ${docConfig.maxLength} caracteres`)"
@@ -83,15 +84,15 @@
         </div>
         <div class="ef-field">
           <label>Nombres <span class="ef-req">*</span></label>
-          <input v-model="form.first_name" type="text" placeholder="NOMBRES" />
+          <input v-model="form.first_name" type="text" placeholder="NOMBRES" required />
         </div>
         <div class="ef-field">
           <label>Apellidos <span class="ef-req">*</span></label>
-          <input v-model="form.last_name" type="text" placeholder="APELLIDOS" />
+          <input v-model="form.last_name" type="text" placeholder="APELLIDOS" required />
         </div>
         <div class="ef-field">
           <label>Correo <span class="ef-req">*</span></label>
-          <input v-model="form.email" type="email" placeholder="correo@ejemplo.com" />
+          <input v-model="form.email" type="email" placeholder="correo@ejemplo.com" required />
         </div>
         <div class="ef-field">
           <label>
@@ -99,7 +100,7 @@
             <span v-if="requirePhone" class="ef-req">*</span>
             <span v-else class="ef-optional">(opcional)</span>
           </label>
-          <input v-model="form.phone" type="text" placeholder="TELEFONO" />
+          <input v-model="form.phone" type="text" placeholder="TELEFONO" :required="requirePhone" />
         </div>
         <div class="ef-field">
           <label>Pais</label>
@@ -107,7 +108,7 @@
         </div>
         <div class="ef-field">
           <label>Perfil <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.client_profile" :items="clientProfileOptions" label-field="label" value-field="id" placeholder="Profesional / Estudiante..." />
+          <SearchSelect v-model="form.client_profile" :items="clientProfileOptions" label-field="label" value-field="id" placeholder="Profesional / Estudiante..." required />
         </div>
         <div class="ef-field">
           <label>Membresia <span class="ef-optional">(opcional)</span></label>
@@ -170,15 +171,17 @@
       <div class="ef-grid-4">
         <div class="ef-field">
           <label>Categoria <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.cat_program_type" :items="catProgramType" label-field="description" value-field="id" placeholder="Curso, PEE, Diplomado..." @update:modelValue="onProgramTypeChange" />
+          <SearchSelect v-model="form.cat_program_type" :items="catProgramType" label-field="description" value-field="id" placeholder="Curso, PEE, Diplomado..." required @update:modelValue="onProgramTypeChange" />
         </div>
         <div class="ef-field">
           <label>Programa <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.program_version_id" :items="programsList" label-field="label" value-field="program_version_id" placeholder="Buscar programa..." :disabled="!form.cat_program_type" :external-loading="loadingPrograms" @update:modelValue="onProgramChange" />
+          <SearchSelect v-model="form.program_version_id" :items="programsList" label-field="label" value-field="program_version_id" placeholder="Buscar programa..." required :disabled="!form.cat_program_type" :external-loading="loadingPrograms" @update:modelValue="onProgramChange" />
         </div>
         <div class="ef-field">
-          <label>Edicion <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.program_edition_id" :items="editionsList" label-field="label" value-field="id" placeholder="Seleccionar edicion..." :disabled="!form.program_version_id" :external-loading="loadingEditions" @update:modelValue="onEditionChange" />
+          <label>Edicion <span v-if="editionsList.length" class="ef-req">*</span></label>
+          <!-- Solo exige edicion si el programa tiene: cursos online y membresias
+               no tienen y ahi el NULL es correcto (misma regla que validate()). -->
+          <SearchSelect v-model="form.program_edition_id" :items="editionsList" label-field="label" value-field="id" placeholder="Seleccionar edicion..." :required="editionsList.length > 0" :disabled="!form.program_version_id" :external-loading="loadingEditions" @update:modelValue="onEditionChange" />
         </div>
         <div class="ef-field">
           <label>Modalidad</label>
@@ -187,13 +190,14 @@
         <!-- Categoria de entrada: solo eventos/congresos la tienen. Define la
              tarifa y el grupo de WhatsApp que sale en el correo. -->
         <div class="ef-field" v-if="isEventProgram">
-          <label>Categoria de entrada <span class="ef-req">*</span></label>
+          <label>Categoria de entrada <span v-if="eventCategories.length" class="ef-req">*</span></label>
           <SearchSelect
             v-model="form.cat_event_category"
             :items="eventCategories"
             label-field="description"
             value-field="cat_event_category"
             placeholder="VIP / GENERAL / VIRTUAL..."
+            :required="eventCategories.length > 0"
             :disabled="!form.program_version_id"
             @change="onEventCategoryChange"
           />
@@ -205,7 +209,7 @@
       <div class="ef-grid-4" style="margin-top:16px" v-if="hasAssignedSeat">
         <div class="ef-field">
           <label>Asiento <span class="ef-req">*</span></label>
-          <input v-model="form.event_seat" type="text" placeholder="A-12" />
+          <input v-model="form.event_seat" type="text" placeholder="A-12" required />
           <small class="ef-cc-help">Aparece en el correo de confirmacion.</small>
         </div>
       </div>
@@ -226,8 +230,10 @@
           <SearchSelect v-model="form.cat_currency" :items="catCurrency" label-field="description" value-field="id" placeholder="MONEDA..." />
         </div>
         <div class="ef-field">
-          <label>Forma de Pago <span class="ef-req">*</span></label>
-          <SearchSelect v-model="form.cat_payment_way" :items="catPaymentWay" label-field="description" value-field="id" placeholder="CONTADO / CUOTAS..." />
+          <label>Forma de Pago <span v-if="!form.is_scholarship" class="ef-req">*</span></label>
+          <!-- La beca limpia los datos de pago y el payload cae a contado: exigirla
+               ahi bloquearia una venta valida. -->
+          <SearchSelect v-model="form.cat_payment_way" :items="catPaymentWay" label-field="description" value-field="id" placeholder="CONTADO / CUOTAS..." :required="!form.is_scholarship" />
         </div>
         <div class="ef-field">
           <label>Precio Base</label>
@@ -444,6 +450,7 @@ import { ref, reactive, computed, inject, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useToastWithAction } from '@/composables/useToastWithAction'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import { ServiceKeys } from '@/services'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
@@ -724,6 +731,8 @@ const isEventProgram = computed(() => programTypeAlias.value === 'we_program_typ
 // alias porque el catalogo se cachea en localStorage y los numeros no son fijos.
 const sapUsername = ref('')
 const sapPassword = ref('')
+const enrollmentForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(enrollmentForm)
 const sapCategoryId = catalog.options('we_program_category').find(c => c.alias === 'we_program_category_sap')?.id ?? null
 const onlineModalityId = catalog.options('we_modality').find(c => c.alias === 'we_modality_online')?.id ?? null
 const isSapOnline = computed(() => {
@@ -1312,7 +1321,7 @@ function validate () {
 }
 
 async function handleSave () {
-  if (saving.value || !validate()) return
+  if (saving.value || !requiredFieldsFilled() || !validate()) return
   saving.value = true
   try {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}')

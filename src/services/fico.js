@@ -158,6 +158,16 @@ export default class FicoService {
     return response.data;
   }
 
+  async correctInitialPayment(payload) {
+    const response = (await api.post('/fico/correctinitialpayment', payload)).data;
+    return response.data;
+  }
+
+  async revertInstallmentPayment(payload) {
+    const response = (await api.post('/fico/revertinstallmentpayment', payload)).data;
+    return response.data;
+  }
+
   async addInstallment(payload) {
     const response = (await api.post('/fico/addinstallment', payload)).data;
     return response.data;

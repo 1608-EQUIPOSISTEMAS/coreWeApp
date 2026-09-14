@@ -978,7 +978,7 @@
 
     <!-- Modal: Formulario Edición -->
     <BaseModal v-model="showFormModal" :title="currentEdition ? 'Administrar Edición' : 'Nueva Edición'" size="xl">
-      <div class="modern-modal-layout">
+      <div ref="editionForm" class="modern-modal-layout">
         <div class="main-column">
           <div class="internal-header mb-3" v-if="currentEdition">
             <div class="d-flex align-items-center gap-2">
@@ -2717,6 +2717,7 @@ function matchesColumnFilters (item) {
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import A5MigrationModal from './A5MigrationModal.vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 
 const showAuditModal = ref(false)
@@ -3950,7 +3951,11 @@ async function handleA5Completed({ migrated, applyA5 }) {
   fetchSchedule()
 }
 
+const editionForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(editionForm)
+
 async function applyModalForm() {
+  if (!requiredFieldsFilled()) return
   if (!isModalValid.value) {
     toast.warning('Complete los campos requeridos')
     return

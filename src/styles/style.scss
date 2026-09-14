@@ -246,15 +246,19 @@ textarea.form-control {
   opacity: 1; /* Previene opacidad reducida en Safari/iOS */
 }
 
-/* Validaciones sutiles */
-/* Se utiliza :invalid solo si el input ha sido tocado o no tiene placeholder-shown para evitar que esté rojo por defecto */
-.form-control:required:invalid:not(:placeholder-shown):not(:disabled):not([readonly]):not(.searchselect-control) {
-  border-color: #ef4444;
+/* Validaciones sutiles
+   Requerido y vacío se pinta en rojo desde el inicio, igual que SearchSelect
+   (has-error), para que el usuario vea de entrada qué le falta.
+   Global y por elemento (no por clase) porque cada vista trae su propia clase
+   de input (form-control, exec-input-light, exec-textarea...).
+   OJO: no volver a excluir :placeholder-shown — un requerido vacío SIEMPRE
+   muestra su placeholder, y con esa exclusión la regla nunca pintaba nada. */
+:is(input, textarea, select):required:invalid:not(:disabled):not([readonly]):not([type="checkbox"]):not([type="radio"]):not(.searchselect-control) {
+  border-color: var(--red-600, #dc2626) !important;
 }
 
-.form-control:required:invalid:not(:placeholder-shown):not(:disabled):not([readonly]):focus:not(.searchselect-control) {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+[data-coreui-theme="dark"] :is(input, textarea, select):required:invalid:not(:disabled):not([readonly]):not([type="checkbox"]):not([type="radio"]):not(.searchselect-control) {
+  border-color: #F87171 !important;
 }
 
 /* ==========================================================================

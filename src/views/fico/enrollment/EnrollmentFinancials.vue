@@ -469,6 +469,12 @@
               <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
             </div>
             <div class="ef-inicial-actions">
+              <button
+                v-if="canCorrectPayments && inicial.installment_id && !isEditing"
+                class="ef-btn-sm ef-btn-outline"
+                @click="$emit('correct-initial', inicial)"
+                title="Corregir el monto registrado del pago inicial"
+              ><i class="fa-solid fa-pen"></i> Corregir inicial</button>
               <a v-for="(url, i) in voucherUrls" :key="url" :href="url" target="_blank" class="ef-voucher-link">
                 <i class="fa-solid fa-image"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
               </a>
@@ -629,6 +635,12 @@
                   @click="$emit('confirm-cuota', c)"
                   title="Confirmar pago de cuota"
                 ><i class="fa-solid fa-check"></i></button>
+                <button
+                  v-if="canRevertCuota(c)"
+                  class="ef-btn-del"
+                  @click="$emit('revert-cuota', c)"
+                  title="Devolver a pendiente (el pago no ingreso)"
+                ><i class="fa-solid fa-rotate-left"></i></button>
                 <button v-if="canDeleteCuota(c)" class="ef-btn-del" @click="$emit('remove-cuota', idx)" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
               </td>
             </tr>
@@ -753,6 +765,7 @@
     <!-- Stepper de confirmacion + preview email -->
     <ActionStepper
       v-if="showConfirmStepper"
+      ref="confirmStepper"
       v-model="confirmStep"
       :steps="['Confirmar Inscripcion', 'Preview Correo']"
       :can-advance="confirmStep === 0 ? true : (sapState.valid && ccState.valid)"
@@ -804,6 +817,7 @@
     <!-- Stepper de observacion -->
     <ActionStepper
       v-if="showObserveStepper"
+      ref="observeStepper"
       v-model="observeStep"
       :steps="['Observar Inscripcion']"
       :can-advance="!!observeReason.trim()"
@@ -811,7 +825,7 @@
       confirm-label="Confirmar Observacion"
       confirm-icon="fa-eye"
       @cancel="showObserveStepper = false; observeStep = 0; observeReason = ''; clearCcRequirement = false"
-      @confirm="$emit('reject-enrollment', { reason: observeReason, clearCcRequirement })"
+      @confirm="onObserveConfirm"
     >
       <template #step-0>
         <div class="ef-observe-wrap">
@@ -824,7 +838,7 @@
           </div>
           <div class="ef-observe-field">
             <label>Motivo de la observacion <span style="color:#DC2626">*</span></label>
-            <textarea v-model="observeReason" class="ef-observe-textarea" rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
+            <textarea v-model="observeReason" class="ef-observe-textarea" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
           </div>
           <!-- Unica salida del bloqueo por copia requerida: si el asesor la
                pidio por error, se baja aca y queda auditado. -->
@@ -843,11 +857,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, inject, watch } from 'vue'
+import { ref, reactive, computed, inject, watch, getCurrentInstance } from 'vue'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters, splitVoucherUrls } from '@/composables/useEnrollmentFormatters'
 import { childEditionLabel } from '@/utils/childEdition'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
@@ -881,6 +896,8 @@ const emit = defineEmits([
   'confirm-cuota',
   'open-reschedule',
   'edit-cuota-amount',
+  'correct-initial',
+  'revert-cuota',
   'save-additional',
   'update-additional'
 ])
@@ -895,10 +912,18 @@ const sapState = ref({ isSapOnline: false, sapUsername: '', sapPassword: '', val
 // comercial marco requires_email_cc y el campo quedo vacio.
 const ccState = ref({ cc: '', valid: true })
 
+// El guard mira el stepper entero y no solo el paso 0: la confirmacion sale
+// desde el preview, que es donde van las credenciales SAP obligatorias.
+const confirmStepper = ref(null)
+const observeStepper = ref(null)
+const confirmFieldsFilled = useRequiredFieldsGuard(computed(() => confirmStepper.value?.$el))
+const observeFieldsFilled = useRequiredFieldsGuard(computed(() => observeStepper.value?.$el))
+
 // Reenvia el evento de confirmacion al padre adjuntando las credenciales SAP y
 // el CC (el padre los pasa a sendConfirmationEmail). En cursos no-SAP las
 // credenciales van vacias; sin copia, el cc va vacio y el backend usa el guardado.
 function onConfirmSend () {
+  if (!confirmFieldsFilled()) return
   const sapCreds = sapState.value.isSapOnline
     ? { sapUsername: sapState.value.sapUsername, sapPassword: sapState.value.sapPassword }
     : {}
@@ -920,6 +945,18 @@ function canEditAmount (c) {
   return true
 }
 
+// Corregir la inicial y revertir cuotas cobradas espeja RESCHEDULE_ROLES del
+// backend (installment.routes.js): sin esto el boton se ve y el POST da 403.
+const instance = getCurrentInstance()
+const $hasRole = instance?.appContext?.config?.globalProperties?.$hasRole || (() => false)
+const canCorrectPayments = computed(() => $hasRole(['ADMIN', 'FICO', 'LIDER_FICO']))
+
+// Solo una cuota ya confirmada se revierte; en modo edicion se esta tocando la
+// tabla a mano y mezclar las dos cosas pisaria el cambio.
+function canRevertCuota (c) {
+  return canCorrectPayments.value && !props.isEditing && !!c?.installment_id && !c._isNew && c.status === 'paid'
+}
+
 const fmt = useEnrollmentFormatters()
 const toast = useToast()
 const cuotaTab = ref('inicial')
@@ -932,6 +969,11 @@ const observeStep = ref(0)
 const observeReason = ref('')
 const clearCcRequirement = ref(false)
 const savingObserve = ref(false)
+
+function onObserveConfirm () {
+  if (!observeFieldsFilled()) return
+  emit('reject-enrollment', { reason: observeReason.value, clearCcRequirement: clearCcRequirement.value })
+}
 
 const listPrice = computed(() => Number(props.enrollment?.list_price) || Number(props.detail?.list_price) || 0)
 const discount = computed(() => Number(props.enrollment?.total_discounted) || Number(props.detail?.discount_amount) || 0)

@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <main class="ef-body" v-if="loaded">
+    <main ref="leadFormRoot" class="ef-body" v-if="loaded">
       <div class="ef-form-wrapper">
 
         <!-- Banner de inscripcion observada por FICO (subsanacion) -->
@@ -81,6 +81,7 @@
                 value-field="alias"
 
                 placeholder="CATEGORÍA..."
+                required
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
@@ -98,6 +99,7 @@
                 :viewOpen="6"
                 value-field="alias"
                 placeholder="MODALIDAD..."
+                required
                 class="exec-select-light w-100"
                 @change="onProgramaTypeChange"
               />
@@ -127,6 +129,7 @@
       :viewOpen="6"
       :model-label="form.program_label"
       placeholder="Buscar programa…"
+      required
       :minChars="0"
       :cache="false"
       class="w-100"
@@ -161,6 +164,7 @@
   value-field="edition_num_id"
   :viewOpen="6"
   placeholder="Buscar Edición…"
+  required
   :model-label="form.edition_label"
   :minChars="0"
   :cache="false"
@@ -398,6 +402,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 label-field="description"
                 value-field="alias"
                 placeholder="MKT..."
+                required
                 class="exec-select-light w-100"
               />
             </div>
@@ -946,7 +951,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
 
   <BaseModal v-model="showViewModal" title="Inscripción del Lead" size="xl">
-    <div class="insc-modal">
+    <div ref="inscriptionFormRoot" class="insc-modal">
       <div v-if="observedData" class="obs-banner mb-3">
         <div class="obs-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <div class="obs-banner-body">
@@ -1095,6 +1100,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         type="text"
         class="form-control form-control-sm"
         placeholder="A-12"
+        required
       />
       <div class="small text-muted mt-1">Aparece en el correo de confirmación.</div>
     </div>
@@ -1913,6 +1919,16 @@ import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import DateTime12 from '@/components/DateTime12.vue'
 import CurrencyInput from '@/components/CurrencyInput.vue'
+import { ref } from 'vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
+
+// Lo que se pinta obligatorio vacío bloquea el guardado. El modal de inscripción
+// desmonta sus campos al cerrarse: cerrado, no hay nada pintado que revisar.
+const leadFormRoot = ref(null)
+const inscriptionFormRoot = ref(null)
+const leadFieldsFilled = useRequiredFieldsGuard(leadFormRoot)
+const inscriptionGuard = useRequiredFieldsGuard(inscriptionFormRoot)
+const inscriptionFieldsFilled = () => !inscriptionFormRoot.value || inscriptionGuard()
 
 const {
   form, insc,
@@ -1974,6 +1990,8 @@ const {
   // necesita el banner y el botón de reenvío para subsanarlas.
   observedFlow:     true,
   defaultChatMessage: '-',
+  leadFieldsFilled,
+  inscriptionFieldsFilled,
 })
 </script>
 

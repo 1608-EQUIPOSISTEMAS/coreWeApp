@@ -82,6 +82,7 @@
           label-field="description"
           value-field="alias"
           placeholder="MKT..."
+          required
           class="exec-select-light w-100"
         />
       </div>

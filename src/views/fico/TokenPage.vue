@@ -409,7 +409,7 @@
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
-          <div class="tp-modal-body">
+          <div ref="linkModalBody" class="tp-modal-body">
             <div v-if="getGroup(linkToken)" class="tp-group-banner">
               <div class="tp-group-banner-title">
                 <i class="fa-solid fa-layer-group"></i>
@@ -435,12 +435,12 @@
               <div class="tp-obs-ref-text" style="font-weight:700">{{ linkToken.payment_type === 'credito' ? 'Credito' : 'Debito' }}</div>
             </div>
             <label class="tp-label" style="margin-top:16px">Proveedor <span style="color:#DC2626">*</span></label>
-            <select v-model="linkForm.cat_provider" class="tp-input">
+            <select v-model="linkForm.cat_provider" class="tp-input" required>
               <option :value="null">--- Seleccionar proveedor ---</option>
               <option v-for="p in providerCatalog" :key="p.id" :value="p.id">{{ p.description }}</option>
             </select>
             <label class="tp-label">URL de pago <span style="color:#DC2626">*</span></label>
-            <input v-model="linkForm.payment_url" class="tp-input" placeholder="https://..." />
+            <input v-model="linkForm.payment_url" class="tp-input" placeholder="https://..." required />
             <label class="tp-label">Notas</label>
             <textarea v-model="linkForm.notes" class="tp-input tp-textarea" rows="2"></textarea>
           </div>
@@ -467,6 +467,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import TokenFilterModal from './TokenFilterModal.vue'
 import { inDateRange } from '@/utils/dateRange'
 import { confirmAction } from '@/composables/useConfirm'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import { ServiceKeys } from '@/services'
 
 const toast = useToast()
@@ -932,6 +933,8 @@ async function fetchStats () {
 const showLinkModal = ref(false)
 const linkToken = ref(null)
 const linkForm = ref({ payment_url: '', cat_provider: null, notes: '' })
+const linkModalBody = ref(null)
+const linkFieldsFilled = useRequiredFieldsGuard(linkModalBody)
 
 const tokenAdvisorObs = computed(() => {
   const t = linkToken.value
@@ -957,6 +960,7 @@ function openAddLink (t) {
 }
 
 async function submitLink () {
+  if (!linkFieldsFilled()) return
   try {
     await api.put('/token/update', {
       token_id: linkToken.value.token_id,

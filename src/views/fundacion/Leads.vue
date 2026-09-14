@@ -564,7 +564,7 @@
   <Teleport to="body">
     <Transition name="downbar">
       <div v-if="showFollowModal" class="downbar-overlay" @click.self="showFollowModal = false">
-        <div class="downbar-panel" role="dialog" aria-modal="true">
+        <div ref="followFormRoot" class="downbar-panel" role="dialog" aria-modal="true">
           <header class="downbar-header">
             <div class="downbar-grabber" aria-hidden="true"></div>
             <h5 class="downbar-title">Gestión de Seguimiento</h5>
@@ -1153,6 +1153,7 @@ import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useTablePersistence } from '@/composables/useTablePersistence'
 import DateTime12 from '@/components/DateTime12.vue'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import { useToast } from 'vue-toastification'
 
 const hasActiveRestrictions = ref(false)
@@ -1160,6 +1161,8 @@ const showControlModal = ref(false)
 const isSavingRestrictions = ref(false)
 const asesoresControl = ref([])
 const toast = useToast()
+const followFormRoot = ref(null)
+const followFieldsFilled = useRequiredFieldsGuard(followFormRoot)
 const router = useRouter()
 const route = useRoute()
 const comercialService = inject(ServiceKeys.Comercial)
@@ -1659,6 +1662,7 @@ async function saveControlRestrictions() {
 
 async function saveFastFollow() {
   if (!selectedFollowLead.value) return
+  if (!followFieldsFilled()) return
   editableHistory.value.forEach(item => { if (item.timerActive) toggleTimer(item) })
   isSavingFollow.value = true
   try {

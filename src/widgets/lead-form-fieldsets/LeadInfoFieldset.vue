@@ -54,6 +54,7 @@
           value-field="alias"
 
           placeholder="CATEGORÍA..."
+          required
           class="exec-select-light w-100"
           @change="onProgramaTypeChange"
         />
@@ -71,6 +72,7 @@
           :viewOpen="6"
           value-field="alias"
           placeholder="MODALIDAD..."
+          required
           class="exec-select-light w-100"
           @change="onProgramaTypeChange"
         />
@@ -100,6 +102,7 @@
               :viewOpen="6"
               :model-label="model.program_label"
               placeholder="Buscar programa…"
+              required
               :minChars="0"
               :cache="false"
               class="w-100"
@@ -134,6 +137,7 @@
           value-field="edition_num_id"
           :viewOpen="6"
           placeholder="Buscar Edición…"
+          required
           :model-label="model.edition_label"
           :minChars="0"
           :cache="false"

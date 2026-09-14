@@ -1,5 +1,5 @@
 <template>
-  <div class="exec-shell form-shell">
+  <div ref="programForm" class="exec-shell form-shell">
 
     <header class="exec-masthead">
       <div class="masthead-inner">
@@ -103,6 +103,7 @@
                 placeholder="Seleccionar..."
                 :model-label="form.cat_category_label"
                 class="exec-select-light w-100"
+                required
               />
             </div>
 
@@ -369,10 +370,6 @@
 .exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
 .exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50, #f8fafc); color: var(--slate-400, #94a3b8); cursor: not-allowed; opacity: 1; }
 
-.exec-input-light:required:invalid:not(:placeholder-shown):not(:disabled) {
-    border-color: var(--red-600, #dc2626) !important;
-}
-
 /* Iconos dentro de inputs */
 .input-group-custom { position: relative; display: flex; align-items: center; }
 .input-icon { position: absolute; left: 12px; color: var(--slate-400, #94a3b8); font-size: 13px; }
@@ -426,6 +423,7 @@
   import SearchSelect from '@/components/SearchSelect.vue'
   import { ServiceKeys } from '@/services'
   import { useToast } from 'vue-toastification'
+  import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 import FileUploader from '@/components/FileUploader.vue'
   const toast = useToast()
@@ -713,7 +711,11 @@ import FileUploader from '@/components/FileUploader.vue'
     }
   }
 
+  const programForm = ref(null)
+  const requiredFieldsFilled = useRequiredFieldsGuard(programForm)
+
   async function guardar() {
+    if (!requiredFieldsFilled()) return
     if (!isValid.value) return
     saving.value = true
     try {

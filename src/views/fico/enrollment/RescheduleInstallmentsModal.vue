@@ -5,7 +5,7 @@
     title="Reprogramar Cuotas"
     size="lg"
   >
-    <div class="ri-body" v-if="enrollment">
+    <div ref="rescheduleForm" class="ri-body" v-if="enrollment">
       <!-- Student info bar -->
       <div class="ri-student-bar">
         <div class="ri-student-main">
@@ -169,14 +169,14 @@
         <div class="ri-pay-grid">
           <div class="ri-field">
             <label class="ri-label">Moneda <span class="ri-req">*</span></label>
-            <select v-model="payment.cat_currency" class="ri-select">
+            <select v-model="payment.cat_currency" class="ri-select" required>
               <option :value="null">Seleccionar...</option>
               <option v-for="c in catalogs.catCurrency || []" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
             </select>
           </div>
           <div class="ri-field">
             <label class="ri-label">Medio de pago <span class="ri-req">*</span></label>
-            <select v-model="payment.cat_payment_medium" class="ri-select">
+            <select v-model="payment.cat_payment_medium" class="ri-select" required>
               <option :value="null">Seleccionar...</option>
               <option v-for="m in catalogs.catPaymentMedium || []" :key="m.id" :value="m.id">{{ m.description }}</option>
             </select>
@@ -243,7 +243,7 @@
       <div class="ri-grid2">
         <div class="ri-field">
           <label class="ri-label">Motivo <span class="ri-req">*</span></label>
-          <select v-model="reasonCode" class="ri-select">
+          <select v-model="reasonCode" class="ri-select" required>
             <option value="">Seleccionar...</option>
             <option v-for="opt in reasonOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
@@ -253,6 +253,7 @@
           <textarea
             v-model="justificacion"
             class="ri-textarea"
+            required
             rows="2"
             placeholder="Describe el motivo del cambio..."
           ></textarea>
@@ -292,6 +293,7 @@ import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
+import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import api from '@/services/api'
 
 const props = defineProps({
@@ -313,6 +315,9 @@ const reasonCode = ref('')
 const justificacion = ref('')
 const saving = ref(false)
 const rows = ref([])
+// Va dentro del slot: BaseModal se teletransporta fuera del arbol de la vista.
+const rescheduleForm = ref(null)
+const requiredFieldsFilled = useRequiredFieldsGuard(rescheduleForm)
 
 const PAID_STATUS = 4454
 const ANNULLED_STATUS = 4456
@@ -573,7 +578,7 @@ function notifyResult (res, okMsg) {
 }
 
 async function handleSave () {
-  if (!canConfirm.value) return
+  if (!requiredFieldsFilled() || !canConfirm.value) return
   saving.value = true
   try {
     if (mode.value === 'campaign') {
