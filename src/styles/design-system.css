@@ -1,0 +1,275 @@
+/* ==========================================================================
+   SISTEMA DE DISEÑO — W|E ERP
+   Guía de uso: Frontend/DESIGN_SYSTEM.md. Vista de referencia: views/dashboard/.
+
+   Global a propósito: 120 vistas copiaban en su <style scoped> las mismas
+   tarjetas, tablas y colores, cada una con un hex distinto. Una vista nueva usa
+   estas clases y tokens y NO redefine colores propios.
+
+   OJO al agregar aquí: una clase global con el MISMO nombre que una copia
+   scoped le suma a esa vista las propiedades que la copia no declara (height,
+   width, border...). Por eso todo lo nuevo lleva prefijo `ds-`; de las clases
+   viejas solo se tocan colores del modo oscuro.
+   ========================================================================== */
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+:root {
+  /* Superficies y bordes */
+  --ds-surface: #ffffff;
+  --ds-surface-2: #f8fafc;
+  --ds-surface-3: #f1f4f9;
+  --ds-border: #e6e9f0;
+  --ds-border-strong: #cbd5e1;
+
+  /* Texto */
+  --ds-ink: #0f172a;
+  --ds-heading: #1b2a5b;
+  --ds-ink-2: #64748b;
+  --ds-muted: #94a3b8;
+
+  /* Marca y datos. --we-navy (#002060) es para botones y marca; en gráficos y
+     enlaces va --ds-accent, un derivado que no se pierde (memoria color-marca). */
+  --ds-brand: var(--we-navy, #002060);
+  --ds-accent: #3a63b8;
+  --ds-accent-2: #93b4e8;
+  --ds-reference: #cbd5e1;
+  --ds-bar: #c9d6ec;
+
+  /* Estados: el tono ok/warn/bad lo decide la regla de negocio, aquí solo el color */
+  --ds-ok: #12a150;
+  --ds-warn: #e08a1e;
+  --ds-bad: #d64545;
+  --ds-ok-ink: #0f7a3d;
+  --ds-warn-ink: #a8620f;
+  --ds-bad-ink: #b83232;
+  --ds-info-ink: #1e40af;
+  --ds-soft-ok: #ecfdf3;
+  --ds-soft-warn: #fff7e8;
+  --ds-soft-bad: #fdf0f0;
+  --ds-soft-info: #eff6ff;
+  --ds-soft-neutral: #f1f4f9;
+
+  /* Forma */
+  --ds-radius: 12px;
+  --ds-radius-sm: 6px;
+  --ds-radius-control: 4px;
+  --ds-gap: 16px;
+  --ds-font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+}
+
+/* Paleta cálida del modo oscuro (origen: EnrollmentPage FICO). */
+:root[data-coreui-theme="dark"] {
+  --ds-surface: #1a1a14;
+  --ds-surface-2: #1f1f1a;
+  --ds-surface-3: #24241e;
+  --ds-border: #2a2a22;
+  --ds-border-strong: #3a3a33;
+
+  --ds-ink: #f4f4f0;
+  --ds-heading: #8faadc;
+  --ds-ink-2: #a0a099;
+  --ds-muted: #8a8a80;
+
+  --ds-accent: #8faadc;
+  --ds-accent-2: #4f6a9a;
+  --ds-reference: #4a4a42;
+  --ds-bar: #3a4a66;
+
+  --ds-ok: #34d399;
+  --ds-warn: #e9b872;
+  --ds-bad: #f87171;
+  --ds-ok-ink: #34d399;
+  --ds-warn-ink: #e9b872;
+  --ds-bad-ink: #f87171;
+  --ds-info-ink: #60a5fa;
+  --ds-soft-ok: rgba(52, 211, 153, 0.12);
+  --ds-soft-warn: rgba(233, 184, 114, 0.12);
+  --ds-soft-bad: rgba(248, 113, 113, 0.12);
+  --ds-soft-info: rgba(96, 165, 250, 0.14);
+  --ds-soft-neutral: #24241e;
+}
+
+/* ── Página ─────────────────────────────────────────────────────────────── */
+.ds-stack { display: flex; flex-direction: column; gap: var(--ds-gap); }
+.ds-page { display: flex; flex-direction: column; gap: var(--ds-gap); padding: 2px 2px 1rem; color: var(--ds-ink); }
+
+.ds-head { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px 16px; margin: 4px 2px 2px; }
+.ds-head-titles { flex: 1; min-width: 0; }
+.ds-title { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: var(--ds-heading); }
+.ds-sub { margin: 6px 0 0; font-size: 14px; color: var(--ds-muted); }
+.ds-head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+/* Veredicto: una frase armada con los datos, coloreada por el tono */
+.ds-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 12px 18px;
+  border: 1px solid var(--ds-border);
+  border-left: 4px solid var(--ds-border);
+  border-radius: 10px;
+  background: var(--ds-surface);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ds-heading);
+}
+.ds-verdict strong { font-size: 12.5px; white-space: nowrap; }
+.ds-verdict.ok { border-left-color: var(--ds-ok); }
+.ds-verdict.ok strong { color: var(--ds-ok-ink); }
+.ds-verdict.warn { border-left-color: var(--ds-warn); }
+.ds-verdict.warn strong { color: var(--ds-warn-ink); }
+.ds-verdict.bad { border-left-color: var(--ds-bad); }
+.ds-verdict.bad strong { color: var(--ds-bad-ink); }
+
+.ds-alert { margin: 0; padding: 14px 18px; border-radius: var(--ds-radius); background: var(--ds-soft-bad); color: var(--ds-bad-ink); font-size: 14px; font-weight: 600; }
+.ds-alert.neutro { background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+
+/* ── KPIs ───────────────────────────────────────────────────────────────── */
+.ds-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--ds-gap); }
+.ds-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+}
+.ds-kpi-icon { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; font-size: 17px; background: var(--ds-soft-neutral); color: var(--ds-accent); }
+.ds-kpi-icon.ok { background: var(--ds-soft-ok); color: var(--ds-ok); }
+.ds-kpi-icon.warn { background: var(--ds-soft-warn); color: var(--ds-warn); }
+.ds-kpi-icon.bad { background: var(--ds-soft-bad); color: var(--ds-bad); }
+.ds-kpi-body { min-width: 0; }
+.ds-kpi-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.ds-kpi-value { font-size: 25px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.ds-kpi-label { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2); }
+.ds-kpi-note { display: block; margin-top: 1px; font-size: 11.5px; color: var(--ds-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Variación (↑ 12%) junto a una cifra */
+.ds-trend { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: var(--ds-radius-sm); background: var(--ds-soft-neutral); color: var(--ds-ink-2); white-space: nowrap; }
+.ds-trend.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ds-trend.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ds-trend.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+
+.ds-track { height: 6px; border-radius: 999px; background: var(--ds-surface-3); overflow: hidden; }
+.ds-track > i { display: block; height: 100%; border-radius: 999px; background: var(--ds-accent); }
+
+.ds-chip { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--ds-soft-neutral); color: var(--ds-ink-2); white-space: nowrap; }
+
+/* Estado de un registro: el color sale del tono, nunca de un hex en la vista */
+.ds-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: var(--ds-radius-control); font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+.ds-pill.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ds-pill.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ds-pill.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.ds-pill.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+
+/* ── Filas: el panel usa todo el ancho (60/40, 50/50, tercios) ─────────── */
+.ds-row { display: grid; gap: var(--ds-gap); }
+.ds-row--hero { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.ds-row--mitad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ds-row--tercios { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ds-row--completa { grid-template-columns: minmax(0, 1fr); }
+
+@media (max-width: 1200px) {
+  .ds-row--tercios { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .ds-row--hero, .ds-row--mitad, .ds-row--tercios { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Panel: título (la pregunta que responde) · cuerpo · conclusión ────── */
+.ds-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  overflow: hidden;
+}
+.ds-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--ds-border); }
+.ds-panel-title { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--ds-heading); }
+.ds-panel-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ds-muted); }
+.ds-panel-hint { font-size: 11.5px; color: var(--ds-muted); white-space: nowrap; }
+.ds-panel-link { font-size: 12px; font-weight: 600; color: var(--ds-ink-2); text-decoration: none; white-space: nowrap; }
+.ds-panel-link:hover, .ds-panel-link:focus-visible { color: var(--ds-accent); }
+.ds-panel-link i { font-size: 10px; margin-left: 3px; }
+.ds-panel-body { flex: 1; padding: 16px 18px; }
+.ds-panel-foot { display: flex; align-items: flex-start; gap: 8px; padding: 10px 18px; font-size: 12px; line-height: 1.5; border-top: 1px solid var(--ds-border); background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+.ds-panel-foot i { margin-top: 2px; font-size: 12px; }
+.ds-panel-foot.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ds-panel-foot.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ds-panel-foot.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+
+.ds-empty { margin: 0; padding: 14px 0; text-align: center; font-size: 13px; color: var(--ds-muted); }
+.ds-empty--lista { padding: 40px 16px; }
+
+.ds-skel { display: block; height: 14px; border-radius: 4px; background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: skel-shimmer 1.4s ease-in-out infinite; }
+[data-coreui-theme="dark"] .ds-skel { background: linear-gradient(90deg, #26262c 25%, #33333b 50%, #26262c 75%); background-size: 200% 100%; }
+
+/* ── Tabla dentro de un panel (máx. 10 filas + "Ver todos") ────────────── */
+.ds-table-scroll { overflow-x: auto; }
+.ds-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ds-table th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ds-muted); padding: 0 12px 9px 0; white-space: nowrap; }
+.ds-table td { padding: 9px 12px 9px 0; border-top: 1px solid var(--ds-border); color: var(--ds-ink-2); vertical-align: top; }
+.ds-table td:first-child { font-weight: 600; color: var(--ds-heading); }
+.ds-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ds-table td.ok { font-weight: 700; color: var(--ds-ok-ink); }
+.ds-table td.warn { font-weight: 700; color: var(--ds-warn-ink); }
+.ds-table td.bad { font-weight: 700; color: var(--ds-bad-ink); }
+.ds-table tr.link { cursor: pointer; }
+.ds-table tr.link:hover td, .ds-table tr.link:focus-visible td { background: var(--ds-soft-neutral); }
+.ds-table tr.link:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: -2px; }
+
+/* ── Formularios ────────────────────────────────────────────────────────── */
+.ds-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px 16px; }
+.ds-field { display: flex; flex-direction: column; min-width: 0; }
+.ds-label { display: block; margin-bottom: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #475569; }
+.ds-req { margin-left: 2px; font-weight: 600; color: #dc2626; }
+.ds-input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--ds-radius-control);
+  transition: border-color 0.15s;
+}
+textarea.ds-input { height: auto; min-height: 72px; resize: vertical; }
+.ds-input:hover:not(:disabled):not(:focus) { border-color: #94a3b8; }
+.ds-input:focus { outline: none; border-color: var(--ds-brand); box-shadow: 0 0 0 3px rgba(0, 32, 96, 0.1); }
+.ds-input:disabled { background: var(--ds-surface-3); color: var(--ds-muted); cursor: not-allowed; }
+.ds-help { margin-top: 4px; font-size: 11.5px; color: var(--ds-muted); }
+
+[data-coreui-theme="dark"] .ds-label { color: #a0a099; }
+[data-coreui-theme="dark"] .ds-input { border-color: var(--ds-border); background: var(--ds-surface-2); color-scheme: dark; }
+[data-coreui-theme="dark"] .ds-input:focus { border-color: #8faadc; box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.16); }
+[data-coreui-theme="dark"] .ds-req { color: #f87171; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-skel, .skel-kpi { animation: none; }
+}
+
+/* ==========================================================================
+   Modo oscuro de la base "exec" (style.scss). Solo colores: la forma de
+   cada botón/pill ya existe y algunas vistas la afinan en su scoped.
+   ========================================================================== */
+/* Primario claro sobre fondo oscuro: el navy puro se pierde en #1A1A14. */
+[data-coreui-theme="dark"] .btn-exec-primary { background: #f4f4f0; color: #14140f; border-color: #f4f4f0; }
+[data-coreui-theme="dark"] .btn-exec-primary:hover:not(:disabled) { background: #e4e4dd; }
+[data-coreui-theme="dark"] .btn-exec-outline,
+[data-coreui-theme="dark"] .btn-icon { background: var(--ds-surface-2); border-color: var(--ds-border); color: var(--ds-ink-2); }
+[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled),
+[data-coreui-theme="dark"] .btn-icon:hover:not(:disabled) { background: var(--ds-surface-3); border-color: var(--ds-border-strong); color: var(--ds-ink); }
+[data-coreui-theme="dark"] .btn-exec-ghost:hover:not(:disabled) { background: var(--ds-surface-3); color: var(--ds-ink); }
+
+[data-coreui-theme="dark"] .pill-slate { background: var(--ds-surface-3); color: #a0a099; border-color: var(--ds-border) !important; }
+[data-coreui-theme="dark"] .pill-teal { background: rgba(45, 212, 191, 0.14); color: #5eead4; border-color: rgba(45, 212, 191, 0.3) !important; }
+[data-coreui-theme="dark"] .pill-red { background: rgba(248, 113, 113, 0.14); color: #f87171; border-color: rgba(248, 113, 113, 0.3) !important; }

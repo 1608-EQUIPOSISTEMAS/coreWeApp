@@ -11,6 +11,7 @@ import {
 } from 'chart.js'
 import { Line, Bar } from 'vue-chartjs'
 import { isDark } from '@/utils/chartTheme'
+import { formatValue, formatCompact } from '@/shared/lib/formatValue.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
 
@@ -37,17 +38,6 @@ const altura = computed(() => (horizontal.value
 
 const reducedMotion = typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
-function formatValue (value, unidad) {
-  if (value === null || value === undefined) return '—'
-  const n = Number(value)
-  if (unidad === 'pct') return `${n.toLocaleString('es-PE', { maximumFractionDigits: 1 })}%`
-  if (unidad === 'soles') {
-    return `S/ ${n.toLocaleString('es-PE', { notation: Math.abs(n) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 })}`
-  }
-  if (unidad === 'horas') return `${n.toLocaleString('es-PE', { maximumFractionDigits: 1 })} h`
-  return n.toLocaleString('es-PE', { maximumFractionDigits: 1 })
-}
 
 function seriesDataset ({ nombre, datos, rol }) {
   const color = rol === 'referencia' ? palette.value.referencia : palette.value.principal
@@ -97,7 +87,7 @@ const chartOptions = computed(() => {
     beginAtZero: true,
     grid: { color: palette.value.grid },
     border: { display: false },
-    ticks: { callback: (v) => formatValue(v, unidad), maxTicksLimit: 5 }
+    ticks: { callback: (v) => formatCompact(v, unidad), maxTicksLimit: 5 }
   }
   const categoryAxis = { grid: { display: false }, border: { display: false } }
   return {

@@ -1,21 +1,21 @@
 <template>
-  <div class="team-dash">
-    <div class="td-head">
-      <div>
-        <div v-if="!data?.resultados" class="eyebrow">MI DÍA A DÍA · SISTEMA INTERNO</div>
-        <h1>{{ scope.area }}</h1>
-        <div v-if="data?.resultados" class="sub">Actualizado a las {{ actualizado }}</div>
-        <div v-else class="sub">Actualizado {{ fechaHoy }} · actividad de {{ mesActualNombre }}</div>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">{{ scope.area }}</h1>
+        <p v-if="data?.resultados" class="ds-sub">Actualizado a las {{ actualizado }}</p>
+        <p v-else class="ds-sub">Tu actividad de {{ mesActualNombre }}, actualizada el {{ fechaHoy }}</p>
       </div>
-      <div class="grow"></div>
-      <button class="btn ghost" type="button" :disabled="loading" @click="load">
-        <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
-        {{ loading ? 'Cargando…' : 'Actualizar' }}
-      </button>
-    </div>
+      <div class="ds-head-actions">
+        <button class="btn-exec btn-exec-outline" type="button" :disabled="loading" @click="load">
+          <i class="fa-solid" :class="loading ? 'fa-spinner fa-spin' : 'fa-rotate'" aria-hidden="true"></i>
+          {{ loading ? 'Cargando…' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
 
-    <div v-if="error" class="alerta">{{ error }}</div>
-    <div v-else-if="loading && !data" class="alerta neutro">Cargando tu panel…</div>
+    <p v-if="error" class="ds-alert">{{ error }}</p>
+    <p v-else-if="loading && !data" class="ds-alert neutro">Cargando tu panel…</p>
 
     <!-- Líder (o ADMIN mirando un área): solo impacto. El uso del ERP lo ve el
          ADMIN en "Uso del sistema"; aquí confundía al líder. -->
@@ -24,94 +24,114 @@
       <TeamCorrections :correcciones="data.correcciones" />
     </template>
 
-    <!-- Colaborador: su propio uso del ERP, como siempre. -->
+    <!-- Colaborador: su propio uso del ERP. -->
     <template v-else-if="data">
-      <!-- KPIs de uso -->
-      <div class="kpis">
-        <div class="kcard">
-          <div class="klbl">ACCIONES · {{ mesActualNombre.toUpperCase() }}</div>
-          <div class="kmain">
-            <div class="knum">{{ num(totalAcciones) }}</div>
-            <span class="pill" :class="deltaAcciones >= 0 ? 'ok' : 'bad'">
-              {{ deltaAcciones >= 0 ? '↑' : '↓' }} {{ Math.abs(deltaAcciones) }}%
-            </span>
-          </div>
-          <div class="knote">vs. {{ num(totalAccionesPrev) }} el mes anterior</div>
-        </div>
-
-        <div class="kcard">
-          <div class="klbl">{{ scope.isLeader ? 'ACTIVOS HOY' : 'DÍAS ACTIVOS' }}</div>
-          <div class="kmain">
-            <div class="knum">{{ scope.isLeader ? activosHoy : (yo?.dias_activos ?? 0) }}</div>
-            <span class="chip">{{ scope.isLeader ? `de ${equipo.length}` : 'este mes' }}</span>
-          </div>
-          <div class="ktrack"><i :style="{ width: pctActivos + '%', background: barColor(pctActivos) }"></i></div>
-        </div>
-
-        <div class="kcard">
-          <div class="klbl">HORA TÍPICA DE ARRANQUE</div>
-          <div class="kmain">
-            <div class="knum">{{ horaEquipo ?? '—' }}</div>
-          </div>
-          <div class="knote">mediana de la primera huella del día · 30 días hábiles</div>
-        </div>
-
-        <div class="kcard">
-          <div class="klbl">MOVIMIENTOS DE HOY</div>
-          <div class="kmain">
-            <div class="knum">{{ num(accionesHoy) }}</div>
-          </div>
-          <div class="knote">{{ picoTexto }}</div>
-        </div>
-      </div>
-
-      <div class="grid-21">
-        <!-- Jornada -->
-        <div class="card">
-          <div class="c-title">Jornada del {{ scope.isLeader ? 'equipo' : 'día' }}</div>
-          <div class="c-sub">Acciones típicas por hora (mediana de los últimos 30 días hábiles)</div>
-          <div class="horas">
-            <div v-for="h in horas" :key="h.hora" class="hcol" :title="`${h.hora}:00 · ${h.acciones} acciones`">
-              <div class="hbar" :style="{ height: alturaHora(h.acciones), background: h.hora === horaPico ? 'var(--td-navy)' : 'var(--td-bar)' }"></div>
-              <div class="hlbl" :class="{ pico: h.hora === horaPico }">{{ h.hora }}</div>
-            </div>
-          </div>
-          <div v-if="!horas.some(h => h.acciones)" class="vacio">Sin actividad registrada en el período.</div>
-        </div>
-
-        <!-- En qué trabaja -->
-        <div class="card">
-          <div class="c-title">En qué se trabaja</div>
-          <div class="c-sub">Registros tocados este mes</div>
-          <div v-if="!data.porTabla.length" class="vacio">Sin movimientos este mes.</div>
-          <div v-for="t in data.porTabla" :key="t.table_name" class="trow">
-            <div class="tlbl">{{ t.label }}</div>
-            <div class="ttrack"><i :style="{ width: pctDe(t.acciones, maxTabla) + '%' }"></i></div>
-            <div class="tval">
-              {{ num(t.acciones) }}
-              <span class="tdelta" :class="t.acciones >= t.acciones_prev ? 'ok' : 'bad'">
-                {{ t.acciones >= t.acciones_prev ? '↑' : '↓' }}{{ Math.abs(t.acciones - t.acciones_prev) }}
+      <div class="ds-kpis">
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
+          <div class="ds-kpi-body">
+            <div class="ds-kpi-row">
+              <span class="ds-kpi-value">{{ num(totalAcciones) }}</span>
+              <span class="ds-trend" :class="deltaAcciones >= 0 ? 'ok' : 'bad'">
+                {{ deltaAcciones >= 0 ? '↑' : '↓' }} {{ Math.abs(deltaAcciones) }}%
               </span>
             </div>
+            <span class="ds-kpi-label">Acciones en {{ mesActualNombre }}</span>
+            <span class="ds-kpi-note">vs. {{ num(totalAccionesPrev) }} el mes anterior</span>
+          </div>
+        </div>
+
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" :class="tonoActivos" aria-hidden="true"><i class="fa-solid fa-calendar-check"></i></span>
+          <div class="ds-kpi-body">
+            <div class="ds-kpi-row">
+              <span class="ds-kpi-value">{{ scope.isLeader ? activosHoy : (yo?.dias_activos ?? 0) }}</span>
+              <span class="ds-trend" :class="tonoActivos">{{ pctActivos }}%</span>
+            </div>
+            <span class="ds-kpi-label">{{ scope.isLeader ? 'Activos hoy' : 'Días activos' }}</span>
+            <span class="ds-kpi-note">{{ scope.isLeader ? `de ${equipo.length} personas` : 'de los días hábiles del mes' }}</span>
+          </div>
+        </div>
+
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">{{ horaEquipo ?? '—' }}</span>
+            <span class="ds-kpi-label">Hora típica de arranque</span>
+            <span class="ds-kpi-note">Mediana de la primera huella, 30 días hábiles</span>
+          </div>
+        </div>
+
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">{{ num(accionesHoy) }}</span>
+            <span class="ds-kpi-label">Movimientos de hoy</span>
+            <span class="ds-kpi-note">{{ picoTexto }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Movimientos -->
-      <div class="card">
-        <div class="c-title">{{ scope.isLeader ? 'Últimos movimientos del equipo' : 'Mis últimos movimientos' }}</div>
-        <div v-if="!data.movimientos.length" class="vacio">Todavía no hay movimientos registrados.</div>
-        <div v-for="m in data.movimientos" :key="m.id" class="mov">
-          <span class="mhora">{{ m.created_at }}</span>
-          <span v-if="scope.isLeader" class="mquien">{{ m.name }}</span>
-          <span class="maccion" :class="'a-' + m.action.toLowerCase()">{{ ACCIONES[m.action] ?? m.action }}</span>
-          <span class="mque">{{ m.label }}</span>
-          <span v-if="m.record_id" class="mid">#{{ m.record_id }}</span>
-        </div>
-        <RouterLink v-if="scope.isLeader" class="verlink" to="/configuracion/auditoria">
-          Ver la bitácora completa <i class="fa-solid fa-arrow-right"></i>
-        </RouterLink>
+      <div class="ds-row ds-row--hero">
+        <section class="ds-panel">
+          <header class="ds-panel-head">
+            <div>
+              <h3 class="ds-panel-title">Jornada del {{ scope.isLeader ? 'equipo' : 'día' }}</h3>
+              <p class="ds-panel-sub">Acciones típicas por hora, mediana de los últimos 30 días hábiles</p>
+            </div>
+          </header>
+          <div class="ds-panel-body">
+            <p v-if="!horas.some(h => h.acciones)" class="ds-empty">Sin actividad registrada en el período.</p>
+            <div v-else class="horas">
+              <div v-for="h in horas" :key="h.hora" class="hcol" :title="`${h.hora}:00 · ${h.acciones} acciones`">
+                <div class="hbar" :class="{ pico: h.hora === horaPico }" :style="{ height: alturaHora(h.acciones) }"></div>
+                <div class="hlbl" :class="{ pico: h.hora === horaPico }">{{ h.hora }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ds-panel">
+          <header class="ds-panel-head">
+            <div>
+              <h3 class="ds-panel-title">En qué se trabaja</h3>
+              <p class="ds-panel-sub">Registros tocados este mes</p>
+            </div>
+          </header>
+          <div class="ds-panel-body">
+            <p v-if="!data.porTabla.length" class="ds-empty">Sin movimientos este mes.</p>
+            <div v-for="t in data.porTabla" :key="t.table_name" class="trow">
+              <div class="tlbl">{{ t.label }}</div>
+              <div class="ds-track"><i :style="{ width: pctDe(t.acciones, maxTabla) + '%' }"></i></div>
+              <div class="tval">
+                {{ num(t.acciones) }}
+                <span class="tdelta" :class="t.acciones >= t.acciones_prev ? 'ok' : 'bad'">
+                  {{ t.acciones >= t.acciones_prev ? '↑' : '↓' }}{{ Math.abs(t.acciones - t.acciones_prev) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
+
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">{{ scope.isLeader ? 'Últimos movimientos del equipo' : 'Mis últimos movimientos' }}</h3>
+          <RouterLink v-if="scope.isLeader" class="ds-panel-link" to="/configuracion/auditoria">
+            Ver la bitácora completa <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </RouterLink>
+        </header>
+        <div class="ds-panel-body">
+          <p v-if="!data.movimientos.length" class="ds-empty">Todavía no hay movimientos registrados.</p>
+          <div v-for="m in data.movimientos" :key="m.id" class="mov">
+            <span class="mhora">{{ m.created_at }}</span>
+            <span v-if="scope.isLeader" class="mquien">{{ m.name }}</span>
+            <span class="maccion" :class="'a-' + m.action.toLowerCase()">{{ ACCIONES[m.action] ?? m.action }}</span>
+            <span class="mque">{{ m.label }}</span>
+            <span v-if="m.record_id" class="mid">#{{ m.record_id }}</span>
+          </div>
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -163,7 +183,6 @@ const num = (n) => Math.round(n ?? 0).toLocaleString('es-PE')
 const pctDe = (v, total) => (total ? Math.round((v / total) * 100) : 0)
 const fechaHoy = new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
 const mesActualNombre = MESES[new Date().getMonth()]
-const barColor = (p) => (p >= 90 ? 'var(--td-green)' : p >= 60 ? 'var(--td-amber)' : 'var(--td-red)')
 
 /* ── Derivados ── */
 const scope = computed(() => data.value?.scope ?? { area: '', isLeader: false })
@@ -180,6 +199,7 @@ const activosHoy = computed(() => equipo.value.filter(p => p.inicio_hoy).length)
 const pctActivos = computed(() => (scope.value.isLeader
   ? pctDe(activosHoy.value, equipo.value.length)
   : pctDe(yo.value?.dias_activos ?? 0, diasHabilesTranscurridos())))
+const tonoActivos = computed(() => (pctActivos.value >= 90 ? 'ok' : pctActivos.value >= 60 ? 'warn' : 'bad'))
 
 const maxTabla = computed(() => Math.max(1, ...(data.value?.porTabla ?? []).map(t => t.acciones)))
 const maxHora = computed(() => Math.max(1, ...horas.value.map(h => h.acciones)))
@@ -187,8 +207,8 @@ const alturaHora = (n) => Math.max(3, Math.round((n / maxHora.value) * 100)) + '
 
 const horaPico = computed(() => horas.value.reduce((mejor, h) => (h.acciones > (mejor?.acciones ?? -1) ? h : mejor), null)?.hora ?? null)
 const picoTexto = computed(() => (horaPico.value === null || !maxHora.value
-  ? 'sin actividad registrada'
-  : `hora más cargada: ${horaPico.value}:00`))
+  ? 'Sin actividad registrada'
+  : `Hora más cargada: ${horaPico.value}:00`))
 
 // Hora de arranque del conjunto: la mediana de las medianas individuales. Se
 // calcula en el cliente porque ya tenemos la fila de cada persona; una consulta
@@ -218,100 +238,31 @@ function diasHabilesTranscurridos () {
 </script>
 
 <style scoped>
-/* ponytail: estilos propios en vez de un sistema de diseño compartido con
-   Dashboard.vue. Si aparece un tercer panel con este mismo lenguaje, ahí sí
-   toca extraer las clases comunes a una hoja aparte. */
-.team-dash {
-  --td-navy: #1b2a5b;
-  --td-green: #12a150;
-  --td-amber: #f0932b;
-  --td-red: #d64545;
-  --td-border: #e6e9f0;
-  --td-muted: #94a3b8;
-  --td-ink2: #64748b;
-  --td-bar: #c9d6ec;
-  --td-card: #fff;
-  color: #0f172a;
-  padding: 2px 2px 1rem;
-}
-.grow { flex: 1; }
-
-.td-head { display: flex; align-items: flex-start; gap: 10px; margin: 4px 2px 18px; flex-wrap: wrap; }
-.td-head .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--td-muted); margin-bottom: 7px; }
-.td-head h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--td-navy); }
-.td-head .sub { margin-top: 7px; font-size: 14px; color: var(--td-muted); }
-.btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: 0.15s; }
-.btn.ghost { background: #fff; border: 1px solid var(--td-border); color: var(--td-ink2); }
-.btn.ghost:hover:not(:disabled) { color: var(--td-navy); }
-
-.alerta { padding: 14px 18px; border-radius: 12px; background: #fdecec; color: var(--td-red); font-size: 14px; font-weight: 600; }
-.alerta.neutro { background: #eef2fb; color: var(--td-ink2); }
-
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 22px; }
-.kcard { background: var(--td-card); border: 1px solid var(--td-border); border-radius: 12px; padding: 18px 20px; }
-.klbl { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--td-muted); }
-.kmain { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 6px; }
-.knum { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--td-navy); }
-.knote { font-size: 12px; color: var(--td-muted); }
-.ktrack, .ttrack { height: 6px; border-radius: 999px; background: #eef1f6; overflow: hidden; }
-.ktrack i, .ttrack i { display: block; height: 100%; border-radius: 999px; background: var(--td-navy); }
-.pill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-.pill.ok { background: #e7f6ee; color: #12703a; }
-.pill.bad { background: #fdecec; color: var(--td-red); }
-.chip { font-size: 12px; font-weight: 600; color: var(--td-ink2); background: #eef2fb; padding: 2px 9px; border-radius: 999px; }
-
-.grid-21 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 22px; }
-.card { background: var(--td-card); border: 1px solid var(--td-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 22px; }
-.c-title { font-size: 16px; font-weight: 700; color: var(--td-navy); }
-.c-sub { font-size: 12.5px; color: var(--td-muted); margin: 4px 0 16px; }
-.vacio { font-size: 13px; color: var(--td-muted); padding: 14px 0; }
-
+/* Página, tarjetas, paneles y colores: sistema de diseño (styles/design-system.css).
+   Aquí solo lo propio de "Mi día a día". */
 .horas { display: flex; align-items: flex-end; gap: 6px; height: 170px; }
 .hcol { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
-.hbar { border-radius: 4px 4px 0 0; transition: 0.2s; }
-.hlbl { font-size: 10.5px; text-align: center; color: var(--td-muted); margin-top: 6px; }
-.hlbl.pico { color: var(--td-navy); font-weight: 700; }
+.hbar { border-radius: 4px 4px 0 0; background: var(--ds-bar); transition: 0.2s; }
+.hbar.pico { background: var(--ds-accent); }
+.hlbl { margin-top: 6px; font-size: 10.5px; text-align: center; color: var(--ds-muted); }
+.hlbl.pico { font-weight: 700; color: var(--ds-heading); }
 
-.trow { display: grid; grid-template-columns: 1fr 70px auto; align-items: center; gap: 10px; margin-bottom: 12px; }
-.tlbl { font-size: 13px; color: var(--td-ink2); }
-.tval { font-size: 13px; font-weight: 700; color: var(--td-navy); white-space: nowrap; }
-.tdelta { font-size: 11px; font-weight: 700; margin-left: 4px; }
-.tdelta.ok { color: #12703a; }
-.tdelta.bad { color: var(--td-red); }
+.trow { display: grid; grid-template-columns: 1fr 70px auto; align-items: center; gap: 10px; }
+.trow + .trow { margin-top: 12px; }
+.tlbl { font-size: 13px; color: var(--ds-ink-2); }
+.tval { font-size: 13px; font-weight: 700; color: var(--ds-heading); white-space: nowrap; }
+.tdelta { margin-left: 4px; font-size: 11px; font-weight: 700; }
+.tdelta.ok { color: var(--ds-ok-ink); }
+.tdelta.bad { color: var(--ds-bad-ink); }
 
-.mov { display: flex; align-items: baseline; gap: 9px; padding: 8px 0; border-top: 1px solid var(--td-border); font-size: 13px; flex-wrap: wrap; }
-.mhora { color: var(--td-muted); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 82px; }
-.mquien { font-weight: 700; color: var(--td-navy); }
+.mov { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; padding: 8px 0; border-top: 1px solid var(--ds-border); font-size: 13px; }
+.mov:first-child { border-top: 0; padding-top: 0; }
+.mhora { min-width: 82px; font-size: 12px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.mquien { font-weight: 700; color: var(--ds-heading); }
 .maccion { font-weight: 600; }
-.a-insert { color: #12703a; } .a-update { color: #c97a1a; } .a-delete { color: var(--td-red); } .a-login { color: var(--td-ink2); }
-.mque { color: var(--td-ink2); }
-.mid { color: var(--td-muted); font-size: 12px; }
-.verlink { display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--td-navy); text-decoration: none; }
-.verlink:hover { text-decoration: underline; }
-
-@media (max-width: 1100px) {
-  .kpis { grid-template-columns: repeat(2, 1fr); }
-  .grid-21 { grid-template-columns: 1fr; }
-}
-
-[data-coreui-theme="dark"] .team-dash {
-  --td-navy: #8FAADC;
-  --td-border: #2A2A22;
-  --td-muted: #8A8A80;
-  --td-ink2: #A0A099;
-  --td-bar: #3A4A66;
-  --td-card: #1A1A14;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .team-dash .btn.ghost { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .team-dash .ktrack,
-[data-coreui-theme="dark"] .team-dash .ttrack { background: #24241E; }
-[data-coreui-theme="dark"] .team-dash .chip,
-[data-coreui-theme="dark"] .team-dash .alerta.neutro { background: rgba(143, 170, 220, 0.12); color: #C9C9C1; }
-[data-coreui-theme="dark"] .team-dash .pill.ok { background: rgba(16, 185, 129, 0.14); color: #34D399; }
-[data-coreui-theme="dark"] .team-dash .pill.bad,
-[data-coreui-theme="dark"] .team-dash .alerta { background: rgba(239, 68, 68, 0.14); color: #F87171; }
-[data-coreui-theme="dark"] .team-dash .a-insert,
-[data-coreui-theme="dark"] .team-dash .tdelta.ok { color: #34D399; }
-[data-coreui-theme="dark"] .team-dash .a-update { color: #E9B872; }
+.a-insert { color: var(--ds-ok-ink); }
+.a-update { color: var(--ds-warn-ink); }
+.a-delete { color: var(--ds-bad-ink); }
+.a-login, .mque { color: var(--ds-ink-2); }
+.mid { font-size: 12px; color: var(--ds-muted); }
 </style>

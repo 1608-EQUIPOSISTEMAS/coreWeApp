@@ -3,6 +3,7 @@
 );
 @use "@coreui/chartjs/scss/coreui-chartjs";
 @use "vendors/simplebar";
+@use "design-system";
 
 /* ==========================================================================
    CONFIGURACIÓN BASE
@@ -340,7 +341,7 @@ textarea.form-control {
 .pill-red   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca !important;}
 
 /* 5. CLASES DE UTILIDAD DE TEXTO */
-.text-mono { font-family: 'IBM Plex Mono', monospace; }
+.text-mono { font-family: var(--ds-font-mono); }
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
 .text-muted { color: var(--text-muted, #94a3b8) !important; }
