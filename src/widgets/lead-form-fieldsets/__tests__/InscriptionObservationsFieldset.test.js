@@ -26,6 +26,15 @@ describe('widgets/lead-form-fieldsets/InscriptionObservationsFieldset', () => {
     expect(wrapper.find('textarea').element.value).toBe('Nota previa')
   })
 
+  // Observaciones es opcional: un `required` aquí pinta el borde rojo y bloquea el envío.
+  it('no marca el textarea como obligatorio', () => {
+    const wrapper = shallowMount(InscriptionObservationsFieldset, {
+      props: { model: {} },
+      global
+    })
+    expect(wrapper.find('textarea').attributes('required')).toBeUndefined()
+  })
+
   it('usa 8 filas fuera del canal General', () => {
     const wrapper = shallowMount(InscriptionObservationsFieldset, {
       props: { model: {}, isChannelGeneral: false },

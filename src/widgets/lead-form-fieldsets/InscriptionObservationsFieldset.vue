@@ -8,7 +8,6 @@
     <textarea
       v-model="model.observacions"
       class="exec-textarea w-100"
-      required
       :rows="!isChannelGeneral ? 8 : 2"
       placeholder="Escribe aquí notas adicionales..."
       v-restrict="{ trim: true, max: 500 }"

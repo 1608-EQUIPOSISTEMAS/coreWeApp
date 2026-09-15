@@ -1570,7 +1570,6 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <textarea
       v-model="insc.observacions"
       class="exec-textarea w-100"
-      required
       :rows="!isChannelGeneral ? 8 : 2"
       placeholder="Escribe aquí notas adicionales..."
       v-restrict="{ trim: true, max: 500 }"
