@@ -204,6 +204,9 @@
 .ds-panel-foot.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
 .ds-panel-foot.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
 
+/* Botonera al pie de un formulario o panel: secundario a la izquierda, primario a la derecha */
+.ds-panel-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--ds-border); }
+
 .ds-empty { margin: 0; padding: 14px 0; text-align: center; font-size: 13px; color: var(--ds-muted); }
 .ds-empty--lista { padding: 40px 16px; }
 
@@ -223,6 +226,13 @@
 .ds-table tr.link { cursor: pointer; }
 .ds-table tr.link:hover td, .ds-table tr.link:focus-visible td { background: var(--ds-soft-neutral); }
 .ds-table tr.link:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: -2px; }
+
+/* Listado de un módulo (paginado): encabezado fijo al hacer scroll, más aire.
+   Va dentro de .ds-panel > .table-responsive-custom, con BasePagination arriba. */
+.ds-table--lista { font-size: 13px; }
+.ds-table--lista th { position: sticky; top: 0; z-index: 1; padding: 10px 12px; background: var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); }
+.ds-table--lista td { padding: 10px 12px; vertical-align: middle; }
+.ds-table--lista tbody tr:hover td { background: var(--ds-surface-2); }
 
 /* ── Formularios ────────────────────────────────────────────────────────── */
 .ds-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px 16px; }
