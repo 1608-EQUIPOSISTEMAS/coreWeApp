@@ -47,9 +47,11 @@ function overlapsPeriod(aulaStart, aulaEnd, periodStart, periodEnd) {
 // =====================================================================
 // FORMULAS DE EVALUACION
 // =====================================================================
-// Mismas constantes que AulaDetail.vue. Si la rubrica cambia, ambos
-// archivos deben moverse en sincronia con el SP del backend.
-const RUBRIC_TOTAL_ITEMS = 20
+// Mismos pesos que AulaDetail.vue: si la formula consolidada cambia, ambos
+// archivos deben moverse en sincronia con el SP del backend. La nota de la
+// rubrica manual NO se calcula aca: llega ya sobre 20 desde el backend, que
+// sabe con que version de rubrica se califico cada auditoria.
+const NOTA_MAXIMA = 20
 const CONSOLIDATED_WEIGHT_IA = 0.7
 const CONSOLIDATED_WEIGHT_MANUAL = 0.3
 // Meta institucional = umbral de BUENO en la rubrica (>= 17 sobre 20).
@@ -440,9 +442,11 @@ const scoreAverages = computed(() => {
   }
 })
 
-// Posicion horizontal (%) de un marcador en la escala 0-20.
+// Posicion horizontal (%) de un marcador en la escala 0-20. Divide entre la
+// NOTA maxima, no entre la cantidad de criterios: coincidian cuando la rubrica
+// tenia 20 items de 1 punto, ya no.
 function scalePos(n) {
-  return Math.min(97, Math.max(3, (n / RUBRIC_TOTAL_ITEMS) * 100))
+  return Math.min(97, Math.max(3, (n / NOTA_MAXIMA) * 100))
 }
 
 // =====================================================================

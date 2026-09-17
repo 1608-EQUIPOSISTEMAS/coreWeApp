@@ -817,7 +817,19 @@ function apellidosNombres(s) {
 // =====================================================================
 // AUDITORIA: rubrica por sesion
 // =====================================================================
-const RUBRIC = [
+// Conviven DOS rubricas. El area academica recorto la suya de 20 criterios a 10
+// (16/09/26): se retiraron los 9 que no se podian auditar de forma objetiva y
+// "resuelve dudas en sesion" + "responde por WhatsApp" se fusionaron en
+// interaction.2, que eran la misma conducta partida en dos. La nota sigue siendo
+// sobre 20, asi que cada criterio paso a valer 2 puntos.
+//
+// Cada auditoria se muestra y se califica con la rubrica que regia cuando se
+// guardo (classroom_audit_rubric.updated_at), para no reescribir la evaluacion
+// de docentes ya auditados. Espeja rubricaDe() en Backend edition.entity.js.
+const FECHA_CORTE_RUBRICA = '2026-09-15'
+
+// CONGELADA: es el texto con el que se evaluo a esos docentes. No se toca.
+const RUBRIC_V1 = [
   {
     key: 'interaction',
     label: 'Interaccion con el alumno',
@@ -864,26 +876,79 @@ const RUBRIC = [
   },
 ]
 
-const RUBRIC_TOTAL_ITEMS = RUBRIC.reduce((a, c) => a + c.items.length, 0)
+// VIGENTE. Las claves sobrevivientes conservan su numero original y por eso
+// quedan salteadas (falta interaction.1, interaction.3...): renumerarlas
+// reinterpretaria las marcas ya guardadas con el criterio equivocado.
+const RUBRIC_V2 = [
+  {
+    key: 'interaction',
+    label: 'Interaccion con el alumno',
+    items: [
+      { key: 'interaction.2', label: 'Resuelve dudas durante la sesion y por el canal de WhatsApp' },
+      { key: 'interaction.4', label: 'Utiliza plantilla de contacto al alumno' },
+    ],
+  },
+  {
+    key: 'content',
+    label: 'Contenido y dinamica de clase',
+    items: [
+      { key: 'content.2', label: 'Refuerza el uso de las carpetas de M. de Revision y M. Complementario' },
+      { key: 'content.3', label: 'El docente explica las fechas establecidas de entrega de proyectos' },
+      { key: 'content.5', label: 'Desarrolla la sesion a traves de taller y/o casos practicos' },
+    ],
+  },
+  {
+    key: 'environment',
+    label: 'Entorno',
+    items: [
+      { key: 'environment.1', label: 'Equipamiento tecnico adecuado (conexion a internet, audio en buen estado y camara encendida en todo momento de la sesion)' },
+      { key: 'environment.2', label: 'Puntualidad al ingreso y culminacion de la sesion' },
+    ],
+  },
+  {
+    key: 'communication',
+    label: 'Comunicacion academica',
+    items: [
+      { key: 'communication.1', label: 'Responde a notificaciones' },
+      { key: 'communication.2', label: 'Envia el pantallazo de apertura de sesion' },
+      { key: 'communication.5', label: 'Notifica la actualizacion de la videoclase' },
+    ],
+  },
+]
 
-// Mapeo IA -> rubrica binaria. Cada item de las 2 primeras categorias se
-// asocia a uno o varios criterios del reporte IA (1-9). Si el promedio de
-// scores asociados >= AI_CHECK_THRESHOLD, el item se marca. Items no
-// detectables por IA (WhatsApp, plantilla, carpetas, video) -> aiCriteria
-// vacio: el auto-fill los deja como estaban (decision manual del auditor).
+const NOTA_MAXIMA_RUBRICA = 20
+
+function buildRubric(version, categorias) {
+  const totalItems = categorias.reduce((a, c) => a + c.items.length, 0)
+  return {
+    version,
+    categorias,
+    totalItems,
+    keys: new Set(categorias.flatMap((c) => c.items.map((it) => it.key))),
+    puntosPorCriterio: NOTA_MAXIMA_RUBRICA / totalItems,
+  }
+}
+
+const RUBRICA_V1 = buildRubric(1, RUBRIC_V1)
+const RUBRICA_V2 = buildRubric(2, RUBRIC_V2)
+
+// Sin fecha devolvemos la vigente: una rubrica que todavia no se guardo se esta
+// llenando ahora.
+function rubricaDe(fecha) {
+  const dia = fecha ? String(fecha).slice(0, 10) : ''
+  return dia !== '' && dia <= FECHA_CORTE_RUBRICA ? RUBRICA_V1 : RUBRICA_V2
+}
+
+// Mapeo IA -> rubrica binaria. Cada item listado se asocia a uno o varios
+// criterios del reporte IA (1-9). Si el promedio de scores asociados >=
+// AI_CHECK_THRESHOLD, el item se marca. Los items que NO aparecen aca son
+// decision manual del auditor: la IA solo ve el transcript de la sesion y no
+// puede constatar WhatsApp, plantilla de contacto, carpetas, notificaciones,
+// pantallazo, videoclase ni el equipamiento del docente.
 const AI_CHECK_THRESHOLD = 3
 const IA_TO_RUBRIC = {
-  'interaction.1': { criterios: [7] },        // Engagement -> oportunidades de participacion
-  'interaction.2': { criterios: [7, 6] },     // Engagement + Claridad -> resuelve dudas
-  'interaction.3': { criterios: [] },         // WhatsApp -> manual
-  'interaction.4': { criterios: [] },         // plantilla contacto -> manual
-  'interaction.5': { criterios: [7], min: 4 },// acompanamiento continuo -> exige score alto
-  'content.1':     { criterios: [4] },        // Casos y ejemplos -> material visual
-  'content.2':     { criterios: [] },         // carpetas M. Revision -> manual
-  'content.3':     { criterios: [2] },        // Estructura -> explica fechas de entrega
-  'content.4':     { criterios: [] },         // video -> manual (no inferible)
-  'content.5':     { criterios: [5, 4] },     // Talleres + Casos -> taller/casos practicos
-  'content.6':     { criterios: [5], min: 4 },// Talleres -> herramienta tecnologica
+  'content.3': { criterios: [2] },     // Estructura -> explica fechas de entrega
+  'content.5': { criterios: [5, 4] },  // Talleres + Casos -> taller/casos practicos
 }
 
 function aiScoreMap(report) {
@@ -931,10 +996,19 @@ async function loadAudit() {
   }
 }
 
+// Rubrica de la sesion abierta: la que regia cuando se guardo su auditoria.
+const activeRubric = computed(() =>
+  rubricaDe(auditMap.value?.[selectedSession.value]?.updated_at),
+)
+// Una auditoria vieja se muestra tal como se lleno, pero no se edita: marcar un
+// criterio la guardaria hoy y la pasaria a la rubrica vigente, cambiando la nota
+// del docente sin que nadie lo haya pedido.
+const isHistoricRubric = computed(() => activeRubric.value.version !== RUBRICA_V2.version)
+
 function hydrateDraft(sessionNum) {
   for (const k of Object.keys(sessionDraft)) delete sessionDraft[k]
   const saved = auditMap.value?.[sessionNum]?.criteria || {}
-  for (const cat of RUBRIC) {
+  for (const cat of rubricaDe(auditMap.value?.[sessionNum]?.updated_at).categorias) {
     for (const it of cat.items) sessionDraft[it.key] = !!saved[it.key]
   }
 }
@@ -946,7 +1020,7 @@ function selectSession(n) {
 }
 
 async function saveSession() {
-  if (isSavingSession.value) return
+  if (isSavingSession.value || isHistoricRubric.value) return
   isSavingSession.value = true
   try {
     const payload = {
@@ -981,19 +1055,18 @@ function categoryScore(cat) {
   return cat.items.reduce((a, it) => a + (sessionDraft[it.key] ? 1 : 0), 0)
 }
 const totalScore = computed(() =>
-  RUBRIC.reduce((a, cat) => a + categoryScore(cat), 0),
+  activeRubric.value.categorias.reduce((a, cat) => a + categoryScore(cat), 0),
 )
 const totalProgress = computed(() =>
-  RUBRIC_TOTAL_ITEMS ? Math.round((totalScore.value / RUBRIC_TOTAL_ITEMS) * 100) : 0,
+  Math.round((totalScore.value / activeRubric.value.totalItems) * 100),
 )
 
 function sessionDotCls(n) {
   const r = auditMap.value?.[n]
   if (!r) return 'sdot-empty'
-  const criteria = r.criteria || {}
-  const filled = Object.values(criteria).filter(Boolean).length
+  const filled = countCriteriaTrue(r.criteria, r.updated_at)
   if (filled === 0 && !r.ai_report) return 'sdot-empty'
-  if (filled >= RUBRIC_TOTAL_ITEMS) return 'sdot-done'
+  if (filled >= rubricaDe(r.updated_at).totalItems) return 'sdot-done'
   return 'sdot-partial'
 }
 
@@ -1121,7 +1194,9 @@ async function runAiAudit() {
       ...(auditMap.value || {}),
       [selectedSession.value]: { ...prev, ...res.row },
     }
-    const applied = applyAiAutoFill(res.row?.ai_report)
+    // El auto-fill escribe en el draft, y el draft de una rubrica historica no
+    // se puede guardar: marcarlo solo dejaria la pantalla mintiendo.
+    const applied = isHistoricRubric.value ? 0 : applyAiAutoFill(res.row?.ai_report)
     toast.success(`IA analizada. ${applied} criterios marcados automaticamente`)
     showAiModal.value = false
   } catch (err) {
@@ -1162,12 +1237,6 @@ function toScore20Num(score1to5) {
   return Number.isFinite(n) ? n * 4 : null
 }
 
-// Convierte el % de rubrica manual (0-100) a la escala /20.
-function manualPctToScore20(pct) {
-  const n = Number(pct)
-  return Number.isFinite(n) ? (n / 100) * 20 : null
-}
-
 // Formula consolidada IA-dominante: la IA es exhaustiva y reproducible
 // (analiza transcript + syllabus con 9 criterios), la rubrica manual valida.
 // Si solo hay una fuente, se usa esa (ver consolidatedScore).
@@ -1182,9 +1251,12 @@ function consolidatedScore(noteIa20, noteManual20) {
   return ia * CONSOLIDATED_WEIGHT_IA + man * CONSOLIDATED_WEIGHT_MANUAL
 }
 
-function countCriteriaTrue(criteria) {
+// Cuenta solo las claves de la rubrica que le toca a esa auditoria: el JSONB de
+// una auditoria vieja trae marcadas claves que la rubrica nueva ya no tiene.
+function countCriteriaTrue(criteria, fecha) {
   if (!criteria || typeof criteria !== 'object') return 0
-  return Object.values(criteria).filter(Boolean).length
+  const { keys } = rubricaDe(fecha)
+  return Object.entries(criteria).filter(([key, marked]) => marked && keys.has(key)).length
 }
 
 // Fila por sesion para el reporte consolidado. Cada elemento incluye:
@@ -1198,16 +1270,16 @@ const generalRows = computed(() => {
   const rows = []
   for (let n = 1; n <= total; n++) {
     const row = auditMap.value?.[n] || null
-    const marked = countCriteriaTrue(row?.criteria)
-    const manualPct = RUBRIC_TOTAL_ITEMS
-      ? Math.round((marked / RUBRIC_TOTAL_ITEMS) * 100) : 0
+    const rubrica = rubricaDe(row?.updated_at)
+    const marked = countCriteriaTrue(row?.criteria, row?.updated_at)
+    const manualPct = Math.round((marked / rubrica.totalItems) * 100)
     const manualScore20 = row?.criteria
-      ? manualPctToScore20(manualPct) : null
+      ? marked * rubrica.puntosPorCriterio : null
     const aiScore20 = toScore20Num(row?.ai_report?.metricas_rapidas?.puntuacion_global)
     rows.push({
       n,
       manualMarked: marked,
-      manualTotal: RUBRIC_TOTAL_ITEMS,
+      manualTotal: rubrica.totalItems,
       manualPct,
       manualScore20,
       aiScore20,
@@ -1280,13 +1352,13 @@ const currentIaScore20 = computed(() =>
   toScore20Num(currentAiReport.value?.metricas_rapidas?.puntuacion_global),
 )
 const currentAcScore20 = computed(() =>
-  RUBRIC_TOTAL_ITEMS ? (totalScore.value / RUBRIC_TOTAL_ITEMS) * 20 : null,
+  totalScore.value * activeRubric.value.puntosPorCriterio,
 )
 const currentConsolidated20 = computed(() =>
   consolidatedScore(currentIaScore20.value, currentAcScore20.value),
 )
 // "Firme" cuando la rubrica del area academica esta completa al 100%.
-const currentFirm = computed(() => totalScore.value === RUBRIC_TOTAL_ITEMS)
+const currentFirm = computed(() => totalScore.value === activeRubric.value.totalItems)
 
 // Pesos mostrados en el scorecard (derivados de la formula consolidada).
 const PESO_IA_PCT = Math.round(CONSOLIDATED_WEIGHT_IA * 100)
@@ -1361,7 +1433,7 @@ function exportSessionPdf() {
   const liList = (arr) => (arr || []).map(
     (x) => `<li><b>${escapeHtml(x.titulo)}.</b> ${escapeHtml(x.detalle)}</li>`,
   ).join('')
-  const rubric = RUBRIC.map((cat) => {
+  const rubric = activeRubric.value.categorias.map((cat) => {
     const done = cat.items.filter((it) => sessionDraft[it.key]).length
     const items = cat.items.map((it) => {
       const on = !!sessionDraft[it.key]
@@ -1433,7 +1505,7 @@ function exportSessionPdf() {
     <span>Veredicto: <b>${escapeHtml(score20Label(currentConsolidated20.value))}</b></span>
     <span>Balance practica/teoria: <b>${m.porcentaje_practica ?? '--'}% / ${m.porcentaje_teoria ?? '--'}%</b></span>
     <span>Temas cubiertos: <b>${m.temas_cubiertos ?? '--'} / ${m.temas_totales ?? '--'}</b></span>
-    <span>Rubrica academica: <b>${totalScore.value} / ${RUBRIC_TOTAL_ITEMS}</b></span>
+    <span>Rubrica academica: <b>${totalScore.value} / ${activeRubric.value.totalItems}</b></span>
   </div>
 
   <h2>Criterios evaluados por IA</h2>
@@ -2324,7 +2396,7 @@ onMounted(async () => {
               <div class="head"><span class="tag">AREA ACADEMICA</span></div>
               <div class="score"><b>{{ fmtNota(currentAcScore20) }}</b><span>/ 20</span></div>
               <div class="bar"><i class="fill-accent" :style="{ width: barWidth(currentAcScore20) }"></i></div>
-              <div class="weight">Peso {{ PESO_MANUAL_PCT }}% · {{ totalScore }}/{{ RUBRIC_TOTAL_ITEMS }} criterios marcados</div>
+              <div class="weight">Peso {{ PESO_MANUAL_PCT }}% · {{ totalScore }}/{{ activeRubric.totalItems }} criterios marcados</div>
             </div>
           </div>
         </div>
@@ -2501,17 +2573,30 @@ onMounted(async () => {
           <div class="ar-card ar-acad-head">
             <div>
               <div class="ar-eyebrow">RUBRICA DEL AREA ACADEMICA</div>
-              <div class="ar-metaline">Marca cada criterio cumplido durante la sesion {{ selectedSession }}.</div>
+              <div class="ar-metaline">
+                {{ isHistoricRubric
+                  ? `Auditoria calificada con la rubrica vigente hasta el ${formatDate(FECHA_CORTE_RUBRICA)}.`
+                  : `Marca cada criterio cumplido durante la sesion ${selectedSession}.` }}
+              </div>
             </div>
             <div class="ar-grow"></div>
             <div class="ar-acad-prog">
-              <div class="big">{{ totalScore }} / {{ RUBRIC_TOTAL_ITEMS }}</div>
+              <div class="big">{{ totalScore }} / {{ activeRubric.totalItems }}</div>
               <div class="ar-metaline">{{ totalProgress }}% completado</div>
             </div>
           </div>
 
-          <div class="ar-rub-grid">
-            <div v-for="cat in RUBRIC" :key="cat.key" class="ar-rub-cat">
+          <div v-if="isHistoricRubric" class="ar-card ar-rub-legacy">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>
+              Rubrica anterior ({{ activeRubric.totalItems }} criterios de
+              {{ activeRubric.puntosPorCriterio }} punto). Se muestra como se lleno y no se edita:
+              volver a guardarla la recalificaria con la rubrica vigente y cambiaria la nota del docente.
+            </span>
+          </div>
+
+          <div class="ar-rub-grid" :class="{ 'is-readonly': isHistoricRubric }">
+            <div v-for="cat in activeRubric.categorias" :key="cat.key" class="ar-rub-cat">
               <div class="rc-head">
                 <h3>{{ cat.label }}</h3>
                 <span class="rc-prog">{{ categoryScore(cat) }} / {{ cat.items.length }}</span>
@@ -2522,7 +2607,7 @@ onMounted(async () => {
                 :key="it.key"
                 class="rub-row"
                 :class="{ on: sessionDraft[it.key] }"
-                @click="sessionDraft[it.key] = !sessionDraft[it.key]"
+                @click="isHistoricRubric || (sessionDraft[it.key] = !sessionDraft[it.key])"
               >
                 <span class="cbx"><i class="fa-solid fa-check"></i></span>
                 <span class="rtext">{{ it.label }}</span>
@@ -2531,10 +2616,10 @@ onMounted(async () => {
           </div>
 
           <div class="ar-savebar">
-            <span class="prog-text">Criterios marcados <b>{{ totalScore }} / {{ RUBRIC_TOTAL_ITEMS }}</b> · {{ totalProgress }}%</span>
+            <span class="prog-text">Criterios marcados <b>{{ totalScore }} / {{ activeRubric.totalItems }}</b> · {{ totalProgress }}%</span>
             <span v-if="lastSavedAt" class="ar-saved">Guardado {{ formatDate(lastSavedAt) }}</span>
             <span class="ar-grow"></span>
-            <button class="ar-btn primary" :disabled="isSavingSession" @click="saveSession">
+            <button v-if="!isHistoricRubric" class="ar-btn primary" :disabled="isSavingSession" @click="saveSession">
               <i v-if="isSavingSession" class="fa-solid fa-spinner fa-spin"></i>
               <i v-else class="fa-solid fa-save"></i>
               Guardar sesion
@@ -3822,6 +3907,12 @@ onMounted(async () => {
 .audit-rd .rub-row.on .cbx { background: var(--ar-accent); border-color: var(--ar-accent); color: var(--ar-accent-ink); }
 .audit-rd .rub-row .rtext { font-size: 13px; line-height: 1.45; color: var(--ar-ink); }
 .audit-rd .rub-row.on .rtext { color: var(--ar-ink-2); }
+
+/* rubrica historica: se lee, no se marca */
+.audit-rd .ar-rub-legacy { display: flex; align-items: flex-start; gap: 11px; padding: 13px 15px; font-size: 13px; line-height: 1.45; color: var(--ar-ink-2); }
+.audit-rd .ar-rub-legacy > i { color: var(--ar-accent); margin-top: 2px; }
+.audit-rd .ar-rub-grid.is-readonly .rub-row { cursor: default; }
+.audit-rd .ar-rub-grid.is-readonly .rub-row:hover { background: transparent; }
 
 /* save bar */
 .audit-rd .ar-savebar {
