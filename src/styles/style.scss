@@ -297,6 +297,11 @@ textarea.form-control {
   padding: 8px 16px; border-radius: 4px; font-size: 12.5px;
   font-weight: 600; cursor: pointer; border: 1px solid transparent; /* Border base para evitar saltos */
   font-family: inherit; transition: all 0.15s; line-height: 1.2;
+  /* .btn-exec también se usa sobre <RouterLink>/<a> (ej. "Ver reportes"): sin
+     esto el navegador les pinta el subrayado por defecto de un link, cosa que
+     un <button> nunca tiene. Un botón no debería verse distinto según qué
+     etiqueta lo renderiza. */
+  text-decoration: none;
 }
 .btn-exec-ghost { background: transparent; color: var(--slate-400, #94a3b8); } /* Color un poco más oscuro para mejor contraste */
 .btn-exec-ghost:hover { background: rgba(0,0,0,0.04); color: var(--text-primary, #0f172a); } /* Ajustado hover para ghost buttons sobre fondos claros */
