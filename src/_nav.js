@@ -92,6 +92,16 @@ export default [
         submodule: 'REPROGRAMACIONES',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'],
       },
+      {
+        // Los tramites los abre el alumno en el portal. Academica confirma que
+        // corresponden y FICO valida el pago, asi que las dos areas ven la
+        // opcion aunque el grupo sea Academica.
+        component: 'CNavItem',
+        name: 'Tickets de Alumnos',
+        to: '/academica/tickets',
+        submodule: 'TICKETS_ALUMNOS',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'],
+      },
     ],
   },
   {

@@ -142,8 +142,40 @@
             </div>
           </div>
 
-          <!-- CV solo en edición -->
-          <div class="row g-4 mt-1 border-top pt-3" v-if="isEdit">
+          <!-- Foto y CV, solo en edición: sp_instructor_register no los conoce -->
+          <div class="row g-3 mt-1 border-top pt-3" v-if="isEdit">
+            <div class="col-md-12">
+              <label class="exec-label">Foto del docente</label>
+              <div class="d-flex align-items-center gap-3">
+                <img
+                  v-if="form.photo_url"
+                  :src="form.photo_url"
+                  class="foto-docente"
+                  alt="Foto del docente"
+                />
+                <div v-else class="foto-docente foto-docente--vacia">
+                  <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="input-group-custom">
+                    <i class="fa-brands fa-google-drive input-icon text-success"></i>
+                    <input
+                      v-model.trim="form.photo_url"
+                      type="url"
+                      class="exec-input-light w-100 icon-padded"
+                      placeholder="https://drive.google.com/file/d/..."
+                    />
+                  </div>
+                  <small class="text-muted">
+                    Link de la carpeta DOCENTES de Drive. Se convierte al guardar;
+                    hasta entonces el preview puede verse vacío.
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4 mt-1" v-if="isEdit">
             <div class="col-md-6">
               <label class="exec-label mb-2">Curriculum Simplificado (CV)</label>
               <FileUploader
@@ -481,6 +513,18 @@
 /* ── Listas dinámicas ── */
 .exec-version-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: var(--white, #fff); overflow: hidden; transition: box-shadow 0.2s; }
 .exec-version-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+.foto-docente {
+  width: 96px; height: 96px; flex: 0 0 96px;
+  border-radius: 50%; object-fit: cover;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--slate-50, #f8fafc);
+}
+.foto-docente--vacia {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--slate-300, #cbd5e1); font-size: 32px;
+  border-style: dashed;
+}
+
 .empty-state { text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50, #f8fafc); border-radius: 6px; border: 1px dashed var(--slate-300, #cbd5e1); }
 
 /* ════════════════════════════════════════
@@ -576,6 +620,7 @@ const form = reactive({
   linkedin:          null,   // → Odoo social_linkedin
   cv_url:            null,
   cv_documents_url:  null,
+  photo_url:         null,   // URL, no bytes: la foto vive en Drive
   odoo_username:     null,   // usuario con el que entra a Odoo, no la FK odoo_user_id
   odoo_password:     null,
   teams_username:    null,
@@ -674,6 +719,7 @@ async function loadData (id) {
       linkedin:          data.linkedin          ?? null,
       cv_url:            data.cv_url            || null,
       cv_documents_url:  data.cv_documents_url  || null,
+      photo_url:         data.photo_url         || null,
       odoo_username:     data.odoo_username     ?? null,
       odoo_password:     data.odoo_password     ?? null,
       teams_username:    data.teams_username    ?? null,
@@ -738,6 +784,7 @@ function buildPayload () {
       profile_resume:      form.profile_resume     ?? null,
       cv_url:              form.cv_url             ?? null,
       cv_documents_url:    form.cv_documents_url   ?? null,
+      photo_url:           form.photo_url          ?? null,
       odoo_username:       form.odoo_username      ?? null,
       odoo_password:       form.odoo_password      ?? null,
       teams_username:      form.teams_username     ?? null,
