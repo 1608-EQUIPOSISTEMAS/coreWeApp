@@ -39,6 +39,22 @@ const routes = [
       },
 
       // =====================
+      // TICKETS
+      // =====================
+      // Sin meta.roles ni meta.module: cualquier usuario logueado abre la
+      // pantalla. El alcance de lo que ve (ADMIN y GERENCIA todo, un líder lo de
+      // su área, el resto lo suyo) lo decide el backend en ticketScopeFor, no
+      // el router: así no hay dos copias del organigrama que se desincronicen.
+      {
+        path: 'tickets',
+        name: 'Tickets',
+        component: () =>
+          import(
+            /* webpackChunkName: "tickets" */ '@/views/tickets/TicketsView.vue'
+          ),
+      },
+
+      // =====================
       // FICO
       // =====================
       {

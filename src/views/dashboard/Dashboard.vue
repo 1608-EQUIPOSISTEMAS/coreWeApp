@@ -244,6 +244,9 @@
           </div>
         </div>
 
+        <!-- Soporte: unico lugar donde se ve el ticketing sin filtrar por area ni autor. -->
+        <TeamResults v-if="data.tickets" :resultados="data.tickets" />
+
         <!-- Decisiones -->
         <div class="card">
           <div class="c-title">Decisiones recomendadas</div>
@@ -291,6 +294,7 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { ServiceKeys } from '@/services'
 import TeamDashboard from './TeamDashboard.vue'
+import TeamResults from './TeamResults.vue'
 
 const dashboardService = inject(ServiceKeys.Dashboard)
 

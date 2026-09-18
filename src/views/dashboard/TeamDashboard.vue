@@ -21,7 +21,6 @@
          ADMIN en "Uso del sistema"; aquí confundía al líder. -->
     <template v-if="data?.resultados">
       <TeamResults :resultados="data.resultados" />
-      <TeamCorrections :correcciones="data.correcciones" />
     </template>
 
     <!-- Colaborador: su propio uso del ERP. -->
@@ -132,6 +131,9 @@
           </div>
         </div>
       </section>
+
+      <!-- Colaborador: soporte, pero solo lo que el mismo reporto (no el area). -->
+      <TeamResults v-if="data.misTickets" :resultados="data.misTickets" />
     </template>
   </div>
 </template>
@@ -139,7 +141,6 @@
 <script setup>
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { ServiceKeys } from '@/services'
-import TeamCorrections from './TeamCorrections.vue'
 import TeamResults from './TeamResults.vue'
 
 // viewAs solo lo pasa Dashboard.vue cuando un ADMIN elige el panel de un líder.
