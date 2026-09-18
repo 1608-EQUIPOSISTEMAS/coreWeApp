@@ -17,7 +17,7 @@ import ConfigService from './config.service'
 import ImportService from './import.service'
 import MarketingService from './marketing.service'
 import ReprogramacionService from './reprogramacion.service'
-import TicketsService from './tickets.service'
+import TicketsAlumnosService from './ticketsAlumnos.service'
 import SchedulePlanService from './schedulePlan.service'
 
 // Re-exportar para fácil acceso
@@ -42,7 +42,7 @@ Notification: Symbol('NotificationService'),
   Import: Symbol('ImportService'),
   Marketing: Symbol('MarketingService'),
   Reprogramacion: Symbol('ReprogramacionService'),
-  Tickets: Symbol('TicketsService'),
+  TicketsAlumnos: Symbol('TicketsAlumnosService'),
   SchedulePlan: Symbol('SchedulePlanService')
 }
 
@@ -65,7 +65,7 @@ export function createServices() {
     [ServiceKeys.Import]: new ImportService(api),
     [ServiceKeys.Marketing]: new MarketingService(api),
     [ServiceKeys.Reprogramacion]: new ReprogramacionService(api),
-    [ServiceKeys.Tickets]: new TicketsService(api),
+    [ServiceKeys.TicketsAlumnos]: new TicketsAlumnosService(api),
     [ServiceKeys.SchedulePlan]: new SchedulePlanService(api)
   }
 }

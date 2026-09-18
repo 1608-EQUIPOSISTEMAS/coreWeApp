@@ -148,7 +148,7 @@ import { confirmAction } from '@/composables/useConfirm'
 import { ServiceKeys } from '@/services'
 
 const toast = useToast()
-const ticketsService = inject(ServiceKeys.Tickets)
+const ticketsService = inject(ServiceKeys.TicketsAlumnos)
 
 // Espejo del catalogo del portal (Nexus: portal/domain/solicitudes.js). Solo
 // para la etiqueta legible y el filtro; el ruteo por area lo decide el backend.
