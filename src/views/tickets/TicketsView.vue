@@ -60,41 +60,26 @@
       @close="modalAbierto = false"
       @crear="crear"
     />
-
-    <TicketDetail
-      :ticket-id="detalleId"
-      :ticket="detalle"
-      :comentarios="comentarios"
-      :adjuntos="adjuntosDetalle"
-      :cargando="cargandoDetalle"
-      :guardando="guardandoDetalle"
-      :comentando="comentando"
-      :error="errorDetalle"
-      :error-comentario="errorComentario"
-      @close="cerrarDetalle"
-      @estado="cambiarEstado"
-      @reasignar="reasignar"
-      @comentar="comentar"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, inject, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { useTickets } from './useTickets.js'
 import TicketsBoard from './TicketsBoard.vue'
 import TicketCreateModal from './TicketCreateModal.vue'
-import TicketDetail from './TicketDetail.vue'
 import SlaPolicies from './SlaPolicies.vue'
 
 const service = inject(ServiceKeys.Tickets)
+const router = useRouter()
 const toast = useToast()
 
 const {
   tickets, kpis, scope, cargando, error,
-  filtro, busqueda, orden, cargar, reemplazar,
+  filtro, busqueda, orden, cargar,
 } = useTickets(service)
 
 const TABS = [
@@ -128,87 +113,10 @@ async function crear (datos) {
 }
 
 // ── Detalle ───────────────────────────────────────────────────────────────
-const detalleId = ref(null)
-const detalle = ref(null)
-const comentarios = ref([])
-const cargandoDetalle = ref(false)
-const guardandoDetalle = ref(false)
-const comentando = ref(false)
-const errorDetalle = ref('')
-const errorComentario = ref('')
-
-// En el detalle el backend manda la lista de adjuntos; en el listado, solo el
-// conteo. Este guard evita que un número se intente recorrer como array.
-const adjuntosDetalle = computed(() =>
-  (Array.isArray(detalle.value?.adjuntos) ? detalle.value.adjuntos : []))
-
-async function abrirDetalle (id) {
-  detalleId.value = id
-  detalle.value = null
-  comentarios.value = []
-  errorDetalle.value = ''
-  cargandoDetalle.value = true
-  try {
-    const [t, c] = await Promise.all([service.detail(id), service.comments(id)])
-    detalle.value = t
-    comentarios.value = c
-  } catch (e) {
-    console.error('tickets.detail:', e)
-    errorDetalle.value = e?.response?.data?.message || 'No se pudo abrir el ticket.'
-  } finally {
-    cargandoDetalle.value = false
-  }
-}
-
-function cerrarDetalle () {
-  detalleId.value = null
-  detalle.value = null
-  comentarios.value = []
-  errorComentario.value = ''
-}
-
-// Las mutaciones REEMPLAZAN el ticket con lo que devuelve el servidor en vez de
-// parchearlo: el SLA y la asignación los decide el backend, y un parche
-// optimista mostraría un estado que no existe.
-async function cambiarEstado (estado) {
-  guardandoDetalle.value = true
-  try {
-    detalle.value = await service.changeStatus(detalleId.value, estado)
-    await reemplazar(detalle.value)
-    toast.success(estado === 'CERRADO' ? 'Ticket marcado como resuelto' : 'Ticket tomado')
-  } catch (e) {
-    console.error('tickets.status:', e)
-    toast.error(e?.response?.data?.message || 'No se pudo cambiar el estado.')
-  } finally {
-    guardandoDetalle.value = false
-  }
-}
-
-async function reasignar (nuevoAsignadoId) {
-  guardandoDetalle.value = true
-  try {
-    detalle.value = await service.reassign(detalleId.value, nuevoAsignadoId)
-    await reemplazar(detalle.value)
-    toast.success(`Ticket reasignado a ${detalle.value.asignadoA?.nombre ?? 'otro agente'}`)
-  } catch (e) {
-    console.error('tickets.reassign:', e)
-    toast.error(e?.response?.data?.message || 'No se pudo reasignar el ticket.')
-  } finally {
-    guardandoDetalle.value = false
-  }
-}
-
-async function comentar ({ cuerpo, archivos }) {
-  comentando.value = true
-  errorComentario.value = ''
-  try {
-    comentarios.value = await service.addComment(detalleId.value, cuerpo, archivos)
-  } catch (e) {
-    console.error('tickets.comment:', e)
-    errorComentario.value = e?.response?.data?.message || 'No se pudo enviar el comentario.'
-  } finally {
-    comentando.value = false
-  }
+// El detalle vive en su propia página (/tickets/:id), no en un modal: así se
+// puede compartir el enlace directo a un ticket y navegar con atrás/adelante.
+function abrirDetalle (id) {
+  router.push({ name: 'TicketDetalle', params: { id } })
 }
 </script>
 

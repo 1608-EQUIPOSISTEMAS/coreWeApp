@@ -41,16 +41,29 @@ const routes = [
       // =====================
       // TICKETS
       // =====================
-      // Sin meta.roles ni meta.module: cualquier usuario logueado abre la
-      // pantalla. El alcance de lo que ve (ADMIN y GERENCIA todo, un líder lo de
-      // su área, el resto lo suyo) lo decide el backend en ticketScopeFor, no
-      // el router: así no hay dos copias del organigrama que se desincronicen.
+      // meta.module sin meta.roles: el guard (más abajo) solo consulta la
+      // matriz de Configuración en ese caso (ver "CASO C"). ADMIN entra igual
+      // porque el backend le otorga TODOS los módulos activos en
+      // /config/mymodules, así que no hace falta listarlo aparte. El alcance
+      // de lo que ve cada quien (ADMIN y GERENCIA todo, un líder lo de su
+      // área, el resto lo suyo) lo sigue decidiendo el backend en
+      // ticketScopeFor, no el router.
       {
         path: 'tickets',
         name: 'Tickets',
+        meta: { module: 'TICKETS' },
         component: () =>
           import(
             /* webpackChunkName: "tickets" */ '@/views/tickets/TicketsView.vue'
+          ),
+      },
+      {
+        path: 'tickets/:id',
+        name: 'TicketDetalle',
+        meta: { module: 'TICKETS' },
+        component: () =>
+          import(
+            /* webpackChunkName: "tickets" */ '@/views/tickets/TicketDetailPage.vue'
           ),
       },
 
