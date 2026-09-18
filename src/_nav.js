@@ -29,6 +29,15 @@ export default [
     // Sin roles = siempre visible (solo lectura)
   },
   {
+    component: 'CNavItem',
+    name: 'Tickets',
+    to: '/tickets',
+    icon: 'cil-envelope-open',
+    // Sin roles = siempre visible: cualquiera reporta una incidencia. El módulo
+    // TICKETS existe en la matriz de Configuración solo para poder revocarlo a
+    // un rol puntual; qué tickets ve cada quien lo decide el backend.
+  },
+  {
     component: 'CNavTitle',
     name: 'Áreas',
     // Sin roles = siempre visible
