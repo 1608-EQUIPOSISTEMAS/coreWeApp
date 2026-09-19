@@ -41,13 +41,6 @@
     </div>
 
     <section class="ds-panel">
-      <header class="ds-panel-head">
-        <div>
-          <h3 class="ds-panel-title">Bandeja</h3>
-          <p class="ds-panel-sub">{{ subtitulo }}</p>
-        </div>
-      </header>
-
       <div class="ds-panel-body">
         <TicketsToolbar
           v-model="filtroLocal"
@@ -109,12 +102,6 @@ const filtroLocal = computed({
   get: () => props.filtro,
   set: (v) => emit('update:filtro', v),
 })
-
-const subtitulo = computed(() => ({
-  ALL: 'Todos los tickets del ERP',
-  AREA: 'Lo que reportó tu área',
-  OWN: 'Las incidencias que reportaste',
-}[props.scope.kind] ?? ''))
 
 // Prioridad y estado se filtran en el cliente, sobre lo que ya llegó filtrado
 // por tab (filtro) desde el servidor: son un recorte visual, no un alcance de

@@ -80,13 +80,19 @@ export function useFilteredNav() {
 
   // Visibilidad = roles hardcodeados ∪ matriz de Configuración.
   // Grupo: por módulo. Hijo: por submódulo (hereda el módulo del grupo).
+  //
+  // OJO: hasRole(undefined) devuelve true ("sin roles = siempre visible"), asi
+  // que un item con SOLO module (sin roles) NO puede pasar por hasRole(item.roles)
+  // o el OR se resuelve en true sin mirar la matriz para nada. Por eso solo se
+  // consulta hasRole cuando el item declara roles explicitos.
   function canSeeGroup(item) {
     if (!item.roles && !item.module) return true // público (Dashboard, títulos)
-    return hasRole(item.roles) || hasModule(item.module)
+    if (item.roles && hasRole(item.roles)) return true
+    return hasModule(item.module)
   }
 
   function canSeeChild(child, parentModule) {
-    if (hasRole(child.roles)) return true
+    if (child.roles && hasRole(child.roles)) return true
     if (child.submodule) return hasSubmodule(parentModule, child.submodule)
     // Hijo sin submódulo declarado: basta el módulo del grupo.
     return !!parentModule && hasModule(parentModule)

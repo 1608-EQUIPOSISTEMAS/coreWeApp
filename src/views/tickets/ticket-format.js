@@ -20,11 +20,12 @@ export const PRIORIDAD_TONO = {
   BAJA: 'ok',
 }
 
-// El siguiente paso del flujo, en las palabras del agente. CERRADO no tiene
-// siguiente: el flujo es irreversible y el botón desaparece.
+// El siguiente paso del flujo, en las palabras del agente. CERRADO sí tiene
+// siguiente: reabrir, para cuando quien reportó avisa que el problema sigue.
 export const SIGUIENTE_ESTADO = {
   ABIERTO: { estado: 'EN_PROGRESO', texto: 'Tomar ticket', icono: 'fa-hand' },
   EN_PROGRESO: { estado: 'CERRADO', texto: 'Marcar como resuelto', icono: 'fa-circle-check' },
+  CERRADO: { estado: 'EN_PROGRESO', texto: 'Reabrir ticket', icono: 'fa-rotate-left' },
 }
 
 const SLA_LABEL = {
@@ -45,19 +46,6 @@ const SLA_TONO = {
 
 export const slaLabel = (estado) => SLA_LABEL[estado] ?? '—'
 export const slaTono = (estado) => SLA_TONO[estado] ?? null
-
-// En qué grupo de urgencia cae un ticket, para la bandeja agrupada (mismo
-// criterio que ya usa el backend en applyFilter/buildKpis: vencido gana sobre
-// por vencer, así un ticket no cuenta en dos grupos a la vez).
-export const GRUPO_LABEL = { VENCIDO: 'Vencidos', POR_VENCER: 'Por vencer', EN_PLAZO: 'En plazo' }
-export const GRUPO_TONO = { VENCIDO: 'bad', POR_VENCER: 'warn', EN_PLAZO: 'ok' }
-export const ORDEN_GRUPOS = ['VENCIDO', 'POR_VENCER', 'EN_PLAZO']
-
-export function grupoUrgencia (t) {
-  if (t.riesgo?.vencido) return 'VENCIDO'
-  if (t.riesgo?.porVencer) return 'POR_VENCER'
-  return 'EN_PLAZO'
-}
 
 /**
  * Cuenta regresiva legible. Positivo = lo que falta; negativo = el retraso.

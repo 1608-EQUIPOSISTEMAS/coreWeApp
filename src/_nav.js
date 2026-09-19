@@ -33,9 +33,10 @@ export default [
     name: 'Tickets',
     to: '/tickets',
     icon: 'cil-envelope-open',
-    // Sin roles = siempre visible: cualquiera reporta una incidencia. El módulo
-    // TICKETS existe en la matriz de Configuración solo para poder revocarlo a
-    // un rol puntual; qué tickets ve cada quien lo decide el backend.
+    module: 'TICKETS',
+    // Sin roles: la visibilidad depende solo de la matriz de Configuración
+    // (módulo TICKETS). ADMIN entra igual porque modulesForRoles() le otorga
+    // todos los módulos activos, sin necesidad de listarlo acá a mano.
   },
   {
     component: 'CNavTitle',

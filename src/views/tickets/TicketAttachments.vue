@@ -78,14 +78,17 @@ async function abrir (a) {
 /* Colores y bordes: sistema de diseño (styles/design-system.css). */
 .tk-adjuntos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .tk-adjunto {
-  display: flex; align-items: center; gap: 8px; max-width: 250px;
-  padding: 6px 10px 6px 6px; border: 1px solid var(--ds-border); border-radius: 8px;
+  display: flex; align-items: center; gap: 10px; max-width: 280px;
+  padding: 8px 12px 8px 8px; border: 1px solid var(--ds-border); border-radius: 8px;
   background: var(--ds-surface); cursor: pointer; text-align: left; transition: 0.15s;
 }
 .tk-adjunto:hover:not(:disabled) { border-color: var(--ds-accent); }
 .tk-adjunto:disabled { opacity: 0.6; cursor: progress; }
-.tk-thumb { width: 38px; height: 38px; object-fit: cover; border-radius: 5px; flex-shrink: 0; }
-.tk-icono { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 5px; background: var(--ds-soft-neutral); color: var(--ds-muted); }
+/* Miniatura más grande (antes 38px): con el detalle ahora en página propia hay
+   aire de sobra y una vista previa diminuta no dejaba distinguir la imagen. El
+   clic sigue abriendo el original en pestaña nueva (ver abrir()). */
+.tk-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.tk-icono { width: 64px; height: 64px; flex-shrink: 0; display: grid; place-items: center; border-radius: 6px; background: var(--ds-soft-neutral); color: var(--ds-muted); font-size: 20px; }
 .tk-adjunto-datos { display: flex; flex-direction: column; min-width: 0; }
 .tk-adjunto-nombre { font-size: 12.5px; color: var(--ds-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-adjunto-peso { font-size: 11px; color: var(--ds-muted); }
