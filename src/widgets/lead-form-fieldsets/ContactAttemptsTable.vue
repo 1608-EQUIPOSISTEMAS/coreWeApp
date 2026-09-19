@@ -75,7 +75,7 @@
           </div>
         </template>
 
-        <div class="attempt-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
+        <div class="attempt-timer mt-2" v-if="isCallAttempt(c.cat_type_attempt)">
           <button
             type="button"
             class="timer-btn"
@@ -126,7 +126,7 @@
           class="exec-textarea w-100"
           rows="2"
           placeholder="Observación..."
-          :disabled="!!c.id && c.cat_type_attempt === 'we_attempt_call' && c.calling_alias !== 'we_calling_pending'"
+          :disabled="!!c.id && isCallAttempt(c.cat_type_attempt) && c.calling_alias !== 'we_calling_pending'"
           v-restrict="{ trim: true, max: 250 }"
         ></textarea>
       </div>
@@ -152,6 +152,7 @@
 </template>
 
 <script setup>
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import SearchSelect from '../../components/SearchSelect.vue'
 import DateTime12 from '../../components/DateTime12.vue'
 import { useLeadFormatters } from '../../composables/useLeadFormatters.js'

@@ -521,7 +521,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 </div>
               </template>
 
-              <div class="attempt-timer mt-2" v-if="c.cat_type_attempt === 'we_attempt_call'">
+              <div class="attempt-timer mt-2" v-if="isCallAttempt(c.cat_type_attempt)">
                 <button
                   type="button"
                   class="timer-btn"
@@ -576,7 +576,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 class="exec-textarea w-100"
                 rows="2"
                 placeholder="Observación..."
-                :disabled="!!c.id && c.cat_type_attempt === 'we_attempt_call' && c.calling_alias !== 'we_calling_pending'"
+                :disabled="!!c.id && isCallAttempt(c.cat_type_attempt) && c.calling_alias !== 'we_calling_pending'"
                 v-restrict="{ trim: true, max: 250 }"
               ></textarea>
             </div>
@@ -1949,6 +1949,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
   import { ref, reactive, computed, onMounted, inject, nextTick, onBeforeUnmount, watch} from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import { useToast } from 'vue-toastification'
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import MultiSelect from '@/components/MultiSelect.vue' 
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
@@ -2772,7 +2773,7 @@ function handleTypeChange(contacto, newVal) {
   //    mensaje): arranca pendiente en los tres, solo la llamada cronometra.
   contacto.calling_alias = 'we_calling_pending';
 
-  if (newVal !== 'we_attempt_call') {
+  if (!isCallAttempt(newVal)) {
     // Detenemos cronómetro si estaba activo y reseteamos duración
     if (contacto.timerActive) {
         clearInterval(contacto.timerId);

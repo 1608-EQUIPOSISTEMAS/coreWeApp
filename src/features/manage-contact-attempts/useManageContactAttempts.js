@@ -1,3 +1,4 @@
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import { onBeforeUnmount } from 'vue'
 
 // Fecha-hora actual redondeada a la hora en punto, en formato 'YYYY-MM-DD HH:00:00'.
@@ -62,7 +63,7 @@ export function useManageContactAttempts (form) {
     // El tipo de respuesta se pide para todo intento (llamada, WhatsApp o mensaje),
     // asi que arranca pendiente en los tres; solo la llamada cronometra.
     contacto.calling_alias = 'we_calling_pending'
-    if (newVal !== 'we_attempt_call') {
+    if (!isCallAttempt(newVal)) {
       if (contacto.timerActive) { clearInterval(contacto.timerId); contacto.timerActive = false; contacto.timerId = null }
       contacto.contact_duration = 0
     }

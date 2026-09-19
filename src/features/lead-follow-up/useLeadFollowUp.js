@@ -1,3 +1,4 @@
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import { ref, onBeforeUnmount } from 'vue'
 
 // Seguimiento rapido de un lead (modal de intentos de contacto con cronometro).
@@ -125,7 +126,7 @@ export function useLeadFollowUp (deps = {}) {
 
   function handleTypeChange (attempt, newVal) {
     attempt.cat_type_attempt = newVal
-    if (newVal !== 'we_attempt_call') {
+    if (!isCallAttempt(newVal)) {
       attempt.calling_alias = 'we_calling_message'
       if (attempt.timerActive) toggleTimer(attempt)
       attempt.contact_duration = 0
