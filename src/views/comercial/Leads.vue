@@ -143,7 +143,7 @@
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
-    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttemptsConVacio" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -351,7 +351,7 @@
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
-    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttemptsConVacio" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Obs..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -730,7 +730,7 @@
         <h6 class="fieldset-title">Estado, Origen y Ubicación</h6>
         <div class="row g-3">
           <div class="col-md-3 col-6"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></div>
-          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttemptsConVacio" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Observaciones</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollowConVacio" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Origen de Intento</label><MultiSelect v-model="filters.attempt_origin_ids" :items="filtroAttemptOrigin" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Nivel de Interés</label><MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -1352,6 +1352,7 @@ const filtroMoment = ref(catalog.options('we_moment') || [])
 const filtroQuery = ref(catalog.options('we_category_query') || [])
 const filtroInterest = ref(catalog.options('we_lead_interest') || [])
 const lAttempts = ref(catalog.options('we_attempt') || [])
+const lAttemptsConVacio = computed(() => [{ id: -1, description: '—' }, ...lAttempts.value])
 const strategyCatalog = ref(catalog.options('we_type_strategy') || [])
 const mktWordsCatalog = ref(catalog.options('we_key_word') || [])
 const filtroCalling = ref(catalog.options('we_calling') || [])
