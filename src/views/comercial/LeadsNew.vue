@@ -446,6 +446,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </button>
           </div>
 
+          <LeadAiSummary v-if="isEdit" :lead-id="leadIdParam" :version="form.contactos.filter(c => c.id).length" />
+
           <div class="attempt-head d-none d-lg-grid mb-2">
             <div class="text-center">#</div>
             <div>Tipo / Origen</div> <div>Fecha y Hora <span class="c-red">*</span></div>
@@ -1955,6 +1957,7 @@ import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
+import LeadAiSummary from '@/widgets/lead-ai-summary/LeadAiSummary.vue'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'

@@ -71,6 +71,12 @@
               <TicketAttachments v-if="adjuntos.length" :adjuntos="adjuntos" kind="ticket" />
             </section>
 
+            <TicketAiNote
+              :ticket-id="ticket.id"
+              :can-manage="!!ticket.canManage"
+              @usar="texto => hilo?.prellenar(texto)"
+            />
+
             <div class="tkd-divisor"></div>
 
             <div class="tkd-tabs" role="tablist">
@@ -165,6 +171,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import TicketAttachments from './TicketAttachments.vue'
 import TicketComments from './TicketComments.vue'
+import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
 import {
   ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,

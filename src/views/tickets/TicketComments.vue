@@ -98,7 +98,13 @@ function reset () {
   archivos.value = []
 }
 
-defineExpose({ reset })
+// Precarga el cuadro de respuesta (p. ej. con el borrador de la IA) sin
+// enviarlo: el agente lo revisa y lo manda él.
+function prellenar (texto) {
+  cuerpo.value = texto
+}
+
+defineExpose({ reset, prellenar })
 </script>
 
 <style scoped>
