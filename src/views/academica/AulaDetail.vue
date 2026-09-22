@@ -360,6 +360,9 @@ function hasAnyGrade(d) {
   )
 }
 const hasDebt = (s) => Number(s.fin_overdue) > 0
+// Misma regla que la etiqueta "Certificar" del detalle FICO: becado que ya
+// pago su certificado. El resto de alumnos trae el certificado incluido.
+const mustCertify = (s) => s.is_beca === true && s.sold_certificate_paid === true
 const ocupLabel = (s) => (s.profile_alias === 'we_profile_student' ? 'E' : 'P')
 // B2B: la decision vive en el backend (is_b2b de classroomStudentsList), que
 // aplica la MISMA regla que el contador del cronograma: canal 'B2B' con
@@ -1913,7 +1916,7 @@ onMounted(async () => {
           </thead>
           <tbody>
             <template v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
-              <tr :class="{ 'row-debt': hasDebt(s), 'row-laptop': s.has_laptop_promo }">
+              <tr :class="{ 'row-debt': hasDebt(s), 'row-laptop': s.has_laptop_promo, 'row-certify': mustCertify(s) }">
                 <td class="sticky-c0 mono small">{{ String(idx + 1).padStart(2, '0') }}</td>
                 <td class="sticky-c1">
                   <div class="student-name-cell">
@@ -1964,7 +1967,10 @@ onMounted(async () => {
                 </td>
                 <td class="td-center">
                   <span v-if="s.is_beca" class="type-badge tb-beca"><i class="fa-solid fa-graduation-cap"></i> Beca</span>
-                  <span v-else class="muted small">--</span>
+                  <span v-if="mustCertify(s)" class="type-badge tb-certify" title="Becado que pago su certificado: hay que certificarlo">
+                    <i class="fa-solid fa-certificate"></i> Certificar
+                  </span>
+                  <span v-if="!s.is_beca" class="muted small">--</span>
                 </td>
                 <td class="td-center">
                   <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
@@ -3141,6 +3147,8 @@ onMounted(async () => {
 .tb-member i { margin-right: 2px; font-size: 9px; }
 .tb-beca { background: #E0F2FE; color: #075985; border: 1px solid #7DD3FC; }
 .tb-beca i { margin-right: 2px; font-size: 9px; }
+.tb-certify { background: var(--ds-soft-ok); color: var(--ds-ok-ink); border: 1px solid var(--ds-ok); margin-left: 4px; }
+.tb-certify i { margin-right: 2px; font-size: 9px; }
 /* Mismos colores que la etiqueta "Traera laptop" del panel FICO */
 .tb-laptop { background: #ECFEFF; color: #155E75; border: 1px solid #A5F3FC; }
 .tb-laptop i { margin-right: 2px; font-size: 9px; color: #0891B2; }
@@ -3245,6 +3253,10 @@ onMounted(async () => {
 .row-laptop .sticky-c0, .row-laptop .sticky-c1 { background: #ECFEFF !important; }
 .row-debt.row-laptop td,
 .row-debt.row-laptop .sticky-c0, .row-debt.row-laptop .sticky-c1 { background: #EAF2FD !important; }
+/* Va despues de deuda/laptop para ganarles: certificar es tarea pendiente de Academica. */
+.row-certify td,
+.row-certify .sticky-c0, .row-certify .sticky-c1 { background: var(--ds-soft-ok) !important; }
+.row-certify .sticky-c0 { box-shadow: inset 3px 0 0 var(--ds-ok); }
 .debt-ico { color: var(--blue-ink); font-size: 12px; margin-left: 2px; flex-shrink: 0; }
 .grades-table .sticky-c1 { overflow: hidden; }
 .debt-swatch {
