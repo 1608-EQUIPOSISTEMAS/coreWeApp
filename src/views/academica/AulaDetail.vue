@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import apexchart from 'vue3-apexcharts'
 import Swal from 'sweetalert2'
 import { ServiceKeys } from '@/services'
+import { useAiJob } from '@/composables/useAiJob.js'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -643,43 +644,59 @@ function applyImport() {
   toast.success(`${applied} alumnos actualizados. Revisa la tabla y pulsa "Guardar cambios".`, { timeout: 4000 })
 }
 
-// --- Observaciones IA (Ollama local via tunel) -------------------------
+// --- Observaciones IA (Ollama local) -----------------------------------
 // El modelo solo produce BORRADORES: entran al draft como filas sucias y se
 // persisten con el boton Guardar, siempre tras revision humana.
-const isGeneratingObs = ref(false)
+// Corre en segundo plano (ai-jobs): la request vuelve al instante y se consulta
+// el avance, asi un aula grande o un modelo lento no revientan un timeout.
+const obsJob = useAiJob()
+const isGeneratingObs = obsJob.corriendo
 const aulaSummaryIa = ref('')
 const iaDraftObs = reactive(new Set()) // observaciones IA aun no guardadas
 
+// "Generando 12 de 25…" mientras corre; el total incluye el resumen del aula.
+const obsProgressLabel = computed(() => {
+  const p = obsJob.progreso.value
+  if (!p?.total) return obsJob.enFila.value > 1 ? 'En fila…' : 'Generando...'
+  return `Generando ${p.hechos} de ${p.total}…`
+})
+
 async function generateObservations(enrollmentIds = null) {
   if (isGeneratingObs.value) return
-  isGeneratingObs.value = true
   try {
-    const res = await editionService.classroomGradesObservations({
-      edition_id: editionId.value,
-      enrollment_ids: enrollmentIds,
-    })
-    if (res?.ok) {
-      for (const it of res.data?.items || []) {
+    const job = await obsJob.run(
+      () => editionService.startGradesObservations({
+        edition_id: editionId.value,
+        enrollment_ids: enrollmentIds,
+        // Aula completa: si ya hay un resultado con las mismas notas (p. ej.
+        // salio y volvio a la pantalla), se recoge sin repetir el modelo.
+        // Un alumno puntual es "Regenerar": siempre texto nuevo.
+        force: !!enrollmentIds,
+      }),
+      (id) => editionService.aiJobStatus(id),
+    )
+    if (job?.estado === 'listo') {
+      for (const it of job.data?.items || []) {
         if (!gradesDraft[it.enrollment_id]) gradesDraft[it.enrollment_id] = emptyGradeDraft()
         gradesDraft[it.enrollment_id].observation = it.observation
         dirtyGrades.add(it.enrollment_id)
         iaDraftObs.add(it.enrollment_id)
       }
-      if (res.data?.aula_summary) aulaSummaryIa.value = res.data.aula_summary
-      const nOk = (res.data?.items || []).length
-      const nErr = (res.data?.errors || []).length
+      if (job.data?.aula_summary) aulaSummaryIa.value = job.data.aula_summary
+      const nOk = (job.data?.items || []).length
+      const nErr = (job.data?.errors || []).length
       toast.success(
         `Observaciones generadas: ${nOk}${nErr ? ` (fallaron ${nErr})` : ''}. Revisa, edita y guarda.`,
         { timeout: 4000 },
       )
+    } else if (job?.estado === 'no_encontrado') {
+      toast.error('El servidor se reinició mientras se generaban las observaciones. Vuelve a intentarlo.')
     } else {
-      toast.error(res?.message || 'No se pudieron generar las observaciones')
+      toast.error(job?.message || 'No se pudieron generar las observaciones')
     }
   } catch (err) {
     console.error('Error generando observaciones:', err)
-    toast.error(err?.response?.data?.message || 'IA local no disponible. Verifica el tunel a Ollama.')
-  } finally {
-    isGeneratingObs.value = false
+    toast.error(err?.response?.data?.message || 'IA local no disponible.')
   }
 }
 
@@ -1855,7 +1872,7 @@ onMounted(async () => {
           @click="generateObservations()"
         >
           <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
-          {{ isGeneratingObs ? 'Generando...' : 'Generar observaciones (IA)' }}
+          {{ isGeneratingObs ? obsProgressLabel : 'Generar observaciones (IA)' }}
         </button>
         <button
           class="btn"
