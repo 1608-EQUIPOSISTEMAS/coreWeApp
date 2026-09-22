@@ -233,7 +233,7 @@
           <label>Forma de Pago <span v-if="!form.is_scholarship" class="ef-req">*</span></label>
           <!-- La beca limpia los datos de pago y el payload cae a contado: exigirla
                ahi bloquearia una venta valida. -->
-          <SearchSelect v-model="form.cat_payment_way" :items="catPaymentWay" label-field="description" value-field="id" placeholder="CONTADO / CUOTAS..." :required="!form.is_scholarship" />
+          <SearchSelect v-model="form.cat_payment_way" :items="catPaymentWay" label-field="description" value-field="id" placeholder="CONTADO / CUOTAS..." :required="!form.is_scholarship" :disabled="isB2BDocPending" />
         </div>
         <div class="ef-field">
           <label>Precio Base</label>
@@ -642,6 +642,14 @@ const isB2BDocPending = computed(() =>
 )
 // El unico B2B que de verdad entra en cero: la carta de compromiso.
 const isB2BWithoutCharge = computed(() => isB2BDocumental.value && !isB2BDocPending.value)
+
+// Una OS/OP no se financia: la empresa gira el total cuando la orden se hace
+// efectiva. Mismo candado que useLeadForm.js (isSinglePaymentForced).
+watch(isB2BDocPending, (pending) => {
+  if (!pending) return
+  form.cat_payment_way = catPaymentWay.find(c => c.alias === 'we_payment_way_single')?.id ?? null
+  installments.value = []
+})
 
 // Tiers de membresia: NO se hardcodean. Son la fuente de verdad normalizada en
 // programs (is_membership=Y), bajo el tipo de programa "Membresia" (catalog 2506).
