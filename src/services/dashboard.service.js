@@ -17,6 +17,22 @@ export default class DashboardService {
     return response.data;
   }
 
+  // Plan del día con IA. Se genera de madrugada; esto solo lo lee. El backend
+  // decide qué plan corresponde (Comercial por asesor o el del área) y qué
+  // parte ve cada rol. viewAs, igual que teamSummary, solo aplica a ADMIN.
+  async dailyPlan(viewAs) {
+    const payload = viewAs ? { view_as: viewAs } : {};
+    const response = (await api.post('/dashboard/daily-plan', payload)).data;
+    return response.data;
+  }
+
+  // Arranca la regeneración en segundo plano (tarda minutos); luego se sondea dailyPlan.
+  async regenerateDailyPlan(viewAs) {
+    const payload = viewAs ? { view_as: viewAs } : {};
+    const response = (await api.post('/dashboard/daily-plan/regenerate', payload)).data;
+    return response.data;
+  }
+
   /**
    * Obtiene el listado de métricas del dashboard basado en filtros de tiempo.
    * @param {Object} payload - { year, month, period }

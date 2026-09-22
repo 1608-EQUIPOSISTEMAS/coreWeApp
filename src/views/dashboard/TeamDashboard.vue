@@ -17,6 +17,9 @@
     <p v-if="error" class="ds-alert">{{ error }}</p>
     <p v-else-if="loading && !data" class="ds-alert neutro">Cargando tu panel…</p>
 
+    <!-- Plan del día con IA: se autooculta si a quien mira no le toca plan. -->
+    <DailyPlan :view-as="viewAs" class="mb-3" />
+
     <!-- Líder (o ADMIN mirando un área): solo impacto. El uso del ERP lo ve el
          ADMIN en "Uso del sistema"; aquí confundía al líder. -->
     <template v-if="data?.resultados">
@@ -142,6 +145,7 @@
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { ServiceKeys } from '@/services'
 import TeamResults from './TeamResults.vue'
+import DailyPlan from './DailyPlan.vue'
 
 // viewAs solo lo pasa Dashboard.vue cuando un ADMIN elige el panel de un líder.
 const props = defineProps({ viewAs: { type: String, default: null } })
