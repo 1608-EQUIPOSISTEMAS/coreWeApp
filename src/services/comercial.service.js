@@ -14,6 +14,13 @@ export default class ComercialService {
     return response.data;
   }
 
+  // Resumen IA del historial de contacto: { estado: 'listo'|'generando'|'error'|
+  // 'sin_intentos'|'apagado', resumen?, siguiente_paso?, anterior? }.
+  async leadSummary(id) {
+    const response = (await api.post('/comercial/leadsummary', { id })).data;
+    return response.data;
+  }
+
   async leadGet(payload) {
     const response = (await api.post('/comercial/leadget', payload)).data;
     console.log(response)

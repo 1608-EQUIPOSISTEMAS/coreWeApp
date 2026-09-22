@@ -14,6 +14,11 @@ export default class TicketsService {
     return (await api.post('/tickets/detail', { ticket_id: ticketId })).data.data
   }
 
+  // Nota IA: { estado: 'listo'|'generando'|'error'|'sin_nota'|'apagado', resumen?, falta?, respuesta_sugerida? }
+  async aiNote (ticketId) {
+    return (await api.post('/tickets/ai-note', { ticket_id: ticketId })).data.data
+  }
+
   async create ({ titulo, problema, link, archivos = [] }) {
     const fd = new FormData()
     fd.append('titulo', titulo)
