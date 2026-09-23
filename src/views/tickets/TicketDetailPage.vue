@@ -230,6 +230,7 @@ import TicketComments from './TicketComments.vue'
 import TicketActivity from './TicketActivity.vue'
 import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
+import { useAutoRefresh } from './useAutoRefresh.js'
 import {
   ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,
   slaLabel, describirReloj, fechaHora, hrefSeguro, iniciales,
@@ -351,6 +352,31 @@ async function cargar () {
 // no cambia.
 watch(() => route.params.id, cargar)
 onMounted(cargar)
+
+// Un ticket abierto sin dueño lo reparte el cron del backend al vencer la
+// ventana de gracia: se consulta en silencio hasta que aparezca el agente.
+async function refrescarAsignacion () {
+  const id = ticket.value?.id
+  if (!id || guardando.value) return
+  try {
+    const t = await service.detail(id)
+    // Si mientras tanto se navegó o se hizo un cambio a mano, esto ya no aplica.
+    if (ticket.value?.id !== id || guardando.value) return
+    const cambio = t.asignadoA?.id !== ticket.value.asignadoA?.id
+    ticket.value = t
+    if (cambio) {
+      actividadDesactualizada()
+      if (t.asignadoA) toast.info(`Ticket asignado automáticamente a ${t.asignadoA.nombre}`)
+    }
+  } catch (e) {
+    console.error('tickets.detail (refresco):', e)
+  }
+}
+
+useAutoRefresh(
+  refrescarAsignacion,
+  () => ticket.value?.estado === 'ABIERTO' && !ticket.value?.asignadoA,
+)
 
 // El servidor devuelve el ticket completo (permisos y adjuntos incluidos), así
 // que se reemplaza tal cual y la vista queda al día sin recargar la página.

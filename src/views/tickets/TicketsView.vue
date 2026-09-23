@@ -53,6 +53,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { useTickets } from './useTickets.js'
+import { useAutoRefresh } from './useAutoRefresh.js'
 import TicketsBoard from './TicketsBoard.vue'
 import TicketCreateModal from './TicketCreateModal.vue'
 
@@ -66,6 +67,14 @@ const {
 } = useTickets(service)
 
 onMounted(cargar)
+
+// Mientras haya tickets abiertos sin asignar, el cron del backend puede
+// repartirlos en cualquier momento: se refresca en silencio para que el agente
+// aparezca solo. `porAsignar` excluye los cerrados, que nadie va a repartir.
+useAutoRefresh(
+  () => { if (!cargando.value) cargar({ silencioso: true }) },
+  () => kpis.value.porAsignar > 0,
+)
 
 // ── Alta ──────────────────────────────────────────────────────────────────
 const modalAbierto = ref(false)
