@@ -98,6 +98,7 @@
   <th class="ts ts-c">Cel. Origen</th>
   <th class="ts ts-c">Canal Pago</th>
   <th class="ts ts-c text-center">Seguimiento</th>
+  <th class="ts ts-c text-center">Observaciones</th>
 </tr>
 <tr v-if="!isCompact" class="thead-filter">
   <th class="tf tf-actions-cell">
@@ -140,6 +141,9 @@
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th class="tf">
+    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th class="tf">
     <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
@@ -197,7 +201,7 @@
   </th>
 
 <th
-  :colspan="colGroups.asesor ? 5 : 1"
+  :colspan="colGroups.asesor ? 6 : 1"
   class="tg-header tg-asesor"
   :class="{ 'tg-collapsed': !colGroups.asesor }"
   @click="colGroups.asesor = !colGroups.asesor"
@@ -242,12 +246,13 @@
   <th v-show="colGroups.lead" class="ts ts-c">Observaciones</th>
   <th v-if="!colGroups.lead" class="ts ts-c tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR (5 cols) -->
+  <!-- D. ASESOR (6 cols) -->
   <th v-show="colGroups.asesor" class="ts ts-c">Asesor/Usuario</th>
   <th v-show="colGroups.asesor" class="ts ts-c">F. Registro</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Cel. Origen</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Canal Pago</th>
   <th v-show="colGroups.asesor" class="ts ts-c text-center">Seguimiento</th>
+  <th v-show="colGroups.asesor" class="ts ts-c text-center">Observaciones</th>
   <th v-if="!colGroups.asesor" class="ts ts-c tg-placeholder-cell"></th>
 </tr>
 
@@ -332,7 +337,7 @@
   <th v-show="colGroups.lead" class="tf"></th><!-- Observaciones (texto libre, sin filtro inline) -->
   <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR filtros (5 cols) -->
+  <!-- D. ASESOR filtros (6 cols) -->
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-if="!isB2B" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -346,7 +351,10 @@
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-show="colGroups.asesor" class="tf">
-    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+    <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
+  </th>
+  <th v-show="colGroups.asesor" class="tf">
+    <MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Obs..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
   <th v-if="!colGroups.asesor" class="tf tg-placeholder-cell"></th>
 </tr>
@@ -426,15 +434,20 @@
                 <td class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.description || '—' }}</td>
                 <td class="td-a text-center" style="min-width:140px">
-                  <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
-                    <span>{{ followMap[l.cat_last_follow_alias] }}</span>
+                  <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
+                    <span>{{ l.cat_last_attempt_type_label }}</span>
                     <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
                   </div>
                   <span v-else class="text-muted small">—</span>
                 </td>
+                <!-- we_calling_message es el centinela de los intentos sin respuesta; el tipo ya sale en Seguimiento -->
+                <td class="td-a text-center" style="min-width:160px">
+                  <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
+                  <span v-else class="text-muted small">—</span>
+                </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="13" class="empty-state">
+                <td colspan="14" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -535,10 +548,15 @@
     <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
-      <div v-if="l.cat_last_follow_alias" class="pill d-inline-flex align-items-center gap-1" :class="badgeForFollow(l.cat_last_follow_alias)">
-        <span>{{ followMap[l.cat_last_follow_alias] }}</span>
+      <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
+        <span>{{ l.cat_last_attempt_type_label }}</span>
         <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
       </div>
+      <span v-else class="text-muted small">—</span>
+    </td>
+    <!-- we_calling_message es el centinela de los intentos sin respuesta; el tipo ya sale en Seguimiento -->
+    <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:160px">
+      <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
       <span v-else class="text-muted small">—</span>
     </td>
     <td v-if="!colGroups.asesor" class="td-a tg-placeholder-cell">
@@ -550,7 +568,7 @@
   </tr>
 
   <tr v-if="!leadsRaw.length">
-    <td colspan="20" class="empty-state">No se encontraron leads con los filtros actuales.</td>
+    <td colspan="21" class="empty-state">No se encontraron leads con los filtros actuales.</td>
   </tr>
   </template>
 </tbody>
@@ -636,7 +654,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2" style="min-width: 230px;">
-                        <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
+                        <SearchSelect v-if="isCallAttempt(attempt.cat_type_attempt)" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
                         <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
                           <i class="fa-regular fa-paper-plane me-2"></i>
                           <span>Mensaje / Gestión</span>
@@ -646,7 +664,7 @@
                         <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !$hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDateForNewAttempt ? { minDate: minDateForNewAttempt } : {}" />
                       </td>
                       <td class="td-a align-top text-center pt-2">
-                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
+                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="isCallAttempt(attempt.cat_type_attempt)">
                           <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="toggleTimer(attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
                             <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
                           </button>
@@ -654,7 +672,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2">
-                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
+                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && isCallAttempt(attempt.cat_type_attempt) && attempt.calling_alias !== 'we_calling_pending'"></textarea>
                       </td>
                       <td class="td-a align-top pt-2">
                         <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
@@ -712,7 +730,8 @@
         <h6 class="fieldset-title">Estado, Origen y Ubicación</h6>
         <div class="row g-3">
           <div class="col-md-3 col-6"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect v-model="filters.status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Todos..." /></div>
-          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Seguimiento</label><MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttempts" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="col-md-3 col-6"><label class="exec-label">Observaciones</label><MultiSelect v-model="filters.last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Origen de Intento</label><MultiSelect v-model="filters.attempt_origin_ids" :items="filtroAttemptOrigin" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Nivel de Interés</label><MultiSelect v-model="filters.interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">País</label><MultiSelect v-model="filters.code_country_ids" :items="filtroPaises" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -1142,6 +1161,7 @@
 
 
 <script setup>
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import { ref, reactive, onMounted, inject, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
@@ -1256,6 +1276,7 @@ const filters = reactive({
   owner_user_ids: [],
   status_lead_ids: [],
   last_follow_ids: [],
+  last_attempt_type_ids: [],
   interest_level_ids: [],
   channel_ids: [],
   query_ids: [],
@@ -1427,6 +1448,7 @@ async function parseQueryAndApply() {
   filters.owner_user_ids     = decodeFilter(q.owner_user_ids)
   filters.status_lead_ids    = decodeFilter(q.status_lead_ids)
   filters.last_follow_ids    = decodeFilter(q.last_follow_ids)
+  filters.last_attempt_type_ids = decodeFilter(q.last_attempt_type_ids)
   filters.interest_level_ids = decodeFilter(q.interest_level_ids)
   filters.channel_ids        = decodeFilter(q.channel_ids)
   filters.query_ids          = decodeFilter(q.query_ids)
@@ -1743,7 +1765,8 @@ function rebuildChips() {
   if (filters.first_contact_from) chips.push({ key: 'first_contact', label: `F.Contacto: ${filters.first_contact_from} → ${filters.first_contact_to}` })
   if (filters.edition_start_from) chips.push({ key: 'edition_start', label: `Edición: ${filters.edition_start_from} → ${filters.edition_start_to}` })
   makeChip('status_lead_ids',    'Estatus',    filters.status_lead_ids)
-  makeChip('last_follow_ids',    'Seguim.',    filters.last_follow_ids)
+  makeChip('last_attempt_type_ids', 'Seguim.', filters.last_attempt_type_ids)
+  makeChip('last_follow_ids',    'Obs.',       filters.last_follow_ids)
   makeChip('attempt_origin_ids', 'O. Intento', filters.attempt_origin_ids)
   makeChip('membership_moment_ids', 'Member', filters.membership_moment_ids)
 
@@ -1825,6 +1848,7 @@ function buildLeadPayload() {
     owner_user_ids:      ownerIds,
     status_lead_ids:     getIds(filters.status_lead_ids),
     last_follow_ids:     getIds(filters.last_follow_ids),
+    last_attempt_type_ids: getIds(filters.last_attempt_type_ids),
     program_version_ids: getIds(filters.program_version_ids),
     prospect_situation_ids: getIds(filters.prospect_situation_ids),
     interest_level_ids:  getIds(filters.interest_level_ids),
@@ -1965,7 +1989,7 @@ async function handleResubmitFromModal () {
 function clearFilters(reload = true) {
   Object.assign(filters, {
     q: '', origin_seller_phone: '', origin_seller_phones: [], program_text: '', estado: null, web: null, b2b: null,
-    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [], order_by: 0,
+    owner_user_ids: [], status_lead_ids: [], last_follow_ids: [], last_attempt_type_ids: [], order_by: 0,
     interest_level_ids: [], channel_ids: [], query_ids: [],
     type_program_ids: [], model_modality_ids: [], strategy_ids: [],
     payment_channel_ids: [],
@@ -2201,7 +2225,7 @@ function onOrderChange() {
 
 
 const filteredCallingByType = (catTypeAttempt) => {
-  if (catTypeAttempt === 'we_attempt_call') return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
+  if (isCallAttempt(catTypeAttempt)) return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
   return filtroCalling.value.filter(c => c.alias === 'we_calling_pending')
 }
 
@@ -2209,7 +2233,7 @@ const withNull = (items) => [{ id: -1, description: '(Vacío)', alias: '__null__
 
 function handleTypeChange(attempt, newVal) {
   attempt.cat_type_attempt = newVal;
-  if (newVal !== 'we_attempt_call') {
+  if (!isCallAttempt(newVal)) {
     attempt.calling_alias = 'we_calling_message';
     if (attempt.timerActive) toggleTimer(attempt);
     attempt.contact_duration = 0;

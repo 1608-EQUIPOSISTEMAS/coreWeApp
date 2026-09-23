@@ -1,3 +1,4 @@
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import { ref, reactive, computed, onMounted, onBeforeUnmount, inject, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -941,7 +942,7 @@ export function useLeadForm(options = {}) {
     // El tipo de respuesta se pide para todo intento (llamada, WhatsApp o mensaje),
     // asi que arranca pendiente en los tres; solo la llamada cronometra.
     contacto.calling_alias = 'we_calling_pending'
-    if (newVal !== 'we_attempt_call') {
+    if (!isCallAttempt(newVal)) {
       if (contacto.timerActive) { clearInterval(contacto.timerId); contacto.timerActive = false; contacto.timerId = null }
       contacto.contact_duration = 0
     }

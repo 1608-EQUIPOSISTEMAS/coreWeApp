@@ -15,7 +15,7 @@
         @click="$emit('reasignar', destino)"
       >
         <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : 'fa-right-left'" aria-hidden="true"></i>
-        Reasignar
+        Mover
       </button>
     </div>
     <small class="tk-hint">

@@ -426,35 +426,7 @@
                           <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
                         </div>
                         <div class="popover-content">
-                          <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                          <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
-                          <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
-                            <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-                              <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
-                              <tbody>
-                                <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                                  <td class="text-center fw-bold text-muted small">
-                                    <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-                                    <div v-else>{{ idx + 1 }}</div>
-                                  </td>
-                                  <td>
-                                    <div class="d-flex flex-column lh-sm py-1">
-                                      <span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
-                                      <div class="d-flex justify-content-between">
-                                        <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span>
-                                        <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td class="text-end pe-3">
-                                    <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
-                                    <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
-                                    <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
+                          <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                         </div>
                       </div>
                       <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
@@ -1025,24 +997,7 @@
                 <div v-if="activeGapPreviewId === 'main_gap'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;">
                   <div class="popover-header-exec"><span>Análisis de Tiempos</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
                   <div class="popover-content">
-                    <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                    <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
-                    <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
-                      <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-                        <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
-                        <tbody>
-                          <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                            <td class="text-center fw-bold text-muted small"><div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div><div v-else>{{ idx + 1 }}</div></td>
-                            <td><div class="d-flex flex-column lh-sm py-1"><span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span><div class="d-flex justify-content-between"><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span></div></div></td>
-                            <td class="text-end pe-3">
-                              <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
-                              <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
-                              <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                   </div>
                 </div>
                 <div v-if="activeGapPreviewId === 'gap_popover'" class="click-overlay" @click="activeGapPreviewId = null"></div>
@@ -1085,7 +1040,23 @@
           </section>
 
           <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course' && modalForm.cat_type_program_alias !== 'we_program_type_event'">
-            <div class="section-label">Estructura del Programa</div>
+            <div class="d-flex align-items-center justify-content-between position-relative">
+              <div class="section-label">Estructura del Programa</div>
+              <!-- El padre no tiene fecha propia en el formulario: la hereda de sus
+                   hijos. Su analisis va aca para decidir, sin cerrar el modal, si
+                   conviene abrir una edicion nueva o colgarse de una existente. -->
+              <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button" :disabled="!parentGapContext" @click.stop="toggleGapPreview($event, 'parent_gap', modalForm.program_version_id, parentGapContext)">
+                <i class="fa-solid fa-timeline text-primary me-1" style="font-size:0.8rem;"></i>
+                <span style="font-size:0.75rem;">Frecuencias del padre</span>
+              </button>
+              <div v-if="activeGapPreviewId === 'parent_gap'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;right:0;left:auto;z-index:1060;">
+                <div class="popover-header-exec"><span>Análisis: {{ modalForm.abbreviation || 'Padre' }}</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+                <div class="popover-content">
+                  <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
+                </div>
+              </div>
+              <div v-if="activeGapPreviewId === 'parent_gap'" class="click-overlay" @click="activeGapPreviewId = null"></div>
+            </div>
             <div class="hierarchy-container">
               <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.8rem;">
                 <thead class="table-light">
@@ -1120,24 +1091,7 @@
                         <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;left:0;z-index:1060;">
                           <div class="popover-header-exec"><span>Análisis: {{ child.abbreviation }}</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
                           <div class="popover-content">
-                            <div v-if="isLoadingGap" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                            <div v-else-if="!gapPreviewData || gapPreviewData.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
-                            <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
-                              <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-                                <thead class="sticky-top"><tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr></thead>
-                                <tbody>
-                                  <tr v-for="(item, idx) in gapPreviewData" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-                                    <td class="text-center fw-bold text-muted small"><div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div><div v-else>{{ idx + 1 }}</div></td>
-                                    <td><div class="d-flex flex-column lh-sm py-1"><span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span><div class="d-flex justify-content-between"><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span><span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span></div></div></td>
-                                    <td class="text-end pe-3">
-                                      <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
-                                      <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="item.gapInfo.color.includes('danger') ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.gapInfo.color.includes('warning') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-info-subtle text-info-emphasis border border-info-subtle')">{{ item.gapInfo.label }}</span></div>
-                                      <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
+                            <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                           </div>
                         </div>
                         <div class="position-relative">
@@ -2252,18 +2206,6 @@ tr[class*="row-segment-"]:hover .td-d {
   z-index: 9999; cursor: default;
 }
 
-/* ── Clean table (inside popover) ── */
-.clean-table thead th {
-  background-color: #f8fafc; color: #64748b; font-weight: 700;
-  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 10px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 2;
-}
-.clean-table tbody td { padding: 10px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
-.clean-table tbody tr:last-child td { border-bottom: none; }
-
-.row-highlight { background-color: #eff6ff !important; }
-.row-highlight td:first-child { border-left: 3px solid #3b82f6; }
-
 /* ═══════════════════════════════════════════════
    ESTILOS DE MODALES (internos)
 ═══════════════════════════════════════════════ */
@@ -2569,10 +2511,6 @@ tr[class*="row-segment-"]:hover .td-d {
 [data-coreui-theme="dark"] .schedule-preview-popover { background-color: #1F1F1A !important; border-color: #2A2A22; }
 [data-coreui-theme="dark"] .schedule-popover { background: #1F1F1A; border-color: #2A2A22; }
 [data-coreui-theme="dark"] .popover-header-sm { background: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .clean-table thead th { background-color: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .clean-table tbody td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .row-highlight { background-color: rgba(59,130,246,.18) !important; }
-[data-coreui-theme="dark"] .row-highlight td:first-child { border-left-color: #60A5FA; }
 
 /* ── Modales (teleported a body: no heredan los tokens del shell) ── */
 [data-coreui-theme="dark"] .form-section { background: #1A1A14; border-color: #2A2A22; }
@@ -2717,6 +2655,8 @@ function matchesColumnFilters (item) {
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import A5MigrationModal from './A5MigrationModal.vue'
+import GapTimeline from './GapTimeline.vue'
+import { parentScheduleFromChildren } from '@/utils/parentSchedule'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 
@@ -5021,6 +4961,30 @@ const isLoadingExtraInfo = ref(false)
 const activeGapPreviewId = ref(null)
 const gapPreviewData = ref([])
 const isLoadingGap = ref(false)
+
+// Fila "SELECCION" del analisis del padre. El padre no tiene fecha ni frecuencia
+// propias en el formulario (solo los cursos y eventos las piden), asi que las
+// toma de los hijos que ya se programaron en la tabla de estructura.
+const parentGapContext = computed(() => {
+  const children = (modalForm.program_version_children || []).map(child => ({
+    start_date: child.start_date,
+    day_label: describeCatalog(catalogs.value.dayCombinationList, child.cat_day_combination_id),
+    hour_label: describeCatalog(catalogs.value.hourCombinationList, child.cat_hour_combination_id)
+  }))
+
+  const schedule = parentScheduleFromChildren(children)
+  if (!schedule) return null
+
+  return {
+    ...schedule,
+    edition_id: currentEdition.value?.edition_num_id,
+    global_code: currentEdition.value?.global_code || 'NUEVA'
+  }
+})
+
+function describeCatalog (list, id) {
+  return (list || []).find(item => item.id === id)?.description
+}
 
 /**
  * Abre el popover de GAPS.

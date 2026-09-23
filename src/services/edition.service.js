@@ -205,6 +205,20 @@ export default class EditionService {
     return response
   }
 
+  // Versiones en segundo plano (las que usa la pantalla): responden al instante
+  // con { job_id, estado, progreso }; el resultado se consulta con aiJobStatus.
+  async startGradesObservations(payload) {
+    return (await api.post('/edition/classroomgradesobservations/start', payload, { meta: { skipLoader: true } })).data.data
+  }
+
+  async startReportRecommendations(payload) {
+    return (await api.post('/edition/reportrecommendations/start', payload, { meta: { skipLoader: true } })).data.data
+  }
+
+  async aiJobStatus(jobId) {
+    return (await api.post('/edition/aijobstatus', { job_id: jobId }, { meta: { skipLoader: true } })).data.data
+  }
+
   async classroomAuditRunAi({ edition_id, session_number, transcript_text, syllabus_image }) {
     const fd = new FormData()
     fd.append('edition_id', String(edition_id))

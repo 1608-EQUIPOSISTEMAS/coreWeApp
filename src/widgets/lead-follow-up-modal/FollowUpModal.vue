@@ -79,7 +79,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2" style="min-width: 230px;">
-                        <SearchSelect v-if="attempt.cat_type_attempt === 'we_attempt_call'" v-model="attempt.calling_alias" :items="callingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
+                        <SearchSelect v-if="isCallAttempt(attempt.cat_type_attempt)" v-model="attempt.calling_alias" :items="callingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
                         <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
                           <i class="fa-regular fa-paper-plane me-2"></i>
                           <span>Mensaje / Gestión</span>
@@ -89,7 +89,7 @@
                         <DateTime12 v-model="attempt.contact_datetime" :onlyHours="true" :disabled="!!attempt.id && (attempt.calling_alias !== 'we_calling_pending' || !hasRole(['LIDER_COMERCIAL']))" :config="!attempt.id && minDate ? { minDate: minDate } : {}" />
                       </td>
                       <td class="td-a align-top text-center pt-2">
-                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="attempt.cat_type_attempt == 'we_attempt_call'">
+                        <div class="d-flex align-items-center justify-content-center gap-2" v-if="isCallAttempt(attempt.cat_type_attempt)">
                           <button class="timer-btn" :class="attempt.timerActive ? 'timer-btn--stop' : 'timer-btn--start'" @click="emit('toggle-timer', attempt)" :disabled="!!attempt.id && attempt.calling_alias !== 'we_calling_pending'" :title="attempt.timerActive ? 'Detener cronómetro' : 'Iniciar cronómetro'">
                             <i class="fa-solid" :class="attempt.timerActive ? 'fa-stop' : 'fa-play'"></i>
                           </button>
@@ -97,7 +97,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2">
-                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attempt.cat_type_attempt === 'we_attempt_call' && attempt.calling_alias !== 'we_calling_pending'"></textarea>
+                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && isCallAttempt(attempt.cat_type_attempt) && attempt.calling_alias !== 'we_calling_pending'"></textarea>
                       </td>
                       <td class="td-a align-top pt-2">
                         <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
@@ -132,6 +132,7 @@
 </template>
 
 <script setup>
+import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
 import SearchSelect from '../../components/SearchSelect.vue'
 import DateTime12 from '../../components/DateTime12.vue'
 

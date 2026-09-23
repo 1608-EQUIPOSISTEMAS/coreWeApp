@@ -1,13 +1,12 @@
 <template>
   <section class="tk-hilo">
-    <h4 class="tk-hilo-titulo">
-      Conversación
-      <span v-if="comentarios.length" class="tk-hilo-conteo">{{ comentarios.length }}</span>
-    </h4>
-
-    <p v-if="!comentarios.length" class="ds-empty">
-      Todavía no hay comentarios. Escribí acá si tenés algo que agregar.
-    </p>
+    <div v-if="!comentarios.length" class="tk-vacio">
+      <span class="tk-vacio-icono"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></span>
+      <p class="tk-vacio-titulo">Todavía no hay comentarios</p>
+      <p class="tk-vacio-sub">
+        Escribí acá abajo{{ reportadoPor ? ` para responderle a ${reportadoPor}` : '' }}.
+      </p>
+    </div>
 
     <ol v-else class="tk-comentarios">
       <li v-for="c in comentarios" :key="c.id" class="tk-comentario">
@@ -45,7 +44,7 @@
 
         <button type="submit" class="btn-exec btn-sm" :disabled="!cuerpo.trim() || enviando">
           <i class="fa-solid" :class="enviando ? 'fa-spinner fa-spin' : 'fa-paper-plane'" aria-hidden="true"></i>
-          {{ enviando ? 'Enviando…' : 'Comentar' }}
+          {{ enviando ? 'Enviando…' : 'Responder' }}
         </button>
       </div>
 
@@ -64,6 +63,7 @@ defineProps({
   comentarios: { type: Array, default: () => [] },
   enviando: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  reportadoPor: { type: String, default: '' },
 })
 
 const emit = defineEmits(['comentar'])
@@ -98,14 +98,27 @@ function reset () {
   archivos.value = []
 }
 
-defineExpose({ reset })
+// Precarga el cuadro de respuesta (p. ej. con el borrador de la IA) sin
+// enviarlo: el agente lo revisa y lo manda él.
+function prellenar (texto) {
+  cuerpo.value = texto
+}
+
+defineExpose({ reset, prellenar })
 </script>
 
 <style scoped>
 /* Chips, botones, vacíos y colores: sistema de diseño (styles/design-system.css). */
 .tk-hilo { display: flex; flex-direction: column; gap: 12px; }
-.tk-hilo-titulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 700; color: var(--ds-heading); }
-.tk-hilo-conteo { padding: 1px 7px; border-radius: 10px; background: var(--ds-soft-neutral); font-size: 11.5px; color: var(--ds-ink-2); }
+
+.tk-vacio { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 34px 16px; text-align: center; }
+.tk-vacio-icono {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 999px;
+  background: var(--ds-soft-neutral); color: var(--ds-muted); font-size: 13px;
+}
+.tk-vacio-titulo { margin: 4px 0 0; font-size: 13.5px; font-weight: 700; color: var(--ds-heading); }
+.tk-vacio-sub { margin: 0; font-size: 12.5px; color: var(--ds-muted); max-width: 320px; }
 
 .tk-comentarios { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .tk-comentario { padding: 11px 13px; border: 1px solid var(--ds-border); border-radius: 9px; }

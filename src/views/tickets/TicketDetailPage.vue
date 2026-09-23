@@ -4,22 +4,58 @@
     <p v-else-if="error" class="ds-alert">{{ error }}</p>
 
     <template v-else-if="ticket">
-      <!-- Cabecera ejecutiva: ancho completo, con el volver, el código/asunto
-           y el estado alineados en una sola franja. Todo lo demás vive en
+      <nav class="tkd-crumbs" aria-label="breadcrumb">
+        <RouterLink to="/tickets">Tickets</RouterLink>
+        <span class="tkd-crumbs-sep">/</span>
+        <span class="tkd-crumbs-actual">#{{ ticket.codigo }}</span>
+      </nav>
+
+      <!-- Cabecera ejecutiva: etiquetas + acciones arriba, asunto grande debajo
+           y la línea de quién reportó / atiende al final. Todo lo demás vive en
            tarjetas propias más abajo, no suelto sobre el fondo de la página. -->
-      <header class="tkd-masthead">
-        <RouterLink class="tkd-volver" to="/tickets">
-          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Tickets
-        </RouterLink>
-        <div class="tkd-masthead-fila">
-          <div class="tkd-masthead-titulos">
-            <h1 class="tkd-codigo">Ticket #{{ ticket.codigo }}</h1>
-            <p class="tkd-asunto">{{ ticket.titulo }}</p>
+      <header class="ds-panel tkd-masthead">
+        <div class="ds-panel-body tkd-masthead-body">
+          <div class="tkd-masthead-top">
+            <div class="tkd-masthead-tags">
+              <span class="tkd-eyebrow">TICKET #{{ ticket.codigo }}</span>
+              <span class="ds-pill" :class="PRIORIDAD_TONO[ticket.prioridad]">{{ ticket.prioridad }}</span>
+              <span class="ds-chip" :class="ESTADO_TONO[ticket.estado]">{{ ESTADO_LABEL[ticket.estado] }}</span>
+            </div>
+
+            <div v-if="ticket.canManage" class="tkd-masthead-acciones">
+              <button
+                v-if="siguiente && ticket.canChangeStatus"
+                type="button"
+                class="btn-exec"
+                :class="{ 'btn-exec-outline': ticket.estado === 'CERRADO' }"
+                :disabled="guardando"
+                @click="cambiarEstado(siguiente.estado)"
+              >
+                <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : siguiente.icono" aria-hidden="true"></i>
+                {{ siguiente.texto }}
+              </button>
+              <button
+                v-if="ticket.estado !== 'CERRADO'"
+                type="button"
+                class="btn-exec btn-exec-outline"
+                @click="irAReasignar"
+              >
+                <i class="fa-solid fa-right-left" aria-hidden="true"></i> Reasignar
+              </button>
+            </div>
           </div>
-          <div class="tkd-masthead-estado">
-            <span class="ds-pill" :class="PRIORIDAD_TONO[ticket.prioridad]">{{ ticket.prioridad }}</span>
-            <span class="ds-chip" :class="ESTADO_TONO[ticket.estado]">{{ ESTADO_LABEL[ticket.estado] }}</span>
-          </div>
+
+          <h1 class="tkd-asunto">{{ ticket.titulo }}</h1>
+
+          <p class="tkd-meta">
+            Reportó <strong>{{ ticket.creadoPor?.nombre || '—' }}</strong>
+            <span class="tkd-meta-sep">·</span>
+            Abierto el {{ fechaHora(ticket.creadoEn) }}
+            <template v-if="ticket.canManage">
+              <span class="tkd-meta-sep">·</span>
+              Atiende <strong>{{ ticket.asignadoA?.nombre || 'Sin asignar' }}</strong>
+            </template>
+          </p>
         </div>
       </header>
 
@@ -35,58 +71,36 @@
               <TicketAttachments v-if="adjuntos.length" :adjuntos="adjuntos" kind="ticket" />
             </section>
 
+            <TicketAiNote
+              :ticket-id="ticket.id"
+              :can-manage="!!ticket.canManage"
+              @usar="texto => hilo?.prellenar(texto)"
+            />
+
             <div class="tkd-divisor"></div>
+
+            <div class="tkd-tabs" role="tablist">
+              <span class="tkd-tab tkd-tab-activa" role="tab" aria-selected="true">
+                Conversación
+                <span v-if="comentarios.length" class="tk-hilo-conteo">{{ comentarios.length }}</span>
+              </span>
+              <span class="tkd-tab" role="tab" aria-disabled="true" title="Próximamente">Actividad</span>
+            </div>
 
             <TicketComments
               ref="hilo"
               :comentarios="comentarios"
               :enviando="comentando"
               :error="errorComentario"
+              :reportado-por="ticket.creadoPor?.nombre"
               @comentar="comentar"
             />
           </div>
         </section>
 
-        <aside class="ds-panel tkd-side">
-          <div class="ds-panel-body tk-side">
-            <div class="tk-side-bloque">
-              <span class="tk-bloque-titulo">Reportó</span>
-              <span class="tk-persona">{{ ticket.creadoPor?.nombre || '—' }}</span>
-              <span class="tk-side-fecha">{{ fechaHora(ticket.creadoEn) }}</span>
-            </div>
-
-            <template v-if="ticket.canManage">
-              <div class="tk-side-divisor"></div>
-              <div class="tk-side-bloque">
-                <span class="tk-bloque-titulo">Atiende</span>
-                <span class="tk-persona">{{ ticket.asignadoA?.nombre || 'Sin asignar' }}</span>
-
-                <button
-                  v-if="siguiente && ticket.canChangeStatus"
-                  type="button"
-                  class="btn-exec tk-side-btn"
-                  :class="{ 'btn-exec-outline': ticket.estado === 'CERRADO' }"
-                  :disabled="guardando"
-                  @click="cambiarEstado(siguiente.estado)"
-                >
-                  <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : siguiente.icono" aria-hidden="true"></i>
-                  {{ siguiente.texto }}
-                </button>
-                <p v-else-if="siguiente" class="tk-hint">
-                  Solo quien tiene el ticket asignado puede moverlo de estado.
-                </p>
-
-                <TicketReassign
-                  v-if="ticket.estado !== 'CERRADO'"
-                  :asignado-a-id="ticket.asignadoA?.id ?? null"
-                  :guardando="guardando"
-                  @reasignar="reasignar"
-                />
-              </div>
-            </template>
-
-            <div class="tk-side-divisor"></div>
-            <div class="tk-side-bloque">
+        <aside class="tkd-side-col">
+          <section class="ds-panel">
+            <div class="ds-panel-body tk-side">
               <span class="tk-bloque-titulo">Tiempos SLA</span>
               <div v-for="r in relojes" :key="r.clave" class="tk-reloj">
                 <div class="tk-reloj-cab">
@@ -97,7 +111,53 @@
                 <span class="tk-reloj-pie">{{ r.detalle }}</span>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section class="ds-panel">
+            <div class="ds-panel-body tk-side">
+              <span class="tk-bloque-titulo">Detalle</span>
+
+              <div class="tk-persona-fila">
+                <span class="tk-avatar">{{ iniciales(ticket.creadoPor?.nombre) }}</span>
+                <div class="tk-persona-info">
+                  <span class="tk-persona">{{ ticket.creadoPor?.nombre || '—' }}</span>
+                  <span class="tk-side-fecha">Reportó · {{ fechaHora(ticket.creadoEn) }}</span>
+                </div>
+              </div>
+
+              <template v-if="ticket.canManage">
+                <div class="tk-persona-fila">
+                  <span class="tk-avatar tk-avatar-agente">{{ iniciales(ticket.asignadoA?.nombre) }}</span>
+                  <div class="tk-persona-info">
+                    <span class="tk-persona">{{ ticket.asignadoA?.nombre || 'Sin asignar' }}</span>
+                    <span class="tk-side-fecha">Atiende · {{ ticket.asignadoA ? ESTADO_LABEL[ticket.estado].toLowerCase() : 'sin tomar' }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <div class="tk-side-divisor"></div>
+              <div class="tk-detalle-grid">
+                <div>
+                  <span class="tk-bloque-titulo">Prioridad</span>
+                  <span class="tk-detalle-valor">{{ capitalizar(ticket.prioridad) }}</span>
+                </div>
+                <div>
+                  <span class="tk-bloque-titulo">Área</span>
+                  <span class="tk-detalle-valor">{{ ticket.area }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-if="ticket.canManage && ticket.estado !== 'CERRADO'" ref="reasignarSeccion" class="ds-panel">
+            <div class="ds-panel-body tk-side">
+              <TicketReassign
+                :asignado-a-id="ticket.asignadoA?.id ?? null"
+                :guardando="guardando"
+                @reasignar="reasignar"
+              />
+            </div>
+          </section>
         </aside>
       </div>
     </template>
@@ -111,10 +171,11 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import TicketAttachments from './TicketAttachments.vue'
 import TicketComments from './TicketComments.vue'
+import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
 import {
   ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,
-  slaLabel, slaTono, tiempoRestante, progresoSla, fechaHora, hrefSeguro,
+  slaLabel, slaTono, tiempoRestante, progresoSla, fechaHora, hrefSeguro, iniciales,
 } from './ticket-format.js'
 
 const service = inject(ServiceKeys.Tickets)
@@ -133,10 +194,17 @@ const adjuntos = computed(() => (Array.isArray(ticket.value?.adjuntos) ? ticket.
 const linkSeguro = computed(() => hrefSeguro(ticket.value?.link))
 const siguiente = computed(() => SIGUIENTE_ESTADO[ticket.value?.estado])
 
+const capitalizar = (texto) => (texto ? texto.charAt(0) + texto.slice(1).toLowerCase() : '—')
+
 const hilo = ref(null)
+const reasignarSeccion = ref(null)
 const ahora = ref(Date.now())
 const tick = setInterval(() => { ahora.value = Date.now() }, 30_000)
 onUnmounted(() => clearInterval(tick))
+
+function irAReasignar () {
+  reasignarSeccion.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 
 const relojes = computed(() => {
   const sla = ticket.value?.sla
@@ -231,46 +299,69 @@ async function comentar ({ cuerpo, archivos }) {
    dos columnas anchas, pensados para pantalla completa (esto ya no es un
    modal): todo el contenido vive dentro de tarjetas con borde propio, nunca
    suelto sobre el fondo de la página. */
-.tkd-page { gap: 16px; }
+.tkd-page { gap: 14px; }
 
-.tkd-volver {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12.5px; font-weight: 600; color: var(--ds-muted);
-  text-decoration: none;
-}
-.tkd-volver:hover { color: var(--ds-accent); }
+.tkd-crumbs { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--ds-muted); }
+.tkd-crumbs a { color: var(--ds-muted); text-decoration: none; }
+.tkd-crumbs a:hover { color: var(--ds-accent); }
+.tkd-crumbs-sep { color: var(--ds-border); }
+.tkd-crumbs-actual { color: var(--ds-heading); }
 
-.tkd-masthead {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 16px 20px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
-  background: var(--ds-surface);
-}
-.tkd-masthead-fila { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.tkd-masthead-titulos { min-width: 0; }
-.tkd-codigo { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-heading); }
-.tkd-asunto { margin: 4px 0 0; font-size: 14.5px; font-weight: 600; color: var(--ds-ink-2); }
-.tkd-masthead-estado { display: flex; align-items: center; gap: 7px; flex-shrink: 0; margin-top: 2px; }
+.tkd-masthead-body { display: flex; flex-direction: column; gap: 10px; }
+.tkd-masthead-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.tkd-masthead-tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tkd-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: var(--ds-muted); }
+.tkd-masthead-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.tkd-asunto { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-heading); }
+.tkd-meta { margin: 0; font-size: 12.5px; color: var(--ds-muted); }
+.tkd-meta strong { color: var(--ds-ink-2); font-weight: 700; }
+.tkd-meta-sep { margin: 0 6px; }
 
 /* Sidebar más ancha que en el modal original (320 vs 240): con todo el ancho
    de una página propia, un panel angosto se veía como una columna perdida. */
 .tkd-split { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
 @media (max-width: 860px) { .tkd-split { grid-template-columns: 1fr; } }
 
-.tkd-main-body { display: flex; flex-direction: column; gap: 18px; }
+.tkd-main-body { display: flex; flex-direction: column; gap: 16px; }
 .tkd-divisor { height: 1px; background: var(--ds-border); }
 
+.tkd-tabs { display: flex; align-items: center; gap: 18px; margin-top: -4px; }
+.tkd-tab {
+  display: flex; align-items: center; gap: 6px; padding-bottom: 8px;
+  font-size: 13px; font-weight: 700; color: var(--ds-muted);
+  border-bottom: 2px solid transparent; cursor: default;
+}
+.tkd-tab[aria-disabled="true"] { opacity: 0.55; }
+.tkd-tab-activa { color: var(--ds-heading); border-bottom-color: var(--ds-accent); }
+.tk-hilo-conteo { padding: 1px 7px; border-radius: 10px; background: var(--ds-soft-neutral); font-size: 11.5px; color: var(--ds-ink-2); }
+
+.tkd-side-col { display: flex; flex-direction: column; gap: 16px; }
+
 .tk-side { display: flex; flex-direction: column; gap: 14px; }
-.tk-side-bloque { display: flex; flex-direction: column; gap: 5px; }
 .tk-side-divisor { height: 1px; background: var(--ds-border); }
 .tk-persona { font-size: 13px; font-weight: 600; color: var(--ds-ink); }
 .tk-side-fecha { font-size: 11.5px; color: var(--ds-muted); }
-.tk-side-btn { align-self: flex-start; margin-top: 2px; }
+
+.tk-persona-fila { display: flex; align-items: center; gap: 10px; }
+.tk-persona-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tk-avatar {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 999px;
+  background: var(--ds-soft-info); color: var(--ds-info-ink); font-size: 12px; font-weight: 700;
+}
+.tk-avatar-agente { background: var(--ds-heading); color: var(--ds-surface); }
+
+.tk-detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tk-detalle-grid > div { display: flex; flex-direction: column; gap: 3px; }
+.tk-detalle-valor { font-size: 13px; font-weight: 700; color: var(--ds-heading); }
 
 .tk-reloj { display: flex; flex-direction: column; gap: 5px; }
 .tk-reloj-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tk-reloj-label { font-size: 12px; font-weight: 600; color: var(--ds-heading); }
 .tk-reloj-pie { font-size: 11px; color: var(--ds-muted); }
-.tk-side-bloque .tk-reloj + .tk-reloj { margin-top: 10px; }
+.tk-side-bloque .tk-reloj + .tk-reloj,
+.tk-side .tk-reloj + .tk-reloj { margin-top: 10px; }
 
 .tk-bloque { display: flex; flex-direction: column; gap: 8px; }
 .tk-bloque-titulo { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ds-ink-2); }

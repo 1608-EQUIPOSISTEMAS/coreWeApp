@@ -3,6 +3,7 @@ import { ref, computed, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import { useAiJob } from '@/composables/useAiJob.js'
 import DateRangePicker from '@/components/DateRangePicker.vue'
 import { isoWeekOf } from '@/utils/isoWeek'
 
@@ -609,7 +610,10 @@ function focusDocente(name) {
 // snapshot de indicadores del periodo. Si la IA no responde, caemos a las
 // cartas heuristicas de abajo (cobertura / acompanamiento).
 const aiDecisions = ref(null)
-const aiLoading = ref(false)
+// En segundo plano (ai-jobs): la request vuelve al instante y se consulta el
+// estado; un modelo lento ya no revienta el timeout de la llamada.
+const recJob = useAiJob()
+const aiLoading = recJob.corriendo
 let aiLastKey = null
 let aiTimer = null
 
@@ -671,18 +675,18 @@ async function generateAiDecisions(force = false) {
   // auto-flujo no vuelve a golpear el endpoint con el mismo snapshot (solo
   // el boton Regenerar fuerza otra corrida).
   aiLastKey = key
-  aiLoading.value = true
   try {
-    const res = await editionService.reportRecommendations({ snapshot })
-    aiDecisions.value = res?.ok && Array.isArray(res.data) && res.data.length === 3
-      ? res.data
+    const job = await recJob.run(
+      () => editionService.startReportRecommendations({ snapshot, force }),
+      (id) => editionService.aiJobStatus(id),
+    )
+    aiDecisions.value = job?.estado === 'listo' && Array.isArray(job.data) && job.data.length === 3
+      ? job.data
       : null
   } catch (err) {
-    // Sin IA (tunel caido, 502): el panel cae a las cartas heuristicas.
+    // Sin IA (Ollama caido, 502): el panel cae a las cartas heuristicas.
     console.warn('Recomendaciones IA no disponibles:', err?.message || err)
     aiDecisions.value = null
-  } finally {
-    aiLoading.value = false
   }
 }
 
