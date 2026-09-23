@@ -65,9 +65,16 @@
             <section class="tk-bloque">
               <h4 class="tk-bloque-titulo">Qué pasó</h4>
               <p class="tk-problema">{{ ticket.problema }}</p>
-              <a v-if="linkSeguro" :href="linkSeguro" target="_blank" rel="noopener noreferrer" class="tk-ref">
-                <i class="fa-solid fa-link" aria-hidden="true"></i> {{ ticket.link }}
-              </a>
+              <!-- Solo http(s) se vuelve <a>: el backend ya no valida el formato,
+                   así que cualquier otra cosa se muestra como texto. -->
+              <template v-for="e in enlaces" :key="e.texto">
+                <a v-if="e.href" :href="e.href" target="_blank" rel="noopener noreferrer" class="tk-ref">
+                  <i class="fa-solid fa-link" aria-hidden="true"></i> {{ e.texto }}
+                </a>
+                <span v-else class="tk-ref tk-ref--texto">
+                  <i class="fa-solid fa-link" aria-hidden="true"></i> {{ e.texto }}
+                </span>
+              </template>
               <TicketAttachments v-if="adjuntos.length" :adjuntos="adjuntos" kind="ticket" />
             </section>
 
@@ -102,12 +109,22 @@
           <section class="ds-panel">
             <div class="ds-panel-body tk-side">
               <span class="tk-bloque-titulo">Tiempos SLA</span>
-              <div v-for="r in relojes" :key="r.clave" class="tk-reloj">
+              <div v-for="r in relojes" :key="r.nombre" class="tk-reloj" :class="{ 'tk-reloj--hecho': r.terminado }">
                 <div class="tk-reloj-cab">
-                  <span class="tk-reloj-label">{{ r.label }}</span>
-                  <span class="ds-pill" :class="slaTono(r.estado)">{{ slaLabel(r.estado) }}</span>
+                  <span class="tk-reloj-label">{{ r.titulo }}</span>
+                  <span class="ds-pill" :class="r.tono">{{ slaLabel(r.estado) }}</span>
                 </div>
-                <div class="ds-track"><i :class="slaTono(r.estado)" :style="{ width: r.progreso + '%' }"></i></div>
+                <!-- Detenido: sin barra, porque una barra a medio llenar se lee
+                     como "sigue corriendo". Corriendo: barra del color del estado. -->
+                <p v-if="r.terminado" class="tk-reloj-resumen" :class="'tk-ink-' + r.tono">
+                  <i class="fa-solid" :class="r.icono" aria-hidden="true"></i> {{ r.resumen }}
+                </p>
+                <template v-else>
+                  <div class="ds-track"><i :class="'tk-fill-' + r.tono" :style="{ width: r.progreso + '%' }"></i></div>
+                  <p class="tk-reloj-resumen" :class="'tk-ink-' + r.tono">
+                    <i class="fa-solid" :class="r.icono" aria-hidden="true"></i> {{ r.resumen }}
+                  </p>
+                </template>
                 <span class="tk-reloj-pie">{{ r.detalle }}</span>
               </div>
             </div>
@@ -175,7 +192,7 @@ import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
 import {
   ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,
-  slaLabel, slaTono, tiempoRestante, progresoSla, fechaHora, hrefSeguro, iniciales,
+  slaLabel, describirReloj, fechaHora, hrefSeguro, iniciales,
 } from './ticket-format.js'
 
 const service = inject(ServiceKeys.Tickets)
@@ -191,7 +208,10 @@ const error = ref('')
 const errorComentario = ref('')
 
 const adjuntos = computed(() => (Array.isArray(ticket.value?.adjuntos) ? ticket.value.adjuntos : []))
-const linkSeguro = computed(() => hrefSeguro(ticket.value?.link))
+const enlaces = computed(() => {
+  const lista = ticket.value?.enlaces ?? (ticket.value?.link ? [ticket.value.link] : [])
+  return lista.map(texto => ({ texto, href: hrefSeguro(texto) }))
+})
 const siguiente = computed(() => SIGUIENTE_ESTADO[ticket.value?.estado])
 
 const capitalizar = (texto) => (texto ? texto.charAt(0) + texto.slice(1).toLowerCase() : '—')
@@ -207,22 +227,17 @@ function irAReasignar () {
 }
 
 const relojes = computed(() => {
-  const sla = ticket.value?.sla
-  if (!sla) return []
+  const t = ticket.value
+  if (!t?.sla) return []
   return [
-    { clave: 'respuesta', label: 'Primera respuesta', reloj: sla.respuesta },
-    { clave: 'resolucion', label: 'Resolución', reloj: sla.resolucion },
+    { tipo: 'respuesta', titulo: 'Primera respuesta' },
+    { tipo: 'resolucion', titulo: 'Resolución' },
   ]
-    .filter(r => r.reloj?.venceEn)
-    .map(r => ({
-      clave: r.clave,
-      label: r.label,
-      estado: r.reloj.estado,
-      progreso: progresoSla(r.reloj, ticket.value.creadoEn, ahora.value),
-      detalle: r.reloj.cumplidoEn
-        ? `Cumplido el ${fechaHora(r.reloj.cumplidoEn)}`
-        : `Vence el ${fechaHora(r.reloj.venceEn)} · ${tiempoRestante(r.reloj.msRestantes)}`,
-    }))
+    .map(r => {
+      const d = describirReloj(t.sla[r.tipo], t.creadoEn, r.tipo, ahora.value)
+      return d && { ...d, titulo: r.titulo }
+    })
+    .filter(Boolean)
 })
 
 watch(() => comentarios.value.length, (ahora_, antes) => {
@@ -253,11 +268,27 @@ async function cargar () {
 watch(() => route.params.id, cargar)
 onMounted(cargar)
 
+// El servidor devuelve el ticket completo (permisos y adjuntos incluidos), así
+// que se reemplaza tal cual y la vista queda al día sin recargar la página.
 async function cambiarEstado (estado) {
+  const estadoPrevio = ticket.value.estado
   guardando.value = true
   try {
-    ticket.value = await service.changeStatus(ticket.value.id, estado)
-    toast.success(estado === 'CERRADO' ? 'Ticket marcado como resuelto' : 'Ticket tomado')
+    const { avisoSlack, ...actualizado } = await service.changeStatus(ticket.value.id, estado)
+    ticket.value = actualizado
+    if (estado !== 'CERRADO') {
+      toast.success(estadoPrevio === 'CERRADO' ? 'Ticket reabierto' : 'Ticket tomado')
+      return
+    }
+    // Al resolver, el backend le manda la confirmación por Slack a quien
+    // reportó y avisa si llegó.
+    const quien = actualizado.creadoPor?.nombre || 'quien lo reportó'
+    if (avisoSlack) {
+      toast.success(`Ticket resuelto. Se envió un mensaje de confirmación a ${quien} por Slack.`)
+    } else {
+      toast.success('Ticket resuelto.')
+      toast.warning(`No se pudo enviar la confirmación por Slack a ${quien}.`)
+    }
   } catch (e) {
     console.error('tickets.status:', e)
     toast.error(e?.response?.data?.message || 'No se pudo cambiar el estado.')
@@ -360,6 +391,16 @@ async function comentar ({ cuerpo, archivos }) {
 .tk-reloj-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tk-reloj-label { font-size: 12px; font-weight: 600; color: var(--ds-heading); }
 .tk-reloj-pie { font-size: 11px; color: var(--ds-muted); }
+.tk-reloj-resumen { margin: 0; font-size: 12.5px; font-weight: 700; }
+.tk-reloj-resumen i { margin-right: 4px; }
+/* Reloj detenido: se atenúa para que el ojo vaya al que todavía corre. */
+.tk-reloj--hecho .tk-reloj-label { color: var(--ds-ink-2); }
+.tk-fill-ok { background: var(--ds-ok); }
+.tk-fill-warn { background: var(--ds-warn); }
+.tk-fill-bad { background: var(--ds-bad); }
+.tk-ink-ok { color: var(--ds-ok-ink); }
+.tk-ink-warn { color: var(--ds-warn-ink); }
+.tk-ink-bad { color: var(--ds-bad-ink); }
 .tk-side-bloque .tk-reloj + .tk-reloj,
 .tk-side .tk-reloj + .tk-reloj { margin-top: 10px; }
 
@@ -367,6 +408,7 @@ async function comentar ({ cuerpo, archivos }) {
 .tk-bloque-titulo { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ds-ink-2); }
 .tk-problema { margin: 0; font-size: 13.5px; color: var(--ds-ink); white-space: pre-wrap; word-break: break-word; }
 .tk-ref { align-self: flex-start; font-size: 12.5px; color: var(--ds-accent); word-break: break-all; }
+.tk-ref--texto { color: var(--ds-ink-2); }
 
 .tk-hint { margin: 0; font-size: 11.5px; color: var(--ds-muted); }
 </style>

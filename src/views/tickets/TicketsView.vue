@@ -50,7 +50,9 @@
       :scope="scope"
       :cargando="cargando"
       :error="error"
+      :tomando-id="tomandoId"
       @abrir="abrirDetalle"
+      @tomar="tomar"
     />
 
     <TicketCreateModal
@@ -79,7 +81,7 @@ const toast = useToast()
 
 const {
   tickets, kpis, scope, cargando, error,
-  filtro, busqueda, orden, cargar,
+  filtro, busqueda, orden, cargar, reemplazar,
 } = useTickets(service)
 
 const TABS = [
@@ -109,6 +111,26 @@ async function crear (datos) {
     errorCrear.value = e?.response?.data?.message || 'No se pudo crear el ticket.'
   } finally {
     creando.value = false
+  }
+}
+
+// ── Tomar desde la bandeja ────────────────────────────────────────────────
+// La fila se reemplaza con lo que devuelve el servidor y los KPIs se recargan:
+// el cambio se ve al instante, sin entrar al detalle ni recargar la página.
+const tomandoId = ref(null)
+
+async function tomar (ticket) {
+  tomandoId.value = ticket.id
+  try {
+    await reemplazar(await service.changeStatus(ticket.id, 'EN_PROGRESO'))
+    toast.success(`Tomaste el ticket #${ticket.codigo}`)
+  } catch (e) {
+    console.error('tickets.take:', e)
+    toast.error(e?.response?.data?.message || 'No se pudo tomar el ticket.')
+    // Si otro agente se adelantó, la bandeja muestra quién lo tiene ahora.
+    await cargar()
+  } finally {
+    tomandoId.value = null
   }
 }
 

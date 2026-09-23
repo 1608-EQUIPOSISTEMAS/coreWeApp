@@ -32,9 +32,15 @@
       </label>
 
       <label class="tk-campo">
-        <span class="tk-label">Enlace de referencia</span>
-        <input v-model="link" type="url" class="tk-input" placeholder="https://…" maxlength="2048" />
-        <small class="tk-hint tk-hint--izq">Opcional: la pantalla del ERP o el documento donde ocurre.</small>
+        <span class="tk-label">Enlaces de referencia</span>
+        <textarea
+          v-model="link"
+          class="tk-input tk-textarea tk-textarea--enlaces"
+          rows="2"
+          maxlength="2048"
+          placeholder="https://…&#10;Uno por línea"
+        ></textarea>
+        <small class="tk-hint tk-hint--izq">Opcional: las pantallas del ERP o los documentos donde ocurre. Puedes pegar varios, uno por línea.</small>
       </label>
 
       <div class="tk-campo">
@@ -205,6 +211,7 @@ watch(() => props.visible, (abierto) => {
 }
 .tk-input:focus { outline: 2px solid var(--ds-accent); outline-offset: -1px; }
 .tk-textarea { resize: vertical; min-height: 110px; }
+.tk-textarea--enlaces { min-height: 56px; }
 .tk-hint { align-self: flex-end; font-size: 11.5px; color: var(--ds-muted); }
 .tk-hint--izq { align-self: flex-start; }
 

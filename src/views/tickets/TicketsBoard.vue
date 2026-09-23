@@ -70,7 +70,9 @@
           :tickets="ticketsFiltrados"
           :can-manage="scope.canManage"
           :mostrar-creador="scope.kind !== 'OWN'"
+          :tomando-id="tomandoId"
           @abrir="$emit('abrir', $event)"
+          @tomar="$emit('tomar', $event)"
         />
       </div>
     </section>
@@ -94,9 +96,10 @@ const props = defineProps({
   orden: { type: String, default: 'sla' },
   cargando: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  tomandoId: { type: Number, default: null },
 })
 
-const emit = defineEmits(['abrir', 'update:filtro', 'update:busqueda', 'update:orden'])
+const emit = defineEmits(['abrir', 'tomar', 'update:filtro', 'update:busqueda', 'update:orden'])
 
 const filtroLocal = computed({
   get: () => props.filtro,
