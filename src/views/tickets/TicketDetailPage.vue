@@ -33,7 +33,7 @@
                 @click="reabrir"
               >
                 <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : 'fa-rotate-left'" aria-hidden="true"></i>
-                El problema sigue: reabrir
+                Reabrir
               </button>
               <button
                 v-if="siguiente && ticket.canChangeStatus"
