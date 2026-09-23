@@ -22,7 +22,19 @@
               <span class="ds-chip" :class="ESTADO_TONO[ticket.estado]">{{ ESTADO_LABEL[ticket.estado] }}</span>
             </div>
 
-            <div v-if="ticket.canManage" class="tkd-masthead-acciones">
+            <div v-if="ticket.canManage || ticket.canReopen" class="tkd-masthead-acciones">
+              <!-- Quien reportó reabre lo suyo si el problema sigue. Si además
+                   es el agente asignado, ya tiene el botón de gestión de abajo. -->
+              <button
+                v-if="ticket.canReopen && !ticket.canChangeStatus"
+                type="button"
+                class="btn-exec btn-exec-outline"
+                :disabled="guardando"
+                @click="reabrir"
+              >
+                <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : 'fa-rotate-left'" aria-hidden="true"></i>
+                El problema sigue: reabrir
+              </button>
               <button
                 v-if="siguiente && ticket.canChangeStatus"
                 type="button"
@@ -35,7 +47,7 @@
                 {{ siguiente.texto }}
               </button>
               <button
-                v-if="ticket.estado !== 'CERRADO'"
+                v-if="ticket.canManage && ticket.estado !== 'CERRADO'"
                 type="button"
                 class="btn-exec btn-exec-outline"
                 @click="irAReasignar"
@@ -81,20 +93,47 @@
             <TicketAiNote
               :ticket-id="ticket.id"
               :can-manage="!!ticket.canManage"
-              @usar="texto => hilo?.prellenar(texto)"
+              @usar="usarBorrador"
             />
 
             <div class="tkd-divisor"></div>
 
             <div class="tkd-tabs" role="tablist">
-              <span class="tkd-tab tkd-tab-activa" role="tab" aria-selected="true">
+              <button
+                type="button"
+                class="tkd-tab"
+                :class="{ 'tkd-tab-activa': pestana === 'conversacion' }"
+                role="tab"
+                :aria-selected="pestana === 'conversacion'"
+                @click="pestana = 'conversacion'"
+              >
                 Conversación
                 <span v-if="comentarios.length" class="tk-hilo-conteo">{{ comentarios.length }}</span>
-              </span>
-              <span class="tkd-tab" role="tab" aria-disabled="true" title="Próximamente">Actividad</span>
+              </button>
+              <button
+                type="button"
+                class="tkd-tab"
+                :class="{ 'tkd-tab-activa': pestana === 'actividad' }"
+                role="tab"
+                :aria-selected="pestana === 'actividad'"
+                @click="pestana = 'actividad'"
+              >
+                Actividad
+                <span v-if="actividad?.length" class="tk-hilo-conteo">{{ actividad.length }}</span>
+              </button>
             </div>
 
+            <TicketActivity
+              v-if="pestana === 'actividad'"
+              :eventos="actividad ?? []"
+              :cargando="cargandoActividad"
+              :error="errorActividad"
+            />
+
+            <!-- v-show y no v-if: cambiar de pestaña no puede borrar lo que el
+                 agente venía escribiendo en la respuesta. -->
             <TicketComments
+              v-show="pestana === 'conversacion'"
               ref="hilo"
               :comentarios="comentarios"
               :enviando="comentando"
@@ -188,6 +227,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import TicketAttachments from './TicketAttachments.vue'
 import TicketComments from './TicketComments.vue'
+import TicketActivity from './TicketActivity.vue'
 import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
 import {
@@ -244,16 +284,60 @@ watch(() => comentarios.value.length, (ahora_, antes) => {
   if (antes !== undefined && ahora_ > antes) hilo.value?.reset()
 })
 
+// ── Pestaña Actividad ──────────────────────────────────────────────────────
+// Se pide recién al abrir la pestaña (la mayoría de las visitas solo miran la
+// conversación). actividad = null significa "no cargada o desactualizada".
+const pestana = ref('conversacion')
+const actividad = ref(null)
+const cargandoActividad = ref(false)
+const errorActividad = ref('')
+
+async function cargarActividad () {
+  const id = ticket.value?.id
+  if (!id) return
+  cargandoActividad.value = true
+  errorActividad.value = ''
+  try {
+    const eventos = await service.activity(id)
+    // Si mientras tanto se navegó a otro ticket, esta respuesta ya no aplica.
+    if (ticket.value?.id === id) actividad.value = eventos
+  } catch (e) {
+    console.error('tickets.activity:', e)
+    errorActividad.value = e?.response?.data?.message || 'No se pudo cargar la actividad.'
+  } finally {
+    cargandoActividad.value = false
+  }
+}
+
+watch(pestana, (p) => {
+  if (p === 'actividad' && actividad.value === null) cargarActividad()
+})
+
+// Tras cualquier cambio (estado, reasignación, comentario) la actividad ya no
+// está al día: si se está mirando se recarga; si no, se pedirá al volver.
+function actividadDesactualizada () {
+  if (pestana.value === 'actividad') cargarActividad()
+  else actividad.value = null
+}
+
+function usarBorrador (texto) {
+  pestana.value = 'conversacion'
+  hilo.value?.prellenar(texto)
+}
+
 async function cargar () {
   const id = Number(route.params.id)
   ticket.value = null
   comentarios.value = []
+  actividad.value = null
+  errorActividad.value = ''
   error.value = ''
   cargando.value = true
   try {
     const [t, c] = await Promise.all([service.detail(id), service.comments(id)])
     ticket.value = t
     comentarios.value = c
+    if (pestana.value === 'actividad') cargarActividad()
   } catch (e) {
     console.error('tickets.detail:', e)
     error.value = e?.response?.data?.message || 'No se pudo abrir el ticket.'
@@ -276,6 +360,7 @@ async function cambiarEstado (estado) {
   try {
     const { avisoSlack, ...actualizado } = await service.changeStatus(ticket.value.id, estado)
     ticket.value = actualizado
+    actividadDesactualizada()
     if (estado !== 'CERRADO') {
       toast.success(estadoPrevio === 'CERRADO' ? 'Ticket reabierto' : 'Ticket tomado')
       return
@@ -297,10 +382,26 @@ async function cambiarEstado (estado) {
   }
 }
 
+async function reabrir () {
+  guardando.value = true
+  try {
+    ticket.value = await service.reopen(ticket.value.id)
+    actividadDesactualizada()
+    const agente = ticket.value.asignadoA?.nombre
+    toast.success(agente ? `Ticket reabierto. Vuelve a ${agente}.` : 'Ticket reabierto.')
+  } catch (e) {
+    console.error('tickets.reopen:', e)
+    toast.error(e?.response?.data?.message || 'No se pudo reabrir el ticket.')
+  } finally {
+    guardando.value = false
+  }
+}
+
 async function reasignar (nuevoAsignadoId) {
   guardando.value = true
   try {
     ticket.value = await service.reassign(ticket.value.id, nuevoAsignadoId)
+    actividadDesactualizada()
     toast.success(`Ticket reasignado a ${ticket.value.asignadoA?.nombre ?? 'otro agente'}`)
   } catch (e) {
     console.error('tickets.reassign:', e)
@@ -315,6 +416,7 @@ async function comentar ({ cuerpo, archivos }) {
   errorComentario.value = ''
   try {
     comentarios.value = await service.addComment(ticket.value.id, cuerpo, archivos)
+    actividadDesactualizada()
   } catch (e) {
     console.error('tickets.comment:', e)
     errorComentario.value = e?.response?.data?.message || 'No se pudo enviar el comentario.'
@@ -359,11 +461,13 @@ async function comentar ({ cuerpo, archivos }) {
 
 .tkd-tabs { display: flex; align-items: center; gap: 18px; margin-top: -4px; }
 .tkd-tab {
-  display: flex; align-items: center; gap: 6px; padding-bottom: 8px;
-  font-size: 13px; font-weight: 700; color: var(--ds-muted);
-  border-bottom: 2px solid transparent; cursor: default;
+  display: flex; align-items: center; gap: 6px; padding: 0 0 8px;
+  border: 0; border-bottom: 2px solid transparent; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: var(--ds-muted);
+  cursor: pointer;
 }
-.tkd-tab[aria-disabled="true"] { opacity: 0.55; }
+.tkd-tab:hover { color: var(--ds-heading); }
+.tkd-tab:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; border-radius: 3px; }
 .tkd-tab-activa { color: var(--ds-heading); border-bottom-color: var(--ds-accent); }
 .tk-hilo-conteo { padding: 1px 7px; border-radius: 10px; background: var(--ds-soft-neutral); font-size: 11.5px; color: var(--ds-ink-2); }
 

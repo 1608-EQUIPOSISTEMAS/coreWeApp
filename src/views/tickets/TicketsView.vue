@@ -21,27 +21,9 @@
       </div>
     </header>
 
-    <!-- Las políticas de SLA no van al sidebar: viven acá dentro y solo las ve
-         quien puede gestionarlas, según lo que responde el backend. -->
-    <nav v-if="scope.canManage" class="tk-tabs" role="tablist" aria-label="Secciones de tickets">
-      <button
-        v-for="t in TABS"
-        :key="t.key"
-        type="button"
-        role="tab"
-        class="tk-tab"
-        :class="{ activo: tab === t.key }"
-        :aria-selected="tab === t.key"
-        @click="tab = t.key"
-      >
-        <i class="fa-solid" :class="t.icono" aria-hidden="true"></i> {{ t.label }}
-      </button>
-    </nav>
-
-    <SlaPolicies v-if="tab === 'SLA' && scope.canManage" />
-
+    <!-- Los plazos de atención ya no se editan acá: salen de la tabla de SLA de
+         criterios-prioridad.md (backend), en horario hábil. -->
     <TicketsBoard
-      v-else
       v-model:filtro="filtro"
       v-model:busqueda="busqueda"
       v-model:orden="orden"
@@ -73,7 +55,6 @@ import { ServiceKeys } from '@/services'
 import { useTickets } from './useTickets.js'
 import TicketsBoard from './TicketsBoard.vue'
 import TicketCreateModal from './TicketCreateModal.vue'
-import SlaPolicies from './SlaPolicies.vue'
 
 const service = inject(ServiceKeys.Tickets)
 const router = useRouter()
@@ -83,12 +64,6 @@ const {
   tickets, kpis, scope, cargando, error,
   filtro, busqueda, orden, cargar, reemplazar,
 } = useTickets(service)
-
-const TABS = [
-  { key: 'BANDEJA', label: 'Bandeja', icono: 'fa-inbox' },
-  { key: 'SLA', label: 'Plazos de atención', icono: 'fa-stopwatch' },
-]
-const tab = ref('BANDEJA')
 
 onMounted(cargar)
 
@@ -144,12 +119,4 @@ function abrirDetalle (id) {
 
 <style scoped>
 /* Página, cabecera, botones y colores: sistema de diseño (styles/design-system.css). */
-.tk-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--ds-border); }
-.tk-tab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 14px; border: 0; border-bottom: 2px solid transparent;
-  background: none; font-size: 13px; font-weight: 600; color: var(--ds-muted); cursor: pointer;
-}
-.tk-tab:hover { color: var(--ds-heading); }
-.tk-tab.activo { color: var(--ds-accent); border-bottom-color: var(--ds-accent); }
 </style>
