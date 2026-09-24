@@ -51,7 +51,7 @@
 
     <p v-if="tab === 'objetivos' && !sinLimiteDeFecha && editableDesde" class="ds-alert neutro">
       <i class="fa-solid fa-lock" aria-hidden="true"></i>
-      Solo se editan las ediciones que empiecen desde el <strong>{{ fecha(editableDesde) }}</strong> (40 días).
+      Solo se editan las ediciones que empiecen desde el <strong>{{ fecha(editableDesde) }}</strong>.
       Las que arrancan antes ya están en venta y su objetivo queda cerrado.
     </p>
 
@@ -329,9 +329,10 @@ const { proxy } = getCurrentInstance()
 // mismo, así que esconder el resto de campos es coherencia, no seguridad.
 const puedeEditarTodo = proxy.$hasRole(['ADMIN', 'GERENCIA'])
 const CANALES_DEL_LIDER = ['COMERCIAL', 'OTROS']
-// La ventana de edición (hoy + 40 días) no aplica a ADMIN: es quien corrige un
-// error en una edición que ya arrancó. El backend aplica la misma excepción; esto
-// solo evita mostrar campos que el servidor va a rechazar.
+// La ventana de edición no aplica a ADMIN: es quien corrige un error en una
+// edición que ya arrancó. El backend aplica la misma excepción; esto solo evita
+// mostrar campos que el servidor va a rechazar. Si el backend manda
+// `editable_desde` en null (ventana suspendida) no hay candado para nadie.
 const sinLimiteDeFecha = proxy.$hasRole(['ADMIN'])
 
 const TABS = [
