@@ -129,8 +129,8 @@
             </div>
           </td>
           <td class="right nowrap">
-            <button class="btn sm" @click="abrirDestino(f)">Destino</button>
-            <button class="btn sm" :disabled="!f.dest_program_version_id && !cierre(f)" @click="abrirContacto(f)">Contactar</button>
+            <button class="btn sm" :disabled="ejecutado(f)" @click="abrirDestino(f)">Destino</button>
+            <button class="btn sm" :disabled="ejecutado(f) || (!f.dest_program_version_id && !cierre(f))" @click="abrirContacto(f)">Contactar</button>
             <button class="btn sm primary" :disabled="f.status !== 'contactado'" @click="abrirVeredicto(f)">Veredicto</button>
           </td>
         </tr>
@@ -395,6 +395,8 @@ const notaVeredicto = ref('')
 
 // Sin fila en la BD el caso existe igual: es un afectado que nadie tomo.
 const estadoDe = f => f.status || 'detectado'
+// Ya movido en el ERP: tocarlo de nuevo solo reescribe el estado (el backend lo rechaza).
+const ejecutado = f => estadoDe(f) === 'aceptado'
 // Un caso cerrado sin destino no es un "Reubicado": el alumno no se movio.
 const estadoLabel = f => (cierre(f) && estadoDe(f) === 'aceptado')
   ? cierre(f).hecho

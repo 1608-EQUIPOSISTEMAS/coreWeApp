@@ -14,7 +14,7 @@
 
     <section class="ds-panel">
       <header class="ds-panel-head">
-        <h3 class="ds-panel-title">¿Qué trámites esperan mi firma?</h3>
+        <h3 class="ds-panel-title">¿Qué trámites esperan a mi área?</h3>
         <span class="ds-panel-hint">{{ incluirCerrados ? 'Todos' : 'Solo pendientes' }}</span>
       </header>
 
@@ -92,8 +92,8 @@
                   </td>
                   <td>{{ etiquetaTipo(t.tipo) }}</td>
                   <td>{{ t.programa || '—' }}</td>
-                  <td><span class="ds-pill info">{{ t.area_actual }}</span></td>
-                  <td><span class="ds-pill" :class="tonoEstado(t.status)">{{ t.status }}</span></td>
+                  <td><span class="ds-pill info">{{ etiquetaTurno(t) }}</span></td>
+                  <td><span class="ds-pill" :class="estado(t.status).tono">{{ estado(t.status).etiqueta }}</span></td>
                   <td>{{ fecha(t.registration_date) }}</td>
                 </tr>
               </template>
@@ -110,12 +110,52 @@
           <div><dt>Contacto</dt><dd>{{ seleccionado.correo || '—' }} · {{ seleccionado.celular || '—' }}</dd></div>
           <div><dt>Trámite</dt><dd>{{ etiquetaTipo(seleccionado.tipo) }}</dd></div>
           <div><dt>Programa</dt><dd>{{ seleccionado.programa || '—' }}</dd></div>
-          <div><dt>Turno</dt><dd>{{ seleccionado.area_actual }}</dd></div>
+          <div v-for="fila in detalleDelPedido(seleccionado)" :key="fila.etiqueta">
+            <dt>{{ fila.etiqueta }}</dt><dd>{{ fila.valor }}</dd>
+          </div>
+          <div><dt>Costo</dt><dd>{{ etiquetaMonto(seleccionado) }}</dd></div>
+          <div><dt>Estado</dt><dd>{{ estado(seleccionado.status).etiqueta }} · turno {{ etiquetaTurno(seleccionado) }}</dd></div>
         </dl>
 
-        <p class="motivo">{{ seleccionado.detalle }}</p>
+        <p v-if="seleccionado.detalle" class="motivo">{{ seleccionado.detalle }}</p>
 
-        <div class="ds-field">
+        <p v-if="seleccionado.requiere_accion_manual" class="ds-alert">
+          {{ seleccionado.requiere_accion_manual }}: al resolverlo, el ERP no moverá la matrícula solo.
+        </p>
+
+        <div v-if="seleccionado.voucher_key || seleccionado.evidencia_key" class="adjuntos">
+          <button
+            v-if="seleccionado.voucher_key"
+            class="btn-exec btn-exec-outline"
+            type="button"
+            @click="verArchivo('voucher')"
+          >
+            <i class="fa-solid fa-receipt" aria-hidden="true"></i> Ver voucher
+          </button>
+          <button
+            v-if="seleccionado.evidencia_key"
+            class="btn-exec btn-exec-outline"
+            type="button"
+            @click="verArchivo('evidencia')"
+          >
+            <i class="fa-solid fa-paperclip" aria-hidden="true"></i> Ver evidencia
+          </button>
+        </div>
+
+        <div v-if="puedeFijarMonto(seleccionado)" class="ds-field">
+          <label class="ds-label" for="monto">Gasto administrativo (S/)</label>
+          <input
+            id="monto"
+            v-model.number="monto"
+            class="ds-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="La lista de precios no tiene este curso"
+          />
+        </div>
+
+        <div v-if="seleccionado.puede_firmar" class="ds-field">
           <label class="ds-label" for="respuesta">Respuesta para el alumno</label>
           <textarea
             id="respuesta"
@@ -128,12 +168,12 @@
         </div>
       </template>
 
-      <template #footer>
+      <template v-if="seleccionado?.puede_firmar" #footer>
         <button class="btn-exec btn-exec-outline" type="button" :disabled="guardando" @click="rechazar">
           Rechazar
         </button>
-        <button class="btn-exec btn-exec-primary" type="button" :disabled="guardando" @click="firmar">
-          {{ guardando ? 'Guardando…' : 'Validar trámite' }}
+        <button class="btn-exec btn-exec-primary" type="button" :disabled="guardando || faltaMonto" @click="firmar">
+          {{ guardando ? 'Guardando…' : textoFirmar(seleccionado) }}
         </button>
       </template>
     </BaseModal>
@@ -146,21 +186,12 @@ import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/BaseModal.vue'
 import { confirmAction } from '@/composables/useConfirm'
 import { ServiceKeys } from '@/services'
+import {
+  TIPOS, detalleDelPedido, estado, etiquetaMonto, etiquetaTipo, etiquetaTurno, puedeFijarMonto, textoFirmar,
+} from '@/entities/ticket-alumno/ticket-alumno.presentacion'
 
 const toast = useToast()
 const ticketsService = inject(ServiceKeys.TicketsAlumnos)
-
-// Espejo del catalogo del portal (Nexus: portal/domain/solicitudes.js). Solo
-// para la etiqueta legible y el filtro; el ruteo por area lo decide el backend.
-const TIPOS = [
-  { valor: 'REPROGRAMACION', etiqueta: 'Reprogramación (nueva fecha)' },
-  { valor: 'CAMBIO_CURSO', etiqueta: 'Cambio de curso' },
-  { valor: 'ALQUILER_SAP', etiqueta: 'Alquiler de usuario SAP' },
-  { valor: 'COMPRA_GRABACIONES', etiqueta: 'Compra de grabaciones o materiales' },
-  { valor: 'CERTIFICADOS', etiqueta: 'Certificados y convalidaciones' },
-  { valor: 'FLEXIBILIDAD_HORARIA', etiqueta: 'Flexibilidad horaria' },
-  { valor: 'REASIGNACION_CURSO', etiqueta: 'Reasignación a curso' },
-]
 
 const tickets = ref([])
 const cargando = ref(true)
@@ -171,7 +202,12 @@ const filtros = reactive({ q: '', tipo: null })
 const abierto = ref(false)
 const seleccionado = ref(null)
 const respuesta = ref('')
+const monto = ref(null)
 const guardando = ref(false)
+
+// Sin monto Academica no puede aprobar: el alumno quedaria debiendo "S/ —".
+const faltaMonto = computed(() =>
+  Boolean(seleccionado.value) && puedeFijarMonto(seleccionado.value) && !(Number(monto.value) >= 0 && monto.value !== '' && monto.value !== null))
 
 const subtitulo = computed(() => {
   if (cargando.value) return 'Cargando…'
@@ -179,13 +215,6 @@ const subtitulo = computed(() => {
   if (!n) return 'Nada pendiente de tu área'
   return `${n} ${n === 1 ? 'trámite espera' : 'trámites esperan'} tu firma`
 })
-
-const etiquetaTipo = tipo => TIPOS.find(t => t.valor === tipo)?.etiqueta || tipo
-
-function tonoEstado (status) {
-  const tonos = { ABIERTA: 'warn', EN_PROCESO: 'info', RESUELTA: 'ok', RECHAZADA: 'bad' }
-  return tonos[status] || ''
-}
 
 function fecha (valor) {
   if (!valor) return '—'
@@ -212,7 +241,17 @@ async function cargar () {
 function abrir (ticket) {
   seleccionado.value = ticket
   respuesta.value = ticket.respuesta || ''
+  monto.value = null
   abierto.value = true
+}
+
+async function verArchivo (cual) {
+  try {
+    const url = await ticketsService.urlDeArchivo({ solicitudId: seleccionado.value.solicitud_id, cual })
+    window.open(url, '_blank', 'noopener')
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'No se pudo abrir el archivo')
+  }
 }
 
 // Firmar es irreversible: o pasa el tramite a la otra area o lo da por resuelto,
@@ -222,7 +261,7 @@ async function firmar () {
   // undefined y el boton no hacia nada.
   const confirmado = await confirmAction({
     title: '¿Validar este trámite?',
-    text: `${seleccionado.value.ticket_number} de ${seleccionado.value.alumno}. Si es el último paso, queda resuelto.`,
+    text: `${seleccionado.value.ticket_number} de ${seleccionado.value.alumno}. El alumno verá el cambio en su portal.`,
     confirmText: 'Sí, validar',
   })
   if (!confirmado) return
@@ -230,15 +269,16 @@ async function firmar () {
   await enviar(() => ticketsService.firmar({
     solicitudId: seleccionado.value.solicitud_id,
     respuesta: respuesta.value,
+    monto: puedeFijarMonto(seleccionado.value) ? monto.value : null,
   }), resultado => resultado.status === 'RESUELTA'
     ? 'Trámite resuelto'
-    : `Trámite validado, ahora lo revisa ${resultado.area_actual}`)
+    : 'Aprobado: el alumno ya puede adjuntar su voucher')
 }
 
 async function rechazar () {
   const confirmado = await confirmAction({
     title: '¿Rechazar este trámite?',
-    text: 'Se cierra sin pasar a la otra área y el alumno ve tu respuesta.',
+    text: 'Se cierra y el alumno ve tu respuesta.',
     confirmText: 'Sí, rechazar',
     danger: true,
   })
@@ -287,6 +327,8 @@ onMounted(cargar)
 .detalle > div { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: baseline; }
 .detalle dt { font-size: 11.5px; font-weight: 600; color: var(--ds-ink-2); }
 .detalle dd { margin: 0; font-size: 13px; color: var(--ds-ink); }
+
+.adjuntos { display: flex; gap: 8px; margin-bottom: var(--ds-gap); }
 
 .motivo {
   margin: 0 0 var(--ds-gap);
