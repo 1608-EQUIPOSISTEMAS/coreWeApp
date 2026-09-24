@@ -56,6 +56,20 @@ export function horasDe (e) {
   return e.schedules.length > 1 ? `${base} (+${e.schedules.length - 1})` : base
 }
 
+// El objetivo de una edición es la SUMA de su reparto por canal, nunca el total
+// guardado: Gerencia > Objetivos se edita canal por canal y deriva el OBJ de
+// ahí, así que cualquier otra pantalla que lea `vacant_goal` puede mostrar un
+// número que Gerencia ya no reconoce.
+//
+// Pasó en producción el 24/09/2026: seis ediciones de octubre arrastraban un
+// objetivo viejo de Producto sin ningún canal (12, 4, 5, 7, 8 y 15). El
+// cronograma las sumaba y Gerencia no, y los dos KPI del mismo mes no cuadraban.
+// Sin canales el objetivo es 0 y la edición sale "Sin meta": es lo correcto,
+// porque el estándar todavía no la alcanzó y alguien tiene que cargarla.
+export function objetivoDeCanales (metasCanal, metrica = 'ventas') {
+  return Object.values(metasCanal || {}).reduce((t, c) => t + (Number(c?.[metrica]) || 0), 0)
+}
+
 // Agrupa el mes en semanas y arma las familias DIP → PEE → ESP → curso.
 //
 // El SP ya devuelve las ediciones de una familia consecutivas; aquí se unen las

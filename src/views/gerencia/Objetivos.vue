@@ -736,18 +736,28 @@ async function cargar () {
   }
 }
 
+function soloLoCambiado (fila) {
+  const cambios = {}
+  for (const clave of TODAS_LAS_CLAVES) {
+    for (const metrica of ['ventas', 'consultas']) {
+      if (!tocada(fila, clave, metrica)) continue
+      cambios[clave] = { ...cambios[clave], [metrica]: fila.canales[clave][metrica] || 0 }
+    }
+  }
+  return cambios
+}
+
 async function guardar () {
   guardando.value = true
   try {
-    // revenue_goal viaja igual que vino: el objetivo de ingresos no sale del plan
-    // y mandarlo en 0 lo borraría. Al líder comercial el backend le recorta el
-    // envío a las ventas de sus canales, así que manda la fila entera igual.
+    // Viaja SOLO la celda que cambió, no la fila entera. Mandar los siete canales
+    // hacía que, si dos personas editan la misma edición a la vez, la segunda en
+    // guardar pisara el cambio de la primera con su copia vieja. El backend
+    // fusiona el envío con lo guardado y deriva el OBJ de los canales.
     const goals = pendientes.value.map((f) => ({
       edition_num_id: f.edition_num_id,
-      target_vacants: total(f, 'ventas'),
       target_revenue: f.meta_monto || 0,
-      target_leads: total(f, 'consultas'),
-      channel_goals: f.canales
+      channel_goals: soloLoCambiado(f)
     }))
     await dashboardService.saveProgramGoals({ goals })
     toast.success(goals.length === 1 ? 'Objetivo guardado' : `${goals.length} objetivos guardados`)

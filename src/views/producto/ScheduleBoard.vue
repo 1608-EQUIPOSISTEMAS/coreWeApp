@@ -403,6 +403,7 @@
 import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { objetivoDeCanales } from '@/shared/lib/cronograma'
 import { ServiceKeys } from '@/services'
 
 const editionService = inject(ServiceKeys.Edition)
@@ -626,8 +627,11 @@ async function fetchAll() {
       .programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value })
       .catch(() => ({ items: [] }))
 
+    // El objetivo se DERIVA del reparto por canal, igual que en Gerencia >
+    // Objetivos, que es donde se edita. Leer `meta_vacantes` (el total guardado)
+    // hacia que las dos pantallas mostraran meses distintos: ver objetivoDeCanales.
     const goalByEd = {}
-    ;(goals.items || []).forEach(g => { goalByEd[g.edition_id] = Number(g.meta_vacantes || 0) })
+    ;(goals.items || []).forEach(g => { goalByEd[g.edition_id] = objetivoDeCanales(g.metas_canal) })
 
     weeks.forEach(w => (w.items || []).forEach(e => {
       // Los congresos/eventos llevan su propia meta en Fundacion > Objetivos:
