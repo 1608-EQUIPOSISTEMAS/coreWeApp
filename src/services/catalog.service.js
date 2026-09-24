@@ -1,7 +1,7 @@
 // src/services/catalog.service.js
 import api from './api'
 
-const LS_KEY = 'CORE_CATALOG_V4' // V4: we_attempt = Seguimiento 1-3 / Llamada 1-2-UV / plantillas / WhatsApp — bump fuerza refetch en todos los clientes
+const LS_KEY = 'CORE_CATALOG_V5' // V5: canal TikTok (we_social_media_tiktok) — bump fuerza refetch en todos los clientes
 
 const DEFAULT_WE_CURRENCY = [
   {

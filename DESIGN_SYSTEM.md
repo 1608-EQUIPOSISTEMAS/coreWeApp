@@ -53,6 +53,7 @@ Se definen en `:root` y cambian solos con `data-coreui-theme="dark"`.
 | `--ds-ink-2` | `#64748b` | `#a0a099` | Texto secundario, etiquetas |
 | `--ds-muted` | `#94a3b8` | `#8a8a80` | Notas, encabezados de tabla, vacío |
 | `--ds-brand` | `#002060` | `#002060` | Marca: botón primario, foco |
+| `--ds-on-brand` | `#ffffff` | `#ffffff` | Texto sobre el navy de marca (el navy no cambia con el tema) |
 | `--ds-accent` | `#3a63b8` | `#8faadc` | Serie principal de gráficos, enlaces, foco de fila |
 | `--ds-accent-2` | `#93b4e8` | `#4f6a9a` | Serie secundaria |
 | `--ds-reference` | `#cbd5e1` | `#4a4a42` | Referencia: típico, meta, período anterior |

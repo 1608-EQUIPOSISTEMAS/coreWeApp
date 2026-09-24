@@ -274,13 +274,29 @@ export default [
     to: '/gerencia',
     icon: 'cil-speedometer',
     module: 'GERENCIA',
-    roles: ['ADMIN', 'GERENCIA'],
+    // LIDER_COMERCIAL entra al grupo solo por Objetivos: ahi ve el objetivo del
+    // mes y edita las ventas de sus canales. Las demas opciones siguen sin el.
+    roles: ['ADMIN', 'GERENCIA', 'LIDER_COMERCIAL'],
     items: [
       {
         component: 'CNavItem',
         name: 'Embudo Consultas-Ventas',
         to: '/gerencia/embudo',
         submodule: 'EMBUDO',
+        roles: ['ADMIN', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Objetivos',
+        to: '/gerencia/objetivos',
+        submodule: 'OBJETIVOS',
+        roles: ['ADMIN', 'GERENCIA', 'LIDER_COMERCIAL'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Parámetros',
+        to: '/gerencia/parametros',
+        submodule: 'PARAMETROS',
         roles: ['ADMIN', 'GERENCIA'],
       },
       {

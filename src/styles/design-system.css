@@ -30,6 +30,9 @@
   /* Marca y datos. --we-navy (#002060) es para botones y marca; en gráficos y
      enlaces va --ds-accent, un derivado que no se pierde (memoria color-marca). */
   --ds-brand: var(--we-navy, #002060);
+  /* Texto sobre el navy de marca. Es blanco en los dos temas: el navy no cambia
+     con el modo oscuro, así que su contraste tampoco. */
+  --ds-on-brand: #ffffff;
   --ds-accent: #3a63b8;
   --ds-accent-2: #93b4e8;
   --ds-reference: #cbd5e1;

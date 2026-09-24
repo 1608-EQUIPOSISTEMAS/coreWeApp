@@ -217,7 +217,7 @@ const routes = [
         name: 'Gerencia',
         component: RouterViewStub,
         redirect: { name: 'GerenciaEmbudo' },
-        meta: { module: 'GERENCIA', roles: ['ADMIN', 'GERENCIA'] },
+        meta: { module: 'GERENCIA', roles: ['ADMIN', 'GERENCIA', 'LIDER_COMERCIAL'] },
         children: [
           {
             path: 'embudo',
@@ -226,6 +226,23 @@ const routes = [
             // "Reporte de Consultas 2026".
             component: () => import('@/views/gerencia/Embudo.vue'),
             meta: { submodule: 'EMBUDO', roles: ['ADMIN', 'GERENCIA'] },
+          },
+          {
+            path: 'objetivos',
+            name: 'GerenciaObjetivos',
+            // Objetivos de ventas y consultas por edición. El estándar sale de
+            // Gerencia > Parámetros y aquí se ajusta edición por edición; antes
+            // se editaban desde Producto > Cronograma.
+            component: () => import('@/views/gerencia/Objetivos.vue'),
+            meta: { submodule: 'OBJETIVOS', roles: ['ADMIN', 'GERENCIA', 'LIDER_COMERCIAL'] },
+          },
+          {
+            path: 'parametros',
+            name: 'GerenciaParametros',
+            // El "Plan 2027" adentro del ERP: el objetivo estándar por programa,
+            // de donde sale el de cada edición futura.
+            component: () => import('@/views/gerencia/Parametros.vue'),
+            meta: { submodule: 'PARAMETROS', roles: ['ADMIN', 'GERENCIA'] },
           },
           {
             path: 'reporte-completo',

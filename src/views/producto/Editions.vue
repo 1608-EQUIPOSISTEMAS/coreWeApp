@@ -75,10 +75,6 @@
 
         <!-- ── Botones de accion. ACADEMICA solo ve Historial. ── -->
         <div class="masthead-actions">
-          <button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-ghost" @click="openMonthlyGoalsModal">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Objetivos
-          </button>
           <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
             Historial
@@ -1358,59 +1354,6 @@
       </div>
     </BaseModal>
 
-    <!-- Modal: Objetivos Mensuales -->
-    <BaseModal v-model="showMonthlyGoalsModal" title="Definición de Objetivos Mensuales" size="xl">
-      <div class="p-3 bg-light rounded ed-modal-body" style="min-height:400px;max-height:70vh;overflow-y:auto;">
-        <div class="table-responsive bg-white border rounded shadow-sm">
-          <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size:0.8rem;">
-            <thead class="table-light sticky-top">
-              <tr>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Línea</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Categ</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Segmento</th>
-                <th rowspan="2" class="align-middle border-bottom-0 text-start pb-2">Programa abr</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Tipo</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Día</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2">Hora</th>
-                <th rowspan="2" class="align-middle border-bottom-0 pb-2 border-end">Fecha</th>
-                <th colspan="2" class="bg-primary-subtle text-primary border-bottom border-primary-subtle py-2"><i class="fa-solid fa-crosshairs me-1"></i>OBJETIVO DE VACANTES</th>
-              </tr>
-              <tr class="bg-light">
-                <th class="border-end text-muted" style="width:120px;">OBJETIVO (#)</th>
-                <th class="text-muted" style="width:150px;">OBJETIVO (S/)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="activeGoalsList.length === 0">
-                <td colspan="10" class="text-center text-muted py-5"><i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i><br>No hay ediciones activas para este periodo.</td>
-              </tr>
-              <tr v-for="(item, gIndex) in activeGoalsList" :key="item.edition_num_id">
-                <td class="text-muted">{{ item.program_line_business || '—' }}</td>
-                <td><span class="badge bg-light text-dark border">{{ item.cat_course_category_label || '—' }}</span></td>
-                <td><div class="segment-circle mx-auto" style="width:20px;height:20px;font-size:0.6rem;">{{ item.cat_segment || '—' }}</div></td>
-                <td class="text-start fw-bold text-primary">{{ item.program_abreviature }}</td>
-                <td class="text-muted">{{ item.program_type || '—' }}</td>
-                <td class="text-muted">{{ item.schedules?.[0]?.day_combination_label || item.day_combination_label || '—' }}</td>
-                <td class="text-muted">{{ item.schedules?.[0]?.hour_combination_label || item.hour_combination_label || '—' }}</td>
-                <td class="fw-bold border-end">{{ formatDate(item.start_date) }}</td>
-                <td class="bg-primary-subtle bg-opacity-10 border-end p-2"><input type="number" class="form-control form-control-sm text-center fw-bold text-dark border-primary-subtle" v-model.number="item.target_vacants" placeholder="0" @paste="onGoalsPaste($event, gIndex)" /></td>
-                <td class="bg-primary-subtle bg-opacity-10 p-2"><CurrencyInput v-model="item.target_revenue" currency="PEN" :storeAsMinor="false" class="form-control form-control-sm fw-bold text-end text-success border-primary-subtle" placeholder="0.00" /></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <template #footer>
-        <div class="d-flex justify-content-between w-100 align-items-center">
-          <span class="text-muted small">Mostrando {{ activeGoalsList.length }} programas activos</span>
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm" @click="showMonthlyGoalsModal = false">Cancelar</button>
-            <button class="btn btn-primary btn-sm fw-bold px-3" @click="saveMonthlyGoals"><i class="fa-solid fa-save me-1"></i>Guardar Objetivos</button>
-          </div>
-        </div>
-      </template>
-    </BaseModal>
-
 <BaseModal v-model="showAuditModal"
   :title="currentEditionId ? 'Historial de Cambios — Edición' : 'Historial Global de Cambios'"
   size="xl">  <div v-if="loadingAudit && !auditLogs.length" class="text-center py-5 ed-modal-body">
@@ -2598,8 +2541,6 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 import { inDateRange } from '@/utils/dateRange';
 import CurrencyInput from '@/components/CurrencyInput.vue' // Ajusta la ruta si es necesario
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
-const showMonthlyGoalsModal = ref(false)
-const activeGoalsList = ref([])
 const currentEditionId = ref(null)
 
 // Estado para los filtros de columna (reemplaza localFilters).
@@ -2678,7 +2619,6 @@ const previousSegmentId = ref(null)
 const programService = inject(ServiceKeys.Program)
 const editionService = inject(ServiceKeys.Edition)
 const instructorService = inject(ServiceKeys.Instructor)
-const dashboardService = inject(ServiceKeys.Dashboard)
 const catalog = inject('catalog')
 const toast = useToast()
 const { proxy } = getCurrentInstance()
@@ -3071,82 +3011,6 @@ async function downloadChildPdf(group, child) {
     toast.error('No se pudo generar el PDF')
   } finally {
     downloadingPdfId.value = null
-  }
-}
-async function openMonthlyGoalsModal() {
-  // 1. Forzamos actualizar el listado primero para traer datos frescos
-  await fetchSchedule()
-
-  // 2. Extraemos todos los items del mes actual y filtramos SOLO los activos
-  // (Dependiendo de tu BD, el campo active puede ser 'Y' o true)
-  const currentMonthItems = schedules.value.flatMap(week => week.items || [])
-  activeGoalsList.value = currentMonthItems.filter(item =>
-    (item.active === 'Y' || item.active === true || item.active === 1) &&
-    (item.cat_segment || '').toUpperCase() !== 'A5') // A5 = cancelados: no llevan objetivo
-
-  // 3. Traemos las metas ya guardadas para pre-llenar el formulario
-  const savedByEd = {}
-  try {
-    const goals = await dashboardService.programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value })
-    ;(goals.items || goals || []).forEach(g => { savedByEd[g.edition_id] = g })
-  } catch (e) {
-    console.error('No se pudieron cargar las metas guardadas:', e)
-  }
-
-  activeGoalsList.value.forEach(item => {
-    const saved = savedByEd[item.edition_num_id]
-    // Prioridad: meta guardada en BD → vacantes regulares como sugerencia inicial
-    item.target_vacants = saved ? saved.meta_vacantes : (item.vacant || 0)
-    item.target_revenue = saved ? saved.meta_monto : 0
-  })
-
-  // 4. Abrimos el modal
-  showMonthlyGoalsModal.value = true
-}
-
-// Pegado tipo hoja de cálculo: una columna copiada de Google Sheets/Excel se
-// reparte hacia abajo desde la fila donde se pega. Las líneas vacías respetan
-// la alineación de la hoja pero NO tocan el valor existente de esa fila.
-function onGoalsPaste(ev, startIndex) {
-  const text = ev.clipboardData?.getData('text') ?? ''
-  if (!/[\n\t]/.test(text)) return // un solo valor → pegado normal del navegador
-  ev.preventDefault()
-  const lines = text.replace(/\r/g, '').split('\n')
-  // quitar solo las líneas vacías FINALES (Sheets siempre agrega una al copiar)
-  while (lines.length && lines[lines.length - 1].trim() === '') lines.pop()
-  let applied = 0, blanks = 0, overflow = 0
-  lines.forEach((line, i) => {
-    const row = activeGoalsList.value[startIndex + i]
-    if (!row) { overflow++; return }
-    const raw = line.split('\t')[0].trim() // si copian varias columnas, usamos la primera
-    if (raw === '') { blanks++; return }
-    const num = Number(raw.replace(/,/g, ''))
-    if (Number.isFinite(num)) { row.target_vacants = num; applied++ }
-  })
-  // Feedback de alineación: si tu hoja tiene más/menos filas que el modal
-  // (p.ej. incluye ediciones A5 que aquí no se muestran), se nota al instante.
-  const parts = [`${applied} objetivos aplicados`]
-  if (blanks) parts.push(`${blanks} líneas vacías (fila sin cambio)`)
-  if (overflow) parts.push(`${overflow} valores sobrantes — tu hoja tiene más filas que el modal`)
-  const remaining = activeGoalsList.value.length - startIndex - lines.length
-  if (remaining > 0) parts.push(`${remaining} filas de abajo sin tocar`)
-  toast[overflow ? 'warning' : 'info'](`Pegado: ${parts.join(' · ')}`)
-}
-
-async function saveMonthlyGoals() {
-  try {
-    const goals = activeGoalsList.value.map(item => ({
-      edition_num_id: item.edition_num_id,
-      target_vacants: Number(item.target_vacants) || 0,
-      target_revenue: Number(item.target_revenue) || 0
-    }))
-
-    const result = await dashboardService.saveProgramGoals({ goals })
-    toast.success(`Objetivos guardados correctamente (${result?.saved ?? goals.length})`)
-    showMonthlyGoalsModal.value = false
-  } catch (error) {
-    console.error("Error guardando objetivos:", error)
-    toast.error("Ocurrió un error al guardar los objetivos")
   }
 }
 function openTreeModal(edition) {

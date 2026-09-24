@@ -77,6 +77,30 @@ async liderList(payload) {
     return response.data;
   }
 
+  // Historial de cambios del objetivo (trigger) + los pedidos rechazados.
+  async goalHistoryList(payload) {
+    const response = (await api.post('/dashboard/goal-history', payload)).data;
+    return response.data;
+  }
+
+  // Gerencia > Parámetros: el objetivo estándar por programa y temporada.
+  async goalStandardsList (payload) {
+    const response = (await api.post('/dashboard/goal-standards', payload)).data;
+    return response.data;
+  }
+
+  // Guardar también lo baja a las ediciones futuras: devuelve { saved, applied }.
+  async saveGoalStandards (payload) {
+    const response = (await api.post('/dashboard/goal-standards/save', payload)).data;
+    return response.data;
+  }
+
+  // Reaplica el estándar completo, para las ediciones creadas después.
+  async applyGoalStandards () {
+    const response = (await api.post('/dashboard/goal-standards/apply', {})).data;
+    return response.data;
+  }
+
   // Nº de consultas (leads) por edición. payload: { edition_ids: number[] }
   // Devuelve [{ edition_num_id, consultas }]
   async leadsPerEditionList(payload) {
