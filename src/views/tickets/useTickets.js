@@ -12,7 +12,7 @@ const DEBOUNCE_MS = 200
 
 export function useTickets (service) {
   const tickets = ref([])
-  const kpis = ref({ total: 0, misAsignados: 0, sinAsignar: 0, porVencer: 0, vencidos: 0 })
+  const kpis = ref({ total: 0, misAsignados: 0, sinAsignar: 0, porAsignar: 0, porVencer: 0, vencidos: 0 })
   const scope = ref({ kind: 'OWN', area: '', canManage: false })
 
   const cargando = ref(false)
@@ -22,23 +22,34 @@ export function useTickets (service) {
   const busqueda = ref('')
   const orden = ref('sla')
 
-  async function cargar () {
-    cargando.value = true
-    error.value = ''
+  // `silencioso` es para el refresco de fondo: no muestra el spinner ni pisa
+  // la bandeja con un error pasajero. `pedido` descarta respuestas viejas, por
+  // si un refresco de fondo llega después de un cambio de filtro.
+  let pedido = 0
+
+  async function cargar ({ silencioso = false } = {}) {
+    const actual = ++pedido
+    if (!silencioso) {
+      cargando.value = true
+      error.value = ''
+    }
     try {
       const data = await service.list({
         filtro: filtro.value,
         busqueda: busqueda.value.trim(),
         orden: orden.value,
       })
+      if (actual !== pedido) return
       tickets.value = data.tickets
       kpis.value = data.kpis
       scope.value = data.scope
     } catch (e) {
       console.error('tickets.list:', e)
-      error.value = e?.response?.data?.message || 'No se pudieron cargar los tickets.'
+      if (!silencioso && actual === pedido) {
+        error.value = e?.response?.data?.message || 'No se pudieron cargar los tickets.'
+      }
     } finally {
-      cargando.value = false
+      if (!silencioso && actual === pedido) cargando.value = false
     }
   }
 

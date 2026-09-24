@@ -86,6 +86,96 @@ export function progresoSla (reloj, creadoEn, ahora = Date.now()) {
   return Math.min(100, Math.max(0, Math.round(((fin - inicio) / total) * 100)))
 }
 
+// Duración legible sin signo ("2 h 10 min"), para plazos y tiempos tomados.
+const duracion = (ms) => tiempoRestante(Math.abs(ms))
+
+const RELOJ_NOMBRE = { respuesta: 'Respuesta', resolucion: 'Resolución' }
+const RELOJ_VERBO = { respuesta: 'Respondido', resolucion: 'Resuelto' }
+const RELOJ_INFINITIVO = { respuesta: 'responder', resolucion: 'resolver' }
+
+/**
+ * Cómo se pinta UN reloj del SLA. Distingue lo que la barra sola no decía:
+ *
+ *   - terminado: el reloj se DETUVO (se respondió / se resolvió). No lleva
+ *     barra —una barra a medio llenar parece que sigue corriendo—, sino el
+ *     tiempo que se tomó contra el plazo que había.
+ *   - corriendo: barra de consumo + cuánto queda (o cuánto va de retraso),
+ *     recalculado con el reloj del navegador para que avance solo.
+ *
+ * El veredicto (en plazo, por vencer, cumplido…) sigue siendo el del servidor;
+ * solo se adelanta a VENCIDO si el plazo pasó mientras la pantalla estaba abierta.
+ */
+export function describirReloj (reloj, creadoEn, tipo, ahora = Date.now()) {
+  if (!reloj?.venceEn) return null
+  const inicio = new Date(creadoEn).getTime()
+  const vence = new Date(reloj.venceEn).getTime()
+  const nombre = RELOJ_NOMBRE[tipo]
+
+  if (reloj.cumplidoEn) {
+    const fin = new Date(reloj.cumplidoEn).getTime()
+    const aTiempo = reloj.estado !== 'INCUMPLIDO'
+    return {
+      nombre,
+      terminado: true,
+      estado: reloj.estado,
+      tono: aTiempo ? 'ok' : 'bad',
+      icono: aTiempo ? 'fa-circle-check' : 'fa-circle-exclamation',
+      resumen: `${RELOJ_VERBO[tipo]} en ${duracion(fin - inicio)}`,
+      corto: `${aTiempo ? 'a tiempo' : 'tarde'} · ${duracion(fin - inicio)}`,
+      detalle: `Plazo: ${duracion(vence - inicio)} · ${fechaHora(reloj.cumplidoEn)}`,
+      progreso: 100,
+    }
+  }
+
+  const restante = vence - ahora
+  const estado = restante < 0 ? 'VENCIDO' : reloj.estado
+  return {
+    nombre,
+    terminado: false,
+    estado,
+    tono: slaTono(estado),
+    icono: 'fa-hourglass-half',
+    // "para resolver" / "para responder": el contador dice de qué es.
+    resumen: restante < 0
+      ? `Vencido hace ${duracion(restante)}`
+      : `Quedan ${duracion(restante)} para ${RELOJ_INFINITIVO[tipo]}`,
+    corto: restante < 0 ? `vencido hace ${duracion(restante)}` : `quedan ${duracion(restante)}`,
+    detalle: `Vence el ${fechaHora(reloj.venceEn)}`,
+    progreso: progresoSla(reloj, creadoEn, ahora),
+  }
+}
+
+/**
+ * La UNICA etapa del SLA que muestra la bandeja, según el momento del ticket:
+ *
+ *   1. Sin tomar  → "Primera respuesta", con barra y cuánto queda.
+ *   2. Tomado     → solo "Resolución", con barra y cuánto queda (la respuesta
+ *                   ya no se muestra: es una etapa cerrada).
+ *   3. Resuelto   → "Cumplido", con un indicador de si fue dentro del plazo
+ *                   (✓ verde) o fuera de plazo (! rojo). Sin barra ni contador.
+ *
+ * Se decide por los relojes y no por el estado del ticket: un ticket reabierto
+ * vuelve a la etapa 2 solo porque su resolución volvió a correr.
+ */
+export function etapaSla (t, ahora = Date.now()) {
+  const sla = t.sla ?? {}
+  const respuesta = describirReloj(sla.respuesta, t.creadoEn, 'respuesta', ahora)
+  const resolucion = describirReloj(sla.resolucion, t.creadoEn, 'resolucion', ahora)
+
+  if (respuesta && !respuesta.terminado) return { ...respuesta, nombre: 'Primera respuesta' }
+  if (resolucion && !resolucion.terminado) return resolucion
+
+  const final = resolucion ?? respuesta
+  if (!final) return null
+  const aTiempo = final.estado !== 'INCUMPLIDO'
+  return {
+    ...final,
+    nombre: 'Cumplido',
+    final: true,
+    corto: aTiempo ? 'Dentro del plazo' : 'Fuera de plazo',
+  }
+}
+
 // Iniciales para el avatar de "Reportó": hasta dos palabras del nombre.
 export function iniciales (nombre) {
   return String(nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()

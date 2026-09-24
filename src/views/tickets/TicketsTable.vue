@@ -11,17 +11,19 @@
           <col class="tk-col-prioridad">
           <col class="tk-col-estado">
           <col class="tk-col-sla">
+          <col v-if="canManage" class="tk-col-accion">
         </colgroup>
         <thead>
           <tr>
             <th>Ticket</th>
-            <th>Asunto</th>
+            <th>Título</th>
             <th v-if="mostrarCreador">Reportó</th>
             <th>Área</th>
             <th v-if="canManage">Atiende</th>
             <th class="tk-zone tk-zone-start">Prioridad</th>
             <th class="tk-zone">Estado</th>
             <th class="tk-zone">Tiempos SLA</th>
+            <th v-if="canManage" class="tk-accion"><span class="visually-hidden">Acción</span></th>
           </tr>
         </thead>
         <tbody>
@@ -65,15 +67,39 @@
               </span>
             </td>
             <td class="tk-zone tk-plazo-cell">
-              <div class="tk-plazo-wrap">
-                <div class="tk-plazo-top">
-                  <span class="tk-plazo-label" :class="'tk-ink-' + plazo(t).tono">{{ plazo(t).label }}</span>
-                  <span class="tk-restante">{{ plazo(t).detalle }}</span>
-                </div>
-                <div class="ds-track tk-plazo-track">
-                  <i :class="'tk-fill-' + plazo(t).tono" :style="{ width: plazo(t).progreso + '%' }"></i>
+              <!-- Una sola etapa: Primera respuesta (sin tomar) → Resolución
+                   (tomado) → Cumplido con indicador de a tiempo / fuera de plazo. -->
+              <div v-if="plazo(t)?.final" class="tk-sla-final" :class="'tk-ink-' + plazo(t).tono">
+                <i class="fa-solid" :class="plazo(t).icono" aria-hidden="true"></i>
+                <span class="tk-sla-final-texto">
+                  <strong>Cumplido</strong>
+                  <small>{{ plazo(t).corto }}</small>
+                </span>
+              </div>
+              <div v-else-if="plazo(t)" class="tk-sla">
+                <div class="tk-sla-fila">
+                  <span class="tk-sla-nombre">{{ plazo(t).nombre }}</span>
+                  <span class="tk-sla-valor" :class="'tk-ink-' + plazo(t).tono">{{ plazo(t).corto }}</span>
+                  <div class="ds-track tk-sla-track">
+                    <i :class="'tk-fill-' + plazo(t).tono" :style="{ width: plazo(t).progreso + '%' }"></i>
+                  </div>
                 </div>
               </div>
+              <span v-else class="tk-restante">—</span>
+            </td>
+            <!-- Tomar desde la bandeja, sin entrar al detalle. .stop para que el
+                 clic no abra además el ticket. -->
+            <td v-if="canManage" class="tk-accion" @click.stop @keydown.enter.stop>
+              <button
+                v-if="t.canChangeStatus && t.estado === 'ABIERTO'"
+                type="button"
+                class="btn-exec tk-btn-tomar"
+                :disabled="!!tomandoId"
+                @click="$emit('tomar', t)"
+              >
+                <i class="fa-solid" :class="tomandoId === t.id ? 'fa-spinner fa-spin' : 'fa-hand'" aria-hidden="true"></i>
+                Tomar
+              </button>
             </td>
           </tr>
         </tbody>
@@ -83,10 +109,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import {
-  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, slaLabel, slaTono, tiempoRestante,
-  progresoSla, fechaCorta, iniciales,
+  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, etapaSla, iniciales,
 } from './ticket-format.js'
 
 // Solo dibuja. El veredicto de cada reloj lo trae el ticket ya evaluado.
@@ -96,9 +121,11 @@ const props = defineProps({
   // Un colaborador solo ve tickets suyos: la columna diría su nombre en todas
   // las filas.
   mostrarCreador: { type: Boolean, default: false },
+  // Id del ticket que se está tomando (spinner en su botón, los demás en pausa).
+  tomandoId: { type: Number, default: null },
 })
 
-defineEmits(['abrir'])
+defineEmits(['abrir', 'tomar'])
 
 // El más nuevo arriba, el más viejo abajo: el orden que importa aquí es
 // cuándo se creó el ticket, no su urgencia.
@@ -106,28 +133,13 @@ const ordenados = computed(() =>
   [...props.tickets].sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn)),
 )
 
-// El plazo que importa es el que está peor: un ticket con la respuesta cumplida
-// pero la resolución vencida está vencido, no cumplido.
-function critico (t) {
-  const resolucion = t.sla?.resolucion
-  const respuesta = t.sla?.respuesta
+// Reloj del navegador: los contadores avanzan sin recargar la bandeja.
+const ahora = ref(Date.now())
+const tick = setInterval(() => { ahora.value = Date.now() }, 30_000)
+onUnmounted(() => clearInterval(tick))
 
-  if (t.estado === 'CERRADO') return resolucion
-
-  return [respuesta, resolucion].find(r => r?.estado === 'VENCIDO')
-    ?? [respuesta, resolucion].find(r => r?.estado === 'POR_VENCER')
-    ?? (respuesta?.estado && respuesta.estado !== 'CUMPLIDO' ? respuesta : resolucion)
-}
-
-function plazo (t) {
-  const c = critico(t)
-  return {
-    label: slaLabel(c?.estado),
-    tono: slaTono(c?.estado),
-    detalle: t.estado === 'CERRADO' ? fechaCorta(c?.cumplidoEn) : tiempoRestante(c?.msRestantes),
-    progreso: progresoSla(c, t.creadoEn),
-  }
-}
+const plazos = computed(() => new Map(props.tickets.map(t => [t.id, etapaSla(t, ahora.value)])))
+const plazo = (t) => plazos.value.get(t.id) ?? null
 </script>
 
 <style scoped>
@@ -150,6 +162,9 @@ function plazo (t) {
 .tk-col-prioridad { width: 9%; }
 .tk-col-estado { width: 12%; }
 .tk-col-sla { width: 18%; }
+.tk-col-accion { width: 96px; }
+.tk-table .tk-accion { text-align: center; cursor: default; }
+.tk-btn-tomar { padding: 5px 11px; font-size: 12px; white-space: nowrap; }
 .tk-table thead th {
   padding: 12px 14px;
   background: var(--ds-surface-2);
@@ -204,13 +219,21 @@ function plazo (t) {
 .tk-dot-info, .tk-fill-info { background: var(--ds-info-ink); }
 .tk-estado { gap: 6px; }
 
-/* Plazo SLA: etiqueta + tiempo restante arriba, barra de consumo abajo */
-.tk-plazo-cell { min-width: 160px; }
-.tk-plazo-wrap { display: inline-flex; flex-direction: column; align-items: center; width: 100%; max-width: 220px; }
-.tk-plazo-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; width: 100%; }
-.tk-plazo-label { font-size: 12px; font-weight: 700; white-space: nowrap; }
+/* Plazo SLA. Dos filas: nombre de la etapa a la izquierda, estado a la derecha; la barra
+   solo bajo la etapa en curso. */
+.tk-sla { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 230px; margin: 0 auto; text-align: left; }
+.tk-sla-fila { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; row-gap: 4px; }
+.tk-sla-nombre { font-size: 11.5px; font-weight: 700; color: var(--ds-heading); }
+.tk-sla-valor { font-size: 11.5px; font-weight: 600; text-align: right; white-space: nowrap; }
+.tk-sla-track { grid-column: 1 / -1; }
+/* Resuelto: sin barra ni contador, solo el veredicto con su ícono. */
+.tk-sla-final { display: inline-flex; align-items: center; gap: 8px; text-align: left; }
+.tk-sla-final > i { font-size: 17px; }
+.tk-sla-final-texto { display: flex; flex-direction: column; line-height: 1.25; }
+.tk-sla-final-texto strong { font-size: 12.5px; }
+.tk-sla-final-texto small { font-size: 11px; font-weight: 600; }
 .tk-ink-ok { color: var(--ds-ok-ink); }
 .tk-ink-warn { color: var(--ds-warn-ink); }
 .tk-ink-bad { color: var(--ds-bad-ink); }
-.tk-plazo-track { width: 100%; }
+.tk-plazo-cell { min-width: 160px; }
 </style>

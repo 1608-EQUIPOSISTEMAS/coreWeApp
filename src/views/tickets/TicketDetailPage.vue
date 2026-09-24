@@ -22,7 +22,19 @@
               <span class="ds-chip" :class="ESTADO_TONO[ticket.estado]">{{ ESTADO_LABEL[ticket.estado] }}</span>
             </div>
 
-            <div v-if="ticket.canManage" class="tkd-masthead-acciones">
+            <div v-if="ticket.canManage || ticket.canReopen" class="tkd-masthead-acciones">
+              <!-- Quien reportó reabre lo suyo si el problema sigue. Si además
+                   es el agente asignado, ya tiene el botón de gestión de abajo. -->
+              <button
+                v-if="ticket.canReopen && !ticket.canChangeStatus"
+                type="button"
+                class="btn-exec btn-exec-outline"
+                :disabled="guardando"
+                @click="reabrir"
+              >
+                <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : 'fa-rotate-left'" aria-hidden="true"></i>
+                Reabrir
+              </button>
               <button
                 v-if="siguiente && ticket.canChangeStatus"
                 type="button"
@@ -35,7 +47,7 @@
                 {{ siguiente.texto }}
               </button>
               <button
-                v-if="ticket.estado !== 'CERRADO'"
+                v-if="ticket.canManage && ticket.estado !== 'CERRADO'"
                 type="button"
                 class="btn-exec btn-exec-outline"
                 @click="irAReasignar"
@@ -65,29 +77,63 @@
             <section class="tk-bloque">
               <h4 class="tk-bloque-titulo">Qué pasó</h4>
               <p class="tk-problema">{{ ticket.problema }}</p>
-              <a v-if="linkSeguro" :href="linkSeguro" target="_blank" rel="noopener noreferrer" class="tk-ref">
-                <i class="fa-solid fa-link" aria-hidden="true"></i> {{ ticket.link }}
-              </a>
+              <!-- Solo http(s) se vuelve <a>: el backend ya no valida el formato,
+                   así que cualquier otra cosa se muestra como texto. -->
+              <template v-for="e in enlaces" :key="e.texto">
+                <a v-if="e.href" :href="e.href" target="_blank" rel="noopener noreferrer" class="tk-ref">
+                  <i class="fa-solid fa-link" aria-hidden="true"></i> {{ e.texto }}
+                </a>
+                <span v-else class="tk-ref tk-ref--texto">
+                  <i class="fa-solid fa-link" aria-hidden="true"></i> {{ e.texto }}
+                </span>
+              </template>
               <TicketAttachments v-if="adjuntos.length" :adjuntos="adjuntos" kind="ticket" />
             </section>
 
             <TicketAiNote
               :ticket-id="ticket.id"
               :can-manage="!!ticket.canManage"
-              @usar="texto => hilo?.prellenar(texto)"
+              @usar="usarBorrador"
             />
 
             <div class="tkd-divisor"></div>
 
             <div class="tkd-tabs" role="tablist">
-              <span class="tkd-tab tkd-tab-activa" role="tab" aria-selected="true">
+              <button
+                type="button"
+                class="tkd-tab"
+                :class="{ 'tkd-tab-activa': pestana === 'conversacion' }"
+                role="tab"
+                :aria-selected="pestana === 'conversacion'"
+                @click="pestana = 'conversacion'"
+              >
                 Conversación
                 <span v-if="comentarios.length" class="tk-hilo-conteo">{{ comentarios.length }}</span>
-              </span>
-              <span class="tkd-tab" role="tab" aria-disabled="true" title="Próximamente">Actividad</span>
+              </button>
+              <button
+                type="button"
+                class="tkd-tab"
+                :class="{ 'tkd-tab-activa': pestana === 'actividad' }"
+                role="tab"
+                :aria-selected="pestana === 'actividad'"
+                @click="pestana = 'actividad'"
+              >
+                Actividad
+                <span v-if="actividad?.length" class="tk-hilo-conteo">{{ actividad.length }}</span>
+              </button>
             </div>
 
+            <TicketActivity
+              v-if="pestana === 'actividad'"
+              :eventos="actividad ?? []"
+              :cargando="cargandoActividad"
+              :error="errorActividad"
+            />
+
+            <!-- v-show y no v-if: cambiar de pestaña no puede borrar lo que el
+                 agente venía escribiendo en la respuesta. -->
             <TicketComments
+              v-show="pestana === 'conversacion'"
               ref="hilo"
               :comentarios="comentarios"
               :enviando="comentando"
@@ -102,12 +148,22 @@
           <section class="ds-panel">
             <div class="ds-panel-body tk-side">
               <span class="tk-bloque-titulo">Tiempos SLA</span>
-              <div v-for="r in relojes" :key="r.clave" class="tk-reloj">
+              <div v-for="r in relojes" :key="r.nombre" class="tk-reloj" :class="{ 'tk-reloj--hecho': r.terminado }">
                 <div class="tk-reloj-cab">
-                  <span class="tk-reloj-label">{{ r.label }}</span>
-                  <span class="ds-pill" :class="slaTono(r.estado)">{{ slaLabel(r.estado) }}</span>
+                  <span class="tk-reloj-label">{{ r.titulo }}</span>
+                  <span class="ds-pill" :class="r.tono">{{ slaLabel(r.estado) }}</span>
                 </div>
-                <div class="ds-track"><i :class="slaTono(r.estado)" :style="{ width: r.progreso + '%' }"></i></div>
+                <!-- Detenido: sin barra, porque una barra a medio llenar se lee
+                     como "sigue corriendo". Corriendo: barra del color del estado. -->
+                <p v-if="r.terminado" class="tk-reloj-resumen" :class="'tk-ink-' + r.tono">
+                  <i class="fa-solid" :class="r.icono" aria-hidden="true"></i> {{ r.resumen }}
+                </p>
+                <template v-else>
+                  <div class="ds-track"><i :class="'tk-fill-' + r.tono" :style="{ width: r.progreso + '%' }"></i></div>
+                  <p class="tk-reloj-resumen" :class="'tk-ink-' + r.tono">
+                    <i class="fa-solid" :class="r.icono" aria-hidden="true"></i> {{ r.resumen }}
+                  </p>
+                </template>
                 <span class="tk-reloj-pie">{{ r.detalle }}</span>
               </div>
             </div>
@@ -171,11 +227,13 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import TicketAttachments from './TicketAttachments.vue'
 import TicketComments from './TicketComments.vue'
+import TicketActivity from './TicketActivity.vue'
 import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
+import { useAutoRefresh } from './useAutoRefresh.js'
 import {
   ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,
-  slaLabel, slaTono, tiempoRestante, progresoSla, fechaHora, hrefSeguro, iniciales,
+  slaLabel, describirReloj, fechaHora, hrefSeguro, iniciales,
 } from './ticket-format.js'
 
 const service = inject(ServiceKeys.Tickets)
@@ -191,7 +249,10 @@ const error = ref('')
 const errorComentario = ref('')
 
 const adjuntos = computed(() => (Array.isArray(ticket.value?.adjuntos) ? ticket.value.adjuntos : []))
-const linkSeguro = computed(() => hrefSeguro(ticket.value?.link))
+const enlaces = computed(() => {
+  const lista = ticket.value?.enlaces ?? (ticket.value?.link ? [ticket.value.link] : [])
+  return lista.map(texto => ({ texto, href: hrefSeguro(texto) }))
+})
 const siguiente = computed(() => SIGUIENTE_ESTADO[ticket.value?.estado])
 
 const capitalizar = (texto) => (texto ? texto.charAt(0) + texto.slice(1).toLowerCase() : '—')
@@ -207,38 +268,77 @@ function irAReasignar () {
 }
 
 const relojes = computed(() => {
-  const sla = ticket.value?.sla
-  if (!sla) return []
+  const t = ticket.value
+  if (!t?.sla) return []
   return [
-    { clave: 'respuesta', label: 'Primera respuesta', reloj: sla.respuesta },
-    { clave: 'resolucion', label: 'Resolución', reloj: sla.resolucion },
+    { tipo: 'respuesta', titulo: 'Primera respuesta' },
+    { tipo: 'resolucion', titulo: 'Resolución' },
   ]
-    .filter(r => r.reloj?.venceEn)
-    .map(r => ({
-      clave: r.clave,
-      label: r.label,
-      estado: r.reloj.estado,
-      progreso: progresoSla(r.reloj, ticket.value.creadoEn, ahora.value),
-      detalle: r.reloj.cumplidoEn
-        ? `Cumplido el ${fechaHora(r.reloj.cumplidoEn)}`
-        : `Vence el ${fechaHora(r.reloj.venceEn)} · ${tiempoRestante(r.reloj.msRestantes)}`,
-    }))
+    .map(r => {
+      const d = describirReloj(t.sla[r.tipo], t.creadoEn, r.tipo, ahora.value)
+      return d && { ...d, titulo: r.titulo }
+    })
+    .filter(Boolean)
 })
 
 watch(() => comentarios.value.length, (ahora_, antes) => {
   if (antes !== undefined && ahora_ > antes) hilo.value?.reset()
 })
 
+// ── Pestaña Actividad ──────────────────────────────────────────────────────
+// Se pide recién al abrir la pestaña (la mayoría de las visitas solo miran la
+// conversación). actividad = null significa "no cargada o desactualizada".
+const pestana = ref('conversacion')
+const actividad = ref(null)
+const cargandoActividad = ref(false)
+const errorActividad = ref('')
+
+async function cargarActividad () {
+  const id = ticket.value?.id
+  if (!id) return
+  cargandoActividad.value = true
+  errorActividad.value = ''
+  try {
+    const eventos = await service.activity(id)
+    // Si mientras tanto se navegó a otro ticket, esta respuesta ya no aplica.
+    if (ticket.value?.id === id) actividad.value = eventos
+  } catch (e) {
+    console.error('tickets.activity:', e)
+    errorActividad.value = e?.response?.data?.message || 'No se pudo cargar la actividad.'
+  } finally {
+    cargandoActividad.value = false
+  }
+}
+
+watch(pestana, (p) => {
+  if (p === 'actividad' && actividad.value === null) cargarActividad()
+})
+
+// Tras cualquier cambio (estado, reasignación, comentario) la actividad ya no
+// está al día: si se está mirando se recarga; si no, se pedirá al volver.
+function actividadDesactualizada () {
+  if (pestana.value === 'actividad') cargarActividad()
+  else actividad.value = null
+}
+
+function usarBorrador (texto) {
+  pestana.value = 'conversacion'
+  hilo.value?.prellenar(texto)
+}
+
 async function cargar () {
   const id = Number(route.params.id)
   ticket.value = null
   comentarios.value = []
+  actividad.value = null
+  errorActividad.value = ''
   error.value = ''
   cargando.value = true
   try {
     const [t, c] = await Promise.all([service.detail(id), service.comments(id)])
     ticket.value = t
     comentarios.value = c
+    if (pestana.value === 'actividad') cargarActividad()
   } catch (e) {
     console.error('tickets.detail:', e)
     error.value = e?.response?.data?.message || 'No se pudo abrir el ticket.'
@@ -253,14 +353,71 @@ async function cargar () {
 watch(() => route.params.id, cargar)
 onMounted(cargar)
 
+// Un ticket abierto sin dueño lo reparte el cron del backend al vencer la
+// ventana de gracia: se consulta en silencio hasta que aparezca el agente.
+async function refrescarAsignacion () {
+  const id = ticket.value?.id
+  if (!id || guardando.value) return
+  try {
+    const t = await service.detail(id)
+    // Si mientras tanto se navegó o se hizo un cambio a mano, esto ya no aplica.
+    if (ticket.value?.id !== id || guardando.value) return
+    const cambio = t.asignadoA?.id !== ticket.value.asignadoA?.id
+    ticket.value = t
+    if (cambio) {
+      actividadDesactualizada()
+      if (t.asignadoA) toast.info(`Ticket asignado automáticamente a ${t.asignadoA.nombre}`)
+    }
+  } catch (e) {
+    console.error('tickets.detail (refresco):', e)
+  }
+}
+
+useAutoRefresh(
+  refrescarAsignacion,
+  () => ticket.value?.estado === 'ABIERTO' && !ticket.value?.asignadoA,
+)
+
+// El servidor devuelve el ticket completo (permisos y adjuntos incluidos), así
+// que se reemplaza tal cual y la vista queda al día sin recargar la página.
 async function cambiarEstado (estado) {
+  const estadoPrevio = ticket.value.estado
   guardando.value = true
   try {
-    ticket.value = await service.changeStatus(ticket.value.id, estado)
-    toast.success(estado === 'CERRADO' ? 'Ticket marcado como resuelto' : 'Ticket tomado')
+    const { avisoSlack, ...actualizado } = await service.changeStatus(ticket.value.id, estado)
+    ticket.value = actualizado
+    actividadDesactualizada()
+    if (estado !== 'CERRADO') {
+      toast.success(estadoPrevio === 'CERRADO' ? 'Ticket reabierto' : 'Ticket tomado')
+      return
+    }
+    // Al resolver, el backend le manda la confirmación por Slack a quien
+    // reportó y avisa si llegó.
+    const quien = actualizado.creadoPor?.nombre || 'quien lo reportó'
+    if (avisoSlack) {
+      toast.success(`Ticket resuelto. Se envió un mensaje de confirmación a ${quien} por Slack.`)
+    } else {
+      toast.success('Ticket resuelto.')
+      toast.warning(`No se pudo enviar la confirmación por Slack a ${quien}.`)
+    }
   } catch (e) {
     console.error('tickets.status:', e)
     toast.error(e?.response?.data?.message || 'No se pudo cambiar el estado.')
+  } finally {
+    guardando.value = false
+  }
+}
+
+async function reabrir () {
+  guardando.value = true
+  try {
+    ticket.value = await service.reopen(ticket.value.id)
+    actividadDesactualizada()
+    const agente = ticket.value.asignadoA?.nombre
+    toast.success(agente ? `Ticket reabierto. Vuelve a ${agente}.` : 'Ticket reabierto.')
+  } catch (e) {
+    console.error('tickets.reopen:', e)
+    toast.error(e?.response?.data?.message || 'No se pudo reabrir el ticket.')
   } finally {
     guardando.value = false
   }
@@ -270,6 +427,7 @@ async function reasignar (nuevoAsignadoId) {
   guardando.value = true
   try {
     ticket.value = await service.reassign(ticket.value.id, nuevoAsignadoId)
+    actividadDesactualizada()
     toast.success(`Ticket reasignado a ${ticket.value.asignadoA?.nombre ?? 'otro agente'}`)
   } catch (e) {
     console.error('tickets.reassign:', e)
@@ -284,6 +442,7 @@ async function comentar ({ cuerpo, archivos }) {
   errorComentario.value = ''
   try {
     comentarios.value = await service.addComment(ticket.value.id, cuerpo, archivos)
+    actividadDesactualizada()
   } catch (e) {
     console.error('tickets.comment:', e)
     errorComentario.value = e?.response?.data?.message || 'No se pudo enviar el comentario.'
@@ -328,11 +487,13 @@ async function comentar ({ cuerpo, archivos }) {
 
 .tkd-tabs { display: flex; align-items: center; gap: 18px; margin-top: -4px; }
 .tkd-tab {
-  display: flex; align-items: center; gap: 6px; padding-bottom: 8px;
-  font-size: 13px; font-weight: 700; color: var(--ds-muted);
-  border-bottom: 2px solid transparent; cursor: default;
+  display: flex; align-items: center; gap: 6px; padding: 0 0 8px;
+  border: 0; border-bottom: 2px solid transparent; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: var(--ds-muted);
+  cursor: pointer;
 }
-.tkd-tab[aria-disabled="true"] { opacity: 0.55; }
+.tkd-tab:hover { color: var(--ds-heading); }
+.tkd-tab:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; border-radius: 3px; }
 .tkd-tab-activa { color: var(--ds-heading); border-bottom-color: var(--ds-accent); }
 .tk-hilo-conteo { padding: 1px 7px; border-radius: 10px; background: var(--ds-soft-neutral); font-size: 11.5px; color: var(--ds-ink-2); }
 
@@ -360,6 +521,16 @@ async function comentar ({ cuerpo, archivos }) {
 .tk-reloj-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tk-reloj-label { font-size: 12px; font-weight: 600; color: var(--ds-heading); }
 .tk-reloj-pie { font-size: 11px; color: var(--ds-muted); }
+.tk-reloj-resumen { margin: 0; font-size: 12.5px; font-weight: 700; }
+.tk-reloj-resumen i { margin-right: 4px; }
+/* Reloj detenido: se atenúa para que el ojo vaya al que todavía corre. */
+.tk-reloj--hecho .tk-reloj-label { color: var(--ds-ink-2); }
+.tk-fill-ok { background: var(--ds-ok); }
+.tk-fill-warn { background: var(--ds-warn); }
+.tk-fill-bad { background: var(--ds-bad); }
+.tk-ink-ok { color: var(--ds-ok-ink); }
+.tk-ink-warn { color: var(--ds-warn-ink); }
+.tk-ink-bad { color: var(--ds-bad-ink); }
 .tk-side-bloque .tk-reloj + .tk-reloj,
 .tk-side .tk-reloj + .tk-reloj { margin-top: 10px; }
 
@@ -367,6 +538,7 @@ async function comentar ({ cuerpo, archivos }) {
 .tk-bloque-titulo { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ds-ink-2); }
 .tk-problema { margin: 0; font-size: 13.5px; color: var(--ds-ink); white-space: pre-wrap; word-break: break-word; }
 .tk-ref { align-self: flex-start; font-size: 12.5px; color: var(--ds-accent); word-break: break-all; }
+.tk-ref--texto { color: var(--ds-ink-2); }
 
 .tk-hint { margin: 0; font-size: 11.5px; color: var(--ds-muted); }
 </style>

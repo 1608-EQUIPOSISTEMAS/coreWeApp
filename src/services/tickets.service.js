@@ -36,6 +36,11 @@ export default class TicketsService {
     return (await api.post('/tickets/status', { ticket_id: ticketId, estado })).data.data
   }
 
+  // Reabrir desde quien reportó (no exige ser ADMIN).
+  async reopen (ticketId) {
+    return (await api.post('/tickets/reopen', { ticket_id: ticketId })).data.data
+  }
+
   async assignees () {
     return (await api.post('/tickets/assignees', {})).data.data
   }
@@ -46,6 +51,11 @@ export default class TicketsService {
 
   async comments (ticketId) {
     return (await api.post('/tickets/comments', { ticket_id: ticketId })).data.data
+  }
+
+  // Pestaña "Actividad": [{ id, tipo, fecha, actor, deUsuario, aUsuario, detalle }]
+  async activity (ticketId) {
+    return (await api.post('/tickets/activity', { ticket_id: ticketId })).data.data
   }
 
   async addComment (ticketId, cuerpo, archivos = []) {
@@ -65,17 +75,5 @@ export default class TicketsService {
     const ruta = kind === 'comment' ? 'comment-attachment' : 'attachment'
     const { data } = await api.get(`/tickets/${ruta}/${attachmentId}`, { responseType: 'blob' })
     return data
-  }
-
-  async slaPolicies () {
-    return (await api.post('/tickets/sla/policies', {})).data.data
-  }
-
-  async saveSlaPolicy ({ prioridad, minutosPrimeraRespuesta, minutosResolucion }) {
-    return (await api.post('/tickets/sla/policy-save', {
-      prioridad,
-      minutos_primera_respuesta: minutosPrimeraRespuesta,
-      minutos_resolucion: minutosResolucion
-    })).data.data
   }
 }
