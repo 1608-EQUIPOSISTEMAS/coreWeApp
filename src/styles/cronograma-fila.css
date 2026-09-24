@@ -1,0 +1,82 @@
+/* ==========================================================================
+   FILA DE CRONOGRAMA — identidad de una edición dentro de un mes
+
+   Las tres primeras columnas del cronograma (CA·CP, curso, fechas), la barra de
+   semana y los tintes de fila. Global y con prefijo `cro-` porque lo comparten
+   Producto > Cronograma Vista y Gerencia > Objetivos: las dos listan el mismo
+   mes y tienen que verse igual.
+
+   ponytail: Cronograma Vista todavía tiene su propia copia en su <style scoped>
+   (clases sin prefijo: .cacp, .curso, .cro…). Migrarla a estas clases es
+   mecánico y queda pendiente; hasta entonces son dos copias del mismo diseño y
+   un cambio aquí hay que espejarlo allá.
+   ========================================================================== */
+
+:root {
+  /* Paleta CATEGÓRICA por segmento: no es un estado (ok/warn/bad), es la
+     identidad de A1..A7. Van como hue vivo y no como token de marca porque los
+     --ds-* mezclados al 13% dan un beige sucio y el ámbar deja de leerse ámbar. */
+  --cro-a1: #3b82f6;
+  --cro-a2: #f59e0b;
+  --cro-a3: #14b8a6;
+  --cro-a4: #f97316;
+  --cro-a5: #ef4444;
+  --cro-a6: #7c3aed;
+  --cro-a7: #1e3a8a;
+}
+
+/* ── Barra de semana ─────────────────────────────────────────────────────── */
+.cro-week td { padding: 0; background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border); }
+.cro-week-bar { display: flex; align-items: center; gap: 10px; padding: 5px 12px; cursor: pointer; }
+.cro-week-bar .cro-caret { width: 22px; height: 22px; border: 0; background: transparent; color: var(--ds-muted); display: grid; place-items: center; border-radius: 6px; cursor: pointer; }
+.cro-week-bar .cro-caret:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
+.cro-week-bar .cro-caret span { display: inline-block; transition: transform .18s; font-size: 12px; }
+.cro-week-bar.is-collapsed .cro-caret span { transform: rotate(-90deg); }
+.cro-week-bar .cro-chip { width: 6px; height: 15px; border-radius: 3px; background: var(--ds-ink); }
+.cro-week-bar h3 { font-size: 13px; font-weight: 800; margin: 0; color: var(--ds-heading); }
+.cro-week-bar .cro-pill { font-size: 10.5px; font-weight: 600; color: var(--ds-ink-2); background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 20px; padding: 1px 9px; }
+.cro-week-bar .cro-grow { flex: 1; }
+.cro-week-bar .cro-stat { font-size: 11px; color: var(--ds-muted); font-weight: 600; }
+
+/* ── Tinte de fila ───────────────────────────────────────────────────────────
+   Orden deliberado: con meta / sin meta primero, familia después y el segmento
+   al final, porque el tinte del segmento ES la identidad de la edición y tiene
+   que ganarle a los otros dos. */
+tr.cro-ed.con-meta > td { background: color-mix(in oklab, var(--ds-warn) 7%, var(--ds-surface)); }
+tr.cro-ed.sin-meta > td { background: color-mix(in oklab, var(--ds-accent-2) 6%, var(--ds-surface)); }
+tr.cro-ed.en-familia > td { background: color-mix(in oklab, var(--ds-accent) 4%, var(--ds-surface)); }
+tr.cro-ed[data-seg]:not([data-seg='']) > td { background: color-mix(in oklab, var(--cro-seg) 13%, var(--ds-surface)); }
+/* Miembro de familia que no es el último: sin línea divisoria, para que el
+   grupo se lea como un bloque. */
+tr.cro-ed.is-fundida > td { border-bottom-color: transparent; }
+
+/* ── CA · CP ─────────────────────────────────────────────────────────────── */
+.cro-cacp { display: flex; flex-direction: column; gap: 1px; }
+.cro-cacp .k { font-size: 8.5px; font-weight: 700; color: var(--ds-muted); width: 14px; display: inline-block; }
+.cro-cacp .v { font-family: var(--ds-font-mono); font-size: 11.5px; color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
+
+/* ── Curso · identificación ──────────────────────────────────────────────── */
+.cro-curso { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cro-curso .top { display: flex; align-items: center; gap: 7px; }
+.cro-curso .nombre { font-size: 13px; font-weight: 700; letter-spacing: -.01em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ds-ink); }
+.cro-curso .area { font-size: 10.5px; color: var(--ds-muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cro-badge { font-size: 9px; font-weight: 800; font-family: var(--ds-font-mono); border-radius: 4px; padding: 1px 6px; flex: none; }
+.cro-nm { font-size: 8.5px; font-weight: 800; font-family: var(--ds-font-mono); letter-spacing: .04em; border-radius: 4px; padding: 1px 5px; background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+
+/* ── Conector padre → hijo: solo líneas, sin etiquetas ───────────────────── */
+.cro-hijo { display: flex; align-items: stretch; gap: 12px; padding-left: 6px; }
+.cro-conector { position: relative; width: 20px; flex: none; }
+.cro-conector::before { content: ''; position: absolute; left: 9px; top: -14px; bottom: 50%; border-left: 2px solid var(--ds-border-strong); }
+.cro-conector::after { content: ''; position: absolute; left: 9px; top: 50%; width: 11px; border-top: 2px solid var(--ds-border-strong); }
+.cro-conector .nodo { position: absolute; left: 5px; top: calc(50% - 3px); width: 8px; height: 8px; border-radius: 50%; background: var(--ds-surface); border: 2px solid var(--ds-border-strong); }
+
+/* ── Fechas y horario ────────────────────────────────────────────────────── */
+.cro-fechas { display: flex; flex-direction: column; gap: 2px; }
+.cro-fechas .dias { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ds-ink-2); white-space: nowrap; }
+.cro-fecha-ini { font-family: var(--ds-font-mono); font-size: 10.5px; font-weight: 800; background: var(--ds-ink); color: var(--ds-surface); border-radius: 5px; padding: 1px 6px; }
+.cro-fechas .flecha,
+.cro-fechas .fin,
+.cro-fechas .ses { color: var(--ds-muted); }
+.cro-fechas .ses { font-weight: 600; }
+.cro-fechas .cuando { font-size: 10.5px; color: var(--ds-muted); white-space: nowrap; }
+.cro-fechas .cuando b { color: var(--ds-ink-2); font-weight: 700; }

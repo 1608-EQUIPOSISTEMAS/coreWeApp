@@ -113,7 +113,7 @@
             <span class="ds-panel-hint">El OBJ se calcula como la suma de sus canales.</span>
           </div>
           <div class="obj-controles">
-            <input v-model="busqueda" class="ds-input obj-buscar" type="search" placeholder="Buscar programa" aria-label="Buscar programa" />
+            <input v-model="busqueda" class="ds-input obj-buscar" type="search" placeholder="Buscar curso, docente, código" aria-label="Buscar programa" />
             <div class="obj-segmento" role="group" aria-label="Filtrar ediciones">
               <button v-for="f in FILTROS" :key="f" type="button"
                       class="obj-seg" :class="{ 'is-active': filtro === f }" @click="filtro = f">
@@ -130,7 +130,9 @@
             <table class="ds-table ds-table--lista obj-table">
               <thead>
                 <tr>
-                  <th rowspan="2" class="obj-sticky">Programa</th>
+                  <th rowspan="2" class="obj-c-cacp">CA · CP</th>
+                  <th rowspan="2" class="obj-c-curso">Curso · identificación</th>
+                  <th rowspan="2" class="obj-c-cro">Cronograma</th>
                   <th :colspan="1 + canalesVenta.length" class="obj-group obj-corte">Ventas</th>
                   <th :colspan="1 + canalesConsulta.length" class="obj-group obj-corte">Consultas</th>
                   <th rowspan="2" class="obj-corte">Origen</th>
@@ -146,51 +148,92 @@
                 <template v-if="cargando">
                   <tr v-for="n in 8" :key="n"><td :colspan="totalColumnas"><span class="ds-skel"></span></td></tr>
                 </template>
-                <tr v-else-if="!visibles.length">
+                <tr v-else-if="!semanas.length">
                   <td :colspan="totalColumnas" class="ds-empty ds-empty--lista">No hay ediciones que coincidan.</td>
                 </tr>
-                <template v-else>
-                  <tr v-for="f in visibles" :key="f.edition_id" :class="{ 'is-sin-plan': sinPlan(f) }">
-                    <td class="obj-sticky obj-prog">
-                      <span class="obj-prog-nombre">
-                        {{ f.programa_abrev }}
-                        <i v-if="cerrada(f)" class="fa-solid fa-lock obj-lock"
-                           :title="`Empieza el ${fecha(f.inicio)}: fuera de la ventana de edición`" aria-hidden="true"></i>
-                      </span>
-                      <span class="obj-prog-inicio">Inicio {{ fecha(f.inicio) }}</span>
+                <template v-for="w in semanas" v-else :key="w.schedule">
+                  <tr class="cro-week">
+                    <td :colspan="totalColumnas">
+                      <div class="cro-week-bar" :class="{ 'is-collapsed': cerradas[w.schedule] }" @click="alternarSemana(w.schedule)">
+                        <button type="button" class="cro-caret" :aria-label="`Plegar la semana ${w.schedule}`"><span>▾</span></button>
+                        <span class="cro-chip"></span>
+                        <h3>Semana {{ w.schedule }}</h3>
+                        <span class="cro-pill">{{ w.items.length }} ediciones</span>
+                        <span class="cro-grow"></span>
+                        <span class="cro-stat">{{ resumenDeSemana(w) }}</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr v-for="it in (cerradas[w.schedule] ? [] : w.items)" :key="it.e.edition_num_id"
+                      class="cro-ed"
+                      :class="[it.enFamilia ? 'en-familia' : '', { 'is-fundida': it.fundida }, total(it.e, 'ventas') ? 'con-meta' : 'sin-meta']"
+                      :data-seg="segmentoDe(it.e)" :style="{ '--cro-seg': tintaDeSegmento(it.e) }">
+                    <td class="obj-c-cacp">
+                      <div class="cro-cacp">
+                        <div><span class="k">CA</span><span class="v">{{ it.e.calc_da ?? 0 }}</span></div>
+                        <div><span class="k">CP</span><span class="v">{{ it.e.calc_dp ?? 0 }}</span></div>
+                      </div>
                     </td>
 
-                    <td class="num obj-obj obj-corte" :class="{ 'is-cero': !total(f, 'ventas') }">{{ formatValue(total(f, 'ventas'), 'num') }}</td>
-                    <td v-for="c in canalesVenta" :key="`v-${f.edition_id}-${c.clave}`" class="num">
-                      <input v-if="editable(f, c, 'ventas')" v-model.number="f.canales[c.clave].ventas"
-                             class="obj-meta" :class="{ 'is-tocada': tocada(f, c.clave, 'ventas'), 'es-cero': !f.canales[c.clave].ventas }"
-                             type="number" min="0" :aria-label="`Ventas de ${c.nombre} en ${f.programa_abrev}`" />
-                      <span v-else class="obj-fijo">{{ formatValue(f.canales[c.clave].ventas, 'num') }}</span>
+                    <td class="obj-c-curso">
+                      <div :class="it.nivel > 0 ? 'cro-hijo' : null">
+                        <div v-if="it.nivel > 0" class="cro-conector" :style="{ marginLeft: ((it.nivel - 1) * 18) + 'px' }"><span class="nodo"></span></div>
+                        <div class="cro-curso">
+                          <div class="top">
+                            <span class="cro-badge" :style="{ background: suave(tintaDeSegmento(it.e)), color: tintaDeSegmento(it.e) }">{{ it.e.cat_segment || '—' }}</span>
+                            <span class="nombre">{{ it.e.program_abreviature || '—' }}</span>
+                            <span v-if="esNuevaMetodologia(it.e)" class="cro-nm" title="Curso con la nueva metodología">NM</span>
+                            <span v-if="sinPlan(it.e)" class="ds-pill warn" title="El estándar de Parámetros no llegó a esta edición">sin plan</span>
+                          </div>
+                          <div class="area">{{ lineaDe(it.e) }} · {{ tipoDe(it.e) }}</div>
+                        </div>
+                      </div>
                     </td>
 
-                    <td class="num obj-obj obj-corte" :class="{ 'is-cero': !total(f, 'consultas') }">{{ formatValue(total(f, 'consultas'), 'num') }}</td>
-                    <td v-for="c in canalesConsulta" :key="`c-${f.edition_id}-${c.clave}`" class="num">
-                      <input v-if="editable(f, c, 'consultas')" v-model.number="f.canales[c.clave].consultas"
-                             class="obj-meta" :class="{ 'is-tocada': tocada(f, c.clave, 'consultas'), 'es-cero': !f.canales[c.clave].consultas }"
-                             type="number" min="0" :aria-label="`Consultas de ${c.nombre} en ${f.programa_abrev}`" />
-                      <span v-else class="obj-fijo">{{ formatValue(f.canales[c.clave].consultas, 'num') }}</span>
+                    <td class="obj-c-cro">
+                      <div class="cro-fechas">
+                        <div class="dias">
+                          <span class="cro-fecha-ini">{{ fechaCorta(it.e.start_date) }}</span>
+                          <span class="flecha">→</span>
+                          <span class="fin">{{ fechaCorta(it.e.end_date) }}</span>
+                          <span v-if="it.e.program_sessions" class="ses">· {{ it.e.program_sessions }} ses</span>
+                        </div>
+                        <div class="cuando"><b>{{ diasDe(it.e) }}</b> · {{ horasDe(it.e) }}</div>
+                      </div>
+                    </td>
+
+                    <td class="num obj-obj obj-corte" :class="{ 'is-cero': !total(it.e, 'ventas') }">{{ formatValue(total(it.e, 'ventas'), 'num') }}</td>
+                    <td v-for="c in canalesVenta" :key="`v-${it.e.edition_num_id}-${c.clave}`" class="num">
+                      <input v-if="editable(it.e, c, 'ventas')" v-model.number="it.e.canales[c.clave].ventas"
+                             class="obj-meta" :class="{ 'is-tocada': tocada(it.e, c.clave, 'ventas'), 'es-cero': !it.e.canales[c.clave].ventas }"
+                             type="number" min="0" :aria-label="`Ventas de ${c.nombre} en ${it.e.program_abreviature}`" />
+                      <span v-else class="obj-fijo">{{ formatValue(it.e.canales[c.clave].ventas, 'num') }}</span>
+                    </td>
+
+                    <td class="num obj-obj obj-corte" :class="{ 'is-cero': !total(it.e, 'consultas') }">{{ formatValue(total(it.e, 'consultas'), 'num') }}</td>
+                    <td v-for="c in canalesConsulta" :key="`c-${it.e.edition_num_id}-${c.clave}`" class="num">
+                      <input v-if="editable(it.e, c, 'consultas')" v-model.number="it.e.canales[c.clave].consultas"
+                             class="obj-meta" :class="{ 'is-tocada': tocada(it.e, c.clave, 'consultas'), 'es-cero': !it.e.canales[c.clave].consultas }"
+                             type="number" min="0" :aria-label="`Consultas de ${c.nombre} en ${it.e.program_abreviature}`" />
+                      <span v-else class="obj-fijo">{{ formatValue(it.e.canales[c.clave].consultas, 'num') }}</span>
                     </td>
 
                     <td class="obj-corte">
-                      <button v-if="f.origen_meta === MODIFICADO" class="ds-pill info obj-origen obj-quien" type="button"
-                              :title="`Modificado por ${f.editado_por || 'alguien'}: ver detalle`" @click="verQuien(f)">
+                      <button v-if="it.e.origen_meta === MODIFICADO" class="ds-pill info obj-origen obj-quien" type="button"
+                              :title="`Modificado por ${it.e.editado_por || 'alguien'}: ver detalle`" @click="verQuien(it.e)">
                         <span class="obj-punto-pill" aria-hidden="true"></span>Modificado
                       </button>
-                      <span v-else class="ds-pill obj-origen" :class="f.origen_meta ? 'info' : 'warn'">
-                        <span class="obj-punto-pill" aria-hidden="true"></span>{{ ETIQUETA_ORIGEN[f.origen_meta] || 'Sin plan' }}
+                      <span v-else class="ds-pill obj-origen" :class="it.e.origen_meta ? 'info' : 'warn'">
+                        <span class="obj-punto-pill" aria-hidden="true"></span>{{ ETIQUETA_ORIGEN[it.e.origen_meta] || 'Sin plan' }}
                       </span>
                     </td>
                   </tr>
                 </template>
               </tbody>
-              <tfoot v-if="!cargando && visibles.length">
+              <tfoot v-if="!cargando && semanas.length">
                 <tr>
-                  <td class="obj-sticky">Total visible</td>
+                  <td colspan="3">Total visible · {{ visibles.length }} ediciones</td>
                   <td class="num obj-obj obj-corte">{{ formatValue(totalesVisibles.ventas, 'num') }}</td>
                   <td v-for="c in canalesVenta" :key="`tv-${c.clave}`" class="num">
                     {{ formatValue(totalCanal(c.clave, 'ventas'), 'num') }}
@@ -319,8 +362,17 @@ import { ServiceKeys } from '@/services'
 import { useToast } from 'vue-toastification'
 import { formatValue } from '@/shared/lib/formatValue'
 import BaseModal from '@/components/BaseModal.vue'
+// Las ediciones salen de la MISMA fuente que Producto > Cronograma Vista y se
+// agrupan con las mismas reglas: las dos pantallas listan el mes y tienen que
+// ordenar y pintar igual, o el usuario deja de creerle a las dos.
+import {
+  agruparPorSemana, segmentoDe, tintaDeSegmento, suave, lineaDe, tipoDe,
+  esNuevaMetodologia, fechaCorta, diasDe, horasDe, fechaLocal
+} from '@/shared/lib/cronograma'
+import '@/styles/cronograma-fila.css'
 
 const dashboardService = inject(ServiceKeys.Dashboard)
+const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 const { proxy } = getCurrentInstance()
 
@@ -377,7 +429,8 @@ const hoy = new Date()
 // esta pantalla no gobierna. Las flechas llegan a cualquier otro.
 const MES_POR_DEFECTO = 10
 const filtros = reactive({ anio: hoy.getFullYear(), mes: MES_POR_DEFECTO })
-const filas = ref([])
+const semanasCrudas = ref([])
+const cerradas = ref({})
 const historial = ref([])
 const tab = ref('objetivos')
 const editableDesde = ref('')
@@ -400,7 +453,7 @@ const canalesConsulta = computed(() => (verCanales.value ? CANALES_CONSULTA : []
 // Una edición queda cerrada si empieza antes de la ventana. Las fechas se
 // comparan como texto ISO (YYYY-MM-DD), que ordena igual que el calendario y no
 // pasa por Date: armarlo en Lima corre el día hacia atrás.
-const cerrada = (fila) => !sinLimiteDeFecha && !!editableDesde.value && String(fila.inicio).slice(0, 10) < editableDesde.value
+const cerrada = (fila) => !sinLimiteDeFecha && !!editableDesde.value && String(fila.start_date).slice(0, 10) < editableDesde.value
 const editable = (fila, canal, metrica) => !cerrada(fila) &&
   (puedeEditarTodo || (metrica === 'ventas' && CANALES_DEL_LIDER.includes(canal.clave)))
 
@@ -439,7 +492,7 @@ const salto = (antes, despues) => {
   return `<span class="obj-antes">${antes}</span> → <strong>${despues}</strong> <span class="obj-delta ${sentido}">${delta}</span>`
 }
 
-const tocada = (fila, clave, metrica) => originales.value.get(fila.edition_id)?.[clave]?.[metrica] !== fila.canales[clave][metrica]
+const tocada = (fila, clave, metrica) => originales.value.get(fila.edition_num_id)?.[clave]?.[metrica] !== fila.canales[clave][metrica]
 const tieneCambios = (fila) => TODAS_LAS_CLAVES.some((c) => tocada(fila, c, 'ventas') || tocada(fila, c, 'consultas'))
 
 // Solo se manda lo que cambió: guardar una fila la marca como modificada para
@@ -447,21 +500,47 @@ const tieneCambios = (fila) => TODAS_LAS_CLAVES.some((c) => tocada(fila, c, 'ven
 // "modificado" y el estándar no volvería a alcanzarlo nunca.
 const pendientes = computed(() => filas.value.filter((f) => !cerrada(f) && tieneCambios(f)))
 
+// Todas las ediciones del mes menos los A5 (cancelados), que agruparPorSemana ya
+// descarta: es el mismo universo que muestra el cronograma.
+const filas = computed(() => agruparPorSemana(semanasCrudas.value).flatMap((w) => w.items.map((it) => it.e)))
+
 const conteos = computed(() => ({
   Todas: filas.value.length,
   'Sin plan': filas.value.filter(sinPlan).length,
   Editadas: filas.value.filter(tieneCambios).length
 }))
 
-const visibles = computed(() => {
+// El filtro entra en la agrupacion y no despues: filtrar la lista ya armada
+// dejaria semanas con su conteo mintiendo y familias partidas por la mitad.
+const coincide = (e) => {
   const texto = busqueda.value.trim().toLowerCase()
-  return filas.value.filter((f) => {
-    if (texto && !`${f.programa_abrev} ${f.programa}`.toLowerCase().includes(texto)) return false
-    if (filtro.value === 'Sin plan') return sinPlan(f)
-    if (filtro.value === 'Editadas') return tieneCambios(f)
-    return true
+  if (texto && ![e.program_abreviature, e.instructor, e.global_code, e.specific_code, e.version_code, lineaDe(e)]
+    .some((v) => String(v || '').toLowerCase().includes(texto))) return false
+  if (filtro.value === 'Sin plan') return sinPlan(e)
+  if (filtro.value === 'Editadas') return tieneCambios(e)
+  return true
+}
+
+const semanas = computed(() => agruparPorSemana(semanasCrudas.value, { visible: coincide }))
+const visibles = computed(() => semanas.value.flatMap((w) => w.items.map((it) => it.e)))
+
+const alternarSemana = (n) => { cerradas.value = { ...cerradas.value, [n]: !cerradas.value[n] } }
+
+// Lo mismo que resume el cronograma: cuantas estan en curso y el logro promedio.
+function resumenDeSemana (w) {
+  const hoyLocal = new Date()
+  const enCurso = w.items.filter((it) => {
+    const ini = fechaLocal(it.e.start_date)
+    const fin = fechaLocal(it.e.end_date)
+    return ini && hoyLocal >= ini && (!fin || hoyLocal <= fin)
+  }).length
+  const logros = w.items.map((it) => {
+    const objetivo = total(it.e, 'ventas')
+    return objetivo ? Math.round(((it.e.cnt_ventas ?? 0) / objetivo) * 100) : 0
   })
-})
+  const promedio = logros.length ? Math.round(logros.reduce((t, n) => t + n, 0) / logros.length) : 0
+  return `${enCurso} en curso · ${promedio}% logro prom.`
+}
 
 // El pie suma lo VISIBLE, no el mes entero: con un filtro puesto, un total que
 // no cuadra con las filas de arriba es la forma más rápida de desconfiar de todo.
@@ -472,11 +551,14 @@ const totalesVisibles = computed(() => visibles.value.reduce((t, f) => ({
   consultas: t.consultas + total(f, 'consultas')
 }), { ventas: 0, consultas: 0 }))
 
+// Las cifras reales salen de cnt_ventas/cnt_consultas, los mismos contadores que
+// pinta el cronograma: leerlas de otra fuente haria que las dos pantallas
+// discreparan sobre el mismo mes.
 const totalesDelMes = computed(() => filas.value.reduce((t, f) => ({
   ventas: t.ventas + total(f, 'ventas'),
   consultas: t.consultas + total(f, 'consultas'),
-  vendidas: t.vendidas + (f.venta_cantidad || 0),
-  consultasReales: t.consultasReales + (f.consultas_reales || 0)
+  vendidas: t.vendidas + (f.cnt_ventas || 0),
+  consultasReales: t.consultasReales + (f.cnt_consultas || 0)
 }), { ventas: 0, consultas: 0, vendidas: 0, consultasReales: 0 }))
 
 // Corte del mes elegido. El ritmo esperado solo tiene sentido en el mes EN CURSO:
@@ -527,8 +609,8 @@ const temporada = computed(() => (MESES_ALTOS.has(filtros.mes) ? 'mes alto' : 'm
 const subtitulo = computed(() => `${filas.value.length} ediciones · ${MESES[filtros.mes - 1]} ${filtros.anio} · ${temporada.value}`)
 const textoBoton = computed(() => (guardando.value ? 'Guardando…' : `Guardar ${pendientes.value.length} cambios`))
 
-// Programa + los dos OBJ + sus canales + origen.
-const totalColumnas = computed(() => 2 + canalesVenta.value.length + canalesConsulta.value.length + 2)
+// CA·CP, curso, cronograma + los dos OBJ + sus canales + origen.
+const totalColumnas = computed(() => 4 + canalesVenta.value.length + canalesConsulta.value.length + 2)
 
 // ── Historial ───────────────────────────────────────────────────────────────
 
@@ -577,10 +659,10 @@ const detalle = computed(() => {
   const f = filaEnDetalle.value
   if (!f) return { titulo: '', autor: '', cuando: '', cambios: [] }
   return {
-    titulo: `${f.programa_abrev} ${f.codigo}`,
+    titulo: `${f.program_abreviature} ${f.global_code}`,
     autor: f.editado_por || 'alguien sin registrar',
     cuando: f.editado_en ? cuando(f.editado_en) : '',
-    cambios: historial.value.filter((h) => h.edition_id === f.edition_id)
+    cambios: historial.value.filter((h) => h.edition_id === f.edition_num_id)
   }
 })
 
@@ -607,7 +689,7 @@ function verQuien (fila) {
 // devuelve objetos nuevos: entregar la referencia haría que editar la fila
 // moviera también su propio "antes" y nada volvería a marcarse como cambiado.
 function descartar () {
-  for (const f of filas.value) f.canales = conTodosLosCanales(originales.value.get(f.edition_id))
+  for (const f of filas.value) f.canales = conTodosLosCanales(originales.value.get(f.edition_num_id))
 }
 
 async function cargar () {
@@ -615,20 +697,40 @@ async function cargar () {
   error.value = ''
   try {
     const periodo = { year: filtros.anio, month_num: filtros.mes }
-    const [datos, cambios] = await Promise.all([
+    const [semanasApi, datos, cambios] = await Promise.all([
+      editionService.editionByWeekList({ page: 1, size: 200, selectedMonth: filtros.mes, selectedYear: filtros.anio }),
       dashboardService.programGoalsList(periodo),
       dashboardService.goalHistoryList(periodo)
     ])
-    filas.value = (datos.items || datos || []).map((f) => ({ ...f, canales: conTodosLosCanales(f.metas_canal) }))
-    originales.value = new Map(filas.value.map((f) => [f.edition_id, conTodosLosCanales(f.canales)]))
+    const objetivoDe = new Map((datos.items || []).map((g) => [g.edition_id, g]))
+    // El objetivo se ENGANCHA a la edicion en vez de armar una lista aparte: la
+    // celda editable vive en `e.canales` y la agrupacion se recalcula con cada
+    // tecla del buscador. Si los canales colgaran de un objeto recreado en cada
+    // recalculo, lo escrito se perderia al filtrar.
+    semanasCrudas.value = (semanasApi.items || []).map((w) => ({
+      schedule: w.schedule,
+      items: (w.items || []).map((e) => {
+        const g = objetivoDe.get(e.edition_num_id)
+        return Object.assign(e, {
+          canales: conTodosLosCanales(g?.metas_canal),
+          metas_canal: g?.metas_canal || {},
+          origen_meta: g?.origen_meta || null,
+          editado_por: g?.editado_por || null,
+          editado_en: g?.editado_en || null,
+          meta_monto: g?.meta_monto || 0
+        })
+      })
+    }))
+    originales.value = new Map(filas.value.map((f) => [f.edition_num_id, conTodosLosCanales(f.canales)]))
     // El corte lo calcula Postgres y viaja con la lista: si el front lo calculara
     // por su cuenta, el candado de la pantalla y el del servidor podrían discrepar.
     editableDesde.value = datos.editable_desde || ''
     historial.value = cambios.items || []
+    cerradas.value = {}
   } catch (e) {
     console.error('No se pudieron cargar los objetivos del mes:', e)
     error.value = 'No se pudieron cargar los objetivos. Reintenta o avisa a sistemas.'
-    filas.value = []
+    semanasCrudas.value = []
   } finally {
     cargando.value = false
   }
@@ -641,7 +743,7 @@ async function guardar () {
     // y mandarlo en 0 lo borraría. Al líder comercial el backend le recorta el
     // envío a las ventas de sus canales, así que manda la fila entera igual.
     const goals = pendientes.value.map((f) => ({
-      edition_num_id: f.edition_id,
+      edition_num_id: f.edition_num_id,
       target_vacants: total(f, 'ventas'),
       target_revenue: f.meta_monto || 0,
       target_leads: total(f, 'consultas'),
@@ -739,6 +841,17 @@ onMounted(cargar)
 .obj-seg-num { opacity: .6; font-weight: 500; }
 
 .obj-scroll { max-height: 640px; }
+
+/* Anchos fijos en las tres columnas de identidad. Sin tope, el nombre del curso
+   estira su columna hasta comerse media tabla y empuja Origen fuera de pantalla:
+   la fila se lee de izquierda a derecha con la rueda, que es justo lo que esta
+   pantalla no puede permitirse (los canales se editan comparando entre filas). */
+.obj-table .obj-c-cacp { width: 58px; }
+.obj-table .obj-c-curso { width: 230px; max-width: 230px; overflow: hidden; }
+.obj-table .obj-c-cro { width: 172px; }
+/* Con nueve columnas numericas, cada pixel de relleno se multiplica por nueve. */
+.obj-table th,
+.obj-table td { padding-left: 8px; padding-right: 8px; }
 .obj-lock { color: var(--ds-muted); font-size: 10px; margin-left: 4px; }
 
 /* Cabecera de dos niveles: el grupo arriba y sus canales debajo. Así se lee
@@ -789,10 +902,6 @@ onMounted(cargar)
 .obj-prog-inicio { display: block; font-size: 11.5px; color: var(--ds-muted); }
 .obj-salto { white-space: nowrap; }
 
-/* El programa se queda a la vista mientras se recorren los siete canales. */
-.obj-sticky { position: sticky; left: 0; z-index: 1; background: var(--ds-surface); }
-tr.is-sin-plan td,
-tr.is-sin-plan .obj-sticky { background: var(--ds-soft-warn); }
 
 .obj-table tfoot td { font-weight: 700; border-top: 2px solid var(--ds-border-strong); background: var(--ds-surface-2); }
 
