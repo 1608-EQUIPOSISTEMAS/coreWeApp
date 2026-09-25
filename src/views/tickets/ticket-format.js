@@ -28,6 +28,20 @@ export const SIGUIENTE_ESTADO = {
   CERRADO: { estado: 'EN_PROGRESO', texto: 'Reabrir ticket', icono: 'fa-rotate-left' },
 }
 
+// Un ABIERTO que ya tiene dueño (reparto automático, reasignación o
+// escalamiento) no se "toma": ya es de alguien. Su agente solo empieza a
+// atenderlo, que es la misma transición a EN_PROGRESO.
+const INICIAR_ATENCION = { estado: 'EN_PROGRESO', texto: 'Iniciar atención', icono: 'fa-play' }
+
+export function siguienteEstado (ticket) {
+  if (!ticket) return undefined
+  if (ticket.estado === 'ABIERTO' && ticket.asignadoA) return INICIAR_ATENCION
+  return SIGUIENTE_ESTADO[ticket.estado]
+}
+
+/** Solo un ABIERTO sin dueño se puede tomar a mano. */
+export const esTomable = (ticket) => ticket?.estado === 'ABIERTO' && !ticket.asignadoA
+
 const SLA_LABEL = {
   EN_PLAZO: 'En plazo',
   POR_VENCER: 'Por vencer',
