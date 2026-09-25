@@ -323,8 +323,10 @@ function prettySize (bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 function errMsg (err, fallback) {
-  if (err?.response?.data?.error || err?.response?.data?.message) {
-    return err.response.data.error || err.response.data.message
+  // message primero: en el formato por defecto de Fastify `error` es solo el
+  // texto del status ("Bad Request") y el motivo real viene en `message`.
+  if (err?.response?.data?.message || err?.response?.data?.error) {
+    return err.response.data.message || err.response.data.error
   }
   // Sin respuesta del backend = fallo de red/timeout (la hoja grande tarda mas
   // que el timeout). Decirlo en vez del generico, que no da ninguna pista.
