@@ -52,6 +52,14 @@
   --ds-soft-info: #eff6ff;
   --ds-soft-neutral: #f1f4f9;
 
+  /* No llegó al objetivo: rosado de marca (Plan Comercial). Es "falta", no
+     "error": el rojo (--ds-bad) queda para lo que está mal, como una conversión
+     bajo la meta. --ds-rose-strong es el tramo más lejos del objetivo. */
+  --ds-rose: #e07aa3;
+  --ds-rose-ink: #8e1f4f;
+  --ds-soft-rose: #fadbe6;
+  --ds-rose-strong: #f4b6cb;
+
   /* Forma */
   --ds-radius: 12px;
   --ds-radius-sm: 6px;
@@ -90,6 +98,11 @@
   --ds-soft-bad: rgba(248, 113, 113, 0.12);
   --ds-soft-info: rgba(96, 165, 250, 0.14);
   --ds-soft-neutral: #24241e;
+
+  --ds-rose: #f08bb4;
+  --ds-rose-ink: #f4a3c4;
+  --ds-soft-rose: rgba(240, 139, 180, 0.14);
+  --ds-rose-strong: rgba(240, 139, 180, 0.3);
 }
 
 /* ── Página ─────────────────────────────────────────────────────────────── */
@@ -168,6 +181,30 @@
 .ds-pill.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
 .ds-pill.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
 .ds-pill.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.ds-pill.rose { background: var(--ds-soft-rose); color: var(--ds-rose-ink); }
+
+/* Pestañas y selector de periodo: control segmentado. El activo va en marca. */
+.ds-tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--ds-border); border-radius: 999px; background: var(--ds-surface); }
+.ds-tabs > button { padding: 6px 13px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2); cursor: pointer; white-space: nowrap; }
+.ds-tabs > button:hover { color: var(--ds-heading); background: var(--ds-surface-2); }
+.ds-tabs > button[aria-selected="true"], .ds-tabs > button[aria-pressed="true"] { background: var(--ds-brand); color: var(--ds-on-brand); }
+.ds-tabs > button:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
+
+/* Banda de lectura rápida: 3-4 conclusiones sobre el navy de marca, arriba de
+   todo. Es EL elemento fuerte de un reporte; uno por pantalla. El tono va en el
+   punto y la barra (.ok/.warn/.bad), el texto queda siempre sobre-marca. */
+.ds-band { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px 26px; padding: 20px 22px; border-radius: var(--ds-radius); background: var(--ds-brand); color: var(--ds-on-brand); }
+.ds-band-item { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ds-band-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; opacity: 0.8; }
+.ds-band-label::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ds-accent-2); }
+.ds-band-value { font-size: 30px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ds-band-text { font-size: 13px; line-height: 1.45; opacity: 0.85; }
+.ds-band-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
+.ds-band-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--ds-accent-2); }
+.ds-band-item.ok .ds-band-label::before, .ds-band-item.ok .ds-band-bar > i { background: var(--ds-ok); }
+.ds-band-item.warn .ds-band-label::before, .ds-band-item.warn .ds-band-bar > i { background: var(--ds-warn); }
+.ds-band-item.bad .ds-band-label::before, .ds-band-item.bad .ds-band-bar > i { background: var(--ds-bad); }
+.ds-band-item.rose .ds-band-label::before, .ds-band-item.rose .ds-band-bar > i { background: var(--ds-rose); }
 
 /* ── Filas: el panel usa todo el ancho (60/40, 50/50, tercios) ─────────── */
 .ds-row { display: grid; gap: var(--ds-gap); }

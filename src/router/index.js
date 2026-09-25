@@ -414,13 +414,14 @@ const routes = [
           component: () => import('@/views/comercial/DiscountsNew.vue'),
           meta: { roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
-        // Reportes — solo líderes y admin (ya los tenías bien)
+        // Objetivos, avance por asesor y ventas diarias en una sola pantalla con pestañas.
         {
-          path: 'RptGoalAgent',
-          name: 'ReportGoalAgent',
-          component: () => import('@/views/comercial/ReportGoalAgent.vue'),
-          meta: { submodule: 'ASESOR_OBJETIVOS', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
+          path: 'plan',
+          name: 'PlanComercial',
+          component: () => import('@/views/comercial/PlanComercial.vue'),
+          meta: { submodule: 'PLAN_COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
+        // Reportes — solo líderes y admin
         {
           path: 'RptGoalEdition',
           name: 'ReportGoalEdition',
@@ -428,29 +429,10 @@ const routes = [
           meta: { submodule: 'CRONOGRAMA_OBJETIVOS', roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
-          path: 'RptControlComercial',
-          name: 'ReportControlComercial',
-          component: () => import('@/views/comercial/ReportControlComercial.vue'),
-          meta: { submodule: 'CONTROL_GESTION', roles: ['ADMIN', 'COMERCIAL', 'GERENCIA'] },
-        },
-        // Reportes generales — todos los comerciales
-        {
-          path: 'RptMktProduct',
-          name: 'ReportMktProduct',
-          component: () => import('@/views/comercial/ReportMktProduct.vue'),
-          meta: { submodule: 'MARKETING_GESTION', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
-        },
-        {
           path: 'RptSLA',
           name: 'ReportSla',
           component: () => import('@/views/comercial/ReportSla.vue'),
           meta: { roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
-        },
-        {
-          path: 'RptCalling',
-          name: 'ReportCalling',
-          component: () => import('@/views/comercial/ReportCalling.vue'),
-          meta: { submodule: 'LLAMADA_GESTION', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {
           path: 'RptPerformanceMarketing',

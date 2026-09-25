@@ -10,6 +10,7 @@ describe('leadRouteForUser', () => {
   it('respeta Comercial y B2B', () => {
     expect(leadRouteForUser({ roles: ['COMERCIAL'] })).toBe('ComercialLeadDetalle')
     expect(leadRouteForUser({ roles: ['B2B'] })).toBe('B2BLeadsEdit')
+    expect(leadRouteForUser({ roles: ['LIDER_B2B'] })).toBe('B2BLeadsEdit')
   })
 
   it('ADMIN y roles mixtos prefieren Comercial', () => {

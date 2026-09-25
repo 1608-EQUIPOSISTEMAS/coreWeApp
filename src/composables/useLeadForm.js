@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { computeDiscounts, chargedTotal } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
+import { tokenInscriptionFlags, tokenLinkAmount } from '@/features/enroll-lead/tokenInscriptionFlags.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
 
 export function useLeadForm(options = {}) {
@@ -599,6 +600,10 @@ export function useLeadForm(options = {}) {
   // Mismo boton que comercial: status "Pagará" + persona + programa. A diferencia
   // de INSCRIBIR no exige F. Pago (justamente todavia no pago).
   const isTokenMode = ref(false)
+  // Token cuya inscripcion se esta editando (llega por ?editToken= desde
+  // Tokens de Pago). null = el modal crea un token nuevo.
+  const editTokenId    = ref(null)
+  const isEditingToken = computed(() => editTokenId.value !== null)
   const showTokenButton = computed(() =>
     showInscription &&
     !form.enrollment_id &&
@@ -1117,7 +1122,10 @@ export function useLeadForm(options = {}) {
       return true
     }
     if (isChannelToken.value) {
-      if (!insc.cat_token_provider) return false
+      // Débito/Crédito, no el proveedor: el modal "Crear Token" oculta el
+      // proveedor, y exigirlo escondía los descuentos hasta reabrir en edición.
+      // El proveedor se sigue validando al guardar la inscripción.
+      if (!insc.token_payment_type) return false
       if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
       return true
     }
@@ -1553,6 +1561,7 @@ export function useLeadForm(options = {}) {
     if (!validateInscriptionClientInfo()) { toast.warning('Complete los campos obligatorios de la inscripción'); return }
     if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) { toast.warning('Faltan datos obligatorios en el formulario del Lead.'); return }
     if (!insc.token_payment_type) { toast.warning('Debe seleccionar el tipo de pago (Débito/Crédito).'); return }
+    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage()); return }
 
     savingInsc.value = true
     try {
@@ -1576,18 +1585,11 @@ export function useLeadForm(options = {}) {
       const enrollmentPayload = buildEnrollmentPayload()
       enrollmentPayload.inscription.lead_id = resolvedLeadId
 
-      // El monto del link es lo que el alumno paga AHORA: en cuotas eso es solo
-      // la inicial (saved_money), no el total.
-      const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
-      const tokenAmount = isInstallments
-        ? (Number(insc.saved_money) || 0)
-        : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
-
       const resp = await ficoService.tokenCreate({
         lead_id:      resolvedLeadId,
         cat_provider: null,
         payment_type: insc.token_payment_type || null,
-        amount:       tokenAmount,
+        amount:       tokenLinkAmount(insc),
         currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
         notes:        `Link para ${form.full_name || '---'}`,
         advisor_observation: insc.observacions || null,
@@ -1606,6 +1608,90 @@ export function useLeadForm(options = {}) {
       }
     } catch (err) { console.error(err); toast.error(err?.response?.data?.message || 'Error inesperado al crear el token de pago.') }
     finally { savingInsc.value = false }
+  }
+
+  // Un link en 0 no cobra nada y FICO no tiene como notarlo (token 838, cuotas
+  // sin reserva). En cuotas el link cobra solo la reserva.
+  function missingTokenAmountMessage() {
+    return isInstallmentMode.value
+      ? 'En cuotas el link cobra la Reserva: ingrese un monto mayor a 0.'
+      : 'El monto a pagar por el link no puede ser 0.'
+  }
+
+  // ── EDICION DE UN TOKEN YA CREADO ────────────────────────────
+  // El token guarda los descuentos solo por ID; se buscan sus valores antes de
+  // abrir el modal para que el total no se recalcule sin descuento.
+  async function loadTokenForEdit(tokenId) {
+    try {
+      const token = await ficoService.tokenGetById(tokenId)
+      if (!token) { toast.error('Token no encontrado'); return }
+
+      const types = ['we_discount_type_percentage', 'we_discount_type_fixed', 'we_discount_type_benefit']
+      const lists = await Promise.all(types.map(alias => discountService.discountCaller({
+        q: '', cat_discount_type: discountCatalog.value.find(e => e.alias === alias)?.id
+      })))
+      const flags = tokenInscriptionFlags(token, {
+        discountsByType: Object.fromEntries(types.map((alias, i) => [alias, lists[i] || []])),
+        paymentChannels: paymentChannelCatalog.value
+      })
+
+      editTokenId.value     = tokenId
+      inscInitialized.value = false
+      openInscription(true)
+      // Sin await entre openInscription y la parte sincrona del restore: ver
+      // checkObservedStatus.
+      await restoreObservedInscription({
+        insc,
+        flags,
+        catalogs: {
+          docType: docTypeCatalog.value,
+          inscModalidades: inscModalidades.value,
+          inscPaymentModes: inscPaymentModes.value,
+          currency: currencyCatalog.value,
+          certificateStatus: certificateStatusCatalog.value,
+          paymentMethod: paymentMethodCatalog.value,
+          paymentChannels: paymentChannelCatalog.value
+        },
+        aliasById,
+        installments: { manualMode, numCuotasManual, editableInstallments },
+        onPriceRestored: () => { priceManuallySet.value = true }
+      })
+    } catch (err) {
+      console.error('[loadTokenForEdit]', err)
+      toast.error('No se pudo cargar la inscripción del token')
+    }
+  }
+
+  async function confirmarEdicionToken() {
+    if (!inscriptionFieldsFilled()) return
+    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage()); return }
+    savingInsc.value = true
+    try {
+      const resp = await ficoService.tokenEditInscription({
+        token_id:     editTokenId.value,
+        inscription:  buildEnrollmentPayload().inscription,
+        amount:       tokenLinkAmount(insc),
+        currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
+        payment_type: insc.token_payment_type || null,
+        cat_payment_channel: insc.cat_payment_channel || null,
+        advisor_observation: insc.observacions || null
+      })
+      const updated = resp?.updated_fields || []
+      if (updated.length === 0) toast.info('Sin cambios para guardar')
+      else toast.success(`Inscripción actualizada (${updated.length} campos)`)
+      showViewModal.value = false
+      router.push({ name: 'ficoTokens' })
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'No se pudieron guardar los cambios')
+    } finally {
+      savingInsc.value = false
+    }
+  }
+
+  function closeInscriptionModal() {
+    showViewModal.value = false
+    isTokenMode.value   = false
+    editTokenId.value   = null
   }
 
   // ── CARGA DE DATOS ───────────────────────────────────────────
@@ -1758,6 +1844,7 @@ export function useLeadForm(options = {}) {
       await loadLead(leadIdParam.value)
       await checkObservedStatus()
       loaded.value = true
+      if (route.query.editToken) await loadTokenForEdit(Number(route.query.editToken))
       return
     }
 
@@ -1825,7 +1912,7 @@ export function useLeadForm(options = {}) {
     isInstallmentMode, installmentRemainder, autoNumCuotas, autoInstallmentPlan,
     reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
     showInscriptionButton, inscriptionBlockReason, isLiderComercial,
-    isTokenMode, showTokenButton,
+    isTokenMode, showTokenButton, isEditingToken,
     sellerPhoneOptions, sellerPhoneLocked,
     eventCategories, isEventProgram, onEventCategoryChange, isVipCategory,
 
@@ -1841,6 +1928,7 @@ export function useLeadForm(options = {}) {
     // Functions
     cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
     openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
+    confirmarEdicionToken, closeInscriptionModal,
     handleResubmit,
     addContacto, removeContacto, toggleTimer, handleTypeChange,
     handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,

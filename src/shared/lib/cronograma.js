@@ -65,7 +65,9 @@ export function horasDe (e) {
 // objetivo viejo de Producto sin ningún canal (12, 4, 5, 7, 8 y 15). El
 // cronograma las sumaba y Gerencia no, y los dos KPI del mismo mes no cuadraban.
 // Sin canales el objetivo es 0 y la edición sale "Sin meta": es lo correcto,
-// porque el estándar todavía no la alcanzó y alguien tiene que cargarla.
+// porque el estándar todavía no la alcanzó y alguien tiene que cargarla. Ojo:
+// Cronograma Vista NO se queda con ese 0, cae al total guardado, porque hasta
+// sep/2026 el objetivo se cargaba a mano ahí y ese histórico ya está cerrado.
 export function objetivoDeCanales (metasCanal, metrica = 'ventas') {
   return Object.values(metasCanal || {}).reduce((t, c) => t + (Number(c?.[metrica]) || 0), 0)
 }

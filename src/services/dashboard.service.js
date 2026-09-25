@@ -50,15 +50,6 @@ async getDetailLeads(payload) {
     const response = (await api.post('/dashboard/detailsales', payload)).data;
     return response.data;
   }
-async getAvailableWeeks(payload) {
-  const response = (await api.post('/dashboard/available-weeks', payload)).data;
-  return response.data;
-}
-
-async liderList(payload) {
-  const response = (await api.post('/dashboard/lider', payload)).data;
-  return response.data;
-}
   // Embudo consultas -> ventas por edición y canal (Gerencia).
   // payload: { year, month_num } → { items, canales, totales }
   async gerenciaFunnel(payload) {
@@ -108,17 +99,6 @@ async liderList(payload) {
       meta: { skipLoader: true }
     })).data;
     return response.data || [];
-  }
-
-  async ventasCanalList(payload) {
-    const response = (await api.post('/dashboard/ventas-canal', payload)).data;
-    return response.data;
-  }
-
-
-  async contactabilityList(payload) {
-    const response = (await api.post('/dashboard/contactability', payload)).data;
-    return response.data;
   }
 
 }

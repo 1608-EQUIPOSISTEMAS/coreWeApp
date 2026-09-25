@@ -1848,7 +1848,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     </div>
 
     <template #footer>
-      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="showViewModal = false; isTokenMode = false">Cerrar</button>
+      <button class="btn-exec btn-exec-ghost btn-exec-sm" @click="closeInscriptionModal">Cerrar</button>
       <!-- Inscripcion observada: se re-registra corregida en vez de guardar de nuevo -->
       <button
         v-if="observedData"
@@ -1862,7 +1862,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <button
   v-else
   class="btn-exec btn-exec-primary btn-exec-sm"
-  @click="isTokenMode ? confirmarToken() : confirmarInscripcion()"
+  @click="isEditingToken ? confirmarEdicionToken() : (isTokenMode ? confirmarToken() : confirmarInscripcion())"
   :disabled="
   savingInsc ||
   (!isTokenMode && form.enrollment_id) ||
@@ -1871,7 +1871,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 "
 >
         <i class="fa-solid fa-spinner fa-spin me-1" v-if="savingInsc"></i>
-        {{ savingInsc ? 'Guardando...' : (isTokenMode ? 'Crear Token' : 'Guardar inscripción') }}
+        {{ savingInsc ? 'Guardando...' : (isEditingToken ? 'Guardar cambios' : (isTokenMode ? 'Crear Token' : 'Guardar inscripción')) }}
       </button>
     </template>
   </BaseModal>
@@ -1959,13 +1959,14 @@ const {
   isInstallmentMode, installmentRemainder, autoNumCuotas,
   reservaDiferida, reservaSplitValid, installmentPlan, installmentTotalSum, installmentPlanValid,
   showInscriptionButton, inscriptionBlockReason, isLiderComercial,
-  isTokenMode, showTokenButton,
+  isTokenMode, showTokenButton, isEditingToken,
   sellerPhoneOptions, sellerPhoneLocked,
   eventCategories, isEventProgram, onEventCategoryChange, isVipCategory,
   programService, discountService, editionService, b2bService,
   fmt2, round2, formatDate, formatDateTime, formatDuration, isValidEmail, openURL, getBadgeClass,
   cancelar, guardar, guardarEfectivo, confirmarEliminacion, confirmarInscripcion,
   openInscription, openTokenInscription, confirmarToken, resetInscriptionData,
+  confirmarEdicionToken, closeInscriptionModal,
   handleResubmit,
   addContacto, removeContacto, toggleTimer, handleTypeChange,
   handleMensajeChatInput, onStatusChange, onChannelChange, onStrategyChange,

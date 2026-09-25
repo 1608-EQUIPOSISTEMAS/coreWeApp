@@ -52,7 +52,8 @@ export function useLeadFormValidations (form, insc, deps = {}) {
       return true
     }
     if (channel.isChannelToken?.value) {
-      if (!insc.cat_token_provider) return false
+      // Débito/Crédito, no el proveedor: el modal "Crear Token" lo oculta.
+      if (!insc.token_payment_type) return false
       if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
       return true
     }

@@ -58,6 +58,7 @@ Se definen en `:root` y cambian solos con `data-coreui-theme="dark"`.
 | `--ds-accent-2` | `#93b4e8` | `#4f6a9a` | Serie secundaria |
 | `--ds-reference` | `#cbd5e1` | `#4a4a42` | Referencia: típico, meta, período anterior |
 | `--ds-bar` | `#c9d6ec` | `#3a4a66` | Barras que no son la destacada |
+| `--ds-rose` / `-rose-ink` / `--ds-soft-rose` / `--ds-rose-strong` | `#e07aa3` / `#8e1f4f` / `#fadbe6` / `#f4b6cb` | `#f08bb4` / `#f4a3c4` / rgba 14–30 % | **No llegó al objetivo** (falta, no error). `.ds-pill.rose`, `.ds-band-item.rose` |
 | `--ds-ok` / `-warn` / `-bad` | `#12a150` / `#e08a1e` / `#d64545` | `#34d399` / `#e9b872` / `#f87171` | Relleno de estado (barra, anillo, borde) |
 | `--ds-ok-ink` / `-warn-ink` / `-bad-ink` / `-info-ink` | `#0f7a3d` / `#a8620f` / `#b83232` / `#1e40af` | igual al relleno | Texto de estado (contraste AA) |
 | `--ds-soft-ok` / `-warn` / `-bad` / `-info` / `-neutral` | tintes claros | rgba al 12–14 % | Fondo de pill, variación, conclusión |
@@ -197,6 +198,39 @@ Reglas del panel:
   su registro (`tr.link` + `tabindex="0"` + `@keydown.enter`).
 - Si un panel no tiene datos, se quita y la fila se reacomoda (backend:
   `row()` en `area-widgets.entity.js`). Nunca un recuadro vacío.
+
+### 5.2.1 Reporte con pestañas y banda de lectura
+
+Referencia: `views/comercial/PlanComercial.vue` (Objetivos / Por asesor / Ventas
+diarias).
+
+- **Pestañas y selector de periodo** con `.ds-tabs`: un control segmentado de
+  `<button>`. Pestañas con `role="tab"` + `aria-selected`; el selector de mes con
+  `aria-pressed`. El activo va en `--ds-brand`. Pestaña y periodo viven en la URL
+  (`?tab=…&mes=…`) para que el enlace compartido abra lo mismo.
+- **Banda de lectura rápida** con `.ds-band` > `.ds-band-item` (`.ds-band-label`,
+  `.ds-band-value`, `.ds-band-bar > i`, `.ds-band-text`): 3–4 conclusiones sobre
+  el navy de marca, arriba de todo. Es **el** elemento fuerte del reporte, uno
+  por pantalla. El tono (`ok | warn | bad`) va en el `.ds-band-item` y solo
+  pinta el punto y la barra; el texto queda siempre en `--ds-on-brand`. Las
+  frases las arma la lógica (`features/plan-comercial/planComercial.js`), no
+  el template.
+- Dólares con `formatValue(v, 'usd')` → `US$ 1,200`.
+
+```vue
+<div class="ds-tabs" role="tablist" aria-label="Reportes">
+  <button type="button" role="tab" :aria-selected="String(tab === 'a')" @click="tab = 'a'">Objetivos</button>
+</div>
+
+<section class="ds-band" aria-label="Lectura rápida de agosto">
+  <div class="ds-band-item ok">
+    <span class="ds-band-label">Vacantes</span>
+    <span class="ds-band-value">104%</span>
+    <div class="ds-band-bar"><i style="width: 100%"></i></div>
+    <span class="ds-band-text">485 de 434 planificadas, 51 sobre el objetivo.</span>
+  </div>
+</section>
+```
 
 ### 5.3 Listado de un módulo
 

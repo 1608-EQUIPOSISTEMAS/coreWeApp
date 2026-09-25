@@ -574,8 +574,10 @@ function agentLabel(s) {
 // contadores del cronograma (comm_bucket): beca > membresía > b2b > hijo de
 // paquete (SEG) > venta directa. MEM usa member_benefits (excluye MEMBRESIA
 // PLUS, igual que el cronograma): un socio PLUS cuenta como VEN/SEG.
+// counts_as_sale = gerencia pidió contarlo como venta (gana a todo menos beca).
 function studentChannel(s) {
   const tag = s.is_beca ? 'BEC'
+    : s.counts_as_sale ? 'VEN'
     : s.member_benefits ? 'MEM'
     : s.is_b2b ? 'B2B'
     : (s.parent_codes && s.parent_codes.length) ? 'SEG'
@@ -630,8 +632,15 @@ async function fetchAll() {
     // El objetivo se DERIVA del reparto por canal, igual que en Gerencia >
     // Objetivos, que es donde se edita. Leer `meta_vacantes` (el total guardado)
     // hacia que las dos pantallas mostraran meses distintos: ver objetivoDeCanales.
+    //
+    // Pero una edicion SIN canales conserva su total guardado: hasta sep/2026 el
+    // objetivo se cargaba a mano desde Producto > Cronograma y nunca tuvo
+    // reparto. Derivar a secas dejaba en cero todo el historico, que es dato
+    // cerrado y no se vuelve a cargar. El plan por canal arranca en oct/2026.
     const goalByEd = {}
-    ;(goals.items || []).forEach(g => { goalByEd[g.edition_id] = objetivoDeCanales(g.metas_canal) })
+    ;(goals.items || []).forEach(g => {
+      goalByEd[g.edition_id] = objetivoDeCanales(g.metas_canal) || g.meta_vacantes
+    })
 
     weeks.forEach(w => (w.items || []).forEach(e => {
       // Los congresos/eventos llevan su propia meta en Fundacion > Objetivos:

@@ -469,6 +469,7 @@ import { inDateRange } from '@/utils/dateRange'
 import { confirmAction } from '@/composables/useConfirm'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import { ServiceKeys } from '@/services'
+import { leadRouteForUser } from '@/utils/leadRouteForUser.js'
 
 const toast = useToast()
 const router = useRouter()
@@ -790,8 +791,10 @@ function openEditInscription (t) {
     toast.error('No se encontro el lead asociado al token')
     return
   }
+  // Al formulario del area de quien pidio el token: B2B y Fundacion no pueden
+  // abrir la ruta de Comercial y el guard los sacaba sin editar nada.
   router.push({
-    name:   'ComercialLeadDetalle',
+    name:   leadRouteForUser(currentUser),
     params: { id: t.lead_id },
     query:  { editToken: t.token_id }
   })

@@ -82,12 +82,6 @@ async searchPhoneGet(payload) {
     })).data;
   }
 
-  async leadStats(payload) {
-    const response = (await api.post('/comercial/leadstats', payload)).data;
-    console.log(response)
-    return response;
-  }
-
   // Devuelve todos los celulares de origen distintos (no solo los de la pagina
   // visible). Alimenta el filtro de la columna Cel. Origen.
   async sellerPhonesList() {

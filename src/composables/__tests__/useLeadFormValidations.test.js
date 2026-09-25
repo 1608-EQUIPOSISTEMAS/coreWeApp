@@ -82,10 +82,14 @@ describe('useLeadFormValidations', () => {
     insc.saved_money = 50
     expect(v.validateInscriptionPaymentInfo()).toBe(true)
   })
-  it('validateInscriptionPaymentInfo: web siempre ok; token exige proveedor', () => {
+  it('validateInscriptionPaymentInfo: web siempre ok; token exige Débito/Crédito', () => {
     const insc = fullInsc()
     expect(useLeadFormValidations(fullForm(), insc, { channel: channel(false, false, true) }).validateInscriptionPaymentInfo()).toBe(true)
     const insc2 = fullInsc()
-    expect(useLeadFormValidations(fullForm(), insc2, { channel: channel(false, true) }).validateInscriptionPaymentInfo()).toBe(false)
+    const v = useLeadFormValidations(fullForm(), insc2, { channel: channel(false, true) })
+    expect(v.validateInscriptionPaymentInfo()).toBe(false)
+    // Sin proveedor: el modal "Crear Token" no lo pide y los descuentos deben verse.
+    insc2.token_payment_type = 'credito'; insc2.cat_token_provider = null
+    expect(v.validateInscriptionPaymentInfo()).toBe(true)
   })
 })

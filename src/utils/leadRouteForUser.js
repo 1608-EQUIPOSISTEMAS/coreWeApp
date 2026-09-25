@@ -9,7 +9,7 @@
 export const LEAD_VIEWS = [
   { route: 'ComercialLeadDetalle', module: 'COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
   { route: 'FundacionLeadsEdit',   module: 'FUNDACION', roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'] },
-  { route: 'B2BLeadsEdit',         module: 'B2B',       roles: ['ADMIN', 'B2B', 'GERENCIA'] },
+  { route: 'B2BLeadsEdit',         module: 'B2B',       roles: ['ADMIN', 'B2B', 'LIDER_B2B', 'GERENCIA'] },
 ]
 
 // user = objeto de localStorage ({ roles: [], submodules: { MODULO: [SUB] } }).
