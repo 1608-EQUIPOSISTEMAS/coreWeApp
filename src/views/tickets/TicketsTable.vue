@@ -23,7 +23,7 @@
             <th class="tk-zone tk-zone-start">Prioridad</th>
             <th class="tk-zone">Estado</th>
             <th class="tk-zone">Tiempos SLA</th>
-            <th v-if="canManage" class="tk-accion"><span class="visually-hidden">Acción</span></th>
+            <th v-if="canManage" class="tk-accion">Acción</th>
           </tr>
         </thead>
         <tbody>
