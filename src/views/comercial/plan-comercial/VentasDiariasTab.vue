@@ -318,6 +318,6 @@ function estado (w) {
 .diario tr.total td { font-weight: 700; color: var(--ds-heading); background: var(--ds-surface-2); border-top: 1px solid var(--ds-border-strong); }
 .diario tr.b2b td { color: var(--ds-ink-2); font-style: italic; }
 .diario tr.b2b td.nombre { color: var(--ds-ink-2); }
-.resumen { min-width: 640px; }
+.resumen { width: 100%; min-width: 640px; }
 .detalle + .detalle { margin-top: 8px; }
 </style>
