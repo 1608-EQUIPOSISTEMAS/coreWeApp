@@ -23,7 +23,7 @@
             <th class="tk-zone tk-zone-start">Prioridad</th>
             <th class="tk-zone">Estado</th>
             <th class="tk-zone">Tiempos SLA</th>
-            <th v-if="canManage" class="tk-accion"><span class="visually-hidden">Acción</span></th>
+            <th v-if="canManage" class="tk-accion">Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +91,7 @@
                  clic no abra además el ticket. -->
             <td v-if="canManage" class="tk-accion" @click.stop @keydown.enter.stop>
               <button
-                v-if="t.canChangeStatus && t.estado === 'ABIERTO'"
+                v-if="t.canChangeStatus && esTomable(t)"
                 type="button"
                 class="btn-exec tk-btn-tomar"
                 :disabled="!!tomandoId"
@@ -111,7 +111,7 @@
 <script setup>
 import { computed, ref, onUnmounted } from 'vue'
 import {
-  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, etapaSla, iniciales,
+  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, etapaSla, iniciales, esTomable,
 } from './ticket-format.js'
 
 // Solo dibuja. El veredicto de cada reloj lo trae el ticket ya evaluado.

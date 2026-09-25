@@ -54,6 +54,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { useTickets } from './useTickets.js'
 import { useAutoRefresh } from './useAutoRefresh.js'
+import { useTicketsEnVivo } from './useTicketsEnVivo.js'
 import TicketsBoard from './TicketsBoard.vue'
 import TicketCreateModal from './TicketCreateModal.vue'
 
@@ -75,6 +76,10 @@ useAutoRefresh(
   () => { if (!cargando.value) cargar({ silencioso: true }) },
   () => kpis.value.porAsignar > 0,
 )
+
+// Y en tiempo real: cualquier cambio de un ticket (uno nuevo por DM de Slack,
+// un reparto, un cambio de estado de otro agente) recarga la bandeja sola.
+useTicketsEnVivo(() => { if (!cargando.value) cargar({ silencioso: true }) })
 
 // ── Alta ──────────────────────────────────────────────────────────────────
 const modalAbierto = ref(false)

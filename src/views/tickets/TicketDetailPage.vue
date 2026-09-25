@@ -5,7 +5,9 @@
 
     <template v-else-if="ticket">
       <nav class="tkd-crumbs" aria-label="breadcrumb">
-        <RouterLink to="/tickets">Tickets</RouterLink>
+        <RouterLink to="/tickets" class="tkd-volver" title="Volver a Tickets">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Tickets
+        </RouterLink>
         <span class="tkd-crumbs-sep">/</span>
         <span class="tkd-crumbs-actual">#{{ ticket.codigo }}</span>
       </nav>
@@ -45,14 +47,6 @@
               >
                 <i class="fa-solid" :class="guardando ? 'fa-spinner fa-spin' : siguiente.icono" aria-hidden="true"></i>
                 {{ siguiente.texto }}
-              </button>
-              <button
-                v-if="ticket.canManage && ticket.estado !== 'CERRADO'"
-                type="button"
-                class="btn-exec btn-exec-outline"
-                @click="irAReasignar"
-              >
-                <i class="fa-solid fa-right-left" aria-hidden="true"></i> Reasignar
               </button>
             </div>
           </div>
@@ -205,7 +199,7 @@
             </div>
           </section>
 
-          <section v-if="ticket.canManage && ticket.estado !== 'CERRADO'" ref="reasignarSeccion" class="ds-panel">
+          <section v-if="ticket.canManage && ticket.estado !== 'CERRADO'" class="ds-panel">
             <div class="ds-panel-body tk-side">
               <TicketReassign
                 :asignado-a-id="ticket.asignadoA?.id ?? null"
@@ -231,8 +225,9 @@ import TicketActivity from './TicketActivity.vue'
 import TicketAiNote from './TicketAiNote.vue'
 import TicketReassign from './TicketReassign.vue'
 import { useAutoRefresh } from './useAutoRefresh.js'
+import { useTicketsEnVivo } from './useTicketsEnVivo.js'
 import {
-  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, SIGUIENTE_ESTADO,
+  ESTADO_LABEL, ESTADO_TONO, PRIORIDAD_TONO, siguienteEstado,
   slaLabel, describirReloj, fechaHora, hrefSeguro, iniciales,
 } from './ticket-format.js'
 
@@ -253,19 +248,14 @@ const enlaces = computed(() => {
   const lista = ticket.value?.enlaces ?? (ticket.value?.link ? [ticket.value.link] : [])
   return lista.map(texto => ({ texto, href: hrefSeguro(texto) }))
 })
-const siguiente = computed(() => SIGUIENTE_ESTADO[ticket.value?.estado])
+const siguiente = computed(() => siguienteEstado(ticket.value))
 
 const capitalizar = (texto) => (texto ? texto.charAt(0) + texto.slice(1).toLowerCase() : '—')
 
 const hilo = ref(null)
-const reasignarSeccion = ref(null)
 const ahora = ref(Date.now())
 const tick = setInterval(() => { ahora.value = Date.now() }, 30_000)
 onUnmounted(() => clearInterval(tick))
-
-function irAReasignar () {
-  reasignarSeccion.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
 
 const relojes = computed(() => {
   const t = ticket.value
@@ -279,10 +269,6 @@ const relojes = computed(() => {
       return d && { ...d, titulo: r.titulo }
     })
     .filter(Boolean)
-})
-
-watch(() => comentarios.value.length, (ahora_, antes) => {
-  if (antes !== undefined && ahora_ > antes) hilo.value?.reset()
 })
 
 // ── Pestaña Actividad ──────────────────────────────────────────────────────
@@ -353,28 +339,36 @@ async function cargar () {
 watch(() => route.params.id, cargar)
 onMounted(cargar)
 
-// Un ticket abierto sin dueño lo reparte el cron del backend al vencer la
-// ventana de gracia: se consulta en silencio hasta que aparezca el agente.
-async function refrescarAsignacion () {
+// Refresco en silencio del ticket abierto: cuando otro lo cambia (el cron que
+// lo reparte, otro agente, un comentario de quien reportó). Nunca mientras se
+// está guardando algo propio, para no pisar la respuesta del servidor.
+async function refrescar () {
   const id = ticket.value?.id
-  if (!id || guardando.value) return
+  if (!id || guardando.value || comentando.value) return
   try {
-    const t = await service.detail(id)
+    const [t, c] = await Promise.all([service.detail(id), service.comments(id)])
     // Si mientras tanto se navegó o se hizo un cambio a mano, esto ya no aplica.
-    if (ticket.value?.id !== id || guardando.value) return
-    const cambio = t.asignadoA?.id !== ticket.value.asignadoA?.id
+    if (ticket.value?.id !== id || guardando.value || comentando.value) return
+    const cambioAgente = t.asignadoA?.id !== ticket.value.asignadoA?.id
+    const sinDuenoAntes = !ticket.value.asignadoA
     ticket.value = t
-    if (cambio) {
-      actividadDesactualizada()
-      if (t.asignadoA) toast.info(`Ticket asignado automáticamente a ${t.asignadoA.nombre}`)
+    comentarios.value = c
+    actividadDesactualizada()
+    if (cambioAgente && sinDuenoAntes && t.asignadoA) {
+      toast.info(`Ticket asignado automáticamente a ${t.asignadoA.nombre}`)
     }
   } catch (e) {
     console.error('tickets.detail (refresco):', e)
   }
 }
 
+// En tiempo real, solo si el aviso es de ESTE ticket.
+useTicketsEnVivo((ids) => { if (ids.has(ticket.value?.id)) refrescar() })
+
+// Respaldo por si el canal en vivo se cae: mientras el ticket siga sin dueño,
+// se consulta cada 30 s hasta que el cron le asigne agente.
 useAutoRefresh(
-  refrescarAsignacion,
+  refrescar,
   () => ticket.value?.estado === 'ABIERTO' && !ticket.value?.asignadoA,
 )
 
@@ -382,13 +376,15 @@ useAutoRefresh(
 // que se reemplaza tal cual y la vista queda al día sin recargar la página.
 async function cambiarEstado (estado) {
   const estadoPrevio = ticket.value.estado
+  const teniaDueno = !!ticket.value.asignadoA
   guardando.value = true
   try {
     const { avisoSlack, ...actualizado } = await service.changeStatus(ticket.value.id, estado)
     ticket.value = actualizado
     actividadDesactualizada()
     if (estado !== 'CERRADO') {
-      toast.success(estadoPrevio === 'CERRADO' ? 'Ticket reabierto' : 'Ticket tomado')
+      const aviso = estadoPrevio === 'CERRADO' ? 'Ticket reabierto' : (teniaDueno ? 'Atención iniciada' : 'Ticket tomado')
+      toast.success(aviso)
       return
     }
     // Al resolver, el backend le manda la confirmación por Slack a quien
@@ -442,6 +438,9 @@ async function comentar ({ cuerpo, archivos }) {
   errorComentario.value = ''
   try {
     comentarios.value = await service.addComment(ticket.value.id, cuerpo, archivos)
+    // Solo tras enviar el propio: un comentario ajeno que llega en vivo no
+    // puede borrar lo que se venía escribiendo.
+    hilo.value?.reset()
     actividadDesactualizada()
   } catch (e) {
     console.error('tickets.comment:', e)
@@ -463,6 +462,9 @@ async function comentar ({ cuerpo, archivos }) {
 .tkd-crumbs { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--ds-muted); }
 .tkd-crumbs a { color: var(--ds-muted); text-decoration: none; }
 .tkd-crumbs a:hover { color: var(--ds-accent); }
+.tkd-volver { display: inline-flex; align-items: center; gap: 6px; }
+.tkd-volver i { transition: transform 0.15s ease; }
+.tkd-volver:hover i { transform: translateX(-2px); }
 .tkd-crumbs-sep { color: var(--ds-border); }
 .tkd-crumbs-actual { color: var(--ds-heading); }
 
