@@ -827,8 +827,9 @@ const tint = (c, p = 12) => `color-mix(in oklab, ${c} ${p}%, var(--surface))`
 const SEG_DEFS = [
   { key: 'A1', def: 'Cursos de apertura (no seguimientos: son los Diplomados, Especializaciones y PEE)' },
   { key: 'A2', def: 'Cursos de seguimiento (los cursos que pertenecen a un Diplomado, Especialización o PEE)' },
-  { key: 'A3', def: 'Modificación de cursos aperturados: Marketing & Comercial deben realizar los cambios respectivos' },
-  { key: 'A4', def: 'Modificación de cursos de seguimiento: Marketing & Comercial deben realizar los cambios respectivos' },
+  // A3 y A4 (modificación de cursos) salen de la leyenda por pedido de negocio
+  // el 25/09/2026. Siguen en SEG_COLORS: si una edición viene con ese segmento,
+  // la fila se pinta igual; lo que se quitó es la fila explicativa.
   { key: 'A5', def: 'Cursos cancelados' },
   { key: 'A6', def: 'Apertura de nuevos cursos (se considera nuevo en sus 3 primeras ediciones)' },
   { key: 'A7', def: 'Curso con vacantes completadas' },
