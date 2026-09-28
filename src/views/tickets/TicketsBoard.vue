@@ -28,7 +28,20 @@
         </div>
       </div>
 
-      <div class="ds-kpi">
+      <!-- ADMIN y GERENCIA (alcance ALL) siguen viendo "Fuera de plazo"; el
+           resto ve su lugar en la fila del área. -->
+      <div v-if="scope.kind !== 'ALL'" class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-list-ol"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">{{ kpis.antesQueElMio ?? 0 }}</span>
+          <span class="ds-kpi-label">Antes que tu ticket</span>
+          <!-- Sin ticket activo propio, el backend cuenta todos los activos del
+               área: los que tendría delante si creara uno ahora. -->
+          <span class="ds-kpi-note">Tickets activos de tu área en la fila</span>
+        </div>
+      </div>
+
+      <div v-else class="ds-kpi">
         <span class="ds-kpi-icon" :class="kpis.vencidos ? 'bad' : ''" aria-hidden="true">
           <i class="fa-solid fa-triangle-exclamation"></i>
         </span>
