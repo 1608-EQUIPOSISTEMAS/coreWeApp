@@ -98,84 +98,60 @@
         </button>
 
         <template v-if="abierta(w)">
-          <!-- Resumen de la semana: lo que cada asesor lleva y le falta -->
-          <div class="ds-table-scroll detalle">
-            <table class="diario resumen">
-              <thead>
-                <tr>
-                  <th class="izq">N°</th><th class="izq">Asesor</th><th class="izq">Código</th>
-                  <th class="sep">Obj.</th><th>Consultas</th><th>Ventas</th><th>Falta</th><th>Conversión</th><th>Ratio día</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in w.rows" :key="r.user_id">
-                  <td class="izq suave">{{ r.n }}</td>
-                  <td class="izq nombre">{{ displayName(r.nombre) }}</td>
-                  <td class="izq codigo">{{ r.alias }}</td>
-                  <td class="sep">{{ formatValue(r.obj, 'num') }}</td>
-                  <td>{{ formatValue(r.total_consultas, 'num') }}</td>
-                  <td><span v-if="r.obj" class="ds-pill" :class="r.ventas_tone">{{ r.total_ventas }}</span><template v-else>{{ r.total_ventas }}</template></td>
-                  <td :class="{ ok: r.falta !== null && r.falta <= 0 }">{{ faltaTexto(r.falta) }}</td>
-                  <td><span v-if="r.conversion !== null" class="ds-pill" :class="r.conversion_tone">{{ fmtPct(r.conversion) }}</span></td>
-                  <td class="suave">{{ formatValue(r.ratio_dia, 'num') }}</td>
-                </tr>
-                <tr class="b2b">
-                  <td></td>
-                  <td class="izq nombre">B2B</td>
-                  <td class="izq codigo">Convenios</td>
-                  <td class="sep"></td><td></td><td>{{ w.b2b.total_ventas }}</td>
-                  <td colspan="3" class="izq suave">no suma a las ventas del equipo</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr class="total">
-                  <td></td>
-                  <td class="izq" colspan="2">Total equipo</td>
-                  <td class="sep">{{ formatValue(w.obj, 'num') }}</td>
-                  <td>{{ w.consultas }}</td>
-                  <td><span v-if="w.obj" class="ds-pill" :class="w.cumplimiento_tone">{{ w.ventas }}</span><template v-else>{{ w.ventas }}</template></td>
-                  <td :class="{ ok: w.falta !== null && w.falta <= 0 }">{{ faltaTexto(w.falta) }}</td>
-                  <td><span class="ds-pill" :class="w.conversion_tone">{{ fmtPct(w.conversion) }}</span></td>
-                  <td>{{ w.obj === null ? '—' : Math.round(w.obj / 5) }}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          <!-- Día por día, de lunes a domingo -->
+          <!-- Una sola tabla: cada asesor es una fila, primero su semana y luego día por día -->
           <div class="ds-table-scroll detalle">
             <table class="diario">
               <thead>
                 <tr class="grupos">
-                  <th colspan="2" class="fijo izq">Por día</th>
+                  <th colspan="2" class="fijo izq"></th>
+                  <th colspan="6" class="sep">Semana</th>
                   <th v-for="(dia, d) in w.dias" :key="dia" colspan="3" class="sep" :class="tonoDia(w, d)">
-                    {{ marca(w, d) }}{{ weekdayName(d) }} {{ Number(dia.slice(8)) }}/{{ Number(dia.slice(5, 7)) }}
+                    {{ marca(w, d) }}{{ weekdayShort(d) }} {{ Number(dia.slice(8)) }}/{{ Number(dia.slice(5, 7)) }}
                   </th>
                 </tr>
                 <tr>
                   <th class="fijo izq">N°</th><th class="fijo2 izq">Asesor</th>
-                  <template v-for="dia in w.dias" :key="dia"><th class="sep">Cons.</th><th>Ventas</th><th>Conv.</th></template>
+                  <th class="sep">Obj.</th><th>Cons.</th><th>Ventas</th><th>Falta</th><th>Conv.</th><th>Ratio día</th>
+                  <template v-for="(dia, d) in w.dias" :key="dia">
+                    <th class="sep" :class="{ apagado: !w.dia_consultas[d] }">Cons.</th>
+                    <th :class="{ apagado: !w.dia_consultas[d] }">Ventas</th>
+                    <th :class="{ apagado: !w.dia_consultas[d] }">Conv.</th>
+                  </template>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="r in w.rows" :key="r.user_id">
                   <td class="fijo izq suave">{{ r.n }}</td>
-                  <td class="fijo2 izq nombre">{{ displayName(r.nombre) }}</td>
+                  <td class="fijo2 izq"><span class="nombre">{{ displayName(r.nombre) }}</span> <small v-if="r.alias !== displayName(r.nombre)" class="codigo">{{ r.alias }}</small></td>
+                  <td class="sep">{{ formatValue(r.obj, 'num') }}</td>
+                  <td>{{ formatValue(r.total_consultas, 'num') }}</td>
+                  <td class="fuerte"><span v-if="r.obj" class="ds-pill" :class="r.ventas_tone">{{ r.total_ventas }}</span><template v-else>{{ r.total_ventas }}</template></td>
+                  <td :class="{ ok: r.falta !== null && r.falta <= 0 }">{{ faltaTexto(r.falta) }}</td>
+                  <td><span v-if="r.conversion !== null" class="ds-pill" :class="r.conversion_tone">{{ fmtPct(r.conversion) }}</span><template v-else>—</template></td>
+                  <td class="suave">{{ formatValue(r.ratio_dia, 'num') }}</td>
                   <template v-for="(c, d) in r.dias" :key="d">
-                    <td class="sep">{{ c.consultas ?? '' }}</td><td>{{ c.ventas }}</td>
-                    <td><span v-if="c.conversion !== null" class="ds-pill" :class="c.tone">{{ fmtPct(c.conversion) }}</span></td>
+                    <td class="sep" :class="{ apagado: !w.dia_consultas[d] }">{{ c.consultas ?? '—' }}</td>
+                    <td :class="{ apagado: !w.dia_consultas[d], fuerte: c.ventas > 0 }">{{ c.ventas }}</td>
+                    <td :class="{ apagado: !w.dia_consultas[d] }"><span v-if="c.conversion !== null" class="ds-pill" :class="c.tone">{{ fmtPct(c.conversion) }}</span><template v-else>—</template></td>
                   </template>
                 </tr>
                 <tr class="b2b">
                   <td class="fijo"></td>
-                  <td class="fijo2 izq nombre">B2B</td>
+                  <td class="fijo2 izq" title="Los convenios B2B no suman a las ventas del equipo">B2B <small>no suma</small></td>
+                  <td class="sep"></td><td></td><td>{{ w.b2b.total_ventas }}</td><td></td><td></td><td></td>
                   <template v-for="(v, d) in w.b2b.ventas" :key="d"><td class="sep"></td><td>{{ v }}</td><td></td></template>
                 </tr>
               </tbody>
               <tfoot>
                 <tr class="total">
                   <td class="fijo"></td>
-                  <td class="fijo2 izq">Total del día</td>
+                  <td class="fijo2 izq">Total equipo</td>
+                  <td class="sep">{{ formatValue(w.obj, 'num') }}</td>
+                  <td>{{ w.consultas }}</td>
+                  <td><span v-if="w.obj" class="ds-pill" :class="w.cumplimiento_tone">{{ w.ventas }}</span><template v-else>{{ w.ventas }}</template></td>
+                  <td :class="{ ok: w.falta !== null && w.falta <= 0 }">{{ faltaTexto(w.falta) }}</td>
+                  <td><span class="ds-pill" :class="w.conversion_tone">{{ fmtPct(w.conversion) }}</span></td>
+                  <td>{{ w.obj === null ? '—' : Math.round(w.obj / 5) }}</td>
                   <template v-for="(dia, d) in w.dias" :key="dia">
                     <td class="sep">{{ w.dia_consultas[d] }}</td><td>{{ w.dia_ventas[d] }}</td>
                     <td><span class="ds-pill" :class="conversionTone(w.dia_conversion[d])">{{ fmtPct(w.dia_conversion[d]) }}</span></td>
@@ -196,7 +172,7 @@ import { ServiceKeys } from '@/services'
 import { formatValue } from '@/shared/lib/formatValue'
 import {
   CONVERSION_GOAL_PCT, dailyWeek, averageByWeekday, conversionMatrix, ventasInsights, conversionTone,
-  pct, monthName, weekdayName, weekdayShort, weekRangeLabel, displayName, referenceWeek
+  pct, monthName, weekdayShort, weekRangeLabel, displayName, referenceWeek
 } from '@/features/plan-comercial/planComercial'
 import LecturaRapida from './LecturaRapida.vue'
 import ColumnChart from './ColumnChart.vue'
@@ -302,22 +278,22 @@ function estado (w) {
 @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
 
 .detalle { border-top: 1px solid var(--ds-border); }
-.diario { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.diario th, .diario td { height: 34px; padding: 0 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--ds-border); background: var(--ds-surface); }
+.diario { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.diario th, .diario td { height: 34px; padding: 0 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--ds-border); background: var(--ds-surface); }
 .diario th { font-size: 11px; font-weight: 600; color: var(--ds-muted); }
 .diario .grupos th { text-align: center; font-weight: 700; color: var(--ds-heading); background: var(--ds-surface-2); }
 .diario .grupos th.top { background: var(--ds-ok-ink); color: var(--ds-surface); }
 .diario .grupos th.rose { background: var(--ds-rose-strong); color: var(--ds-rose-ink); }
 .diario .izq { text-align: left; }
 .diario .sep { border-left: 1px solid var(--ds-border); }
-.diario .fijo { position: sticky; left: 0; z-index: 1; width: 40px; min-width: 40px; }
-.diario .fijo2 { position: sticky; left: 40px; z-index: 1; min-width: 110px; box-shadow: 1px 0 0 var(--ds-border); }
+.diario .fijo { position: sticky; left: 0; z-index: 1; width: 36px; min-width: 36px; }
+.diario .fijo2 { position: sticky; left: 36px; z-index: 1; min-width: 150px; box-shadow: 1px 0 0 var(--ds-border); }
 .diario .nombre { font-weight: 700; color: var(--ds-heading); }
-.diario .codigo, .diario .suave { color: var(--ds-muted); }
+.diario .codigo, .diario .suave, .diario small { color: var(--ds-muted); font-size: 11px; }
+.diario td.fuerte { font-weight: 700; color: var(--ds-ink); }
+/* Dia sin consultas: se atenua para que la vista vaya a los dias trabajados. */
+.diario .apagado { color: var(--ds-muted); opacity: 0.55; }
 .diario td.ok { font-weight: 700; color: var(--ds-ok-ink); }
 .diario tr.total td { font-weight: 700; color: var(--ds-heading); background: var(--ds-surface-2); border-top: 1px solid var(--ds-border-strong); }
 .diario tr.b2b td { color: var(--ds-ink-2); font-style: italic; }
-.diario tr.b2b td.nombre { color: var(--ds-ink-2); }
-.resumen { width: 100%; min-width: 640px; }
-.detalle + .detalle { margin-top: 8px; }
 </style>

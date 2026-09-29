@@ -45,35 +45,50 @@
         <header class="ds-panel-head">
           <div>
             <h3 class="ds-panel-title">¿En qué semana se quedó cada uno?</h3>
-            <p class="ds-panel-sub">Logro / objetivo por semana · {{ monthName(month).toLowerCase() }}</p>
+            <p class="ds-panel-sub">Objetivo y logro por semana · {{ monthName(month).toLowerCase() }} · el equipo lleva el objetivo del área, no la suma de los asesores</p>
           </div>
           <div class="escala" aria-label="Escala de colores">
             <span class="heat rose-strong">&lt; 80%</span><span class="heat rose">80–99%</span><span class="heat ok">100–119%</span><span class="heat top">≥ 120%</span>
           </div>
         </header>
         <div class="ds-panel-body ds-table-scroll">
-          <table class="mapa">
+          <table class="ds-table mapa">
             <thead>
+              <tr class="grupos">
+                <th colspan="2"></th>
+                <th v-for="c in mapa.columnas" :key="c.key" colspan="4" class="sep" :class="{ equipo: c.equipo }">{{ c.nombre }}</th>
+              </tr>
               <tr>
-                <th scope="col">Sem.</th><th scope="col">Días</th><th scope="col">Equipo</th>
-                <th v-for="p in report.people" :key="p.user_id" scope="col">{{ displayName(p.nombre) }}</th>
+                <th>Sem.</th><th>Días</th>
+                <template v-for="c in mapa.columnas" :key="c.key">
+                  <th class="num sep" :class="{ equipo: c.equipo }">% part.</th>
+                  <th class="num" :class="{ equipo: c.equipo }">Obj.</th>
+                  <th class="num" :class="{ equipo: c.equipo }">% logro</th>
+                  <th class="num" :class="{ equipo: c.equipo }">Logro</th>
+                </template>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="fila in mapa.semanas" :key="fila.key">
-                <th scope="row">{{ fila.label }}</th>
-                <td class="dias">{{ fila.dias }}</td>
-                <td v-for="(c, i) in fila.celdas" :key="i">
-                  <span class="heat" :class="c.tono"><strong>{{ c.valor }}</strong><small>{{ c.detalle }}</small></span>
-                </td>
+              <tr v-for="(w, wi) in report.weeks" :key="w.date_start">
+                <td class="sem">{{ w.week_label }}</td>
+                <td class="dias">{{ periodOf(w) }}</td>
+                <template v-for="c in mapa.columnas" :key="c.key">
+                  <td class="num sep suave" :class="{ equipo: c.equipo }">{{ fmtPct(c.semanas[wi].part) }}</td>
+                  <td class="num" :class="{ equipo: c.equipo }">{{ formatValue(c.semanas[wi].obj, 'num') }}</td>
+                  <td class="num" :class="{ equipo: c.equipo }"><span class="heat" :class="c.semanas[wi].tono">{{ fmtPct(c.semanas[wi].ratio) }}</span></td>
+                  <td class="num fuerte" :class="{ equipo: c.equipo }">{{ c.semanas[wi].logro }}</td>
+                </template>
               </tr>
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row" colspan="2">Total</th>
-                <td v-for="(c, i) in mapa.total" :key="i">
-                  <span class="heat" :class="c.tono"><strong>{{ c.valor }}</strong><small>{{ c.detalle }}</small></span>
-                </td>
+                <td colspan="2">Total</td>
+                <template v-for="c in mapa.columnas" :key="c.key">
+                  <td class="num sep" :class="{ equipo: c.equipo }">{{ c.obj ? '100%' : '—' }}</td>
+                  <td class="num" :class="{ equipo: c.equipo }">{{ formatValue(c.obj, 'num') }}</td>
+                  <td class="num" :class="{ equipo: c.equipo }"><span class="heat" :class="c.total.tono">{{ fmtPct(c.total.ratio) }}</span></td>
+                  <td class="num" :class="{ equipo: c.equipo }">{{ c.total.logro }}</td>
+                </template>
               </tr>
             </tfoot>
           </table>
@@ -132,32 +147,39 @@ const fueraDelMapa = computed(() => {
 
 const fmtPct = (ratio) => formatValue(pct(ratio), 'pct')
 
-// Una celda del mapa: "logro / objetivo" y el %. La semana en curso no se juzga
-// todavia y la que no empezo no tiene logro que mostrar.
-function celda (logro, obj, semana) {
-  const sinObjetivo = obj === null
-  if (semana && !semana.empezo) return { tono: 'neutro', valor: '—', detalle: sinObjetivo ? 'sin objetivo' : `obj. ${obj}` }
-  const ratio = compliance(logro, obj)
-  const enCurso = semana?.en_curso
+// Una semana de una columna del mapa. La semana en curso no se juzga todavia y
+// la que no empezo no tiene logro que mostrar.
+function celda (logro, obj, objMes, semana) {
+  const ratio = semana && !semana.empezo ? null : compliance(logro, obj)
   return {
-    tono: enCurso ? 'neutro' : heatTone(ratio),
-    valor: sinObjetivo ? String(logro) : `${logro} / ${obj}`,
-    detalle: sinObjetivo ? 'sin objetivo' : enCurso ? `obj. ${obj} · en curso` : fmtPct(ratio)
+    part: objMes ? (obj ?? 0) / objMes : null,
+    obj,
+    ratio,
+    logro: semana && !semana.empezo ? '—' : logro,
+    tono: semana?.en_curso || ratio === null ? 'neutro' : heatTone(ratio)
   }
 }
 
-// Filas = semanas, columnas = equipo + cada asesor.
+// Columnas = equipo + cada asesor, con la estructura de la hoja: % part. | Obj. | % logro | Logro.
 const mapa = computed(() => {
   const { weeks, people, team } = report.value
-  return {
-    semanas: weeks.map((w, wi) => ({
-      key: w.date_start,
-      label: w.week_label,
-      dias: periodOf(w),
-      celdas: [celda(w.vacantes, w.obj_vacantes, w), ...people.map((p) => celda(p.semanas[wi].vacantes, p.semanas[wi].obj, w))]
-    })),
-    total: [celda(team.logro, team.obj), ...people.map((p) => celda(p.logro, p.obj))]
+  const equipo = {
+    key: 'equipo',
+    nombre: 'Equipo',
+    equipo: true,
+    obj: team.obj,
+    semanas: weeks.map((w) => celda(w.vacantes, w.obj_vacantes, team.obj, w)),
+    total: celda(team.logro, team.obj)
   }
+  const asesores = people.map((p) => ({
+    key: p.user_id,
+    nombre: displayName(p.nombre),
+    equipo: false,
+    obj: p.obj,
+    semanas: weeks.map((w, wi) => celda(p.semanas[wi].vacantes, p.semanas[wi].obj, p.obj, w)),
+    total: celda(p.logro, p.obj)
+  }))
+  return { columnas: [equipo, ...asesores] }
 })
 </script>
 
@@ -199,16 +221,18 @@ const mapa = computed(() => {
 .escala { display: flex; flex-wrap: wrap; gap: 4px; }
 .escala .heat { padding: 3px 8px; font-size: 11px; font-weight: 700; }
 
-.mapa { width: 100%; min-width: 720px; border-collapse: separate; border-spacing: 4px; font-size: 12.5px; }
-.mapa th { font-size: 11.5px; font-weight: 700; color: var(--ds-heading); text-align: center; white-space: nowrap; }
-.mapa th[scope="row"] { text-align: left; }
-.mapa thead th:nth-child(-n + 2) { text-align: left; color: var(--ds-muted); }
-.mapa td.dias { color: var(--ds-ink-2); white-space: nowrap; }
-.mapa tfoot th { color: var(--ds-heading); }
+.mapa { min-width: 720px; font-size: 12.5px; }
+.mapa .grupos th { padding-top: 0; font-size: 11.5px; font-weight: 700; color: var(--ds-heading); text-align: center; }
+.mapa .sep { border-left: 1px solid var(--ds-border); }
+.mapa td.sem { font-weight: 700; color: var(--ds-heading); }
+.mapa td.dias, .mapa td.suave { color: var(--ds-muted); white-space: nowrap; }
+.mapa td.fuerte { font-weight: 700; color: var(--ds-ink); }
+/* El bloque del equipo se tiñe: su objetivo es el del area, no la suma de los asesores. */
+.mapa .equipo { background: var(--ds-surface-2); }
+.mapa tfoot td { font-weight: 700; color: var(--ds-heading); border-top: 1px solid var(--ds-border-strong); }
 
-.heat { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 8px; border-radius: var(--ds-radius-sm); background: var(--ds-soft-neutral); color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
-.heat strong { font-size: 14px; font-weight: 800; }
-.heat small { font-size: 10.5px; font-weight: 500; opacity: 0.85; }
+.heat { display: inline-block; min-width: 44px; padding: 2px 7px; text-align: center; border-radius: var(--ds-radius-sm); background: var(--ds-soft-neutral); color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
+.heat { font-weight: 700; }
 .heat.rose-strong { background: var(--ds-rose-strong); color: var(--ds-rose-ink); }
 .heat.rose { background: var(--ds-soft-rose); color: var(--ds-rose-ink); }
 .heat.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }

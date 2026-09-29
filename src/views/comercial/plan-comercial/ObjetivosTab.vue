@@ -3,7 +3,7 @@
     <p v-if="error" class="ds-alert">{{ error }}</p>
 
     <template v-else-if="loading">
-      <div class="ds-band"><span v-for="n in 4" :key="n" class="ds-skel"></span></div>
+      <div class="ds-band"><span v-for="n in 3" :key="n" class="ds-skel"></span></div>
       <div class="ds-row ds-row--mitad">
         <div v-for="n in 2" :key="n" class="ds-panel"><div class="ds-panel-body"><span v-for="r in 6" :key="r" class="ds-skel skel-line"></span></div></div>
       </div>
@@ -11,6 +11,62 @@
 
     <template v-else-if="actual">
       <LecturaRapida :items="insights" :periodo="monthName(month)" />
+
+      <article class="ds-panel">
+        <header class="ds-panel-head">
+          <div>
+            <h3 class="ds-panel-title">Detalle semanal de {{ monthName(month).toLowerCase() }}</h3>
+            <p class="ds-panel-sub">Planificado, avance de vacantes y avance de ingresos. El % de participación es el del plan. Los dólares se pasan a soles a {{ usdToPen }}.</p>
+          </div>
+        </header>
+        <div class="ds-panel-body ds-table-scroll">
+          <table class="ds-table tabla-semanal">
+            <thead>
+              <tr class="grupos">
+                <th colspan="2">Semana</th>
+                <th colspan="3" class="sep">Planificado</th>
+                <th colspan="2" class="sep">Avance de vacantes</th>
+                <th colspan="4" class="sep">Avance de ingresos</th>
+              </tr>
+              <tr>
+                <th>Sem.</th><th>Días</th>
+                <th class="num sep">% part.</th><th class="num">Obj. #</th><th class="num">Obj. S/</th>
+                <th class="num sep">% cumpl.</th><th class="num">Logro #</th>
+                <th class="num sep">% cumpl.</th><th class="num">Logro S/</th><th class="num">Soles</th><th class="num">Dólares</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="w in actual.weeks" :key="w.date_start">
+                <td>{{ w.week_label }}</td>
+                <td>{{ periodOf(w) }}</td>
+                <td class="num sep">{{ fmtPct(w.part_obj) }}</td>
+                <td class="num">{{ formatValue(w.obj_vacantes, 'num') }}</td>
+                <td class="num">{{ formatValue(w.obj_ingresos, 'soles') }}</td>
+                <td class="num sep"><span class="ds-pill" :class="goalTone(w.cumplimiento)">{{ fmtPct(w.cumplimiento) }}</span></td>
+                <td class="num fuerte">{{ formatValue(w.vacantes, 'num') }}</td>
+                <td class="num sep"><span class="ds-pill" :class="goalTone(w.cumplimiento_ingresos)">{{ fmtPct(w.cumplimiento_ingresos) }}</span></td>
+                <td class="num fuerte">{{ formatValue(w.ingresos, 'soles') }}</td>
+                <td class="num suave">{{ formatValue(w.ingresos_pen, 'soles') }}</td>
+                <td class="num suave">{{ formatValue(w.ingresos_usd, 'usd') }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">Total del mes</td>
+                <td class="num sep">{{ actual.obj_vacantes ? '100%' : '—' }}</td>
+                <td class="num">{{ formatValue(actual.obj_vacantes, 'num') }}</td>
+                <td class="num">{{ formatValue(actual.obj_ingresos, 'soles') }}</td>
+                <td class="num sep"><span class="ds-pill" :class="goalTone(actual.cumplimiento)">{{ fmtPct(actual.cumplimiento) }}</span></td>
+                <td class="num">{{ formatValue(actual.vacantes, 'num') }}</td>
+                <td class="num sep"><span class="ds-pill" :class="goalTone(actual.cumplimiento_ingresos)">{{ fmtPct(actual.cumplimiento_ingresos) }}</span></td>
+                <td class="num">{{ formatValue(actual.ingresos, 'soles') }}</td>
+                <td class="num">{{ formatValue(actual.ingresos_pen, 'soles') }}</td>
+                <td class="num">{{ formatValue(actual.ingresos_usd, 'usd') }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </article>
 
       <div class="ds-row ds-row--mitad">
         <article class="ds-panel">
@@ -51,64 +107,6 @@
           </div>
         </article>
       </div>
-
-      <article class="ds-panel">
-        <header class="ds-panel-head">
-          <div>
-            <h3 class="ds-panel-title">Detalle semanal de {{ monthName(month).toLowerCase() }}</h3>
-            <p class="ds-panel-sub">Planificado, avance de vacantes y avance de ingresos. Los dólares se pasan a soles a {{ usdToPen }}.</p>
-          </div>
-        </header>
-        <div class="ds-panel-body ds-table-scroll">
-          <table class="ds-table tabla-semanal">
-            <thead>
-              <tr class="grupos">
-                <th colspan="2">Semana</th>
-                <th colspan="3" class="sep">Planificado</th>
-                <th colspan="2" class="sep">Avance de vacantes</th>
-                <th colspan="5" class="sep">Avance de ingresos</th>
-              </tr>
-              <tr>
-                <th>Sem.</th><th>Días</th>
-                <th class="num sep">% part.</th><th class="num">Obj. #</th><th class="num">Obj. S/</th>
-                <th class="num sep">Logro</th><th class="num">% cumpl.</th>
-                <th class="num sep">% part.</th><th class="num">Soles</th><th class="num">Dólares</th><th class="num">Total S/</th><th class="num">% cumpl.</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="w in actual.weeks" :key="w.date_start">
-                <td>{{ w.week_label }}</td>
-                <td>{{ periodOf(w) }}</td>
-                <td class="num sep">{{ fmtPct(w.part_obj) }}</td>
-                <td class="num">{{ formatValue(w.obj_vacantes, 'num') }}</td>
-                <td class="num">{{ formatValue(w.obj_ingresos, 'soles') }}</td>
-                <td class="num sep fuerte">{{ formatValue(w.vacantes, 'num') }}</td>
-                <td class="num"><span class="ds-pill" :class="goalTone(w.cumplimiento)">{{ fmtPct(w.cumplimiento) }}</span></td>
-                <td class="num sep">{{ fmtPct(w.part_ingresos) }}</td>
-                <td class="num">{{ formatValue(w.ingresos_pen, 'soles') }}</td>
-                <td class="num">{{ formatValue(w.ingresos_usd, 'usd') }}</td>
-                <td class="num fuerte">{{ formatValue(w.ingresos, 'soles') }}</td>
-                <td class="num"><span class="ds-pill" :class="goalTone(w.cumplimiento_ingresos)">{{ fmtPct(w.cumplimiento_ingresos) }}</span></td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2">Total del mes</td>
-                <td class="num sep">{{ actual.obj_vacantes ? '100%' : '—' }}</td>
-                <td class="num">{{ formatValue(actual.obj_vacantes, 'num') }}</td>
-                <td class="num">{{ formatValue(actual.obj_ingresos, 'soles') }}</td>
-                <td class="num sep">{{ formatValue(actual.vacantes, 'num') }}</td>
-                <td class="num"><span class="ds-pill" :class="goalTone(actual.cumplimiento)">{{ fmtPct(actual.cumplimiento) }}</span></td>
-                <td class="num sep">{{ actual.ingresos ? '100%' : '—' }}</td>
-                <td class="num">{{ formatValue(actual.ingresos_pen, 'soles') }}</td>
-                <td class="num">{{ formatValue(actual.ingresos_usd, 'usd') }}</td>
-                <td class="num">{{ formatValue(actual.ingresos, 'soles') }}</td>
-                <td class="num"><span class="ds-pill" :class="goalTone(actual.cumplimiento_ingresos)">{{ fmtPct(actual.cumplimiento_ingresos) }}</span></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </article>
     </template>
 
     <p v-else class="ds-alert neutro">No hay datos de {{ monthName(month).toLowerCase() }}. Elige otro mes arriba.</p>
@@ -192,9 +190,10 @@ const mesesChart = computed(() => totales.value.map((m) => ({
 .leyenda i.accent { background: var(--ds-accent); }
 .leyenda i.accent-2 { background: var(--ds-accent-2); }
 
-.tabla-semanal { min-width: 980px; }
-.tabla-semanal .grupos th { padding-top: 0; font-size: 11px; font-weight: 700; color: var(--ds-heading); }
+.tabla-semanal { min-width: 860px; }
+.tabla-semanal .grupos th { padding-top: 0; font-size: 11px; font-weight: 700; color: var(--ds-heading); text-align: center; }
 .tabla-semanal .sep { border-left: 1px solid var(--ds-border); padding-left: 12px; }
 .tabla-semanal td.fuerte { font-weight: 700; color: var(--ds-ink); }
+.tabla-semanal td.suave { color: var(--ds-muted); }
 .tabla-semanal tfoot td { font-weight: 700; color: var(--ds-heading); background: var(--ds-surface-2); border-top: 1px solid var(--ds-border-strong); }
 </style>

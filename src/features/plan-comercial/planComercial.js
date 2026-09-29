@@ -73,7 +73,6 @@ export function monthTotals (month, usdToPen) {
     weeks: weeks.map((w) => ({
       ...w,
       part_obj: obj_vacantes ? (w.obj_vacantes ?? 0) / obj_vacantes : null,
-      part_ingresos: ingresos ? w.ingresos / ingresos : null,
       cumplimiento: compliance(w.vacantes, w.obj_vacantes),
       cumplimiento_ingresos: compliance(w.ingresos, w.obj_ingresos)
     })),
@@ -93,10 +92,6 @@ export function objetivosInsights (totalsByMonth, selected) {
   const faltan = (goal, got, fmt) => (got >= goal ? `${fmt(got - goal)} sobre el objetivo` : `faltan ${fmt(goal - got)}`)
   const n = (x) => Math.round(x).toLocaleString('es-PE')
   const soles = (x) => `S/ ${n(x)}`
-
-  const ticketPlan = m.obj_vacantes ? m.obj_ingresos / m.obj_vacantes : null
-  const ticketReal = m.vacantes ? m.ingresos / m.vacantes : null
-  const ticketVsPlan = ticketPlan && ticketReal ? ticketReal / ticketPlan - 1 : null
 
   const measured = m.weeks.filter((w) => w.obj_vacantes > 0 && w.vacantes > 0)
   const ranked = [...measured].sort((a, b) => b.cumplimiento - a.cumplimiento)
@@ -125,16 +120,6 @@ export function objetivosInsights (totalsByMonth, selected) {
         : `${soles(m.ingresos)} cobrados en el mes.`,
       tone: goalTone(m.cumplimiento_ingresos),
       bar: m.cumplimiento_ingresos
-    },
-    {
-      key: 'ticket',
-      label: 'Ticket promedio',
-      value: ticketReal ? soles(ticketReal) : '—',
-      text: ticketVsPlan !== null
-        ? `Plan ${soles(ticketPlan)} por vacante: ${ticketVsPlan >= 0 ? '+' : ''}${pct(ticketVsPlan)}% frente al plan.`
-        : 'Se calcula con vacantes e ingresos del mes.',
-      tone: ticketVsPlan === null ? 'neutro' : ticketVsPlan >= 0 ? 'ok' : 'rose',
-      bar: null
     },
     {
       key: 'semana',
