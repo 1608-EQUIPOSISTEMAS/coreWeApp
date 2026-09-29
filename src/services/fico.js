@@ -194,6 +194,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Informe FICO: metas de cobranza del area en el rango { date_start, date_end }.
+  async reporte(period) {
+    const response = (await api.post('/fico/reporte', period)).data;
+    return response.data;
+  }
+
   async courseChange(payload) {
     const response = (await api.post('/fico/coursechange', payload, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;

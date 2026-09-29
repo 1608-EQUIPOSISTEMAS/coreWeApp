@@ -1069,7 +1069,7 @@ async function handleCorrectInitialSubmit (payload) {
       new_amount: payload.new_amount,
       justificacion: payload.justificacion
     })
-    toast.success('Pago inicial corregido.')
+    toast.success(result?.message || 'Pago inicial corregido.')
     showCorrectionWarnings(result)
     correctInitialVisible.value = false
     correctInitialTarget.value = null

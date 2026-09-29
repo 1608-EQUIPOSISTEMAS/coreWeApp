@@ -466,11 +466,12 @@
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
               <span class="ef-bar-label">Pago Inicial</span>
-              <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
+              <span class="fw700 mono" style="font-size:18px" :class="{ 'ef-inicial-removed': fmt.isCuotaAnulada(inicial) }">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
+              <span v-if="fmt.isCuotaAnulada(inicial)" class="ef-pill pill-muted">Eliminado</span>
             </div>
             <div class="ef-inicial-actions">
               <button
-                v-if="canCorrectPayments && inicial.installment_id && !isEditing"
+                v-if="canCorrectPayments && inicial.installment_id && !isEditing && !fmt.isCuotaAnulada(inicial)"
                 class="ef-btn-sm ef-btn-outline"
                 @click="$emit('correct-initial', inicial)"
                 title="Corregir el monto registrado del pago inicial"
@@ -1663,6 +1664,7 @@ function needsEditionDecision (child) {
 /* Anulada por retiro / campaña de cobranza: tachada pero presente (auditoria) */
 .ef-table .cuota-annulled td { background: #FAFAFA; color: #A3A3A3; }
 .ef-table .cuota-annulled td:nth-child(-n+3) { text-decoration: line-through; }
+.ef-inicial-removed { text-decoration: line-through; opacity: .55; }
 
 .ef-total-row td {
   padding: 12px 10px;

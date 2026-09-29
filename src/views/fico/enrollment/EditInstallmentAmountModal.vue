@@ -33,9 +33,20 @@
             @keydown.enter="trySubmit"
           />
         </div>
+        <button
+          v-if="isInitial && !removing"
+          type="button"
+          class="eia-btn-remove"
+          @click="newAmount = 0"
+        ><i class="fa-solid fa-trash-can"></i> Eliminar pago inicial</button>
       </div>
 
-      <div v-if="hasDiff" class="eia-diff" :class="{ 'eia-diff-up': delta > 0, 'eia-diff-down': delta < 0 }">
+      <div v-if="removing" class="eia-diff eia-diff-down">
+        <span class="eia-diff-old">S/. {{ formatMoney(oldAmount) }}</span>
+        <span class="eia-diff-delta">Se anula la inicial y su pago; la venta queda con sus cuotas</span>
+      </div>
+
+      <div v-else-if="hasDiff" class="eia-diff" :class="{ 'eia-diff-up': delta > 0, 'eia-diff-down': delta < 0 }">
         <span class="eia-diff-old">S/. {{ formatMoney(oldAmount) }}</span>
         <i class="fa-solid fa-arrow-right eia-diff-arrow"></i>
         <span class="eia-diff-new">S/. {{ formatMoney(newAmount) }}</span>
@@ -69,7 +80,7 @@
       >
         <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
         <i v-else class="fa-solid fa-check"></i>
-        {{ saving ? 'Guardando...' : 'Guardar cambio' }}
+        {{ saving ? 'Guardando...' : (removing ? 'Eliminar inicial' : 'Guardar cambio') }}
       </button>
     </template>
   </BaseModal>
@@ -98,8 +109,11 @@ const amountInputRef = ref(null)
 
 const oldAmount = computed(() => Number(props.installment?.amount || 0))
 const delta = computed(() => Number(newAmount.value || 0) - oldAmount.value)
+// Solo la inicial acepta 0: significa eliminarla (se registro en otra venta).
+// Una cuota en 0 no tiene sentido; para eso esta la campana de cobranza.
+const removing = computed(() => isInitial.value && newAmount.value === 0)
 const hasDiff = computed(() =>
-  Number.isFinite(newAmount.value) && newAmount.value > 0 && Math.abs(delta.value) >= 0.01
+  Number.isFinite(newAmount.value) && (newAmount.value > 0 || removing.value) && Math.abs(delta.value) >= 0.01
 )
 const canSave = computed(() =>
   hasDiff.value && justificacion.value.trim().length > 0
@@ -225,6 +239,16 @@ function formatDate (iso) {
 .eia-diff-delta { font-size: 11.5px; color: #6F6F66; margin-left: 2px; }
 .eia-diff-up .eia-diff-delta { color: #047857; }
 .eia-diff-down .eia-diff-delta { color: #B91C1C; }
+
+.eia-btn-remove {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0; border: none; background: none;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  color: var(--ds-bad-ink);
+  cursor: pointer;
+}
+.eia-btn-remove:hover { text-decoration: underline; }
 
 .eia-textarea {
   width: 100%; box-sizing: border-box;

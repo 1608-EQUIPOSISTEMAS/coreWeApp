@@ -221,6 +221,13 @@ export default [
         submodule: 'COBRANZAS',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Reporte Finanzas',
+        to: '/fico/reporte',
+        submodule: 'REPORTE',
+        roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'],
+      },
     ],
   },
   {

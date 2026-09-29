@@ -1958,7 +1958,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
 import LeadAiSummary from '@/widgets/lead-ai-summary/LeadAiSummary.vue'
-import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
+import { computeDiscounts, chargedTotal } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   const toast = useToast()
@@ -2390,6 +2390,7 @@ watch(
     insc.dsct_porcent_id,
     insc.dsct_stick_id,
     insc.dsct_benefit_ids,
+    form.ocupacion_alias,
   ],
   () => {
     const r = computeDiscounts(insc)
@@ -2413,7 +2414,7 @@ watch(
     insc.montoDescuentoFijo       = r.montoFijo
     insc.montoBeneficioTotal      = r.montoBeneficioTotal
     insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
-    insc.total_amount             = r.total_amount
+    insc.total_amount             = chargedTotal(r, form.ocupacion_alias)
   },
   { deep: true }
 )

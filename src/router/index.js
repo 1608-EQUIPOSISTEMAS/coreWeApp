@@ -108,6 +108,13 @@ const routes = [
             component: () => import('@/views/fico/Collections.vue'),
             meta: { submodule: 'COBRANZAS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
+          // Informe del area contra sus objetivos (una pagina, como el Comercial).
+          {
+            path: 'reporte',
+            name: 'ReporteFico',
+            component: () => import('@/views/fico/ReporteFico.vue'),
+            meta: { submodule: 'REPORTE', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'] },
+          },
           // {
           //   path: 'reportes',
           //   name: 'FicoReportes',
