@@ -1958,7 +1958,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 
 import FileUploader from '@/components/FileUploader.vue'
 import LeadAiSummary from '@/widgets/lead-ai-summary/LeadAiSummary.vue'
-import { computeDiscounts, chargedTotal } from '@/features/apply-discounts/computeDiscounts.js'
+import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   const toast = useToast()
@@ -2414,7 +2414,7 @@ watch(
     insc.montoDescuentoFijo       = r.montoFijo
     insc.montoBeneficioTotal      = r.montoBeneficioTotal
     insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
-    insc.total_amount             = chargedTotal(r, form.ocupacion_alias)
+    insc.total_amount             = r.total_amount
   },
   { deep: true }
 )
@@ -3313,6 +3313,9 @@ cat_certificate_status,
       // que FICO no pueda confirmar la venta sin resolverlo.
       requires_email_cc:    insc.requires_email_cc === true,
       email_cc:             insc.email_cc || null,
+      // Comercial nunca cobra al centimo, aunque el prospecto sea Corporativo.
+      // Explicito: sin el flag el SP cae a la regla vieja de los tokens legacy.
+      charge_in_cents:      false,
       cat_event_category:   insc.cat_event_category || null,
       event_seat:           isVipCategory.value ? (insc.event_seat || '').trim() || null : null,
       student_attachment_url: form.carnet_url || null,

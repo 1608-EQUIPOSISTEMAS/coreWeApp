@@ -584,7 +584,7 @@ async function handleAddInstallmentSubmit (payload) {
     await refreshDetail()
   } catch (err) {
     console.error('[addInstallment]', err)
-    toast.error(err?.response?.data?.error || 'No se pudo agregar la cuota.')
+    toast.error(apiErrorMessage(err) || 'No se pudo agregar la cuota.')
   } finally {
     savingAddInstallment.value = false
   }
@@ -783,13 +783,13 @@ async function handleConfirmPayment (sapCreds = {}) {
       }
     } catch (emailErr) {
       console.error('[sendConfirmationEmail]', emailErr)
-      const msg = emailErr?.response?.data?.error || emailErr?.message || 'fallo desconocido'
+      const msg = apiErrorMessage(emailErr) || emailErr?.message || 'fallo desconocido'
       toast.error(`Error al enviar correo: ${msg}`, { timeout: 7000 })
     }
     goBack()
   } catch (err) {
     console.error('[confirmPayment]', err)
-    const msg = err?.response?.data?.error || err?.message || 'error desconocido'
+    const msg = apiErrorMessage(err) || err?.message || 'error desconocido'
     toast.error(`Error al confirmar el pago: ${msg}`, { timeout: 7000 })
   } finally {
     savingFinancials.value = false
@@ -925,7 +925,7 @@ async function handleConfirmCuota (cuota) {
     await refreshDetail()
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al confirmar cuota.')
+    toast.error(apiErrorMessage(err) || 'Error al confirmar cuota.')
   }
 }
 
@@ -940,7 +940,7 @@ async function handleSaveAdditional (payload) {
     refreshAuditLog()
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al registrar el pago adicional.')
+    toast.error(apiErrorMessage(err) || 'Error al registrar el pago adicional.')
   } finally {
     savingFinancials.value = false
   }
@@ -957,7 +957,7 @@ async function handleUpdateAdditional (payload) {
     refreshAuditLog()
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al actualizar el pago adicional.')
+    toast.error(apiErrorMessage(err) || 'Error al actualizar el pago adicional.')
   } finally {
     savingFinancials.value = false
   }
@@ -1014,7 +1014,7 @@ async function handleRejectEnrollment (payload) {
     await refreshDetail()
   } catch (err) {
     console.error(err)
-    toast.error(err?.response?.data?.error || 'Error al observar inscripcion.')
+    toast.error(apiErrorMessage(err) || 'Error al observar inscripcion.')
   }
 }
 
@@ -1043,10 +1043,17 @@ async function handleEditAmountSubmit (payload) {
     await refreshDetail()
   } catch (err) {
     console.error('[editInstallmentAmount]', err)
-    toast.error(err?.response?.data?.error || 'No se pudo editar el monto.')
+    toast.error(apiErrorMessage(err) || 'No se pudo editar el monto.')
   } finally {
     savingEditAmount.value = false
   }
+}
+
+// message primero: con el formato por defecto de Fastify `error` es solo el
+// texto del status ("Bad Request") y el motivo real (el DomainError) va en `message`.
+function apiErrorMessage (err) {
+  const data = err?.response?.data
+  return data?.message || data?.error
 }
 
 // El backend corrige la BD pero no puede deshacer lo que ya salio (correo,
@@ -1076,7 +1083,7 @@ async function handleCorrectInitialSubmit (payload) {
     await refreshDetail()
   } catch (err) {
     console.error('[correctInitialPayment]', err)
-    toast.error(err?.response?.data?.error || 'No se pudo corregir el pago inicial.')
+    toast.error(apiErrorMessage(err) || 'No se pudo corregir el pago inicial.')
   } finally {
     savingCorrectInitial.value = false
   }
@@ -1103,7 +1110,7 @@ async function handleRevertSubmit (payload) {
     await refreshDetail()
   } catch (err) {
     console.error('[revertInstallmentPayment]', err)
-    toast.error(err?.response?.data?.error || 'No se pudo revertir la cuota.')
+    toast.error(apiErrorMessage(err) || 'No se pudo revertir la cuota.')
   } finally {
     savingRevert.value = false
   }

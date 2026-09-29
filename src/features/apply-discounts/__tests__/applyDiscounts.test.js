@@ -61,15 +61,15 @@ describe('computeDiscounts (puro)', () => {
   })
 
   // Caso real, inscripcion 18805: lista 730, 65% + beneficio 50 = 205.50.
-  describe('chargedTotal: B2B cobra al centimo, el resto trunca', () => {
+  describe('chargedTotal: solo el modulo B2B cobra al centimo, el resto trunca', () => {
     const r = computeDiscounts({ montoOriginal: 730, val_porcentaje: 65, val_beneficios: [50] })
 
-    it.each(['we_prospect_situation_convenios', 'we_prospect_situation_corporate'])('%s conserva los centimos', (alias) => {
-      expect(chargedTotal(r, alias)).toBe(205.5)
+    it('el formulario B2B conserva los centimos', () => {
+      expect(chargedTotal(r, 'we_business_line_b2b')).toBe(205.5)
     })
 
-    it('fuera de B2B se trunca a soles enteros', () => {
-      expect(chargedTotal(r, 'we_prospect_situation_student')).toBe(205)
+    it('Fundacion y Comercial (sin linea) truncan a soles enteros', () => {
+      expect(chargedTotal(r, 'we_business_line_fundacion')).toBe(205)
       expect(chargedTotal(r, null)).toBe(205)
     })
   })

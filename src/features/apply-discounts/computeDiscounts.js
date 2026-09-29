@@ -54,16 +54,19 @@ export function computeDiscounts ({ montoOriginal, val_porcentaje, val_fijo, val
   }
 }
 
-const B2B_PROSPECT_SITUATIONS = ['we_prospect_situation_corporate', 'we_prospect_situation_convenios']
-
-// Total a cobrar segun el canal. B2B cobra al centimo: la empresa paga el monto
-// exacto de su factura (65% de 730 = 205.50) y truncarlo registraba un pago que
-// no ocurrio. El resto de canales sigue en soles enteros. Espejo del SP
-// sp_comercial_enrollment_register (v_agent_origin = 'B2B', que sale de la misma
-// situacion del prospecto): si los dos lados divergen, su guard de discrepancia
-// rechaza la venta.
-export function chargedTotal (discounts, prospectSituationAlias) {
-  return B2B_PROSPECT_SITUATIONS.includes(prospectSituationAlias)
+// Total a cobrar segun el FORMULARIO. Solo el modulo B2B cobra al centimo: la
+// empresa paga el monto exacto de su factura (65% de 730 = 205.50) y truncarlo
+// registraba un pago que no ocurrio. Comercial y Fundacion siguen en soles
+// enteros aunque el prospecto sea Corporativo/Convenios (antes se decidia por esa
+// situacion y Comercial terminaba cobrando 124.50). Espejo del SP
+// sp_comercial_enrollment_register, que lee insc.charge_in_cents: si los dos
+// lados divergen, su guard de discrepancia rechaza la venta.
+export function chargedTotal (discounts, businessLineAlias) {
+  return chargesInCents(businessLineAlias)
     ? discounts.exactTotal
     : discounts.total_amount
+}
+
+export function chargesInCents (businessLineAlias) {
+  return businessLineAlias === 'we_business_line_b2b'
 }

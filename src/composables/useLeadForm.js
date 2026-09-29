@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, inject, watch, nex
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
-import { computeDiscounts, chargedTotal } from '@/features/apply-discounts/computeDiscounts.js'
+import { computeDiscounts, chargedTotal, chargesInCents } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
 import { tokenInscriptionFlags, tokenLinkAmount } from '@/features/enroll-lead/tokenInscriptionFlags.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
@@ -820,7 +820,7 @@ export function useLeadForm(options = {}) {
       insc.montoDescuentoFijo       = r.montoFijo
       insc.montoBeneficioTotal      = r.montoBeneficioTotal
       insc.beneficiosSoloBadge      = r.beneficiosSoloBadge
-      insc.total_amount             = chargedTotal(r, form.ocupacion_alias)
+      insc.total_amount             = chargedTotal(r, businessLine)
     },
     { deep: true }
   )
@@ -1403,6 +1403,7 @@ export function useLeadForm(options = {}) {
         ticket_payment_urls: paymentFiles,
         attachments: generalAttachments,
         b2b_contract_id: insc.b2b_contract_id || null,
+        charge_in_cents: chargesInCents(businessLine),
         // Toda venta nacida en el modulo de Fundacion es del canal FWE, sea quien
         // sea el asesor que la registro (el alias sigue viajando en seller_agent_id).
         agent_origin: businessLine === 'we_business_line_fundacion' ? 'FWE' : null,
