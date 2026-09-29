@@ -176,6 +176,13 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Reporte Comercial',
+        to: '/comercial/reporte',
+        submodule: 'REPORTE',
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Cronograma - Objetivos',
         to: '/comercial/RptGoalEdition',
         submodule: 'CRONOGRAMA_OBJETIVOS',

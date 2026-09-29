@@ -176,6 +176,22 @@ export default class EditionService {
     return response.data || []
   }
 
+  // Criterios de la rubrica que mas restan al promedio de auditoria (objetivo 18).
+  async auditObjective(payload) {
+    const response = (await api.post('/edition/auditobjective', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || { meta: 18, auditorias_periodo: 0, ventana: null, criterios: [] }
+  }
+
+  // Aprobados, jalados y certificados de los ultimos 6 meses (Reporte Academico).
+  async academicOutcomes() {
+    const response = (await api.post('/edition/academicoutcomes', {}, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || { meses: [], tarjetas: [] }
+  }
+
   // Seguimiento Docentes del Reporte Academico: cronograma S1..Sn derivado
   // (con reprogramaciones) + nota de auditoria por sesion, para el rango.
   async teacherFollowup(payload) {
@@ -183,16 +199,6 @@ export default class EditionService {
       meta: { skipLoader: true }
     })).data
     return response.data || { editions: [] }
-  }
-
-  // Recomendaciones IA del Reporte Academico (Ollama local). El backend hace
-  // hasta 2 intentos de ~60s; sin loader global (la carta muestra el suyo).
-  async reportRecommendations(payload) {
-    const response = (await api.post('/edition/reportrecommendations', payload, {
-      meta: { skipLoader: true },
-      timeout: 150000
-    })).data
-    return response
   }
 
   // Borradores de observacion con la IA local (Ollama). Puede tardar ~1 min
@@ -209,10 +215,6 @@ export default class EditionService {
   // con { job_id, estado, progreso }; el resultado se consulta con aiJobStatus.
   async startGradesObservations(payload) {
     return (await api.post('/edition/classroomgradesobservations/start', payload, { meta: { skipLoader: true } })).data.data
-  }
-
-  async startReportRecommendations(payload) {
-    return (await api.post('/edition/reportrecommendations/start', payload, { meta: { skipLoader: true } })).data.data
   }
 
   async aiJobStatus(jobId) {

@@ -232,6 +232,24 @@ diarias).
 </section>
 ```
 
+### 5.2.2 Informe de una página (reporte de área)
+
+Referencia: `views/academica/ReporteAcademico.vue` (28/09/26, pedido del usuario
+sobre una referencia tipo infografía). Segundo uso: `views/comercial/ReporteComercial.vue`
+(selector de mes nativo en la banda; un panel por objetivo del área). Al tercer
+reporte de área, sus reglas de estilo pasan a `design-system.css` como `ds-report-*`.
+
+- Arriba, **una banda navy delgada**: título, periodo en texto y selector de
+  periodo a la derecha (el calendario abre hacia la izquierda y necesita ese
+  lado libre). Debajo, **una fila de 5 cifras** con `.ds-kpi` a todo el ancho.
+  Nada de listas de frases con números gigantes en la banda: se rechazaron.
+- Debajo, **paneles en grilla de 2 columnas** (1 bajo 900 px) cuya cabecera es
+  una **barra de color sólido** `--ds-brand` con el título en `--ds-on-brand`,
+  centrado. El cuerpo es un gráfico que llena el panel; el pie, una frase.
+- El color de los datos: verde = bueno, rojo = malo, ámbar = atención; lo neutro
+  en `--ds-bar`. Nunca turquesa/rojo decorativos de la referencia.
+- Poco texto: el informe se lee por los gráficos. Panel sin datos se quita.
+
 ### 5.3 Listado de un módulo
 
 ```vue
@@ -360,6 +378,7 @@ se usa `confirmAction()` (§7).
 | Aviso breve | `useToast()` de vue-toastification | `toast.success / error / warning`. Único sistema de toasts |
 | Confirmar acción | `confirmAction({ title, text, confirmText, danger })` | `composables/useConfirm.js`; `danger: true` para borrar/anular |
 | Gráfico | `views/dashboard/ResultChart.vue` o vue-chartjs | Ver §9 |
+| Panel de indicador (ranking, medidor, dona, métricas, tabla corta) | `views/dashboard/ResultWidget.vue` | Recibe un objeto `widget` (contrato de `results.entity.js`). Fuera del dashboard lo arma un módulo puro del feature, nunca el template |
 | Carga global con blur | `meta: { showLoader: true }` en la ruta | Opt-in; el resto usa skeleton |
 
 **No usar en código nuevo:** `CCard`, `CButton`, `CTable`, `CModal` de CoreUI en
@@ -493,5 +512,8 @@ Hoy conviven 4 encabezados y ~11.900 hex en 122 `.vue`. Al tocar una vista
 cubre el global y su bloque oscuro; 4) revisar claro, oscuro y 400 px.
 
 **Estado:** `views/dashboard/` (panel de líder y "Mi día a día") migrado.
+`views/academica/ReporteAcademico.vue`: solo el bloque "Resultados del alumno"
+usa `ds-*`; el resto sigue legacy a pedido (el rediseño completo se revirtió
+el 28/09/26: perdía la matriz de auditorías por sesión).
 Siguen los módulos por uso: FICO inscripciones → Comercial leads → Académica
 aulas → Producto cronograma → Configuración → B2B/Fundación.

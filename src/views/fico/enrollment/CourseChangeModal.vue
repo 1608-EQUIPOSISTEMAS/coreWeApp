@@ -201,6 +201,7 @@
 <script setup>
 import { ref, reactive, computed, watch, inject } from 'vue'
 import { ServiceKeys } from '@/services'
+import { isWithinCourseChangeWindow } from './editionWindows.js'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
@@ -222,15 +223,6 @@ const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 const fmt = useEnrollmentFormatters()
 
-// Compara start_date (cadena calendario) contra hoy local sin sufrir TZ shift.
-function isFutureOrToday (startDate) {
-  const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return false
-  const ed = new Date(+m[1], +m[2] - 1, +m[3])
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return ed >= today
-}
 
 const ccProgramVersionId = ref(null)
 const ccEditionId = ref(null)
@@ -324,7 +316,7 @@ async function onProgramChange() {
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
     ccEditionsList.value = (items || [])
-      .filter(e => e.start_date && isFutureOrToday(e.start_date))
+      .filter(e => isWithinCourseChangeWindow(e.start_date))
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,

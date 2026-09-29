@@ -3,6 +3,7 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import { isoWeekOf } from '@/utils/isoWeek'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -27,34 +28,23 @@ function parseLocal(str) {
 const toYmd = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-// Semana ISO de una fecha (el jueves de la semana define el anio ISO).
-function isoWeekOf(date) {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7))
-  const jan1 = new Date(d.getFullYear(), 0, 1)
-  return { year: d.getFullYear(), week: Math.ceil(((d - jan1) / 86400000 + 1) / 7) }
-}
-
-// Un anio ISO tiene 53 semanas si empieza en jueves (o miercoles si es bisiesto).
-function weeksInYear(y) {
-  const jan1 = new Date(y, 0, 1).getDay()
-  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
-  return jan1 === 4 || (leap && jan1 === 3) ? 53 : 52
-}
-
-const { year: y0, week: w0 } = isoWeekOf(new Date())
-const year = ref(y0)
-const week = ref(w0)
+const todayYmd = toYmd(new Date())
+// Se navega por el lunes de la semana: sumar 7 dias cruza de anio sin
+// aritmetica de "semana 53".
+const monday = ref(isoWeekOf(todayYmd).monday)
+const week = computed(() => isoWeekOf(monday.value).week)
 const data = ref(null)
 const isLoading = ref(false)
-const todayYmd = toYmd(new Date())
 
 async function load() {
   isLoading.value = true
   try {
-    // Mismo endpoint que Control de Ediciones: trae el cronograma EFECTIVO
-    // (reprogramaciones incluidas) — aqui solo se pivotea por dia.
-    data.value = await editionService.weeklyControl({ year: year.value, week: week.value })
+    // Mismo cronograma EFECTIVO que Control de Ediciones (reprogramaciones
+    // incluidas) mas la auditoria de cada sesion — aqui solo se pivotea por dia.
+    data.value = await editionService.teacherFollowup({
+      date_start: monday.value,
+      date_end: isoWeekOf(monday.value).sunday
+    })
   } catch (err) {
     console.error('Error cargando vista semanal:', err)
     toast.error('Error al cargar la vista semanal')
@@ -65,22 +55,14 @@ async function load() {
 }
 
 function moveWeek(delta) {
-  let w = week.value + delta
-  if (w < 1) {
-    year.value -= 1
-    w = weeksInYear(year.value)
-  } else if (w > weeksInYear(year.value)) {
-    year.value += 1
-    w = 1
-  }
-  week.value = w
+  const d = parseLocal(monday.value)
+  d.setDate(d.getDate() + 7 * delta)
+  monday.value = toYmd(d)
   load()
 }
 
 function goToday() {
-  const t = isoWeekOf(new Date())
-  year.value = t.year
-  week.value = t.week
+  monday.value = isoWeekOf(todayYmd).monday
   load()
 }
 
@@ -103,8 +85,23 @@ function startMinutes(label) {
   return h * 60 + Number(m[2] || 0)
 }
 
+// Auditada = tiene nota de la IA o de la rubrica manual (mismo criterio que la
+// matriz del Reporte Academico). Solo el guardado manual firma autor.
+const isAudited = (s) => s.ai_20 != null || s.manual_20 != null
+const auditorOf = (s) => s.audited_by || 'IA'
+// Una clase que aun no se dicta no esta "pendiente de auditar". Hoy cuenta:
+// la de la mañana ya puede tener auditoria.
+const isDue = (s) => s.date <= todayYmd
+
+const AUDIT_FILTERS = [
+  { key: 'todas', label: 'Todas', match: () => true },
+  { key: 'auditadas', label: 'Auditadas', match: (c) => isAudited(c.session) },
+  { key: 'pendientes', label: 'Sin auditar', match: (c) => isDue(c.session) && !isAudited(c.session) }
+]
+const auditFilter = ref(AUDIT_FILTERS[0])
+
 // Pivote: sesiones cuya fecha efectiva cae en la semana, agrupadas por dia.
-const days = computed(() => {
+const allDays = computed(() => {
   if (!data.value) return []
   const monday = parseLocal(data.value.date_start)
   const out = []
@@ -132,14 +129,20 @@ const days = computed(() => {
   return out
 })
 
-// Resumen de la semana visible para los KPIs de la cabecera.
+const days = computed(() =>
+  allDays.value.map((d) => ({ ...d, classes: d.classes.filter(auditFilter.value.match) }))
+)
+
+// Resumen de la semana completa (sin filtro) para los KPIs de la cabecera.
 const summary = computed(() => {
-  const s = { total: 0, A: 0, R: 0, T: 0, nm: 0 }
-  for (const d of days.value) {
+  const s = { total: 0, A: 0, R: 0, T: 0, nm: 0, audited: 0, due: 0 }
+  for (const d of allDays.value) {
     for (const c of d.classes) {
       s.total++
       if (c.session.status) s[c.session.status]++
       if (c.edition.new_methodology) s.nm++
+      if (isAudited(c.session)) s.audited++
+      if (isDue(c.session)) s.due++
     }
   }
   return s
@@ -230,6 +233,17 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
         </div>
         <div class="k-foot"><span>clases marcadas NM</span></div>
       </div>
+      <div class="kpi" style="--bar: #7C3AED">
+        <div class="k-label">
+          <span>Auditadas</span>
+          <i class="fa-solid fa-clipboard-check k-icon"></i>
+        </div>
+        <div class="k-value">
+          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
+          <template v-else>{{ summary.audited }}</template>
+        </div>
+        <div class="k-foot"><span>de {{ summary.due }} clases ya dictadas</span></div>
+      </div>
     </div>
 
     <div class="filter-bar">
@@ -242,6 +256,15 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
         <span class="sw e-nm">NM</span>Nueva metodología
       </span>
       <div class="spacer"></div>
+      <div class="seg" role="group" aria-label="Filtrar por auditoría">
+        <button
+          v-for="f in AUDIT_FILTERS"
+          :key="f.key"
+          :class="{ on: auditFilter.key === f.key }"
+          :aria-pressed="auditFilter.key === f.key"
+          @click="auditFilter = f"
+        >{{ f.label }}</button>
+      </div>
       <span class="muted">Clic en una clase para abrir su aula</span>
     </div>
 
@@ -281,6 +304,9 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
               {{ estadoOf(c.session).label }}
               <template v-if="c.session.new_date"> · era {{ fmtShort(c.session.planned_date) }}</template>
             </div>
+            <div v-if="isAudited(c.session)" class="cls-badge e-audit">
+              <i class="fa-solid fa-clipboard-check"></i> Auditada · {{ auditorOf(c.session) }}
+            </div>
           </button>
         </div>
       </div>
@@ -309,6 +335,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
   --blue-soft: #ECF2FE;
   --blue-ink: #1D4ED8;
   --nm-soft: #ECFEFF; --nm-ink: #0E7490; /* nueva metodologia */
+  --audit-soft: #F3EEFF; --audit-ink: #6D28D9;
   --accent: var(--we-navy, #002060);
   --surface: #ffffff;
   --radius: 10px;
@@ -363,7 +390,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 .week-nav .center .rg { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 
 /* ---------- KPIs ---------- */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
 .kpi {
   background: var(--surface); border-radius: var(--radius);
   padding: 14px 16px; border: 1px solid var(--line);
@@ -404,6 +431,14 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
 .e-repro { background: var(--red-soft); color: var(--red-ink); }
 .e-tard { background: var(--amber-soft); color: var(--amber-ink); }
 .e-nm { background: var(--nm-soft); color: var(--nm-ink); }
+.e-audit { background: var(--audit-soft); color: var(--audit-ink); gap: 4px; text-transform: none; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button {
+  border: none; background: transparent; color: var(--ink-3);
+  font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px;
+}
+.seg button.on { background: var(--audit-soft); color: var(--audit-ink); font-weight: 600; }
 
 /* ---------- kanban de 7 dias ---------- */
 .grid-wrap { overflow-x: auto; padding-bottom: 6px; }
@@ -512,6 +547,7 @@ const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params
   --blue-soft: rgba(37,99,235,0.18);
   --blue-ink: #60A5FA;
   --nm-soft: rgba(14,116,144,0.20); --nm-ink: #67E8F9;
+  --audit-soft: rgba(124,58,237,0.20); --audit-ink: #C4B5FD;
   --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
 }
 [data-coreui-theme="dark"] .cw-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }

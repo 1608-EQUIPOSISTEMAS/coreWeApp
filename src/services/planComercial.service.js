@@ -21,6 +21,11 @@ export default class PlanComercialService {
     return (await this.api.post('/plan-comercial/plan', { month_start: monthStart })).data.data
   }
 
+  // Informe Comercial de un rango { date_start, date_end } ('YYYY-MM-DD').
+  async reporte (period) {
+    return (await this.api.post('/plan-comercial/reporte', period)).data.data
+  }
+
   // weeks: [{ date_start, obj_vacantes, obj_ingresos, asesores: { [user_id]: n } }]
   async guardarPlan (monthStart, weeks) {
     return (await this.api.post('/plan-comercial/plan/save', { month_start: monthStart, weeks })).data.data

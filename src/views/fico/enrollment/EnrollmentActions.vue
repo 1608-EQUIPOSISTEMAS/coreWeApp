@@ -528,6 +528,7 @@ import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow } from './editionWindows.js'
 
 const props = defineProps({
   enrollment: { type: Object, default: null },
@@ -736,33 +737,6 @@ async function loadRPEditions () {
   }
 }
 
-// Parsea start_date (cadena calendario) a Date local sin sufrir TZ shift:
-// si el server Node corre en UTC, el ISO viene como '2026-05-09T00:00:00.000Z',
-// que `new Date()` interpreta como 2026-05-08 19:00 Lima — falsea el filtro.
-function parseLocalDate (startDate) {
-  const m = String(startDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null
-}
-
-// Cambio de curso: solo ediciones de hoy en adelante.
-function isFutureOrToday (startDate) {
-  const ed = parseLocalDate(startDate)
-  if (!ed) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return ed >= today
-}
-
-// Reprogramación: admite desde el 1ro de hace 2 meses.
-// Ej: estando en julio, admite ediciones desde el 01/05.
-function isWithinReprogramWindow (startDate) {
-  const ed = parseLocalDate(startDate)
-  if (!ed) return false
-  const now = new Date()
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-  return ed >= cutoff
-}
-
 async function handleReprogramConfirm () {
   if (!requiredFieldsFilled()) return
   saving.value = true
@@ -877,7 +851,7 @@ async function onCCProgramChange () {
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
     ccEditionsList.value = (items || [])
-      .filter(e => e.start_date && isFutureOrToday(e.start_date))
+      .filter(e => isWithinCourseChangeWindow(e.start_date))
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,

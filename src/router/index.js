@@ -421,6 +421,13 @@ const routes = [
           component: () => import('@/views/comercial/PlanComercial.vue'),
           meta: { submodule: 'PLAN_COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
+        // Informe del area contra sus objetivos (una pagina, como el Academico).
+        {
+          path: 'reporte',
+          name: 'ReporteComercial',
+          component: () => import('@/views/comercial/ReporteComercial.vue'),
+          meta: { submodule: 'REPORTE', roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
         // Reportes — solo líderes y admin
         {
           path: 'RptGoalEdition',

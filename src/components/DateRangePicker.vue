@@ -16,6 +16,11 @@ const props = defineProps({
   },
   minDate: { type: String, default: null },
   maxDate: { type: String, default: null },
+  // Accesos rapidos: [{ id, label, range: (hoy) => ({ start, end }) }]. Sin
+  // pasarlos quedan los de siempre (ultimos 7/14/30 dias).
+  presets: { type: Array, default: null },
+  // Un reporte que no compara periodos no debe ofrecer el check.
+  comparable: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -106,15 +111,21 @@ const selectionPhase = ref('start') // 'start' | 'end'
 // =====================================================================
 // PRESETS
 // =====================================================================
-const PRESETS = [
-  { id: '7d',  label: 'Últimos 7 días',  days: 7 },
-  { id: '14d', label: 'Últimos 14 días', days: 14 },
-  { id: '30d', label: 'Últimos 30 días', days: 30 },
+const lastDays = (days) => (hoy) => ({ start: addDays(hoy, -(days - 1)), end: hoy })
+const DEFAULT_PRESETS = [
+  { id: '7d',  label: 'Últimos 7 días',  range: lastDays(7) },
+  { id: '14d', label: 'Últimos 14 días', range: lastDays(14) },
+  { id: '30d', label: 'Últimos 30 días', range: lastDays(30) },
 ]
+const PRESETS = computed(() => props.presets || DEFAULT_PRESETS)
+const presetOf = (start, end) =>
+  PRESETS.value.find((p) => {
+    const r = p.range(todayYmd())
+    return r.start === start && r.end === end
+  })
 
 function applyPreset(preset) {
-  const end = todayYmd()
-  const start = addDays(end, -(preset.days - 1))
+  const { start, end } = preset.range(todayYmd())
   draftStart.value = start
   draftEnd.value = end
   selectionPhase.value = 'start'
@@ -124,12 +135,7 @@ function applyPreset(preset) {
   viewMonth.value = startDate.getMonth()
 }
 
-const activePresetId = computed(() => {
-  if (!draftStart.value || !draftEnd.value) return null
-  if (draftEnd.value !== todayYmd()) return null
-  const span = diffDays(draftStart.value, draftEnd.value) + 1
-  return PRESETS.find((p) => p.days === span)?.id || null
-})
+const activePresetId = computed(() => presetOf(draftStart.value, draftEnd.value)?.id || null)
 
 // =====================================================================
 // COMPARE
@@ -294,8 +300,7 @@ function commit() {
 const triggerLabel = computed(() => {
   const v = props.modelValue || {}
   if (!v.start || !v.end) return 'Seleccionar periodo'
-  const span = diffDays(v.start, v.end) + 1
-  const presetMatch = PRESETS.find((p) => p.days === span && v.end === todayYmd())
+  const presetMatch = presetOf(v.start, v.end)
   const prefix = presetMatch ? `${presetMatch.label}: ` : ''
   return `${prefix}${formatShortDate(v.start)} - ${formatShortDate(v.end)}`
 })
@@ -394,7 +399,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
           </button>
         </div>
 
-        <div class="drp-compare">
+        <div v-if="comparable" class="drp-compare">
           <label class="drp-compare-toggle">
             <input type="checkbox" v-model="draftCompareOn" />
             <span class="drp-check"></span>
