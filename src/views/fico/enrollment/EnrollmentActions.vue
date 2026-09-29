@@ -22,7 +22,7 @@
           <i class="fa-solid fa-circle-check"></i> Aprobar Migracion
           <span class="eact-tag eact-tag-approve">PR</span>
         </button>
-        <template v-if="canManageEnrollment">
+        <template v-if="canManageEnrollment && !isOriginMoved">
           <button class="eact-btn" @click="startAction('rp')">
             <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion
             <span class="eact-tag">RP</span>
@@ -528,7 +528,7 @@ import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
-import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow } from './editionWindows.js'
+import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin } from './editionWindows.js'
 
 const props = defineProps({
   enrollment: { type: Object, default: null },
@@ -588,6 +588,14 @@ const isPendingReview = computed(() => {
     || props.detail?.cat_type_status_alias
     || props.enrollment?.type_status_alias
   return alias === 'we_enrollment_status_pending_review'
+})
+// Origen ya en CC/RP: su destino existe y lo que falte se corrige ahi. Un
+// segundo RP/CC duplica la inscripcion (el backend tambien lo rechaza).
+const isOriginMoved = computed(() => {
+  const alias = props.enrollment?.cat_type_status_alias
+    || props.detail?.cat_type_status_alias
+    || props.enrollment?.type_status_alias
+  return isMovedOrigin(alias)
 })
 
 function startAction (action) {

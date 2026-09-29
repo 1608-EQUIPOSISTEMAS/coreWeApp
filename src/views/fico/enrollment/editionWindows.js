@@ -29,3 +29,12 @@ export function isWithinReprogramWindow (startDate, today = new Date()) {
   const cutoff = new Date(today.getFullYear(), today.getMonth() - 2, 1)
   return ed >= cutoff
 }
+
+// Origen ya en CC o RP: su destino existe y lo que falte se corrige ahí. Un
+// segundo RP/CC duplica la inscripción (CC #19397 → #20010 + #20011, 29/09/26);
+// el backend también lo rechaza (assertOriginNotMovedYet).
+const MOVED_ORIGIN_STATUSES = ['we_enrollment_status_course_changed', 'we_enrollment_status_reprogrammed']
+
+export function isMovedOrigin (statusAlias) {
+  return MOVED_ORIGIN_STATUSES.includes(statusAlias)
+}

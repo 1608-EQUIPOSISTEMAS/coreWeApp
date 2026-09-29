@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isWithinCourseChangeWindow, isWithinReprogramWindow } from '../editionWindows.js'
+import { isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin } from '../editionWindows.js'
 
 const today = new Date(2026, 8, 28) // 28/09/2026 local
 
@@ -23,5 +23,16 @@ describe('isWithinReprogramWindow', () => {
   it('admite desde el 1ro de hace 2 meses', () => {
     expect(isWithinReprogramWindow('2026-07-01', today)).toBe(true)
     expect(isWithinReprogramWindow('2026-06-30', today)).toBe(false)
+  })
+})
+
+describe('isMovedOrigin', () => {
+  it('un origen en CC o RP ya tiene destino: no se ofrece otro RP/CC', () => {
+    expect(isMovedOrigin('we_enrollment_status_course_changed')).toBe(true)
+    expect(isMovedOrigin('we_enrollment_status_reprogrammed')).toBe(true)
+  })
+  it('una inscripción activa sí puede moverse', () => {
+    expect(isMovedOrigin('we_inscription_way_act')).toBe(false)
+    expect(isMovedOrigin(undefined)).toBe(false)
   })
 })

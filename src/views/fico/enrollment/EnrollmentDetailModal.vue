@@ -523,7 +523,7 @@
                 <i class="fa-solid fa-chevron-down" style="font-size:9px;margin-left:2px"></i>
               </button>
               <div v-if="showActionsMenu" class="edm-dropdown-menu" @mouseleave="showActionsMenu = false">
-                <div class="edm-dropdown-group">
+                <div v-if="!isOriginMoved" class="edm-dropdown-group">
                   <span class="edm-dropdown-label">Programa</span>
                   <button class="edm-dropdown-item" @click="showActionsMenu = false; $emit('open-rp', enrollment, selectedDetail)">
                     <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion <span class="edm-dd-tag">RP</span>
@@ -532,7 +532,7 @@
                     <i class="fa-solid fa-right-left"></i> Cambio de Curso <span class="edm-dd-tag edm-dd-tag-cc">CC</span>
                   </button>
                 </div>
-                <div class="edm-dropdown-sep"></div>
+                <div v-if="!isOriginMoved" class="edm-dropdown-sep"></div>
                 <div class="edm-dropdown-group">
                   <span class="edm-dropdown-label">Alumno</span>
                   <button class="edm-dropdown-item" @click="showActionsMenu = false; isChangingModality = true">
@@ -704,6 +704,7 @@ import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import BaseModal from '@/components/BaseModal.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
+import { isMovedOrigin } from './editionWindows.js'
 
 const props = defineProps({
   visible: Boolean,
@@ -800,6 +801,13 @@ const isPendingReview = computed(() => {
     || props.enrollment?.cat_type_status_alias
     || props.enrollment?.type_status_alias
   return alias === 'we_enrollment_status_pending_review'
+})
+// Origen ya en CC/RP: lo que falte se corrige en su destino (ver EnrollmentActions).
+const isOriginMoved = computed(() => {
+  const alias = selectedDetail.value?.cat_type_status_alias
+    || props.enrollment?.cat_type_status_alias
+    || props.enrollment?.type_status_alias
+  return isMovedOrigin(alias)
 })
 
 // "Hoy" en TZ del browser. FICO opera desde Lima asi que coincide; el backend
