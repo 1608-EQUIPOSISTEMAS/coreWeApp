@@ -3968,22 +3968,9 @@ const searchEditionsFiltered = async (q) => {
     year
   })
 
-  const hoy = new Date()
-
-  // Desde el 1° del mes pasado
-  const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
-  desde.setHours(0, 0, 0, 0)
-
-  // Hasta el 31 dic del año actual
-  const hasta = new Date(hoy.getFullYear(), 11, 31)
-  hasta.setHours(23, 59, 59, 999)
-
+  // La ventana de fechas (mes pasado + 12 meses) la aplica sp_edition_caller
+  // con month/year; filtrar aquí otra vez escondía los inicios del año siguiente.
   return (response || [])
-    .filter(e => {
-      if (!e.start_date) return true
-      const fecha = new Date(e.start_date)
-      return fecha >= desde && fecha <= hasta
-    })
     .sort((a, b) => {
       if (!a.start_date && !b.start_date) return 0
       if (!a.start_date) return 1

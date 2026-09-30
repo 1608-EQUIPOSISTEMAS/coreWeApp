@@ -114,5 +114,12 @@ export function useFilteredNav() {
       .filter(Boolean) // elimina los null
   })
 
-  return { filteredNav, refreshModules, grantedModules, grantedSubmodules }
+  // Las pantallas visibles como lista plana: la usan el buscador del header y
+  // los fijados del sidebar, así ninguno muestra algo que el usuario no puede abrir.
+  const navLinks = computed(() => filteredNav.value.flatMap((item) => {
+    if (item.items) return item.items.map((child) => ({ name: child.name, to: child.to, group: item.name }))
+    return item.to ? [{ name: item.name, to: item.to, group: null }] : []
+  }))
+
+  return { filteredNav, navLinks, refreshModules, grantedModules, grantedSubmodules }
 }

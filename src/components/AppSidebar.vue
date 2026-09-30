@@ -1,12 +1,12 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import weLogo from '@/assets/brand/WE-EDUCACION-PRINCIPAL.png'
 import { useSidebarStore } from '@/stores/sidebar.js'
 import { useFilteredNav } from '@/composables/useFilteredNav.js'
 
 const sidebar = useSidebarStore()
-const { filteredNav, refreshModules } = useFilteredNav()
+const { filteredNav, navLinks, refreshModules } = useFilteredNav()
 const route = useRoute()
 
 const expandedGroups = ref(new Set())
@@ -48,6 +48,20 @@ function badgeText(b) {
   return b
 }
 
+// Fijados: preferencia de cada navegador, no de la cuenta. Se cruzan con
+// navLinks para que un permiso retirado saque también el acceso fijado.
+const PINS_KEY = 'we_nav_pins_v1'
+function readPins() {
+  try { return JSON.parse(localStorage.getItem(PINS_KEY) || '[]') } catch { return [] }
+}
+const pins = ref(readPins())
+const pinnedLinks = computed(() => navLinks.value.filter((l) => pins.value.includes(l.to)))
+const isPinned = (to) => pins.value.includes(to)
+function togglePin(to) {
+  pins.value = isPinned(to) ? pins.value.filter((p) => p !== to) : [...pins.value, to]
+  try { localStorage.setItem(PINS_KEY, JSON.stringify(pins.value)) } catch { /* modo privado: queda en memoria */ }
+}
+
 onMounted(() => {
   // Trae los módulos vigentes de la matriz de permisos (sin re-login).
   refreshModules()
@@ -61,40 +75,69 @@ onMounted(() => {
 </script>
 
 <template>
-  <aside class="sidebar-shell" :class="{ 'is-hidden': !sidebar.visible }">
+  <aside
+    class="sidebar-shell"
+    :class="{ 'is-hidden': !sidebar.visible }"
+    aria-label="Menú principal"
+  >
     <div class="brand">
       <RouterLink to="/" class="brand-box">
         <span class="brand-mark">
           <img :src="weLogo" alt="W|E" class="brand-mark-img" />
         </span>
         <span class="brand-words">
-          <span class="brand-words__main">W<span class="brand-words__bar">|</span>E</span>
-          <span class="brand-words__sub">EDUCACIÓN EJECUTIVA</span>
+          <span class="brand-words__main">WE Educación</span>
+          <span class="brand-words__sub">System ERP</span>
         </span>
       </RouterLink>
     </div>
 
     <nav class="sidebar-nav">
-      <template v-for="(item, idx) in filteredNav" :key="idx">
-        <div
-          v-if="item.component === 'CNavTitle'"
-          class="nav-section-label"
+      <template v-if="pinnedLinks.length">
+        <div class="nav-section-label">Fijados</div>
+        <RouterLink
+          v-for="link in pinnedLinks"
+          :key="'pin-' + link.to"
+          :to="link.to"
+          custom
+          v-slot="{ navigate, isActive }"
         >
-          <span class="nav-section-label__text">{{ item.name }}</span>
+          <button
+            class="nav-pin"
+            :class="{ active: isActive }"
+            type="button"
+            :title="link.group ? `${link.group} › ${link.name}` : link.name"
+            @click="goTo(navigate, link.to)"
+          >
+            <span class="nav-pin__dot" aria-hidden="true"></span>
+            <span class="label">{{ link.name }}</span>
+          </button>
+        </RouterLink>
+      </template>
+
+      <template v-for="(item, idx) in filteredNav" :key="idx">
+        <!-- Los accesos sueltos del inicio (Dashboard, Cronograma...) no traen
+             título en _nav.js; sin él se confunden con los Fijados. -->
+        <div v-if="idx === 0 && item.component !== 'CNavTitle'" class="nav-section-label">General</div>
+        <div v-if="item.component === 'CNavTitle'" class="nav-section-label">
+          {{ item.name }}
         </div>
 
         <template v-else-if="item.component === 'CNavGroup'">
           <button
-            class="nav-item nav-group-toggle"
+            class="nav-item menu-group"
             :class="{
               expanded: isExpanded(idx),
               'has-active': hasActiveChild(item),
             }"
             type="button"
+            :title="item.name"
+            :aria-expanded="isExpanded(idx)"
             @click="toggleGroup(idx)"
           >
             <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
             <span class="label">{{ item.name }}</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
           <div v-show="isExpanded(idx)" class="nav-children">
             <RouterLink
@@ -104,18 +147,30 @@ onMounted(() => {
               custom
               v-slot="{ navigate, isActive }"
             >
-              <button
-                class="nav-item nav-child"
-                :class="{ active: isActive }"
-                type="button"
-                @click="goTo(navigate, child.to)"
-              >
-                <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
-                <span class="label">{{ child.name }}</span>
-                <span v-if="badgeText(child.badge) != null" class="badge">
-                  {{ badgeText(child.badge) }}
-                </span>
-              </button>
+              <div class="nav-child-row">
+                <button
+                  class="nav-child"
+                  :class="{ active: isActive }"
+                  type="button"
+                  :aria-current="isActive ? 'page' : undefined"
+                  @click="goTo(navigate, child.to)"
+                >
+                  <span class="label">{{ child.name }}</span>
+                  <span v-if="badgeText(child.badge) != null" class="badge">
+                    {{ badgeText(child.badge) }}
+                  </span>
+                </button>
+                <button
+                  class="pin-btn"
+                  :class="{ 'is-on': isPinned(child.to) }"
+                  type="button"
+                  :aria-label="isPinned(child.to) ? `Quitar ${child.name} de fijados` : `Fijar ${child.name}`"
+                  :aria-pressed="isPinned(child.to)"
+                  @click="togglePin(child.to)"
+                >
+                  <CIcon icon="cil-star" />
+                </button>
+              </div>
             </RouterLink>
           </div>
         </template>
@@ -130,6 +185,8 @@ onMounted(() => {
             class="nav-item"
             :class="{ active: isActive }"
             type="button"
+            :title="item.name"
+            :aria-current="isActive ? 'page' : undefined"
             @click="goTo(navigate, item.to)"
           >
             <CIcon v-if="item.icon" :icon="item.icon" class="icon" />
@@ -137,233 +194,213 @@ onMounted(() => {
             <span v-if="badgeText(item.badge) != null" class="badge">
               {{ badgeText(item.badge) }}
             </span>
-            <span v-else-if="isActive" class="active-dot" aria-hidden="true"></span>
           </button>
         </RouterLink>
       </template>
     </nav>
+
   </aside>
 </template>
 
 <style scoped>
+/* Ancho y alto del header compartidos con DefaultLayout y AppHeader
+   (--layout-*): la línea bajo el logo continúa la del header. */
 .sidebar-shell {
-  --bg-elev: #FFFFFF;
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --active-bg: #F0EFEB;
-
   position: fixed;
   top: 0; left: 0; bottom: 0;
-  width: 212px;
-  background: var(--bg-elev);
-  border-right: 1px solid var(--line);
-  padding: 12px 7px;
+  width: var(--layout-sidebar-w);
+  background: var(--ds-surface);
+  border-right: 1px solid var(--ds-border);
   display: flex;
   flex-direction: column;
-  gap: 3px;
   font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 13px;
-  color: var(--ink-2);
+  font-size: 13.5px;
+  color: var(--ds-ink-2);
   z-index: 1000;
   -webkit-font-smoothing: antialiased;
   transform: translateX(0);
-  transition: transform 0.22s ease, background 0.18s, border-color 0.18s;
+  transition: transform 0.22s ease;
 }
-.sidebar-shell.is-hidden {
-  transform: translateX(-100%);
-  box-shadow: none;
-}
+.sidebar-shell.is-hidden { transform: translateX(-100%); }
 
 .brand {
-  padding: 2px 2px 14px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--line-soft);
+  height: var(--layout-header-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--ds-border);
 }
 .brand-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   text-decoration: none;
-  padding: 4px 6px;
-  transition: opacity 0.15s;
+  min-width: 0;
 }
-.brand-box:hover { opacity: 0.8; }
+.brand-box:hover { opacity: 0.85; }
 .brand-mark {
-  width: 33px;
-  height: 33px;
-  border-radius: 8px;
-  background: #0E1B3D;
-  border: 1px solid #1E2E57;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ds-brand);
   display: grid;
   place-items: center;
   flex-shrink: 0;
   overflow: hidden;
 }
-.brand-mark-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 5px;
-}
-.brand-words {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-.brand-words__main {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ink);
-}
-.brand-words__bar {
-  color: var(--ink-4);
-  font-weight: 400;
-  margin: 0 1px;
-}
-.brand-words__sub {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--ink-3);
-  margin-top: 1px;
-}
+.brand-mark-img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+.brand-words { display: flex; flex-direction: column; line-height: 1.2; white-space: nowrap; }
+.brand-words__main { font-size: 14.5px; font-weight: 700; color: var(--ds-ink); }
+.brand-words__sub { font-size: 11.5px; color: var(--ds-ink-2); }
 
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding-right: 2px;
-  margin-right: -2px;
+  gap: 2px;
+  padding: 6px 12px 10px;
 }
 .sidebar-nav::-webkit-scrollbar { width: 6px; }
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(20,20,15,0.15);
-  border-radius: 10px;
-}
-.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--ds-border); border-radius: 10px; }
 
 .nav-section-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 11px 8px 5px;
-}
-.nav-section-label__text {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--ink-4);
+  padding: 16px 12px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--ds-ink-2);
   white-space: nowrap;
-  flex-shrink: 0;
-}
-.nav-section-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 8px;
-  border-radius: 7px;
-  color: var(--ink-2);
-  font-size: 12.5px;
+  gap: 12px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 9px;
+  color: var(--ds-ink-2);
+  font-size: 13.5px;
+  font-weight: 500;
   cursor: pointer;
-  user-select: none;
   border: none;
   background: transparent;
   width: 100%;
   text-align: left;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
 }
-.nav-item:hover { background: var(--bg-soft); color: var(--ink); }
-.nav-item.active {
-  background: var(--active-bg);
-  color: var(--ink);
-  font-weight: 500;
-}
-.nav-item .icon {
-  width: 15px;
-  height: 15px;
+.nav-item:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
+.nav-item.active { background: var(--ds-soft-info); color: var(--ds-info-ink); font-weight: 700; }
+.nav-item .icon { width: 17px; height: 17px; flex-shrink: 0; }
+.nav-item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.menu-group.expanded,
+.menu-group.has-active { color: var(--ds-ink); font-weight: 700; }
+.chev {
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
-  opacity: 0.8;
-  color: var(--ink-3);
+  opacity: 0.6;
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
 }
-.nav-item.active .icon { opacity: 1; color: var(--ink); }
-.nav-item .label { flex: 1; }
-.nav-item .badge {
-  font-size: 10px;
-  font-weight: 600;
-  background: var(--ink);
-  color: white;
-  padding: 1px 6px;
-  border-radius: 999px;
+.menu-group.expanded .chev { transform: rotate(0deg); }
+
+.nav-children { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 6px; }
+.nav-child-row { position: relative; display: flex; align-items: center; }
+.nav-child {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 34px 0 41px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ds-ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 0;
 }
-.nav-item.active .badge { background: var(--green); }
-.nav-item .active-dot {
+.nav-child .label { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.nav-child:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
+.nav-child.active { background: var(--ds-soft-info); color: var(--ds-info-ink); font-weight: 700; }
+.nav-child.active::before {
+  content: "";
+  position: absolute;
+  left: 26px;
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--green);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+  background: var(--ds-accent);
+}
+.badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--ds-bad);
+  color: var(--ds-on-brand);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+/* La estrella aparece al pasar por la fila; fijada queda siempre visible. */
+.pin-btn {
+  position: absolute;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ds-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.pin-btn svg { width: 13px; height: 13px; }
+.nav-child-row:hover .pin-btn,
+.pin-btn:focus-visible,
+.pin-btn.is-on { opacity: 1; }
+.pin-btn.is-on { color: var(--ds-warn); }
+.pin-btn:hover { background: var(--ds-surface); color: var(--ds-ink); }
+
+.nav-pin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  padding: 0 12px 0 17px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ds-ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
   flex-shrink: 0;
 }
+.nav-pin:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
+.nav-pin.active { color: var(--ds-info-ink); font-weight: 700; }
+.nav-pin__dot { width: 7px; height: 7px; border-radius: 2px; background: var(--ds-accent); flex-shrink: 0; }
+.nav-pin .label { overflow: hidden; text-overflow: ellipsis; }
 
-.nav-group-toggle.expanded::after { transform: rotate(180deg) !important; }
-.nav-group-toggle::after { transition: transform 0.2s ease !important; }
-.nav-group-toggle.has-active:not(.expanded) .label { font-weight: 500; color: var(--ink); }
-.nav-group-toggle.has-active:not(.expanded) .icon { color: var(--ink); opacity: 1; }
-
-.nav-children {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-left: 8px;
-  margin-left: 9px;
-  border-left: 1px solid var(--line-soft);
-  margin-top: 2px;
-  margin-bottom: 5px;
-}
-.nav-children .nav-child { font-size: 12px; padding: 5px 8px; }
-.nav-children .nav-child .icon { opacity: 0.7; width: 13px; height: 13px; }
 
 @media (max-width: 991px) {
-  .sidebar-shell:not(.is-hidden) {
-    box-shadow: 4px 0 24px rgba(20,20,15,0.18);
-  }
+  .sidebar-shell:not(.is-hidden) { box-shadow: 4px 0 24px rgba(20, 20, 15, 0.18); }
 }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .sidebar-shell {
-  --bg-elev: #14140F;
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --active-bg: #2A2A22;
-}
-[data-coreui-theme="dark"] .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.18);
-}
-[data-coreui-theme="dark"] .sidebar-shell .nav-item .badge { color: #14140F; background: #F4F4F0; }
-[data-coreui-theme="dark"] .sidebar-shell .nav-item.active .badge { background: var(--green); color: #fff; }
 </style>

@@ -116,6 +116,17 @@ los formularios del ERP (650 usos) y cambiarla rompería la consistencia.
 Corte responsive: tercios pasa a 2 columnas bajo **1200px**; todo pasa a 1
 columna bajo **900px**.
 
+### 4.1 Marco de la app (sidebar + header)
+
+`DefaultLayout.vue` define `--layout-sidebar-w` (256px) y `--layout-header-h` (64px).
+`AppSidebar` y `AppHeader` las leen: el alto del logo es el del header para
+que la línea inferior sea una sola. Ambos van en blanco (`--ds-surface`); el
+usuario vive en el header (tarjeta avatar + nombre + rol), nunca al pie del
+sidebar. El buscador del header y los "Fijados" del sidebar salen de
+`useFilteredNav().navLinks`: solo muestran pantallas que el usuario puede abrir.
+Secciones del sidebar: Fijados (si hay) → General (accesos sueltos) → Áreas →
+Administración; sin "Contraer menú" (se pidió quitarlo).
+
 ---
 
 ## 5. Plantillas por tipo de pantalla

@@ -7,6 +7,7 @@ import { useToast } from 'vue-toastification'
 import { useNotifications } from '@/composables/useNotifications'
 import UnattendedCallsModal from '@/components/UnattendedCallsModal.vue'
 import { useSidebarStore } from '@/stores/sidebar.js'
+import { useFilteredNav } from '@/composables/useFilteredNav.js'
 import { leadRouteForUser } from '@/utils/leadRouteForUser.js'
 import { ServiceKeys } from '@/services'
 import { inject } from 'vue'
@@ -72,14 +73,61 @@ const ROUTE_LABELS = {
   new: 'Nuevo',
 }
 
+const { navLinks } = useFilteredNav()
+
+// La pantalla del sidebar que contiene la ruta actual (la de prefijo más largo:
+// /fico/inscripciones/123 es Finanzas › Inscripciones). Si ninguna la contiene
+// (detalle suelto, notificaciones) se arma con los segmentos de la URL.
+const currentLink = computed(() => navLinks.value
+  .filter((l) => route.path === l.to || route.path.startsWith(l.to + '/'))
+  .sort((a, b) => b.to.length - a.to.length)[0])
+
 const crumbs = computed(() => {
-  const segments = route.path.split('/').filter(Boolean)
-  return segments.map((seg, i) => {
-    const label = ROUTE_LABELS[seg] || seg.charAt(0).toUpperCase() + seg.slice(1)
-    const path = '/' + segments.slice(0, i + 1).join('/')
-    return { label, path, current: i === segments.length - 1 }
-  })
+  const labels = currentLink.value
+    ? [currentLink.value.group, currentLink.value.name].filter(Boolean)
+    : route.path.split('/').filter(Boolean)
+      .map((seg) => ROUTE_LABELS[seg] || seg.charAt(0).toUpperCase() + seg.slice(1))
+  return labels.map((label, i) => ({ label, current: i === labels.length - 1 }))
 })
+
+// ── Buscador de pantallas (Ctrl K) ──
+const query = ref('')
+const searchOpen = ref(false)
+const activeResult = ref(0)
+const searchInput = ref(null)
+const normalize = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+const results = computed(() => {
+  const q = normalize(query.value.trim())
+  if (!q) return []
+  return navLinks.value
+    .filter((l) => normalize(`${l.name} ${l.group || ''}`).includes(q))
+    .slice(0, 8)
+})
+
+function openResult(link) {
+  if (!link) return
+  router.push(link.to)
+  query.value = ''
+  searchOpen.value = false
+  searchInput.value?.blur()
+}
+
+function onSearchKey(e) {
+  const n = results.value.length
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); activeResult.value = (activeResult.value + 1) % n }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); activeResult.value = (activeResult.value - 1 + n) % n }
+  else if (e.key === 'Enter') openResult(results.value[activeResult.value])
+  else if (e.key === 'Escape') { query.value = ''; searchInput.value?.blur() }
+}
+
+function onGlobalKey(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    searchInput.value?.focus()
+  }
+}
+onMounted(() => document.addEventListener('keydown', onGlobalKey))
+onUnmounted(() => document.removeEventListener('keydown', onGlobalKey))
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const userName = user.name || user.alias || user.username || 'Usuario'
@@ -200,24 +248,49 @@ function $hasRole(roles) {
     >
       <CIcon icon="cil-menu" size="sm" />
     </button>
-    <button type="button" class="search" disabled>
-      <CIcon icon="cil-magnifying-glass" size="sm" />
-      <span>Buscar en el sistema...</span>
-      <span class="kbd">⌘K</span>
-    </button>
+    <nav class="crumbs" aria-label="Ruta">
+      <template v-for="(c, i) in crumbs" :key="i">
+        <svg v-if="i > 0" class="crumbs__sep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        <span :class="{ 'crumbs__current': c.current }">{{ c.label }}</span>
+      </template>
+    </nav>
 
     <div class="spacer"></div>
 
-    <button
-      type="button"
-      class="icon-btn"
-      :aria-label="colorMode === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
-      :title="colorMode === 'dark' ? 'Modo claro' : 'Modo oscuro'"
-      @click="toggleTheme"
-    >
-      <CIcon v-if="colorMode === 'dark'" icon="cil-moon" size="sm" />
-      <CIcon v-else icon="cil-sun" size="sm" />
-    </button>
+    <div class="search" :class="{ 'is-open': searchOpen && results.length }">
+      <CIcon icon="cil-magnifying-glass" size="sm" class="search__icon" />
+      <input
+        ref="searchInput"
+        v-model="query"
+        type="search"
+        class="search__input"
+        placeholder="Buscar módulo…"
+        aria-label="Buscar módulo"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="search-results"
+        :aria-expanded="searchOpen && results.length > 0"
+        @focus="searchOpen = true"
+        @blur="searchOpen = false"
+        @input="activeResult = 0"
+        @keydown="onSearchKey"
+      />
+      <span class="kbd">Ctrl K</span>
+      <ul v-if="searchOpen && results.length" id="search-results" class="search__results" role="listbox">
+        <li
+          v-for="(r, i) in results"
+          :key="r.to"
+          role="option"
+          :aria-selected="i === activeResult"
+          :class="{ 'is-active': i === activeResult }"
+          @mousedown.prevent="openResult(r)"
+          @mouseenter="activeResult = i"
+        >
+          <span class="search__name">{{ r.name }}</span>
+          <span v-if="r.group" class="search__group">{{ r.group }}</span>
+        </li>
+      </ul>
+    </div>
 
     <CDropdown variant="nav-item" placement="bottom-end" @show="onOpenBell">
       <CDropdownToggle :caret="false" class="icon-btn notif-toggle">
@@ -263,6 +336,19 @@ function $hasRole(roles) {
         </div>
       </CDropdownMenu>
     </CDropdown>
+
+    <button
+      type="button"
+      class="icon-btn"
+      :aria-label="colorMode === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+      :title="colorMode === 'dark' ? 'Modo claro' : 'Modo oscuro'"
+      @click="toggleTheme"
+    >
+      <CIcon v-if="colorMode === 'dark'" icon="cil-moon" size="sm" />
+      <CIcon v-else icon="cil-sun" size="sm" />
+    </button>
+
+    <span class="topbar-divider" aria-hidden="true"></span>
 
     <CDropdown placement="bottom-end" variant="nav-item">
       <CDropdownToggle :caret="false" class="user-pill">
@@ -327,27 +413,19 @@ function $hasRole(roles) {
 
 <style scoped>
 .topbar {
-  --bg-elev: #FFFFFF;
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-
-  height: 56px;
-  background: var(--bg-elev);
-  border-bottom: 1px solid var(--line);
+  height: var(--layout-header-h);
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-border);
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 20px;
+  gap: 12px;
+  padding: 0 24px 0 16px;
   position: sticky;
   top: 0;
   z-index: 30;
   font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  color: var(--ink);
+  color: var(--ds-ink);
   -webkit-font-smoothing: antialiased;
   transition: box-shadow 0.18s;
 }
@@ -355,130 +433,167 @@ function $hasRole(roles) {
 
 .spacer { flex: 1; }
 
-.search {
+.crumbs {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-soft);
-  border: 1px solid var(--line);
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--ds-ink-2);
+  white-space: nowrap;
+}
+.crumbs__sep { width: 11px; height: 11px; transform: rotate(-90deg); opacity: 0.7; }
+.crumbs__current { color: var(--ds-ink); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 300px;
+  height: 36px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
-  padding: 6px 10px;
-  width: 280px;
-  font-size: 13px;
-  color: var(--ink-3);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s, border-color 0.15s;
+  color: var(--ds-ink-2);
+  transition: border-color 0.15s, background 0.15s;
 }
-.search:hover:not(:disabled) {
-  background: white;
-  border-color: #DDD;
-}
-.search:disabled { cursor: not-allowed; opacity: 0.85; }
-.search > span:first-of-type {
+.search:focus-within { background: var(--ds-surface); border-color: var(--ds-border-strong); }
+.search__icon { flex-shrink: 0; }
+/* !important: los estilos globales de input (CoreUI) le ponían borde y caja. */
+.search__input {
   flex: 1;
-  text-align: left;
+  min-width: 0;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  appearance: none;
+  background: transparent !important;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ds-ink);
 }
+.search__input::placeholder { color: var(--ds-ink-2); }
+.search__input::-webkit-search-cancel-button { display: none; }
+.search__results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -12px rgba(20,20,15,0.22);
+  z-index: 40;
+}
+.search__results li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search__results li.is-active { background: var(--ds-soft-info); }
+.search__name { font-size: 13.5px; font-weight: 600; color: var(--ds-ink); }
+.search__group { margin-left: auto; font-size: 12px; color: var(--ds-ink-2); }
 .kbd {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: var(--ds-font-mono);
   font-size: 10.5px;
+  line-height: 1.4;
   padding: 1px 5px;
   border-radius: 4px;
-  border: 1px solid var(--line);
-  background: white;
-  color: var(--ink-3);
-  margin-left: auto;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  color: var(--ds-ink-2);
+  flex-shrink: 0;
 }
 
 .icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
   display: grid;
   place-items: center;
-  color: var(--ink-2);
+  color: var(--ds-ink-2);
   padding: 0;
   cursor: pointer;
   position: relative;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-.icon-btn:hover {
-  background: var(--bg-soft);
-  color: var(--ink);
-  border-color: #DDD;
-}
+.icon-btn:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
 
 .notif-toggle .notif-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -5px;
+  right: -5px;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #EF4444;
-  color: #fff;
+  background: var(--ds-bad);
+  color: var(--ds-on-brand);
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 18px;
   text-align: center;
-  box-shadow: 0 0 0 2px var(--bg-elev);
+  box-shadow: 0 0 0 2px var(--ds-surface);
 }
+
+.topbar-divider { width: 1px; height: 28px; background: var(--ds-border); margin: 0 2px; }
 
 .user-pill {
   display: flex !important;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   background: transparent !important;
-  border: 1px solid transparent !important;
-  border-radius: 10px;
+  border: 0 !important;
+  border-radius: 12px;
   padding: 4px 8px 4px 4px !important;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
 }
-.user-pill:hover {
-  background: var(--bg-soft) !important;
-  border-color: var(--line) !important;
-}
+.user-pill:hover { background: var(--ds-surface-3) !important; }
 .user-pill__avatar {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #2a52a0 0%, var(--we-navy, #002060) 55%, var(--we-navy-dark, #001540) 100%);
+  background: var(--ds-brand);
   display: grid;
   place-items: center;
-  color: #FFFFFF;
+  color: var(--ds-on-brand);
   font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  font-size: 14px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px -2px rgba(0,32,96,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 .user-pill__info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 1px;
   line-height: 1.15;
   text-align: left;
 }
-.user-pill__name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
+.user-pill__name { font-size: 14px; font-weight: 700; color: var(--ds-ink); white-space: nowrap; }
+.user-pill__role { font-size: 12.5px; color: var(--ds-ink-2); white-space: nowrap; }
+.user-pill__chev { color: var(--ds-ink-2); width: 12px; height: 12px; margin-left: 4px; }
+
+@media (max-width: 991px) {
+  .crumbs { display: none; }
 }
-.user-pill__role {
-  font-size: 11px;
-  color: var(--ink-3);
-  white-space: nowrap;
-}
-.user-pill__chev {
-  color: var(--ink-4);
-  width: 11px;
-  height: 11px;
-  margin-left: 1px;
+@media (max-width: 767px) {
+  .search { width: auto; flex: 1; }
+  .kbd { display: none; }
 }
 @media (max-width: 575px) {
   .user-pill__info { display: none; }
@@ -588,35 +703,6 @@ function $hasRole(roles) {
 /* ════════════════════════════════════════
    DARK MODE
    ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .topbar {
-  --bg-elev: #14140F;
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-}
-[data-coreui-theme="dark"] .topbar .icon-btn {
-  background: #1F1F1A;
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .topbar .icon-btn:hover {
-  background: #2A2A22;
-  color: #F4F4F0;
-  border-color: #3A3A33;
-}
-[data-coreui-theme="dark"] .topbar .search {
-  background: #1F1F1A;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
-[data-coreui-theme="dark"] .topbar .kbd {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
 [data-coreui-theme="dark"] .notif-menu {
   background: #1A1A14 !important;
   border-color: #2A2A22 !important;

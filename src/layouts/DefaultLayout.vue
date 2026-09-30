@@ -25,6 +25,10 @@ const sidebar = useSidebarStore()
 
 <style scoped>
 .layout-shell {
+  /* Medidas que comparten AppSidebar y AppHeader. */
+  --layout-sidebar-w: 256px;
+  --layout-header-h: 64px;
+
   min-height: 100vh;
   background: #F7F7F5;
   font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -40,7 +44,7 @@ const sidebar = useSidebarStore()
 
 @media (min-width: 992px) {
   .main-shell.is-shifted {
-    padding-left: 212px;
+    padding-left: var(--layout-sidebar-w);
   }
 }
 
