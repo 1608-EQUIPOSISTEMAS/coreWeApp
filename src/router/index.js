@@ -213,6 +213,13 @@ const routes = [
             component: () => import('@/views/producto/BulkLinks.vue'),
             meta: { submodule: 'LINKS', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
           },
+          // Informe del area contra sus objetivos; En vivo y Online son pestañas.
+          {
+            path: 'reporte',
+            name: 'ReporteProducto',
+            component: () => import('@/views/producto/ReporteProducto.vue'),
+            meta: { submodule: 'REPORTE', roles: ['ADMIN', 'LIDER_PRODUCTO', 'GERENCIA'] },
+          },
         ],
       },
 

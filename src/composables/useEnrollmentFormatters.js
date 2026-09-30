@@ -59,12 +59,9 @@ export function useEnrollmentFormatters () {
     return /\bLAPTOP\b/.test(haystack)
   }
 
-  // Detecta el beneficio "CUENTA CLAUDE" — el alumno usara su cuenta personal.
-  const hasClaudeAccount = e => {
-    if (!e) return false
-    const haystack = `${e.main_discount || ''} ${e.additional_discounts || ''}`.toUpperCase()
-    return /CUENTA\s+CLAUDE/.test(haystack)
-  }
+  // Etiqueta CUENTA PERSONAL ('CLAUDE' | 'CHATGPT' | null): columna propia por
+  // inscripcion, porque en una especializacion va por modulo y no por venta.
+  const hasPersonalAccount = e => !!e?.personal_account
 
   // Becado que ya pago su certificado (etiqueta Certificar). Flag calculado
   // por sp_fico_enrollment_list (beca_certificada).
@@ -141,7 +138,7 @@ export function useEnrollmentFormatters () {
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, hasLaptopPromo, hasClaudeAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, isPendiente, isContado, hasLaptopPromo, hasPersonalAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel, isCuotaAnulada,
     auditIcon, auditLabel
   }

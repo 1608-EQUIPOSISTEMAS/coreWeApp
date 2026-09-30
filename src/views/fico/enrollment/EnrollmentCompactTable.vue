@@ -111,7 +111,7 @@
           v-for="e in enrollments"
           :key="e.enrollment_id"
           class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasClaudeAccount(e), 'has-cert': fmt.hasCertPaid(e) }]"
+          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasPersonalAccount(e), 'has-cert': fmt.hasCertPaid(e) }]"
           @click="onRowClick(e, $event)"
         >
           <td class="tc">
@@ -538,7 +538,7 @@ function clearColFilters () {
   background: rgba(8, 145, 178, 0.26);
 }
 
-/* Fila con tinte naranja cuando tiene el beneficio CUENTA CLAUDE
+/* Fila con tinte naranja cuando tiene la etiqueta CUENTA PERSONAL
    (mismo color que la etiqueta "CUENTA PERSONAL" del panel lateral) */
 .ect-row.has-claude td {
   background: #FFF7ED;

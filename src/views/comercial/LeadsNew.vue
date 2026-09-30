@@ -1497,6 +1497,13 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   <span>• {{ ben.label }}</span>
                 </div>
               </div>
+              <!-- CUENTA PERSONAL S/100 en una especializacion: Academica entrega la cuenta solo en estos modulos -->
+              <PersonalAccountModules
+                v-if="needsPersonalAccountModules"
+                v-model="insc.personal_account_modules"
+                :modules="programChildren"
+                class="mt-2"
+              />
             </div>
           </template>
         </div>
@@ -1968,6 +1975,8 @@ import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
   import SearchSelect from '@/components/SearchSelect.vue'
   import DateTime12 from '@/components/DateTime12.vue'
   import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
+  import PersonalAccountModules from '@/features/personal-account/PersonalAccountModules.vue'
+  import { requiresModulePick, resolvePersonalAccount } from '@/features/personal-account/personalAccount.js'
 
   import { ServiceKeys } from '@/services'
 
@@ -2156,6 +2165,7 @@ price_profesional_dollars: 0,
     modalidadPago: 'CONTADO',
     montoOriginal: 0,  
     dsct_benefit_ids: [],
+    personal_account_modules: [],
     val_beneficios: [],
     val_porcentaje: 0,
     val_fijo: 0,
@@ -3025,6 +3035,7 @@ function resetInscriptionData() {
     dsct_porcent_id: null,
     dsct_stick_id: null,
     dsct_benefit_ids: [],
+    personal_account_modules: [],
     val_porcentaje: 0,
     val_fijo: 0,
     val_beneficios: [],
@@ -3305,6 +3316,11 @@ cat_certificate_status,
         value: b.value,
         label: b.label
       })),
+      ...resolvePersonalAccount({
+        benefits: insc.dsct_benefit_ids,
+        moduleCount: programChildren.value.length,
+        selectedModules: insc.personal_account_modules
+      }),
     installment_plan: isInstallmentMode.value ? installmentPlan.value : null,
 
       // Observaciones y archivos
@@ -3354,6 +3370,10 @@ const inscriptionFieldsFilled = () => !inscriptionFormRoot.value || inscriptionG
 async function confirmarInscripcion() {
    if (!comercialService) return console.error('comercialService no inyectado')
    if (!inscriptionFieldsFilled() || !leadFieldsFilled()) return
+   if (needsPersonalAccountModules.value && !insc.personal_account_modules.length) {
+     toast.warning('Marca en qué módulo(s) va la cuenta personal')
+     return
+   }
 
 
    if (!insc.montoOriginal || Number(insc.montoOriginal) <= 0) {
@@ -3674,6 +3694,7 @@ async function loadTokenForEdit (tokenId) {
     insc.dsct_stick_id       = d.dsct_stick_id       || null
     insc.dsct_stick_label    = d.dsct_stick_label    || null
     insc.dsct_benefit_ids    = d.dsct_benefit_ids    || []
+    insc.personal_account_modules = d.personal_account_modules || []
     insc.b2b_contract_id     = d.b2b_contract_id     || null
     insc.token_payment_type  = token.payment_type    || null
 
@@ -4073,6 +4094,10 @@ function onEventCategoryChange (opcion) {
 
 // Solo la entrada VIP da derecho a acompanantes: fuera de VIP el campo no se
 // muestra y lo que se haya escrito se descarta al guardar.
+// S/100 de CUENTA CLAUDE/CHATGPT en un paquete: la asesora marca los modulos.
+const needsPersonalAccountModules = computed(() =>
+  requiresModulePick(insc.dsct_benefit_ids, programChildren.value.length))
+
 const isVipCategory = computed(() => {
   const sel = eventCategories.value.find(c => c.cat_event_category === insc.cat_event_category)
   return sel?.alias === 'we_event_category_vip'

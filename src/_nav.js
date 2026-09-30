@@ -351,6 +351,13 @@ export default [
         submodule: 'LINKS',
         roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Reporte Producto',
+        to: '/producto/reporte',
+        submodule: 'REPORTE',
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'GERENCIA'],
+      },
     ],
   },
   {

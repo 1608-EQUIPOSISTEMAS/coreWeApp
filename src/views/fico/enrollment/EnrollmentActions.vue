@@ -116,6 +116,7 @@
               </div>
               <small class="eact-price-hint">Lo ya pagado queda en la inscripcion RP; estas cuotas se trasladan a la nueva inscripcion y saldran en el correo.</small>
             </div>
+            <PersonalAccountField v-model="rpPersonalAccount" :program-version-id="props.enrollment?.program_version_id ?? null" />
             <div class="eact-field">
               <label>Justificacion <span class="eact-req">*</span></label>
               <textarea v-model="rpJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
@@ -237,6 +238,7 @@
               <MultiFileUploader v-model="ccForm.ticket_payment_urls" label="Adjuntar comprobante" :required="false" />
             </div>
 
+            <PersonalAccountField v-model="ccPersonalAccount" :program-version-id="ccProgramVersionId" style="margin-top:14px" />
             <div class="eact-field" style="margin-top:14px">
               <label>Justificacion <span class="eact-req">*</span></label>
               <textarea v-model="ccJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo del cambio de curso..."></textarea>
@@ -528,6 +530,7 @@ import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
+import PersonalAccountField from './PersonalAccountField.vue'
 import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin } from './editionWindows.js'
 
 const props = defineProps({
@@ -627,6 +630,8 @@ function resetAllForms () {
   rpJustificacion.value = ''
   rpEditions.value = []
   rpPlan.value = []
+  rpPersonalAccount.value = emptyPersonalAccount()
+  ccPersonalAccount.value = emptyPersonalAccount()
   ccProgramVersionId.value = null
   ccEditionId.value = null
   ccTotalAmount.value = 0
@@ -691,10 +696,22 @@ const rpPlanSumsOk = computed(() =>
   Math.abs(rpPlanTotal.value - rpPendingTotal.value) <= 0.01
 )
 
+// CUENTA PERSONAL del destino (RP/CC): opcional, pero si se marca en un paquete
+// tiene que ir en al menos un modulo. { provider, modules }.
+const emptyPersonalAccount = () => ({ provider: null, modules: null })
+const personalAccountComplete = pa => !pa.provider || pa.modules === null || pa.modules.length > 0
+const rpPersonalAccount = ref(emptyPersonalAccount())
+const ccPersonalAccount = ref(emptyPersonalAccount())
+const personalAccountPayload = pa => ({
+  personal_account: pa.provider,
+  personal_account_modules: pa.provider ? pa.modules : null
+})
+
 const canAdvanceRP = computed(() =>
   rpEditionId.value !== null &&
   rpJustificacion.value.trim().length > 0 &&
-  (rpPendingCuotas.value.length === 0 || rpPlanSumsOk.value)
+  (rpPendingCuotas.value.length === 0 || rpPlanSumsOk.value) &&
+  personalAccountComplete(rpPersonalAccount.value)
 )
 
 // Para el preview del correo: el plan con la numeracion 1..n que tendra el
@@ -752,7 +769,8 @@ async function handleReprogramConfirm () {
     const payload = {
       enrollment_id: enrollmentId.value,
       new_edition_id: rpEditionId.value,
-      justificacion: rpJustificacion.value.trim()
+      justificacion: rpJustificacion.value.trim(),
+      ...personalAccountPayload(rpPersonalAccount.value)
     }
     if (rpPendingCuotas.value.length) {
       payload.installment_plan = rpPlan.value.map(c => ({
@@ -829,7 +847,8 @@ const ccDiferencia = computed(() => Math.max(0, ccEditionFinalPrice.value - ccPa
 const canAdvanceCC = computed(() =>
   !!ccProgramVersionId.value &&
   (ccNoEdition.value || !!ccEditionId.value) &&
-  !!ccJustificacion.value.trim()
+  !!ccJustificacion.value.trim() &&
+  personalAccountComplete(ccPersonalAccount.value)
 )
 
 async function loadCCPrograms () {
@@ -906,7 +925,8 @@ async function handleCourseChangeConfirm () {
         url: f.url || f,
         name: f.name || 'Comprobante',
         type: f.type || null
-      }))
+      })),
+      ...personalAccountPayload(ccPersonalAccount.value)
     })
     toast.success('Cambio de curso realizado correctamente.')
     emit('action-completed')

@@ -180,6 +180,41 @@
           </div>
           <p class="bpanel-foot">La barra llega hasta 20 %: la meta queda a la mitad.</p>
         </article>
+
+        <!-- Conteo de ventas por categoría, observadas y convenios -->
+        <article class="bpanel bpanel--ancho">
+          <h2 class="panel-band">Ventas del periodo · {{ report.conteo.ventas }}</h2>
+          <div class="bpanel-body">
+            <div class="cifras">
+              <div v-for="c in cifrasVentas" :key="c.clave" class="cifra" :class="c.grupo">
+                <span class="cifra-label">{{ c.label }}</span>
+                <strong class="cifra-valor">{{ formatValue(report.conteo[c.clave], 'num') }}</strong>
+                <span class="cifra-sub">{{ c.sub }}</span>
+              </div>
+            </div>
+            <table class="goal-table">
+              <thead>
+                <tr>
+                  <th scope="col">Mes de venta</th>
+                  <th v-for="c in cifrasVentas" :key="c.clave" scope="col" class="num">{{ c.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in report.meses" :key="m.mes">
+                  <th scope="row" class="goal-name">{{ monthName(m.mes) }}</th>
+                  <td v-for="c in cifrasVentas" :key="c.clave" class="num" :class="c.clave === 'ventas' ? 'goal-fig' : 'goal-sub'">
+                    {{ formatValue(m.conteo[c.clave], 'num') }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="bpanel-foot">
+            Ventas = pagadas y aprobadas por FICO, por F. PAGO (En Vivo, grabados y membresías), sin becas, B2B ni eventos.
+            La categoría es la del lead, la columna Z de "3. SYSTEM": Mkt = palabra de campaña, Com = estrategia del asesor, Otros = entró solo; WEB = venta de la web.
+            Observadas = ventas del mes que FICO observó alguna vez; el ERP registra el cambio desde el 17/08/26. Convenios = ventas B2B aprobadas, fuera del total.
+          </p>
+        </article>
       </div>
     </template>
   </div>
@@ -247,6 +282,20 @@ const periodLabel = computed(() => {
 })
 const vivo = computed(() => report.value.vivo)
 const plan = computed(() => report.value.consultas_plan)
+
+const cifrasVentas = computed(() => {
+  const c = report.value.conteo
+  const de = (k) => (c.ventas ? `${formatValue((c[k] / c.ventas) * 100, 'pct')} de las ventas` : '—')
+  return [
+    { clave: 'ventas', label: 'Ventas', sub: 'pagadas y aprobadas', grupo: 'venta' },
+    { clave: 'mkt', label: 'Mkt', sub: de('mkt'), grupo: 'venta' },
+    { clave: 'com', label: 'Com', sub: de('com'), grupo: 'venta' },
+    { clave: 'web', label: 'WEB', sub: de('web'), grupo: 'venta' },
+    { clave: 'otros', label: 'Otros', sub: de('otros'), grupo: 'venta' },
+    { clave: 'observadas', label: 'Observadas', sub: 'FICO las devolvió', grupo: 'salida' },
+    { clave: 'convenios', label: 'Convenios', sub: 'B2B, aparte', grupo: 'aparte' }
+  ]
+})
 // Una cohorte sin clientes (antes del ERP) no dice nada.
 const cohorts = computed(() => report.value.recompra.cohortes.filter((c) => c.clientes > 0))
 const blackTop = computed(() => report.value.black_por_vencer.slice(0, BLACK_LIST_LIMIT))
@@ -294,6 +343,18 @@ const salesChart = computed(() => ({
 .band-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
 .band-title { margin: 2px 0 0; font-size: 24px; font-weight: 800; color: var(--ds-on-brand); }
 .band-period { font-weight: 500; opacity: .8; }
+.bpanel--ancho { grid-column: 1 / -1; }
+.cifras { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.cifra { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--ds-radius-sm); background: var(--ds-surface-2); }
+/* Observadas en otro fondo: es un reproceso, no una venta más. */
+.cifra.salida { background: var(--ds-soft-warn); }
+.cifra.salida .cifra-valor { color: var(--ds-warn-ink); }
+.cifra.aparte { background: var(--ds-soft-info); }
+.cifra-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); }
+.cifra-valor { font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.cifra-sub { font-size: 12px; color: var(--ds-ink-2); }
+@media (max-width: 1100px) { .cifras { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); } }
+
 .headline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ds-gap); margin-bottom: var(--ds-gap); }
 @media (max-width: 1100px) { .headline { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
 

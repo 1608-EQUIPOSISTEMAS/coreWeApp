@@ -31,11 +31,11 @@
           <i class="fa-solid fa-laptop"></i> Traera laptop
         </span>
         <span
-          v-if="fmt.hasClaudeAccount(enrollment)"
+          v-if="fmt.hasPersonalAccount(enrollment)"
           class="esp-pill esp-pill-claude"
-          title="Beneficio CUENTA CLAUDE — el alumno usara su cuenta personal"
+          :title="`Académica entrega una cuenta ${enrollment.personal_account}${enrollment.personal_account_modules?.length ? ` en ${enrollment.personal_account_modules.length} módulo(s)` : ''}`"
         >
-          <i class="fa-solid fa-user-shield"></i> CUENTA PERSONAL
+          <i class="fa-solid fa-user-shield"></i> CUENTA PERSONAL · {{ enrollment.personal_account }}
         </span>
       </div>
 

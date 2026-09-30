@@ -11,6 +11,16 @@
     <div v-if="!report" class="goal-empty">{{ loading ? 'Cargando informe…' : 'No se pudo cargar el informe.' }}</div>
 
     <template v-else>
+      <div class="headline">
+        <div v-for="c in headlineCards" :key="c.label" class="ds-kpi">
+          <span class="ds-kpi-icon" :class="c.tono" aria-hidden="true"><i class="fa-solid" :class="c.icono"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">{{ formatValue(c.valor, c.unidad) }}</span>
+            <span class="ds-kpi-label">{{ c.label }}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="panel-grid">
         <!-- 1. Alumnos que pagan sus cuotas -->
         <article class="bpanel">
@@ -69,9 +79,38 @@
             <p class="goal-note">
               A la fecha se esperaba <b>{{ cobranza.esperado }} %</b> · al ritmo actual cierra en <b>{{ formatValue(cobranza.proyeccion, 'soles') }}</b>.
             </p>
-            <ReportBars :grafico="cobranzaChart" titulo="Cobranza de cuotas por mes contra la meta" :alto="200" />
+            <ReportBars :grafico="cobranzaChart" titulo="Cobranza de cuotas por mes contra la meta" :alto="260" />
           </div>
           <p class="bpanel-foot">Pagos de cuotas por fecha de pago, en soles (dólares a 3.75). La meta de un rango parcial se prorratea por días.</p>
+        </article>
+
+        <!-- Deuda vencida por antigüedad -->
+        <article class="bpanel">
+          <h2 class="panel-band">Deuda vencida · {{ formatValue(deuda.total, 'soles') }}</h2>
+          <div class="bpanel-body">
+            <div class="stack" role="img" :aria-label="agingLabel">
+              <i v-for="t in deuda.tramos" :key="t.clave" :class="AGING_TONES[t.clave]" :style="{ width: (deuda.total ? (t.soles / deuda.total) * 100 : 0) + '%' }"></i>
+            </div>
+            <ul class="legend">
+              <li v-for="t in deuda.tramos" :key="t.clave">
+                <i :class="AGING_TONES[t.clave]"></i>{{ t.label }} <b>{{ formatValue(t.soles, 'soles') }}</b> · {{ t.alumnos }} alumnos
+              </li>
+            </ul>
+            <table v-if="deuda.top.length" class="wait-table">
+              <caption>Los {{ deuda.top.length }} que más deben de {{ deuda.alumnos }} alumnos</caption>
+              <tbody>
+                <tr v-for="d in deuda.top" :key="d.alumno">
+                  <td class="wait-name">{{ d.alumno }}</td>
+                  <td class="goal-sub">{{ d.cuotas }} {{ d.cuotas === 1 ? 'cuota' : 'cuotas' }}</td>
+                  <td class="wait-days" :class="{ viejo: d.dias > 90 }">{{ d.dias }} d</td>
+                  <td class="num goal-fig">{{ formatValue(d.soles, 'soles') }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="goal-note">No hay cuotas vencidas impagas.</p>
+            <p class="goal-note"><RouterLink to="/fico/cobranzas">Ver todas en Cobranzas</RouterLink></p>
+          </div>
+          <p class="bpanel-foot">Foto de hoy. Días = atraso de su cuota más vieja. Pasados los 90 días la deuda casi siempre termina en retiro: llamar primero a los de 31 a 90.</p>
         </article>
 
         <!-- Proyección: lo que ya está programado contra la meta -->
@@ -112,40 +151,12 @@
           <p class="bpanel-foot">Foto de hoy, sin importar el periodo elegido. No incluye pagos tardíos de cuotas vencidas en meses anteriores.</p>
         </article>
 
-        <!-- Deuda vencida por antigüedad -->
-        <article class="bpanel">
-          <h2 class="panel-band">Deuda vencida · {{ formatValue(deuda.total, 'soles') }}</h2>
-          <div class="bpanel-body">
-            <div class="stack" role="img" :aria-label="agingLabel">
-              <i v-for="t in deuda.tramos" :key="t.clave" :class="AGING_TONES[t.clave]" :style="{ width: (deuda.total ? (t.soles / deuda.total) * 100 : 0) + '%' }"></i>
-            </div>
-            <ul class="legend">
-              <li v-for="t in deuda.tramos" :key="t.clave">
-                <i :class="AGING_TONES[t.clave]"></i>{{ t.label }} <b>{{ formatValue(t.soles, 'soles') }}</b> · {{ t.alumnos }} alumnos
-              </li>
-            </ul>
-            <table v-if="deuda.top.length" class="wait-table">
-              <caption>Los {{ deuda.top.length }} que más deben de {{ deuda.alumnos }} alumnos</caption>
-              <tbody>
-                <tr v-for="d in deuda.top" :key="d.alumno">
-                  <td class="wait-name">{{ d.alumno }}</td>
-                  <td class="goal-sub">{{ d.cuotas }} {{ d.cuotas === 1 ? 'cuota' : 'cuotas' }}</td>
-                  <td class="wait-days" :class="{ viejo: d.dias > 90 }">{{ d.dias }} d</td>
-                  <td class="num goal-fig">{{ formatValue(d.soles, 'soles') }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="goal-note">No hay cuotas vencidas impagas.</p>
-            <p class="goal-note"><RouterLink to="/fico/cobranzas">Ver todas en Cobranzas</RouterLink></p>
-          </div>
-          <p class="bpanel-foot">Foto de hoy. Días = atraso de su cuota más vieja. Pasados los 90 días la deuda casi siempre termina en retiro: llamar primero a los de 31 a 90.</p>
-        </article>
-
         <!-- Recaudación por medio de pago -->
         <article class="bpanel">
           <h2 class="panel-band">Recaudación por medio de pago · {{ formatValue(report.medios.total, 'soles') }}</h2>
           <div class="bpanel-body">
-            <table class="goal-table">
+            <p v-if="!report.medios.medios.length" class="goal-note sin-datos">No entró ningún pago en el periodo.</p>
+            <table v-else class="goal-table">
               <tbody>
                 <tr v-for="m in report.medios.medios" :key="m.medio">
                   <th scope="row" class="goal-name">{{ m.medio }}</th>
@@ -164,8 +175,44 @@
           <p class="bpanel-foot">Todo lo que entró en el periodo (ventas y cuotas), por fecha de pago y en soles. "Sin medio registrado" es un pago que FICO confirmó sin elegir el medio.</p>
         </article>
 
+        <!-- Inscripciones del periodo y en qué terminaron -->
+        <article class="bpanel bpanel--ancho">
+          <h2 class="panel-band">Inscripciones del periodo · {{ inscripciones.total }}</h2>
+          <div class="bpanel-body">
+            <div class="cifras">
+              <div v-for="c in cifrasInscripciones" :key="c.clave" class="cifra" :class="c.grupo">
+                <span class="cifra-label">{{ c.label }}</span>
+                <strong class="cifra-valor">{{ formatValue(inscripciones[c.clave], 'num') }}</strong>
+                <span class="cifra-sub">{{ c.sub }}</span>
+              </div>
+            </div>
+            <table class="goal-table">
+              <thead>
+                <tr>
+                  <th scope="col">Mes de venta</th>
+                  <th v-for="c in cifrasInscripciones" :key="c.clave" scope="col" class="num">{{ c.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in report.meses" :key="m.mes">
+                  <th scope="row" class="goal-name">{{ monthName(m.mes) }}</th>
+                  <td v-for="c in cifrasInscripciones" :key="c.clave" class="num" :class="c.clave === 'total' ? 'goal-fig' : 'goal-sub'">
+                    {{ formatValue(m.inscripciones[c.clave], 'num') }}
+                    <small v-if="c.pct && m.inscripciones[c.pct]" class="pct">{{ formatValue(m.inscripciones[c.pct], 'pct') }}</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="bpanel-foot">
+            Inscripciones aprobadas por FICO, por F. PAGO, igual que la hoja. PT = pago total, PP = pago en cuotas, beca = monto 0.
+            Retirados, RP y CC son las ventas de ese mes que <b>hoy</b> están en ese estado: el ERP no guarda la fecha del retiro ni de la RP.
+            Una venta es la inscripción principal: el retiro de un solo curso de un paquete no cuenta.
+          </p>
+        </article>
+
         <!-- Evolución + 4. IGV -->
-        <article class="bpanel">
+        <article class="bpanel bpanel--ancho">
           <h2 class="panel-band">Últimos 6 meses</h2>
           <div class="bpanel-body">
             <table class="goal-table">
@@ -216,6 +263,33 @@ const ficoService = inject(ServiceKeys.Fico)
 const toast = useToast()
 
 // Mientras más vieja la deuda, más difícil de recuperar.
+const headlineCards = computed(() => {
+  const a = alumnos.value
+  const i = inscripciones.value
+  return [
+    { label: `pagan sus cuotas · meta ${metas.value.cumplen}%`, valor: a.pct_cumplen, unidad: 'pct', icono: 'fa-user-check', tono: a.tono_cumplen },
+    { label: `pagan a tiempo · meta ${metas.value.puntual}%`, valor: a.pct_puntual, unidad: 'pct', icono: 'fa-clock', tono: a.tono_puntual },
+    { label: `cobranza de cuotas · ${formatValue(cobranza.value.pct, 'pct')} de la meta`, valor: cobranza.value.logrado, unidad: 'soles', icono: 'fa-sack-dollar', tono: cobranza.value.tono },
+    { label: `deuda vencida · ${deuda.value.alumnos} alumnos`, valor: deuda.value.total, unidad: 'soles', icono: 'fa-triangle-exclamation', tono: deuda.value.total ? 'warn' : null },
+    { label: `inscripciones · ${i.pt} PT, ${i.pp} PP`, valor: i.total, unidad: 'num', icono: 'fa-file-signature', tono: null }
+  ]
+})
+
+// PT, PP y becas suman el total; retirados, RP y CC son en qué terminaron.
+const cifrasInscripciones = computed(() => {
+  const i = inscripciones.value
+  const de = (k) => (i[k] !== null ? `${formatValue(i[k], 'pct')} del total` : '—')
+  return [
+    { clave: 'total', label: 'Inscripciones', sub: 'aprobadas', grupo: 'venta' },
+    { clave: 'pt', label: 'PT', sub: 'pago total', grupo: 'venta' },
+    { clave: 'pp', label: 'PP', sub: i.pct_pp !== null ? `${formatValue(i.pct_pp, 'pct')} de las pagadas` : 'en cuotas', pct: 'pct_pp', grupo: 'venta' },
+    { clave: 'becas', label: 'Becas', sub: 'monto 0', grupo: 'venta' },
+    { clave: 'retirados', label: 'Retirados', sub: de('pct_retirados'), pct: 'pct_retirados', grupo: 'salida' },
+    { clave: 'rp', label: 'RP', sub: de('pct_rp'), pct: 'pct_rp', grupo: 'salida' },
+    { clave: 'cc', label: 'CC', sub: de('pct_cc'), pct: 'pct_cc', grupo: 'salida' }
+  ]
+})
+
 const AGING_TONES = { '1-30': 'accent', '31-90': 'warn', '90+': 'bad' }
 const NO_METHOD_LABEL = 'Sin medio registrado'
 
@@ -266,6 +340,7 @@ const alumnos = computed(() => report.value.alumnos)
 const cobranza = computed(() => report.value.cobranza)
 const proyeccion = computed(() => report.value.proyeccion)
 const deuda = computed(() => report.value.deuda)
+const inscripciones = computed(() => report.value.inscripciones)
 const agingLabel = computed(() => deuda.value.tramos.map((t) => `${t.label}: ${formatValue(t.soles, 'soles')}`).join(', '))
 
 // A tiempo / tarde / no pagó suman el 100 % de los alumnos: una sola barra.
@@ -300,6 +375,9 @@ const cobranzaChart = computed(() => ({
 .band-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
 .band-title { margin: 2px 0 0; font-size: 24px; font-weight: 800; color: var(--ds-on-brand); }
 .band-period { font-weight: 500; opacity: .8; }
+
+.headline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ds-gap); margin-bottom: var(--ds-gap); }
+@media (max-width: 1100px) { .headline { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
 
 .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-gap); margin-bottom: var(--ds-gap); }
 .bpanel {
@@ -336,6 +414,7 @@ const cobranzaChart = computed(() => ({
 .goal-bar--thin { height: 8px; margin: 0; }
 .bar-col { width: 32%; }
 .proj-note { margin-top: 10px; }
+.sin-datos { padding: 24px 0; text-align: center; }
 .stack > i.accent, .legend i.accent { background: var(--ds-accent); }
 
 .wait-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 12.5px; }
@@ -346,6 +425,18 @@ const cobranzaChart = computed(() => ({
 .wait-days { text-align: right; font-weight: 700; color: var(--ds-warn-ink); white-space: nowrap; }
 .wait-days.viejo { color: var(--ds-bad-ink); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.bpanel--ancho { grid-column: 1 / -1; }
+.cifras { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.cifra { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--ds-radius-sm); background: var(--ds-surface-2); }
+/* Salidas en otro fondo: no son ventas, son en qué terminaron. */
+.cifra.salida { background: var(--ds-soft-warn); }
+.cifra-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); }
+.cifra-valor { font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.cifra.salida .cifra-valor { color: var(--ds-warn-ink); }
+.cifra-sub { font-size: 12px; color: var(--ds-ink-2); }
+.pct { margin-left: 4px; font-size: 11px; color: var(--ds-muted); }
+@media (max-width: 1100px) { .cifras { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); } }
 
 .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 0 0 6px; padding: 0; list-style: none; font-size: 13px; color: var(--ds-ink-2); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; }

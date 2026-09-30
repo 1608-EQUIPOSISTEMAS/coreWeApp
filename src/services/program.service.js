@@ -65,7 +65,10 @@ export default class ProgramService {
     console.log(response.data)
     return response.data;
   }
-  
-  
-  
+
+  // Informe de Producto de una linea ('envivo' | 'online') en { date_start, date_end }.
+  async reporte(payload) {
+    const response = (await api.post('/program/reporte', payload)).data;
+    return response.data;
+  }
 }
