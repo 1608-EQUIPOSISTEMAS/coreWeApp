@@ -459,6 +459,7 @@ import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import SapCredentialsFields from '@/views/fico/enrollment/SapCredentialsFields.vue'
 import { isSapCredentialsValid } from '@/views/fico/enrollment/sapCredentials.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
+import { toLocalIsoDate } from '@/shared/lib/localDate.js'
 import {
   isSpeakerCategory,
   hasAssignedSeat as isSeatedCategory,
@@ -922,7 +923,7 @@ function autoGenerateInstallments () {
     d.setMonth(d.getMonth() + i + 1)
     d.setDate(15)
     installments.value.push({
-      due_date: d.toISOString().slice(0, 10),
+      due_date: toLocalIsoDate(d),
       amount: i === n - 1 ? last : perCuota
     })
   }
@@ -1260,7 +1261,7 @@ function generateInstallments () {
     const d = new Date(today)
     d.setMonth(d.getMonth() + i + 1)
     installments.value.push({
-      due_date: d.toISOString().slice(0, 10),
+      due_date: toLocalIsoDate(d),
       amount: i === n - 1 ? last : perCuota
     })
   }
@@ -1275,7 +1276,7 @@ function addInstallment () {
   const nextMonth = new Date()
   nextMonth.setMonth(nextMonth.getMonth() + installments.value.length + 1)
   installments.value.push({
-    due_date: nextMonth.toISOString().slice(0, 10),
+    due_date: toLocalIsoDate(nextMonth),
     amount: Math.max(0, Math.round(remaining * 100) / 100)
   })
 }

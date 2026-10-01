@@ -651,7 +651,7 @@
                  el del pago se deriva restando, asi la suma nunca puede descuadrar. -->
             <tr v-if="c._detraction" class="ef-detraction-row">
               <td></td>
-              <td colspan="10">
+              <td colspan="11">
                 <div class="ef-detraction-box">
                   <span class="ef-detraction-title"><i class="fa-solid fa-scissors"></i> Detraccion</span>
                   <label>
@@ -683,13 +683,13 @@
               </td>
             </tr>
             </template>
-            <tr v-if="!cuotas.length"><td colspan="11" class="ef-empty-row">Sin cuotas programadas</td></tr>
+            <tr v-if="!cuotas.length"><td colspan="12" class="ef-empty-row">Sin cuotas programadas</td></tr>
           </tbody>
           <tfoot v-if="cuotas.length">
             <tr class="ef-total-row">
               <td class="fw700 tr">Total:</td>
-              <td class="tr mono fw700">S/. {{ fmt.formatMoney(cuotasTotal) }}</td>
-              <td colspan="9"></td>
+              <td class="tr mono fw700 ef-amount-cell">S/. {{ fmt.formatMoney(cuotasTotal) }}</td>
+              <td colspan="10"></td>
             </tr>
           </tfoot>
         </table>
@@ -868,6 +868,7 @@ import ActionStepper from '@/components/ActionStepper.vue'
 import EmailPreviewStep from './EmailPreviewStep.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import api from '@/services/api'
+import { toLocalIsoDate } from '@/shared/lib/localDate.js'
 
 const props = defineProps({
   detail: { type: Object, default: () => ({}) },
@@ -1075,7 +1076,7 @@ const adicional = reactive({
   cat_business_entity: null,
   bank_account_id: null,
   transaction_code: '',
-  payment_date: new Date().toISOString().slice(0, 10),
+  payment_date: toLocalIsoDate(),
   voucher_url: null
 })
 const certificatePayment = computed(() => props.detail?.additional_payments?.[0] || null)
@@ -1111,7 +1112,7 @@ function startEditAdicional () {
     cat_business_entity: p.cat_business_entity || null,
     bank_account_id: p.bank_account_id || null,
     transaction_code: p.transaction_code || '',
-    payment_date: p.payment_date ? String(p.payment_date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+    payment_date: p.payment_date ? String(p.payment_date).slice(0, 10) : toLocalIsoDate(),
     voucher_url: p.evidence_url || null
   })
   adicionalJust.value = ''
@@ -1138,7 +1139,7 @@ async function uploadAdicionalVoucher (event) {
   event.target.value = ''
 }
 
-const todayIso = computed(() => new Date().toISOString().slice(0, 10))
+const todayIso = computed(() => toLocalIsoDate())
 // La OS/OP no pide moneda ni medio: no hay deposito que describir todavia.
 const canConfirmContado = computed(() =>
   isBeca.value || isDocumentalSale.value || (props.form.cat_currency && props.form.cat_payment_medium)
@@ -1670,7 +1671,6 @@ function needsEditionDecision (child) {
   padding: 12px 10px;
   border-top: 1px solid #F0F0F0;
   background: #FAFAFA;
-  font-size: 13px;
 }
 .ef-empty-row { text-align: center; padding: 32px; color: #C4C4C4; font-size: 13px; }
 

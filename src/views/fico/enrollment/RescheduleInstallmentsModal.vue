@@ -295,6 +295,7 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import api from '@/services/api'
+import { toLocalIsoDate } from '@/shared/lib/localDate.js'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -438,7 +439,7 @@ watch(() => props.visible, (v) => {
     cat_business_entity: null,
     bank_account_id: null,
     transaction_code: '',
-    payment_date: new Date().toISOString().slice(0, 10),
+    payment_date: toLocalIsoDate(),
     voucher_url: null
   })
   rows.value = buildInitialRows()
@@ -470,10 +471,10 @@ const payment = reactive({
   cat_business_entity: null,
   bank_account_id: null,
   transaction_code: '',
-  payment_date: new Date().toISOString().slice(0, 10),
+  payment_date: toLocalIsoDate(),
   voucher_url: null
 })
-const todayIso = computed(() => new Date().toISOString().slice(0, 10))
+const todayIso = computed(() => toLocalIsoDate())
 const payDiscount = ref(0)
 const payDiscountType = ref('percent') // el caso tipico de campaña es %
 // Descuento efectivo en soles (el % se calcula sobre el total de las cuotas a pagar).

@@ -1,278 +1,252 @@
 <template>
-  <div class="eet-scroll-wrapper">
-    <table class="eet-table">
-      <thead>
-        <!-- Group headers row -->
-        <tr class="eet-group-row">
-          <th class="eet-th-action eet-sticky-col">&nbsp;</th>
+  <section class="ds-panel">
+    <div class="ds-table-scroll">
+      <table class="ds-table ds-table--densa eet">
+        <thead>
+          <!-- Grupos plegables: el estado se recuerda en el navegador. -->
+          <tr class="eet-groups">
+            <th class="eet-sticky">&nbsp;</th>
+            <th v-for="g in GROUPS" :key="g.key" :colspan="cg[g.key] ? groupCols[g.key] : 1" class="eet-group">
+              <button
+                type="button"
+                class="eet-group-btn"
+                :class="{ 'has-filter': groupHasFilter(g) }"
+                :aria-expanded="cg[g.key]"
+                :title="groupHasFilter(g) ? 'Hay un filtro activo en este grupo' : (cg[g.key] ? 'Plegar grupo' : 'Desplegar grupo')"
+                @click="toggle(g.key)"
+              >
+                <i class="fa-solid fa-chevron-right eet-chevron" :class="{ 'is-open': cg[g.key] }" aria-hidden="true"></i>
+                {{ g.label }}
+                <i v-if="groupHasFilter(g)" class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+          </tr>
 
-          <th
-            class="eet-group-header eet-grp-identity"
-            :colspan="cg.identity ? 4 : 1"
-            @click="toggle('identity')"
-          >
-            <span class="eet-group-label">
-              <svg class="eet-chevron" :class="{ 'is-collapsed': !cg.identity }" width="10" height="10" viewBox="0 0 10 10"><path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              IDENTIDAD
-            </span>
-          </th>
+          <tr>
+            <th class="eet-sticky"><span class="sr-only">Abrir</span></th>
 
-          <th
-            class="eet-group-header eet-grp-profile"
-            :colspan="cg.profile ? 5 : 1"
-            @click="toggle('profile')"
-          >
-            <span class="eet-group-label">
-              <svg class="eet-chevron" :class="{ 'is-collapsed': !cg.profile }" width="10" height="10" viewBox="0 0 10 10"><path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              PERFIL ALUMNO
-            </span>
-          </th>
-
-          <th
-            class="eet-group-header eet-grp-program"
-            :colspan="cg.program ? programCols : 1"
-            @click="toggle('program')"
-          >
-            <span class="eet-group-label">
-              <svg class="eet-chevron" :class="{ 'is-collapsed': !cg.program }" width="10" height="10" viewBox="0 0 10 10"><path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              PROGRAMA
-            </span>
-          </th>
-
-          <th
-            class="eet-group-header eet-grp-finance"
-            :colspan="cg.finance ? 14 : 1"
-            @click="toggle('finance')"
-          >
-            <span class="eet-group-label">
-              <svg class="eet-chevron" :class="{ 'is-collapsed': !cg.finance }" width="10" height="10" viewBox="0 0 10 10"><path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              FINANZAS
-            </span>
-          </th>
-
-          <th
-            class="eet-group-header eet-grp-installments"
-            :colspan="cg.installments ? 16 : 1"
-            @click="toggle('installments')"
-          >
-            <span class="eet-group-label">
-              <svg class="eet-chevron" :class="{ 'is-collapsed': !cg.installments }" width="10" height="10" viewBox="0 0 10 10"><path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              CUOTAS
-            </span>
-          </th>
-        </tr>
-
-        <!-- Column headers row -->
-        <tr class="eet-col-row">
-          <th class="eet-th-action eet-sticky-col">Acc.</th>
-
-          <!-- Identity -->
-          <template v-if="cg.identity">
-            <th class="eet-col-header">DNI</th>
-            <th class="eet-col-header">Nombres</th>
-            <th class="eet-col-header">Celular</th>
-            <th class="eet-col-header">Correo</th>
-          </template>
-          <th v-else class="eet-col-header eet-collapsed-hint">...</th>
-
-          <!-- Profile -->
-          <template v-if="cg.profile">
-            <th class="eet-col-header">Ocupacion</th>
-            <th class="eet-col-header">Tip. Cliente</th>
-            <th class="eet-col-header">Member</th>
-            <th class="eet-col-header">Estado</th>
-            <th class="eet-col-header">Mod./Tipo</th>
-          </template>
-          <th v-else class="eet-col-header eet-collapsed-hint">...</th>
-
-          <!-- Program -->
-          <template v-if="cg.program">
-            <th class="eet-col-header">Tipo Prog.</th>
-            <th class="eet-col-header">Mod. Prog.</th>
-            <th class="eet-col-header">Programa</th>
-            <th class="eet-col-header">ED</th>
-            <template v-for="n in childCols" :key="'ch-' + n">
-              <th class="eet-col-header">CURSO {{ n }}</th>
-              <th class="eet-col-header">FI {{ n }}</th>
-            </template>
-          </template>
-          <th v-else class="eet-col-header eet-collapsed-hint">...</th>
-
-          <!-- Finance -->
-          <template v-if="cg.finance">
-            <th class="eet-col-header">F. Inicio</th>
-            <th class="eet-col-header">F. Pago</th>
-            <th class="eet-col-header">Asesor</th>
-            <th class="eet-col-header">Tipo Pago</th>
-            <th class="eet-col-header">Dsct Princ</th>
-            <th class="eet-col-header">Dsct Adic</th>
-            <th class="eet-col-header">Canal</th>
-            <th class="eet-col-header">P. Lista</th>
-            <th class="eet-col-header">Total</th>
-            <th class="eet-col-header">Descontado</th>
-            <th class="eet-col-header">Moneda</th>
-            <th class="eet-col-header">Medio Pago</th>
-            <th class="eet-col-header">Ent. Empresa</th>
-            <th class="eet-col-header">Ent. Financ.</th>
-          </template>
-          <th v-else class="eet-col-header eet-collapsed-hint">...</th>
-
-          <!-- Installments -->
-          <template v-if="cg.installments">
-            <template v-for="n in 8" :key="'ih-'+n">
-              <th class="eet-col-header">FC{{ n }}</th>
-              <th class="eet-col-header">C{{ n }}</th>
-            </template>
-          </template>
-          <th v-else class="eet-col-header eet-collapsed-hint">...</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <template v-if="isLoading">
-          <tr v-for="n in 10" :key="'sk-' + n" class="eet-skeleton-row">
-            <td class="eet-td-action eet-sticky-col">
-              <div class="eet-sk-cell" style="width:18px;height:18px;border-radius:4px;margin:0 auto"></div>
-            </td>
             <template v-if="cg.identity">
-              <td class="eet-cell"><div class="eet-sk-cell" style="width:80px"></div></td>
-              <td class="eet-cell"><div class="eet-sk-cell" style="width:140px"></div></td>
-              <td class="eet-cell"><div class="eet-sk-cell" style="width:90px"></div></td>
-              <td class="eet-cell"><div class="eet-sk-cell" style="width:140px"></div></td>
+              <th>DNI</th>
+              <th><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('alumno') }" :aria-expanded="colToggles.isOpen('alumno')" @click="colToggles.toggle('alumno')">Nombres <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th>Celular</th>
+              <th>Correo</th>
             </template>
-            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else class="eet-folded">…</th>
 
             <template v-if="cg.profile">
-              <td v-for="c in 5" :key="'skp-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+              <th>Ocupación</th>
+              <th>Tipo cliente</th>
+              <th>Member</th>
+              <th>Estado</th>
+              <th>Mod. / tipo</th>
             </template>
-            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else class="eet-folded">…</th>
 
             <template v-if="cg.program">
-              <td v-for="c in programCols" :key="'skpr-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+              <th>Tipo prog.</th>
+              <th>Mod. prog.</th>
+              <th><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('programa') }" :aria-expanded="colToggles.isOpen('programa')" @click="colToggles.toggle('programa')">Programa <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th>Ed.</th>
+              <template v-for="n in childCols" :key="'ch-' + n">
+                <th>Curso {{ n }}</th>
+                <th>FI {{ n }}</th>
+              </template>
             </template>
-            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else class="eet-folded">…</th>
 
             <template v-if="cg.finance">
-              <td v-for="c in 14" :key="'skf-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+              <th>F. inicio</th>
+              <th><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fPago') }" :aria-expanded="colToggles.isOpen('fPago')" @click="colToggles.toggle('fPago')">F. pago <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('agente') }" :aria-expanded="colToggles.isOpen('agente')" @click="colToggles.toggle('agente')">Asesor <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('tipoPago') }" :aria-expanded="colToggles.isOpen('tipoPago')" @click="colToggles.toggle('tipoPago')">Tipo pago <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th>Dsct. princ.</th>
+              <th>Dsct. adic.</th>
+              <th>Canal</th>
+              <th class="num">P. lista</th>
+              <th class="num"><button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('montoMin') }" :aria-expanded="colToggles.isOpen('montoMin')" @click="colToggles.toggle('montoMin')">Total <i class="fa-solid fa-filter" aria-hidden="true"></i></button></th>
+              <th class="num">Descontado</th>
+              <th>Moneda</th>
+              <th>Medio pago</th>
+              <th>Ent. empresa</th>
+              <th>Ent. financ.</th>
             </template>
-            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else class="eet-folded">…</th>
 
             <template v-if="cg.installments">
-              <td v-for="c in 16" :key="'ski-'+c" class="eet-cell"><div class="eet-sk-cell"></div></td>
+              <template v-for="n in 8" :key="'ih-' + n">
+                <th>FC{{ n }}</th>
+                <th class="num">C{{ n }}</th>
+              </template>
             </template>
-            <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else class="eet-folded">…</th>
           </tr>
-        </template>
-        <template v-else>
-        <tr
-          v-for="e in enrollments"
-          :key="e.id"
-          class="eet-data-row"
-        >
-          <!-- Action -->
-          <td class="eet-td-action eet-sticky-col">
-            <button class="eet-btn-detail" @click="openDetail(e)" title="Ver detalle">
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2.5C4 2.5 1.5 7.5 1.5 7.5s2.5 5 6 5 6-5 6-5-2.5-5-6-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="7.5" cy="7.5" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
-            </button>
-          </td>
 
-          <!-- Identity -->
-          <template v-if="cg.identity">
-            <td class="eet-cell">{{ e.document_number || '\u2014' }}</td>
-            <td class="eet-cell eet-cell-name">{{ e.student_full_name || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.phone || '\u2014' }}</td>
-            <td class="eet-cell eet-cell-email">{{ e.email || '\u2014' }}</td>
-          </template>
-          <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+          <!-- Fila de filtros: aparece solo al abrir una columna o con un filtro
+               puesto. Misma forma que la fila de títulos para quedar alineada. -->
+          <tr v-if="colToggles.anyVisible.value" class="eet-filters">
+            <th class="eet-sticky">
+              <button class="btn-icon btn-icon-sm" type="button" title="Limpiar y cerrar filtros" aria-label="Limpiar y cerrar filtros" @click="clearFilters">
+                <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+              </button>
+            </th>
 
-          <!-- Profile -->
-          <template v-if="cg.profile">
-            <td class="eet-cell">{{ e.occupation_label || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.client_type_label || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.member_type_label || '\u2014' }}</td>
-            <td class="eet-cell">
-              <span :class="['eet-pill', fmt.statusPill(e.student_status)]">{{ e.student_status || '\u2014' }}</span>
-            </td>
-            <td class="eet-cell">{{ [e.modality, e.student_type_label].filter(Boolean).join(' / ') || '\u2014' }}</td>
-          </template>
-          <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
-
-          <!-- Program -->
-          <template v-if="cg.program">
-            <td class="eet-cell">{{ e.program_type || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.program_modality || '\u2014' }}</td>
-            <td class="eet-cell eet-cell-program">
-              {{ e.program_name || '\u2014' }}
-              <span
-                v-if="Number(e.validations_count) > 0"
-                class="eet-validation-badge"
-                :title="`${e.validations_count} modulo(s) convalidado(s)`"
-              >
-                <i class="fa-solid fa-circle-check"></i> Convalida
-              </span>
-            </td>
-            <td class="eet-cell">{{ e.edition_code || '\u2014' }}</td>
-            <template v-for="n in childCols" :key="'cc-' + n">
-              <td class="eet-cell eet-cell-course" :title="childAt(e, n)?.course_full_name">
-                {{ childAt(e, n)?.course_name || '\u2014' }}
-              </td>
-              <td class="eet-cell eet-cell-date" :title="childAt(e, n)?.edition_code">
-                {{ fmt.formatDate(childAt(e, n)?.start_date) }}
-              </td>
+            <template v-if="cg.identity">
+              <th></th>
+              <th><input v-if="colToggles.isOpen('alumno')" :value="colFilters.alumno" @input="setFilter('alumno', $event.target.value)" class="eet-filter" placeholder="Nombre o DNI…" aria-label="Filtrar por alumno" /></th>
+              <th></th>
+              <th></th>
             </template>
-          </template>
-          <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <th v-else></th>
 
-          <!-- Finance -->
-          <template v-if="cg.finance">
-            <td class="eet-cell">{{ fmt.formatDate(e.start_date) }}</td>
-            <td class="eet-cell">{{ fmt.formatDate(e.pay_date) }}</td>
-            <td class="eet-cell">{{ e.seller_agent_name || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.payment_type || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.main_discount || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.additional_discounts || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.payment_channel || '\u2014' }}</td>
-            <td class="eet-cell eet-cell-money">{{ fmt.formatMoney(e.list_price) }}</td>
-            <td class="eet-cell eet-cell-money">{{ fmt.formatMoney(e.total_to_pay) }}</td>
-            <td class="eet-cell eet-cell-money">{{ fmt.formatMoney(e.total_discounted) }}</td>
-            <td class="eet-cell">{{ e.currency_label || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.method_payment_label || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.account_label || '\u2014' }}</td>
-            <td class="eet-cell">{{ e.token_provider_label || '\u2014' }}</td>
-          </template>
-          <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
+            <template v-if="cg.profile"><th v-for="c in 5" :key="'fp-' + c"></th></template>
+            <th v-else></th>
 
-          <!-- Installments -->
-          <template v-if="cg.installments">
-            <template v-for="n in 8" :key="'ic-'+n">
-              <td class="eet-cell eet-cell-date">{{ fmt.formatDate(e['fc'+n]) }}</td>
-              <td class="eet-cell eet-cell-money">{{ e['c'+n] != null ? fmt.formatMoney(e['c'+n]) : '\u2014' }}</td>
+            <template v-if="cg.program">
+              <th></th>
+              <th></th>
+              <th><input v-if="colToggles.isOpen('programa')" :value="colFilters.programa" @input="setFilter('programa', $event.target.value)" class="eet-filter" placeholder="Programa…" aria-label="Filtrar por programa" /></th>
+              <th></th>
+              <th v-for="c in childCols * 2" :key="'fc-' + c"></th>
             </template>
-          </template>
-          <td v-else class="eet-cell eet-collapsed-hint">&nbsp;</td>
-        </tr>
+            <th v-else></th>
 
-        <tr v-if="!enrollments.length">
-          <td :colspan="totalCols" class="eet-empty">Sin registros</td>
-        </tr>
-        </template>
-      </tbody>
-    </table>
-  </div>
+            <template v-if="cg.finance">
+              <th></th>
+              <th><BaseDatePicker v-if="colToggles.isOpen('fPago')" :model-value="colFilters.fPago" @update:model-value="v => setFilter('fPago', v)" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Desde – hasta" /></th>
+              <th><ColumnFilterDropdown v-if="colToggles.isOpen('agente')" column-label="Agente" :all-items="enrollments" :value-extractor="e => e.seller_agent_name || '(Vacío)'" :model-value="colFilters.agente" @update:model-value="v => setFilter('agente', v)" /></th>
+              <th><ColumnFilterDropdown v-if="colToggles.isOpen('tipoPago')" column-label="Tipo Pago" :all-items="enrollments" :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'" :model-value="colFilters.tipoPago" @update:model-value="v => setFilter('tipoPago', v)" /></th>
+              <th v-for="c in 4" :key="'ff-' + c"></th>
+              <th><input v-if="colToggles.isOpen('montoMin')" :value="colFilters.montoMin" @input="setFilter('montoMin', $event.target.value)" type="number" min="0" class="eet-filter num" placeholder="&ge; 0" aria-label="Total mínimo" /></th>
+              <th v-for="c in 5" :key="'fg-' + c"></th>
+            </template>
+            <th v-else></th>
+
+            <template v-if="cg.installments"><th v-for="c in 16" :key="'fi-' + c"></th></template>
+            <th v-else></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <template v-if="isLoading">
+            <tr v-for="n in 10" :key="'sk-' + n">
+              <td :colspan="totalCols"><span class="ds-skel"></span></td>
+            </tr>
+          </template>
+          <tr v-else-if="!enrollments.length">
+            <td :colspan="totalCols" class="ds-empty ds-empty--lista">No hay inscripciones con estos filtros. Quita un filtro para ver más.</td>
+          </tr>
+          <template v-else>
+            <tr v-for="e in enrollments" :key="e.enrollment_id">
+              <td class="eet-sticky">
+                <button class="btn-icon btn-icon-sm" type="button" title="Abrir detalle completo" aria-label="Abrir detalle completo" @click="openDetail(e)">
+                  <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                </button>
+              </td>
+
+              <template v-if="cg.identity">
+                <td class="mono">{{ e.document_number || '—' }}</td>
+                <td class="eet-strong eet-clip" :title="e.student_full_name">{{ e.student_full_name || '—' }}</td>
+                <td>{{ e.phone || '—' }}</td>
+                <td class="eet-clip" :title="e.email">{{ e.email || '—' }}</td>
+              </template>
+              <td v-else class="eet-folded"></td>
+
+              <template v-if="cg.profile">
+                <td>{{ e.occupation_label || '—' }}</td>
+                <td>{{ e.client_type_label || '—' }}</td>
+                <td>{{ e.member_type_label || '—' }}</td>
+                <td><span class="ds-pill" :class="studentTone(e.student_status)">{{ e.student_status || '—' }}</span></td>
+                <td>{{ [e.modality, e.student_type_label].filter(Boolean).join(' / ') || '—' }}</td>
+              </template>
+              <td v-else class="eet-folded"></td>
+
+              <template v-if="cg.program">
+                <td>{{ e.program_type || '—' }}</td>
+                <td>{{ e.program_modality || '—' }}</td>
+                <td class="eet-strong eet-clip" :title="e.program_name">
+                  {{ e.program_name || '—' }}
+                  <span v-if="Number(e.validations_count) > 0" class="ds-pill violet" :title="`${e.validations_count} módulo(s) convalidado(s)`">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Convalida
+                  </span>
+                </td>
+                <td>{{ e.edition_code || '—' }}</td>
+                <template v-for="n in childCols" :key="'cc-' + n">
+                  <td class="eet-clip" :title="childAt(e, n)?.course_full_name">{{ childAt(e, n)?.course_name || '—' }}</td>
+                  <td :title="childAt(e, n)?.edition_code">{{ fmt.formatDate(childAt(e, n)?.start_date) }}</td>
+                </template>
+              </template>
+              <td v-else class="eet-folded"></td>
+
+              <template v-if="cg.finance">
+                <td>{{ fmt.formatDate(e.start_date) }}</td>
+                <td>{{ fmt.formatDate(e.pay_date) }}</td>
+                <td>{{ e.seller_agent_name || '—' }}</td>
+                <td>{{ e.payment_type || '—' }}</td>
+                <td>{{ e.main_discount || '—' }}</td>
+                <td>{{ e.additional_discounts || '—' }}</td>
+                <td>{{ e.payment_channel || '—' }}</td>
+                <td class="num mono">{{ fmt.formatMoney(e.list_price) }}</td>
+                <td class="num mono eet-strong">{{ fmt.formatMoney(e.total_to_pay) }}</td>
+                <td class="num mono">{{ fmt.formatMoney(e.total_discounted) }}</td>
+                <td>{{ e.currency_label || '—' }}</td>
+                <td>{{ e.method_payment_label || '—' }}</td>
+                <td>{{ e.account_label || '—' }}</td>
+                <td>{{ e.token_provider_label || '—' }}</td>
+              </template>
+              <td v-else class="eet-folded"></td>
+
+              <template v-if="cg.installments">
+                <template v-for="n in 8" :key="'ic-' + n">
+                  <td>{{ fmt.formatDate(e['fc' + n]) }}</td>
+                  <td class="num mono">{{ e['c' + n] != null ? fmt.formatMoney(e['c' + n]) : '—' }}</td>
+                </template>
+              </template>
+              <td v-else class="eet-folded"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </template>
 
 <script setup>
 import { reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
+import { useColumnFilterToggles } from '@/composables/useColumnFilterToggles.js'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import BaseDatePicker from '@/components/BaseDatePicker.vue'
 
 const props = defineProps({
   enrollments: { type: Array, default: () => [] },
-  isLoading:   { type: Boolean, default: false }
+  colFilters: { type: Object, required: true },
+  isLoading: { type: Boolean, default: false }
 })
+const emit = defineEmits(['clear-col-filters', 'update-filter'])
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
+// Mismos filtros que la vista compacta (useEnrollmentList.colFilters): lo que se
+// filtra en una vista sigue filtrado al cambiar a la otra.
+const colToggles = useColumnFilterToggles(props.colFilters)
+
+// Los filtros son del composable de la pagina (useEnrollmentList.colFilters): la
+// tabla no los muta, avisa el cambio y la pagina lo aplica.
+const setFilter = (key, value) => emit('update-filter', key, value)
+
+// Estado del ALUMNO (no el de FICO): activo es lo normal, retirado/anulado es
+// baja; SEG, RP, CC, E0... son situaciones de la venta, no alertas.
+function studentTone (status) {
+  if (/activ/i.test(status || '')) return 'ok'
+  if (/retir|anul/i.test(status || '')) return 'bad'
+  return ''
+}
+
+function clearFilters () {
+  emit('clear-col-filters')
+  colToggles.closeAll()
+}
 
 function openDetail (e) {
   router.push({
@@ -288,7 +262,7 @@ function loadState () {
   try {
     const raw = localStorage.getItem(LS_KEY)
     if (raw) return JSON.parse(raw)
-  } catch { /* noop */ }
+  } catch { /* preferencia corrupta o sin storage: se usan los defaults */ }
   return null
 }
 
@@ -296,7 +270,7 @@ const defaults = { identity: true, profile: true, program: true, finance: true, 
 const cg = reactive({ ...defaults, ...loadState() })
 
 watch(cg, val => {
-  localStorage.setItem(LS_KEY, JSON.stringify(val))
+  try { localStorage.setItem(LS_KEY, JSON.stringify(val)) } catch { /* modo privado: no se recuerda */ }
 }, { deep: true })
 
 function toggle (key) {
@@ -311,395 +285,92 @@ const childCols = computed(
   () => props.enrollments.reduce((max, e) => Math.max(max, e.children?.length || 0), 0)
 )
 
-// Tipo Prog. + Mod. Prog. + Programa + ED, mas el par de cada curso hijo.
-const programCols = computed(() => 4 + childCols.value * 2)
-
 const childAt = (e, n) => e.children?.[n - 1]
 
-const totalCols = computed(() => {
-  let n = 1 // action col
-  n += cg.identity ? 4 : 1
-  n += cg.profile ? 5 : 1
-  n += cg.program ? programCols.value : 1
-  n += cg.finance ? 14 : 1
-  n += cg.installments ? 16 : 1
-  return n
-})
+// filters = claves de colFilters que viven en el grupo: si el grupo esta plegado
+// y alguna filtra, su encabezado lo avisa (si no, el filtro quedaria invisible).
+const GROUPS = [
+  { key: 'identity', label: 'Identidad', filters: ['alumno'] },
+  { key: 'profile', label: 'Perfil del alumno', filters: [] },
+  { key: 'program', label: 'Programa', filters: ['programa'] },
+  { key: 'finance', label: 'Finanzas', filters: ['fPago', 'agente', 'tipoPago', 'montoMin'] },
+  { key: 'installments', label: 'Cuotas', filters: [] }
+]
+const groupHasFilter = (g) => g.filters.some(colToggles.isActive)
+
+const groupCols = computed(() => ({
+  identity: 4,
+  profile: 5,
+  program: 4 + childCols.value * 2,
+  finance: 14,
+  installments: 16
+}))
+
+const totalCols = computed(() =>
+  1 + GROUPS.reduce((n, g) => n + (cg[g.key] ? groupCols.value[g.key] : 1), 0))
 </script>
 
 <style scoped>
-/* Scroll wrapper */
-.eet-scroll-wrapper {
-  overflow-x: auto;
-  overflow-y: visible;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  background: #fff;
-}
+/* Tabla, pills, vacío y skeleton salen de ds-*. Aquí: la columna fija, los
+   grupos plegables y la fila de filtros. Sin bloque dark: todo va con tokens. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Table base */
-.eet-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
-  font-size: 12px;
-  color: #1F2937;
-}
+.eet { width: max-content; min-width: 100%; }
+.eet th, .eet td { white-space: nowrap; }
+.eet td { vertical-align: middle; }
+.eet td:first-child { color: inherit; }
 
-/* Sticky action column */
-.eet-sticky-col {
+/* Columna de acción fija al hacer scroll horizontal. */
+.eet-sticky {
   position: sticky;
   left: 0;
-  z-index: 3;
-  background: #fff;
-  min-width: 48px;
+  z-index: 2;
   width: 48px;
   text-align: center;
-  border-right: 1px solid #E5E7EB;
+  background: var(--ds-surface);
+  box-shadow: inset -1px 0 0 var(--ds-border);
 }
 
-/* Group header row */
-.eet-group-row {
-  background: #FAFAFA;
+.eet-groups th { padding-top: 8px; padding-bottom: 6px; background: var(--ds-surface-2); }
+.eet-group { border-left: 1px solid var(--ds-border); }
+.eet-group-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 11.5px; font-weight: 700; color: var(--ds-heading);
 }
+.eet-group-btn.has-filter { color: var(--ds-accent); }
+.eet-group-btn:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; }
+.eet-chevron { font-size: 9px; transition: transform 0.15s; }
+.eet-chevron.is-open { transform: rotate(90deg); }
+.eet-folded { width: 32px; text-align: center; color: var(--ds-muted); }
 
-.eet-group-row .eet-sticky-col {
-  background: #FAFAFA;
-}
-
-.eet-group-header {
-  padding: 6px 10px;
-  background: #fff;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  border-bottom: 1px solid #F3F4F6;
-  transition: background 0.15s;
-}
-
-.eet-group-header:hover {
-  background: #F9FAFB;
-}
-
-.eet-group-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #374151;
-}
-
-/* Group accent borders */
-.eet-grp-identity { border-left: 2px solid #2563eb; }
-.eet-grp-profile { border-left: 2px solid #7c3aed; }
-.eet-grp-program { border-left: 2px solid #059669; }
-.eet-grp-finance { border-left: 2px solid #d97706; }
-.eet-grp-installments { border-left: 2px solid #0ea5e9; }
-
-/* Chevron rotation */
-.eet-chevron {
-  transition: transform 0.2s;
-  transform: rotate(90deg);
-  flex-shrink: 0;
-}
-
-.eet-chevron.is-collapsed {
-  transform: rotate(0deg);
-}
-
-/* Column header row */
-.eet-col-row {
-  background: #FAFAFA;
-}
-
-.eet-col-row .eet-sticky-col {
-  background: #FAFAFA;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6B7280;
-  padding: 5px 6px;
-  border-bottom: 1px solid #E5E7EB;
-}
-
-.eet-col-header {
-  padding: 5px 8px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6B7280;
-  white-space: nowrap;
-  border-bottom: 1px solid #E5E7EB;
-  background: #FAFAFA;
-}
-
-.eet-collapsed-hint {
-  color: #9CA3AF;
-  text-align: center;
-  min-width: 32px;
-  width: 32px;
-  font-size: 11px;
-  letter-spacing: 2px;
-}
-
-/* Data rows */
-.eet-data-row {
-  height: 44px;
-  transition: background 0.12s;
-}
-
-.eet-data-row:hover {
-  background: #F9FAFB;
-}
-
-.eet-data-row:hover .eet-sticky-col {
-  background: #F9FAFB;
-}
-
-.eet-data-row .eet-sticky-col {
-  border-bottom: 1px solid #F3F4F6;
-}
-
-/* Cells */
-.eet-cell {
-  padding: 0 8px;
-  white-space: nowrap;
-  border-bottom: 1px solid #F3F4F6;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-}
-
-.eet-cell-name {
-  max-width: 180px;
-  font-weight: 500;
-}
-
-.eet-cell-email {
-  max-width: 180px;
-  color: #6B7280;
-  font-size: 11px;
-}
-
-.eet-cell-program {
-  max-width: 220px;
-}
-
-.eet-cell-course {
-  max-width: 150px;
-}
-
-.eet-validation-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: 6px;
-  padding: 2px 6px;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #5B21B6;
-  background: #F5F3FF;
-  border: 1px solid #DDD6FE;
-  border-radius: 4px;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-.eet-validation-badge i {
-  font-size: 8px;
-}
-
-.eet-cell-money {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
-
-.eet-cell-date {
-  font-size: 11px;
-  color: #6B7280;
-}
-
-.eet-td-action {
-  padding: 0;
-  border-bottom: 1px solid #F3F4F6;
-  vertical-align: middle;
-}
-
-/* Action button */
-.eet-btn-detail {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #6B7280;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.eet-btn-detail:hover {
-  background: #EFF6FF;
-  color: #2563eb;
-}
-
-/* Status pills */
-.eet-pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.pill-green {
-  background: #ECFDF5;
-  color: #065F46;
-}
-
-.pill-amber {
-  background: #FFFBEB;
-  color: #92400E;
-}
-
-.pill-red {
-  background: #FEF2F2;
-  color: #991B1B;
-}
-
-/* Voucher link */
-.eet-voucher-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #2563eb;
-  transition: color 0.15s;
-}
-
-.eet-voucher-link:hover {
-  color: #1D4ED8;
-}
-
-.eet-muted {
-  color: #D1D5DB;
-}
-
-/* Empty state */
-.eet-empty {
-  text-align: center;
-  padding: 40px 16px;
-  color: #9CA3AF;
-  font-size: 13px;
-  border-bottom: none;
-}
-
-/* Skeleton loading */
-.eet-skeleton-row {
-  height: 44px;
-}
-.eet-skeleton-row td {
-  border-bottom: 1px solid #F3F4F6;
-  vertical-align: middle;
-}
-.eet-sk-cell {
-  height: 10px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
-  background-size: 200% 100%;
-  animation: eet-sk-shimmer 1.4s ease-in-out infinite;
+.eet-filters th { padding-top: 6px; padding-bottom: 6px; background: var(--ds-surface-2); }
+.eet-filter,
+.eet-filters :deep(.exec-flatpickr-input) {
   width: 100%;
+  min-width: 120px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-control);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  outline: none;
 }
-@keyframes eet-sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+.eet-filter::placeholder,
+.eet-filters :deep(.exec-flatpickr-input::placeholder) { color: var(--ds-muted); }
+.eet-filter:focus,
+.eet-filters :deep(.exec-flatpickr-input:focus) { border-color: var(--ds-accent); }
+.eet-filter.num { min-width: 90px; text-align: right; -moz-appearance: textfield; }
+.eet-filter.num::-webkit-outer-spin-button,
+.eet-filter.num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .eet-scroll-wrapper {
-  background: #1A1A14;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .eet-table { color: #D4D4CC; }
-
-[data-coreui-theme="dark"] .eet-sticky-col {
-  background: #1A1A14;
-  border-right-color: #2A2A22;
-}
-
-[data-coreui-theme="dark"] .eet-group-row,
-[data-coreui-theme="dark"] .eet-group-row .eet-sticky-col,
-[data-coreui-theme="dark"] .eet-col-row,
-[data-coreui-theme="dark"] .eet-col-row .eet-sticky-col,
-[data-coreui-theme="dark"] .eet-col-header {
-  background: #1F1F1A;
-  color: #6F6F66;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .eet-group-header {
-  background: #1A1A14;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .eet-group-header:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .eet-group-label { color: #D4D4CC; }
-
-/* Group accent borders — keep colors but slightly brighter on dark */
-[data-coreui-theme="dark"] .eet-grp-identity { border-left-color: #60A5FA; }
-[data-coreui-theme="dark"] .eet-grp-profile { border-left-color: #A78BFA; }
-[data-coreui-theme="dark"] .eet-grp-program { border-left-color: #34D399; }
-[data-coreui-theme="dark"] .eet-grp-finance { border-left-color: #FBBF24; }
-[data-coreui-theme="dark"] .eet-grp-installments { border-left-color: #38BDF8; }
-
-[data-coreui-theme="dark"] .eet-collapsed-hint { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .eet-data-row .eet-sticky-col,
-[data-coreui-theme="dark"] .eet-cell,
-[data-coreui-theme="dark"] .eet-td-action {
-  border-bottom-color: #1F1F1A;
-}
-[data-coreui-theme="dark"] .eet-data-row:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .eet-data-row:hover .eet-sticky-col { background: #1F1F1A; }
-
-[data-coreui-theme="dark"] .eet-cell-email { color: #A0A099; }
-[data-coreui-theme="dark"] .eet-cell-date { color: #A0A099; }
-[data-coreui-theme="dark"] .eet-muted { color: #3A3A33; }
-
-[data-coreui-theme="dark"] .eet-validation-badge {
-  background: rgba(139,92,246,0.16);
-  border-color: rgba(139,92,246,0.4);
-  color: #C4B5FD;
-}
-
-[data-coreui-theme="dark"] .eet-btn-detail { color: #A0A099; }
-[data-coreui-theme="dark"] .eet-btn-detail:hover {
-  background: rgba(37,99,235,0.16);
-  color: #60A5FA;
-}
-
-[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
-[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
-
-[data-coreui-theme="dark"] .eet-voucher-link { color: #60A5FA; }
-[data-coreui-theme="dark"] .eet-voucher-link:hover { color: #93C5FD; }
-
-[data-coreui-theme="dark"] .eet-empty { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .eet-skeleton-row td { border-bottom-color: #1F1F1A; }
-[data-coreui-theme="dark"] .eet-sk-cell {
-  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
-  background-size: 200% 100%;
-}
+.eet-strong { font-weight: 600; color: var(--ds-ink); }
+.eet-clip { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.mono { font-family: var(--ds-font-mono); font-size: 11.5px; }
+.eet .ds-pill.violet { margin-left: 6px; }
 </style>

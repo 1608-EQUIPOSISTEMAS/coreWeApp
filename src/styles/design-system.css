@@ -60,6 +60,15 @@
   --ds-soft-rose: #fadbe6;
   --ds-rose-strong: #f4b6cb;
 
+  /* Marcas de negocio en filas y pills (FICO): convalida, laptop, cuenta personal.
+     No son estados bueno/malo, por eso no reusan ok/warn/bad. */
+  --ds-soft-violet: #f5f3ff;
+  --ds-violet-ink: #5b21b6;
+  --ds-soft-cyan: #ecfeff;
+  --ds-cyan-ink: #0e7490;
+  --ds-soft-orange: #fff7ed;
+  --ds-orange-ink: #c2410c;
+
   /* Forma */
   --ds-radius: 12px;
   --ds-radius-sm: 6px;
@@ -103,6 +112,13 @@
   --ds-rose-ink: #f4a3c4;
   --ds-soft-rose: rgba(240, 139, 180, 0.14);
   --ds-rose-strong: rgba(240, 139, 180, 0.3);
+
+  --ds-soft-violet: rgba(167, 139, 250, 0.14);
+  --ds-violet-ink: #c4b5fd;
+  --ds-soft-cyan: rgba(34, 211, 238, 0.12);
+  --ds-cyan-ink: #67e8f9;
+  --ds-soft-orange: rgba(251, 146, 60, 0.14);
+  --ds-orange-ink: #fdba74;
 }
 
 /* ── Página ─────────────────────────────────────────────────────────────── */
@@ -182,6 +198,9 @@
 .ds-pill.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
 .ds-pill.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
 .ds-pill.rose { background: var(--ds-soft-rose); color: var(--ds-rose-ink); }
+.ds-pill.violet { background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+.ds-pill.cyan { background: var(--ds-soft-cyan); color: var(--ds-cyan-ink); }
+.ds-pill.orange { background: var(--ds-soft-orange); color: var(--ds-orange-ink); }
 
 /* Pestañas y selector de periodo: control segmentado. El activo va en marca. */
 .ds-tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--ds-border); border-radius: 999px; background: var(--ds-surface); }
@@ -273,6 +292,20 @@
 .ds-table--lista th { position: sticky; top: 0; z-index: 1; padding: 10px 12px; background: var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); }
 .ds-table--lista td { padding: 10px 12px; vertical-align: middle; }
 .ds-table--lista tbody tr:hover td { background: var(--ds-surface-2); }
+/* Listado de trabajo con muchas columnas (Inscripciones FICO): misma tabla, más
+   apretada para que 12 columnas entren sin scroll horizontal a 1440 px. */
+.ds-table--densa { font-size: 12px; }
+.ds-table--densa th { padding: 8px 10px; font-size: 11px; }
+.ds-table--densa td { padding: 7px 10px; }
+/* Encabezado que abre el filtro de su columna (la fila de filtros aparece solo
+   al pedirla, ver useColumnFilterToggles). Embudo tenue; marcado si filtra. */
+.ds-th-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; white-space: nowrap; text-align: inherit; }
+.ds-th-filter i { font-size: 9px; opacity: 0.35; transition: opacity 0.15s; }
+.ds-th-filter:hover i, .ds-th-filter[aria-expanded="true"] i { opacity: 0.8; }
+.ds-th-filter.is-active { color: var(--ds-accent); }
+.ds-th-filter.is-active i { opacity: 1; }
+.ds-th-filter:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; border-radius: 2px; }
+th.num .ds-th-filter { flex-direction: row-reverse; }
 
 /* ── Formularios ────────────────────────────────────────────────────────── */
 .ds-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px 16px; }
@@ -323,3 +356,9 @@ textarea.ds-input { height: auto; min-height: 72px; resize: vertical; }
 [data-coreui-theme="dark"] .pill-slate { background: var(--ds-surface-3); color: #a0a099; border-color: var(--ds-border) !important; }
 [data-coreui-theme="dark"] .pill-teal { background: rgba(45, 212, 191, 0.14); color: #5eead4; border-color: rgba(45, 212, 191, 0.3) !important; }
 [data-coreui-theme="dark"] .pill-red { background: rgba(248, 113, 113, 0.14); color: #f87171; border-color: rgba(248, 113, 113, 0.3) !important; }
+
+/* Acción destructiva (eliminar, anular) dentro de un modal de confirmación.
+   Va en este archivo y no en style.scss para salir de tokens en claro y oscuro. */
+.btn-exec-danger { background: var(--ds-bad); border-color: transparent; color: var(--ds-on-brand); }
+.btn-exec-danger:hover:not(:disabled) { filter: brightness(0.92); }
+.btn-exec-danger:disabled { background: var(--ds-surface-3); color: var(--ds-muted); cursor: not-allowed; }

@@ -97,6 +97,7 @@
   <th class="ts ts-c">Registro</th>
   <th class="ts ts-c">Cel. Origen</th>
   <th class="ts ts-c">Canal Pago</th>
+  <th class="ts ts-c text-center">Ult. Fecha de Contacto</th>
   <th class="ts ts-c text-center">Seguimiento</th>
   <th class="ts ts-c text-center">Observaciones</th>
 </tr>
@@ -142,6 +143,7 @@
   <th class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+  <th class="tf"></th>
   <th class="tf">
     <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttemptsConVacio" label-key="description" value-key="id" placeholder="Todos..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -201,7 +203,7 @@
   </th>
 
 <th
-  :colspan="colGroups.asesor ? 6 : 1"
+  :colspan="colGroups.asesor ? 7 : 1"
   class="tg-header tg-asesor"
   :class="{ 'tg-collapsed': !colGroups.asesor }"
   @click="colGroups.asesor = !colGroups.asesor"
@@ -251,6 +253,7 @@
   <th v-show="colGroups.asesor" class="ts ts-c">F. Registro</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Cel. Origen</th>
   <th v-show="colGroups.asesor" class="ts ts-c">Canal Pago</th>
+  <th v-show="colGroups.asesor" class="ts ts-c text-center">Ult. Fecha de Contacto</th>
   <th v-show="colGroups.asesor" class="ts ts-c text-center">Seguimiento</th>
   <th v-show="colGroups.asesor" class="ts ts-c text-center">Observaciones</th>
   <th v-if="!colGroups.asesor" class="ts ts-c tg-placeholder-cell"></th>
@@ -337,7 +340,7 @@
   <th v-show="colGroups.lead" class="tf"></th><!-- Observaciones (texto libre, sin filtro inline) -->
   <th v-if="!colGroups.lead" class="tf tg-placeholder-cell"></th>
 
-  <!-- D. ASESOR filtros (6 cols) -->
+  <!-- D. ASESOR filtros (7 cols) -->
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-if="!isComercial" v-model="filters.owner_user_ids" :items="filtroOwners" label-key="description" value-key="id" placeholder="Asesor..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -350,6 +353,7 @@
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.payment_channel_ids" :items="filtroPaymentChannel" label-key="description" value-key="id" placeholder="Canal pago..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
+  <th v-show="colGroups.asesor" class="tf"></th>
   <th v-show="colGroups.asesor" class="tf">
     <MultiSelect v-model="filters.last_attempt_type_ids" :items="lAttemptsConVacio" label-key="description" value-key="id" placeholder="Seguim..." class="hf-multiselect" @update:model-value="triggerInlineFilter" />
   </th>
@@ -433,6 +437,7 @@
                 </td>
                 <td class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.description || '—' }}</td>
+                <td class="td-a small nowrap text-center">{{ lastContactDate(l) }}</td>
                 <td class="td-a text-center" style="min-width:140px">
                   <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
                     <span>{{ l.cat_last_attempt_type_label }}</span>
@@ -447,7 +452,7 @@
                 </td>
               </tr>
               <tr v-if="!leadsRaw.length">
-                <td colspan="14" class="empty-state">
+                <td colspan="15" class="empty-state">
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <p>No se encontraron leads con los filtros actuales.</p>
                 </td>
@@ -466,7 +471,7 @@
       <td v-if="!colGroups.cliente"></td>
       <td v-show="colGroups.lead" v-for="c in 8" :key="'l'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.lead"></td>
-      <td v-show="colGroups.asesor" v-for="c in 5" :key="'a'+c"><div class="sk-cell"></div></td>
+      <td v-show="colGroups.asesor" v-for="c in 7" :key="'a'+c"><div class="sk-cell"></div></td>
       <td v-if="!colGroups.asesor"></td>
     </tr>
   </template>
@@ -547,6 +552,7 @@
     <td v-show="colGroups.asesor" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a small nowrap text-center">{{ lastContactDate(l) }}</td>
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
       <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
         <span>{{ l.cat_last_attempt_type_label }}</span>
@@ -568,7 +574,7 @@
   </tr>
 
   <tr v-if="!leadsRaw.length">
-    <td colspan="21" class="empty-state">No se encontraron leads con los filtros actuales.</td>
+    <td colspan="22" class="empty-state">No se encontraron leads con los filtros actuales.</td>
   </tr>
   </template>
 </tbody>
@@ -2143,6 +2149,17 @@ function rowClassForStatus(s) {
 function badgeForInterest(s) {
   const map = { 'we_lead_interest_high': 'pill-red', 'we_lead_interest_medium': 'pill-amber', 'we_lead_interest_low': 'pill-slate' };
   return map[s] || 'pill-slate'
+}
+
+// follow_details llega ordenado por attempt_number DESC: el [0] es el último
+// intento. Se corta el string en vez de usar new Date() para no correr la hora
+// por la zona (ver fechas UTC en Lima).
+function lastContactDate(lead) {
+  const raw = lead.follow_details?.[0]?.contact_datetime
+  if (!raw) return '—'
+  const [date, time = ''] = String(raw).replace('T', ' ').split(' ')
+  const [y, m, d] = date.split('-')
+  return `${d}/${m}/${y.slice(2)} ${time.slice(0, 5)}`.trim()
 }
 
 function badgeForFollow(s) {

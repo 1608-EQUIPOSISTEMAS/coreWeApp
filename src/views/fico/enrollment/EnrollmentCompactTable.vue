@@ -1,189 +1,155 @@
 <template>
-  <div class="ect-wrap">
-    <table class="ect">
-      <thead>
-        <tr class="ect-head">
-          <th class="tc" style="width:42px"></th>
-          <th style="width:120px">F. Registro</th>
-          <th>Alumno / Documento</th>
-          <th>Programa / Edicion</th>
-          <th style="width:90px">Agente</th>
-          <th style="width:85px">F. Pago</th>
-          <th class="tc" style="width:100px">Tipo Pago</th>
-          <th class="tr" style="width:95px">Monto Neto</th>
-          <th class="tr" style="width:80px">Inicial</th>
-          <th class="tr" style="width:80px">Pagado</th>
-          <th class="tr" style="width:85px">Saldo</th>
-          <th class="tc" style="width:145px">Estado FICO</th>
-        </tr>
-        <!-- Toda columna filtra desde esta fila: ningun control vive en el
-             encabezado. Texto -> caja de escribir, categoria -> desplegable,
-             dinero -> piso (>=). -->
-        <tr class="ect-filters">
-          <td class="tc">
-            <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
-              <i class="fa-solid fa-eraser"></i>
-            </button>
-          </td>
-          <td>
-            <BaseDatePicker
-              v-model="colFilters.fRegistro"
-              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-              placeholder="F. Registro..."
-            />
-          </td>
-          <td>
-            <input v-model="colFilters.alumno" class="filter-input" placeholder="Buscar..." />
-          </td>
-          <td>
-            <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
-          </td>
-          <td class="tc">
-            <ColumnFilterDropdown
-              column-label="Agente"
-              :all-items="enrollments"
-              :value-extractor="e => e.seller_agent_name || '(Vacío)'"
-              v-model="colFilters.agente"
-            />
-          </td>
-          <td>
-            <BaseDatePicker
-              v-model="colFilters.fPago"
-              :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-              placeholder="F. Pago..."
-            />
-          </td>
-          <td class="tc">
-            <ColumnFilterDropdown
-              column-label="Tipo Pago"
-              :all-items="enrollments"
-              :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'"
-              v-model="colFilters.tipoPago"
-            />
-          </td>
-          <td>
-            <input v-model="colFilters.montoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
-          </td>
-          <td>
-            <input v-model="colFilters.inicialMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
-          </td>
-          <td>
-            <input v-model="colFilters.pagadoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
-          </td>
-          <td>
-            <input v-model="colFilters.saldoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
-          </td>
-          <td class="tc">
-            <ColumnFilterDropdown
-              column-label="Estado FICO"
-              :all-items="enrollments"
-              :value-extractor="e => e.confirmation || 'Pendiente'"
-              :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']"
-              v-model="colFilters.estado"
-            />
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <template v-if="isLoading">
-          <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
-            <td><div class="sk-cell" style="width:90px"></div></td>
-            <td>
-              <div class="sk-cell" style="width:140px"></div>
-              <div class="sk-cell mt-1" style="width:90px;height:8px"></div>
-            </td>
-            <td>
-              <div class="sk-cell" style="width:160px"></div>
-              <div class="sk-cell mt-1" style="width:60px;height:8px"></div>
-            </td>
-            <td><div class="sk-cell" style="width:70px"></div></td>
-            <td><div class="sk-cell" style="width:70px"></div></td>
-            <td class="tc"><div class="sk-cell" style="width:62px;margin:0 auto"></div></td>
-            <td class="tr"><div class="sk-cell" style="width:80px;margin-left:auto"></div></td>
-            <td class="tr"><div class="sk-cell" style="width:64px;margin-left:auto"></div></td>
-            <td class="tr"><div class="sk-cell" style="width:64px;margin-left:auto"></div></td>
-            <td class="tr"><div class="sk-cell" style="width:70px;margin-left:auto"></div></td>
-            <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
+  <section class="ds-panel">
+    <div class="ds-table-scroll">
+      <table class="ds-table ds-table--lista ds-table--densa ect">
+        <thead>
+          <tr>
+            <th class="tc" style="width:44px"><span class="sr-only">Abrir</span></th>
+            <th style="width:120px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fRegistro') }" :aria-expanded="colToggles.isOpen('fRegistro')" :title="colToggles.isOpen('fRegistro') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('fRegistro')">
+                F. registro <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th>
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('alumno') }" :aria-expanded="colToggles.isOpen('alumno')" :title="colToggles.isOpen('alumno') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('alumno')">
+                Alumno / documento <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th>
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('programa') }" :aria-expanded="colToggles.isOpen('programa')" :title="colToggles.isOpen('programa') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('programa')">
+                Programa / edición <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th style="width:96px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('agente') }" :aria-expanded="colToggles.isOpen('agente')" :title="colToggles.isOpen('agente') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('agente')">
+                Agente <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th style="width:96px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fPago') }" :aria-expanded="colToggles.isOpen('fPago')" :title="colToggles.isOpen('fPago') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('fPago')">
+                F. pago <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="tc" style="width:110px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('tipoPago') }" :aria-expanded="colToggles.isOpen('tipoPago')" :title="colToggles.isOpen('tipoPago') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('tipoPago')">
+                Tipo de pago <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="num" style="width:100px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('montoMin') }" :aria-expanded="colToggles.isOpen('montoMin')" :title="colToggles.isOpen('montoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('montoMin')">
+                Monto neto <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="num" style="width:90px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('inicialMin') }" :aria-expanded="colToggles.isOpen('inicialMin')" :title="colToggles.isOpen('inicialMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('inicialMin')">
+                Inicial <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="num" style="width:90px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('pagadoMin') }" :aria-expanded="colToggles.isOpen('pagadoMin')" :title="colToggles.isOpen('pagadoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('pagadoMin')">
+                Pagado <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="num" style="width:90px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('saldoMin') }" :aria-expanded="colToggles.isOpen('saldoMin')" :title="colToggles.isOpen('saldoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('saldoMin')">
+                Saldo <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th class="tc" style="width:140px">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('estado') }" :aria-expanded="colToggles.isOpen('estado')" :title="colToggles.isOpen('estado') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('estado')">
+                Estado FICO <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+            </th>
           </tr>
-        </template>
-        <template v-else>
-        <tr
-          v-for="e in enrollments"
-          :key="e.enrollment_id"
-          class="ect-row"
-          :class="[fmt.rowClass(e), { 'is-selected': e.enrollment_id === selectedId, 'has-validations': Number(e.validations_count) > 0, 'has-laptop': fmt.hasLaptopPromo(e), 'has-claude': fmt.hasPersonalAccount(e), 'has-cert': fmt.hasCertPaid(e) }]"
-          @click="onRowClick(e, $event)"
-        >
-          <td class="tc">
-            <button class="act-btn act-teal" title="Abrir detalle completo" @click.stop="openDetail(e)">
-              <i class="fa-solid fa-clipboard-check"></i>
-            </button>
-          </td>
-          <td class="cell-date">{{ fmt.formatDateTime(e.registration_date) }}</td>
-          <td class="col-alumno">
-            <div class="cell-main cell-clip" :title="e.student_full_name">
-              {{ e.student_full_name }}
-              <span v-for="chip in rowProblems(e)" :key="chip.key"
-                :class="['ect-chip', `ect-chip-${chip.tone}`]"
-                :title="chip.tooltip">
-                <i class="fa-solid" :class="chip.icon"></i> {{ chip.label }}
-              </span>
-            </div>
-            <div class="cell-sub cell-extra">{{ e.document_number || '— sin DNI' }}</div>
-          </td>
-          <td class="col-programa">
-            <div class="cell-main cell-clip" :title="e.program_name">
-              {{ e.program_name }}
-              <span
-                v-if="Number(e.validations_count) > 0"
-                class="pill pill-purple pill-sm pill-validation"
-                :title="`${e.validations_count} modulo(s) convalidado(s)`"
-              >
-                <i class="fa-solid fa-circle-check"></i>
-                Convalida
-              </span>
-            </div>
-            <span class="pill pill-slate cell-extra">{{ e.edition_code }}</span>
-          </td>
-          <td class="col-agente">
-            <div class="cell-main cell-clip" :title="e.seller_agent_name">{{ e.seller_agent_name }}</div>
-          </td>
-          <td class="cell-date">{{ fmt.formatDate(e.pay_date) }}</td>
-          <td class="tc">
-            <span class="pill pill-sm" :class="fmt.isContado(e) ? 'pill-slate' : 'pill-blue'">
-              {{ fmt.isContado(e) ? 'Al contado' : 'Cuotas' }}
-            </span>
-          </td>
-          <td class="tr mono">S/. {{ fmt.formatMoney(e.total_to_pay) }}</td>
-          <td class="tr mono" :class="fmt.isContado(e) ? '' : (fmt.getReserva(e) > 0 ? 'c-blue' : 'c-muted')">
-            {{ fmt.isContado(e) ? '\u2014' : 'S/. ' + fmt.formatMoney(fmt.getReserva(e)) }}
-          </td>
-          <td class="tr mono c-green">S/. {{ fmt.formatMoney(fmt.getPagado(e)) }}</td>
-          <td
-            class="tr mono"
-            :class="fmt.isContado(e) ? '' : (fmt.calcSaldo(e) > 0 ? 'c-red fw700' : 'c-muted')"
-          >{{ fmt.isContado(e) ? '\u2014' : 'S/. ' + fmt.formatMoney(fmt.calcSaldo(e)) }}</td>
-          <td class="tc">
-            <span class="pill" :class="fmt.statusPill(e.confirmation)">
-              {{ e.confirmation || 'Pendiente' }}
-            </span>
-          </td>
-        </tr>
-        <tr v-if="!enrollments.length">
-          <td colspan="12" class="empty-row">
-            <div class="empty-state">
-              <div class="empty-icon">
-                <i class="fa-solid fa-magnifying-glass"></i>
-              </div>
-              <h4 class="empty-title">No hay matriculas que coincidan</h4>
-              <p class="empty-text">Cambia los filtros o limpia los chips activos para ver mas resultados.</p>
-            </div>
-          </td>
-        </tr>
-        </template>
-      </tbody>
-    </table>
-  </div>
+          <!-- Fila de filtros: aparece solo con alguna columna abierta o con
+               un filtro puesto (useColumnFilterToggles). -->
+          <tr v-if="colToggles.anyVisible.value" class="ect-filters">
+            <th class="tc">
+              <button class="btn-icon btn-icon-sm" type="button" title="Limpiar y cerrar filtros" aria-label="Limpiar y cerrar filtros" @click="clearFilters">
+                <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+              </button>
+            </th>
+            <th><template v-if="colToggles.isOpen('fRegistro')"><BaseDatePicker :model-value="colFilters.fRegistro" @update:model-value="v => setFilter('fRegistro', v)" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Desde – hasta" /></template></th>
+            <th><template v-if="colToggles.isOpen('alumno')"><input :value="colFilters.alumno" @input="setFilter('alumno', $event.target.value)" class="ect-filter" placeholder="Nombre o DNI…" aria-label="Filtrar por alumno" /></template></th>
+            <th><template v-if="colToggles.isOpen('programa')"><input :value="colFilters.programa" @input="setFilter('programa', $event.target.value)" class="ect-filter" placeholder="Programa…" aria-label="Filtrar por programa" /></template></th>
+            <th><template v-if="colToggles.isOpen('agente')"><ColumnFilterDropdown column-label="Agente" :all-items="enrollments" :value-extractor="e => e.seller_agent_name || '(Vacío)'" :model-value="colFilters.agente" @update:model-value="v => setFilter('agente', v)" /></template></th>
+            <th><template v-if="colToggles.isOpen('fPago')"><BaseDatePicker :model-value="colFilters.fPago" @update:model-value="v => setFilter('fPago', v)" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Desde – hasta" /></template></th>
+            <th><template v-if="colToggles.isOpen('tipoPago')"><ColumnFilterDropdown column-label="Tipo Pago" :all-items="enrollments" :value-extractor="e => (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'" :model-value="colFilters.tipoPago" @update:model-value="v => setFilter('tipoPago', v)" /></template></th>
+            <th><template v-if="colToggles.isOpen('montoMin')"><input :value="colFilters.montoMin" @input="setFilter('montoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Monto neto mínimo" /></template></th>
+            <th><template v-if="colToggles.isOpen('inicialMin')"><input :value="colFilters.inicialMin" @input="setFilter('inicialMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Inicial mínima" /></template></th>
+            <th><template v-if="colToggles.isOpen('pagadoMin')"><input :value="colFilters.pagadoMin" @input="setFilter('pagadoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Pagado mínimo" /></template></th>
+            <th><template v-if="colToggles.isOpen('saldoMin')"><input :value="colFilters.saldoMin" @input="setFilter('saldoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Saldo mínimo" /></template></th>
+            <th><template v-if="colToggles.isOpen('estado')"><ColumnFilterDropdown column-label="Estado FICO" :all-items="enrollments" :value-extractor="e => e.confirmation || 'Pendiente'" :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']" :model-value="colFilters.estado" @update:model-value="v => setFilter('estado', v)" /></template></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="isLoading">
+            <tr v-for="n in 10" :key="'sk-' + n">
+              <td colspan="12"><span class="ds-skel"></span></td>
+            </tr>
+          </template>
+          <tr v-else-if="!enrollments.length">
+            <td colspan="12" class="ds-empty ds-empty--lista">
+              No hay inscripciones con estos filtros. Quita un filtro o limpia los de columna para ver más.
+            </td>
+          </tr>
+          <template v-else>
+            <tr
+              v-for="e in enrollments"
+              :key="e.enrollment_id"
+              class="link"
+              tabindex="0"
+              :class="rowMarks(e)"
+              :aria-selected="e.enrollment_id === selectedId"
+              @click="onRowClick(e, $event)"
+              @keydown.enter.self="emit('select-row', e)"
+            >
+              <td class="tc">
+                <button class="btn-icon btn-icon-sm" type="button" title="Abrir detalle completo" aria-label="Abrir detalle completo" @click.stop="openDetail(e)">
+                  <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                </button>
+              </td>
+              <td class="ect-date">{{ fmt.formatDateTime(e.registration_date) }}</td>
+              <td>
+                <div class="ect-main ect-clip ect-alumno" :title="e.student_full_name">
+                  {{ e.student_full_name }}
+                  <span v-for="chip in rowProblems(e)" :key="chip.key" class="ds-pill ect-flag" :class="chip.tone" :title="chip.tooltip">
+                    <i class="fa-solid" :class="chip.icon" aria-hidden="true"></i> {{ chip.label }}
+                  </span>
+                </div>
+                <div class="ect-sub ect-extra">{{ e.document_number || '— sin DNI' }}</div>
+              </td>
+              <td>
+                <div class="ect-main ect-clip ect-programa" :title="e.program_name">
+                  {{ e.program_name }}
+                  <span v-if="Number(e.validations_count) > 0" class="ds-pill violet ect-flag" :title="`${e.validations_count} módulo(s) convalidado(s)`">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Convalida
+                  </span>
+                </div>
+                <span class="ds-pill ect-extra">{{ e.edition_code }}</span>
+              </td>
+              <td><div class="ect-main ect-clip ect-agente" :title="e.seller_agent_name">{{ e.seller_agent_name }}</div></td>
+              <td class="ect-date">{{ fmt.formatDate(e.pay_date) }}</td>
+              <td class="tc">
+                <span class="ds-pill" :class="fmt.isContado(e) ? '' : 'info'">{{ fmt.isContado(e) ? 'Al contado' : 'Cuotas' }}</span>
+              </td>
+              <td class="num mono ect-strong">S/. {{ fmt.formatMoney(e.total_to_pay) }}</td>
+              <td class="num mono" :class="!fmt.isContado(e) && fmt.getReserva(e) > 0 ? 'is-info' : 'is-muted'">
+                {{ fmt.isContado(e) ? '—' : 'S/. ' + fmt.formatMoney(fmt.getReserva(e)) }}
+              </td>
+              <td class="num mono is-ok">S/. {{ fmt.formatMoney(fmt.getPagado(e)) }}</td>
+              <td class="num mono" :class="!fmt.isContado(e) && fmt.calcSaldo(e) > 0 ? 'is-bad' : 'is-muted'">
+                {{ fmt.isContado(e) ? '—' : 'S/. ' + fmt.formatMoney(fmt.calcSaldo(e)) }}
+              </td>
+              <td class="tc">
+                <span class="ds-pill" :class="STATUS_TONE[fmt.statusPill(e.confirmation)]">{{ e.confirmation || 'Pendiente' }}</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </template>
 
 <script setup>
@@ -191,6 +157,7 @@ import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
+import { useColumnFilterToggles } from '@/composables/useColumnFilterToggles.js'
 
 const props = defineProps({
   enrollments: { type: Array, default: () => [] },
@@ -200,10 +167,37 @@ const props = defineProps({
   isLoading:   { type: Boolean, default: false },
   selectedId:  { type: [Number, String], default: null }
 })
-const emit = defineEmits(['select-row'])
+// Limpiar lo hace el composable (useEnrollmentList.clearColFilters): limpia
+// TODOS los filtros, incluidas fechas y montos, y vuelve a consultar. La copia
+// local de antes se saltaba fRegistro y los 4 montos minimos.
+const emit = defineEmits(['select-row', 'clear-col-filters', 'update-filter'])
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
+const colToggles = useColumnFilterToggles(props.colFilters)
+
+// Los filtros son del composable de la pagina (useEnrollmentList.colFilters): la
+// tabla no los muta, avisa el cambio y la pagina lo aplica.
+const setFilter = (key, value) => emit('update-filter', key, value)
+
+function clearFilters () {
+  emit('clear-col-filters')
+  colToggles.closeAll()
+}
+
+// statusPill del formatter devuelve la clase vieja; aqui se traduce a tono ds.
+const STATUS_TONE = { 'pill-green': 'ok', 'pill-red': 'bad', 'pill-amber': 'warn' }
+
+// Marcas de negocio que tinen la fila (mismo color que su etiqueta en el panel).
+function rowMarks (e) {
+  return {
+    'is-selected': e.enrollment_id === props.selectedId,
+    'mark-validation': Number(e.validations_count) > 0,
+    'mark-laptop': fmt.hasLaptopPromo(e),
+    'mark-personal': fmt.hasPersonalAccount(e),
+    'mark-cert': fmt.hasCertPaid(e)
+  }
+}
 
 function onRowClick (e, evt) {
   if (evt.target.closest('button, input, select, a, label')) return
@@ -216,17 +210,17 @@ function rowProblems (e) {
   const out = []
   // Sin email: bloqueante para envio de confirmacion al alumno.
   if (!e.email || !String(e.email).trim()) {
-    out.push({ key: 'email', tone: 'red', icon: 'fa-envelope-circle-check', label: 'sin correo', tooltip: 'No se podra enviar confirmacion ni acceso al campus' })
+    out.push({ key: 'email', tone: 'bad', icon: 'fa-envelope-circle-check', label: 'sin correo', tooltip: 'No se podra enviar confirmacion ni acceso al campus' })
   }
   // Sin DNI: usual en B2B/WEB pero relevante avisar.
   if (!e.document_number || !String(e.document_number).trim()) {
-    out.push({ key: 'doc', tone: 'amber', icon: 'fa-id-card', label: 'sin DNI', tooltip: 'Inscripcion sin documento (caso B2B/WEB tipico)' })
+    out.push({ key: 'doc', tone: 'warn', icon: 'fa-id-card', label: 'sin DNI', tooltip: 'Inscripcion sin documento (caso B2B/WEB tipico)' })
   }
   // Sin voucher en pago al contado pendiente: probablemente hay que pedirlo.
   const isCash = fmt.isContado(e)
   const pending = fmt.isPendiente(e)
   if (isCash && pending && (!e.payment_vouchers || !String(e.payment_vouchers).trim())) {
-    out.push({ key: 'voucher', tone: 'amber', icon: 'fa-receipt', label: 'sin voucher', tooltip: 'Pago al contado pendiente sin comprobante adjunto' })
+    out.push({ key: 'voucher', tone: 'warn', icon: 'fa-receipt', label: 'sin voucher', tooltip: 'Pago al contado pendiente sin comprobante adjunto' })
   }
   // Nota: convalidaciones ya tienen chip propio en columna Programa, no se duplican aqui.
   return out
@@ -240,466 +234,75 @@ function openDetail (e) {
   })
 }
 
-function clearColFilters () {
-  props.colFilters.alumno   = ''
-  props.colFilters.programa = ''
-  props.colFilters.fPago    = ''
-  props.colFilters.agente   = []
-  props.colFilters.tipoPago = []
-  props.colFilters.estado   = []
-}
 </script>
 
 <style scoped>
-/* ---- wrapper ---- */
-.ect-wrap {
-  background: #fff;
-  border-radius: 10px;
-  overflow-x: auto;
-  border: 1px solid #F0F0F0;
-}
-
-/* ---- table base ---- */
-.ect {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11.5px;
-  color: #1A1A1A;
-}
+/* Tabla, pills, vacío y skeleton salen de ds-* (design-system.css). Aquí solo
+   lo propio: la fila de filtros, recortes de texto y los tintes de negocio.
+   Sin bloque dark: todo va con tokens. */
 .tc { text-align: center; }
-.tr { text-align: right; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---- header ---- */
-.ect-head th {
-  background: #FAFAFA;
-  padding: 8px 10px;
-  text-align: left;
-  font-weight: 500;
-  color: #8C8C8C;
-  border-bottom: 1px solid #F0F0F0;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-/* ---- filter row ---- */
-.ect-filters {
-  background: #FAFAFA;
-}
-.ect-filters td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #F0F0F0;
-}
-
-.filter-input {
-  width: 100%;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid #E8E8E8;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #1A1A1A;
-  background: #fff;
-  transition: all .2s ease;
-  font-family: inherit;
-}
-.filter-input:focus {
-  outline: none;
-  border-color: #0D9488;
-  box-shadow: 0 0 0 3px rgba(13,148,136,.06);
-}
-.filter-input::placeholder { color: #C4C4C4; }
-.filter-input.tr { text-align: right; }
-
-/* flatpickr renderiza su propio input (altInput) fuera del alcance de .filter-input,
-   asi que hay que igualarlo a mano para que la fila no quede despareja. */
+/* Fila de filtros: debajo de los títulos, sin el sticky del encabezado. */
+.ect-filters th { position: static; padding-top: 6px; padding-bottom: 6px; background: var(--ds-surface-2); }
+.ect-filter,
 .ect-filters :deep(.exec-flatpickr-input) {
   width: 100%;
   height: 30px;
+  box-sizing: border-box;
   padding: 0 10px;
-  border: 1px solid #E8E8E8;
-  border-radius: 6px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-control);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font: inherit;
   font-size: 12px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  box-sizing: border-box;
+  font-weight: 400;
   outline: none;
-  transition: all .2s ease;
 }
-.ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #C4C4C4; }
-.ect-filters :deep(.exec-flatpickr-input:focus) {
-  border-color: #0D9488;
-  box-shadow: 0 0 0 3px rgba(13,148,136,.06);
-}
+.ect-filter::placeholder,
+.ect-filters :deep(.exec-flatpickr-input::placeholder) { color: var(--ds-muted); }
+.ect-filter:focus,
+.ect-filters :deep(.exec-flatpickr-input:focus) { border-color: var(--ds-accent); }
+.ect-filter.num { text-align: right; }
+/* Las flechitas del input number tapan el monto en 30px de alto. */
+.ect-filter[type="number"] { -moz-appearance: textfield; }
+.ect-filter[type="number"]::-webkit-outer-spin-button,
+.ect-filter[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-/* Las flechitas del input number no caben en 30px de alto y encima tapan el
-   monto. Se escribe la cifra, no se sube de a uno. */
-.filter-input[type="number"] { -moz-appearance: textfield; }
-.filter-input[type="number"]::-webkit-outer-spin-button,
-.filter-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+/* Celdas */
+.ect td:first-child { color: inherit; }
+.ect-main { font-weight: 600; color: var(--ds-ink); line-height: 1.35; }
+.ect-sub { margin-top: 1px; font-size: 11px; color: var(--ds-muted); }
+.ect-date { font-size: 11.5px; white-space: nowrap; }
+.ect-clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nombres largos se recortan; el title muestra el completo. */
+.ect-alumno { max-width: 200px; }
+.ect-programa { max-width: 240px; }
+.ect-agente { max-width: 90px; }
+.ect-flag { margin-left: 6px; vertical-align: middle; font-size: 10px; }
+.ect .ect-extra { margin-top: 3px; font-weight: 600; }
 
-.filter-clear {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #E8E8E8;
-  background: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #A3A3A3;
-  font-size: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s ease;
-}
-.filter-clear:hover {
-  background: #FEF2F2;
-  border-color: #FCA5A5;
-  color: #EF4444;
-}
+.mono { font-family: var(--ds-font-mono); font-size: 11.5px; }
+.ect-strong { font-weight: 700; color: var(--ds-ink); }
+.is-ok { color: var(--ds-ok-ink); }
+.is-info { color: var(--ds-info-ink); }
+.is-bad { color: var(--ds-bad-ink); font-weight: 700; }
+.is-muted { color: var(--ds-muted); }
 
-/* ---- body rows ---- */
-.ect-row td {
-  padding: 7px 10px;
-  border-bottom: 1px solid #F5F5F5;
-  vertical-align: middle;
-  height: 36px;
-  box-sizing: border-box;
-  transition: background .15s ease;
-}
-.ect-row {
-  cursor: pointer;
-}
-.ect-row:hover td {
-  background: #FAFAFA;
-}
-.ect-row.is-selected td {
-  background: #F0FDFA;
-  box-shadow: inset 0 -1px 0 #CCFBF1;
-}
-.ect-row.is-selected td:first-child {
-  box-shadow: inset 3px 0 0 #0D9488, inset 0 -1px 0 #CCFBF1;
-}
-.ect-row:last-child td {
-  border-bottom: none;
-}
+/* Tintes de negocio, el mismo color que su etiqueta en el panel lateral
+   (si hay varios, gana el último declarado). */
+.ect tr.mark-validation td { background: var(--ds-soft-violet); }
+.ect tr.mark-cert td { background: var(--ds-soft-ok); }
+.ect tr.mark-personal td { background: var(--ds-soft-orange); }
+.ect tr.mark-laptop td { background: var(--ds-soft-cyan); }
 
-/* ---- row status indicator ---- */
-/* Barras de color removidas — ya no marcamos las filas con borde lateral. */
+/* Selección al final: manda sobre cualquier tinte de negocio. */
+.ect tr.is-selected td { background: var(--ds-soft-info); }
+.ect tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--ds-accent); }
 
-/* ---- action button ---- */
-.act-btn {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #E8E8E8;
-  background: #fff;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #A3A3A3;
-  font-size: 12px;
-  transition: all .2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.act-btn.act-teal {
-  border-color: #E8E8E8;
-  color: #737373;
-}
-.act-btn.act-teal:hover {
-  background: #F0FDFA;
-  border-color: #0D9488;
-  color: #0D9488;
-}
-
-/* ---- cell typography ---- */
-.cell-main {
-  font-weight: 600;
-  color: #1A1A1A;
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-.cell-clip {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-/* Per-column max widths so long names get clipped to ellipsis instead
-   of stretching the table out of proportion. Native title=hover shows full name. */
-.col-alumno { max-width: 180px; }
-.col-alumno .cell-clip { max-width: 180px; }
-.col-programa { max-width: 220px; }
-.col-programa .cell-clip { max-width: 220px; }
-.col-agente { max-width: 90px; }
-.col-agente .cell-clip { max-width: 90px; }
-.cell-sub {
-  color: #A3A3A3;
-  font-size: 10.5px;
-  margin-top: 1px;
-}
-.cell-date {
-  font-size: 11px;
-  color: #737373;
-  white-space: nowrap;
-}
-
-/* ---- money / numeric ---- */
-.mono {
-  font-variant-numeric: tabular-nums;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-.fw700 { font-weight: 700; }
-.c-green { color: #059669; }
-.c-blue  { color: #2563EB; }
-.c-red   { color: #DC2626; }
-.c-muted { color: #C4C4C4; }
-
-/* ---- pills ---- */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-.pill-sm {
-  padding: 3px 8px;
-  font-size: 10.5px;
-}
-.pill-slate { background: #F5F5F5; color: #737373; }
-.pill-green { background: #ECFDF5; color: #065F46; }
-.pill-amber { background: #FFF8EB; color: #92400E; }
-.pill-blue  { background: #EFF6FF; color: #1E40AF; }
-.pill-red   { background: #FEF2F2; color: #991B1B; }
-.pill-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
-
-/* Chips de problemas en fila (junto al nombre del alumno) */
-.ect-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: 6px;
-  padding: 1px 6px;
-  font-size: 9.5px;
-  font-weight: 600;
-  border-radius: 4px;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-transform: lowercase;
-}
-.ect-chip i { font-size: 8px; }
-.ect-chip-red    { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
-.ect-chip-amber  { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
-.ect-chip-purple { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
-
-/* Badge especifico de convalidacion: distintivo + clickeable */
-.pill-validation {
-  margin-left: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 700;
-  vertical-align: middle;
-}
-.pill-validation i {
-  font-size: 9px;
-}
-
-/* Fila con tinte cian cuando la inscripcion incluye promo LAPTOP
-   (mismo color que la etiqueta "Traera laptop" del panel lateral).
-   Se pinta sobre los td porque hover/is-selected tambien pintan td. */
-.ect-row.has-laptop td {
-  background: #ECFEFF;
-}
-.ect-row.has-laptop:hover td {
-  background: #CFFAFE;
-}
-.ect-row.has-laptop.is-selected td {
-  background: #A5F3FC;
-}
-[data-coreui-theme="dark"] .ect-row.has-laptop td {
-  background: rgba(8, 145, 178, 0.14);
-}
-[data-coreui-theme="dark"] .ect-row.has-laptop:hover td,
-[data-coreui-theme="dark"] .ect-row.has-laptop.is-selected td {
-  background: rgba(8, 145, 178, 0.26);
-}
-
-/* Fila con tinte naranja cuando tiene la etiqueta CUENTA PERSONAL
-   (mismo color que la etiqueta "CUENTA PERSONAL" del panel lateral) */
-.ect-row.has-claude td {
-  background: #FFF7ED;
-}
-.ect-row.has-claude:hover td {
-  background: #FFEDD5;
-}
-.ect-row.has-claude.is-selected td {
-  background: #FED7AA;
-}
-[data-coreui-theme="dark"] .ect-row.has-claude td {
-  background: rgba(234, 88, 12, 0.14);
-}
-[data-coreui-theme="dark"] .ect-row.has-claude:hover td,
-[data-coreui-theme="dark"] .ect-row.has-claude.is-selected td {
-  background: rgba(234, 88, 12, 0.26);
-}
-
-/* Fila con tinte verde cuando el becado ya pago su certificado
-   (etiqueta "Certificar", mismo verde que el pill del detalle) */
-.ect-row.has-cert td {
-  background: #ECFDF5;
-}
-.ect-row.has-cert:hover td {
-  background: #D1FAE5;
-}
-.ect-row.has-cert.is-selected td {
-  background: #A7F3D0;
-}
-[data-coreui-theme="dark"] .ect-row.has-cert td {
-  background: rgba(16, 185, 129, 0.14);
-}
-[data-coreui-theme="dark"] .ect-row.has-cert:hover td,
-[data-coreui-theme="dark"] .ect-row.has-cert.is-selected td {
-  background: rgba(16, 185, 129, 0.26);
-}
-
-/* Fila completa con tinte morado claro cuando tiene convalidaciones */
-.ect-row.has-validations {
-  background: linear-gradient(90deg, #FAF5FF 0%, #FFFFFF 30%);
-}
-.ect-row.has-validations:hover {
-  background: linear-gradient(90deg, #F3E8FF 0%, #FAFAFA 30%);
-}
-.ect-row.has-validations.is-selected {
-  background: linear-gradient(90deg, #EDE9FE 0%, #F8FAFC 30%);
-}
-
-/* ---- empty state ---- */
-.empty-row {
-  padding: 0;
-}
-.empty-state {
-  padding: 56px 24px;
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 6px;
-}
-.empty-icon {
-  width: 56px; height: 56px;
-  border-radius: 14px;
-  background: #FAFAFA;
-  color: #A3A3A3;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  margin-bottom: 8px;
-  border: 1px solid #EFEFEF;
-}
-.empty-title {
-  font-size: 14px; font-weight: 700;
-  color: #1A1A1A; margin: 0;
-  letter-spacing: -0.01em;
-}
-.empty-text {
-  font-size: 12.5px; color: #737373;
-  margin: 0; max-width: 320px; line-height: 1.5;
-}
-
-/* ---- skeleton loading ---- */
-.skeleton-row td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #F5F5F5;
-  vertical-align: middle;
-  height: 52px;
-  box-sizing: border-box;
-}
-.sk-cell {
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #F5F5F5 25%, #EBEBEB 50%, #F5F5F5 75%);
-  background-size: 200% 100%;
-  animation: ect-sk-shimmer 1.4s ease-in-out infinite;
-  width: 100%;
-}
-.sk-cell.mt-1 { margin-top: 6px; }
-@keyframes ect-sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ---- responsive ---- */
 @media (max-width: 768px) {
-  .cell-extra { display: none; }
-  .cell-clip  { max-width: 140px; }
-  .ect-head th { font-size: 10px; padding: 8px; }
-  .ect-row td  { padding: 10px 8px; }
+  .ect-extra { display: none; }
+  .ect-alumno, .ect-programa { max-width: 140px; }
 }
-@media (max-width: 640px) {
-  .cell-clip { max-width: 100px; }
-}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .ect-wrap {
-  background: #1A1A14;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ect { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ect-head th {
-  background: #1F1F1A;
-  color: #A0A099;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ect-filters,
-[data-coreui-theme="dark"] .ect-filters td {
-  background: #1F1F1A;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .filter-input,
-[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input) {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .filter-input::placeholder,
-[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #6F6F66; }
-[data-coreui-theme="dark"] .filter-input:focus,
-[data-coreui-theme="dark"] .ect-filters :deep(.exec-flatpickr-input:focus) {
-  border-color: #34D399;
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
-}
-[data-coreui-theme="dark"] .filter-clear {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #6F6F66;
-}
-[data-coreui-theme="dark"] .filter-clear:hover {
-  background: rgba(239,68,68,0.16);
-  border-color: rgba(239,68,68,0.4);
-  color: #F87171;
-}
-[data-coreui-theme="dark"] .ect-row td {
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .ect-row:hover td { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ect-row.is-selected td { background: #2A2A22; }
-[data-coreui-theme="dark"] .cell-main { color: #F4F4F0; }
-[data-coreui-theme="dark"] .cell-sub { color: #A0A099; }
-[data-coreui-theme="dark"] .cell-date { color: #A0A099; }
-[data-coreui-theme="dark"] .mono { color: #F4F4F0; }
-[data-coreui-theme="dark"] .c-muted { color: #6F6F66; }
-[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; }
 </style>

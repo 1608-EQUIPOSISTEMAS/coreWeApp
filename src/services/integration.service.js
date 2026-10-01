@@ -20,12 +20,8 @@ export default class IntegrationService {
     return (await api.post('/integration/syncFicoSalesToSheet', undefined, { timeout: 0, meta: { showLoader: true } })).data;
   }
 
-  async syncFicoToSheets() {
-    // Fire-and-forget: el backend responde al instante (202) y sincroniza en
-    // segundo plano. El progreso se consulta con getFicoSyncStatus().
-    return (await api.post('/integration/syncFicoToSheets')).data;
-  }
-
+  // El sync a Sheets corre solo en el backend (cron fico-sheets-autosync):
+  // la pantalla de Inscripciones solo consulta si esta al dia.
   async getFicoSyncStatus() {
     return (await api.get('/integration/syncFicoToSheets/status')).data;
   }

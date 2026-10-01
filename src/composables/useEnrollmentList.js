@@ -326,6 +326,17 @@ export function useEnrollmentList () {
   function openFilterModal () { showFilterModal.value = true; ensureFilterCatalogs() }
   function applyFilters () { showFilterModal.value = false; pagin.value.page = 1; saveState(); fetchEnrollments() }
 
+  // Lo que se confirma en el modal de filtros: el modal edita una copia y recien
+  // aqui pasa a los filtros reales. Los rangos de fecha llegan como texto del
+  // datepicker y se parten en desde/hasta con handleDateChange.
+  function applyDraftFilters (draft) {
+    Object.assign(filters, draft)
+    handleDateChange(draft.created_range_string, 'created')
+    handleDateChange(draft.edition_range_string, 'edition')
+    handleDateChange(draft.payment_range_string, 'payment')
+    applyFilters()
+  }
+
   function handleDateChange (dateStr, type) {
     if (!dateStr) {
       if (type === 'created') { filters.date_from = null; filters.date_to = null }
@@ -496,7 +507,7 @@ export function useEnrollmentList () {
     filtroStatus, filtroTiposPrograma, filtroModalidad, filtroPaymentChannel,
     filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
-    colFilters, clearColFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
+    colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
     fetchEnrollments, forceRefresh, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,

@@ -62,6 +62,7 @@ Se definen en `:root` y cambian solos con `data-coreui-theme="dark"`.
 | `--ds-ok` / `-warn` / `-bad` | `#12a150` / `#e08a1e` / `#d64545` | `#34d399` / `#e9b872` / `#f87171` | Relleno de estado (barra, anillo, borde) |
 | `--ds-ok-ink` / `-warn-ink` / `-bad-ink` / `-info-ink` | `#0f7a3d` / `#a8620f` / `#b83232` / `#1e40af` | igual al relleno | Texto de estado (contraste AA) |
 | `--ds-soft-ok` / `-warn` / `-bad` / `-info` / `-neutral` | tintes claros | rgba al 12–14 % | Fondo de pill, variación, conclusión |
+| `--ds-soft-violet` / `-cyan` / `-orange` + `--ds-*-ink` | `#f5f3ff` / `#ecfeff` / `#fff7ed` (tinta `#5b21b6` / `#0e7490` / `#c2410c`) | rgba 12–14 % (tinta clara) | **Marcas de negocio**, no estados: convalida (violeta), laptop (cian), cuenta personal (naranja). `.ds-pill.violet/.cyan/.orange` y tinte de fila |
 | `--ds-radius` / `-sm` / `-control` | `12px` / `6px` / `4px` | — | Panel / chip, variación / botón, input, pill |
 | `--ds-gap` | `16px` | — | Separación entre bloques |
 | `--ds-font-mono` | Spline Sans Mono | — | Códigos, IDs, montos alineados |
@@ -86,7 +87,7 @@ cifras llevan `font-variant-numeric: tabular-nums` para que las columnas no bail
 | Título de panel | 13.5 / 700 | `.ds-panel-title` |
 | Texto base | 13 / 400–500 | — |
 | Etiqueta de KPI | 12.5 / 600 | `.ds-kpi-label` |
-| Tabla | 12.5 (listado 13) | `.ds-table` |
+| Tabla | 12.5 (listado 13, denso 12) | `.ds-table`, `--lista`, `--densa` (listado de trabajo con 10+ columnas) |
 | Encabezado de tabla, nota | 11.5 / 600 | `th`, `.ds-kpi-note` |
 | **Etiqueta de formulario** | 10.5 / 600 MAYÚSCULA `.05em` | `.ds-label` |
 
@@ -384,7 +385,7 @@ se usa `confirmAction()` (§7).
 | Monto | `CurrencyInput` | |
 | Paginación + botón de filtros | `BasePagination` | `v-model="{ size, page, total }"`, emite `change`, `open-filters` |
 | Filtros aplicados | `BaseFilterChips` | `items` |
-| Filtro por columna | `ColumnFilterDropdown` | |
+| Filtro por columna | `ColumnFilterDropdown` + `useColumnFilterToggles` | El encabezado es un `<button class="ds-th-filter">`; la fila de filtros aparece solo al abrir una columna o con un filtro puesto |
 | Archivos | `FileUploader` / `MultiFileUploader` | |
 | Aviso breve | `useToast()` de vue-toastification | `toast.success / error / warning`. Único sistema de toasts |
 | Confirmar acción | `confirmAction({ title, text, confirmText, danger })` | `composables/useConfirm.js`; `danger: true` para borrar/anular |
@@ -406,6 +407,7 @@ vistas (CoreUI queda para el shell: header y sidebar); clases Bootstrap `card`,
 | `.btn-exec .btn-exec-primary` | La acción principal. Una por pantalla / modal |
 | `.btn-exec .btn-exec-outline` | Secundaria (Cancelar, Exportar, Actualizar) |
 | `.btn-exec .btn-exec-ghost` | Terciaria dentro de una barra |
+| `.btn-exec .btn-exec-danger` | Eliminar / anular, **solo** dentro del modal que confirma (rojo `--ds-bad`) |
 | `+ .btn-sm` | Dentro de un panel o una tabla |
 | `.btn-icon .btn-icon-sm` | Acción de fila. **Siempre** con `title` y `aria-label` |
 

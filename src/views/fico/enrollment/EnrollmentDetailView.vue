@@ -5,7 +5,7 @@
       <button class="edv-back" @click="goBack">
         <i class="fa-solid fa-arrow-left"></i> Volver al listado
       </button>
-      <div class="edv-topbar-info">
+      <div v-if="!notFound" class="edv-topbar-info">
         <span class="edv-topbar-name">{{ detail.student_full_name || enrollment?.student_full_name || '' }}</span>
         <span class="edv-topbar-program">{{ detail.program_name || enrollment?.program_name || '' }}</span>
         <span class="edv-topbar-pill" :class="statusPillClass">{{ statusLabel }}</span>
@@ -28,6 +28,11 @@
     <div v-if="loading" class="edv-loading">
       <div class="edv-spinner"></div>
       <span>Cargando detalle...</span>
+    </div>
+
+    <div v-else-if="notFound" class="edv-notfound" role="alert">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>No se encontró la inscripción #{{ enrollmentId }}. Vuelve a la lista y ábrela de nuevo.</span>
     </div>
 
     <!-- Two-column layout -->
@@ -265,6 +270,8 @@ import RescheduleInstallmentsModal from './RescheduleInstallmentsModal.vue'
 import EditInstallmentAmountModal from './EditInstallmentAmountModal.vue'
 import RevertInstallmentModal from './RevertInstallmentModal.vue'
 import AddInstallmentModal from './AddInstallmentModal.vue'
+import { toLocalIsoDate } from '@/shared/lib/localDate.js'
+import { findEnrollmentById } from '@/entities/enrollment/findEnrollmentById.js'
 
 const props = defineProps({
   id: { type: [String, Number], required: true }
@@ -280,6 +287,9 @@ const fmt = useEnrollmentFormatters()
 const catalogs = useEnrollmentCatalogs()
 
 const loading = ref(true)
+// La inscripcion del URL no se pudo cargar: no se muestra nada que permita
+// aprobar o cobrar (ver findEnrollmentById).
+const notFound = ref(false)
 const enrollment = ref(null)
 const detail = ref({ installments: [], payment_history: [] })
 const auditLog = ref([])
@@ -310,14 +320,11 @@ const isPendingReview = computed(() => {
     || enrollment.value?.type_status_alias
   return alias === 'we_enrollment_status_pending_review'
 })
-function toIsoDate (d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-const todayIso = computed(() => toIsoDate(new Date()))
+const todayIso = computed(() => toLocalIsoDate())
 const maxActivationDate = computed(() => {
   const d = new Date()
   d.setMonth(d.getMonth() + 6)
-  return toIsoDate(d)
+  return toLocalIsoDate(d)
 })
 const activationDate = ref('')
 const isActivationDeferred = computed(() => {
@@ -1175,8 +1182,7 @@ async function refreshDetail () {
       ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
     ])
     detail.value = paymentResponse || { installments: [], payment_history: [] }
-    const items = listResult?.items || (Array.isArray(listResult) ? listResult : [])
-    const match = items.find(i => Number(i.enrollment_id) === enrollmentId.value)
+    const match = findEnrollmentById(listResult?.items || (Array.isArray(listResult) ? listResult : []), enrollmentId.value)
     if (match) enrollment.value = match
     buildInstallments()
     refreshAuditLog()
@@ -1209,18 +1215,20 @@ async function loadEnrollment () {
   odooEmail.value = null
   odooPassword.value = null
 
+  notFound.value = false
   const routeState = window.history.state?.enrollment
   if (routeState) {
     enrollment.value = routeState
   } else {
     try {
       const result = await ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
-      const items = result?.items || (Array.isArray(result) ? result : [])
-      const match = items.find(i => Number(i.enrollment_id) === enrollmentId.value)
-      enrollment.value = match || items[0] || {}
+      const match = findEnrollmentById(result?.items || (Array.isArray(result) ? result : []), enrollmentId.value)
+      enrollment.value = match || {}
+      notFound.value = !match
     } catch (err) {
       console.error('Error cargando enrollment:', err)
       enrollment.value = {}
+      notFound.value = true
     }
   }
 
@@ -1447,6 +1455,17 @@ watch(enrollmentId, (newId, oldId) => {
   color: #C4C4C4;
   font-size: 13px;
 }
+
+.edv-notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 120px 24px;
+  color: var(--ds-ink-2);
+  font-size: 14px;
+}
+.edv-notfound i { font-size: 24px; color: var(--ds-warn); }
 
 .edv-spinner {
   width: 28px;

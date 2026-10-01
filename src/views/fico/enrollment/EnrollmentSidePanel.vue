@@ -1,259 +1,192 @@
 <template>
-  <aside v-if="enrollment" class="esp" :key="enrollment.enrollment_id">
-    <div class="esp-detail">
-      <header class="esp-head">
-        <div class="esp-head-id">
-          <span class="esp-avatar">{{ initials }}</span>
-          <div class="esp-head-name">
-            <h3 class="esp-name">{{ enrollment.student_full_name || 'Sin nombre' }}</h3>
-            <span class="esp-doc">{{ enrollment.document_number || '---' }}</span>
-          </div>
-        </div>
-        <div class="esp-head-actions">
-          <button class="esp-icon-btn" title="Cerrar" @click="$emit('close')">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      </header>
+  <aside v-if="enrollment" class="ds-panel esp" :key="enrollment.enrollment_id" aria-label="Resumen de la inscripción">
+    <header class="esp-head">
+      <span class="esp-avatar" aria-hidden="true">{{ initials }}</span>
+      <div class="esp-head-name">
+        <h3 class="esp-name">{{ enrollment.student_full_name || 'Sin nombre' }}</h3>
+        <span class="esp-doc">{{ enrollment.document_number || 'Sin documento' }}</span>
+      </div>
+      <button class="btn-icon btn-icon-sm" type="button" title="Cerrar (Esc)" aria-label="Cerrar panel" @click="$emit('close')">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </header>
 
-      <div class="esp-status-row">
-        <span class="esp-pill" :class="fmt.statusPill(enrollment.confirmation)">
-          {{ enrollment.confirmation || 'Pendiente' }}
-        </span>
-        <span class="esp-pill esp-pill-soft">
-          {{ fmt.isContado(enrollment) ? 'Al contado' : 'Cuotas' }}
-        </span>
-        <span
-          v-if="fmt.hasLaptopPromo(enrollment)"
-          class="esp-pill esp-pill-laptop"
-          title="Esta inscripcion incluye laptop como beneficio"
-        >
-          <i class="fa-solid fa-laptop"></i> Traera laptop
+    <div class="esp-body">
+      <div class="esp-pills">
+        <span class="ds-pill" :class="STATUS_TONE[fmt.statusPill(enrollment.confirmation)]">{{ enrollment.confirmation || 'Pendiente' }}</span>
+        <span class="ds-pill" :class="fmt.isContado(enrollment) ? '' : 'info'">{{ fmt.isContado(enrollment) ? 'Al contado' : 'Cuotas' }}</span>
+        <span v-if="fmt.hasLaptopPromo(enrollment)" class="ds-pill cyan" title="Esta inscripción incluye laptop como beneficio">
+          <i class="fa-solid fa-laptop" aria-hidden="true"></i> Traerá laptop
         </span>
         <span
           v-if="fmt.hasPersonalAccount(enrollment)"
-          class="esp-pill esp-pill-claude"
+          class="ds-pill orange"
           :title="`Académica entrega una cuenta ${enrollment.personal_account}${enrollment.personal_account_modules?.length ? ` en ${enrollment.personal_account_modules.length} módulo(s)` : ''}`"
         >
-          <i class="fa-solid fa-user-shield"></i> CUENTA PERSONAL · {{ enrollment.personal_account }}
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i> Cuenta personal · {{ enrollment.personal_account }}
         </span>
       </div>
 
-      <div class="esp-highlights">
-        <div class="esp-h-card">
-          <span class="esp-h-label">Monto neto</span>
-          <span class="esp-h-value">S/ {{ fmt.formatMoney(enrollment.total_to_pay) }}</span>
+      <div class="esp-money">
+        <div class="esp-money-cell">
+          <span class="esp-money-label">Monto neto</span>
+          <span class="esp-money-value">S/ {{ fmt.formatMoney(enrollment.total_to_pay) }}</span>
         </div>
-        <div class="esp-h-card esp-h-green">
-          <span class="esp-h-label">Pagado</span>
-          <span class="esp-h-value">S/ {{ fmt.formatMoney(fmt.getPagado(enrollment)) }}</span>
+        <div class="esp-money-cell is-ok">
+          <span class="esp-money-label">Pagado</span>
+          <span class="esp-money-value">S/ {{ fmt.formatMoney(fmt.getPagado(enrollment)) }}</span>
         </div>
-        <div class="esp-h-card" :class="saldo > 0 ? 'esp-h-red' : 'esp-h-muted'">
-          <span class="esp-h-label">Saldo</span>
-          <span class="esp-h-value">{{ fmt.isContado(enrollment) ? '\u2014' : 'S/ ' + fmt.formatMoney(saldo) }}</span>
+        <div class="esp-money-cell" :class="!fmt.isContado(enrollment) && saldo > 0 ? 'is-bad' : 'is-muted'">
+          <span class="esp-money-label">Saldo</span>
+          <span class="esp-money-value">{{ fmt.isContado(enrollment) ? '—' : 'S/ ' + fmt.formatMoney(saldo) }}</span>
         </div>
       </div>
 
-      <div class="esp-section">
+      <section class="esp-section">
         <h4 class="esp-section-title">Programa</h4>
         <dl class="esp-dl">
-          <div class="esp-dl-row">
-            <dt>Programa</dt>
-            <dd>{{ enrollment.program_name || '---' }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>Edicion</dt>
-            <dd>{{ enrollment.edition_code || '---' }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>Tipo / Modalidad</dt>
-            <dd>{{ [enrollment.program_type, enrollment.program_modality].filter(Boolean).join(' / ') || '---' }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>Inicio</dt>
-            <dd>{{ fmt.formatDate(enrollment.start_date) }}</dd>
-          </div>
+          <div><dt>Programa</dt><dd>{{ enrollment.program_name || '—' }}</dd></div>
+          <div><dt>Edición</dt><dd>{{ enrollment.edition_code || '—' }}</dd></div>
+          <div><dt>Tipo / modalidad</dt><dd>{{ [enrollment.program_type, enrollment.program_modality].filter(Boolean).join(' / ') || '—' }}</dd></div>
+          <div><dt>Inicio</dt><dd>{{ fmt.formatDate(enrollment.start_date) }}</dd></div>
         </dl>
-      </div>
+      </section>
 
-      <div class="esp-section">
+      <section class="esp-section">
         <h4 class="esp-section-title">Correos</h4>
         <ul class="esp-emails">
-          <li class="esp-email">
+          <li>
             <div class="esp-email-info">
               <span class="esp-email-label">Personal</span>
-              <span class="esp-email-value" :class="{ 'esp-email-empty': !enrollment.email }">
-                {{ enrollment.email || 'Sin correo registrado' }}
-              </span>
+              <span class="esp-email-value" :class="{ 'is-empty': !enrollment.email }">{{ enrollment.email || 'Sin correo registrado' }}</span>
             </div>
             <button
               v-if="enrollment.email"
-              class="esp-email-copy"
-              :title="copiedKey === 'personal' ? 'Copiado' : 'Copiar al portapapeles'"
+              class="btn-icon btn-icon-sm"
+              type="button"
+              :title="copiedKey === 'personal' ? 'Copiado' : 'Copiar correo personal'"
+              :aria-label="copiedKey === 'personal' ? 'Copiado' : 'Copiar correo personal'"
               @click="copyEmail(enrollment.email, 'personal')"
             >
-              <i :class="copiedKey === 'personal' ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
+              <i :class="copiedKey === 'personal' ? 'fa-solid fa-check' : 'fa-regular fa-copy'" aria-hidden="true"></i>
             </button>
           </li>
-          <li class="esp-email">
+          <li>
             <div class="esp-email-info">
-              <span class="esp-email-label">Campus Virtual</span>
-              <span class="esp-email-value" :class="{ 'esp-email-empty': !odooEmail && !loadingOdooEmail }">
-                <template v-if="loadingOdooEmail">Cargando...</template>
+              <span class="esp-email-label">Campus virtual</span>
+              <span class="esp-email-value" :class="{ 'is-empty': !odooEmail && !loadingOdooEmail }">
+                <template v-if="loadingOdooEmail">Cargando…</template>
                 <template v-else>{{ odooEmail || 'Sin acceso registrado' }}</template>
               </span>
             </div>
             <button
               v-if="odooEmail"
-              class="esp-email-copy"
-              :title="copiedKey === 'campus' ? 'Copiado' : 'Copiar al portapapeles'"
+              class="btn-icon btn-icon-sm"
+              type="button"
+              :title="copiedKey === 'campus' ? 'Copiado' : 'Copiar correo del campus'"
+              :aria-label="copiedKey === 'campus' ? 'Copiado' : 'Copiar correo del campus'"
               @click="copyEmail(odooEmail, 'campus')"
             >
-              <i :class="copiedKey === 'campus' ? 'fa-solid fa-check' : 'fa-regular fa-copy'"></i>
+              <i :class="copiedKey === 'campus' ? 'fa-solid fa-check' : 'fa-regular fa-copy'" aria-hidden="true"></i>
             </button>
           </li>
         </ul>
-      </div>
+      </section>
 
-      <div class="esp-section">
+      <section class="esp-section">
         <h4 class="esp-section-title">Pago</h4>
         <dl class="esp-dl">
-          <div class="esp-dl-row">
-            <dt>F. Registro</dt>
-            <dd>{{ fmt.formatDateTime(enrollment.registration_date) }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>F. Pago</dt>
-            <dd>{{ fmt.formatDate(enrollment.pay_date) }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>Canal</dt>
-            <dd>{{ enrollment.payment_channel || '---' }}</dd>
-          </div>
-          <div class="esp-dl-row">
-            <dt>Asesor</dt>
-            <dd>{{ enrollment.seller_agent_name || '---' }}</dd>
-          </div>
+          <div><dt>F. registro</dt><dd>{{ fmt.formatDateTime(enrollment.registration_date) }}</dd></div>
+          <div><dt>F. pago</dt><dd>{{ fmt.formatDate(enrollment.pay_date) }}</dd></div>
+          <div><dt>Canal</dt><dd>{{ enrollment.payment_channel || '—' }}</dd></div>
+          <div><dt>Asesor</dt><dd>{{ enrollment.seller_agent_name || '—' }}</dd></div>
         </dl>
-      </div>
+      </section>
 
-      <div v-if="!fmt.isContado(enrollment)" class="esp-section">
+      <section v-if="!fmt.isContado(enrollment)" class="esp-section">
         <h4 class="esp-section-title">Cuotas</h4>
         <ul class="esp-cuotas">
-          <li v-for="n in 8" :key="'c-' + n" v-show="enrollment[`c${n}`] != null" class="esp-cuota">
+          <li v-for="n in 8" v-show="enrollment[`c${n}`] != null" :key="'c-' + n">
             <span class="esp-cuota-num">C{{ n }}</span>
             <span class="esp-cuota-date">{{ fmt.formatDate(enrollment[`fc${n}`]) }}</span>
             <span class="esp-cuota-amt">S/ {{ fmt.formatMoney(enrollment[`c${n}`]) }}</span>
           </li>
         </ul>
-      </div>
+      </section>
 
-      <!-- Quick actions: only when the enrollment is approved (no point
-           emailing/syncing one that hasn't been reviewed yet) -->
-      <div v-if="isApproved" class="esp-section">
-        <h4 class="esp-section-title">Acciones rapidas</h4>
-        <div class="esp-quick-actions">
-          <button class="esp-action-btn" :disabled="busy === 'confirm'" @click="onResendConfirm">
-            <i class="fa-solid" :class="busy === 'confirm' ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
-            Reenviar confirmacion
+      <!-- Acciones rápidas solo con la venta aprobada: no tiene sentido reenviar
+           el correo o sincronizar cuotas de una que FICO no revisó. -->
+      <section v-if="isApproved" class="esp-section">
+        <h4 class="esp-section-title">Acciones rápidas</h4>
+        <div class="esp-actions">
+          <button class="btn-exec btn-exec-outline btn-sm" type="button" :disabled="busy === 'confirm'" @click="onResendConfirm">
+            <i class="fa-solid" :class="busy === 'confirm' ? 'fa-spinner fa-spin' : 'fa-paper-plane'" aria-hidden="true"></i>
+            Reenviar confirmación
           </button>
-          <button v-if="!fmt.isContado(enrollment)" class="esp-action-btn" :disabled="busy === 'sync'" @click="run('sync')">
-            <i class="fa-solid" :class="busy === 'sync' ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+          <button v-if="!fmt.isContado(enrollment)" class="btn-exec btn-exec-outline btn-sm" type="button" :disabled="busy === 'sync'" @click="run('sync')">
+            <i class="fa-solid" :class="busy === 'sync' ? 'fa-spinner fa-spin' : 'fa-rotate'" aria-hidden="true"></i>
             Sincronizar cuotas
           </button>
         </div>
-      </div>
+      </section>
 
-      <div v-if="isAdmin" class="esp-section esp-danger">
-        <h4 class="esp-section-title esp-danger-title">Zona de administrador</h4>
-        <button class="esp-danger-btn" @click="openDeleteModal">
-          <i class="fa-solid fa-trash-can"></i>
-          Eliminar inscripcion
+      <section v-if="isAdmin" class="esp-section esp-danger">
+        <h4 class="esp-section-title">Zona de administrador</h4>
+        <button class="btn-exec btn-exec-danger btn-sm" type="button" @click="openDeleteModal">
+          <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Eliminar inscripción
         </button>
-        <p class="esp-danger-hint">Borra esta inscripcion y sus modulos hijos. No afecta Odoo.</p>
-      </div>
+        <p class="esp-hint">Borra esta inscripción y sus módulos hijos. No afecta Odoo.</p>
+      </section>
+    </div>
 
-      <footer class="esp-footer">
-        <button class="esp-btn-primary" @click="$emit('view-full', enrollment)">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver detalle completo
+    <footer class="esp-foot">
+      <button class="btn-exec btn-exec-primary" type="button" @click="$emit('view-full', enrollment)">
+        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Ver detalle completo
+      </button>
+    </footer>
+
+    <BaseModal :model-value="showSapModal" title="Credenciales SAP" size="md" @update:model-value="v => !v && closeSapModal()">
+      <div ref="sapModalBody">
+        <p class="esp-modal-lead">
+          Este es un curso <strong>SAP online</strong>. Escribe el usuario y la contraseña del
+          servidor SAP que se enviarán a <strong>{{ enrollment.student_full_name }}</strong>.
+        </p>
+        <SapCredentialsFields v-model:username="sapUsername" v-model:password="sapPassword" />
+      </div>
+      <template #footer>
+        <button class="btn-exec btn-exec-outline" type="button" :disabled="sendingSap" @click="closeSapModal">Cancelar</button>
+        <button class="btn-exec btn-exec-primary" type="button" :disabled="!sapValid || sendingSap" @click="sendSapConfirmation">
+          <i class="fa-solid" :class="sendingSap ? 'fa-spinner fa-spin' : 'fa-paper-plane'" aria-hidden="true"></i>
+          {{ sendingSap ? 'Enviando…' : 'Enviar correo' }}
         </button>
-      </footer>
-    </div>
+      </template>
+    </BaseModal>
 
-    <div v-if="showSapModal" class="esp-modal-backdrop" @click.self="closeSapModal">
-      <div class="esp-modal" role="dialog" aria-modal="true">
-        <header class="esp-modal-head esp-modal-head-sap">
-          <span class="esp-modal-icon esp-modal-icon-sap"><i class="fa-solid fa-server"></i></span>
-          <h3>Credenciales SAP</h3>
-        </header>
-        <div ref="sapModalBody" class="esp-modal-body">
-          <p class="esp-modal-lead">
-            Este es un curso <strong>SAP online</strong>. Escribe el usuario y la contraseña del
-            servidor SAP que se enviarán a <strong>{{ enrollment.student_full_name }}</strong>.
-          </p>
-          <SapCredentialsFields v-model:username="sapUsername" v-model:password="sapPassword" />
-        </div>
-        <footer class="esp-modal-foot">
-          <button class="esp-modal-btn esp-modal-btn-ghost" :disabled="sendingSap" @click="closeSapModal">
-            Cancelar
-          </button>
-          <button
-            class="esp-modal-btn esp-modal-btn-exec"
-            :disabled="!sapValid || sendingSap"
-            @click="sendSapConfirmation"
-          >
-            <i class="fa-solid" :class="sendingSap ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
-            {{ sendingSap ? 'Enviando...' : 'Enviar correo' }}
-          </button>
-        </footer>
-      </div>
-    </div>
-
-    <div v-if="showDeleteModal" class="esp-modal-backdrop" @click.self="closeDeleteModal">
-      <div class="esp-modal" role="dialog" aria-modal="true">
-        <header class="esp-modal-head">
-          <span class="esp-modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-          <h3>Eliminar inscripcion</h3>
-        </header>
-        <div class="esp-modal-body">
-          <p class="esp-modal-lead">
-            Estas a punto de <strong>borrar permanentemente</strong> la inscripcion de
-            <strong>{{ enrollment.student_full_name }}</strong> en
-            <strong>{{ enrollment.program_name }}</strong> ({{ enrollment.edition_code || '---' }}).
-          </p>
-          <ul class="esp-modal-list">
-            <li>Se eliminan cuotas, pagos, validaciones, adjuntos, tokens, emails y auditoria.</li>
-            <li>Los modulos hijos asociados tambien se eliminan en cascada.</li>
-            <li>El lead asociado se conserva como consulta activa.</li>
-            <li>La sale.order y la matricula en Odoo <strong>no</strong> se tocan.</li>
-            <li><strong>Esta accion es irreversible.</strong></li>
-          </ul>
-          <label class="esp-modal-field">
-            Escribe <code>ELIMINAR</code> para confirmar
-            <input
-              v-model="deleteConfirmText"
-              class="esp-modal-input"
-              placeholder="ELIMINAR"
-              autocomplete="off"
-              spellcheck="false"
-            />
-          </label>
-        </div>
-        <footer class="esp-modal-foot">
-          <button class="esp-modal-btn esp-modal-btn-ghost" :disabled="deleting" @click="closeDeleteModal">
-            Cancelar
-          </button>
-          <button
-            class="esp-modal-btn esp-modal-btn-danger"
-            :disabled="!canConfirmDelete || deleting"
-            @click="confirmDelete"
-          >
-            <i class="fa-solid" :class="deleting ? 'fa-spinner fa-spin' : 'fa-trash-can'"></i>
-            {{ deleting ? 'Eliminando...' : 'Eliminar definitivamente' }}
-          </button>
-        </footer>
-      </div>
-    </div>
+    <BaseModal :model-value="showDeleteModal" title="Eliminar inscripción" size="md" @update:model-value="v => !v && closeDeleteModal()">
+      <p class="esp-modal-lead">
+        Estás a punto de <strong>borrar permanentemente</strong> la inscripción de
+        <strong>{{ enrollment.student_full_name }}</strong> en
+        <strong>{{ enrollment.program_name }}</strong> ({{ enrollment.edition_code || '—' }}).
+      </p>
+      <ul class="esp-modal-list">
+        <li>Se eliminan cuotas, pagos, validaciones, adjuntos, tokens, correos y auditoría.</li>
+        <li>Los módulos hijos asociados también se eliminan en cascada.</li>
+        <li>El lead asociado se conserva como consulta activa.</li>
+        <li>La sale.order y la matrícula en Odoo <strong>no</strong> se tocan.</li>
+        <li><strong>Esta acción es irreversible.</strong></li>
+      </ul>
+      <label class="ds-field">
+        <span class="ds-label">Escribe ELIMINAR para confirmar</span>
+        <input v-model="deleteConfirmText" class="ds-input" placeholder="ELIMINAR" autocomplete="off" spellcheck="false" />
+      </label>
+      <template #footer>
+        <button class="btn-exec btn-exec-outline" type="button" :disabled="deleting" @click="closeDeleteModal">Cancelar</button>
+        <button class="btn-exec btn-exec-danger" type="button" :disabled="!canConfirmDelete || deleting" @click="confirmDelete">
+          <i class="fa-solid" :class="deleting ? 'fa-spinner fa-spin' : 'fa-trash-can'" aria-hidden="true"></i>
+          {{ deleting ? 'Eliminando…' : 'Eliminar definitivamente' }}
+        </button>
+      </template>
+    </BaseModal>
   </aside>
 </template>
 
@@ -263,6 +196,7 @@ import { useToast } from 'vue-toastification'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import { ServiceKeys } from '@/services'
 import SapCredentialsFields from './SapCredentialsFields.vue'
+import BaseModal from '@/components/BaseModal.vue'
 import { isSapCredentialsValid } from './sapCredentials.js'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
@@ -272,6 +206,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'view-full', 'deleted'])
 
 const fmt = useEnrollmentFormatters()
+// statusPill del formatter devuelve la clase vieja; aqui se traduce a tono ds.
+const STATUS_TONE = { 'pill-green': 'ok', 'pill-red': 'bad', 'pill-amber': 'warn' }
 const toast = useToast()
 const ficoService = inject(ServiceKeys.Fico)
 
@@ -456,678 +392,112 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
 </script>
 
 <style scoped>
+/* Panel lateral de Inscripciones. Colores y piezas salen de ds-* y btn-exec;
+   aquí solo la disposición propia del panel. Sin bloque dark. */
 .esp {
   width: 380px;
   flex-shrink: 0;
-  background: #fff;
-  border: 1px solid #EFEFEF;
-  border-radius: 14px;
-  padding: 0;
-  align-self: flex-start;
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  top: calc(var(--layout-header-h, 64px) + 12px);
+  max-height: calc(100vh - var(--layout-header-h, 64px) - 24px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.esp-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
 }
 
-
-/* Header */
 .esp-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.esp-head-id {
-  display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ds-border);
 }
 .esp-avatar {
-  width: 40px;
-  height: 40px;
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: grid; place-items: center;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0D9488, #14B8A6);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
+  background: var(--ds-soft-info);
+  color: var(--ds-info-ink);
+  font-weight: 800; font-size: 14px;
 }
-.esp-head-name { min-width: 0; }
+.esp-head-name { flex: 1; min-width: 0; }
 .esp-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1A1A1A;
-  margin: 0 0 2px 0;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
-}
-.esp-doc {
-  font-size: 11.5px;
-  color: #A3A3A3;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-}
-.esp-icon-btn {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #EFEFEF;
-  background: #fff;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #737373;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-.esp-icon-btn:hover {
-  background: #FAFAFA;
-  color: #1A1A1A;
-}
-
-/* Status pills */
-.esp-status-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.esp-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.esp-pill-soft { background: #F5F5F5; color: #737373; }
-.esp-pill-laptop {
-  background: #ECFEFF;
-  color: #155E75;
-  border: 1px solid #A5F3FC;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.esp-pill-laptop i { font-size: 10px; color: #0891B2; }
-
-.esp-pill-claude {
-  background: #FFF7ED;
-  color: #9A3412;
-  border: 1px solid #FED7AA;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.esp-pill-claude i { font-size: 10px; color: #EA580C; }
-
-/* Highlights */
-.esp-highlights {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.esp-h-card {
-  background: #FAFAFA;
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border-left: 2px solid #E5E5E5;
-}
-.esp-h-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #A3A3A3;
-  font-weight: 600;
-}
-.esp-h-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1A1A1A;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-.esp-h-green { border-left-color: #10B981; background: #F0FDF4; }
-.esp-h-green .esp-h-value { color: #047857; }
-.esp-h-red { border-left-color: #EF4444; background: #FEF2F2; }
-.esp-h-red .esp-h-value { color: #B91C1C; }
-.esp-h-muted .esp-h-value { color: #A3A3A3; }
-
-/* Sections */
-.esp-section { display: flex; flex-direction: column; gap: 8px; }
-.esp-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #A3A3A3;
   margin: 0;
+  font-size: 14.5px; font-weight: 700; color: var(--ds-heading);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.esp-dl { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.esp-dl-row {
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 12px;
-  align-items: baseline;
-  padding: 6px 0;
-  border-bottom: 1px solid #F5F5F5;
-}
-.esp-dl-row:last-child { border-bottom: none; }
-.esp-dl-row dt {
-  font-size: 11px;
-  color: #A3A3A3;
-  font-weight: 500;
-}
-.esp-dl-row dd {
-  font-size: 12.5px;
-  color: #1A1A1A;
-  font-weight: 500;
-  margin: 0;
-  word-break: break-word;
-}
+.esp-doc { font-size: 12px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
 
-/* Cuotas */
-.esp-cuotas {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.esp-cuota {
-  display: grid;
-  grid-template-columns: 36px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 7px 10px;
-  background: #FAFAFA;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.esp-cuota-num {
-  font-weight: 700;
-  font-size: 11px;
-  color: #0D9488;
-  letter-spacing: 0.02em;
-}
-.esp-cuota-date { color: #737373; font-size: 11px; }
-.esp-cuota-amt {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: #1A1A1A;
-}
-
-/* Emails */
-.esp-emails {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.esp-email {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: #FAFAFA;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.esp-email-info {
+.esp-body {
   flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.esp-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Tres cifras: monto, pagado y saldo, cada una con su tono. */
+.esp-money { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.esp-money-cell {
+  padding: 8px 10px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
-.esp-email-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #A3A3A3;
-  font-weight: 600;
+.esp-money-label { display: block; font-size: 11px; font-weight: 600; color: var(--ds-ink-2); }
+.esp-money-value {
+  display: block; margin-top: 3px;
+  font-family: var(--ds-font-mono); font-size: 12px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--ds-ink); white-space: nowrap;
 }
-.esp-email-value {
-  font-size: 12px;
-  color: #1A1A1A;
-  font-weight: 500;
-  word-break: break-all;
-  line-height: 1.4;
-}
-.esp-email-empty { color: #C4C4C4; font-style: italic; font-weight: 400; }
-.esp-email-copy {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border: 1px solid #EFEFEF;
-  background: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #737373;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-.esp-email-copy:hover {
-  background: #F0FDFA;
-  border-color: #99F6E4;
-  color: #0F766E;
-}
+.esp-money-cell.is-ok { background: var(--ds-soft-ok); border-color: transparent; }
+.esp-money-cell.is-ok .esp-money-value { color: var(--ds-ok-ink); }
+.esp-money-cell.is-bad { background: var(--ds-soft-bad); border-color: transparent; }
+.esp-money-cell.is-bad .esp-money-value { color: var(--ds-bad-ink); }
+.esp-money-cell.is-muted .esp-money-value { color: var(--ds-muted); }
 
-/* Quick actions */
-.esp-quick-actions { display: flex; flex-direction: column; gap: 6px; }
-.esp-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #1A1A1A;
-  background: #FAFAFA;
-  border: 1px solid #EFEFEF;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-  text-align: left;
-  letter-spacing: -0.01em;
-}
-.esp-action-btn i {
-  width: 14px; font-size: 11px; color: #0D9488; text-align: center;
-}
-.esp-action-btn:hover:not(:disabled) {
-  background: #F0FDFA;
-  border-color: #99F6E4;
-  color: #0F766E;
-}
-.esp-action-btn:disabled { opacity: 0.55; cursor: wait; }
+.esp-section-title { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--ds-heading); }
+.esp-dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.esp-dl > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; font-size: 12.5px; }
+.esp-dl dt { font-weight: 500; color: var(--ds-ink-2); }
+.esp-dl dd { margin: 0; color: var(--ds-ink); font-weight: 600; overflow-wrap: anywhere; }
 
-/* Danger zone */
-.esp-danger {
-  border-top: 1px dashed #FECACA;
-  padding-top: 12px;
-  margin-top: 4px;
-}
-.esp-danger-title { color: #B91C1C; }
-.esp-danger-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 12px;
-  width: 100%;
-  font-size: 12px;
-  font-weight: 600;
-  color: #B91C1C;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-  letter-spacing: -0.01em;
-}
-.esp-danger-btn i { font-size: 12px; }
-.esp-danger-btn:hover {
-  background: #FEE2E2;
-  border-color: #FCA5A5;
-  color: #991B1B;
-}
-.esp-danger-hint {
-  margin: 6px 0 0;
-  font-size: 10.5px;
-  color: #A3A3A3;
-  line-height: 1.4;
-}
+.esp-emails { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.esp-emails li { display: flex; align-items: center; gap: 8px; }
+.esp-email-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.esp-email-label { font-size: 11px; color: var(--ds-ink-2); }
+.esp-email-value { font-size: 12.5px; font-weight: 600; color: var(--ds-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.esp-email-value.is-empty { color: var(--ds-muted); font-weight: 400; font-style: italic; }
 
-/* Delete confirmation modal */
-.esp-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 10, 10, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-  animation: esp-backdrop-in 0.18s ease-out;
-}
-.esp-modal {
-  animation: esp-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes esp-backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes esp-modal-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-.esp-modal {
-  background: #fff;
-  border-radius: 14px;
-  max-width: 460px;
-  width: 100%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.esp-modal-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  background: #FEF2F2;
-  border-bottom: 1px solid #FECACA;
-}
-.esp-modal-head h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #991B1B;
-  letter-spacing: -0.01em;
-}
-.esp-modal-icon {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: #B91C1C;
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-}
-.esp-modal-body {
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.esp-modal-lead {
-  margin: 0;
-  font-size: 13px;
-  color: #1A1A1A;
-  line-height: 1.5;
-}
-.esp-modal-list {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 12px;
-  color: #525252;
-  line-height: 1.55;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.esp-modal-list strong { color: #1A1A1A; }
-.esp-modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-  color: #525252;
-  font-weight: 500;
-}
-.esp-modal-field code {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  background: #F5F5F5;
-  padding: 1px 6px;
-  border-radius: 4px;
-  color: #B91C1C;
-  font-weight: 700;
-}
-.esp-modal-input {
-  width: 100%;
-  padding: 9px 12px;
-  font-size: 13px;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 0.04em;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-.esp-modal-input:focus { border-color: #B91C1C; }
-.esp-modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px 16px;
-  border-top: 1px solid #F5F5F5;
-}
-.esp-modal-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
+.esp-cuotas { list-style: none; margin: 0; padding: 0; }
+.esp-cuotas li {
+  display: grid; grid-template-columns: 34px 1fr auto; gap: 8px;
+  padding: 6px 0; border-top: 1px solid var(--ds-border);
   font-size: 12.5px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  font-family: inherit;
-  letter-spacing: -0.01em;
-  transition: all 0.15s ease;
 }
-.esp-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.esp-modal-btn-ghost {
-  background: #fff;
-  color: #525252;
-  border-color: #E5E5E5;
-}
-.esp-modal-btn-ghost:hover:not(:disabled) { background: #FAFAFA; color: #1A1A1A; }
-.esp-modal-btn-danger {
-  background: #B91C1C;
-  color: #fff;
-}
-.esp-modal-btn-danger:hover:not(:disabled) { background: #991B1B; }
-.esp-modal-btn-exec {
-  background: #0284C7;
-  color: #fff;
-}
-.esp-modal-btn-exec:hover:not(:disabled) { background: #0369A1; }
+.esp-cuotas li:first-child { border-top: 0; }
+.esp-cuota-num { font-weight: 700; color: var(--ds-ink-2); }
+.esp-cuota-date { color: var(--ds-ink-2); }
+.esp-cuota-amt { font-family: var(--ds-font-mono); font-weight: 700; color: var(--ds-ink); }
 
-/* SAP modal: cabecera azul en vez de roja */
-.esp-modal-head-sap {
-  background: #F0F9FF;
-  border-bottom-color: #BAE6FD;
-}
-.esp-modal-head-sap h3 { color: #0c4a6e; }
-.esp-modal-icon-sap { background: #0284C7; }
+.esp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.esp-danger { padding: 12px; border-radius: var(--ds-radius-sm); background: var(--ds-soft-bad); }
+.esp-danger .esp-section-title { color: var(--ds-bad-ink); }
+.esp-hint { margin: 8px 0 0; font-size: 11.5px; color: var(--ds-ink-2); }
 
-/* Footer */
-.esp-footer {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid #EFEFEF;
-}
-.esp-btn-primary {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--we-navy, #002060);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  font-family: inherit;
-  letter-spacing: -0.01em;
-}
-.esp-btn-primary:hover { background: var(--we-navy-dark, #001540); }
-.esp-btn-primary i { font-size: 11px; }
+.esp-foot { padding: 12px 16px; border-top: 1px solid var(--ds-border); }
+.esp-foot .btn-exec { width: 100%; justify-content: center; }
 
-/* Pill colors (reused) */
-.pill-green { background: #ECFDF5; color: #065F46; }
-.pill-amber { background: #FFF8EB; color: #92400E; }
-.pill-red   { background: #FEF2F2; color: #991B1B; }
-.pill-slate { background: #F5F5F5; color: #737373; }
+.esp-modal-lead { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--ds-ink); }
+.esp-modal-list { margin: 0 0 14px; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: var(--ds-ink-2); }
 
-/* Responsive */
 @media (max-width: 1280px) {
   .esp { width: 340px; }
-  .esp-name { max-width: 180px; }
 }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .esp {
-  background: #1A1A14;
-  border-color: #2A2A22;
+@media (max-width: 1024px) {
+  .esp { width: 100%; position: static; max-height: none; }
 }
-[data-coreui-theme="dark"] .esp-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .esp-doc { color: #A0A099; }
-[data-coreui-theme="dark"] .esp-icon-btn {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
-[data-coreui-theme="dark"] .esp-icon-btn:hover {
-  background: #2A2A22;
-  color: #F4F4F0;
-}
-
-[data-coreui-theme="dark"] .esp-pill-soft { background: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .esp-pill-laptop {
-  background: rgba(8,145,178,0.16);
-  color: #67E8F9;
-  border-color: rgba(8,145,178,0.4);
-}
-[data-coreui-theme="dark"] .esp-pill-laptop i { color: #22D3EE; }
-[data-coreui-theme="dark"] .esp-pill-claude {
-  background: rgba(234,88,12,0.16);
-  color: #FDBA74;
-  border-color: rgba(234,88,12,0.4);
-}
-[data-coreui-theme="dark"] .esp-pill-claude i { color: #FB923C; }
-[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
-[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
-[data-coreui-theme="dark"] .pill-slate { background: #2A2A22; color: #A0A099; }
-
-[data-coreui-theme="dark"] .esp-h-card {
-  background: #1F1F1A;
-  border-left-color: #3A3A33;
-}
-[data-coreui-theme="dark"] .esp-h-label { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-h-value { color: #F4F4F0; }
-[data-coreui-theme="dark"] .esp-h-green { background: rgba(16,185,129,0.12); border-left-color: #10B981; }
-[data-coreui-theme="dark"] .esp-h-green .esp-h-value { color: #34D399; }
-[data-coreui-theme="dark"] .esp-h-red { background: rgba(239,68,68,0.12); border-left-color: #EF4444; }
-[data-coreui-theme="dark"] .esp-h-red .esp-h-value { color: #F87171; }
-[data-coreui-theme="dark"] .esp-h-muted .esp-h-value { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .esp-section-title { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-dl-row { border-bottom-color: #1F1F1A; }
-[data-coreui-theme="dark"] .esp-dl-row dt { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-dl-row dd { color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .esp-email { background: #1F1F1A; }
-[data-coreui-theme="dark"] .esp-email-label { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-email-value { color: #F4F4F0; }
-[data-coreui-theme="dark"] .esp-email-empty { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-email-copy {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
-[data-coreui-theme="dark"] .esp-email-copy:hover {
-  background: rgba(16,185,129,0.12);
-  border-color: rgba(16,185,129,0.4);
-  color: #34D399;
-}
-
-[data-coreui-theme="dark"] .esp-cuota { background: #1F1F1A; }
-[data-coreui-theme="dark"] .esp-cuota-num { color: #34D399; }
-[data-coreui-theme="dark"] .esp-cuota-date { color: #A0A099; }
-[data-coreui-theme="dark"] .esp-cuota-amt { color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .esp-action-btn {
-  background: #1F1F1A;
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .esp-action-btn i { color: #34D399; }
-[data-coreui-theme="dark"] .esp-action-btn:hover:not(:disabled) {
-  background: rgba(16,185,129,0.12);
-  border-color: rgba(16,185,129,0.4);
-  color: #34D399;
-}
-
-[data-coreui-theme="dark"] .esp-danger { border-top-color: rgba(239,68,68,0.35); }
-[data-coreui-theme="dark"] .esp-danger-title { color: #F87171; }
-[data-coreui-theme="dark"] .esp-danger-btn {
-  background: rgba(239,68,68,0.12);
-  border-color: rgba(239,68,68,0.4);
-  color: #F87171;
-}
-[data-coreui-theme="dark"] .esp-danger-btn:hover {
-  background: rgba(239,68,68,0.2);
-  border-color: rgba(239,68,68,0.6);
-  color: #FCA5A5;
-}
-[data-coreui-theme="dark"] .esp-danger-hint { color: #6F6F66; }
-[data-coreui-theme="dark"] .esp-modal { background: #1A1A14; }
-[data-coreui-theme="dark"] .esp-modal-head {
-  background: rgba(239,68,68,0.12);
-  border-bottom-color: rgba(239,68,68,0.35);
-}
-[data-coreui-theme="dark"] .esp-modal-head h3 { color: #FCA5A5; }
-[data-coreui-theme="dark"] .esp-modal-lead { color: #F4F4F0; }
-[data-coreui-theme="dark"] .esp-modal-list { color: #D4D4CC; }
-[data-coreui-theme="dark"] .esp-modal-list strong { color: #F4F4F0; }
-[data-coreui-theme="dark"] .esp-modal-field { color: #D4D4CC; }
-[data-coreui-theme="dark"] .esp-modal-field code { background: #2A2A22; color: #FCA5A5; }
-[data-coreui-theme="dark"] .esp-modal-input {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .esp-modal-input:focus { border-color: #F87171; }
-[data-coreui-theme="dark"] .esp-modal-foot { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .esp-modal-btn-ghost {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .esp-modal-btn-ghost:hover:not(:disabled) {
-  background: #2A2A22;
-  color: #F4F4F0;
-}
-
-[data-coreui-theme="dark"] .esp-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .esp-btn-primary { background: #F4F4F0; color: #14140F; }
-[data-coreui-theme="dark"] .esp-btn-primary:hover { background: #E4E4DD; }
 </style>
