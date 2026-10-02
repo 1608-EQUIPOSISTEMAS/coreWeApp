@@ -1,56 +1,69 @@
 <template>
   <section class="eact-section">
-    <h3 class="eact-title"><i class="fa-solid fa-bolt"></i> Acciones</h3>
-
     <!-- Banner trazabilidad: inscripcion proveniente de migracion A5 -->
-    <div v-if="replacesEnrollmentId" class="eact-migration-banner">
-      <i class="fa-solid fa-arrow-right-arrow-left"></i>
-      <div class="eact-mb-text">
+    <div v-if="replacesEnrollmentId" class="eact-banner warn">
+      <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+      <div>
         <strong>Inscripcion creada por migracion A5</strong>
         <p>Reemplaza a la inscripcion <a href="#" @click.prevent="$emit('open-related', replacesEnrollmentId)">#{{ replacesEnrollmentId }}</a> (edicion cancelada). Los pagos viven en la original hasta que se apruebe la migracion.</p>
       </div>
     </div>
 
-    <!-- Action buttons (when no action is active) -->
-    <div v-if="!activeAction" class="eact-buttons">
-      <template v-if="!isModalityOnlyRole">
-        <button
-          v-if="isPendingReview"
-          class="eact-btn eact-btn-approve"
-          @click="startAction('approveMigration')"
-        >
-          <i class="fa-solid fa-circle-check"></i> Aprobar Migracion
-          <span class="eact-tag eact-tag-approve">PR</span>
-        </button>
-        <template v-if="canManageEnrollment && !isOriginMoved">
-          <button class="eact-btn" @click="startAction('rp')">
-            <i class="fa-solid fa-calendar-xmark"></i> Reprogramar Edicion
-            <span class="eact-tag">RP</span>
+    <!-- Acciones agrupadas por lo que tocan; cada tarjeta dice que hace para no
+         tener que abrirla para saberlo. El retiro va aparte y en rojo. -->
+    <div v-if="!activeAction" class="eact-groups">
+      <section v-if="!isModalityOnlyRole && (isPendingReview || (canManageEnrollment && !isOriginMoved))" class="eact-group">
+        <h4 class="eact-group-title">Movimientos de la venta</h4>
+        <div class="eact-tiles">
+          <button v-if="isPendingReview" type="button" class="eact-tile ok" @click="startAction('approveMigration')">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <span class="eact-tile-text"><strong>Aprobar migración</strong><small>Trae las cuotas de la venta original y confirma la nueva edición</small></span>
+            <span class="eact-tag">PR</span>
           </button>
-          <button class="eact-btn" @click="startAction('cc')">
-            <i class="fa-solid fa-right-left"></i> Cambio de Curso
-            <span class="eact-tag eact-tag-cc">CC</span>
+          <template v-if="canManageEnrollment && !isOriginMoved">
+            <button type="button" class="eact-tile" @click="startAction('rp')">
+              <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i>
+              <span class="eact-tile-text"><strong>Reprogramar edición</strong><small>Mismo programa, otra edición; las cuotas pendientes viajan</small></span>
+              <span class="eact-tag">RP</span>
+            </button>
+            <button type="button" class="eact-tile" @click="startAction('cc')">
+              <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+              <span class="eact-tile-text"><strong>Cambio de curso</strong><small>Pasa lo pagado a otro programa y calcula la diferencia</small></span>
+              <span class="eact-tag violet">CC</span>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <section class="eact-group">
+        <h4 class="eact-group-title">Datos</h4>
+        <div class="eact-tiles">
+          <button type="button" class="eact-tile" @click="startAction('modality')">
+            <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+            <span class="eact-tile-text"><strong>Cambiar modalidad</strong><small>Normal o Flex; también a los módulos hijos</small></span>
           </button>
-        </template>
-        <div class="eact-sep"></div>
-      </template>
-      <button class="eact-btn" @click="startAction('modality')">
-        <i class="fa-solid fa-shuffle"></i> Cambiar Modalidad
-      </button>
-      <template v-if="!isModalityOnlyRole">
-        <button class="eact-btn" @click="startAction('editStudent')">
-          <i class="fa-solid fa-user-pen"></i> Editar Alumno
-        </button>
-        <template v-if="canManageEnrollment">
-          <button class="eact-btn" @click="startAction('editSellerAgent')">
-            <i class="fa-solid fa-user-tie"></i> Editar Asesor
+          <template v-if="!isModalityOnlyRole">
+            <button type="button" class="eact-tile" @click="startAction('editStudent')">
+              <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+              <span class="eact-tile-text"><strong>Editar alumno</strong><small>Nombre, documento, correos, teléfono y perfil</small></span>
+            </button>
+            <button v-if="canManageEnrollment" type="button" class="eact-tile" @click="startAction('editSellerAgent')">
+              <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+              <span class="eact-tile-text"><strong>Editar asesor</strong><small>Canal y asesor al que se atribuye la venta</small></span>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <section v-if="!isModalityOnlyRole && canManageEnrollment" class="eact-group">
+        <h4 class="eact-group-title">Retiro</h4>
+        <div class="eact-tiles">
+          <button type="button" class="eact-tile bad" @click="startAction('retire')">
+            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+            <span class="eact-tile-text"><strong>Retirar alumno</strong><small>Baja de la venta y sus módulos, anula cuotas pendientes y lo saca de Odoo</small></span>
           </button>
-          <div class="eact-sep"></div>
-          <button class="eact-btn eact-btn-danger" @click="startAction('retire')">
-            <i class="fa-solid fa-user-slash"></i> Retirar Alumno
-          </button>
-        </template>
-      </template>
+        </div>
+      </section>
     </div>
 
     <!-- Active action with stepper -->
@@ -88,14 +101,10 @@
             </div>
             <div class="eact-field">
               <label>Nueva Edicion</label>
-              <div class="eact-select-wrap">
-                <select v-model="rpEditionId" class="eact-select" :disabled="loadingEditions">
-                  <option :value="null" disabled>{{ loadingEditions ? 'Cargando ediciones...' : 'Seleccionar edicion...' }}</option>
-                  <option v-for="ed in rpEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
-                </select>
-                <i v-if="loadingEditions" class="fa-solid fa-spinner fa-spin eact-select-icon"></i>
-                <i v-else class="fa-solid fa-chevron-down eact-select-icon"></i>
-              </div>
+              <select v-model="rpEditionId" class="ds-input" :disabled="loadingEditions">
+                <option :value="null" disabled>{{ loadingEditions ? 'Cargando ediciones…' : 'Seleccionar edición…' }}</option>
+                <option v-for="ed in rpEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
+              </select>
             </div>
             <!-- Plan de cuotas pendientes que se trasladan a la nueva inscripcion -->
             <div v-if="rpPendingCuotas.length" class="eact-field">
@@ -106,8 +115,8 @@
                 </div>
                 <div v-for="(c, i) in rpPlan" :key="c.installment_id" class="eact-rp-plan-row">
                   <span class="eact-rp-plan-num">{{ i + 1 }}</span>
-                  <input v-model.number="c.amount" type="number" step="0.01" min="0.01" class="eact-input eact-input-amount" />
-                  <input v-model="c.due_date" type="date" class="eact-input" />
+                  <input v-model.number="c.amount" type="number" step="0.01" min="0.01" class="ds-input eact-input-amount" />
+                  <input v-model="c.due_date" type="date" class="ds-input" />
                 </div>
                 <div class="eact-rp-plan-foot" :class="{ 'eact-rp-plan-foot--err': !rpPlanSumsOk }">
                   <span>Total del plan: {{ fmt.formatMoney(rpPlanTotal) }}</span>
@@ -118,8 +127,8 @@
             </div>
             <PersonalAccountField v-model="rpPersonalAccount" :program-version-id="props.enrollment?.program_version_id ?? null" />
             <div class="eact-field">
-              <label>Justificacion <span class="eact-req">*</span></label>
-              <textarea v-model="rpJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="rpJustificacion" class="ds-input" required rows="3" placeholder="Motivo de la reprogramacion..."></textarea>
             </div>
           </div>
         </template>
@@ -181,7 +190,7 @@
               </div>
               <div class="eact-field">
                 <label>Nueva edicion</label>
-                <select v-model="ccEditionId" class="eact-select" :disabled="!ccProgramVersionId || ccLoadingEditions || ccNoEdition" @change="onCCEditionChange">
+                <select v-model="ccEditionId" class="ds-input" :disabled="!ccProgramVersionId || ccLoadingEditions || ccNoEdition" @change="onCCEditionChange">
                   <option :value="null" disabled>{{ ccLoadingEditions ? 'Cargando...' : (ccNoEdition ? 'No aplica' : 'Seleccionar edicion...') }}</option>
                   <option v-for="ed in ccEditionsList" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                 </select>
@@ -189,7 +198,7 @@
                 <small v-else-if="ccNoEdition" class="eact-price-hint">Este programa no tiene ediciones publicadas; el destino se crea sin edicion.</small>
               </div>
             </div>
-            <div class="eact-grid-3" style="margin-top:12px">
+            <div class="eact-grid-3">
               <div class="eact-field">
                 <label>Precio lista nuevo</label>
                 <div class="eact-amount">{{ fmt.formatMoney(ccEditionFinalPrice) }}</div>
@@ -203,7 +212,7 @@
               </div>
               <div class="eact-field">
                 <label>Monto a registrar</label>
-                <input v-model.number="ccTotalAmount" type="number" step="0.01" min="0" class="eact-input eact-input-amount" placeholder="0.00" />
+                <input v-model.number="ccTotalAmount" type="number" step="0.01" min="0" class="ds-input eact-input-amount" placeholder="0.00" />
               </div>
             </div>
 
@@ -223,25 +232,25 @@
               </div>
               <div class="eact-field">
                 <label>Cuenta bancaria</label>
-                <select v-model="ccForm.bank_account_id" class="eact-select" :disabled="!ccForm.cat_business_entity">
+                <select v-model="ccForm.bank_account_id" class="ds-input" :disabled="!ccForm.cat_business_entity">
                   <option :value="null">{{ ccForm.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
                   <option v-for="a in filteredAccounts(ccForm.cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} — {{ a.currency }} — {{ a.account_number }}</option>
                 </select>
               </div>
               <div class="eact-field">
                 <label>N. Operacion</label>
-                <input v-model.trim="ccForm.transaction_code" type="text" class="eact-input" placeholder="Codigo de operacion..." />
+                <input v-model.trim="ccForm.transaction_code" type="text" class="ds-input" placeholder="Codigo de operacion..." />
               </div>
             </div>
-            <div class="eact-field" style="margin-top:12px">
+            <div class="eact-field">
               <label>Comprobante(s) de pago</label>
               <MultiFileUploader v-model="ccForm.ticket_payment_urls" label="Adjuntar comprobante" :required="false" />
             </div>
 
-            <PersonalAccountField v-model="ccPersonalAccount" :program-version-id="ccProgramVersionId" style="margin-top:14px" />
-            <div class="eact-field" style="margin-top:14px">
-              <label>Justificacion <span class="eact-req">*</span></label>
-              <textarea v-model="ccJustificacion" class="eact-textarea" required rows="3" placeholder="Motivo del cambio de curso..."></textarea>
+            <PersonalAccountField v-model="ccPersonalAccount" :program-version-id="ccProgramVersionId" />
+            <div class="eact-field">
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="ccJustificacion" class="ds-input" required rows="3" placeholder="Motivo del cambio de curso..."></textarea>
             </div>
           </div>
         </template>
@@ -271,15 +280,15 @@
               </div>
               <div class="eact-field">
                 <label>Nueva modalidad</label>
-                <select v-model="newModalityId" class="eact-select">
+                <select v-model="newModalityId" class="ds-input">
                   <option :value="null">Seleccionar...</option>
                   <option v-for="m in modalityOptions" :key="m.id" :value="m.id">{{ m.description }}</option>
                 </select>
               </div>
             </div>
             <div class="eact-field">
-              <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
-              <textarea v-model="modalityJustificacion" class="eact-textarea" rows="2" placeholder="Motivo del cambio..."></textarea>
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="modalityJustificacion" class="ds-input" rows="2" placeholder="Motivo del cambio..."></textarea>
             </div>
           </div>
         </template>
@@ -302,39 +311,39 @@
             <div class="eact-grid-2">
               <div class="eact-field">
                 <label>Nombres</label>
-                <input v-model="editStudentForm.first_name" type="text" class="eact-input" />
+                <input v-model="editStudentForm.first_name" type="text" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>Apellidos</label>
-                <input v-model="editStudentForm.last_name" type="text" class="eact-input" />
+                <input v-model="editStudentForm.last_name" type="text" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>N. Documento</label>
-                <input v-model="editStudentForm.document_number" type="text" class="eact-input" />
+                <input v-model="editStudentForm.document_number" type="text" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>Correo Original</label>
-                <input v-model="editStudentForm.origin_email" type="email" class="eact-input" />
+                <input v-model="editStudentForm.origin_email" type="email" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>Correo Odoo</label>
-                <input v-model="editStudentForm.odoo_email" type="email" class="eact-input" />
+                <input v-model="editStudentForm.odoo_email" type="email" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>Telefono</label>
-                <input v-model="editStudentForm.origin_phone" type="text" class="eact-input" />
+                <input v-model="editStudentForm.origin_phone" type="text" class="ds-input" />
               </div>
               <div class="eact-field">
                 <label>Perfil</label>
-                <select v-model="editStudentForm.cat_profile_id" class="eact-select">
+                <select v-model="editStudentForm.cat_profile_id" class="ds-input">
                   <option :value="null">Seleccionar...</option>
                   <option v-for="p in profileOptions" :key="p.id" :value="p.id">{{ p.description }}</option>
                 </select>
               </div>
             </div>
             <div class="eact-field">
-              <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
-              <textarea v-model="editStudentJustificacion" class="eact-textarea" rows="2" placeholder="Motivo de la edicion..."></textarea>
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="editStudentJustificacion" class="ds-input" rows="2" placeholder="Motivo de la edicion..."></textarea>
             </div>
           </div>
         </template>
@@ -360,7 +369,7 @@
                 <div class="eact-readonly">{{ currentAgentLabel }}</div>
               </div>
               <div class="eact-field">
-                <label>Canal <span class="eact-req">*</span></label>
+                <label>Canal<span class="ds-req">*</span></label>
                 <SearchSelect
                   v-model="newAgentCategory"
                   :items="agentCategoryOptions"
@@ -376,9 +385,9 @@
                  la consulta que YA registro para este alumno y este programa.
                  Sin consulta no hay trazabilidad y el match queda bloqueado. -->
             <div class="eact-field" v-if="newAgentCategory === 'web'">
-              <label>Consulta del asesor <span class="eact-req">*</span></label>
-              <div v-if="loadingWebCandidates" class="eact-readonly" style="font-size:12px;color:#666">
-                <i class="fa-solid fa-spinner fa-spin"></i> Buscando consultas con el telefono del alumno...
+              <label>Consulta del asesor<span class="ds-req">*</span></label>
+              <div v-if="loadingWebCandidates" class="eact-readonly eact-note">
+                <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Buscando consultas con el telefono del alumno...
               </div>
               <SearchSelect
                 v-else-if="webCandidates.length"
@@ -389,14 +398,14 @@
                 placeholder="Buscar consulta por asesor..."
                 required
               />
-              <div v-else class="eact-readonly" style="font-size:12px;color:#b02a37">
-                <i class="fa-solid fa-triangle-exclamation"></i>
+              <div v-else class="ds-callout bad">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                 Ningun asesor registro una consulta con el telefono del alumno para este programa.
                 El asesor debe registrarla antes de que se le pueda atribuir la venta.
               </div>
             </div>
             <div class="eact-field" v-else-if="newAgentCategory && !WE_CATS.includes(newAgentCategory)">
-              <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="eact-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
+              <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="ds-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
               <SearchSelect
                 v-model="newSellerAgentId"
                 :items="filteredAgentOptions"
@@ -406,15 +415,15 @@
                 :required="newAgentCategory !== 'sa'"
               />
             </div>
-            <div v-if="WE_CATS.includes(newAgentCategory)" class="eact-readonly" style="font-size:12px;color:#666">
-              <i class="fa-solid fa-circle-info"></i> Canal WE no lleva asesor individual asignado.
+            <div v-if="WE_CATS.includes(newAgentCategory)" class="eact-readonly eact-note">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Canal WE no lleva asesor individual asignado.
             </div>
             <small v-if="agentPreview" class="eact-price-hint">
-              <i class="fa-solid fa-eye"></i> Asesor quedara como: <strong>{{ agentPreview }}</strong>
+              <i class="fa-solid fa-eye" aria-hidden="true"></i> Asesor quedara como: <strong>{{ agentPreview }}</strong>
             </small>
             <div class="eact-field">
-              <label class="eact-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion (obligatorio)</label>
-              <textarea v-model="editAgentJustificacion" class="eact-textarea" rows="2" placeholder="Motivo del cambio de asesor..."></textarea>
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="editAgentJustificacion" class="ds-input" rows="2" placeholder="Motivo del cambio de asesor..."></textarea>
             </div>
           </div>
         </template>
@@ -435,15 +444,15 @@
         <template #step-0>
           <div class="eact-form">
             <div class="eact-field">
-              <label>Motivo del retiro <span class="eact-req">*</span></label>
-              <textarea v-model="retireReason" class="eact-textarea eact-textarea-danger" required rows="3" placeholder="Explica el motivo del retiro..."></textarea>
+              <label>Motivo del retiro<span class="ds-req">*</span></label>
+              <textarea v-model="retireReason" class="ds-input" required rows="3" placeholder="Explica el motivo del retiro..."></textarea>
             </div>
             <div class="eact-refund-row">
               <label class="eact-checkbox-label">
                 <input type="checkbox" v-model="retireHasRefund" /> Hubo devolucion
               </label>
-              <div v-if="retireHasRefund" style="flex:1">
-                <input v-model.number="retireRefundAmount" type="number" min="0" step="0.01" class="eact-input" placeholder="Monto devuelto..." />
+              <div v-if="retireHasRefund" class="eact-refund-input">
+                <input v-model.number="retireRefundAmount" type="number" min="0" step="0.01" class="ds-input" placeholder="Monto devuelto..." />
               </div>
             </div>
           </div>
@@ -464,14 +473,14 @@
       >
         <template #step-0>
           <div class="eact-form">
-            <div class="eact-observe-banner">
-              <i class="fa-solid fa-circle-info"></i>
+            <div class="eact-banner warn">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
               <div>
                 <strong>Aprobar inscripcion migrada</strong>
                 <p>Esto transferira las cuotas pendientes desde la inscripcion origen <strong>#{{ replacesEnrollmentId }}</strong>, inscribira al alumno en Odoo (si aplica) y enviara el correo de confirmacion con la nueva edicion.</p>
               </div>
             </div>
-            <div class="eact-readonly" style="margin-top:8px">
+            <div class="eact-readonly">
               Edicion destino: <strong>{{ props.enrollment?.edition_code || props.detail?.edition_code || '---' }}</strong>
             </div>
           </div>
@@ -492,16 +501,16 @@
       >
         <template #step-0>
           <div class="eact-form">
-            <div class="eact-observe-banner">
-              <i class="fa-solid fa-triangle-exclamation"></i>
+            <div class="eact-banner warn">
+              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
               <div>
                 <strong>Observar inscripcion</strong>
                 <p>La inscripcion sera devuelta al asesor comercial para correccion. Se le notificara automaticamente.</p>
               </div>
             </div>
             <div class="eact-field">
-              <label>Motivo de la observacion <span class="eact-req">*</span></label>
-              <textarea v-model="observeReason" class="eact-textarea" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
+              <label>Motivo de la observacion<span class="ds-req">*</span></label>
+              <textarea v-model="observeReason" class="ds-input" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
             </div>
             <!-- Unica salida del bloqueo por copia requerida: si el asesor la
                  pidio por error, se baja aca y queda auditado. -->
@@ -1316,389 +1325,112 @@ async function handleRetire () {
 </script>
 
 <style scoped>
-.eact-section {
-  background: transparent;
+/* Todo con tokens ds-*: el modo oscuro sale de los tokens. Inputs = ds-input. */
+.eact-section { display: flex; flex-direction: column; gap: var(--ds-gap); }
+
+.eact-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: var(--ds-radius-sm);
+  font-size: 12.5px; line-height: 1.5;
 }
+.eact-banner.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.eact-banner > i { flex-shrink: 0; margin-top: 2px; font-size: 15px; }
+.eact-banner strong { display: block; margin-bottom: 2px; font-size: 13px; }
+.eact-banner p { margin: 0; }
+.eact-banner a { color: inherit; font-weight: 700; text-decoration: underline; }
 
-.eact-title {
-  display: none;
+/* Tarjetas de accion agrupadas */
+.eact-groups { display: flex; flex-direction: column; gap: 18px; }
+.eact-group-title { margin: 0 0 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-muted); }
+.eact-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.eact-tile {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; text-align: left; cursor: pointer;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius); background: var(--ds-surface);
+  font-family: inherit; color: var(--ds-ink);
+  transition: border-color 0.15s, background 0.15s;
 }
-
-/* Action buttons */
-.eact-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+.eact-tile:hover { border-color: var(--ds-accent); background: var(--ds-surface-2); }
+.eact-tile:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; }
+.eact-tile > i {
+  display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px;
+  border-radius: var(--ds-radius-sm); background: var(--ds-soft-info); color: var(--ds-info-ink); font-size: 14px;
 }
-
-.eact-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  background: #fff;
-  color: #1A1A1A;
-  cursor: pointer;
-  transition: all .2s ease;
-  font-family: inherit;
-}
-.eact-btn:hover { border-color: #1A1A1A; background: #FAFAFA; }
-.eact-btn i { font-size: 13px; color: #A3A3A3; transition: color .2s ease; }
-.eact-btn:hover i { color: #1A1A1A; }
-
-.eact-btn-danger { border-color: #E8E8E8; color: #DC2626; }
-.eact-btn-danger:hover { border-color: #FCA5A5; background: #FFFBFB; }
-.eact-btn-danger i { color: #E8A3A3; }
-.eact-btn-danger:hover i { color: #DC2626; }
-
-.eact-btn-warn { border-color: #E8E8E8; color: #B45309; }
-.eact-btn-warn:hover { border-color: #FDE68A; background: #FFFDF5; }
-.eact-btn-warn i { color: #D4B783; }
-.eact-btn-warn:hover i { color: #D97706; }
-
-.eact-btn-approve { border-color: #BBF7D0; color: #047857; background: #F0FDF4; }
-.eact-btn-approve:hover { border-color: #34D399; background: #ECFDF5; }
-.eact-btn-approve i { color: #10B981; }
-.eact-btn-approve:hover i { color: #047857; }
-.eact-tag-approve { background: #DCFCE7; color: #047857; }
-
-.eact-migration-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
-  border-radius: 10px;
-  font-size: 12.5px;
-  color: #78350F;
-  line-height: 1.5;
-  margin-bottom: 14px;
-}
-.eact-migration-banner i { font-size: 15px; color: #D97706; margin-top: 2px; flex-shrink: 0; }
-.eact-migration-banner strong { display: block; font-size: 13px; margin-bottom: 2px; color: #78350F; }
-.eact-migration-banner p { margin: 0; color: #92400E; }
-.eact-migration-banner a { color: #B45309; text-decoration: underline; font-weight: 600; }
-
+.eact-tile-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.eact-tile-text strong { font-size: 13px; font-weight: 700; color: var(--ds-heading); }
+.eact-tile-text small { font-size: 11.5px; line-height: 1.4; color: var(--ds-ink-2); }
+.eact-tile.ok > i { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.eact-tile.ok { border-color: var(--ds-ok); }
+.eact-tile.bad > i { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.eact-tile.bad strong { color: var(--ds-bad-ink); }
+.eact-tile.bad:hover { border-color: var(--ds-bad); background: var(--ds-soft-bad); }
 .eact-tag {
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #F5F5F5;
-  color: #737373;
+  flex-shrink: 0; padding: 2px 7px; border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-neutral); color: var(--ds-ink-2); font-size: 10.5px; font-weight: 700;
 }
-.eact-tag-cc { background: #F3F0FF; color: #6D28D9; }
+.eact-tag.violet { background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
 
-.eact-sep { width: 1px; height: 24px; background: #F0F0F0; }
-
-/* Active action */
+/* Formularios de cada accion (dentro del ActionStepper) */
 .eact-active { margin-top: 4px; }
-
-/* Form elements */
-.eact-form { display: flex; flex-direction: column; gap: 18px; }
+.eact-form { display: flex; flex-direction: column; gap: 16px; }
+.eact-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.eact-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.eact-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.eact-field > label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-ink-2); }
+.eact-optional { margin-left: 4px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ds-muted); }
+.eact-readonly { padding: 8px 12px; border-radius: var(--ds-radius-control); background: var(--ds-surface-2); font-size: 13px; font-weight: 600; color: var(--ds-ink); }
+.eact-note { font-size: 12px; font-weight: 500; color: var(--ds-ink-2); }
+.eact-input-amount { font-family: var(--ds-font-mono); text-align: right; }
 
 .eact-student-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #FAFAFA;
-  border-radius: 10px;
-  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface-2);
 }
-.eact-student-main { display: flex; flex-direction: column; gap: 2px; }
-.eact-student-name { font-size: 14px; font-weight: 600; color: #1A1A1A; letter-spacing: -0.01em; }
-.eact-student-doc { font-size: 12px; color: #A3A3A3; font-weight: 400; }
+.eact-student-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.eact-student-name { font-size: 14px; font-weight: 700; color: var(--ds-heading); }
+.eact-student-doc { font-size: 12px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
 .eact-program-pill {
-  font-size: 11px; font-weight: 600; color: #4338CA;
-  background: #F3F0FF;
-  padding: 5px 14px; border-radius: 6px;
-  white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;
+  max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 4px 10px; border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-info); color: var(--ds-info-ink); font-size: 11px; font-weight: 700;
 }
-
-.eact-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.eact-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-
-.eact-field { display: flex; flex-direction: column; gap: 6px; }
-.eact-field label { font-size: 11px; font-weight: 500; color: #A3A3A3; text-transform: uppercase; letter-spacing: .05em; }
-.eact-req { color: #DC2626; }
-
-.eact-readonly {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1A1A1A;
-  background: #FAFAFA;
-  border-radius: 8px;
-  padding: 9px 14px;
-}
-
-.eact-select-wrap { position: relative; }
-.eact-select {
-  width: 100%;
-  padding: 9px 36px 9px 14px;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  appearance: none;
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.eact-select:focus { outline: none; border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
-.eact-select:disabled { background: #FAFAFA; color: #C4C4C4; cursor: not-allowed; }
-.eact-select-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #C4C4C4; pointer-events: none; }
-
-.eact-input {
-  width: 100%;
-  padding: 9px 14px;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  outline: none;
-  transition: all .2s ease;
-}
-.eact-input:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
-.eact-input-amount { font-variant-numeric: tabular-nums; font-weight: 600; }
-
-.eact-textarea {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #FDE68A;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #FFFDF5;
-  resize: vertical;
-  min-height: 72px;
-  transition: all .2s ease;
-}
-.eact-textarea:focus { outline: none; border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.06); }
-.eact-textarea::placeholder { color: #D1D5DB; }
-.eact-textarea-danger { border-color: #FCA5A5; background: #FFFBFB; }
-.eact-textarea-danger:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.06); }
 
 .eact-subsection-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  font-weight: 500;
-  color: #A3A3A3;
-  letter-spacing: .06em;
-  padding-top: 4px;
+  padding-top: 6px; border-top: 1px solid var(--ds-border);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-heading);
 }
+.eact-amount { padding: 8px 0; font-family: var(--ds-font-mono); font-size: 14px; font-weight: 700; color: var(--ds-heading); }
+.eact-amount-green { color: var(--ds-ok-ink); }
+.eact-amount-red { color: var(--ds-bad-ink); }
+.eact-price-hint { display: block; margin-top: 2px; font-size: 11px; color: var(--ds-ink-2); }
 
-.eact-amount { font-size: 14px; font-weight: 600; color: #1A1A1A; font-variant-numeric: tabular-nums; padding: 8px 0; }
-.eact-amount-green { color: #059669; }
-.eact-amount-red { color: #DC2626; }
-.eact-price-hint { display: block; font-size: 10.5px; color: #6B7280; margin-top: 2px; }
-
-.eact-warn-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #92400E;
-}
-.eact-warn-label i { font-size: 13px; color: #D97706; }
-
-.eact-refund-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.eact-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1A1A1A;
-  cursor: pointer;
-}
-.eact-checkbox-label input { width: 16px; height: 16px; cursor: pointer; accent-color: #1A1A1A; }
-
-.eact-observe-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 18px;
-  background: #FFF8EB;
-  border-radius: 10px;
-  font-size: 12.5px;
-  color: #92400E;
-  line-height: 1.5;
-}
-.eact-observe-banner i { font-size: 16px; color: #F59E0B; margin-top: 2px; flex-shrink: 0; }
-.eact-observe-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
-.eact-observe-banner p { margin: 0; }
+.eact-refund-row { display: flex; align-items: center; gap: 14px; }
+.eact-refund-input { flex: 1; }
+.eact-checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ds-ink); }
+.eact-checkbox-label input, .eact-cc-clear input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ds-accent); }
 
 .eact-cc-clear {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid #E5E7EB;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #64748B;
-  line-height: 1.5;
-  cursor: pointer;
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  font-size: 12px; line-height: 1.5; color: var(--ds-ink-2);
 }
-.eact-cc-clear input { margin-top: 3px; flex-shrink: 0; }
-.eact-cc-clear strong { display: block; font-size: 12.5px; color: #111827; margin-bottom: 2px; }
+.eact-cc-clear input { flex-shrink: 0; margin-top: 3px; }
+.eact-cc-clear strong { display: block; margin-bottom: 2px; font-size: 12.5px; color: var(--ds-ink); }
 
 /* Plan de cuotas de la reprogramacion */
-.eact-rp-saldo { float: right; font-weight: 700; color: #92400E; text-transform: none; letter-spacing: 0; }
-.eact-rp-plan {
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.eact-rp-plan-head, .eact-rp-plan-row {
-  display: grid;
-  grid-template-columns: 32px 1fr 1fr;
-  gap: 10px;
-  align-items: center;
-  padding: 6px 12px;
-}
-.eact-rp-plan-head {
-  background: #F9FAFB;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #6B7280;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.eact-rp-plan-row { border-top: 1px solid #F3F4F6; }
-.eact-rp-plan-num { font-size: 12px; font-weight: 700; color: #6B7280; }
+.eact-rp-saldo { float: right; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--ds-warn-ink); }
+.eact-rp-plan { overflow: hidden; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.eact-rp-plan-head, .eact-rp-plan-row { display: grid; grid-template-columns: 32px 1fr 1fr; gap: 10px; align-items: center; padding: 6px 12px; }
+.eact-rp-plan-head { background: var(--ds-surface-2); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ds-muted); }
+.eact-rp-plan-row { border-top: 1px solid var(--ds-border); }
+.eact-rp-plan-num { font-size: 12px; font-weight: 700; color: var(--ds-ink-2); }
 .eact-rp-plan-foot {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-top: 1px solid #E5E7EB;
-  background: #F9FAFB;
-  font-size: 12px;
-  font-weight: 700;
-  color: #111827;
+  display: flex; justify-content: space-between; padding: 8px 12px;
+  border-top: 1px solid var(--ds-border); background: var(--ds-surface-2);
+  font-size: 12px; font-weight: 700; color: var(--ds-ink);
 }
-.eact-rp-plan-foot--err { color: #DC2626; background: #FEF2F2; }
+.eact-rp-plan-foot--err { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .eact-btn {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  color: #F4F4F0;
+@media (max-width: 900px) {
+  .eact-grid-2, .eact-grid-3 { grid-template-columns: 1fr; }
 }
-[data-coreui-theme="dark"] .eact-btn:hover { border-color: #F4F4F0; background: #1F1F1A; }
-[data-coreui-theme="dark"] .eact-btn i { color: #8A8A80; }
-[data-coreui-theme="dark"] .eact-btn:hover i { color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .eact-btn-danger { border-color: #2A2A22; color: #F87171; }
-[data-coreui-theme="dark"] .eact-btn-danger:hover { border-color: rgba(248,113,113,.45); background: rgba(239,68,68,.10); }
-[data-coreui-theme="dark"] .eact-btn-danger i { color: rgba(248,113,113,.55); }
-[data-coreui-theme="dark"] .eact-btn-danger:hover i { color: #F87171; }
-
-[data-coreui-theme="dark"] .eact-btn-warn { border-color: #2A2A22; color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-btn-warn:hover { border-color: rgba(251,191,36,.45); background: rgba(245,158,11,.10); }
-[data-coreui-theme="dark"] .eact-btn-warn i { color: rgba(251,191,36,.55); }
-[data-coreui-theme="dark"] .eact-btn-warn:hover i { color: #FBBF24; }
-
-[data-coreui-theme="dark"] .eact-btn-approve { border-color: rgba(16,185,129,.35); color: #34D399; background: rgba(16,185,129,.12); }
-[data-coreui-theme="dark"] .eact-btn-approve:hover { border-color: #34D399; background: rgba(16,185,129,.18); }
-[data-coreui-theme="dark"] .eact-btn-approve i { color: #34D399; }
-[data-coreui-theme="dark"] .eact-btn-approve:hover i { color: #6EE7B7; }
-[data-coreui-theme="dark"] .eact-tag-approve { background: rgba(16,185,129,.2); color: #34D399; }
-
-[data-coreui-theme="dark"] .eact-migration-banner {
-  background: rgba(245,158,11,.12);
-  border-color: rgba(245,158,11,.35);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .eact-migration-banner i { color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-migration-banner strong { color: #FCD34D; }
-[data-coreui-theme="dark"] .eact-migration-banner p { color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-migration-banner a { color: #FCD34D; }
-
-[data-coreui-theme="dark"] .eact-tag { background: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .eact-tag-cc { background: rgba(139,92,246,.16); color: #A78BFA; }
-[data-coreui-theme="dark"] .eact-sep { background: #2A2A22; }
-
-[data-coreui-theme="dark"] .eact-student-bar { background: #1F1F1A; }
-[data-coreui-theme="dark"] .eact-student-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .eact-student-doc { color: #8A8A80; }
-[data-coreui-theme="dark"] .eact-program-pill { background: rgba(99,102,241,.16); color: #A78BFA; }
-
-[data-coreui-theme="dark"] .eact-field label { color: #8A8A80; }
-[data-coreui-theme="dark"] .eact-req { color: #F87171; }
-[data-coreui-theme="dark"] .eact-readonly { color: #F4F4F0; background: #1F1F1A; }
-
-[data-coreui-theme="dark"] .eact-select,
-[data-coreui-theme="dark"] .eact-input {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .eact-select:focus,
-[data-coreui-theme="dark"] .eact-input:focus {
-  border-color: #F4F4F0;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
-}
-[data-coreui-theme="dark"] .eact-select:disabled { background: #1F1F1A; color: #6F6F66; }
-[data-coreui-theme="dark"] .eact-select-icon { color: #6F6F66; }
-[data-coreui-theme="dark"] .eact-input[type="date"] { color-scheme: dark; }
-
-[data-coreui-theme="dark"] .eact-textarea {
-  background: rgba(245,158,11,.08);
-  border-color: rgba(245,158,11,.35);
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .eact-textarea:focus { border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.10); }
-[data-coreui-theme="dark"] .eact-textarea::placeholder { color: #6F6F66; }
-[data-coreui-theme="dark"] .eact-textarea-danger { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.08); }
-[data-coreui-theme="dark"] .eact-textarea-danger:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.10); }
-
-[data-coreui-theme="dark"] .eact-subsection-label { color: #8A8A80; }
-[data-coreui-theme="dark"] .eact-amount { color: #F4F4F0; }
-[data-coreui-theme="dark"] .eact-amount-green { color: #34D399; }
-[data-coreui-theme="dark"] .eact-amount-red { color: #F87171; }
-[data-coreui-theme="dark"] .eact-price-hint { color: #A0A099; }
-
-[data-coreui-theme="dark"] .eact-warn-label { color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-warn-label i { color: #FBBF24; }
-
-[data-coreui-theme="dark"] .eact-checkbox-label { color: #F4F4F0; }
-[data-coreui-theme="dark"] .eact-checkbox-label input { accent-color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .eact-observe-banner {
-  background: rgba(245,158,11,.12);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .eact-observe-banner i { color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-cc-clear { border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .eact-cc-clear strong { color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .eact-rp-saldo { color: #FBBF24; }
-[data-coreui-theme="dark"] .eact-rp-plan { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .eact-rp-plan-head { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .eact-rp-plan-row { border-top-color: #1F1F1A; }
-[data-coreui-theme="dark"] .eact-rp-plan-num { color: #A0A099; }
-[data-coreui-theme="dark"] .eact-rp-plan-foot {
-  border-top-color: #2A2A22;
-  background: #1F1F1A;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .eact-rp-plan-foot--err { color: #F87171; background: rgba(239,68,68,.12); }
 </style>

@@ -1,337 +1,243 @@
 <template>
-  <div class="token-page">
-    <header class="ep-masthead">
-      <div class="ep-masthead-left">
-        <span class="ep-breadcrumb">FICO</span>
-        <h1 class="ep-title">Tokens de Pago</h1>
-        <span class="ep-subtitle">Gestion de links de pago</span>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Tokens de pago</h1>
+        <p class="ds-sub">Links de pago pedidos por Comercial: FICO pone el link e inscribe cuando se paga</p>
       </div>
     </header>
 
-    <section class="ep-section">
-      <div class="ep-kpis">
-        <article v-for="k in kpiCards" :key="k.key" class="ep-kpi" :class="`ep-kpi-${k.color}`">
-          <div class="ep-kpi-head">
-            <span class="ep-kpi-label">{{ k.label }}</span>
-            <i class="fa-solid ep-kpi-icon" :class="k.icon"></i>
-          </div>
-          <div class="ep-kpi-main">
+    <div class="ds-kpis">
+      <div v-for="k in kpiCards" :key="k.key" class="ds-kpi">
+        <span class="ds-kpi-icon" :class="k.tone" aria-hidden="true"><i class="fa-solid" :class="k.icon"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
             <span v-if="isLoading" class="skel-kpi"></span>
-            <span v-else class="ep-kpi-value">{{ k.formatted }}</span>
+            <span v-else class="ds-kpi-value">{{ k.formatted }}</span>
           </div>
-          <span class="ep-kpi-foot">
-            {{ k.description }}
-            <strong v-if="k.secondary">{{ k.secondary }}</strong>
-          </span>
-        </article>
+          <span class="ds-kpi-label">{{ k.label }}</span>
+          <span class="ds-kpi-note">{{ k.description }} <strong v-if="k.secondary">{{ k.secondary }}</strong></span>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
-      <div class="ep-filter-bar-main">
-        <nav class="ep-tabs" aria-label="Estados de tokens">
+    <section class="ds-panel">
+      <div class="tp-toolbar">
+        <div class="ds-tabs" role="group" aria-label="Estado del token">
           <button
             v-for="tab in statusTabs"
             :key="tab.value"
-            :class="['ep-tab', { 'is-active': filterStatus === tab.value && !filters.status_in.length }]"
+            type="button"
+            :aria-pressed="filterStatus === tab.value && !filters.status_in.length"
             @click="setStatusFilter(tab.value)"
           >
-            <i class="fa-solid" :class="tab.icon"></i> {{ tab.label }}
+            <i class="fa-solid" :class="tab.icon" aria-hidden="true"></i> {{ tab.label }}
           </button>
-        </nav>
-
-        <div class="ep-toolbar">
-          <span v-if="selectionMode" class="tp-selhint">
-            <i class="fa-solid fa-object-group"></i>
-            Modo seleccion — elige tus tokens compatibles
-            <button class="tp-selhint-cancel" @click="cancelGrouping" title="Salir (Esc)">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </span>
-          <BasePagination
-            v-model="pagination"
-            @change="fetchTokens"
-            @open-filters="onOpenFilters"
-          />
         </div>
-      </div>
-
-      <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
-        <span class="ep-filter-strip-badge">
-          <i class="fa-solid fa-circle-half-stroke"></i>
-          Filtros activos
-          <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
+        <span v-if="selectionMode" class="tp-selhint">
+          <i class="fa-solid fa-object-group" aria-hidden="true"></i>
+          Modo selección: elige tus tokens compatibles
+          <button class="btn-icon btn-icon-sm" type="button" title="Salir (Esc)" aria-label="Salir del modo selección" @click="cancelGrouping">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
         </span>
+        <BasePagination v-model="pagination" @change="fetchTokens" @open-filters="onOpenFilters" />
+      </div>
+      <div v-if="activeFilterChips.length > 0" class="tp-chips">
         <BaseFilterChips :items="activeFilterChips" @remove="clearFilter" @clear-all="clearAdvancedFilters" />
       </div>
     </section>
 
     <TokenFilterModal
       :visible="showFilterModal"
-      @update:visible="v => showFilterModal = v"
       :filters="filters"
       :filtro-status="filtroStatus"
       :filtro-owners="filtroOwners"
       :filtro-provider="providerCatalog"
       :filtro-payment-type="filtroPaymentType"
+      @update:visible="v => showFilterModal = v"
       @apply="applyFilters"
       @clear="clearAdvancedFilters"
-      @date-change="handleDateChange"
     />
 
-    <div class="ect-wrap">
-      <table class="ect">
-        <thead>
-          <tr class="ect-head">
-            <th v-if="selectionMode" class="tc" style="width:36px"></th>
-            <th style="width:90px">Creado</th>
-            <th>Alumno / Contacto</th>
-            <th>Programa / Edicion</th>
-            <th class="tc" style="width:100px">Tipo</th>
-            <th class="tc" style="width:120px">Proveedor</th>
-            <th class="tr" style="width:100px">Monto</th>
-            <th class="tc" style="width:110px">Estado</th>
-            <th style="width:170px">Link</th>
-            <th style="width:130px">Asesor</th>
-            <th style="width:90px">Fecha pago</th>
-            <th class="tc" style="width:170px">Acciones</th>
-          </tr>
-          <!-- Toda columna filtra desde esta fila: ningun control vive en el
-               encabezado. Texto -> caja de escribir, categoria -> desplegable,
-               fecha -> calendario de rango, dinero -> piso (>=). -->
-          <tr class="ect-filters">
-            <td v-if="selectionMode"></td>
-            <td>
-              <BaseDatePicker
-                v-model="colFilters.creado"
-                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-                placeholder="Creado..."
-              />
-            </td>
-            <td>
-              <input v-model="colFilters.alumno" class="filter-input" placeholder="Buscar..." />
-            </td>
-            <td>
-              <input v-model="colFilters.programa" class="filter-input" placeholder="Buscar..." />
-            </td>
-            <td class="tc">
-              <ColumnFilterDropdown
-                column-label="Tipo"
-                :all-items="tokens"
-                :value-extractor="t => t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'"
-                v-model="colFilters.tipo"
-              />
-            </td>
-            <td class="tc">
-              <ColumnFilterDropdown
-                column-label="Proveedor"
-                :all-items="tokens"
-                :value-extractor="t => t.provider_name || '(Sin proveedor)'"
-                v-model="colFilters.proveedor"
-              />
-            </td>
-            <td>
-              <input v-model="colFilters.montoMin" type="number" min="0" class="filter-input tr" placeholder="&ge; 0" />
-            </td>
-            <td class="tc">
-              <ColumnFilterDropdown
-                column-label="Estado"
-                :all-items="tokens"
-                :value-extractor="t => statusConfig[t.status]?.label || t.status"
-                v-model="colFilters.estado"
-              />
-            </td>
-            <td></td>
-            <td class="tc">
-              <ColumnFilterDropdown
-                column-label="Asesor"
-                :all-items="tokens"
-                :value-extractor="t => t.requested_by_name || t.created_by_name || '(Sin asesor)'"
-                v-model="colFilters.asesor"
-              />
-            </td>
-            <td>
-              <BaseDatePicker
-                v-model="colFilters.fechaPago"
-                :config="{ mode: 'range', dateFormat: 'Y-m-d' }"
-                placeholder="F. Pago..."
-              />
-            </td>
-            <td class="tc">
-              <button class="filter-clear" title="Limpiar filtros columna" @click="clearColFilters">
-                <i class="fa-solid fa-eraser"></i>
-              </button>
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-if="isLoading">
-            <tr v-for="n in 10" :key="'sk-' + n" class="skeleton-row">
-              <td><div class="sk-cell" style="width:70px"></div></td>
-              <td>
-                <div class="sk-cell" style="width:140px"></div>
-                <div class="sk-cell mt-1" style="width:90px;height:8px"></div>
-              </td>
-              <td>
-                <div class="sk-cell" style="width:160px"></div>
-                <div class="sk-cell mt-1" style="width:60px;height:8px"></div>
-              </td>
-              <td class="tc"><div class="sk-cell" style="width:60px;margin:0 auto"></div></td>
-              <td class="tc"><div class="sk-cell" style="width:80px;margin:0 auto"></div></td>
-              <td class="tr"><div class="sk-cell" style="width:80px;margin-left:auto"></div></td>
-              <td class="tc"><div class="sk-cell" style="width:90px;margin:0 auto"></div></td>
-              <td><div class="sk-cell" style="width:150px"></div></td>
-              <td><div class="sk-cell" style="width:90px"></div></td>
-              <td><div class="sk-cell" style="width:70px"></div></td>
-              <td class="tc"><div class="sk-cell" style="width:120px;margin:0 auto"></div></td>
+    <section class="ds-panel">
+      <div class="ds-table-scroll">
+        <table class="ds-table ds-table--lista ds-table--densa tp-table">
+          <thead>
+            <tr>
+              <th v-if="selectionMode" class="tc" style="width:36px"><span class="sr-only">Seleccionar</span></th>
+              <th v-for="col in COLUMNS" :key="col.key" :class="col.cls" :style="col.width ? `width:${col.width}` : null">
+                <button
+                  v-if="col.filter"
+                  type="button"
+                  class="ds-th-filter"
+                  :class="{ 'is-active': colToggles.isActive(col.key) }"
+                  :aria-expanded="colToggles.isOpen(col.key)"
+                  :title="colToggles.isOpen(col.key) ? 'Ocultar filtro' : 'Filtrar por esta columna'"
+                  @click="colToggles.toggle(col.key)"
+                >
+                  {{ col.label }} <i class="fa-solid fa-filter" aria-hidden="true"></i>
+                </button>
+                <template v-else>{{ col.label }}</template>
+              </th>
             </tr>
-          </template>
-          <template v-else>
-            <tr
-              v-for="t in filteredTokens"
-              :key="t.token_id"
-              class="ect-row"
-              :class="{
-                'tp-row-grouped': !!t.group_id,
-                'tp-row-selected': selectedTokenIds.has(t.token_id),
-                'tp-row-disabled': selectionMode && !isSelectable(t) && !selectedTokenIds.has(t.token_id)
-              }"
-              @click="selectionMode && toggleTokenSelection(t)"
-              @contextmenu="openCtxMenu($event, t)"
-            >
-              <td v-if="selectionMode" class="tc">
-                <input
-                  type="checkbox"
-                  class="tp-chk"
-                  :checked="selectedTokenIds.has(t.token_id)"
-                  :disabled="!isSelectable(t)"
-                  :title="isSelectable(t) ? 'Seleccionar' : 'No seleccionable (no es tuyo, ya tiene link o esta en otro grupo)'"
-                  @click.stop="toggleTokenSelection(t)"
-                />
-              </td>
-              <td class="cell-date">{{ formatDate(t.created_at) }}</td>
-              <td>
-                <div class="cell-main cell-clip">{{ t.student_name }}</div>
-                <div class="cell-sub">{{ t.student_phone || '---' }}{{ t.student_email ? ' · ' + t.student_email : '' }}</div>
-                <span v-if="getGroup(t)" class="tp-group-chip" :title="`Grupo ${getGroup(t).shortId} · ${getGroup(t).count} tokens · Total ${getGroup(t).currency} ${formatMoney(getGroup(t).total)}`">
-                  <i class="fa-solid fa-object-group"></i>
-                  GRUPO {{ getGroup(t).shortId }} · {{ getGroup(t).count }} tokens · Total {{ getGroup(t).currency }} {{ formatMoney(getGroup(t).total) }}
-                </span>
-              </td>
-              <td>
-                <div class="cell-main cell-clip">{{ t.program_name }}</div>
-                <span class="pill pill-sm pill-slate">{{ t.edition_code }} {{ formatEditionShortDate(t.edition_start_date) }}</span>
-                <span v-if="hasValidations(t)" class="pill pill-sm pill-amber" style="margin-left:4px">Convalida</span>
-              </td>
-              <td class="tc">
-                <span v-if="t.payment_type" class="pill pill-sm" :class="t.payment_type === 'credito' ? 'pill-amber' : 'pill-teal'">{{ t.payment_type === 'credito' ? 'Credito' : 'Debito' }}</span>
-                <span v-else class="pill pill-sm pill-slate">---</span>
-              </td>
-              <td class="tc">
-                <span class="pill pill-sm pill-blue">{{ t.provider_name || '---' }}</span>
-              </td>
-              <td class="tr mono">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
-              <td class="tc">
-                <span class="pill" :class="statusConfig[t.status]?.class || 'pill-slate'">
-                  {{ statusConfig[t.status]?.label || t.status }}
-                </span>
-              </td>
-              <td>
-                <div v-if="t.payment_url" class="tp-link-cell">
-                  <button class="tp-link-text" :title="`${t.payment_url}\n(Click para copiar)`" @click="copyLink(t.payment_url)">
-                    {{ truncateUrl(t.payment_url) }}
-                  </button>
-                  <button
-                    v-if="canAddLink && t.status !== 'confirmed'"
-                    class="act-btn act-teal"
-                    title="Editar link"
-                    @click="openAddLink(t)"
-                  >
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                </div>
-                <span v-else class="cell-sub">--</span>
-              </td>
-              <td class="cell-advisor">{{ t.requested_by_name || t.created_by_name || '---' }}</td>
-              <td class="cell-date">
-                <template v-if="t.status === 'paid' || t.status === 'confirmed'">{{ formatDate(t.updated_at) }}</template>
-                <span v-else class="cell-sub">—</span>
-              </td>
-              <td class="tc">
-                <div class="tp-actions">
-                  <template v-if="t.status === 'pending'">
-                    <template v-if="canAddLink">
-                      <button class="act-btn act-teal" title="Agregar Link" @click="openAddLink(t)">
-                        <i class="fa-solid fa-link"></i>
-                      </button>
-                      <button class="act-btn act-red" title="Eliminar" @click="deleteToken(t)">
-                        <i class="fa-solid fa-trash-can"></i>
-                      </button>
-                    </template>
-                    <button
-                      v-if="canEditInscription(t)"
-                      class="act-btn act-indigo"
-                      title="Editar inscripcion"
-                      @click="openEditInscription(t)"
-                    >
-                      <i class="fa-solid fa-user-pen"></i>
+            <!-- Fila de filtros: aparece solo con alguna columna abierta o con un
+                 filtro puesto (useColumnFilterToggles), igual que Inscripciones. -->
+            <tr v-if="colToggles.anyVisible.value" class="tp-filters">
+              <th v-if="selectionMode"></th>
+              <th>
+                <BaseDatePicker v-if="colToggles.isOpen('creado')" v-model="colFilters.creado" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Desde – hasta" />
+              </th>
+              <th><input v-if="colToggles.isOpen('alumno')" v-model="colFilters.alumno" class="ds-input" placeholder="Nombre o teléfono…" aria-label="Filtrar por alumno" /></th>
+              <th><input v-if="colToggles.isOpen('programa')" v-model="colFilters.programa" class="ds-input" placeholder="Programa…" aria-label="Filtrar por programa" /></th>
+              <th>
+                <ColumnFilterDropdown v-if="colToggles.isOpen('tipo')" v-model="colFilters.tipo" column-label="Tipo" :all-items="tokens" :value-extractor="t => t.payment_type === 'credito' ? 'Credito' : t.payment_type === 'debito' ? 'Debito' : '(Sin tipo)'" />
+              </th>
+              <th>
+                <ColumnFilterDropdown v-if="colToggles.isOpen('proveedor')" v-model="colFilters.proveedor" column-label="Proveedor" :all-items="tokens" :value-extractor="t => t.provider_name || '(Sin proveedor)'" />
+              </th>
+              <th><input v-if="colToggles.isOpen('montoMin')" v-model="colFilters.montoMin" type="number" min="0" class="ds-input tp-num" placeholder="&ge; 0" aria-label="Monto mínimo" /></th>
+              <th>
+                <ColumnFilterDropdown v-if="colToggles.isOpen('estado')" v-model="colFilters.estado" column-label="Estado" :all-items="tokens" :value-extractor="t => statusConfig[t.status]?.label || t.status" />
+              </th>
+              <th></th>
+              <th>
+                <ColumnFilterDropdown v-if="colToggles.isOpen('asesor')" v-model="colFilters.asesor" column-label="Asesor" :all-items="tokens" :value-extractor="t => t.requested_by_name || t.created_by_name || '(Sin asesor)'" />
+              </th>
+              <th>
+                <BaseDatePicker v-if="colToggles.isOpen('fechaPago')" v-model="colFilters.fechaPago" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Desde – hasta" />
+              </th>
+              <th class="tc">
+                <button class="btn-icon btn-icon-sm" type="button" title="Limpiar y cerrar filtros" aria-label="Limpiar y cerrar filtros" @click="clearColFilters">
+                  <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-if="isLoading">
+              <tr v-for="n in 10" :key="'sk-' + n">
+                <td :colspan="selectionMode ? 12 : 11"><span class="ds-skel"></span></td>
+              </tr>
+            </template>
+            <template v-else>
+              <tr
+                v-for="t in filteredTokens"
+                :key="t.token_id"
+                :class="{
+                  'is-grouped': !!t.group_id,
+                  'is-selected': selectedTokenIds.has(t.token_id),
+                  'is-disabled': selectionMode && !isSelectable(t) && !selectedTokenIds.has(t.token_id)
+                }"
+                @click="selectionMode && toggleTokenSelection(t)"
+                @contextmenu="openCtxMenu($event, t)"
+              >
+                <td v-if="selectionMode" class="tc">
+                  <input
+                    type="checkbox"
+                    class="tp-chk"
+                    :checked="selectedTokenIds.has(t.token_id)"
+                    :disabled="!isSelectable(t)"
+                    :title="isSelectable(t) ? 'Seleccionar' : 'No seleccionable (no es tuyo, ya tiene link o está en otro grupo)'"
+                    @click.stop="toggleTokenSelection(t)"
+                  />
+                </td>
+                <td class="mono">{{ formatDate(t.created_at) }}</td>
+                <td>
+                  <div class="tp-main">{{ t.student_name }}</div>
+                  <div class="tp-sub">{{ t.student_phone || '—' }}{{ t.student_email ? ' · ' + t.student_email : '' }}</div>
+                  <span v-if="getGroup(t)" class="ds-pill violet tp-group" :title="`Grupo ${getGroup(t).shortId} · ${getGroup(t).count} tokens · Total ${getGroup(t).currency} ${formatMoney(getGroup(t).total)}`">
+                    <i class="fa-solid fa-object-group" aria-hidden="true"></i>
+                    Grupo {{ getGroup(t).shortId }} · {{ getGroup(t).count }} tokens · {{ getGroup(t).currency }} {{ formatMoney(getGroup(t).total) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="tp-main">{{ t.program_name }}</div>
+                  <span v-if="t.edition_code" class="ds-pill">{{ t.edition_code }} {{ formatEditionShortDate(t.edition_start_date) }}</span>
+                  <span v-if="hasValidations(t)" class="ds-pill violet tp-ml">Convalida</span>
+                </td>
+                <td>
+                  <span v-if="t.payment_type" class="ds-pill" :class="t.payment_type === 'credito' ? 'warn' : 'cyan'">{{ t.payment_type === 'credito' ? 'Crédito' : 'Débito' }}</span>
+                  <span v-else class="tp-sub">—</span>
+                </td>
+                <td><span class="ds-pill info">{{ t.provider_name || '—' }}</span></td>
+                <td class="num mono tp-amount">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
+                <td><span class="ds-pill" :class="statusConfig[t.status]?.tone">{{ statusConfig[t.status]?.label || t.status }}</span></td>
+                <td>
+                  <div v-if="t.payment_url" class="tp-link">
+                    <button class="tp-link-text" type="button" :title="`${t.payment_url}\n(Clic para copiar)`" @click="copyLink(t.payment_url)">
+                      {{ truncateUrl(t.payment_url) }}
                     </button>
-                    <button
-                      v-if="t.group_id && !t.payment_url && Number(t.requested_by) === Number(currentUserId)"
-                      class="act-btn act-slate"
-                      title="Desagrupar este grupo"
-                      @click="ungroupTokens(t.group_id)"
-                    >
-                      <i class="fa-solid fa-object-ungroup"></i>
+                    <button v-if="canAddLink && t.status !== 'confirmed'" class="btn-icon btn-icon-sm" type="button" title="Editar link" aria-label="Editar link" @click="openAddLink(t)">
+                      <i class="fa-solid fa-pen" aria-hidden="true"></i>
                     </button>
-                    <span v-if="!canAddLink && !canEditInscription(t) && !t.group_id" class="cell-sub">En espera</span>
-                  </template>
-                  <template v-else-if="t.status === 'link_sent' || t.status === 'paid'">
-                    <template v-if="t.enrollment_id">
-                      <button class="tp-btn-confirm" title="Ver inscripcion" @click="goToEnrollment(t.enrollment_id)">
-                        <i class="fa-solid fa-eye"></i> Ver
+                  </div>
+                  <span v-else class="tp-sub">—</span>
+                </td>
+                <td>{{ t.requested_by_name || t.created_by_name || '—' }}</td>
+                <td class="mono">
+                  <template v-if="t.status === 'paid' || t.status === 'confirmed'">{{ formatDate(t.updated_at) }}</template>
+                  <span v-else class="tp-sub">—</span>
+                </td>
+                <td class="tc">
+                  <div class="tp-actions">
+                    <template v-if="t.status === 'pending'">
+                      <template v-if="canAddLink">
+                        <button class="btn-exec btn-exec-primary btn-sm" type="button" title="Agregar link de pago" @click="openAddLink(t)">
+                          <i class="fa-solid fa-link" aria-hidden="true"></i> Link
+                        </button>
+                        <button class="btn-icon btn-icon-sm tp-danger" type="button" title="Eliminar token" aria-label="Eliminar token" @click="deleteToken(t)">
+                          <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                        </button>
+                      </template>
+                      <button v-if="canEditInscription(t)" class="btn-icon btn-icon-sm" type="button" title="Editar inscripción" aria-label="Editar inscripción" @click="openEditInscription(t)">
+                        <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
                       </button>
-                    </template>
-                    <template v-else-if="canConfirmEnrollment">
                       <button
-                        class="tp-btn-confirm"
-                        :title="confirmingTokens.has(t.token_id) ? 'Inscribiendo...' : 'Crear inscripcion'"
+                        v-if="t.group_id && !t.payment_url && Number(t.requested_by) === Number(currentUserId)"
+                        class="btn-icon btn-icon-sm"
+                        type="button"
+                        title="Desagrupar este grupo"
+                        aria-label="Desagrupar este grupo"
+                        @click="ungroupTokens(t.group_id)"
+                      >
+                        <i class="fa-solid fa-object-ungroup" aria-hidden="true"></i>
+                      </button>
+                      <span v-if="!canAddLink && !canEditInscription(t) && !t.group_id" class="tp-sub">En espera</span>
+                    </template>
+                    <template v-else-if="t.status === 'link_sent' || t.status === 'paid'">
+                      <button v-if="t.enrollment_id" class="btn-exec btn-exec-outline btn-sm" type="button" title="Ver inscripción" @click="goToEnrollment(t.enrollment_id)">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i> Ver
+                      </button>
+                      <button
+                        v-else-if="canConfirmEnrollment"
+                        class="btn-exec btn-exec-primary btn-sm"
+                        type="button"
                         :disabled="confirmingTokens.has(t.token_id)"
                         @click="confirmToken(t)"
                       >
-                        <template v-if="confirmingTokens.has(t.token_id)">
-                          <i class="fa-solid fa-spinner fa-spin"></i> Inscribiendo...
-                        </template>
-                        <template v-else>
-                          <i class="fa-solid fa-graduation-cap"></i> Inscribir
-                        </template>
+                        <i class="fa-solid" :class="confirmingTokens.has(t.token_id) ? 'fa-spinner fa-spin' : 'fa-graduation-cap'" aria-hidden="true"></i>
+                        {{ confirmingTokens.has(t.token_id) ? 'Inscribiendo…' : 'Inscribir' }}
+                      </button>
+                      <button v-if="canEditInscription(t)" class="btn-icon btn-icon-sm" type="button" title="Editar inscripción" aria-label="Editar inscripción" @click="openEditInscription(t)">
+                        <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+                      </button>
+                      <button class="btn-icon btn-icon-sm" type="button" title="Copiar link" aria-label="Copiar link" @click="copyLink(t.payment_url)">
+                        <i class="fa-solid fa-copy" aria-hidden="true"></i>
                       </button>
                     </template>
-                    <button
-                      v-if="canEditInscription(t)"
-                      class="act-btn act-indigo"
-                      title="Editar inscripcion"
-                      @click="openEditInscription(t)"
-                    >
-                      <i class="fa-solid fa-user-pen"></i>
-                    </button>
-                    <button class="act-btn act-teal" title="Copiar link" @click="copyLink(t.payment_url)">
-                      <i class="fa-solid fa-copy"></i>
-                    </button>
-                  </template>
-                  <template v-else-if="t.status === 'confirmed'">
-                    <i class="fa-solid fa-circle-check tp-confirmed-icon"></i>
-                  </template>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!tokens.length">
-              <td :colspan="selectionMode ? 12 : 11" class="empty-row">Sin resultados</td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+                    <i v-else-if="t.status === 'confirmed'" class="fa-solid fa-circle-check tp-done" title="Inscrito" aria-label="Inscrito"></i>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!tokens.length">
+                <td :colspan="selectionMode ? 12 : 11" class="ds-empty--lista tp-empty">No hay tokens con estos filtros.</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <Teleport to="body">
       <div
@@ -340,30 +246,21 @@
         :style="{ top: ctxMenu.y + 'px', left: ctxMenu.x + 'px' }"
         @click.stop
       >
-        <button
-          v-if="!selectionMode && isSelectable(ctxMenu.token)"
-          class="tp-ctx-item"
-          @click="startGrouping(ctxMenu.token)"
-        >
-          <i class="fa-solid fa-object-group"></i> Agrupar tokens
+        <button v-if="!selectionMode && isSelectable(ctxMenu.token)" class="tp-ctx-item" type="button" @click="startGrouping(ctxMenu.token)">
+          <i class="fa-solid fa-object-group" aria-hidden="true"></i> Agrupar tokens
         </button>
-        <button
-          v-if="selectionMode"
-          class="tp-ctx-item"
-          @click="cancelGrouping"
-        >
-          <i class="fa-solid fa-xmark"></i> Cancelar seleccion
+        <button v-if="selectionMode" class="tp-ctx-item" type="button" @click="cancelGrouping">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i> Cancelar selección
         </button>
         <button
           v-if="ctxMenu.token?.group_id && Number(ctxMenu.token?.requested_by) === Number(currentUserId)"
           class="tp-ctx-item"
+          type="button"
           @click="ungroupFromCtx"
         >
-          <i class="fa-solid fa-object-ungroup"></i> Desagrupar grupo
+          <i class="fa-solid fa-object-ungroup" aria-hidden="true"></i> Desagrupar grupo
         </button>
-        <div v-if="!hasCtxActions" class="tp-ctx-empty">
-          Sin acciones disponibles
-        </div>
+        <div v-if="!hasCtxActions" class="tp-ctx-empty">Sin acciones disponibles</div>
       </div>
     </Teleport>
 
@@ -378,80 +275,76 @@
           <span>
             Total: <strong>{{ selectionSummary.currency }} {{ formatMoney(selectionSummary.total) }}</strong>
             <span v-if="selectionSummary.overCount" class="tp-selbar-warn">
-              · El limite de agrupacion es de {{ MAX_TOKENS_PER_GROUP }} tokens por grupo
+              · El límite de agrupación es de {{ MAX_TOKENS_PER_GROUP }} tokens por grupo
             </span>
             <span v-if="selectionSummary.overLimit" class="tp-selbar-warn">
-              · Supera el limite de {{ selectionSummary.currency }} {{ MAX_GROUP_AMOUNT }}
+              · Supera el límite de {{ selectionSummary.currency }} {{ MAX_GROUP_AMOUNT }}
             </span>
           </span>
         </div>
         <button
-          class="ep-btn-new"
+          class="btn-exec btn-exec-primary"
+          type="button"
           :disabled="selectionSummary.overLimit || selectionSummary.overCount"
           @click="submitGroup"
         >
-          <i class="fa-solid fa-object-group"></i> Agrupar en un solo link
+          <i class="fa-solid fa-object-group" aria-hidden="true"></i> Agrupar en un solo link
         </button>
       </div>
     </Teleport>
 
-    <Teleport to="body">
-      <div v-if="showLinkModal" class="tp-overlay" @click.self="showLinkModal = false">
-        <div class="tp-modal tp-modal-sm">
-          <div class="tp-modal-head">
-            <h2 class="tp-modal-title">
-              {{ isEditingLink ? 'Editar' : 'Agregar' }} Link de Pago
-              <span v-if="getGroup(linkToken)" class="tp-modal-badge">
-                <i class="fa-solid fa-object-group"></i> Grupo {{ getGroup(linkToken).shortId }}
-              </span>
-            </h2>
-            <button class="tp-modal-close" @click="showLinkModal = false">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <div ref="linkModalBody" class="tp-modal-body">
-            <div v-if="getGroup(linkToken)" class="tp-group-banner">
-              <div class="tp-group-banner-title">
-                <i class="fa-solid fa-layer-group"></i>
-                Este link {{ isEditingLink ? 'cubre' : 'cubrira' }} <strong>{{ getGroup(linkToken).count }} tokens</strong> del mismo pago — los cambios se aplican a todos
-              </div>
-              <ul class="tp-group-list">
-                <li v-for="gt in tokens.filter(x => x.group_id === linkToken?.group_id)" :key="gt.token_id">
-                  <span>{{ gt.student_name || '---' }} · {{ gt.program_name || '---' }}</span>
-                  <strong class="mono">{{ gt.currency }} {{ formatMoney(gt.amount) }}</strong>
-                </li>
-              </ul>
-              <div class="tp-group-banner-total">
-                <span>TOTAL</span>
-                <strong class="mono">{{ getGroup(linkToken).currency }} {{ formatMoney(getGroup(linkToken).total) }}</strong>
-              </div>
-            </div>
-            <div v-if="tokenAdvisorObs" class="tp-obs-ref">
-              <div class="tp-obs-ref-title"><i class="fa-solid fa-comment-dots"></i> Observacion del asesor</div>
-              <div class="tp-obs-ref-text">{{ tokenAdvisorObs }}</div>
-            </div>
-            <div v-if="linkToken?.payment_type" class="tp-obs-ref" style="margin-top:8px;background:#FEF3C7;border-color:#FCD34D">
-              <div class="tp-obs-ref-title"><i class="fa-solid fa-credit-card"></i> Tipo de pago</div>
-              <div class="tp-obs-ref-text" style="font-weight:700">{{ linkToken.payment_type === 'credito' ? 'Credito' : 'Debito' }}</div>
-            </div>
-            <label class="tp-label" style="margin-top:16px">Proveedor <span style="color:#DC2626">*</span></label>
-            <select v-model="linkForm.cat_provider" class="tp-input" required>
-              <option :value="null">--- Seleccionar proveedor ---</option>
-              <option v-for="p in providerCatalog" :key="p.id" :value="p.id">{{ p.description }}</option>
-            </select>
-            <label class="tp-label">URL de pago <span style="color:#DC2626">*</span></label>
-            <input v-model="linkForm.payment_url" class="tp-input" placeholder="https://..." required />
-            <label class="tp-label">Notas</label>
-            <textarea v-model="linkForm.notes" class="tp-input tp-textarea" rows="2"></textarea>
-          </div>
-          <div class="tp-modal-foot">
-            <button class="tp-btn-cancel" @click="showLinkModal = false">Cancelar</button>
-            <button class="ep-btn-new" :disabled="!linkForm.payment_url || !linkForm.cat_provider" @click="submitLink">Guardar</button>
+    <BaseModal
+      :model-value="showLinkModal"
+      :title="`${isEditingLink ? 'Editar' : 'Agregar'} link de pago`"
+      size="md"
+      @update:model-value="v => showLinkModal = v"
+    >
+      <div ref="linkModalBody" class="tp-link-form">
+        <div v-if="getGroup(linkToken)" class="tp-group-box">
+          <p class="tp-group-title">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            Este link {{ isEditingLink ? 'cubre' : 'cubrirá' }} <strong>{{ getGroup(linkToken).count }} tokens</strong> del mismo pago (grupo {{ getGroup(linkToken).shortId }}): los cambios se aplican a todos.
+          </p>
+          <ul class="tp-group-list">
+            <li v-for="gt in tokens.filter(x => x.group_id === linkToken?.group_id)" :key="gt.token_id">
+              <span>{{ gt.student_name || '—' }} · {{ gt.program_name || '—' }}</span>
+              <strong class="mono">{{ gt.currency }} {{ formatMoney(gt.amount) }}</strong>
+            </li>
+          </ul>
+          <div class="tp-group-total">
+            <span>Total</span>
+            <strong class="mono">{{ getGroup(linkToken).currency }} {{ formatMoney(getGroup(linkToken).total) }}</strong>
           </div>
         </div>
+        <p v-if="tokenAdvisorObs" class="ds-callout info">
+          <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+          <span><strong>Observación del asesor:</strong> {{ tokenAdvisorObs }}</span>
+        </p>
+        <p v-if="linkToken?.payment_type" class="ds-callout warn">
+          <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+          <span>Tipo de pago: <strong>{{ linkToken.payment_type === 'credito' ? 'Crédito' : 'Débito' }}</strong></span>
+        </p>
+        <div class="ds-field">
+          <label class="ds-label" for="tp-provider">Proveedor<span class="ds-req">*</span></label>
+          <select id="tp-provider" v-model="linkForm.cat_provider" class="ds-input" required>
+            <option :value="null">Seleccionar proveedor…</option>
+            <option v-for="p in providerCatalog" :key="p.id" :value="p.id">{{ p.description }}</option>
+          </select>
+        </div>
+        <div class="ds-field">
+          <label class="ds-label" for="tp-url">URL de pago<span class="ds-req">*</span></label>
+          <input id="tp-url" v-model="linkForm.payment_url" class="ds-input" placeholder="https://…" required />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label" for="tp-notes">Notas</label>
+          <textarea id="tp-notes" v-model="linkForm.notes" class="ds-input" rows="2"></textarea>
+        </div>
       </div>
-    </Teleport>
-
+      <template #footer>
+        <button class="btn-exec btn-exec-outline" type="button" @click="showLinkModal = false">Cancelar</button>
+        <button class="btn-exec btn-exec-primary" type="button" :disabled="!linkForm.payment_url || !linkForm.cat_provider" @click="submitLink">Guardar</button>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -465,6 +358,8 @@ import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import TokenFilterModal from './TokenFilterModal.vue'
+import BaseModal from '@/components/BaseModal.vue'
+import { useColumnFilterToggles } from '@/composables/useColumnFilterToggles.js'
 import { inDateRange } from '@/utils/dateRange'
 import { confirmAction } from '@/composables/useConfirm'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
@@ -491,22 +386,41 @@ function goToEnrollment (enrollmentId) {
   router.push({ name: 'enrollmentDetail', params: { id: enrollmentId } })
 }
 
+// Respaldo si el catalogo llega sin el grupo (pasa con el cache local). Ids =
+// tabla catalog (we_token_provider); antes eran 3247-3249, que no existen, y
+// al editar un link el proveedor salia vacio.
 const providerCatalog = (() => {
   const items = catalog.options('we_token_provider')
   if (items.length > 0) return items
   return [
-    { id: 3247, description: 'Qulqi' },
-    { id: 3248, description: 'MercadoPago' },
-    { id: 3249, description: 'PayPal' }
+    { id: 4311, description: 'Qulqi' },
+    { id: 4312, description: 'MercadoPago' },
+    { id: 4313, description: 'PayPal' }
   ]
 })()
 
+// tone = clase de .ds-pill. Confirmado es el estado final (inscrito): neutro.
 const statusConfig = {
-  pending:   { label: 'Pendiente',    class: 'pill-amber' },
-  link_sent: { label: 'Link Enviado', class: 'pill-blue' },
-  paid:      { label: 'Pagado',       class: 'pill-green' },
-  confirmed: { label: 'Confirmado',   class: 'pill-slate' }
+  pending: { label: 'Pendiente', tone: 'warn' },
+  link_sent: { label: 'Link enviado', tone: 'info' },
+  paid: { label: 'Pagado', tone: 'ok' },
+  confirmed: { label: 'Confirmado', tone: '' }
 }
+
+// Columnas de la tabla; las de filter: true abren su filtro con un clic.
+const COLUMNS = [
+  { key: 'creado', label: 'Creado', width: '96px', filter: true },
+  { key: 'alumno', label: 'Alumno / contacto', filter: true },
+  { key: 'programa', label: 'Programa / edición', filter: true },
+  { key: 'tipo', label: 'Tipo', width: '90px', filter: true },
+  { key: 'proveedor', label: 'Proveedor', width: '110px', filter: true },
+  { key: 'montoMin', label: 'Monto', width: '110px', filter: true, cls: 'num' },
+  { key: 'estado', label: 'Estado', width: '110px', filter: true },
+  { key: 'link', label: 'Link', width: '170px' },
+  { key: 'asesor', label: 'Asesor', width: '110px', filter: true },
+  { key: 'fechaPago', label: 'F. pago', width: '96px', filter: true },
+  { key: 'acciones', label: 'Acciones', width: '170px', cls: 'tc' }
+]
 
 const statusTabs = [
   { label: 'Todos',        value: '',          icon: 'fa-inbox' },
@@ -534,10 +448,14 @@ const emptyColFilters = () => ({
   fechaPago: ''
 })
 
-const colFilters = ref(emptyColFilters())
+// reactive (no ref): useColumnFilterToggles lee las claves del objeto, y limpiar
+// con Object.assign mantiene la misma referencia.
+const colFilters = reactive(emptyColFilters())
+const colToggles = useColumnFilterToggles(colFilters)
 
 function clearColFilters () {
-  colFilters.value = emptyColFilters()
+  Object.assign(colFilters, emptyColFilters())
+  colToggles.closeAll()
 }
 
 // === Filtros avanzados (modal) ===
@@ -620,7 +538,12 @@ function handleDateChange (rangeStr) {
   filters.date_to   = p[1] || p[0] || null
 }
 
-function applyFilters () {
+// El modal manda su borrador: recien aqui se copia a los filtros de la pagina.
+function applyFilters (draft) {
+  if (draft) {
+    Object.assign(filters, draft)
+    handleDateChange(draft.created_range_string)
+  }
   // Modal y tabs comparten el concepto "estado". Si el usuario eligio estados
   // en el modal, las tabs dejan de mandar — evita doble filtro contradictorio.
   if (filters.status_in?.length) filterStatus.value = ''
@@ -658,7 +581,7 @@ function clearAdvancedFilters () {
 }
 
 const filteredTokens = computed(() => {
-  const cf = colFilters.value
+  const cf = colFilters
   return tokens.value.filter(t => {
     if (cf.alumno) {
       const q = cf.alumno.toLowerCase()
@@ -834,7 +757,7 @@ const kpiCards = computed(() => [
     key: 'pending',
     label: 'Pendientes totales',
     icon: 'fa-hourglass-half',
-    color: 'amber',
+    tone: 'warn',
     formatted: stats.pending.toLocaleString('es-PE'),
     description: 'Esperan link de FICO'
   },
@@ -842,7 +765,7 @@ const kpiCards = computed(() => [
     key: 'awaitingConfirmation',
     label: 'Por confirmar',
     icon: 'fa-paper-plane',
-    color: 'indigo',
+    tone: '',
     formatted: stats.awaitingConfirmation.toLocaleString('es-PE'),
     description: 'Link enviado, esperan inscribir'
   },
@@ -850,7 +773,7 @@ const kpiCards = computed(() => [
     key: 'confirmedToday',
     label: 'Confirmados hoy',
     icon: 'fa-circle-check',
-    color: 'teal',
+    tone: 'ok',
     formatted: stats.confirmedToday.toLocaleString('es-PE'),
     description: 'Cerrados en el dia de hoy'
   },
@@ -858,7 +781,7 @@ const kpiCards = computed(() => [
     key: 'amount',
     label: 'Monto en espera',
     icon: 'fa-coins',
-    color: 'green',
+    tone: '',
     formatted: 'S/ ' + formatMoneyInt(stats.amountPen),
     description: stats.amountUsd > 0 ? 'USD pendiente:' : 'En tokens activos',
     secondary: stats.amountUsd > 0 ? '$ ' + formatMoneyInt(stats.amountUsd) : ''
@@ -1143,980 +1066,85 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.token-page {
-  --e-bg: #FFFFFF;
-  --e-bg-subtle: #FAFAF8;
-  --e-border: #E8E8E3;
-  --e-border-strong: #D4D4CC;
-  --e-text: #14140F;
-  --e-text-secondary: #6F6F66;
-  --e-text-muted: #A0A099;
-  --e-accent: #10B981;
-  --e-accent-soft: #ECFDF4;
-
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--e-text);
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.ep-masthead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 22px;
-}
-.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
-.ep-breadcrumb {
-  font-size: 11px;
-  color: var(--e-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-.ep-title {
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--e-text);
-  margin: 0;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-.ep-subtitle {
-  font-size: 13.5px;
-  color: var(--e-text-secondary);
-  font-weight: 400;
-  margin-top: 2px;
-}
-
-.ep-section {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-bottom: 14px;
-}
-.ep-section.ep-filter-bar {
-  background: #fff;
-  border: 1px solid var(--e-border);
-  border-radius: 10px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-.ep-section.ep-filter-bar.is-filtered {
-  border-color: rgba(16, 185, 129, 0.32);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
-}
-.ep-filter-bar-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-}
-.ep-section.ep-filter-bar .ep-tabs {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-  flex: 0 1 auto;
-}
-.ep-section.ep-filter-bar .ep-toolbar {
-  flex: 1 1 auto;
-  justify-content: flex-end;
-  margin: 0;
-}
-
-.ep-filter-strip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 14px;
-  border-top: 1px solid var(--e-border);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
-}
-.ep-filter-strip-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #047857;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.ep-filter-strip-badge i { font-size: 11px; }
-.ep-filter-strip-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px; height: 18px;
-  padding: 0 5px;
-  background: var(--e-accent);
-  color: #fff;
-  border-radius: 9px;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.ep-filter-strip :deep(.active-filters) {
-  margin-bottom: 0;
-  flex: 1 1 auto;
-}
-.ep-filter-strip :deep(.active-filters .label) {
-  display: none;
-}
-.ep-section-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
-}
-.ep-section-title {
-  font-size: 13px; font-weight: 700; margin: 0;
-  color: var(--e-text); letter-spacing: -0.01em;
-}
-.ep-section-meta {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 11px; color: var(--e-text-muted); font-weight: 500;
-}
-.ep-section-meta i { font-size: 10px; }
-.ep-refresh-btn {
-  width: 26px; height: 26px;
-  border: 1px solid var(--e-border);
-  background: #fff;
-  border-radius: 6px; cursor: pointer;
-  color: var(--e-text-secondary); font-size: 11px;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: all 0.15s ease; margin-left: 4px;
-}
-.ep-refresh-btn:hover:not(:disabled) {
-  background: var(--e-accent-soft);
-  border-color: var(--e-accent);
-  color: var(--e-accent);
-}
-.ep-refresh-btn:disabled { opacity: 0.5; cursor: wait; }
-
-.ep-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.ep-kpi {
-  background: #fff;
-  border: 1px solid var(--e-border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.ep-kpi:hover {
-  border-color: var(--e-border-strong);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 16px rgba(0,0,0,0.04);
-}
-.ep-kpi::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: currentColor;
-}
-.ep-kpi-head {
-  display: flex; justify-content: space-between; align-items: center;
-}
-.ep-kpi-label {
-  font-size: 11px; font-weight: 600;
-  color: var(--e-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.ep-kpi-icon { font-size: 12px; color: currentColor; opacity: 0.65; }
-.ep-kpi-main {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: 8px;
-}
-.ep-kpi-value {
-  font-size: 30px;
-  font-weight: 600;
-  color: var(--e-text);
-  letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-.ep-kpi-foot {
-  font-size: 11px; color: var(--e-text-muted);
-  border-top: 1px solid var(--e-border);
-  padding-top: 8px; margin-top: 2px;
-}
-.ep-kpi-foot strong { color: var(--e-text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 4px; }
-
-.ep-kpi-indigo { color: #6366F1; }
-.ep-kpi-amber  { color: #D97706; }
-.ep-kpi-green  { color: #10B981; }
-.ep-kpi-teal   { color: #0D9488; }
-
-.ep-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--e-border);
-}
-.ep-tab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px;
-  font-size: 12.5px; font-weight: 500;
-  color: var(--e-text-secondary);
-  background: var(--e-bg-subtle);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all .15s ease;
-  font-family: inherit;
-}
-.ep-tab i { font-size: 11px; opacity: 0.7; }
-.ep-tab:hover { color: var(--e-text); background: #F5F5F5; }
-.ep-tab.is-active {
-  color: var(--e-accent);
-  background: var(--e-accent-soft);
-  border-color: rgba(13, 148, 136, 0.25);
-  font-weight: 600;
-}
-.ep-tab.is-active i { opacity: 1; }
-
-.ep-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
-}
-
-.tp-search-wrap { position: relative; flex: 0 0 auto; }
-.tp-search-icon {
-  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  color: var(--e-text-muted); font-size: 12px; pointer-events: none;
-}
-.tp-search {
-  width: 280px;
-  height: 34px;
-  padding: 0 12px 0 34px;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--e-text);
-  background: #fff;
-  font-family: inherit;
-  transition: all .2s ease;
-  box-sizing: border-box;
-}
-.tp-search:focus {
-  outline: none;
-  border-color: var(--e-accent);
-  box-shadow: 0 0 0 3px rgba(13,148,136,.06);
-}
-.tp-search::placeholder { color: #C4C4C4; }
-
-.ect-wrap {
-  background: #fff;
-  border-radius: 14px;
-  overflow-x: auto;
-  border: 1px solid var(--e-border);
-}
-.ect {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  color: #1A1A1A;
-}
+/* Todo con tokens ds-*: sin bloque dark. El menu contextual y la barra de
+   seleccion van teletransportados al body, pero el scope de Vue los alcanza. */
 .tc { text-align: center; }
-.tr { text-align: right; }
+.num { text-align: right; }
+.mono { font-variant-numeric: tabular-nums; }
 
-.ect-head th {
-  background: #FAFAFA;
-  padding: 10px 10px;
-  text-align: left;
-  font-weight: 500;
-  color: #8C8C8C;
-  border-bottom: 1px solid #F0F0F0;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-.ect-row td {
-  padding: 10px 10px;
-  border-bottom: 1px solid #F5F5F5;
-  vertical-align: middle;
-  height: 48px;
-  box-sizing: border-box;
-  transition: background .15s ease;
-}
-.ect-row:hover td { background: #FAFAFA; }
-.ect-row:last-child td { border-bottom: none; }
-
-.cell-main {
-  font-weight: 600;
-  color: #1A1A1A;
-  font-size: 12px;
-  line-height: 1.3;
-}
-.cell-clip {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cell-sub {
-  color: #A3A3A3;
-  font-size: 10.5px;
-  margin-top: 2px;
-}
-.cell-date {
-  font-size: 11px;
-  color: #737373;
-  white-space: nowrap;
-}
-.cell-advisor {
-  font-size: 11.5px;
-  color: #4B5563;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 110px;
-}
-.mono {
-  font-variant-numeric: tabular-nums;
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 11.5px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.pill-sm { padding: 2px 7px; font-size: 10px; }
-.pill-slate { background: #F5F5F5; color: #737373; }
-.pill-green { background: #ECFDF5; color: #065F46; }
-.pill-amber { background: #FFF8EB; color: #92400E; }
-.pill-blue  { background: #EFF6FF; color: #1E40AF; }
-.pill-red   { background: #FEF2F2; color: #991B1B; }
-.pill-teal  { background: #F0FDFA; color: #0F766E; }
-
-.tp-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  row-gap: 4px;
-}
-.act-btn {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #E8E8E8;
-  background: #fff;
-  border-radius: 7px;
-  cursor: pointer;
-  color: #A3A3A3;
-  font-size: 11px;
-  transition: all .2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.act-btn.act-teal { border-color: #E8E8E8; color: #737373; }
-.act-btn.act-teal:hover { background: #F0FDFA; border-color: var(--e-accent); color: var(--e-accent); }
-.act-btn.act-red { border-color: #E8E8E8; color: #737373; }
-.act-btn.act-red:hover { background: #FEF2F2; border-color: #FCA5A5; color: #EF4444; }
-
-.tp-btn-confirm {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 7px;
-  background: var(--we-navy, #002060);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .2s ease;
-  white-space: nowrap;
-}
-.tp-btn-confirm:hover { background: var(--we-navy-dark, #001540); }
-
-.tp-confirmed-icon { color: #059669; font-size: 16px; }
-
-.tp-link-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.tp-link-text {
-  display: inline-block;
-  font-size: 12px;
-  color: #4338CA;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 150px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: rgba(67, 56, 202, 0.35);
-  text-underline-offset: 2px;
-  transition: color 0.15s ease;
-}
-.tp-link-text:hover {
-  color: #4F46E5;
-  text-decoration-color: #4F46E5;
-}
-
-.empty-row {
-  padding: 48px;
-  text-align: center;
-  color: #C4C4C4;
-  font-size: 13px;
-}
-
-.skeleton-row td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #F5F5F5;
-  vertical-align: middle;
-  height: 52px;
-  box-sizing: border-box;
-}
-.sk-cell {
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #F5F5F5 25%, #EBEBEB 50%, #F5F5F5 75%);
-  background-size: 200% 100%;
-  animation: tp-sk-shimmer 1.4s ease-in-out infinite;
-  width: 100%;
-}
-.sk-cell.mt-1 { margin-top: 6px; }
-@keyframes tp-sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.tp-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-.tp-modal {
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 14px;
-  width: 640px;
-  max-width: 95vw;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,.15);
-}
-.tp-modal-sm { width: 640px; max-width: 95vw; }
-.tp-modal-head {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 12px;
-}
-.tp-modal-title { font-size: 15px; font-weight: 600; color: #1A1A1A; margin: 0; }
-.tp-modal-close {
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: #F5F5F5;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #737373;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .2s;
-}
-.tp-modal-close:hover { background: #EBEBEB; color: #1A1A1A; }
-.tp-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 20px 24px;
-  scrollbar-width: thin;
-  scrollbar-color: #D4D4D8 transparent;
-}
-.tp-modal-body::-webkit-scrollbar { width: 6px; }
-.tp-modal-body::-webkit-scrollbar-track { background: transparent; }
-.tp-modal-body::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 3px; }
-.tp-modal-body::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
-.tp-obs-ref {
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  border-radius: 8px;
-  padding: 10px 14px;
-  overflow: hidden;
-}
-.tp-obs-ref-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6B7280;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 4px;
-}
-.tp-obs-ref-title i { margin-right: 4px; }
-.tp-obs-ref-text {
-  font-size: 13px;
-  color: #1A1A1A;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-.tp-modal-foot {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 24px 20px;
-  border-top: 1px solid #F0F0F0;
-}
-
-.tp-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #1A1A1A;
-  margin-bottom: 6px;
-  margin-top: 16px;
-}
-.tp-label:first-child { margin-top: 0; }
-
-.tp-input {
-  width: 100%;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #1A1A1A;
-  background: #fff;
-  font-family: inherit;
-  transition: all .2s ease;
-  box-sizing: border-box;
-}
-.tp-input:focus {
-  outline: none;
-  border-color: var(--e-accent);
-  box-shadow: 0 0 0 3px rgba(13,148,136,.06);
-}
-.tp-textarea { height: auto; padding: 10px 12px; resize: vertical; }
-
-.tp-btn-cancel {
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #737373;
-  background: #fff;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .2s ease;
-}
-.tp-btn-cancel:hover { background: #F5F5F5; color: #1A1A1A; }
-
-.ep-btn-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--we-navy, #002060);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background .2s ease;
-  font-family: inherit;
-}
-.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
-.ep-btn-new:disabled { opacity: .4; cursor: not-allowed; }
-
-@media (max-width: 1280px) {
-  .ep-kpis { grid-template-columns: repeat(2, 1fr); }
-}
+.tp-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; padding: 12px 18px; }
+.tp-chips { display: flex; align-items: center; gap: 8px; padding: 0 18px 12px; }
 .tp-selhint {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px 6px 14px;
-  background: #EEF2FF;
-  color: #4338CA;
-  border: 1px solid #C7D2FE;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.tp-selhint-cancel {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #4338CA;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.tp-selhint-cancel:hover { background: #C7D2FE; }
-
-.tp-ctx-menu {
-  position: fixed;
-  z-index: 950;
-  min-width: 200px;
-  padding: 4px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  user-select: none;
-}
-.tp-ctx-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: #1F2937;
-  font-size: 13px;
-  text-align: left;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.tp-ctx-item:hover { background: #EEF2FF; color: #4338CA; }
-.tp-ctx-item i { width: 16px; color: #6366F1; }
-.tp-ctx-empty {
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #9CA3AF;
-  font-style: italic;
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 12px;
+  border-radius: var(--ds-radius-sm); background: var(--ds-soft-violet); color: var(--ds-violet-ink);
+  font-size: 12.5px; font-weight: 600;
 }
 
-.tp-chk { width: 16px; height: 16px; cursor: pointer; accent-color: #6366F1; }
+.tp-table td { vertical-align: middle; }
+.tp-filters th { padding-top: 4px; padding-bottom: 8px; vertical-align: top; font-weight: 400; text-transform: none; }
+.tp-filters .ds-input { height: 30px; padding: 4px 8px; font-size: 12px; }
+.tp-num { text-align: right; }
+.tp-main { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--ds-ink); }
+.tp-sub { font-size: 11.5px; color: var(--ds-muted); }
+.tp-ml { margin-left: 4px; }
+.tp-group { margin-top: 4px; }
+.tp-amount { font-weight: 700; color: var(--ds-heading); white-space: nowrap; }
+.tp-empty { text-align: center; color: var(--ds-muted); }
+
+.tp-link { display: flex; align-items: center; gap: 4px; }
+.tp-link-text {
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0; border: 0; background: none; cursor: copy;
+  font-family: inherit; font-size: 12px; color: var(--ds-accent);
+}
+.tp-link-text:hover, .tp-link-text:focus-visible { text-decoration: underline; }
+.tp-actions { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.tp-danger:hover { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.tp-done { font-size: 16px; color: var(--ds-ok); }
+
+/* Estados de fila: agrupado (borde violeta), elegido y no seleccionable */
+.tp-table tr.is-grouped td:first-child { box-shadow: inset 3px 0 0 var(--ds-violet-ink); }
+.tp-table tr.is-selected td { background: var(--ds-soft-info); }
+.tp-table tr.is-disabled td { opacity: 0.5; }
+.tp-chk { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ds-accent); }
 .tp-chk:disabled { cursor: not-allowed; opacity: 0.35; }
 
-.tp-row-selected td { background: #EEF2FF !important; }
-.tp-row-grouped td:first-child { border-left: 3px solid #6366F1; }
-.tp-row-disabled td { opacity: 0.5; }
-.ect-row { cursor: default; }
-.ect-row.tp-row-grouped { cursor: default; }
-
-.tp-group-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  padding: 2px 8px;
-  background: #EEF2FF;
-  color: #4338CA;
-  border: 1px solid #C7D2FE;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+/* Menu contextual (clic derecho) */
+.tp-ctx-menu {
+  position: fixed; z-index: 950; min-width: 200px; padding: 4px; user-select: none;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
 }
+.tp-ctx-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; cursor: pointer;
+  border: 0; border-radius: var(--ds-radius-control); background: transparent; text-align: left;
+  font-family: inherit; font-size: 13px; color: var(--ds-ink);
+}
+.tp-ctx-item:hover, .tp-ctx-item:focus-visible { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.tp-ctx-item i { width: 16px; color: var(--ds-accent); }
+.tp-ctx-empty { padding: 8px 12px; font-size: 12px; font-style: italic; color: var(--ds-muted); }
 
+/* Barra flotante de seleccion para agrupar */
 .tp-selbar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 12px 20px;
-  background: #1F2937;
-  color: #FFFFFF;
-  border-radius: 14px;
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 900;
+  display: flex; align-items: center; gap: 20px; padding: 12px 20px;
+  border-radius: var(--ds-radius); background: var(--ds-brand); color: var(--ds-on-brand);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  z-index: 900;
 }
+.tp-selbar.is-over-limit { background: var(--ds-bad); }
 .tp-selbar-info { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .tp-selbar-info strong { font-size: 14px; }
-.tp-selbar.is-over-limit { background: #7F1D1D; }
-.tp-selbar-warn { color: #FCA5A5; font-weight: 600; }
-.tp-selbar .ep-btn-new:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-selbar-warn { font-weight: 700; }
 
-.tp-modal-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 8px;
-  padding: 3px 10px;
-  background: #EEF2FF;
-  color: #4338CA;
-  border: 1px solid #C7D2FE;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  vertical-align: middle;
-}
+/* Modal de link */
+.tp-link-form { display: flex; flex-direction: column; gap: 12px; }
+.tp-group-box { padding: 12px 14px; border-radius: var(--ds-radius-sm); background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+.tp-group-title { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; font-size: 12.5px; line-height: 1.5; }
+.tp-group-list { margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.tp-group-list li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--ds-border); color: var(--ds-ink); }
+.tp-group-total { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--ds-border); font-size: 12.5px; font-weight: 700; }
 
-.tp-group-banner {
-  margin-bottom: 12px;
-  padding: 12px 14px;
-  background: #F5F3FF;
-  border: 1px solid #DDD6FE;
-  border-radius: 10px;
-}
-.tp-group-banner-title {
-  font-size: 13px;
-  color: #4338CA;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.tp-group-banner-title i { margin-right: 6px; }
-.tp-group-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  color: #374151;
-}
-.tp-group-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px dashed #DDD6FE;
-}
-.tp-group-list li:last-child { border-bottom: none; }
-.tp-group-banner-total {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 8px;
-  border-top: 2px solid #DDD6FE;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1F2937;
-}
-
-.act-slate {
-  background: #F3F4F6;
-  color: #4B5563;
-  border: 1px solid #E5E7EB;
-}
-.act-slate:hover { background: #E5E7EB; }
-
-.act-indigo {
-  background: #EEF2FF;
-  color: #4338CA;
-  border: 1px solid #C7D2FE;
-}
-.act-indigo:hover { background: #E0E7FF; }
-
-.tp-insc-hint {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 16px;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  border-radius: 10px;
-  color: #1E40AF;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.tp-insc-hint i { margin-top: 2px; }
-.req { color: #DC2626; }
-
-@media (max-width: 768px) {
-  .ep-toolbar { flex-direction: column; align-items: stretch; }
-  .tp-search-wrap { width: 100%; }
-  .tp-search { width: 100%; }
-  .tp-modal { width: 95vw; }
-  .tp-modal-sm { width: 95vw; }
-  .ep-kpis { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
   .tp-selbar { left: 16px; right: 16px; transform: none; flex-direction: column; align-items: stretch; }
-}
-
-/* ---- column filter row ---- */
-.ect-filters { background: var(--e-bg-subtle); }
-.ect-filters td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--e-border);
-}
-.filter-input,
-.filter-select {
-  width: 100%;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--e-border-strong);
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--e-text);
-  background: #fff;
-  transition: all .2s ease;
-  font-family: inherit;
-}
-.filter-select { padding: 0 8px; cursor: pointer; appearance: auto; }
-.filter-input:focus,
-.filter-select:focus {
-  outline: none;
-  border-color: var(--e-accent);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
-}
-.filter-input::placeholder { color: var(--e-text-muted); }
-.filter-input.tr { text-align: right; }
-
-/* Las flechitas del input number no caben en 30px y tapan el monto. */
-.filter-input[type="number"] { -moz-appearance: textfield; }
-.filter-input[type="number"]::-webkit-outer-spin-button,
-.filter-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* flatpickr renderiza su propio input (altInput) fuera del alcance de
-   .filter-input: hay que igualarlo a mano o la fila queda despareja. */
-.ect-filters :deep(.exec-flatpickr-input) {
-  width: 100%;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--e-border-strong);
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: inherit;
-  color: var(--e-text);
-  background: #fff;
-  box-sizing: border-box;
-  outline: none;
-  transition: all .2s ease;
-}
-.ect-filters :deep(.exec-flatpickr-input::placeholder) { color: var(--e-text-muted); }
-.ect-filters :deep(.exec-flatpickr-input:focus) {
-  border-color: var(--e-accent);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
-}
-
-.filter-clear {
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--e-border-strong);
-  background: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--e-text-muted);
-  font-size: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s ease;
-}
-.filter-clear:hover {
-  background: #FEF2F2;
-  border-color: #FCA5A5;
-  color: #EF4444;
-}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .token-page {
-  --e-bg: #1A1A14;
-  --e-bg-subtle: #1F1F1A;
-  --e-border: #2A2A22;
-  --e-border-strong: #3A3A33;
-  --e-text: #F4F4F0;
-  --e-text-secondary: #A0A099;
-  --e-text-muted: #6F6F66;
-  --e-accent-soft: rgba(16,185,129,0.16);
-}
-[data-coreui-theme="dark"] .token-page .ep-section.ep-filter-bar { background: #1A1A14; }
-[data-coreui-theme="dark"] .token-page .ep-section.ep-filter-bar.is-filtered {
-  border-color: rgba(52, 211, 153, 0.32);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
-}
-[data-coreui-theme="dark"] .token-page .ep-filter-strip {
-  border-top-color: #2A2A22;
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
-}
-[data-coreui-theme="dark"] .token-page .ep-filter-strip-badge { color: #34D399; }
-[data-coreui-theme="dark"] .token-page .ep-kpi { background: #1A1A14; }
-[data-coreui-theme="dark"] .token-page .ep-kpi:hover {
-  border-color: #3A3A33;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.35);
-}
-[data-coreui-theme="dark"] .token-page .ep-tab { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .token-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .token-page .tp-search { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .token-page .tp-search::placeholder { color: #6F6F66; }
-[data-coreui-theme="dark"] .token-page .ect-wrap { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .token-page .ect-head th { background: #1F1F1A; color: #A0A099; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .token-page .ect-row td { border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .token-page .ect-row:hover td { background: #1F1F1A; }
-[data-coreui-theme="dark"] .token-page .ect-filters,
-[data-coreui-theme="dark"] .token-page .ect-filters td { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .token-page .filter-input,
-[data-coreui-theme="dark"] .token-page .filter-select,
-[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input) {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .token-page .filter-input::placeholder,
-[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input::placeholder) { color: #6F6F66; }
-[data-coreui-theme="dark"] .token-page .filter-input:focus,
-[data-coreui-theme="dark"] .token-page .ect-filters :deep(.exec-flatpickr-input:focus),
-[data-coreui-theme="dark"] .token-page .filter-select:focus {
-  border-color: #34D399;
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
-}
-[data-coreui-theme="dark"] .token-page .filter-clear {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #6F6F66;
-}
-[data-coreui-theme="dark"] .token-page .filter-clear:hover {
-  background: rgba(239,68,68,0.16);
-  border-color: rgba(239,68,68,0.4);
-  color: #F87171;
-}
-[data-coreui-theme="dark"] .token-page .cell-main { color: #F4F4F0; }
-[data-coreui-theme="dark"] .token-page .cell-sub { color: #A0A099; }
-[data-coreui-theme="dark"] .token-page .ep-refresh-btn {
-  background: #1A1A14;
 }
 </style>

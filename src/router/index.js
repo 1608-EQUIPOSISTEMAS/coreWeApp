@@ -388,7 +388,7 @@ const routes = [
         {
           path: 'leads',
           name: 'ComercialListado',
-          component: () => import('@/views/comercial/Leads.vue'), // FSD re-revertido 2026-06-02: re-flip con CSS no cargaba datos en runtime. Diagnosticando pages/comercial/LeadsPage.vue
+          component: () => import('@/views/comercial/Leads.vue'),
           meta: { submodule: 'LEADS', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         {

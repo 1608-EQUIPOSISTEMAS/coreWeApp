@@ -314,6 +314,14 @@ estado en `.ds-head-actions` junto a las acciones) → `.ds-kpis` con las 3–4
 cifras que importan → `.ds-row--hero` o `--mitad` con paneles (datos, pagos,
 historial). Referencia de contenido: `views/fico/enrollment/EnrollmentPage.vue`.
 
+Variante con ficha lateral (`views/fico/enrollment/EnrollmentDetailView.vue`):
+`ds-head` (enlace "← Volver" chico encima del título, subtítulo "programa ·
+edición · #id", pill de estado en las acciones) → grilla `340px | 1fr`. A la
+izquierda, la ficha en `ds-panel` con listas `dt | dd` (etiqueta 96px) y
+`position: sticky`. A la derecha, un `ds-panel` con `ds-tabs` en la cabecera.
+El scroll es el de la página, nunca uno interno con `height: calc(100vh…)`.
+Una cifra no se repite entre la ficha y la pestaña (el total vive en Finanzas).
+
 ### 5.5 Formulario
 
 ```vue
@@ -385,6 +393,11 @@ se usa `confirmAction()` (§7).
 | Monto | `CurrencyInput` | |
 | Paginación + botón de filtros | `BasePagination` | `v-model="{ size, page, total }"`, emite `change`, `open-filters` |
 | Filtros aplicados | `BaseFilterChips` | `items` |
+| Aviso antes de guardar | `<p class="ds-callout warn">` + icono + `<span>` | Neutro, `.info`, `.warn`, `.bad`. Para la consecuencia que el usuario debe leer ANTES de confirmar ("no se revierte en Odoo"). No es un toast |
+| Monto con moneda | `currencySymbol(id, catCurrency)` (`entities/enrollment/currencySymbol.js`) | `S/.` o `$` según la moneda del monto (la cuota) o de la venta; nunca `S/.` fijo en el template. Un total mezclado vuelve a `S/.` |
+| Dato ya registrado | `<dl>` etiqueta/valor, no un `<select disabled>` | Un formulario gris deshabilitado no se lee; el select aparece solo cuando se puede editar |
+| Color de texto | `var(--ds-ink)`, `--ds-ink-2`, `--ds-*-ink` (o una clase scoped que los use) | Nunca `text-dark` / `text-secondary` / `text-primary` de Bootstrap: tienen color fijo y en modo oscuro el texto desaparece (pasó en `/comercial/leads` al quitar sus bloques dark) |
+| Campo obligatorio | `<span class="ds-req">*</span>` dentro del `ds-label` | Reemplaza los "(obligatorio)" y las etiquetas ámbar sueltas |
 | Filtro por columna | `ColumnFilterDropdown` + `useColumnFilterToggles` | El encabezado es un `<button class="ds-th-filter">`; la fila de filtros aparece solo al abrir una columna o con un filtro puesto |
 | Archivos | `FileUploader` / `MultiFileUploader` | |
 | Aviso breve | `useToast()` de vue-toastification | `toast.success / error / warning`. Único sistema de toasts |

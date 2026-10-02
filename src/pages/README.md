@@ -9,7 +9,6 @@ pages/
     EnrollmentListPage.vue
     EnrollmentDetailPage.vue   destino de EnrollmentDetailModal.vue (80KB)
   comercial/
-    LeadsPage.vue              destino de LeadsNew.vue (197KB)
 ```
 
 Reglas:

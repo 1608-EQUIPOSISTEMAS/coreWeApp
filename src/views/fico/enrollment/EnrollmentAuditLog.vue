@@ -1,18 +1,12 @@
 <template>
   <section class="ea-section">
-    <h3 class="ea-title">
-      <i class="fa-solid fa-clock-rotate-left"></i> Historial
-      <span v-if="auditLog.length" class="ea-badge">{{ auditLog.length }}</span>
-    </h3>
-
-    <div v-if="!auditLog.length" class="ea-empty">
-      <i class="fa-solid fa-inbox"></i>
-      <p>Sin registros de historial</p>
-    </div>
+    <p v-if="!auditLog.length" class="ds-empty ds-empty--lista">
+      Todavía no hay movimientos en esta inscripción.
+    </p>
 
     <div v-for="log in auditLog" :key="log.audit_id" class="ea-item">
-      <div class="ea-dot" :class="'dot-' + log.action">
-        <i :class="fmt.auditIcon(log.action)"></i>
+      <div class="ea-dot" :class="auditTone(log.action)">
+        <i :class="fmt.auditIcon(log.action)" aria-hidden="true"></i>
       </div>
       <div class="ea-body">
         <div class="ea-head">
@@ -22,19 +16,18 @@
         </div>
         <p v-if="log.details" class="ea-details">{{ log.details }}</p>
         <div v-if="log.justificacion" class="ea-justificacion">
-          <i class="fa-solid fa-quote-left"></i> {{ log.justificacion }}
+          <i class="fa-solid fa-quote-left" aria-hidden="true"></i> {{ log.justificacion }}
         </div>
         <div v-if="log.changes && Object.keys(parseChanges(log.changes)).length" class="ea-changes">
           <div
             v-for="(val, key) in parseChanges(log.changes)"
             :key="key"
             class="ea-change-row"
-            :class="{ 'ea-change-modified': val.old && val.new && val.old !== val.new }"
           >
             <span class="ea-change-field">{{ key }}:</span>
             <template v-if="val.old && val.new && val.old !== val.new">
               <span class="ea-old">{{ val.old }}</span>
-              <i class="fa-solid fa-arrow-right ea-arrow"></i>
+              <i class="fa-solid fa-arrow-right ea-arrow" aria-hidden="true"></i>
               <span class="ea-new">{{ val.new }}</span>
             </template>
             <template v-else-if="val.old && val.new && val.old === val.new">
@@ -59,9 +52,24 @@ defineProps({
 
 const fmt = useEnrollmentFormatters()
 
+// El color dice QUÉ tipo de evento fue, no cuál exactamente (eso lo dice el
+// icono y la etiqueta): dinero ok, cambios a revisar, fallas, movimientos de
+// programa (CC/RP/E0) y el resto informativo.
+const TONE_BY_ACTION = {
+  approved: 'ok', payment_registered: 'ok', validation_applied: 'ok', additional_payment: 'ok', odoo_fee_paid: 'ok',
+  edited: 'warn', modality_changed: 'warn', profile_changed: 'warn', student_edited: 'warn', observed: 'warn',
+  installments_rescheduled: 'warn', edition_reprogrammed: 'warn', children_skipped_no_edition: 'warn', additional_payment_edited: 'warn',
+  seller_agent_changed: 'warn', retire_reverted: 'warn', collection_campaign: 'warn', installment_amount_edited: 'warn',
+  initial_payment_corrected: 'warn', installment_payment_reverted: 'warn', installment_added: 'warn', installment_plan_adjusted: 'warn',
+  email_failed: 'bad', retired: 'bad', sap_credentials_missing: 'bad',
+  course_changed: 'violet', created_from_cc: 'violet', created_from_rp: 'violet', parent_marked_e0: 'violet', validation_requested: 'violet'
+}
+const auditTone = action => TONE_BY_ACTION[action] || 'info'
+
 function parseChanges (changes) {
   let parsed = changes
   if (typeof changes === 'string') {
+    // Un changes que no es JSON es texto libre viejo: no hay diff que pintar.
     try { parsed = JSON.parse(changes) } catch { return {} }
   }
   if (!parsed) return {}
@@ -74,164 +82,44 @@ function parseChanges (changes) {
 </script>
 
 <style scoped>
-.ea-section {
-  background: transparent;
-}
-
-.ea-title {
-  display: none;
-}
-
-.ea-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: #F0F0F0;
-  color: #737373;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.ea-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 56px;
-  color: #C4C4C4;
-  font-size: 13px;
-}
-.ea-empty i { font-size: 24px; opacity: .5; }
-
-.ea-item {
-  display: flex;
-  gap: 14px;
-  position: relative;
-  padding-bottom: 24px;
-}
-
+.ea-item { display: flex; gap: 14px; position: relative; padding-bottom: 22px; }
 .ea-item:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 30px;
-  bottom: 0;
-  width: 1px;
-  background: #F0F0F0;
+  content: ''; position: absolute; left: 13px; top: 30px; bottom: 0;
+  width: 1px; background: var(--ds-border);
 }
-
 .ea-dot {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #fff;
-  background: #C4C4C4;
-  position: relative;
-  z-index: 1;
+  flex-shrink: 0; position: relative; z-index: 1;
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center; font-size: 11px;
 }
+.ea-dot.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ea-dot.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ea-dot.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.ea-dot.violet { background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+.ea-dot.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
 
-.dot-created { background: #0D9488; }
-.dot-approved { background: #059669; }
-.dot-edited { background: #D97706; }
-.dot-odoo_enrolled { background: #6366F1; }
-.dot-odoo_unenrolled { background: #6366F1; }
-.dot-email_sent { background: #3B82F6; }
-.dot-email_failed { background: #DC2626; }
-.dot-payment_registered { background: #059669; }
-.dot-odoo_fees_activated { background: #6366F1; }
-.dot-children_skipped_no_edition { background: #F59E0B; }
-.dot-parent_marked_e0 { background: #8B5CF6; }
-.dot-edition_reprogrammed { background: #F59E0B; }
-.dot-course_changed { background: #8B5CF6; }
-.dot-created_from_cc { background: #8B5CF6; }
-.dot-created_from_rp { background: #8B5CF6; }
-.dot-children_created { background: #0D9488; }
-.dot-modality_changed { background: #D97706; }
-.dot-profile_changed { background: #D97706; }
-.dot-student_edited { background: #D97706; }
-.dot-created_from_token { background: #6366F1; }
-.dot-retired { background: #DC2626; }
-.dot-observed { background: #F59E0B; }
-.dot-resubmitted { background: #3B82F6; }
-.dot-validation_requested { background: #8B5CF6; }
-.dot-validation_applied { background: #059669; }
-.dot-installments_rescheduled { background: #F59E0B; }
-.dot-odoo_fee_paid { background: #6366F1; }
-.dot-additional_payment { background: #059669; }
-.dot-additional_payment_edited { background: #D97706; }
-
-.ea-body { flex: 1; padding-top: 3px; }
-
-.ea-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.ea-action { font-size: 13px; font-weight: 600; color: #1A1A1A; letter-spacing: -0.01em; }
-.ea-user { font-size: 12px; color: #A3A3A3; font-weight: 400; }
-.ea-date { font-size: 11px; color: #C4C4C4; margin-left: auto; }
-
-.ea-details {
-  margin: 5px 0 0;
-  font-size: 12.5px;
-  color: #737373;
-  line-height: 1.5;
-}
+.ea-body { flex: 1; min-width: 0; padding-top: 4px; }
+.ea-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ea-action { font-size: 13px; font-weight: 700; color: var(--ds-ink); }
+.ea-user { font-size: 12px; color: var(--ds-ink-2); }
+.ea-date { margin-left: auto; font-size: 11.5px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.ea-details { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-2); }
 
 .ea-justificacion {
-  margin-top: 8px;
-  padding: 10px 14px;
-  background: #FFF8EB;
-  border-radius: 8px;
-  font-size: 12.5px;
-  color: #92400E;
-  line-height: 1.5;
+  margin-top: 8px; padding: 9px 12px; border-radius: var(--ds-radius-sm);
+  background: var(--ds-soft-warn); color: var(--ds-warn-ink);
+  font-size: 12.5px; line-height: 1.5;
 }
-.ea-justificacion i { margin-right: 4px; font-size: 10px; opacity: .5; }
+.ea-justificacion i { margin-right: 4px; font-size: 10px; opacity: 0.6; }
 
 .ea-changes {
-  margin-top: 8px;
-  padding: 10px 14px;
-  background: #FAFAFA;
-  border-radius: 8px;
+  margin-top: 8px; padding: 8px 12px; border-radius: var(--ds-radius-sm);
+  border: 1px solid var(--ds-border); background: var(--ds-surface-2);
 }
-
-.ea-change-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 0; }
-.ea-change-row.ea-change-modified { background: #FFFDF5; margin: 0 -10px; padding: 4px 10px; border-radius: 6px; }
-.ea-change-field { font-weight: 500; color: #A3A3A3; min-width: 90px; }
-.ea-old { color: #DC2626; text-decoration: line-through; opacity: .7; }
-.ea-new { color: #059669; font-weight: 600; }
-.ea-same { color: #1A1A1A; }
-.ea-arrow { font-size: 10px; color: #C4C4C4; }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .ea-badge { background: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .ea-empty { color: #6F6F66; }
-[data-coreui-theme="dark"] .ea-item:not(:last-child)::before { background: #2A2A22; }
-[data-coreui-theme="dark"] .ea-dot { background: #3A3A33; }
-[data-coreui-theme="dark"] .ea-action { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ea-user { color: #8A8A80; }
-[data-coreui-theme="dark"] .ea-date { color: #6F6F66; }
-[data-coreui-theme="dark"] .ea-details { color: #A0A099; }
-[data-coreui-theme="dark"] .ea-justificacion { background: rgba(245,158,11,.12); color: #FBBF24; }
-[data-coreui-theme="dark"] .ea-changes { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ea-change-row.ea-change-modified { background: rgba(245,158,11,.08); }
-[data-coreui-theme="dark"] .ea-change-field { color: #8A8A80; }
-[data-coreui-theme="dark"] .ea-old { color: #F87171; }
-[data-coreui-theme="dark"] .ea-new { color: #34D399; }
-[data-coreui-theme="dark"] .ea-same { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ea-arrow { color: #6F6F66; }
+.ea-change-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 3px 0; font-size: 12.5px; }
+.ea-change-field { min-width: 90px; font-weight: 500; color: var(--ds-ink-2); }
+.ea-old { color: var(--ds-bad-ink); text-decoration: line-through; opacity: 0.75; }
+.ea-new { color: var(--ds-ok-ink); font-weight: 600; }
+.ea-same { color: var(--ds-ink); }
+.ea-arrow { font-size: 10px; color: var(--ds-muted); }
 </style>

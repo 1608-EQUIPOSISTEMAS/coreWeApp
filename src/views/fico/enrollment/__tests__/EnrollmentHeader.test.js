@@ -4,8 +4,8 @@ import EnrollmentHeader from '../EnrollmentHeader.vue'
 
 const seatText = enrollment => {
   const wrapper = shallowMount(EnrollmentHeader, { props: { enrollment } })
-  const card = wrapper.findAll('.eh-ic').find(c => c.text().includes('Asiento VIP'))
-  return card ? card.find('.eh-ic-value').text() : null
+  const row = wrapper.find('.eh-seat')
+  return row.exists() ? row.find('strong').text() : null
 }
 
 describe('EnrollmentHeader / asiento VIP', () => {

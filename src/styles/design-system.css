@@ -331,6 +331,14 @@ textarea.ds-input { height: auto; min-height: 72px; resize: vertical; }
 .ds-input:disabled { background: var(--ds-surface-3); color: var(--ds-muted); cursor: not-allowed; }
 .ds-help { margin-top: 4px; font-size: 11.5px; color: var(--ds-muted); }
 
+/* Aviso dentro de un panel o modal: lo que hay que saber ANTES de guardar
+   (consecuencia, regla rara). Neutro por defecto; tono por el riesgo. */
+.ds-callout { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--ds-radius-sm); background: var(--ds-soft-neutral); color: var(--ds-ink-2); font-size: 12.5px; line-height: 1.5; }
+.ds-callout > i { margin-top: 3px; font-size: 12px; }
+.ds-callout.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.ds-callout.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ds-callout.bad { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+
 [data-coreui-theme="dark"] .ds-label { color: #a0a099; }
 [data-coreui-theme="dark"] .ds-input { border-color: var(--ds-border); background: var(--ds-surface-2); color-scheme: dark; }
 [data-coreui-theme="dark"] .ds-input:focus { border-color: #8faadc; box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.16); }

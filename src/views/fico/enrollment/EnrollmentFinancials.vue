@@ -1,10 +1,8 @@
 <template>
   <section class="ef-section">
-    <h3 class="ef-title"><i class="fa-solid fa-file-invoice-dollar"></i> Finanzas</h3>
-
-    <!-- Badge de promo: el alumno debe traer laptop como beneficio de la inscripcion -->
+        <!-- Badge de promo: el alumno debe traer laptop como beneficio de la inscripcion -->
     <div v-if="hasLaptopPromo" class="ef-laptop-banner">
-      <i class="fa-solid fa-laptop"></i>
+      <i class="fa-solid fa-laptop" aria-hidden="true"></i>
       <div class="ef-laptop-banner-text">
         <strong>Traera laptop</strong>
         <span>Inscripcion con promo LAPTOP — confirmar que el alumno trae su equipo</span>
@@ -15,7 +13,7 @@
     <div class="ef-bar">
       <div class="ef-bar-item">
         <span class="ef-bar-label">Precio Lista</span>
-        <span class="ef-bar-value">S/. {{ fmt.formatMoney(listPrice) }}</span>
+        <span class="ef-bar-value">{{ saleSymbol }} {{ fmt.formatMoney(listPrice) }}</span>
       </div>
       <div class="ef-bar-sep"></div>
       <div class="ef-bar-item ef-discount-wrap">
@@ -25,7 +23,7 @@
           @mouseenter="showDiscountTip = true"
           @mouseleave="showDiscountTip = false"
         >
-          - S/. {{ fmt.formatMoney(discount) }}
+          - {{ saleSymbol }} {{ fmt.formatMoney(discount) }}
           <i v-if="discountLines.length" class="fa-solid fa-circle-info ef-tip-icon"></i>
           <div v-if="showDiscountTip && discountLines.length" class="ef-tooltip">
             <div v-for="(d, i) in discountLines" :key="i" class="ef-tip-row">{{ d }}</div>
@@ -35,28 +33,28 @@
       <div class="ef-bar-sep"></div>
       <div class="ef-bar-item">
         <span class="ef-bar-label">Total</span>
-        <span class="ef-bar-value fw700">S/. {{ fmt.formatMoney(total) }}</span>
+        <span class="ef-bar-value fw700">{{ saleSymbol }} {{ fmt.formatMoney(total) }}</span>
       </div>
       <div v-if="reserva > 0" class="ef-bar-sep"></div>
       <div v-if="reserva > 0" class="ef-bar-item">
         <span class="ef-bar-label">Inicial</span>
-        <span class="ef-bar-value c-blue">S/. {{ fmt.formatMoney(reserva) }}</span>
+        <span class="ef-bar-value c-blue">{{ saleSymbol }} {{ fmt.formatMoney(reserva) }}</span>
       </div>
       <div class="ef-bar-sep"></div>
       <div class="ef-bar-item">
         <span class="ef-bar-label">Pagado</span>
-        <span class="ef-bar-value c-green">S/. {{ fmt.formatMoney(paid) }}</span>
+        <span class="ef-bar-value c-green">{{ saleSymbol }} {{ fmt.formatMoney(paid) }}</span>
       </div>
       <div class="ef-bar-sep"></div>
       <div class="ef-bar-item">
         <span class="ef-bar-label">Saldo</span>
-        <span class="ef-bar-value" :class="balance > 0 ? 'c-red fw700' : 'c-green'">S/. {{ fmt.formatMoney(balance) }}</span>
+        <span class="ef-bar-value" :class="balance > 0 ? 'c-red fw700' : 'c-green'">{{ saleSymbol }} {{ fmt.formatMoney(balance) }}</span>
       </div>
     </div>
 
     <!-- Convalidacion -->
     <div v-if="validations.length > 0" class="ef-validation-block">
-      <h6 class="ef-sub-title"><i class="fa-solid fa-rotate-right"></i> Convalidacion</h6>
+      <h6 class="ef-sub-title"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Convalidacion</h6>
       <table class="ef-table">
         <thead>
           <tr>
@@ -70,8 +68,8 @@
           <tr v-for="child in programChildren" :key="child.child_program_version_id">
             <td class="fw700">{{ child.child_name }}</td>
             <td class="tc">
-              <span v-if="isValidated(child.child_program_version_id)" class="ef-pill pill-amber">Convalidar</span>
-              <span v-else class="ef-pill pill-green">Inscribir</span>
+              <span v-if="isValidated(child.child_program_version_id)" class="ds-pill warn">Convalidar</span>
+              <span v-else class="ds-pill ok">Inscribir</span>
             </td>
             <td>
               <template v-if="isValidated(child.child_program_version_id)">&mdash;</template>
@@ -79,16 +77,16 @@
                 <!-- Hijo NO esta en el arbol del padre Y no tiene custom edition: requiere accion -->
                 <span v-if="needsEditionDecision(child)" class="ef-edition-warn"
                   @click="editingEdition[child.child_program_version_id] = true">
-                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                   Falta elegir edicion
                 </span>
                 <span v-else-if="!editingEdition[child.child_program_version_id]"
                   class="ef-edition-link"
                   @click="editingEdition[child.child_program_version_id] = true">
                   {{ getCustomEditionLabel(child) || treeEditionLabel(child) }}
-                  <i class="fa-solid fa-pen" style="font-size:10px;margin-left:4px;opacity:.4"></i>
+                  <i class="fa-solid fa-pen ef-edition-pen" aria-hidden="true"></i>
                 </span>
-                <select v-if="editingEdition[child.child_program_version_id]" class="ef-select-sm" style="min-width:200px"
+                <select v-if="editingEdition[child.child_program_version_id]" class="ef-select-sm ef-select-edition"
                   :value="getCustomEditionId(child.child_program_version_id)"
                   @change="$emit('change-edition', { childVersionId: child.child_program_version_id, editionId: Number($event.target.value) || null }); editingEdition[child.child_program_version_id] = false"
                   @blur="editingEdition[child.child_program_version_id] = false">
@@ -105,7 +103,7 @@
               <button v-if="planStatus !== 'pendiente'" class="ef-btn-del"
                 @click="$emit('toggle-validation', child.child_program_version_id)"
                 :title="isValidated(child.child_program_version_id) ? 'Quitar convalidacion' : 'Convalidar'">
-                <i :class="isValidated(child.child_program_version_id) ? 'fa-solid fa-xmark' : 'fa-solid fa-check'"></i>
+                <i :class="isValidated(child.child_program_version_id) ? 'fa-solid fa-xmark' : 'fa-solid fa-check'" aria-hidden="true"></i>
               </button>
             </td>
           </tr>
@@ -119,10 +117,10 @@
            de reasignacion ya registrado -->
       <div v-if="showAdicionales" class="ef-cuota-tabs">
         <button :class="['ef-cuota-tab', { active: becaTab === 'pago' }]" @click="becaTab = 'pago'">
-          <i class="fa-solid fa-money-bill-wave"></i> Pago
+          <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Pago
         </button>
         <button :class="['ef-cuota-tab', { active: becaTab === 'adicionales' }]" @click="becaTab = 'adicionales'">
-          <i class="fa-solid fa-file-invoice"></i> Adicionales
+          <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Adicionales
         </button>
       </div>
 
@@ -133,12 +131,12 @@
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
               <span class="ef-bar-label">{{ adicionalLabel }}</span>
-              <span class="fw700 mono" style="font-size:18px">S/. {{ fmt.formatMoney(certificatePayment.amount) }}</span>
+              <span class="ef-amount-lg mono">{{ currencySymbol(certificatePayment.cat_currency, catalogs.catCurrency) }} {{ fmt.formatMoney(certificatePayment.amount) }}</span>
             </div>
             <div class="ef-inicial-actions">
               <span class="ef-cert-badge"><i class="fa-solid" :class="adicionalMeta.icon"></i> {{ adicionalMeta.chip }}</span>
-              <a v-if="certificatePayment.evidence_url" :href="certificatePayment.evidence_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
-              <span v-else class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
+              <a v-if="certificatePayment.evidence_url" :href="certificatePayment.evidence_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image" aria-hidden="true"></i> Ver Voucher</a>
+              <span v-else class="ef-muted-note">Sin voucher adjunto</span>
             </div>
           </div>
           <div class="ef-form-row mt12">
@@ -156,72 +154,72 @@
             <div class="ef-inicial-info">
               <span class="ef-bar-label">{{ editingAdicional ? 'Editar ' + adicionalLabel : adicionalLabel }}</span>
               <div class="ef-cert-amount">
-                <span class="fw700 mono" style="font-size:16px">S/.</span>
-                <input v-model.number="adicional.amount" type="number" step="0.01" min="0" class="ef-input ef-cert-amount-input mono" placeholder="50.00" />
+                <span class="ef-amount-lg mono">{{ currencySymbol(adicional.cat_currency, catalogs.catCurrency) }}</span>
+                <input v-model.number="adicional.amount" type="number" step="0.01" min="0" class="ds-input ef-cert-amount-input mono" placeholder="50.00" />
               </div>
             </div>
             <div class="ef-inicial-actions">
-              <a v-if="adicional.voucher_url" :href="adicional.voucher_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image"></i> Ver Voucher</a>
-              <label class="ef-voucher-link" style="cursor:pointer">
-                <i class="fa-solid fa-cloud-arrow-up"></i> {{ adicional.voucher_url ? 'Cambiar Voucher' : 'Adjuntar Voucher' }}
-                <input type="file" accept="image/*,.pdf" style="display:none" @change="uploadAdicionalVoucher" />
+              <a v-if="adicional.voucher_url" :href="adicional.voucher_url" target="_blank" class="ef-voucher-link"><i class="fa-solid fa-image" aria-hidden="true"></i> Ver Voucher</a>
+              <label class="ef-voucher-link">
+                <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> {{ adicional.voucher_url ? 'Cambiar Voucher' : 'Adjuntar Voucher' }}
+                <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="uploadAdicionalVoucher" />
               </label>
             </div>
           </div>
           <div class="ef-form-row mt12">
             <div class="ef-field">
               <label>Tipo Moneda</label>
-              <select v-model="adicional.cat_currency" class="ef-select">
+              <select v-model="adicional.cat_currency" class="ds-input">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Medio de Pago</label>
-              <select v-model="adicional.cat_payment_medium" class="ef-select">
+              <select v-model="adicional.cat_payment_medium" class="ds-input">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Entidad Empresa</label>
-              <select v-model="adicional.cat_business_entity" class="ef-select">
+              <select v-model="adicional.cat_business_entity" class="ds-input">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Cuenta Bancaria</label>
-              <select v-model="adicional.bank_account_id" class="ef-select" :disabled="!adicional.cat_business_entity">
+              <select v-model="adicional.bank_account_id" class="ds-input" :disabled="!adicional.cat_business_entity">
                 <option :value="null">{{ adicional.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
                 <option v-for="a in filteredAccounts(adicional.cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>N. Operacion</label>
-              <input v-model="adicional.transaction_code" class="ef-input" placeholder="Numero de operacion" />
+              <input v-model="adicional.transaction_code" class="ds-input" placeholder="Numero de operacion" />
             </div>
             <div class="ef-field">
               <label>Fecha de Pago</label>
-              <input v-model="adicional.payment_date" type="date" class="ef-input" :max="todayIso" />
+              <input v-model="adicional.payment_date" type="date" class="ds-input" :max="todayIso" />
             </div>
           </div>
           <!-- Edicion: justificacion obligatoria (queda en el historial) -->
           <div v-if="editingAdicional" class="ef-cert-just">
-            <label class="ef-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion del cambio (obligatorio)</label>
-            <textarea v-model="adicionalJust" class="ef-textarea" rows="2" placeholder="Explica el motivo de la edicion..."></textarea>
+            <label class="ef-warn-label"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Justificacion del cambio (obligatorio)</label>
+            <textarea v-model="adicionalJust" class="ds-input" rows="2" placeholder="Explica el motivo de la edicion..."></textarea>
           </div>
           <div class="ef-cert-actions">
             <template v-if="editingAdicional">
-              <button class="ef-action-btn" @click="editingAdicional = false">Cancelar edicion</button>
-              <button class="ef-btn-primary" :disabled="!canSaveAdicional || !adicionalJust.trim() || saving" @click="$emit('update-additional', { payment_id: certificatePayment.payment_id, ...adicional, justificacion: adicionalJust })">
+              <button type="button" class="btn-exec btn-exec-outline" @click="editingAdicional = false">Cancelar edicion</button>
+              <button type="button" class="btn-exec btn-exec-primary" :disabled="!canSaveAdicional || !adicionalJust.trim() || saving" @click="$emit('update-additional', { payment_id: certificatePayment.payment_id, ...adicional, justificacion: adicionalJust })">
                 <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
                 {{ saving ? 'Guardando...' : 'Guardar cambios' }}
               </button>
             </template>
             <template v-else>
-              <p class="ef-cert-hint"><i class="fa-solid fa-circle-info"></i> Al registrar el pago se activara la etiqueta <strong>Certificar</strong> para este becado.</p>
-              <button class="ef-btn-primary" :disabled="!canSaveAdicional || saving" @click="$emit('save-additional', { ...adicional })">
+              <p class="ef-cert-hint"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Al registrar el pago se activara la etiqueta <strong>Certificar</strong> para este becado.</p>
+              <button type="button" class="btn-exec btn-exec-primary" :disabled="!canSaveAdicional || saving" @click="$emit('save-additional', { ...adicional })">
                 <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
                 {{ saving ? 'Registrando...' : 'Registrar Pago' }}
               </button>
@@ -231,17 +229,17 @@
       </div>
 
       <template v-if="!showAdicionales || becaTab === 'pago'">
-      <h6 v-if="!isBeca" class="ef-sub-title"><i class="fa-solid fa-money-bill-wave"></i> Pago al Contado</h6>
+      <h6 v-if="!isBeca" class="ef-sub-title"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Pago al Contado</h6>
       <div class="ef-contado-card">
         <div class="ef-contado-amount">
           <span class="ef-bar-label">Monto</span>
-          <span class="fw700 mono" style="font-size:16px">S/. {{ fmt.formatMoney(total) }}</span>
+          <span class="ef-amount-lg mono">{{ saleSymbol }} {{ fmt.formatMoney(total) }}</span>
         </div>
         <div class="ef-voucher-links">
           <a v-for="(url, i) in voucherUrls" :key="url" :href="url" target="_blank" class="ef-voucher-link">
-            <i class="fa-solid fa-image"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
+            <i class="fa-solid fa-image" aria-hidden="true"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
           </a>
-          <span v-if="!voucherUrls.length" class="c-muted" style="font-size:12px">Sin voucher adjunto</span>
+          <span v-if="!voucherUrls.length" class="ef-muted-note">Sin voucher adjunto</span>
         </div>
       </div>
 
@@ -250,7 +248,7 @@
         <div class="ef-field">
           <label>Tipo Moneda</label>
           <span v-if="!isEditing" class="ef-readonly">{{ detail?.currency_symbol || '---' }}</span>
-          <select v-else v-model="form.cat_currency" class="ef-select">
+          <select v-else v-model="form.cat_currency" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
           </select>
@@ -258,7 +256,7 @@
         <div class="ef-field">
           <label>Medio de Pago</label>
           <span v-if="!isEditing" class="ef-readonly">{{ lastPayment?.payment_method || '---' }}</span>
-          <select v-else v-model="form.cat_payment_medium" class="ef-select">
+          <select v-else v-model="form.cat_payment_medium" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
           </select>
@@ -266,7 +264,7 @@
         <div class="ef-field">
           <label>Entidad Empresa</label>
           <span v-if="!isEditing" class="ef-readonly">{{ lastPayment?.business_entity || '---' }}</span>
-          <select v-else v-model="form.cat_business_entity" class="ef-select">
+          <select v-else v-model="form.cat_business_entity" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
           </select>
@@ -274,7 +272,7 @@
         <div class="ef-field">
           <label>Cuenta Bancaria</label>
           <span v-if="!isEditing" class="ef-readonly">{{ lastPayment ? [lastPayment.bank_name, lastPayment.bank_currency, lastPayment.bank_account_number].filter(Boolean).join(' - ') || '---' : '---' }}</span>
-          <select v-else v-model="form.bank_account_id" class="ef-select" :disabled="!form.cat_business_entity">
+          <select v-else v-model="form.bank_account_id" class="ds-input" :disabled="!form.cat_business_entity">
             <option :value="null">{{ form.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
             <option v-for="a in filteredAccounts(form.cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
           </select>
@@ -282,12 +280,12 @@
         <div class="ef-field">
           <label>N. Operacion</label>
           <span v-if="!isEditing" class="ef-readonly mono">{{ lastPayment?.transaction_code || '---' }}</span>
-          <input v-else v-model="form.transaction_code" class="ef-input" placeholder="Numero de operacion" />
+          <input v-else v-model="form.transaction_code" class="ds-input" placeholder="Numero de operacion" />
         </div>
         <div class="ef-field">
           <label>Fecha de Pago</label>
           <span v-if="!isEditing" class="ef-readonly">{{ lastPayment?.payment_date ? fmt.formatDate(lastPayment.payment_date) : '---' }}</span>
-          <input v-else v-model="form.payment_date" type="date" class="ef-input" :max="todayIso" />
+          <input v-else v-model="form.payment_date" type="date" class="ds-input" :max="todayIso" />
         </div>
       </div>
 
@@ -296,46 +294,46 @@
            detraccion funciona aca sin codigo aparte. -->
       <div v-if="contadoPendiente && !isEditing" class="ef-collect mt12">
         <div class="ef-collect-head">
-          <span><i class="fa-solid fa-hand-holding-dollar"></i> Registrar el cobro</span>
-          <span class="ef-collect-amount mono">S/. {{ fmt.formatMoney(contadoPendiente.amount) }}</span>
+          <span><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Registrar el cobro</span>
+          <span class="ef-collect-amount mono">{{ symbolOf(contadoPendiente) }} {{ fmt.formatMoney(contadoPendiente.amount) }}</span>
         </div>
 
         <div class="ef-form-row">
           <div class="ef-field">
             <label>Tipo Moneda</label>
-            <select v-model="contadoPendiente._cat_currency" class="ef-select">
+            <select v-model="contadoPendiente._cat_currency" class="ds-input">
               <option :value="null">Seleccionar...</option>
               <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
             </select>
           </div>
           <div class="ef-field">
             <label>Medio de Pago</label>
-            <select v-model="contadoPendiente._cat_payment_medium" class="ef-select">
+            <select v-model="contadoPendiente._cat_payment_medium" class="ds-input">
               <option :value="null">Seleccionar...</option>
               <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
             </select>
           </div>
           <div class="ef-field">
             <label>Entidad Empresa</label>
-            <select v-model="contadoPendiente._cat_business_entity" class="ef-select">
+            <select v-model="contadoPendiente._cat_business_entity" class="ds-input">
               <option :value="null">Seleccionar...</option>
               <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
             </select>
           </div>
           <div class="ef-field">
             <label>Cuenta Bancaria</label>
-            <select v-model="contadoPendiente._bank_account_id" class="ef-select" :disabled="!contadoPendiente._cat_business_entity">
+            <select v-model="contadoPendiente._bank_account_id" class="ds-input" :disabled="!contadoPendiente._cat_business_entity">
               <option :value="null">{{ contadoPendiente._cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
               <option v-for="a in filteredAccounts(contadoPendiente._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
             </select>
           </div>
           <div class="ef-field">
             <label>N. Operacion</label>
-            <input v-model="contadoPendiente._transaction_code" class="ef-input" placeholder="Numero de operacion" />
+            <input v-model="contadoPendiente._transaction_code" class="ds-input" placeholder="Numero de operacion" />
           </div>
           <div class="ef-field">
             <label>Fecha de Pago</label>
-            <input v-model="contadoPendiente._payment_date" type="date" class="ef-input" :max="todayIso" />
+            <input v-model="contadoPendiente._payment_date" type="date" class="ds-input" :max="todayIso" />
           </div>
         </div>
 
@@ -343,7 +341,7 @@
           <label class="ef-file-btn" :class="{ done: contadoPendiente._voucher_url }">
             <i class="fa-solid" :class="contadoPendiente._voucher_url ? 'fa-circle-check' : 'fa-cloud-arrow-up'"></i>
             <span>{{ contadoPendiente._voucher_url ? 'Voucher cargado' : 'Subir voucher' }}</span>
-            <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, contadoPendiente)" />
+            <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="e => uploadVoucher(e, contadoPendiente)" />
           </label>
           <a v-if="contadoPendiente._voucher_url" :href="contadoPendiente._voucher_url" target="_blank" class="ef-file-view">Ver</a>
 
@@ -353,7 +351,7 @@
           </label>
 
           <button
-            class="ef-btn-primary"
+            class="btn-exec btn-exec-primary"
             :disabled="saving || !contadoPendiente._cat_currency || !contadoPendiente._cat_payment_medium || (!!contadoPendiente._detraction && !detractionValid(contadoPendiente))"
             @click="$emit('confirm-cuota', contadoPendiente)"
           >
@@ -365,10 +363,10 @@
         <!-- Segundo deposito: solo se pide el monto detraido, el del pago se
              deriva restando y por eso la suma nunca puede descuadrar. -->
         <div v-if="contadoPendiente._detraction" class="ef-detraction-box">
-          <span class="ef-detraction-title"><i class="fa-solid fa-scissors"></i> Detraccion</span>
+          <span class="ef-detraction-title"><i class="fa-solid fa-scissors" aria-hidden="true"></i> Detraccion</span>
           <label>
             Monto detraido
-            <input v-model.number="contadoPendiente._detraction.amount" type="number" step="0.01" min="0" class="ef-input tr mono" placeholder="0.00" />
+            <input v-model.number="contadoPendiente._detraction.amount" type="number" step="0.01" min="0" class="ds-input tr mono" placeholder="0.00" />
           </label>
           <label>
             Cuenta (Banco de la Nacion)
@@ -379,18 +377,18 @@
           </label>
           <label>
             N. Operacion
-            <input v-model="contadoPendiente._detraction.transaction_code" class="ef-input" placeholder="---" />
+            <input v-model="contadoPendiente._detraction.transaction_code" class="ds-input" placeholder="---" />
           </label>
           <label class="ef-file-btn sm" :class="{ done: contadoPendiente._detraction._voucher_url }">
             <i class="fa-solid" :class="contadoPendiente._detraction._voucher_url ? 'fa-circle-check' : 'fa-cloud-arrow-up'"></i>
             <span>{{ contadoPendiente._detraction._voucher_url ? 'Cargado' : 'Voucher' }}</span>
-            <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, contadoPendiente._detraction)" />
+            <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="e => uploadVoucher(e, contadoPendiente._detraction)" />
           </label>
           <a v-if="contadoPendiente._detraction._voucher_url" :href="contadoPendiente._detraction._voucher_url" target="_blank" class="ef-file-view">Ver</a>
           <span class="ef-detraction-split" :class="{ 'c-red': !detractionValid(contadoPendiente) }">
-            Pago S/. {{ fmt.formatMoney(contadoPendiente.amount - (Number(contadoPendiente._detraction.amount) || 0)) }}
-            + Detraccion S/. {{ fmt.formatMoney(Number(contadoPendiente._detraction.amount) || 0) }}
-            = S/. {{ fmt.formatMoney(contadoPendiente.amount) }}
+            Pago {{ symbolOf(contadoPendiente) }} {{ fmt.formatMoney(contadoPendiente.amount - (Number(contadoPendiente._detraction.amount) || 0)) }}
+            + Detracción {{ symbolOf(contadoPendiente) }} {{ fmt.formatMoney(Number(contadoPendiente._detraction.amount) || 0) }}
+            = {{ symbolOf(contadoPendiente) }} {{ fmt.formatMoney(contadoPendiente.amount) }}
           </span>
         </div>
       </div>
@@ -398,7 +396,7 @@
       <!-- OS/OP: no hay datos bancarios que pedir todavia. FICO confirma contra
            la orden adjunta y la cuota queda pendiente hasta que llegue el deposito. -->
       <div v-if="mode === 'confirm' && isDocumentalSale" class="ef-doc-notice mt12">
-        <i class="fa-solid fa-file-contract"></i>
+        <i class="fa-solid fa-file-contract" aria-hidden="true"></i>
         <span>
           Venta con <strong>{{ detail?.b2b_doctype_label || 'orden documental' }}</strong>:
           el pago no ha llegado. Al confirmar, el alumno accede al campus y la cuota
@@ -410,39 +408,39 @@
       <div v-if="mode === 'confirm' && !isDocumentalSale" class="ef-form-row mt12">
         <div class="ef-field">
           <label>Tipo Moneda</label>
-          <select v-model="form.cat_currency" class="ef-select">
+          <select v-model="form.cat_currency" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
           </select>
         </div>
         <div class="ef-field">
           <label>Medio de Pago</label>
-          <select v-model="form.cat_payment_medium" class="ef-select">
+          <select v-model="form.cat_payment_medium" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
           </select>
         </div>
         <div class="ef-field">
           <label>Entidad Empresa</label>
-          <select v-model="form.cat_business_entity" class="ef-select">
+          <select v-model="form.cat_business_entity" class="ds-input">
             <option :value="null">Seleccionar...</option>
             <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
           </select>
         </div>
         <div class="ef-field">
           <label>Cuenta Bancaria</label>
-          <select v-model="form.bank_account_id" class="ef-select" :disabled="!form.cat_business_entity">
+          <select v-model="form.bank_account_id" class="ds-input" :disabled="!form.cat_business_entity">
             <option :value="null">{{ form.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
             <option v-for="a in filteredAccounts(form.cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
           </select>
         </div>
         <div class="ef-field">
           <label>N. Operacion</label>
-          <input v-model="form.transaction_code" class="ef-input" placeholder="Numero de operacion" />
+          <input v-model="form.transaction_code" class="ds-input" placeholder="Numero de operacion" />
         </div>
         <div class="ef-field">
           <label>Fecha de Pago</label>
-          <input v-model="form.payment_date" type="date" class="ef-input" :max="todayIso" />
+          <input v-model="form.payment_date" type="date" class="ds-input" :max="todayIso" />
         </div>
       </div>
       </template>
@@ -452,10 +450,10 @@
     <div v-else class="ef-payment">
       <div class="ef-cuota-tabs">
         <button :class="['ef-cuota-tab', { active: cuotaTab === 'inicial' }]" @click="cuotaTab = 'inicial'">
-          <i class="fa-solid fa-receipt"></i> Pago Inicial
+          <i class="fa-solid fa-receipt" aria-hidden="true"></i> Pago Inicial
         </button>
         <button :class="['ef-cuota-tab', { active: cuotaTab === 'cuotas' }]" @click="cuotaTab = 'cuotas'">
-          <i class="fa-solid fa-calendar-days"></i> Cuotas
+          <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Cuotas
           <span v-if="cuotas.length" class="ef-tab-badge">{{ cuotas.length }}</span>
         </button>
       </div>
@@ -466,67 +464,78 @@
           <div class="ef-inicial-top">
             <div class="ef-inicial-info">
               <span class="ef-bar-label">Pago Inicial</span>
-              <span class="fw700 mono" style="font-size:18px" :class="{ 'ef-inicial-removed': fmt.isCuotaAnulada(inicial) }">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
-              <span v-if="fmt.isCuotaAnulada(inicial)" class="ef-pill pill-muted">Eliminado</span>
+              <span class="ef-amount-lg mono" :class="{ 'ef-inicial-removed': fmt.isCuotaAnulada(inicial) }">{{ symbolOf(inicial) }} {{ fmt.formatMoney(inicial.amount) }}</span>
+              <span v-if="fmt.isCuotaAnulada(inicial)" class="ds-pill">Eliminado</span>
+              <span v-else-if="inicial.status === 'paid'" class="ds-pill ok">Pagado</span>
             </div>
             <div class="ef-inicial-actions">
               <button
                 v-if="canCorrectPayments && inicial.installment_id && !isEditing && !fmt.isCuotaAnulada(inicial)"
-                class="ef-btn-sm ef-btn-outline"
+                class="btn-exec btn-exec-outline btn-sm"
                 @click="$emit('correct-initial', inicial)"
                 title="Corregir el monto registrado del pago inicial"
-              ><i class="fa-solid fa-pen"></i> Corregir inicial</button>
+              ><i class="fa-solid fa-pen" aria-hidden="true"></i> Corregir inicial</button>
               <a v-for="(url, i) in voucherUrls" :key="url" :href="url" target="_blank" class="ef-voucher-link">
-                <i class="fa-solid fa-image"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
+                <i class="fa-solid fa-image" aria-hidden="true"></i> Ver Voucher{{ voucherUrls.length > 1 ? ` ${i + 1}` : '' }}
               </a>
             </div>
           </div>
-          <div class="ef-form-row mt12">
+          <!-- Ya pagado y sin editar: se lee como dato, no como un formulario
+               deshabilitado (los selects grises con el medio vacio no se leian). -->
+          <dl v-if="inicial.status === 'paid' && !isEditing" class="ef-dl mt12">
+            <div><dt>Moneda</dt><dd>{{ labelOf(catalogs.catCurrency, inicial._cat_currency, 'abbreviation') }}</dd></div>
+            <div><dt>Medio de pago</dt><dd>{{ labelOf(catalogs.catPaymentMedium, inicial._cat_payment_medium) }}</dd></div>
+            <div><dt>Entidad empresa</dt><dd>{{ labelOf(catalogs.catBusinessEntity, inicial._cat_business_entity) }}</dd></div>
+            <div><dt>Cuenta bancaria</dt><dd>{{ accountLabel(inicial._bank_account_id) }}</dd></div>
+            <div><dt>N° operación</dt><dd class="mono">{{ inicial._transaction_code || '—' }}</dd></div>
+            <div><dt>Fecha de pago</dt><dd>{{ fmt.formatDate(inicial._payment_date) }}</dd></div>
+          </dl>
+          <div v-else class="ef-form-row mt12">
             <div class="ef-field">
               <label>Tipo Moneda</label>
-              <select v-model="inicial._cat_currency" class="ef-select" :disabled="inicial.status === 'paid' && !isEditing">
+              <select v-model="inicial._cat_currency" class="ds-input" :disabled="inicial.status === 'paid' && !isEditing">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="c in catalogs.catCurrency" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Medio de Pago</label>
-              <select v-model="inicial._cat_payment_medium" class="ef-select" :disabled="inicial.status === 'paid' && !isEditing">
+              <select v-model="inicial._cat_payment_medium" class="ds-input" :disabled="inicial.status === 'paid' && !isEditing">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Entidad Empresa</label>
-              <select v-model="inicial._cat_business_entity" class="ef-select" :disabled="inicial.status === 'paid' && !isEditing">
+              <select v-model="inicial._cat_business_entity" class="ds-input" :disabled="inicial.status === 'paid' && !isEditing">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>Cuenta Bancaria</label>
-              <select v-model="inicial._bank_account_id" class="ef-select" :disabled="(inicial.status === 'paid' && !isEditing) || !inicial._cat_business_entity">
+              <select v-model="inicial._bank_account_id" class="ds-input" :disabled="(inicial.status === 'paid' && !isEditing) || !inicial._cat_business_entity">
                 <option :value="null">{{ inicial._cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
                 <option v-for="a in filteredAccounts(inicial._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
               </select>
             </div>
             <div class="ef-field">
               <label>N. Operacion</label>
-              <input v-model="inicial._transaction_code" class="ef-input" placeholder="Numero de operacion" :disabled="inicial.status === 'paid' && !isEditing" />
+              <input v-model="inicial._transaction_code" class="ds-input" placeholder="Numero de operacion" :disabled="inicial.status === 'paid' && !isEditing" />
             </div>
             <div class="ef-field">
               <label>Fecha de Pago</label>
-              <input v-model="inicial._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="inicial.status === 'paid' && !isEditing" />
+              <input v-model="inicial._payment_date" type="date" class="ds-input" :max="todayIso" :disabled="inicial.status === 'paid' && !isEditing" />
             </div>
           </div>
         </div>
-        <div v-else class="ef-empty"><i class="fa-solid fa-inbox"></i><p>Sin pago inicial registrado</p></div>
+        <div v-else class="ef-empty"><i class="fa-solid fa-inbox" aria-hidden="true"></i><p>Sin pago inicial registrado</p></div>
       </div>
 
       <!-- Cuotas -->
       <div v-if="cuotaTab === 'cuotas'" class="ef-tab-body">
         <div v-if="planStatus === 'borrador'" class="ef-notice">
-          <i class="fa-solid fa-file-pen"></i>
+          <i class="fa-solid fa-file-pen" aria-hidden="true"></i>
           <div>
             <strong>Plan en Borrador</strong>
             <p>Comercial envio este plan de cuotas. Confirma el plan para gestionar los pagos.</p>
@@ -534,15 +543,15 @@
         </div>
 
         <div class="ef-cuotas-toolbar">
-          <span class="c-muted" style="font-size:11px">{{ cuotas.length }} cuota{{ cuotas.length !== 1 ? 's' : '' }}</span>
+          <span class="ef-muted-note">{{ cuotas.length }} cuota{{ cuotas.length !== 1 ? 's' : '' }}</span>
           <div class="ef-toolbar-actions">
             <button
               v-if="planStatus === 'pendiente' && hasReschedulableCuotas"
-              class="ef-btn-sm ef-btn-outline"
+              class="btn-exec btn-exec-outline btn-sm"
               @click="$emit('open-reschedule')"
               title="Reprogramar fechas de cuotas pendientes"
-            ><i class="fa-solid fa-calendar-days"></i> Reprogramar</button>
-            <button class="ef-btn-sm ef-btn-teal" @click="$emit('add-cuota')"><i class="fa-solid fa-plus"></i> Agregar Cuota</button>
+            ><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Reprogramar</button>
+            <button type="button" class="btn-exec btn-exec-primary btn-sm" @click="$emit('add-cuota')"><i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar Cuota</button>
           </div>
         </div>
 
@@ -568,16 +577,16 @@
             <tr :class="fmt.cuotaRowClass(c)">
               <td class="fw700 tc">{{ c.installment_number || (idx + 1) }}</td>
               <td v-if="c._isNew || (c.status === 'paid' && isEditing)">
-                <input v-model.number="c.amount" type="number" step="0.01" class="ef-input tr mono" placeholder="0.00" />
+                <input v-model.number="c.amount" type="number" step="0.01" class="ds-input tr mono" placeholder="0.00" />
               </td>
               <td v-else class="tr mono fw700 ef-amount-cell">
-                <span>S/. {{ fmt.formatMoney(c.amount) }}</span>
+                <span>{{ symbolOf(c) }} {{ fmt.formatMoney(c.amount) }}</span>
                 <button
                   v-if="canEditAmount(c)"
                   class="ef-amount-edit"
                   @click="$emit('edit-cuota-amount', c)"
                   title="Editar monto"
-                ><i class="fa-solid fa-pen"></i></button>
+                ><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
               </td>
               <td v-if="c._isNew || (c.status === 'paid' && isEditing)">
                 <BaseDatePicker v-model="c.due_date" placeholder="dd/mm/aaaa" class="ef-datepicker" />
@@ -585,40 +594,46 @@
               <td v-else :class="{ 'c-red fw700': fmt.isOverdue(c.due_date) && c.status !== 'paid' }">{{ fmt.formatDate(c.due_date) }}</td>
               <td class="tc"><span class="ef-pill" :class="fmt.cuotaStatusPill(c, planStatus)">{{ fmt.cuotaStatusLabel(c, planStatus) }}</span></td>
               <td>
-                <select v-model="c._cat_currency" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <span v-if="isRowLocked(c)" class="ef-cell-text">{{ labelOf(catalogs.catCurrency, c._cat_currency, 'abbreviation') }}</span>
+                <select v-else v-model="c._cat_currency" class="ef-select-sm">
                   <option :value="null">---</option>
                   <option v-for="cur in catalogs.catCurrency" :key="cur.id" :value="cur.id">{{ cur.abbreviation || cur.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_payment_medium" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <span v-if="isRowLocked(c)" class="ef-cell-text">{{ labelOf(catalogs.catPaymentMedium, c._cat_payment_medium) }}</span>
+                <select v-else v-model="c._cat_payment_medium" class="ef-select-sm">
                   <option :value="null">---</option>
                   <option v-for="m in catalogs.catPaymentMedium" :key="m.id" :value="m.id">{{ m.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._cat_business_entity" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'">
+                <span v-if="isRowLocked(c)" class="ef-cell-text">{{ labelOf(catalogs.catBusinessEntity, c._cat_business_entity) }}</span>
+                <select v-else v-model="c._cat_business_entity" class="ef-select-sm">
                   <option :value="null">---</option>
                   <option v-for="b in catalogs.catBusinessEntity" :key="b.id" :value="b.id">{{ b.description }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="c._bank_account_id" class="ef-select-sm" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador' || !c._cat_business_entity">
+                <span v-if="isRowLocked(c)" class="ef-cell-text">{{ accountLabel(c._bank_account_id) }}</span>
+                <select v-else v-model="c._bank_account_id" class="ef-select-sm" :disabled="!c._cat_business_entity">
                   <option :value="null">---</option>
                   <option v-for="a in filteredAccounts(c._cat_business_entity)" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }}</option>
                 </select>
               </td>
               <td>
-                <input v-model="c._transaction_code" class="ef-input" placeholder="---" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
+                <span v-if="isRowLocked(c)" class="ef-cell-text mono">{{ c._transaction_code || '—' }}</span>
+                <input v-else v-model="c._transaction_code" class="ds-input" placeholder="---" />
               </td>
               <td>
-                <input v-model="c._payment_date" type="date" class="ef-input" :max="todayIso" :disabled="fmt.isCuotaAnulada(c) || (c.status === 'paid' && !isEditing) || planStatus === 'borrador'" />
+                <span v-if="isRowLocked(c)" class="ef-cell-text">{{ c._payment_date ? fmt.formatDate(c._payment_date) : '—' }}</span>
+                <input v-else v-model="c._payment_date" type="date" class="ds-input" :max="todayIso" />
               </td>
               <td class="tc">
-                <a v-if="c._voucher_url" :href="c._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher"><i class="fa-solid fa-image"></i></a>
+                <a v-if="c._voucher_url" :href="c._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher"><i class="fa-solid fa-image" aria-hidden="true"></i></a>
                 <label v-if="planStatus !== 'borrador' && c.status !== 'paid' && !fmt.isCuotaAnulada(c)" class="ef-upload-btn" title="Subir voucher">
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                  <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, c)" />
+                  <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                  <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="e => uploadVoucher(e, c)" />
                 </label>
               </td>
               <td class="tc">
@@ -628,21 +643,21 @@
                   :class="{ active: !!c._detraction }"
                   @click="toggleDetraction(c)"
                   title="La empresa pago con detraccion (dos vouchers)"
-                ><i class="fa-solid fa-scissors"></i></button>
+                ><i class="fa-solid fa-scissors" aria-hidden="true"></i></button>
                 <button
                   v-if="canPayCuota(c) && c._cat_currency && c._cat_payment_medium"
                   class="ef-btn-confirm-cuota"
                   :disabled="!!c._detraction && !detractionValid(c)"
                   @click="$emit('confirm-cuota', c)"
                   title="Confirmar pago de cuota"
-                ><i class="fa-solid fa-check"></i></button>
+                ><i class="fa-solid fa-check" aria-hidden="true"></i></button>
                 <button
                   v-if="canRevertCuota(c)"
                   class="ef-btn-del"
                   @click="$emit('revert-cuota', c)"
                   title="Devolver a pendiente (el pago no ingreso)"
-                ><i class="fa-solid fa-rotate-left"></i></button>
-                <button v-if="canDeleteCuota(c)" class="ef-btn-del" @click="$emit('remove-cuota', idx)" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                ><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button>
+                <button v-if="canDeleteCuota(c)" class="ef-btn-del" @click="$emit('remove-cuota', idx)" title="Eliminar"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>
               </td>
             </tr>
 
@@ -653,10 +668,10 @@
               <td></td>
               <td colspan="11">
                 <div class="ef-detraction-box">
-                  <span class="ef-detraction-title"><i class="fa-solid fa-scissors"></i> Detraccion</span>
+                  <span class="ef-detraction-title"><i class="fa-solid fa-scissors" aria-hidden="true"></i> Detraccion</span>
                   <label>
                     Monto detraido
-                    <input v-model.number="c._detraction.amount" type="number" step="0.01" min="0" class="ef-input tr mono" placeholder="0.00" />
+                    <input v-model.number="c._detraction.amount" type="number" step="0.01" min="0" class="ds-input tr mono" placeholder="0.00" />
                   </label>
                   <label>
                     Cuenta (Banco de la Nacion)
@@ -667,17 +682,17 @@
                   </label>
                   <label>
                     N. Operacion
-                    <input v-model="c._detraction.transaction_code" class="ef-input" placeholder="---" />
+                    <input v-model="c._detraction.transaction_code" class="ds-input" placeholder="---" />
                   </label>
                   <label class="ef-upload-btn" title="Subir voucher de la detraccion">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <input type="file" accept="image/*,.pdf" style="display:none" @change="e => uploadVoucher(e, c._detraction)" />
+                    <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                    <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="e => uploadVoucher(e, c._detraction)" />
                   </label>
-                  <a v-if="c._detraction._voucher_url" :href="c._detraction._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher de la detraccion"><i class="fa-solid fa-image"></i></a>
+                  <a v-if="c._detraction._voucher_url" :href="c._detraction._voucher_url" target="_blank" class="ef-voucher-sm" title="Ver voucher de la detraccion"><i class="fa-solid fa-image" aria-hidden="true"></i></a>
                   <span class="ef-detraction-split" :class="{ 'c-red': !detractionValid(c) }">
-                    Pago S/. {{ fmt.formatMoney(c.amount - (Number(c._detraction.amount) || 0)) }}
-                    + Detraccion S/. {{ fmt.formatMoney(Number(c._detraction.amount) || 0) }}
-                    = S/. {{ fmt.formatMoney(c.amount) }}
+                    Pago {{ symbolOf(c) }} {{ fmt.formatMoney(c.amount - (Number(c._detraction.amount) || 0)) }}
+                    + Detracción {{ symbolOf(c) }} {{ fmt.formatMoney(Number(c._detraction.amount) || 0) }}
+                    = {{ symbolOf(c) }} {{ fmt.formatMoney(c.amount) }}
                   </span>
                 </div>
               </td>
@@ -688,7 +703,7 @@
           <tfoot v-if="cuotas.length">
             <tr class="ef-total-row">
               <td class="fw700 tr">Total:</td>
-              <td class="tr mono fw700 ef-amount-cell">S/. {{ fmt.formatMoney(cuotasTotal) }}</td>
+              <td class="tr mono fw700 ef-amount-cell">{{ cuotasSymbol }} {{ fmt.formatMoney(cuotasTotal) }}</td>
               <td colspan="10"></td>
             </tr>
           </tfoot>
@@ -699,12 +714,12 @@
     <!-- Edit panel -->
     <div v-if="isEditing" class="ef-edit-panel">
       <div class="ef-edit-head">
-        <div class="ef-edit-title"><i class="fa-solid fa-pen-to-square"></i> Editar datos financieros</div>
-        <button class="ef-edit-close" @click="$emit('cancel-edit')"><i class="fa-solid fa-xmark"></i></button>
+        <div class="ef-edit-title"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar datos financieros</div>
+        <button class="ef-edit-close" @click="$emit('cancel-edit')"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
       </div>
       <div class="ef-edit-body">
-        <label class="ef-warn-label"><i class="fa-solid fa-triangle-exclamation"></i> Justificacion del cambio (obligatorio)</label>
-        <textarea v-model="justificacion" class="ef-textarea" rows="2" placeholder="Explica el motivo de la edicion..."></textarea>
+        <label class="ef-warn-label"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Justificacion del cambio (obligatorio)</label>
+        <textarea v-model="justificacion" class="ds-input" rows="2" placeholder="Explica el motivo de la edicion..."></textarea>
       </div>
     </div>
 
@@ -714,17 +729,17 @@
         <!-- En el nav Adicionales se edita el pago adicional (certificado o
              reasignacion); en Pago, los datos financieros (salvo becas, cuyo
              Pago es beca y no tiene nada que editar). -->
-        <button v-if="becaTab === 'adicionales' && certificatePayment" class="ef-action-btn" @click="startEditAdicional">
-          <i class="fa-solid fa-pen-to-square"></i> Editar datos
+        <button v-if="becaTab === 'adicionales' && certificatePayment" class="btn-exec btn-exec-outline" @click="startEditAdicional">
+          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar datos
         </button>
-        <button v-else-if="!isBeca && (!showAdicionales || becaTab === 'pago')" class="ef-action-btn" @click="$emit('start-edit')">
-          <i class="fa-solid fa-pen-to-square"></i> Editar datos
+        <button v-else-if="!isBeca && (!showAdicionales || becaTab === 'pago')" class="btn-exec btn-exec-outline" @click="$emit('start-edit')">
+          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar datos
         </button>
       </template>
 
       <template v-if="mode === 'view' && isEditing">
-        <button class="ef-action-btn" @click="$emit('cancel-edit')">Cancelar edicion</button>
-        <button class="ef-btn-primary" :disabled="saving || !justificacion.trim()" @click="$emit('save-edit', justificacion)">
+        <button type="button" class="btn-exec btn-exec-outline" @click="$emit('cancel-edit')">Cancelar edicion</button>
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="saving || !justificacion.trim()" @click="$emit('save-edit', justificacion)">
           <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
           {{ saving ? 'Guardando...' : 'Guardar cambios' }}
         </button>
@@ -732,11 +747,11 @@
 
       <template v-if="mode === 'confirm' && !showConfirmStepper && !showObserveStepper">
         <button class="ef-btn-observe" @click="showObserveStepper = true">
-          <i class="fa-solid fa-eye"></i> Observar
+          <i class="fa-solid fa-eye" aria-hidden="true"></i> Observar
         </button>
         <button
           v-if="isContado"
-          class="ef-btn-primary"
+          class="btn-exec btn-exec-primary"
           :disabled="!canConfirmContado"
           @click="showConfirmStepper = true"
         >
@@ -745,15 +760,15 @@
         </button>
         <button
           v-else-if="planStatus === 'borrador'"
-          class="ef-btn-primary"
+          class="btn-exec btn-exec-primary"
           :disabled="!installments.length"
           @click="showConfirmStepper = true"
         >
-          <i class="fa-solid fa-clipboard-check"></i> Confirmar Pago
+          <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Confirmar Pago
         </button>
         <button
           v-else-if="planStatus === 'pendiente'"
-          class="ef-btn-primary"
+          class="btn-exec btn-exec-primary"
           :disabled="saving"
           @click="$emit('save-cuotas')"
         >
@@ -785,18 +800,18 @@
           <template v-if="!isContado && inicial">
             <div class="ef-confirm-row">
               <span class="ef-confirm-label">Pago Inicial</span>
-              <span class="ef-confirm-value">S/. {{ fmt.formatMoney(inicial.amount) }}</span>
+              <span class="ef-confirm-value">{{ symbolOf(inicial) }} {{ fmt.formatMoney(inicial.amount) }}</span>
             </div>
             <div class="ef-confirm-row">
               <span class="ef-confirm-label">Cuotas ({{ cuotas.length }})</span>
-              <span class="ef-confirm-value">S/. {{ fmt.formatMoney(cuotasTotal) }}</span>
+              <span class="ef-confirm-value">{{ cuotasSymbol }} {{ fmt.formatMoney(cuotasTotal) }}</span>
             </div>
           </template>
           <div class="ef-confirm-row">
             <span class="ef-confirm-label">Total</span>
-            <span class="ef-confirm-value fw700">S/. {{ fmt.formatMoney(total) }}</span>
+            <span class="ef-confirm-value fw700">{{ saleSymbol }} {{ fmt.formatMoney(total) }}</span>
           </div>
-          <p v-if="isBeca" class="ef-confirm-note" style="color:#D97706;font-weight:600">Beca — Descuento 100%. No requiere pago.</p>
+          <p v-if="isBeca" class="ds-callout warn">Beca — Descuento 100%. No requiere pago.</p>
           <p class="ef-confirm-note">Al confirmar se inscribira al alumno en Odoo y se enviara el correo de confirmacion.</p>
         </div>
       </template>
@@ -831,15 +846,15 @@
       <template #step-0>
         <div class="ef-observe-wrap">
           <div class="ef-observe-banner">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
             <div>
               <strong>Observar inscripcion</strong>
               <p>La inscripcion sera devuelta al asesor comercial para correccion. Se le notificara automaticamente.</p>
             </div>
           </div>
           <div class="ef-observe-field">
-            <label>Motivo de la observacion <span style="color:#DC2626">*</span></label>
-            <textarea v-model="observeReason" class="ef-observe-textarea" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
+            <label>Motivo de la observación<span class="ds-req">*</span></label>
+            <textarea v-model="observeReason" class="ds-input" required rows="3" placeholder="Describe que debe corregir el asesor..."></textarea>
           </div>
           <!-- Unica salida del bloqueo por copia requerida: si el asesor la
                pidio por error, se baja aca y queda auditado. -->
@@ -869,6 +884,8 @@ import EmailPreviewStep from './EmailPreviewStep.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import api from '@/services/api'
 import { toLocalIsoDate } from '@/shared/lib/localDate.js'
+import { currencySymbol } from '@/entities/enrollment/currencySymbol.js'
+import { summarizePayment } from '@/entities/enrollment/paymentSummary.js'
 
 const props = defineProps({
   detail: { type: Object, default: () => ({}) },
@@ -979,39 +996,19 @@ function onObserveConfirm () {
 
 const listPrice = computed(() => Number(props.enrollment?.list_price) || Number(props.detail?.list_price) || 0)
 const discount = computed(() => Number(props.enrollment?.total_discounted) || Number(props.detail?.discount_amount) || 0)
-const total = computed(() => {
-  if (props.installments?.length) {
-    // Las anuladas (retiro / campaña de cobranza) siguen visibles pero no suman.
-    return props.installments.reduce((sum, i) => sum + (fmt.isCuotaAnulada(i) ? 0 : Number(i.amount) || 0), 0)
-  }
-  return Number(props.enrollment?.total_to_pay) || Number(props.detail?.net_amount) || 0
-})
+// Total, pagado y saldo salen de la misma regla que la ficha lateral
+// (entities/enrollment/paymentSummary.js), incluido el cobro pendiente OS/OP.
+const summary = computed(() => summarizePayment({
+  enrollment: props.enrollment,
+  detail: props.detail,
+  installments: props.installments,
+  mode: props.mode
+}))
+const total = computed(() => summary.value.total)
+const paid = computed(() => summary.value.paid)
+const balance = computed(() => summary.value.balance)
+const contadoPendiente = computed(() => summary.value.pendingCollection)
 const reserva = computed(() => props.enrollment ? fmt.getReserva(props.enrollment) : 0)
-// Venta al contado ya aprobada cuya cuota sigue sin cobrarse. Es el caso normal
-// de una OS/OP: FICO aprueba hoy contra la orden y la empresa deposita despues.
-// Mientras exista, el cobro esta pendiente por mas que la inscripcion figure
-// aprobada.
-//
-// _payment_id descarta las ventas viejas que SI se cobraron y solo quedaron con
-// el estado de la cuota sin actualizar (hay ~7 en produccion): ahi el dinero
-// entro, el desajuste es de estado y no toca pedir el cobro de nuevo.
-const contadoPendiente = computed(() => {
-  if (!isContado.value || props.mode === 'confirm') return null
-  return props.installments.find(i =>
-    i.status !== 'paid' && !fmt.isCuotaAnulada(i) && !i._payment_id
-  ) || null
-})
-
-// getPagado/calcSaldo dan por pagado todo contado aprobado —era cierto mientras
-// aprobar exigiera registrar el pago—. Con OS/OP hay que mirar la cuota.
-const paid = computed(() => {
-  if (contadoPendiente.value) return 0
-  return props.enrollment ? fmt.getPagado(props.enrollment) : Number(props.detail?.amount_paid) || 0
-})
-const balance = computed(() => {
-  if (contadoPendiente.value) return Number(contadoPendiente.value.amount) || 0
-  return props.enrollment ? fmt.calcSaldo(props.enrollment) : Number(props.detail?.balance_due) || 0
-})
 const voucherUrls = computed(() => splitVoucherUrls(props.enrollment?.payment_vouchers))
 const isContado = computed(() => props.enrollment ? fmt.isContado(props.enrollment) : true)
 
@@ -1058,6 +1055,26 @@ const hasLaptopPromo = computed(() => fmt.hasLaptopPromo(props.enrollment))
 const inicial = computed(() => props.installments.find(i => i.installment_number === 0 || i.is_reserva) || null)
 const cuotas = computed(() => props.installments.filter(i => i.installment_number !== 0 && !i.is_reserva))
 const cuotasTotal = computed(() => cuotas.value.reduce((sum, c) => sum + (fmt.isCuotaAnulada(c) ? 0 : Number(c.amount) || 0), 0))
+
+// Simbolo por monto: cada cuota trae su moneda (_cat_currency) y una cuota en
+// dolares se pinta con $. El total de cuotas solo lleva $ si TODAS son en
+// dolares; con monedas mezcladas la suma no es un monto real (Fase 4).
+const symbolOf = row => currencySymbol(row?._cat_currency ?? props.detail?.cat_currency_id, props.catalogs?.catCurrency)
+const saleSymbol = computed(() => currencySymbol(props.detail?.cat_currency_id, props.catalogs?.catCurrency))
+const cuotasSymbol = computed(() => {
+  const symbols = new Set(cuotas.value.map(symbolOf))
+  return symbols.size === 1 ? [...symbols][0] : 'S/.'
+})
+
+// Datos de un pago ya registrado, leidos como texto (sin selects deshabilitados).
+function labelOf (list, id, field = 'description') {
+  const item = (list || []).find(x => Number(x.id) === Number(id))
+  return item?.[field] || item?.description || '—'
+}
+function accountLabel (accountId) {
+  const a = (props.catalogs?.allBankAccounts || []).find(x => Number(x.account_id) === Number(accountId))
+  return a ? [a.bank_name, a.currency, a.account_number].filter(Boolean).join(' - ') : '—'
+}
 
 const planStatus = computed(() => {
   const conf = (props.enrollment?.confirmation || '').toLowerCase()
@@ -1133,7 +1150,8 @@ async function uploadAdicionalVoucher (event) {
       adicional.voucher_url = res.data.url
       toast.success('Voucher subido')
     }
-  } catch {
+  } catch (err) {
+    console.error('[uploadVoucher]', err)
     toast.error('Error al subir voucher')
   }
   event.target.value = ''
@@ -1157,7 +1175,8 @@ async function uploadVoucher (event, cuota) {
       cuota._voucher_url = res.data.url
       toast.success('Voucher subido')
     }
-  } catch {
+  } catch (err) {
+    console.error('[uploadVoucher]', err)
     toast.error('Error al subir voucher')
   }
   event.target.value = ''
@@ -1187,6 +1206,12 @@ function detractionValid (c) {
 function filteredAccounts (entityId) {
   if (!entityId || !props.catalogs?.allBankAccounts) return []
   return props.catalogs.allBankAccounts.filter(a => a.business_entity_catalog_id === entityId)
+}
+
+// Fila cerrada (cobrada, anulada o plan en borrador): sus datos se leen como
+// texto. Antes eran selects deshabilitados en gris que no se distinguian.
+function isRowLocked (c) {
+  return fmt.isCuotaAnulada(c) || (c.status === 'paid' && !props.isEditing) || planStatus.value === 'borrador'
 }
 
 function canDeleteCuota (c) {
@@ -1249,1042 +1274,295 @@ function needsEditionDecision (child) {
 </script>
 
 <style scoped>
-.ef-section {
-  background: transparent;
-}
-
-.ef-title {
-  display: none;
-}
-
-/* Laptop promo banner: indica que el alumno traera laptop como beneficio */
-.ef-laptop-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, #ECFEFF 0%, #F0F9FF 100%);
-  border: 1px solid #A5F3FC;
-  border-left: 3px solid #0891B2;
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-}
-.ef-laptop-banner > i {
-  font-size: 18px;
-  color: #0891B2;
-  flex-shrink: 0;
-}
-.ef-laptop-banner-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  line-height: 1.35;
-}
-.ef-laptop-banner-text strong {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #155E75;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-.ef-laptop-banner-text span {
-  font-size: 11.5px;
-  color: #0E7490;
-}
-[data-coreui-theme="dark"] .ef-laptop-banner {
-  background: rgba(8,145,178,0.12);
-  border-color: rgba(8,145,178,0.4);
-  border-left-color: #22D3EE;
-}
-[data-coreui-theme="dark"] .ef-laptop-banner > i { color: #22D3EE; }
-[data-coreui-theme="dark"] .ef-laptop-banner-text strong { color: #67E8F9; }
-[data-coreui-theme="dark"] .ef-laptop-banner-text span { color: #A5F3FC; }
-
-/* Financial bar */
-.ef-bar {
-  display: flex;
-  align-items: stretch;
-  background: #FAFAFA;
-  border-radius: 10px;
-  padding: 16px 0;
-  margin-bottom: 24px;
-}
-
-.ef-bar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 0 16px;
-  position: relative;
-}
-
-.ef-bar-sep { width: 1px; background: #F0F0F0; align-self: stretch; }
-.ef-bar-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #A3A3A3; font-weight: 500; }
-.ef-bar-value { font-size: 14px; font-weight: 600; color: #1A1A1A; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.02em; }
-
-.ef-discount-wrap { position: relative; }
-.ef-has-tip { cursor: help; position: relative; }
-.ef-tip-icon { font-size: 10px; margin-left: 3px; opacity: .4; }
-
-.ef-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1A1A1A;
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 11px;
-  white-space: nowrap;
-  z-index: 10;
-  font-weight: 400;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-}
-.ef-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #1A1A1A;
-}
-.ef-tip-row { padding: 2px 0; }
-
-/* Payment section */
-.ef-payment { margin-bottom: 20px; }
-
-.ef-sub-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1A1A1A;
-  margin: 0 0 14px;
-  letter-spacing: -0.01em;
-}
-.ef-sub-title i { color: #A3A3A3; font-size: 13px; }
-
-/* Contado card */
-.ef-contado-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px;
-  background: #FAFAFA;
-  border-radius: 10px;
-}
-.ef-contado-amount { display: flex; flex-direction: column; gap: 2px; }
-
-.ef-voucher-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: #F5F5F5;
-  color: #1A1A1A;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background .2s ease;
-}
-.ef-voucher-link:hover { background: #EBEBEB; }
-.ef-voucher-links { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.ef-voucher-sm { color: #737373; font-size: 14px; text-decoration: none; transition: color .2s ease; margin-right: 6px; }
-.ef-voucher-sm:hover { color: #1A1A1A; }
-
-.ef-upload-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: #A3A3A3;
-  cursor: pointer;
-  transition: all .2s ease;
-  font-size: 13px;
-}
-.ef-upload-btn:hover { background: #F0FDFA; color: #0D9488; }
-
-.ef-btn-confirm-cuota {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #10B981;
-  background: #ECFDF5;
-  color: #059669;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s ease;
-  margin-right: 4px;
-}
-.ef-btn-confirm-cuota:hover { background: #059669; color: #fff; }
-
-/* Celda de monto con lapiz inline para editar */
-.ef-amount-cell {
-  position: relative;
-  white-space: nowrap;
-}
-.ef-amount-edit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 6px;
-  border: none;
-  background: transparent;
-  color: #A0A099;
-  border-radius: 4px;
-  font-size: 10px;
-  cursor: pointer;
-  transition: color .15s, background .15s;
-  vertical-align: middle;
-}
-.ef-amount-edit:hover {
-  color: #6366F1;
-  background: rgba(99, 102, 241, 0.08);
-}
-
-/* Form rows */
-.ef-form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.mt12 { margin-top: 14px; }
-
-.ef-field { display: flex; flex-direction: column; gap: 5px; }
-.ef-field label { font-size: 11px; font-weight: 500; color: #A3A3A3; text-transform: uppercase; letter-spacing: .05em; }
-
-.ef-readonly {
-  font-size: 13px;
-  color: #1A1A1A;
-  padding: 8px 0;
-  border-bottom: 1px solid #F5F5F5;
-  min-height: 34px;
-  line-height: 1.4;
-}
-
-.ef-input,
-.ef-select {
-  height: 34px;
-  padding: 0 12px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  outline: none;
-  transition: all .2s ease;
-}
-.ef-input:focus,
-.ef-select:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
-.ef-input:disabled,
-.ef-select:disabled { background: #FAFAFA; color: #C4C4C4; cursor: not-allowed; }
-
-.ef-datepicker { width: 140px; }
-.ef-datepicker :deep(input) {
-  height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  width: 100%;
-  font-family: inherit;
-}
-
-.ef-select-sm {
-  height: 30px;
-  padding: 0 8px;
-  font-size: 11.5px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  border: 1px solid #E8E8E8;
-  border-radius: 6px;
-  outline: none;
-  width: 100%;
-  transition: all .2s ease;
-}
-.ef-select-sm:focus { border-color: #1A1A1A; }
-.ef-select-sm:disabled { background: #FAFAFA; color: #C4C4C4; cursor: not-allowed; }
-
-/* Cuota tabs */
-.ef-cuota-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid #F0F0F0;
-  margin-bottom: 16px;
-}
-
-.ef-cuota-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 18px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #A3A3A3;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: color .2s ease, border-color .2s ease;
-  font-family: inherit;
-}
-.ef-cuota-tab:hover { color: #1A1A1A; }
-.ef-cuota-tab.active { color: #1A1A1A; font-weight: 600; border-bottom-color: #1A1A1A; }
-
-.ef-tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #F0F0F0;
-  color: #737373;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.ef-tab-body { padding: 4px 0; }
-
-/* Inicial card */
-.ef-inicial-card {
-  padding: 16px 18px;
-  background: #FAFAFA;
-  border-radius: 10px;
-}
-.ef-inicial-top { display: flex; align-items: center; justify-content: space-between; }
-.ef-inicial-info { display: flex; flex-direction: column; gap: 3px; }
-.ef-inicial-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-/* Adicionales: pago del certificado del becado */
-.ef-cert-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 8px;
-  background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;
-  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-}
-.ef-cert-amount { display: inline-flex; align-items: center; gap: 8px; }
-.ef-cert-just { margin-top: 14px; }
-.ef-cert-amount-input { width: 110px; text-align: right; font-weight: 700; }
-.ef-cert-actions {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-top: 16px;
-}
-.ef-cert-hint {
-  margin: 0; font-size: 12px; color: #737373;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.ef-cert-hint i { color: #A3A3A3; }
-
-/* Notice */
-.ef-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  font-size: 12.5px;
-  line-height: 1.5;
-  margin-bottom: 14px;
-  background: #FFF8EB;
-  color: #92400E;
-}
-.ef-notice i { font-size: 15px; margin-top: 1px; flex-shrink: 0; color: #D97706; }
-.ef-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
-.ef-notice p { margin: 0; }
-
-/* Toolbar */
-.ef-cuotas-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.ef-btn-sm {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .2s ease;
-}
-.ef-btn-sm:hover { opacity: .85; }
-.ef-btn-teal { background: var(--we-navy, #002060); color: #fff; }
-.ef-btn-outline {
-  background: #fff; color: #4338CA; border: 1px solid #C7D2FE;
-}
-.ef-btn-outline:hover { background: #EEF2FF; opacity: 1; }
-.ef-toolbar-actions { display: inline-flex; gap: 8px; align-items: center; }
-
-/* Table */
-.ef-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  color: #1A1A1A;
-}
-.ef-table thead th {
-  background: #FAFAFA;
-  padding: 10px 10px;
-  text-align: left;
-  font-weight: 500;
-  color: #A3A3A3;
-  border-bottom: 1px solid #F0F0F0;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  white-space: nowrap;
-}
-.ef-table tbody td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #F5F5F5;
-  vertical-align: middle;
-}
-.ef-table tbody tr:hover { background: #FAFAFA; }
-.ef-table .cuota-paid td { background: #F7FDF9; }
-.ef-table .cuota-overdue td { background: #FFFBFB; }
-/* Anulada por retiro / campaña de cobranza: tachada pero presente (auditoria) */
-.ef-table .cuota-annulled td { background: #FAFAFA; color: #A3A3A3; }
-.ef-table .cuota-annulled td:nth-child(-n+3) { text-decoration: line-through; }
-.ef-inicial-removed { text-decoration: line-through; opacity: .55; }
-
-.ef-total-row td {
-  padding: 12px 10px;
-  border-top: 1px solid #F0F0F0;
-  background: #FAFAFA;
-}
-.ef-empty-row { text-align: center; padding: 32px; color: #C4C4C4; font-size: 13px; }
-
-.ef-btn-del {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #C4C4C4;
-  cursor: pointer;
-  font-size: 11px;
-  transition: all .2s ease;
-}
-.ef-btn-del:hover { background: #FEF2F2; color: #DC2626; }
-
-/* Pill */
-.ef-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-.pill-green { background: #ECFDF5; color: #065F46; }
-.pill-amber { background: #FFF8EB; color: #92400E; }
-.pill-red   { background: #FEF2F2; color: #991B1B; }
-.pill-muted { background: #F3F4F6; color: #6B7280; }
-
-/* Empty state */
-.ef-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 48px;
-  color: #C4C4C4;
-  font-size: 13px;
-}
-.ef-empty i { font-size: 24px; opacity: .5; }
-
-/* Edit panel */
-.ef-edit-panel {
-  border: 1px solid #F0F0F0;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-top: 16px;
-}
-.ef-edit-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: #FAFAFA;
-  border-bottom: 1px solid #F0F0F0;
-}
-.ef-edit-title { font-size: 13px; font-weight: 600; color: #1A1A1A; display: flex; align-items: center; gap: 8px; }
-.ef-edit-title i { color: #A3A3A3; }
-.ef-edit-close {
-  width: 28px; height: 28px; border-radius: 6px; border: none;
-  background: none; color: #C4C4C4; cursor: pointer; font-size: 14px;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: all .2s ease;
-}
-.ef-edit-close:hover { color: #1A1A1A; background: #F0F0F0; }
-.ef-edit-body { padding: 16px 18px; }
-
-.ef-warn-label {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 500; color: #92400E; margin-bottom: 6px;
-}
-.ef-warn-label i { font-size: 13px; color: #D97706; }
-
-.ef-textarea {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #1A1A1A;
-  background: #fff;
-  border: 1px solid #E8E8E8;
-  border-radius: 8px;
-  outline: none;
-  resize: vertical;
-  transition: all .2s ease;
-}
-.ef-textarea:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(0,0,0,.04); }
-
-/* Footer */
-.ef-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #F0F0F0;
-}
-
-.ef-action-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 18px; font-size: 13px; font-weight: 500;
-  border: 1px solid #E8E8E8; border-radius: 8px;
-  background: #fff; color: #737373;
-  cursor: pointer; transition: all .2s ease; font-family: inherit;
-}
-.ef-action-btn:hover { border-color: #1A1A1A; color: #1A1A1A; }
-
-.ef-btn-primary {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 20px; background: var(--we-navy, #002060); color: #fff;
-  border: none; border-radius: 8px; font-size: 13px;
-  font-weight: 600; font-family: inherit; cursor: pointer;
-  transition: background .2s ease;
-}
-.ef-btn-primary:hover { background: var(--we-navy-dark, #001540); }
-.ef-btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-
-/* Observe button */
-.ef-btn-observe {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 18px; background: #FFF8EB; color: #B45309;
-  border: 1px solid #FDE68A; border-radius: 8px; font-size: 13px;
-  font-weight: 500; font-family: inherit; cursor: pointer;
-  transition: all .2s ease;
-}
-.ef-btn-observe:hover { background: #FEF3C7; border-color: #F59E0B; }
-
-/* Observe stepper content */
-.ef-observe-wrap { display: flex; flex-direction: column; gap: 16px; }
-.ef-observe-banner {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 14px 18px; background: #FFF8EB;
-  border-radius: 10px;
-  font-size: 12.5px; color: #92400E; line-height: 1.5;
-}
-.ef-observe-banner i { font-size: 16px; color: #F59E0B; margin-top: 2px; flex-shrink: 0; }
-.ef-observe-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
-.ef-observe-banner p { margin: 0; }
-.ef-observe-field { display: flex; flex-direction: column; gap: 5px; }
-.ef-observe-field label { font-size: 11px; font-weight: 500; color: #A3A3A3; text-transform: uppercase; letter-spacing: .05em; }
-.ef-observe-textarea {
-  width: 100%; padding: 12px 14px; border: 1px solid #FDE68A;
-  border-radius: 8px; font-size: 13px; font-family: inherit;
-  color: #1A1A1A; background: #FFFDF5; resize: vertical; min-height: 72px;
-}
-.ef-observe-textarea:focus { outline: none; border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,.08); }
-.ef-observe-textarea::placeholder { color: #D1D5DB; }
-
-.ef-cc-clear {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 12px 14px; border: 1px solid #E5E7EB; border-radius: 8px;
-  font-size: 12px; color: #64748B; line-height: 1.5; cursor: pointer;
-}
-.ef-cc-clear input { margin-top: 3px; flex-shrink: 0; }
-.ef-cc-clear strong { display: block; font-size: 12.5px; color: #111827; margin-bottom: 2px; }
-
-/* Confirm summary */
-.ef-confirm-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 8px 0;
-}
-.ef-confirm-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 18px;
-  background: #FAFAFA;
-  border-radius: 8px;
-}
-.ef-confirm-label { font-size: 13px; color: #A3A3A3; font-weight: 500; }
-.ef-confirm-value { font-size: 14px; color: #1A1A1A; font-weight: 600; }
-.ef-confirm-note {
-  font-size: 12.5px;
-  color: #737373;
-  line-height: 1.5;
-  padding: 12px 16px;
-  background: #FAFAFA;
-  border-radius: 8px;
-  margin: 0;
-}
-
-/* Utilities */
+/* Todo con tokens ds-*: el modo oscuro sale de los tokens, sin bloque aparte.
+   Botones e inputs grandes son globales (btn-exec, ds-input); aquí queda lo
+   propio de Finanzas: barra de montos, tarjetas de pago, tabla de cuotas. */
+.ef-section { display: flex; flex-direction: column; }
 .tr { text-align: right; }
 .tc { text-align: center; }
 .fw700 { font-weight: 700; }
-.mono { font-family: 'JetBrains Mono', monospace; }
-.c-green { color: #059669; }
-.c-blue  { color: #2563EB; }
-.c-red { color: #DC2626; }
-.c-muted { color: #C4C4C4; }
+.mono { font-family: var(--ds-font-mono); }
+.mt12 { margin-top: 14px; }
+.c-green { color: var(--ds-ok-ink); }
+.c-blue { color: var(--ds-info-ink); }
+.c-red { color: var(--ds-bad-ink); }
+.ef-muted-note { font-size: 12px; color: var(--ds-muted); }
+.ef-file-input { display: none; }
 
-.ef-validation-block {
-  margin-bottom: 24px;
-  padding: 16px 0;
-  border-bottom: 1px solid #F0F0F0;
+/* Promo laptop: marca de negocio (cian), no un estado */
+.ef-laptop-banner {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 14px; padding: 10px 14px; border-radius: var(--ds-radius-sm);
+  background: var(--ds-soft-cyan); color: var(--ds-cyan-ink);
 }
-.ef-edition-link {
-  color: #1A1A1A;
-  cursor: pointer;
-  font-size: 13px;
-  transition: color .2s;
-}
-.ef-edition-link:hover { color: #0D9488; }
+.ef-laptop-banner > i { flex-shrink: 0; font-size: 18px; }
+.ef-laptop-banner-text { display: flex; flex-direction: column; gap: 1px; line-height: 1.35; }
+.ef-laptop-banner-text strong { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.ef-laptop-banner-text span { font-size: 11.5px; }
 
+/* Barra de montos */
+.ef-bar {
+  display: flex; align-items: stretch; flex-wrap: wrap;
+  margin-bottom: 20px; padding: 14px 0;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius); background: var(--ds-surface-2);
+}
+.ef-bar-item { flex: 1; min-width: 110px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 14px; }
+.ef-bar-sep { width: 1px; align-self: stretch; background: var(--ds-border); }
+.ef-bar-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-muted); }
+.ef-bar-value { font-family: var(--ds-font-mono); font-size: 14px; font-weight: 700; color: var(--ds-heading); white-space: nowrap; }
+.ef-bar-value.c-green { color: var(--ds-ok-ink); }
+.ef-bar-value.c-blue { color: var(--ds-info-ink); }
+.ef-bar-value.c-red { color: var(--ds-bad-ink); }
+
+.ef-discount-wrap, .ef-has-tip { position: relative; }
+.ef-has-tip { cursor: help; }
+.ef-tip-icon { margin-left: 3px; font-size: 10px; opacity: 0.5; }
+.ef-tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 10;
+  padding: 8px 14px; border-radius: var(--ds-radius-sm);
+  background: var(--ds-ink); color: var(--ds-surface);
+  font-family: inherit; font-size: 11px; font-weight: 400; white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+.ef-tip-row { padding: 2px 0; }
+
+/* Secciones de pago */
+.ef-payment { margin-bottom: 16px; }
+.ef-sub-title { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--ds-heading); }
+.ef-sub-title i { color: var(--ds-muted); }
+.ef-amount-lg { font-size: 18px; font-weight: 800; color: var(--ds-heading); }
+
+.ef-contado-card, .ef-inicial-card {
+  padding: 16px 18px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius); background: var(--ds-surface);
+}
+.ef-contado-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ef-contado-amount, .ef-inicial-info { display: flex; flex-direction: column; gap: 3px; }
+.ef-inicial-info { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 10px; }
+.ef-inicial-info .ef-bar-label { flex-basis: 100%; }
+.ef-inicial-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ef-inicial-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
+.ef-inicial-removed { text-decoration: line-through; opacity: 0.55; }
+
+/* Datos de un pago ya registrado: etiqueta arriba, valor abajo */
+.ef-dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 14px 0 0; }
+.ef-dl dt { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-muted); }
+.ef-dl dd { margin: 3px 0 0; font-size: 13px; font-weight: 600; color: var(--ds-ink); overflow-wrap: anywhere; }
+
+.ef-voucher-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.ef-voucher-link {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  background: var(--ds-surface); color: var(--ds-ink-2);
+  font-size: 12px; font-weight: 600; text-decoration: none;
+}
+.ef-voucher-link:hover { border-color: var(--ds-border-strong); color: var(--ds-accent); }
+.ef-voucher-sm { margin-right: 6px; font-size: 14px; color: var(--ds-ink-2); text-decoration: none; }
+.ef-voucher-sm:hover { color: var(--ds-accent); }
+
+/* Formularios */
+.ef-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ef-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ef-field label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-ink-2); }
+.ef-readonly { min-height: 34px; padding: 8px 0; border-bottom: 1px solid var(--ds-border); font-size: 13px; font-weight: 600; color: var(--ds-ink); }
+
+.ef-select-sm {
+  width: 100%; height: 30px; padding: 0 8px;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  background: var(--ds-surface); color: var(--ds-ink); font-family: inherit; font-size: 11.5px;
+}
+.ef-select-sm:focus { outline: none; border-color: var(--ds-accent); }
+.ef-select-sm:disabled { background: var(--ds-surface-3); color: var(--ds-muted); cursor: not-allowed; }
+.ef-select-edition { min-width: 200px; }
+.ef-cell-text { font-size: 12px; color: var(--ds-ink-2); white-space: nowrap; }
+.ef-table .ds-input { height: 30px; padding: 4px 8px; font-size: 11.5px; }
+.ef-datepicker { width: 140px; }
+.ef-cert-amount { display: inline-flex; align-items: center; gap: 8px; }
+.ef-cert-amount-input { width: 110px; font-weight: 700; text-align: right; }
+
+/* Pestañas Pago inicial / Cuotas (y Pago / Adicionales): subrayado, para no
+   competir con el segmentado de arriba (Finanzas / Acciones / Historial). */
+.ef-cuota-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--ds-border); }
+.ef-cuota-tab {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: -1px; padding: 9px 14px;
+  border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2);
+}
+.ef-cuota-tab:hover { color: var(--ds-heading); }
+.ef-cuota-tab.active { border-bottom-color: var(--ds-accent); color: var(--ds-heading); }
+.ef-cuota-tab:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; }
+.ef-tab-badge {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--ds-surface-3); color: var(--ds-ink-2); font-size: 10.5px;
+}
+.ef-tab-body { padding: 2px 0; }
+
+/* Avisos */
+.ef-notice, .ef-observe-banner, .ef-doc-notice {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: var(--ds-radius-sm);
+  font-size: 12.5px; line-height: 1.5;
+}
+.ef-notice, .ef-observe-banner { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ef-notice { margin-bottom: 14px; }
+.ef-doc-notice { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.ef-notice i, .ef-observe-banner i, .ef-doc-notice i { flex-shrink: 0; margin-top: 2px; font-size: 14px; }
+.ef-notice strong, .ef-observe-banner strong { display: block; margin-bottom: 2px; font-size: 13px; }
+.ef-notice p, .ef-observe-banner p { margin: 0; }
+
+/* Adicionales (certificado / reasignacion) */
+.ef-cert-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-ok); color: var(--ds-ok-ink);
+  font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ef-cert-just { margin-top: 14px; }
+.ef-cert-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.ef-cert-hint { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--ds-ink-2); }
+
+/* Tabla de cuotas */
+.ef-cuotas-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ef-toolbar-actions { display: inline-flex; align-items: center; gap: 8px; }
+.ef-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--ds-ink); }
+.ef-table thead th {
+  padding: 9px 10px; border-bottom: 1px solid var(--ds-border); background: var(--ds-surface-2);
+  text-align: left; white-space: nowrap;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-muted);
+}
+.ef-table thead th.tr { text-align: right; }
+.ef-table thead th.tc { text-align: center; }
+.ef-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--ds-border); vertical-align: middle; }
+.ef-table tbody tr:hover td { background: var(--ds-surface-2); }
+.ef-table .cuota-paid td { background: var(--ds-soft-ok); }
+.ef-table .cuota-overdue td { background: var(--ds-soft-bad); }
+/* Anulada por retiro / campaña de cobranza: tachada pero presente (auditoria) */
+.ef-table .cuota-annulled td { color: var(--ds-muted); }
+.ef-table .cuota-annulled td:nth-child(-n+3) { text-decoration: line-through; }
+.ef-total-row td { padding: 11px 10px; background: var(--ds-surface-2); }
+.ef-empty-row { padding: 32px; text-align: center; font-size: 13px; color: var(--ds-muted); }
+.ef-amount-cell { white-space: nowrap; }
+
+.ef-amount-edit, .ef-btn-del, .ef-upload-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--ds-radius-control); background: transparent; cursor: pointer;
+  color: var(--ds-muted);
+}
+.ef-amount-edit { width: 20px; height: 20px; margin-left: 6px; font-size: 10px; vertical-align: middle; }
+.ef-amount-edit:hover { background: var(--ds-soft-info); color: var(--ds-accent); }
+.ef-btn-del { width: 26px; height: 26px; font-size: 11px; }
+.ef-btn-del:hover { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.ef-upload-btn { width: 28px; height: 28px; font-size: 13px; }
+.ef-upload-btn:hover { background: var(--ds-soft-info); color: var(--ds-accent); }
+.ef-btn-confirm-cuota {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 4px;
+  border: 1px solid var(--ds-ok); border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-ok); color: var(--ds-ok-ink); font-size: 11px; cursor: pointer;
+}
+.ef-btn-confirm-cuota:hover:not(:disabled) { background: var(--ds-ok); color: var(--ds-on-brand); }
+.ef-btn-confirm-cuota:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Estado de la cuota (clases de fmt.cuotaStatusPill) */
+.ef-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: var(--ds-radius-control); font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.pill-green { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.pill-amber { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pill-red { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.pill-muted { background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+
+.ef-empty { margin: 0; padding: 40px 16px; text-align: center; font-size: 13px; color: var(--ds-muted); }
+.ef-empty i { display: block; margin-bottom: 8px; font-size: 22px; opacity: 0.5; }
+.ef-empty p { margin: 0; }
+
+/* Convalidacion */
+.ef-validation-block { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--ds-border); }
+.ef-edition-link { cursor: pointer; font-size: 13px; color: var(--ds-ink); }
+.ef-edition-link:hover { color: var(--ds-accent); }
+.ef-edition-pen { margin-left: 4px; font-size: 10px; opacity: 0.4; }
 .ef-edition-warn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #B91C1C;
-  background: #FEF2F2;
-  border: 1px dashed #FCA5A5;
-  padding: 3px 8px;
-  border-radius: 6px;
-  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; cursor: pointer;
+  border: 1px dashed var(--ds-bad); border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-bad); color: var(--ds-bad-ink); font-size: 12px; font-weight: 600;
 }
-.ef-edition-warn i { font-size: 11px; }
-.ef-edition-warn:hover { background: #FEE2E2; border-color: #F87171; }
 
-/* Caja de cobro de una venta al contado aprobada sin pago (OS/OP). */
-.ef-collect {
-  border: 1px solid #BFDBFE;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: #F8FBFF;
-}
-.ef-collect-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1E3A8A;
-  margin-bottom: 10px;
-}
+/* Cobro de una venta al contado aprobada sin pago (OS/OP) */
+.ef-collect { padding: 12px 14px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius); background: var(--ds-surface-2); }
+.ef-collect-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--ds-heading); }
 .ef-collect-amount { font-size: 15px; }
-.ef-collect-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #E2E8F0;
-}
-.ef-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: #475569;
-  cursor: pointer;
-  user-select: none;
-}
-.ef-check input { width: 15px; height: 15px; accent-color: #7C3AED; cursor: pointer; }
-.ef-check small { color: #94A3B8; }
-.ef-collect-actions .ef-btn-primary { margin-left: auto; }
+.ef-collect-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ds-border); }
+.ef-collect-actions .btn-exec-primary { margin-left: auto; }
+.ef-check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; font-size: 12px; color: var(--ds-ink-2); }
+.ef-check input { width: 15px; height: 15px; accent-color: var(--ds-accent); cursor: pointer; }
+.ef-check small { color: var(--ds-muted); }
 
-/* Selector de archivo con etiqueta: el .ef-upload-btn de la tabla es un cuadro
-   de 28px para el icono solo y el texto se le desborda. */
+/* Selector de archivo con etiqueta (el .ef-upload-btn es solo icono) */
 .ef-file-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-  padding: 7px 13px;
-  border: 1px dashed #CBD5E1;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .15s ease;
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  border: 1px dashed var(--ds-border-strong); border-radius: var(--ds-radius-control);
+  background: var(--ds-surface); color: var(--ds-ink-2); font-size: 12px; font-weight: 600;
 }
-.ef-file-btn:hover { border-color: #7C3AED; color: #7C3AED; }
-.ef-file-btn.done {
-  border-style: solid;
-  border-color: #A7F3D0;
-  background: #ECFDF5;
-  color: #059669;
-}
-.ef-file-btn.sm { padding: 5px 10px; font-size: 11px; }
-.ef-file-view {
-  font-size: 11px;
-  font-weight: 600;
-  color: #2563EB;
-  text-decoration: none;
-}
+.ef-file-btn:hover { border-color: var(--ds-accent); color: var(--ds-accent); }
+.ef-file-btn.done { border-style: solid; border-color: var(--ds-ok); background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ef-file-btn.sm { padding: 4px 9px; font-size: 11px; }
+.ef-file-view { font-size: 11.5px; font-weight: 600; color: var(--ds-accent); text-decoration: none; }
 .ef-file-view:hover { text-decoration: underline; }
 
-/* Fila desplegable de detraccion: colgada de su cuota, no es una cuota mas. */
-.ef-detraction-row td { background: #F8FAFC; border-top: none; }
-.ef-detraction-box {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px;
-  padding: 6px 4px;
+/* Detraccion (SPOT): fila colgada de su cuota, violeta = marca de negocio */
+.ef-detraction-row td { background: var(--ds-surface-2); }
+.ef-detraction-box { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 6px 4px; }
+.ef-detraction-box > label:not(.ef-file-btn):not(.ef-upload-btn) {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase; color: var(--ds-ink-2);
 }
-/* :not(.ef-file-btn) para no aplastar el selector de archivo, que es un label
-   pero se dibuja como boton. */
-.ef-detraction-box > label:not(.ef-file-btn) {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748B;
-  text-transform: uppercase;
-}
-.ef-detraction-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #7C3AED;
-  white-space: nowrap;
-}
-.ef-detraction-split {
-  font-size: 11px;
-  font-weight: 600;
-  color: #475569;
-  margin-left: auto;
-}
+.ef-detraction-title { font-size: 11.5px; font-weight: 700; white-space: nowrap; color: var(--ds-violet-ink); }
+.ef-detraction-split { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--ds-ink-2); }
+.ef-detraction-split.c-red { color: var(--ds-bad-ink); }
 .ef-btn-detraction {
-  border: 1px solid #DDD6FE;
-  background: #F5F3FF;
-  color: #7C3AED;
-  border-radius: 6px;
-  padding: 2px 6px;
-  margin-right: 3px;
+  margin-right: 3px; padding: 2px 6px; cursor: pointer;
+  border: 1px solid transparent; border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-violet); color: var(--ds-violet-ink);
 }
-.ef-btn-detraction.active { background: #7C3AED; color: #fff; border-color: #7C3AED; }
+.ef-btn-detraction.active { border-color: var(--ds-violet-ink); }
 
-/* Aviso de venta OS/OP: informativo, no es una alerta de error. */
-.ef-doc-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #1E3A8A;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  padding: 10px 12px;
-  border-radius: 8px;
+/* Panel de edicion y pie */
+.ef-edit-panel { margin-top: 16px; overflow: hidden; border: 1px solid var(--ds-border); border-radius: var(--ds-radius); }
+.ef-edit-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--ds-border); background: var(--ds-surface-2); }
+.ef-edit-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ds-heading); }
+.ef-edit-close {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+  border: 0; border-radius: var(--ds-radius-control); background: none; cursor: pointer; color: var(--ds-muted);
 }
-.ef-doc-notice i { margin-top: 2px; }
+.ef-edit-close:hover { background: var(--ds-surface-3); color: var(--ds-ink); }
+.ef-edit-body { padding: 14px 16px; }
+.ef-warn-label { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--ds-warn-ink); }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .ef-bar { background: #1A1A14; }
-[data-coreui-theme="dark"] .ef-bar-sep { background: #2A2A22; }
-[data-coreui-theme="dark"] .ef-bar-label { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-bar-value { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-tooltip {
-  background: #F4F4F0;
-  color: #14140F;
-  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+.ef-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--ds-border); }
+/* Observar no es destructivo ni la accion principal: contorno en tono ambar */
+.ef-btn-observe {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; cursor: pointer;
+  border: 1px solid var(--ds-warn); border-radius: var(--ds-radius-control);
+  background: var(--ds-soft-warn); color: var(--ds-warn-ink);
+  font-family: inherit; font-size: 13px; font-weight: 600;
 }
-[data-coreui-theme="dark"] .ef-tooltip::after { border-top-color: #F4F4F0; }
+.ef-btn-observe:hover { background: var(--ds-surface); }
 
-[data-coreui-theme="dark"] .ef-sub-title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-sub-title i { color: #6F6F66; }
+/* Stepper de observacion */
+.ef-observe-wrap { display: flex; flex-direction: column; gap: 16px; }
+.ef-observe-field { display: flex; flex-direction: column; gap: 5px; }
+.ef-observe-field label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-ink-2); }
+.ef-cc-clear {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  font-size: 12px; line-height: 1.5; color: var(--ds-ink-2);
+}
+.ef-cc-clear input { flex-shrink: 0; margin-top: 3px; }
+.ef-cc-clear strong { display: block; margin-bottom: 2px; font-size: 12.5px; color: var(--ds-ink); }
 
-[data-coreui-theme="dark"] .ef-contado-card { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ef-voucher-link {
-  background: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-voucher-link:hover { background: #3A3A33; }
-[data-coreui-theme="dark"] .ef-voucher-sm { color: #A0A099; }
-[data-coreui-theme="dark"] .ef-voucher-sm:hover { color: #F4F4F0; }
+/* Resumen de confirmacion */
+.ef-confirm-summary { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+.ef-confirm-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-radius: var(--ds-radius-sm); background: var(--ds-surface-2); }
+.ef-confirm-label { font-size: 13px; font-weight: 500; color: var(--ds-ink-2); }
+.ef-confirm-value { font-size: 14px; font-weight: 600; color: var(--ds-heading); }
+.ef-confirm-note { margin: 0; padding: 12px 16px; border-radius: var(--ds-radius-sm); background: var(--ds-surface-2); font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-2); }
 
-[data-coreui-theme="dark"] .ef-upload-btn { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-upload-btn:hover {
-  background: rgba(13,148,136,0.16);
-  color: #2DD4BF;
+@media (max-width: 900px) {
+  .ef-form-row, .ef-dl { grid-template-columns: 1fr 1fr; }
 }
-[data-coreui-theme="dark"] .ef-btn-confirm-cuota {
-  background: rgba(16,185,129,0.16);
-  border-color: rgba(16,185,129,0.4);
-  color: #34D399;
-}
-[data-coreui-theme="dark"] .ef-btn-confirm-cuota:hover { background: #10B981; color: #fff; }
-
-[data-coreui-theme="dark"] .ef-field label { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-readonly {
-  color: #F4F4F0;
-  border-bottom-color: #1F1F1A;
-}
-[data-coreui-theme="dark"] .ef-input,
-[data-coreui-theme="dark"] .ef-select,
-[data-coreui-theme="dark"] .ef-select-sm {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-input:focus,
-[data-coreui-theme="dark"] .ef-select:focus,
-[data-coreui-theme="dark"] .ef-select-sm:focus {
-  border-color: #F4F4F0;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
-}
-[data-coreui-theme="dark"] .ef-input:disabled,
-[data-coreui-theme="dark"] .ef-select:disabled,
-[data-coreui-theme="dark"] .ef-select-sm:disabled {
-  background: #1F1F1A;
-  color: #6F6F66;
-}
-[data-coreui-theme="dark"] .ef-datepicker :deep(input) {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-
-[data-coreui-theme="dark"] .ef-cuota-tabs { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .ef-cuota-tab { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-cuota-tab:hover { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-cuota-tab.active {
-  color: #F4F4F0;
-  border-bottom-color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-tab-badge {
-  background: #2A2A22;
-  color: #A0A099;
-}
-
-[data-coreui-theme="dark"] .ef-inicial-card { background: #1F1F1A; }
-
-[data-coreui-theme="dark"] .ef-cert-badge {
-  background: rgba(16,185,129,0.16);
-  border-color: rgba(16,185,129,0.4);
-  color: #34D399;
-}
-[data-coreui-theme="dark"] .ef-cert-hint { color: #A0A099; }
-[data-coreui-theme="dark"] .ef-cert-hint i { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .ef-notice {
-  background: rgba(245,158,11,0.14);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .ef-notice i { color: #FBBF24; }
-
-[data-coreui-theme="dark"] .ef-btn-teal { background: #F4F4F0; color: #14140F; }
-[data-coreui-theme="dark"] .ef-btn-outline {
-  background: #1A1A14;
-  color: #A78BFA;
-  border-color: rgba(167,139,250,0.4);
-}
-[data-coreui-theme="dark"] .ef-btn-outline:hover { background: rgba(99,102,241,0.16); }
-
-[data-coreui-theme="dark"] .ef-table { color: #D4D4CC; }
-[data-coreui-theme="dark"] .ef-table thead th {
-  background: #1F1F1A;
-  color: #6F6F66;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ef-table tbody td { border-bottom-color: #1F1F1A; }
-[data-coreui-theme="dark"] .ef-table tbody tr:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ef-table .cuota-paid td { background: rgba(16,185,129,0.08); }
-[data-coreui-theme="dark"] .ef-table .cuota-overdue td { background: rgba(239,68,68,0.08); }
-[data-coreui-theme="dark"] .ef-table .cuota-annulled td { background: #1F1F1A; color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-total-row td {
-  background: #1F1F1A;
-  border-top-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ef-empty-row { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .ef-btn-del { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-btn-del:hover {
-  background: rgba(239,68,68,0.16);
-  color: #F87171;
-}
-
-[data-coreui-theme="dark"] .pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
-[data-coreui-theme="dark"] .pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
-[data-coreui-theme="dark"] .pill-muted { background: #2A2A22; color: #A0A099; }
-
-[data-coreui-theme="dark"] .ef-empty { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .ef-edit-panel { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .ef-edit-head {
-  background: #1F1F1A;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ef-edit-title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-edit-title i { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-edit-close { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-edit-close:hover { color: #F4F4F0; background: #2A2A22; }
-
-[data-coreui-theme="dark"] .ef-warn-label { color: #FBBF24; }
-[data-coreui-theme="dark"] .ef-warn-label i { color: #FBBF24; }
-
-[data-coreui-theme="dark"] .ef-textarea {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-textarea:focus {
-  border-color: #F4F4F0;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
-}
-
-[data-coreui-theme="dark"] .ef-footer { border-top-color: #2A2A22; }
-
-[data-coreui-theme="dark"] .ef-action-btn {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
-[data-coreui-theme="dark"] .ef-action-btn:hover {
-  border-color: #F4F4F0;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-btn-primary { background: #F4F4F0; color: #14140F; }
-[data-coreui-theme="dark"] .ef-btn-primary:hover { background: #E4E4DD; }
-
-[data-coreui-theme="dark"] .ef-btn-observe {
-  background: rgba(245,158,11,0.14);
-  border-color: rgba(245,158,11,0.4);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .ef-btn-observe:hover {
-  background: rgba(245,158,11,0.22);
-  border-color: rgba(245,158,11,0.6);
-}
-
-[data-coreui-theme="dark"] .ef-observe-banner {
-  background: rgba(245,158,11,0.14);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .ef-observe-banner i { color: #FBBF24; }
-[data-coreui-theme="dark"] .ef-observe-field label { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-observe-textarea {
-  background: #14140F;
-  border-color: rgba(245,158,11,0.4);
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ef-observe-textarea::placeholder { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-cc-clear { border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .ef-cc-clear strong { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-observe-textarea:focus {
-  border-color: #FBBF24;
-  box-shadow: 0 0 0 3px rgba(245,158,11,.16);
-}
-
-[data-coreui-theme="dark"] .ef-confirm-row { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ef-confirm-label { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-confirm-value { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-confirm-note {
-  background: #1F1F1A;
-  color: #A0A099;
-}
-
-[data-coreui-theme="dark"] .ef-validation-block { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .ef-edition-link { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-edition-link:hover { color: #2DD4BF; }
-[data-coreui-theme="dark"] .ef-edition-warn {
-  background: rgba(239,68,68,0.16);
-  border-color: rgba(239,68,68,0.4);
-  color: #F87171;
-}
-[data-coreui-theme="dark"] .ef-edition-warn:hover {
-  background: rgba(239,68,68,0.22);
-  border-color: rgba(239,68,68,0.6);
-}
-[data-coreui-theme="dark"] .ef-collect {
-  background: rgba(96,165,250,0.08);
-  border-color: rgba(96,165,250,0.3);
-}
-[data-coreui-theme="dark"] .ef-collect-head { color: #93C5FD; }
-[data-coreui-theme="dark"] .ef-check { color: #A8A89A; }
-[data-coreui-theme="dark"] .ef-detraction-row td { background: rgba(255,255,255,0.03); }
-[data-coreui-theme="dark"] .ef-detraction-box > label:not(.ef-file-btn) { color: #8FAADC; }
-[data-coreui-theme="dark"] .ef-file-btn {
-  background: transparent;
-  border-color: rgba(143,170,220,0.4);
-  color: #A8A89A;
-}
-[data-coreui-theme="dark"] .ef-file-btn:hover { border-color: #C4B5FD; color: #C4B5FD; }
-[data-coreui-theme="dark"] .ef-file-btn.done {
-  background: rgba(16,185,129,0.12);
-  border-color: rgba(16,185,129,0.4);
-  color: #34D399;
-}
-[data-coreui-theme="dark"] .ef-file-view { color: #60A5FA; }
-[data-coreui-theme="dark"] .ef-detraction-split { color: #A8A89A; }
-[data-coreui-theme="dark"] .ef-btn-detraction {
-  background: rgba(167,139,250,0.14);
-  border-color: rgba(167,139,250,0.35);
-  color: #C4B5FD;
-}
-[data-coreui-theme="dark"] .ef-btn-detraction.active { background: #7C3AED; color: #fff; }
-[data-coreui-theme="dark"] .ef-doc-notice {
-  background: rgba(96,165,250,0.14);
-  border-color: rgba(96,165,250,0.35);
-  color: #93C5FD;
-}
-
-[data-coreui-theme="dark"] .c-green { color: #34D399; }
-[data-coreui-theme="dark"] .c-blue  { color: #60A5FA; }
-[data-coreui-theme="dark"] .c-red { color: #F87171; }
-[data-coreui-theme="dark"] .c-muted { color: #6F6F66; }
 </style>

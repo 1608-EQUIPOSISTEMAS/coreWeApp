@@ -1,3 +1,5 @@
+import { isPastDue } from '@/shared/lib/localDate.js'
+
 // Un pago puede traer varios comprobantes y la vista los devuelve concatenados
 // en un solo texto (`payment_vouchers`), a veces sin separador:
 // "https://a/1.jpghttps://b/2.jpg". Cortamos en cada "http" para no abrir la
@@ -42,6 +44,10 @@ export function useEnrollmentFormatters () {
     if (sl.includes('rechaz') || sl.includes('anula')) return 'pill-red'
     return 'pill-amber'
   }
+  // Tono ds-pill (ok/bad/warn) del mismo estado; statusPill queda para las
+  // vistas legacy que aun pintan .pill-green/.pill-red/.pill-amber.
+  const STATUS_TONE = { 'pill-green': 'ok', 'pill-red': 'bad', 'pill-amber': 'warn' }
+  const statusTone = s => STATUS_TONE[statusPill(s)]
 
   const isPendiente = e => {
     const s = (e.confirmation || '').toLowerCase()
@@ -89,13 +95,8 @@ export function useEnrollmentFormatters () {
     return (saldo / total) < 0.5 ? 'row-amber' : 'row-red'
   }
 
-  const parseLocalDate = d => {
-    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (m) return new Date(+m[1], +m[2] - 1, +m[3])
-    return new Date(d)
-  }
-
-  const isOverdue = d => d ? parseLocalDate(d) < new Date() : false
+  // Una sola regla de vencida: shared/lib/localDate.js#isPastDue
+  const isOverdue = d => isPastDue(d)
 
   // Anulada (retiro / campaña de cobranza): la fila queda tachada pero visible.
   const isCuotaAnulada = c => Number(c?.cat_status) === 4456
@@ -126,19 +127,19 @@ export function useEnrollmentFormatters () {
   }
 
   const auditIcon = action => {
-    const map = { created: 'fa-solid fa-circle-plus', approved: 'fa-solid fa-circle-check', edited: 'fa-solid fa-pen', odoo_enrolled: 'fa-solid fa-graduation-cap', odoo_unenrolled: 'fa-solid fa-user-xmark', email_sent: 'fa-solid fa-envelope', email_failed: 'fa-solid fa-envelope-circle-check', payment_registered: 'fa-solid fa-money-bill-wave', edition_reprogrammed: 'fa-solid fa-calendar-xmark', course_changed: 'fa-solid fa-right-left', created_from_cc: 'fa-solid fa-right-to-bracket', created_from_rp: 'fa-solid fa-calendar-plus', children_created: 'fa-solid fa-sitemap', children_skipped_no_edition: 'fa-solid fa-triangle-exclamation', parent_marked_e0: 'fa-solid fa-layer-group', modality_changed: 'fa-solid fa-shuffle', profile_changed: 'fa-solid fa-user-tag', student_edited: 'fa-solid fa-user-pen', seller_agent_changed: 'fa-solid fa-user-tie', retired: 'fa-solid fa-user-slash', retire_reverted: 'fa-solid fa-user-check', observed: 'fa-solid fa-eye', resubmitted: 'fa-solid fa-rotate-right', created_from_token: 'fa-solid fa-link', validation_requested: 'fa-solid fa-rotate-right', validation_applied: 'fa-solid fa-circle-check', installments_rescheduled: 'fa-solid fa-calendar-days', odoo_fee_paid: 'fa-solid fa-money-check-dollar', odoo_fees_activated: 'fa-solid fa-list-check', token_inscription_edited: 'fa-solid fa-user-pen', token_grouped: 'fa-solid fa-object-group', token_ungrouped: 'fa-solid fa-object-ungroup', token_link_added: 'fa-solid fa-link', token_link_edited: 'fa-solid fa-pen', installment_amount_edited: 'fa-solid fa-coins', initial_payment_corrected: 'fa-solid fa-receipt', installment_payment_reverted: 'fa-solid fa-rotate-left', installment_added: 'fa-solid fa-circle-plus', additional_payment: 'fa-solid fa-certificate', additional_payment_edited: 'fa-solid fa-pen', collection_campaign: 'fa-solid fa-bullhorn', sap_credentials_missing: 'fa-solid fa-server' }
+    const map = { created: 'fa-solid fa-circle-plus', approved: 'fa-solid fa-circle-check', edited: 'fa-solid fa-pen', odoo_enrolled: 'fa-solid fa-graduation-cap', odoo_unenrolled: 'fa-solid fa-user-xmark', email_sent: 'fa-solid fa-envelope', email_failed: 'fa-solid fa-envelope-circle-check', payment_registered: 'fa-solid fa-money-bill-wave', edition_reprogrammed: 'fa-solid fa-calendar-xmark', course_changed: 'fa-solid fa-right-left', created_from_cc: 'fa-solid fa-right-to-bracket', created_from_rp: 'fa-solid fa-calendar-plus', children_created: 'fa-solid fa-sitemap', children_skipped_no_edition: 'fa-solid fa-triangle-exclamation', parent_marked_e0: 'fa-solid fa-layer-group', modality_changed: 'fa-solid fa-shuffle', profile_changed: 'fa-solid fa-user-tag', student_edited: 'fa-solid fa-user-pen', seller_agent_changed: 'fa-solid fa-user-tie', retired: 'fa-solid fa-user-slash', retire_reverted: 'fa-solid fa-user-check', observed: 'fa-solid fa-eye', resubmitted: 'fa-solid fa-rotate-right', created_from_token: 'fa-solid fa-link', validation_requested: 'fa-solid fa-rotate-right', validation_applied: 'fa-solid fa-circle-check', installments_rescheduled: 'fa-solid fa-calendar-days', odoo_fee_paid: 'fa-solid fa-money-check-dollar', odoo_fees_activated: 'fa-solid fa-list-check', token_inscription_edited: 'fa-solid fa-user-pen', token_grouped: 'fa-solid fa-object-group', token_ungrouped: 'fa-solid fa-object-ungroup', token_link_added: 'fa-solid fa-link', token_link_edited: 'fa-solid fa-pen', installment_amount_edited: 'fa-solid fa-coins', initial_payment_corrected: 'fa-solid fa-receipt', installment_payment_reverted: 'fa-solid fa-rotate-left', installment_added: 'fa-solid fa-circle-plus', installment_plan_adjusted: 'fa-solid fa-calendar-check', additional_payment: 'fa-solid fa-certificate', additional_payment_edited: 'fa-solid fa-pen', collection_campaign: 'fa-solid fa-bullhorn', sap_credentials_missing: 'fa-solid fa-server' }
     if (action === 'email_failed') return 'fa-solid fa-triangle-exclamation'
     return map[action] || 'fa-solid fa-circle-info'
   }
 
   const auditLabel = action => {
-    const map = { created: 'Inscripcion creada', approved: 'Pago aprobado', edited: 'Datos editados', odoo_enrolled: 'Inscrito en Odoo', odoo_unenrolled: 'Desinscrito de Odoo', email_sent: 'Correo enviado', email_failed: 'Error al enviar correo', payment_registered: 'Pago registrado', edition_reprogrammed: 'Edicion reprogramada', course_changed: 'Cambio de curso', created_from_cc: 'Creado por cambio de curso', created_from_rp: 'Creado por reprogramacion', children_created: 'Modulos hijos creados', children_skipped_no_edition: 'Modulo saltado: sin edicion', parent_marked_e0: 'Padre marcado E0', modality_changed: 'Cambio de modalidad', profile_changed: 'Cambio de perfil', student_edited: 'Datos del alumno editados', seller_agent_changed: 'Asesor actualizado', retired: 'Alumno retirado', retire_reverted: 'Retiro revertido', observed: 'Inscripcion observada', resubmitted: 'Reenviado a FICO', created_from_token: 'Creado desde token de pago', validation_requested: 'Convalidacion solicitada', validation_applied: 'Convalidacion aplicada', installments_rescheduled: 'Cuotas reprogramadas', odoo_fee_paid: 'Cuota marcada pagada en Odoo', odoo_fees_activated: 'Cuotas Odoo activadas', token_inscription_edited: 'Inscripcion editada por asesor', token_grouped: 'Token agrupado', token_ungrouped: 'Token desagrupado', token_link_added: 'Link de pago colocado', token_link_edited: 'Link de pago editado', installment_amount_edited: 'Monto de cuota editado', initial_payment_corrected: 'Pago inicial corregido', installment_payment_reverted: 'Cuota devuelta a pendiente', installment_added: 'Cuota agregada', additional_payment: 'Pago de certificado registrado', additional_payment_edited: 'Pago de certificado editado', collection_campaign: 'Campaña de cobranza aplicada', sap_credentials_missing: 'Correo enviado SIN credenciales SAP' }
+    const map = { created: 'Inscripcion creada', approved: 'Pago aprobado', edited: 'Datos editados', odoo_enrolled: 'Inscrito en Odoo', odoo_unenrolled: 'Desinscrito de Odoo', email_sent: 'Correo enviado', email_failed: 'Error al enviar correo', payment_registered: 'Pago registrado', edition_reprogrammed: 'Edicion reprogramada', course_changed: 'Cambio de curso', created_from_cc: 'Creado por cambio de curso', created_from_rp: 'Creado por reprogramacion', children_created: 'Modulos hijos creados', children_skipped_no_edition: 'Modulo saltado: sin edicion', parent_marked_e0: 'Padre marcado E0', modality_changed: 'Cambio de modalidad', profile_changed: 'Cambio de perfil', student_edited: 'Datos del alumno editados', seller_agent_changed: 'Asesor actualizado', retired: 'Alumno retirado', retire_reverted: 'Retiro revertido', observed: 'Inscripcion observada', resubmitted: 'Reenviado a FICO', created_from_token: 'Creado desde token de pago', validation_requested: 'Convalidacion solicitada', validation_applied: 'Convalidacion aplicada', installments_rescheduled: 'Cuotas reprogramadas', odoo_fee_paid: 'Cuota marcada pagada en Odoo', odoo_fees_activated: 'Cuotas Odoo activadas', token_inscription_edited: 'Inscripcion editada por asesor', token_grouped: 'Token agrupado', token_ungrouped: 'Token desagrupado', token_link_added: 'Link de pago colocado', token_link_edited: 'Link de pago editado', installment_amount_edited: 'Monto de cuota editado', initial_payment_corrected: 'Pago inicial corregido', installment_payment_reverted: 'Cuota devuelta a pendiente', installment_added: 'Cuota agregada', installment_plan_adjusted: 'Plan de cuotas ajustado', additional_payment: 'Pago de certificado registrado', additional_payment_edited: 'Pago de certificado editado', collection_campaign: 'Campaña de cobranza aplicada', sap_credentials_missing: 'Correo enviado SIN credenciales SAP' }
     return map[action] || action
   }
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, isPendiente, isContado, hasLaptopPromo, hasPersonalAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, statusTone, isPendiente, isContado, hasLaptopPromo, hasPersonalAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel, isCuotaAnulada,
     auditIcon, auditLabel
   }

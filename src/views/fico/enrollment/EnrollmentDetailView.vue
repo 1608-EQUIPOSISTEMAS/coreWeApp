@@ -1,157 +1,175 @@
 <template>
-  <div class="edv-page">
-    <!-- Top bar -->
-    <div class="edv-topbar">
-      <button class="edv-back" @click="goBack">
-        <i class="fa-solid fa-arrow-left"></i> Volver al listado
-      </button>
-      <div v-if="!notFound" class="edv-topbar-info">
-        <span class="edv-topbar-name">{{ detail.student_full_name || enrollment?.student_full_name || '' }}</span>
-        <span class="edv-topbar-program">{{ detail.program_name || enrollment?.program_name || '' }}</span>
-        <span class="edv-topbar-pill" :class="statusPillClass">{{ statusLabel }}</span>
-        <span v-if="showCertificarPill" class="edv-topbar-pill pill-certificar"><i class="fa-solid fa-certificate"></i> Certificar</span>
-      </div>
-      <div v-if="totalNav > 0" class="edv-topbar-nav" :title="`Pendientes del ${fmt.formatDate(enrollment?.pay_date)}`">
-        <span class="edv-nav-counter">
-          {{ currentNavIndex >= 0 ? currentNavIndex + 1 : '—' }} / {{ totalNav }}
-        </span>
-        <button class="edv-nav-btn" :disabled="!prevNavTarget" @click="goToPrevPending" :title="prevNavTarget ? `Anterior: ${prevNavTarget.student_full_name}` : 'No hay anterior'">
-          <i class="fa-solid fa-chevron-left"></i>
+  <div class="ds-page edv">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <button class="edv-back" type="button" @click="goBack">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Inscripciones
         </button>
-        <button class="edv-nav-btn" :disabled="!nextNavTarget" @click="goToNextPending" :title="nextNavTarget ? `Siguiente: ${nextNavTarget.student_full_name}` : 'No hay siguiente'">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
+        <div class="edv-title-row">
+          <h1 class="ds-title">{{ studentName || `Inscripción #${enrollmentId}` }}</h1>
+          <template v-if="!notFound && !loading">
+            <span class="edv-status" :class="statusTone">
+              <i class="fa-solid" :class="STATUS_ICON[statusTone]" aria-hidden="true"></i> {{ statusLabel }}
+            </span>
+            <span v-if="showCertificarPill" class="edv-status ok">
+              <i class="fa-solid fa-certificate" aria-hidden="true"></i> Certificar
+            </span>
+          </template>
+        </div>
+        <p v-if="!notFound && headerSub" class="ds-sub">{{ headerSub }}</p>
       </div>
+      <div v-if="!notFound && !loading && totalNav > 0" class="ds-head-actions">
+        <!-- Cola de pendientes del mismo dia de pago. Dentro de la cola: anterior /
+             posicion / siguiente con texto. Fuera (venta ya aprobada): un solo
+             boton que lleva al primero, sin flechas muertas. -->
+        <template v-if="totalNav > 0">
+          <div v-if="currentNavIndex >= 0" class="edv-nav" role="group" :aria-label="`Pendientes del ${fmt.formatDate(enrollment?.pay_date)}`">
+            <button
+              class="edv-nav-btn"
+              type="button"
+              :disabled="!prevNavTarget"
+              :title="prevNavTarget ? `Anterior: ${prevNavTarget.student_full_name}` : 'Es el primero'"
+              @click="goToPrevPending"
+            >
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior
+            </button>
+            <span class="edv-nav-counter">
+              <span><strong>{{ currentNavIndex + 1 }}</strong> de {{ totalNav }}</span>
+              <small>pendientes del {{ fmt.formatDate(enrollment?.pay_date) }}</small>
+            </span>
+            <button
+              class="edv-nav-btn"
+              type="button"
+              :disabled="!nextNavTarget"
+              :title="nextNavTarget ? `Siguiente: ${nextNavTarget.student_full_name}` : 'Es el último'"
+              @click="goToNextPending"
+            >
+              Siguiente <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button
+            v-else-if="nextNavTarget"
+            class="btn-exec btn-exec-outline btn-sm"
+            type="button"
+            :title="`Siguiente: ${nextNavTarget.student_full_name}`"
+            @click="goToNextPending"
+          >
+            Siguiente pendiente <span class="edv-nav-badge">{{ totalNav }}</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </template>
+      </div>
+    </header>
+
+    <div v-if="loading" class="edv-layout" aria-busy="true" aria-label="Cargando detalle">
+      <div class="ds-panel edv-skel"><span v-for="n in 8" :key="n" class="ds-skel"></span></div>
+      <div class="ds-panel edv-skel"><span v-for="n in 12" :key="n" class="ds-skel"></span></div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="edv-loading">
-      <div class="edv-spinner"></div>
-      <span>Cargando detalle...</span>
-    </div>
+    <p v-else-if="notFound" class="ds-alert neutro" role="alert">
+      No se encontró la inscripción #{{ enrollmentId }}. Vuelve a la lista y ábrela de nuevo.
+    </p>
 
-    <div v-else-if="notFound" class="edv-notfound" role="alert">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <span>No se encontró la inscripción #{{ enrollmentId }}. Vuelve a la lista y ábrela de nuevo.</span>
-    </div>
-
-    <!-- Two-column layout -->
     <div v-else class="edv-layout">
-      <!-- LEFT PANEL (40%) - Info fija -->
-      <aside class="edv-sidebar">
+      <aside class="edv-aside">
         <EnrollmentHeader
           :enrollment="enrollment"
           :detail="detail"
           :current-profile="currentProfile"
-          :total="modalTotal"
-        />
-        <EnrollmentOdoo
+          :summary="paymentSummary"
+          :currency-symbol="saleSymbol"
           :odoo-email="odooEmail"
           :odoo-password="odooPassword"
         />
       </aside>
 
-      <!-- RIGHT PANEL (60%) - Tabs de contenido -->
-      <main class="edv-main">
-        <div class="edv-tabs">
-          <button
-            :class="['edv-tab', { active: activeTab === 'finanzas' }]"
-            @click="activeTab = 'finanzas'"
-          >
-            <i class="fa-solid fa-file-invoice-dollar"></i> Finanzas
-          </button>
-          <button
-            v-if="modalMode === 'view'"
-            :class="['edv-tab', { active: activeTab === 'acciones' }]"
-            @click="activeTab = 'acciones'"
-          >
-            <i class="fa-solid fa-bolt"></i> Acciones
-          </button>
-          <button
-            :class="['edv-tab', { active: activeTab === 'historial' }]"
-            @click="activeTab = 'historial'"
-          >
-            <i class="fa-solid fa-clock-rotate-left"></i> Historial
-            <span v-if="auditLog.length" class="edv-tab-badge">{{ auditLog.length }}</span>
-          </button>
+      <main class="ds-panel edv-main">
+        <div class="ds-panel-head">
+          <div class="ds-tabs" role="tablist" aria-label="Secciones de la inscripción">
+            <button type="button" role="tab" :aria-selected="activeTab === 'finanzas'" @click="activeTab = 'finanzas'">
+              <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> Finanzas
+            </button>
+            <button v-if="modalMode === 'view'" type="button" role="tab" :aria-selected="activeTab === 'acciones'" @click="activeTab = 'acciones'">
+              <i class="fa-solid fa-bolt" aria-hidden="true"></i> Acciones
+            </button>
+            <button type="button" role="tab" :aria-selected="activeTab === 'historial'" @click="activeTab = 'historial'">
+              <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial
+              <span v-if="auditLog.length" class="edv-count">{{ auditLog.length }}</span>
+            </button>
+          </div>
         </div>
 
-        <div class="edv-tab-content">
+        <div class="ds-panel-body">
           <!-- Membresia: fecha de activacion en modo confirm -->
           <div
             v-if="activeTab === 'finanzas' && modalMode === 'confirm' && isMembershipEnrollment"
-            class="edv-activation-block"
+            class="edv-callout warn"
           >
-            <div class="edv-activation-head">
-              <i class="fa-solid fa-calendar-day"></i>
-              <span class="edv-activation-title">Activacion de Membresia</span>
+            <p class="edv-callout-title">
+              <i class="fa-solid fa-calendar-day" aria-hidden="true"></i> Activación de membresía
+            </p>
+            <div class="ds-field edv-date">
+              <label class="ds-label" for="edv-activation">Fecha de activación</label>
+              <input
+                id="edv-activation"
+                v-model="activationDate"
+                type="date"
+                :min="todayIso"
+                :max="maxActivationDate"
+                class="ds-input"
+              />
             </div>
-            <div class="edv-activation-body">
-              <div class="edv-field">
-                <label>Fecha de activacion</label>
-                <input
-                  type="date"
-                  v-model="activationDate"
-                  :min="todayIso"
-                  :max="maxActivationDate"
-                  class="edv-input"
-                />
-              </div>
-              <p v-if="isActivationDeferred" class="edv-hint-deferred">
-                <i class="fa-solid fa-clock"></i>
-                <span>El correo de bienvenida sale hoy con sus credenciales; el acceso a los cursos se habilita el <strong>{{ fmt.formatDate(activationDate) }}</strong> a las 9am (Lima).</span>
-              </p>
-              <p v-else class="edv-hint-immediate">
-                <i class="fa-solid fa-bolt"></i>
-                <span>Activacion inmediata al confirmar el pago.</span>
-              </p>
-            </div>
+            <p v-if="isActivationDeferred" class="edv-callout-text">
+              El correo de bienvenida sale hoy con sus credenciales; el acceso a los cursos se habilita el
+              <strong>{{ fmt.formatDate(activationDate) }}</strong> a las 9am (Lima).
+            </p>
+            <p v-else class="edv-callout-text">Activación inmediata al confirmar el pago.</p>
           </div>
 
           <!-- Membresia: activacion ya programada (modo view) -->
           <div
             v-if="activeTab === 'finanzas' && modalMode === 'view' && hasFutureScheduledActivation"
-            class="edv-activation-block edv-activation-scheduled"
+            class="edv-callout info"
           >
-            <div class="edv-activation-head">
-              <i class="fa-solid fa-clock"></i>
-              <span class="edv-activation-title">Activacion programada</span>
+            <p class="edv-callout-title">
+              <i class="fa-solid fa-clock" aria-hidden="true"></i> Activación programada
+            </p>
+            <p class="edv-callout-text">
+              Esta membresía se activará el <strong>{{ fmt.formatDate(scheduledActivationDate) }}</strong> (9am Lima).
+              El correo de bienvenida y la inscripción en Odoo se ejecutarán automáticamente.
+            </p>
+            <div v-if="!isReschedulingActivation">
+              <button class="btn-exec btn-exec-outline btn-sm" type="button" @click="isReschedulingActivation = true; newActivationDate = todayIso">
+                <i class="fa-solid fa-calendar-pen" aria-hidden="true"></i> Reprogramar fecha
+              </button>
             </div>
-            <div class="edv-activation-body">
-              <p class="edv-activation-info">
-                Esta membresia se activara el <strong>{{ fmt.formatDate(scheduledActivationDate) }}</strong> (9am Lima). El correo de bienvenida y la inscripcion en Odoo se ejecutaran automaticamente.
-              </p>
-              <div v-if="!isReschedulingActivation">
-                <button class="edv-btn-primary" @click="isReschedulingActivation = true; newActivationDate = todayIso">
-                  <i class="fa-solid fa-calendar-pen"></i> Reprogramar fecha
+            <template v-else>
+              <div class="ds-field edv-date">
+                <label class="ds-label" for="edv-reschedule">Nueva fecha</label>
+                <input
+                  id="edv-reschedule"
+                  v-model="newActivationDate"
+                  type="date"
+                  :min="todayIso"
+                  :max="maxActivationDate"
+                  class="ds-input"
+                />
+              </div>
+              <div class="edv-callout-actions">
+                <button class="btn-exec btn-exec-outline btn-sm" type="button" :disabled="savingReschedule" @click="isReschedulingActivation = false; newActivationDate = ''">
+                  Cancelar
+                </button>
+                <button
+                  class="btn-exec btn-exec-primary btn-sm"
+                  type="button"
+                  :disabled="!newActivationDate || savingReschedule || newActivationDate <= todayIso"
+                  @click="handleRescheduleActivation"
+                >
+                  <i class="fa-solid" :class="savingReschedule ? 'fa-spinner fa-spin' : 'fa-check'" aria-hidden="true"></i>
+                  {{ savingReschedule ? 'Guardando…' : 'Confirmar reprogramación' }}
                 </button>
               </div>
-              <div v-else class="edv-reschedule-form">
-                <div class="edv-field">
-                  <label>Nueva fecha</label>
-                  <input
-                    type="date"
-                    v-model="newActivationDate"
-                    :min="todayIso"
-                    :max="maxActivationDate"
-                    class="edv-input"
-                  />
-                </div>
-                <div class="edv-reschedule-actions">
-                  <button class="edv-btn-ghost" :disabled="savingReschedule" @click="isReschedulingActivation = false; newActivationDate = ''">
-                    Cancelar
-                  </button>
-                  <button
-                    class="edv-btn-primary"
-                    :disabled="!newActivationDate || savingReschedule || newActivationDate <= todayIso"
-                    @click="handleRescheduleActivation"
-                  >
-                    <i class="fa-solid" :class="savingReschedule ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-                    {{ savingReschedule ? 'Guardando...' : 'Confirmar reprogramacion' }}
-                  </button>
-                </div>
-              </div>
-            </div>
+            </template>
           </div>
 
           <EnrollmentFinancials
@@ -262,7 +280,6 @@ import { useEnrollmentCatalogs } from '@/composables/useEnrollmentCatalogs'
 import { useToast } from 'vue-toastification'
 import { useToastWithAction } from '@/composables/useToastWithAction'
 import EnrollmentHeader from './EnrollmentHeader.vue'
-import EnrollmentOdoo from './EnrollmentOdoo.vue'
 import EnrollmentFinancials from './EnrollmentFinancials.vue'
 import EnrollmentActions from './EnrollmentActions.vue'
 import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
@@ -272,6 +289,9 @@ import RevertInstallmentModal from './RevertInstallmentModal.vue'
 import AddInstallmentModal from './AddInstallmentModal.vue'
 import { toLocalIsoDate } from '@/shared/lib/localDate.js'
 import { findEnrollmentById } from '@/entities/enrollment/findEnrollmentById.js'
+import { currencySymbol } from '@/entities/enrollment/currencySymbol.js'
+import { resolveInstallmentStatus } from '@/entities/enrollment/installmentStatus.js'
+import { summarizePayment } from '@/entities/enrollment/paymentSummary.js'
 
 const props = defineProps({
   id: { type: [String, Number], required: true }
@@ -304,7 +324,7 @@ const studentFlags = ref(null)
 const activeProfileId = ref(null)
 const activeModalityId = ref(null)
 
-// Membresia: misma logica que EnrollmentDetailModal (heuristica por nombre,
+// Membresia: heuristica por nombre (el
 // backend re-valida con programs.is_membership). El datepicker solo aparece
 // cuando isMembershipEnrollment=true; el resto del flujo es identico al regular.
 const isMembershipEnrollment = computed(() => {
@@ -423,25 +443,37 @@ const modalMode = computed(() => {
   return 'confirm'
 })
 
-const modalTotal = computed(() => {
-  if (modalInstallments.value?.length) {
-    return modalInstallments.value.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
-  }
-  return Number(enrollment.value?.total_to_pay) || Number(detail.value?.net_amount) || 0
-})
+const saleSymbol = computed(() => currencySymbol(detail.value?.cat_currency_id, catalogs.catCurrency.value))
+
+// Misma regla que la barra de Finanzas: la ficha y la pestaña no pueden diferir.
+const paymentSummary = computed(() => summarizePayment({
+  enrollment: enrollment.value,
+  detail: detail.value,
+  installments: modalInstallments.value,
+  mode: modalMode.value
+}))
 
 const statusLabel = computed(() => {
   const s = enrollment.value?.confirmation
   if (!s || s.toLowerCase().includes('pendiente')) return 'Pendiente Revisar'
   return s
 })
-const statusPillClass = computed(() => fmt.statusPill(enrollment.value?.confirmation))
+// El estado va junto al nombre y con icono: arriba a la derecha, como pill
+// chico, se perdia (pedido del usuario).
+const STATUS_ICON = { ok: 'fa-circle-check', warn: 'fa-clock', bad: 'fa-circle-xmark' }
+const statusTone = computed(() => fmt.statusTone(enrollment.value?.confirmation))
+const studentName = computed(() => detail.value.student_full_name || enrollment.value?.student_full_name || '')
+const headerSub = computed(() => {
+  const program = detail.value.program_name || enrollment.value?.program_name
+  const edition = detail.value.edition_code || enrollment.value?.edition_code
+  return [program, edition, `#${enrollmentId.value}`].filter(Boolean).join(' · ')
+})
 
 // Etiqueta "Certificar": becado (total 0 con descuento) que ya pago su
 // certificado (pago adicional registrado -> cat_certificate_status = paid).
 const showCertificarPill = computed(() => {
   const d = detail.value || {}
-  const isBeca = modalTotal.value === 0 && (Number(d.discount_amount) || Number(enrollment.value?.total_discounted) || 0) > 0
+  const isBeca = paymentSummary.value.total === 0 && (Number(d.discount_amount) || Number(enrollment.value?.total_discounted) || 0) > 0
   return isBeca && d.certificate_status_alias === 'we_certificate_status_paid'
 })
 
@@ -453,18 +485,25 @@ const lastPayment = computed(() => {
   return hist.find(p => p.installment_id != null) || null
 })
 
+// Respaldo cuando el catalogo no trae el grupo: no basta con que exista el
+// servicio, la lista puede llegar VACIA (el cache CORE_CATALOG_V3 no siempre
+// trae we_profile) y el perfil salia '---'. Ids = tabla catalog en la BD.
+const PROFILE_FALLBACK = [
+  { id: 3086, description: 'PROFESIONAL' },
+  { id: 3087, description: 'ESTUDIANTE' },
+  { id: 3200, description: 'GENERAL' }
+]
+const MODALITY_FALLBACK = [
+  { id: 2626, description: 'Normal (Regular)', alias: 'we_insc_modality_normal' },
+  { id: 2625, description: 'Flexible (Flex)', alias: 'we_insc_modality_flexible' }
+]
+
 const profileOptions = computed(() => {
-  if (catalogService) {
-    return catalogService.options('we_profile').map(i => ({
-      id: i.id ?? i.raw?.id,
-      description: i.description ?? i.raw?.description
-    }))
-  }
-  return [
-    { id: 3086, description: 'PROFESIONAL' },
-    { id: 3087, description: 'ESTUDIANTE' },
-    { id: 3200, description: 'GENERAL' }
-  ]
+  const fromCatalog = (catalogService?.options('we_profile') || []).map(i => ({
+    id: i.id ?? i.raw?.id,
+    description: i.description ?? i.raw?.description
+  }))
+  return fromCatalog.length ? fromCatalog : PROFILE_FALLBACK
 })
 
 const currentProfile = computed(() => {
@@ -475,17 +514,12 @@ const currentProfile = computed(() => {
 })
 
 const modalityOptions = computed(() => {
-  if (catalogService) {
-    return catalogService.options('we_insc_modality').map(i => ({
-      id: i.id ?? i.raw?.id,
-      description: i.description ?? i.raw?.description,
-      alias: i.alias
-    }))
-  }
-  return [
-    { id: 2626, description: 'Normal (Regular)', alias: 'we_insc_modality_normal' },
-    { id: 2625, description: 'Flexible (Flex)', alias: 'we_insc_modality_flexible' }
-  ]
+  const fromCatalog = (catalogService?.options('we_insc_modality') || []).map(i => ({
+    id: i.id ?? i.raw?.id,
+    description: i.description ?? i.raw?.description,
+    alias: i.alias
+  }))
+  return fromCatalog.length ? fromCatalog : MODALITY_FALLBACK
 })
 
 const currentModality = computed(() => {
@@ -499,13 +533,6 @@ function goBack () {
   router.push({ name: 'enrollment' })
 }
 
-function resolveInstallmentStatus (i) {
-  const alias = i.status_alias || ''
-  if (alias.includes('paid')) return 'paid'
-  if (alias.includes('pending')) return 'pending'
-  return 'draft'
-}
-
 function buildInstallments () {
   const inst = detail.value?.installments || []
   const payments = detail.value?.payment_history || []
@@ -517,7 +544,7 @@ function buildInstallments () {
     const isInicial = i.installment_number === 0 || i.is_reserva
     return {
       ...i,
-      status: resolveInstallmentStatus(i),
+      status: resolveInstallmentStatus(i.status_alias),
       _cat_currency: pay?.cat_payment_medium_id ? (detail.value?.cat_currency_id || null) : (i.cat_currency || null),
       _cat_payment_medium: pay?.cat_payment_medium_id || i.cat_payment_medium || null,
       _cat_business_entity: pay?.cat_business_entity_id || i.cat_business_entity || null,
@@ -1155,9 +1182,12 @@ const prevNavTarget   = computed(() => {
   const idx = currentNavIndex.value
   return idx > 0 ? sameDayPending.value[idx - 1] : null
 })
+// Si la venta abierta no esta en la cola (ya aprobada), la flecha lleva al
+// primer pendiente del dia: antes mostraba "— / 7" con las dos flechas muertas.
 const nextNavTarget   = computed(() => {
   const idx = currentNavIndex.value
-  return idx >= 0 && idx < sameDayPending.value.length - 1 ? sameDayPending.value[idx + 1] : null
+  if (idx < 0) return sameDayPending.value[0] || null
+  return idx < sameDayPending.value.length - 1 ? sameDayPending.value[idx + 1] : null
 })
 
 function goToPrevPending () {
@@ -1175,15 +1205,22 @@ function handleActionCompleted () {
   refreshDetail()
 }
 
+// La fila de UNA venta, pedida por id: el SP la lee de la vista viva (no de la
+// foto que refresca el cron), asi una venta recien creada desde Tokens se abre
+// al instante. findEnrollmentById es la red: nunca se toma otra venta.
+async function fetchEnrollmentRow () {
+  const result = await ficoService.enrollmentList({ enrollment_id: enrollmentId.value, size: 1, page: 1 })
+  return findEnrollmentById(result?.items || (Array.isArray(result) ? result : []), enrollmentId.value)
+}
+
 async function refreshDetail () {
   try {
-    const [paymentResponse, listResult] = await Promise.all([
+    const [paymentResponse, freshRow] = await Promise.all([
       ficoService.getPaymentDetail(enrollmentId.value),
-      ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
+      fetchEnrollmentRow()
     ])
     detail.value = paymentResponse || { installments: [], payment_history: [] }
-    const match = findEnrollmentById(listResult?.items || (Array.isArray(listResult) ? listResult : []), enrollmentId.value)
-    if (match) enrollment.value = match
+    if (freshRow) enrollment.value = freshRow
     buildInstallments()
     refreshAuditLog()
 
@@ -1221,8 +1258,7 @@ async function loadEnrollment () {
     enrollment.value = routeState
   } else {
     try {
-      const result = await ficoService.enrollmentList({ q: String(enrollmentId.value), size: 50, page: 1 })
-      const match = findEnrollmentById(result?.items || (Array.isArray(result) ? result : []), enrollmentId.value)
+      const match = await fetchEnrollmentRow()
       enrollment.value = match || {}
       notFound.value = !match
     } catch (err) {
@@ -1337,422 +1373,76 @@ watch(enrollmentId, (newId, oldId) => {
 </script>
 
 <style scoped>
-.edv-page {
-  background: #fff;
-  min-height: 100vh;
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1A1A1A;
-}
-
-/* Top bar */
-.edv-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 0 32px;
-  height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #F0F0F0;
-}
-
+/* Marco ds-*: la ficha (EnrollmentHeader/Odoo) queda fija a la izquierda y
+   las pestañas en un panel; el scroll es el de la página, no uno interno. */
 .edv-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #737373;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .2s ease;
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0 0 6px; padding: 0; border: 0; background: none;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2); cursor: pointer;
 }
-.edv-back:hover { background: #FAFAFA; color: #1A1A1A; }
-.edv-back i { font-size: 12px; }
+.edv-back:hover, .edv-back:focus-visible { color: var(--ds-accent); }
+.edv-back i { font-size: 11px; }
 
-.edv-topbar-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
+.edv-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.edv-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border: 1px solid; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700; line-height: 1; white-space: nowrap;
 }
+.edv-status.ok { border-color: var(--ds-ok); background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.edv-status.warn { border-color: var(--ds-warn); background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.edv-status.bad { border-color: var(--ds-bad); background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
 
-.edv-topbar-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1A1A1A;
-  letter-spacing: -0.01em;
-}
-.edv-topbar-program {
-  font-size: 13px;
-  color: #A3A3A3;
-  font-weight: 400;
-}
-
-.edv-topbar-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-.edv-topbar-pill.pill-green { background: #ECFDF5; color: #065F46; }
-.edv-topbar-pill.pill-amber { background: #FFF8EB; color: #92400E; }
-.edv-topbar-pill.pill-red   { background: #FEF2F2; color: #991B1B; }
-.edv-topbar-pill.pill-certificar { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; gap: 5px; }
-
-.edv-topbar-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px 4px 12px;
-  border-radius: 8px;
-  background: #FAFAFA;
-  border: 1px solid #F0F0F0;
-  margin-left: auto;
-}
-.edv-nav-counter {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1A1A1A;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+.edv-nav {
+  display: inline-flex; align-items: stretch; overflow: hidden;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control); background: var(--ds-surface);
 }
 .edv-nav-btn {
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: none;
-  background: #fff;
-  color: #1A1A1A;
-  font-size: 11px;
-  cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; cursor: pointer;
+  border: 0; background: transparent; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--ds-ink);
 }
-.edv-nav-btn:hover:not(:disabled) { background: #F0F0F0; }
-.edv-nav-btn:disabled { color: #C4C4C4; cursor: not-allowed; }
-
-/* Loading */
-.edv-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 120px 24px;
-  color: #C4C4C4;
-  font-size: 13px;
+.edv-nav-btn i { font-size: 10px; }
+.edv-nav-btn:hover:not(:disabled) { background: var(--ds-surface-2); color: var(--ds-accent); }
+.edv-nav-btn:disabled { color: var(--ds-muted); cursor: not-allowed; }
+.edv-nav-btn:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: -2px; }
+.edv-nav-counter {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px 14px;
+  border-inline: 1px solid var(--ds-border); font-size: 12.5px; color: var(--ds-ink); line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.edv-nav-counter small { font-size: 10.5px; color: var(--ds-muted); }
+.edv-nav-badge {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--ds-soft-warn); color: var(--ds-warn-ink); font-size: 10.5px; font-weight: 700;
 }
 
-.edv-notfound {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 120px 24px;
-  color: var(--ds-ink-2);
-  font-size: 14px;
+.edv-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--ds-gap); align-items: start; }
+.edv-aside {
+  display: flex; flex-direction: column; gap: var(--ds-gap);
+  position: sticky; top: calc(var(--layout-header-h) + 12px);
 }
-.edv-notfound i { font-size: 24px; color: var(--ds-warn); }
+.edv-skel { gap: 12px; padding: 18px; }
+.edv-skel .ds-skel:nth-child(3n) { width: 60%; }
 
-.edv-spinner {
-  width: 28px;
-  height: 28px;
-  border: 2px solid #F0F0F0;
-  border-top-color: #1A1A1A;
-  border-radius: 50%;
-  animation: edv-spin .6s linear infinite;
+.edv-main .ds-panel-head { padding: 10px 18px; }
+.edv-count {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px;
+  border-radius: 9px; background: var(--ds-surface-3); color: var(--ds-ink-2); font-size: 10.5px;
 }
-@keyframes edv-spin { to { transform: rotate(360deg); } }
+.ds-tabs > button[aria-selected="true"] .edv-count { background: rgba(255, 255, 255, 0.2); color: inherit; }
 
-/* Two-column layout */
-.edv-layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 0;
-  height: calc(100vh - 56px);
-  overflow: hidden;
+.edv-callout {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: var(--ds-gap); padding: 14px 16px; border-radius: var(--ds-radius-sm);
 }
+.edv-callout.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.edv-callout.info { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.edv-callout-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 700; }
+.edv-callout-text { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink); }
+.edv-callout-actions { display: flex; gap: 8px; }
+.edv-date { max-width: 220px; }
 
-.edv-sidebar {
-  padding: 28px 24px;
-  overflow-y: auto;
-  border-right: 1px solid #F0F0F0;
-  background: #FAFAFA;
+@media (max-width: 1100px) {
+  .edv-layout { grid-template-columns: 1fr; }
+  .edv-aside { position: static; }
 }
-
-.edv-main {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: #fff;
-}
-
-/* Tabs */
-.edv-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid #F0F0F0;
-  background: #fff;
-  padding: 0 32px;
-  flex-shrink: 0;
-}
-
-.edv-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #A3A3A3;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  cursor: pointer;
-  transition: color .2s ease, border-color .2s ease;
-  font-family: inherit;
-  letter-spacing: -0.01em;
-}
-.edv-tab:hover { color: #1A1A1A; }
-.edv-tab.active {
-  color: #1A1A1A;
-  font-weight: 600;
-  border-bottom-color: #1A1A1A;
-}
-.edv-tab i { font-size: 13px; }
-
-.edv-tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #F0F0F0;
-  color: #737373;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.edv-tab-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px 32px;
-}
-
-.edv-activation-block {
-  margin-bottom: 18px;
-  padding: 16px 18px;
-  background: #FFFBEB;
-  border: 1px solid #FCD34D;
-  border-radius: 14px;
-}
-.edv-activation-block.edv-activation-scheduled {
-  background: #EEF2FF;
-  border-color: #C7D2FE;
-}
-.edv-activation-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: #92400E;
-}
-.edv-activation-scheduled .edv-activation-head { color: #3730A3; }
-.edv-activation-title { font-weight: 600; }
-.edv-activation-body { display: flex; flex-direction: column; gap: 12px; }
-.edv-activation-info { margin: 0; font-size: 13.5px; color: #1F2937; line-height: 1.5; }
-.edv-field { display: flex; flex-direction: column; gap: 6px; max-width: 220px; }
-.edv-field label { font-size: 12px; color: #374151; font-weight: 500; }
-.edv-input {
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  font-size: 13.5px;
-  background: #FFFFFF;
-  color: #111827;
-}
-.edv-input:focus { outline: none; border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
-.edv-hint-deferred,
-.edv-hint-immediate {
-  margin: 0;
-  padding: 8px 12px;
-  font-size: 12.5px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1.45;
-}
-.edv-hint-deferred { background: #FEF3C7; color: #92400E; }
-.edv-hint-immediate { background: #ECFDF5; color: #065F46; }
-.edv-reschedule-form { display: flex; flex-direction: column; gap: 12px; }
-.edv-reschedule-actions { display: flex; gap: 8px; }
-.edv-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  background: #6366F1;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.edv-btn-primary:disabled { background: #C7D2FE; cursor: not-allowed; }
-.edv-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  background: transparent;
-  color: #374151;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* Redirect overlay */
-.edv-redirect-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 40px;
-  pointer-events: none;
-}
-
-.edv-redirect-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 24px;
-  background: #1A1A1A;
-  color: #fff;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: 0 16px 48px rgba(0,0,0,.16);
-  pointer-events: auto;
-  animation: edv-slide-up .3s cubic-bezier(.16,1,.3,1);
-}
-
-.edv-redirect-card i { color: #34D399; font-size: 16px; }
-.edv-redirect-card span { display: flex; flex-direction: column; gap: 2px; }
-.edv-redirect-sub { font-size: 11px; opacity: 0.7; font-weight: 400; }
-
-.edv-redirect-cancel {
-  background: rgba(255,255,255,.12);
-  border: none;
-  color: rgba(255,255,255,.8);
-  padding: 5px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .2s ease;
-}
-.edv-redirect-cancel:hover { background: rgba(255,255,255,.2); }
-
-@keyframes edv-slide-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .edv-page {
-  background: #0E0E0A;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .edv-topbar {
-  background: #14140F;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .edv-back { color: #A0A099; }
-[data-coreui-theme="dark"] .edv-back:hover { background: #1F1F1A; color: #F4F4F0; }
-[data-coreui-theme="dark"] .edv-topbar-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .edv-topbar-program { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .edv-topbar-pill.pill-green { background: rgba(16,185,129,0.16); color: #34D399; }
-[data-coreui-theme="dark"] .edv-topbar-pill.pill-amber { background: rgba(245,158,11,0.16); color: #FBBF24; }
-[data-coreui-theme="dark"] .edv-topbar-pill.pill-red   { background: rgba(239,68,68,0.16); color: #F87171; }
-[data-coreui-theme="dark"] .edv-topbar-pill.pill-certificar { background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.4); color: #34D399; }
-
-[data-coreui-theme="dark"] .edv-topbar-nav {
-  background: #14140F;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .edv-nav-counter { color: #F4F4F0; }
-[data-coreui-theme="dark"] .edv-nav-btn {
-  background: #1F1F1A;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .edv-nav-btn:hover:not(:disabled) { background: #2A2A22; }
-[data-coreui-theme="dark"] .edv-nav-btn:disabled { color: #6F6F66; }
-
-[data-coreui-theme="dark"] .edv-loading { color: #6F6F66; }
-[data-coreui-theme="dark"] .edv-spinner {
-  border-color: #2A2A22;
-  border-top-color: #F4F4F0;
-}
-
-[data-coreui-theme="dark"] .edv-sidebar {
-  background: #14140F;
-  border-right-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .edv-main { background: #0E0E0A; }
-
-[data-coreui-theme="dark"] .edv-tabs {
-  background: #0E0E0A;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .edv-tab { color: #6F6F66; }
-[data-coreui-theme="dark"] .edv-tab:hover { color: #F4F4F0; }
-[data-coreui-theme="dark"] .edv-tab.active {
-  color: #F4F4F0;
-  border-bottom-color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .edv-tab-badge {
-  background: #2A2A22;
-  color: #A0A099;
-}
-
-[data-coreui-theme="dark"] .edv-redirect-card {
-  background: #F4F4F0;
-  color: #14140F;
-  box-shadow: 0 16px 48px rgba(0,0,0,.5);
-}
-[data-coreui-theme="dark"] .edv-redirect-card i { color: #10B981; }
-[data-coreui-theme="dark"] .edv-redirect-cancel {
-  background: rgba(20,20,15,.12);
-  color: rgba(20,20,15,.7);
-}
-[data-coreui-theme="dark"] .edv-redirect-cancel:hover { background: rgba(20,20,15,.2); }
 </style>

@@ -1167,6 +1167,7 @@ import { useRouter, useRoute } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
+import { isPastDue, toLocalIsoDate, addDaysIso } from '@/shared/lib/localDate.js'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import MultiSelect from '@/components/MultiSelect.vue'
@@ -1186,6 +1187,7 @@ const followFieldsFilled = useRequiredFieldsGuard(followFormRoot)
 const router = useRouter()
 const route = useRoute()
 const comercialService = inject(ServiceKeys.Comercial)
+const notificationService = inject(ServiceKeys.Notification)
 const authService = inject(ServiceKeys.Auth)
 const ficoService = inject(ServiceKeys.Fico)
 const catalog = inject('catalog')
@@ -1664,7 +1666,7 @@ async function saveControlRestrictions() {
     // ── Notificar por SSE a todos los asesores afectados ──────────
     const affectedIds = asesoresControl.value.map(a => a.user_id)
     try {
-      await comercialService.pushRestrictionsUpdate({ user_ids: affectedIds })
+      await notificationService.pushRestrictionsUpdate({ user_ids: affectedIds })
     } catch (e) {
       // No crítico: si falla el push, las restricciones igual se guardaron
       console.warn('[Restricciones] No se pudo notificar por SSE:', e.message)
@@ -2003,10 +2005,10 @@ function clearFilters(reload = true) {
 
 // Vistas rapidas: resuelven IDs de catalogo por alias (no se hardcodean numeros)
 // y entregan al filtro el shape `{ value, label }` que rebuildChips/fetchLeads esperan.
+// "Hoy" en Lima + N dias. Antes usaba toISOString (UTC): desde las 19:00 las
+// vistas rapidas arrancaban en la fecha de mañana.
 function isoDayOffset(days = 0) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return addDaysIso(toLocalIsoDate(), days)
 }
 
 function resolveByAlias(catalogRef, aliases) {
@@ -2239,8 +2241,7 @@ function isOverdue(cuota) {
   // La reserva nunca se marca como vencida
   if (cuota.is_reserva) return false
   if (!cuota.due_date || cuota.status_alias === 'we_payment_status_paid') return false
-  const [d, m, y] = cuota.due_date.split('/')
-  return new Date(`${y}-${m}-${d}`) < new Date()
+  return isPastDue(cuota.due_date)
 }
 
 // ¿Es la próxima a vencer? (coincide con next_due_date del SP)

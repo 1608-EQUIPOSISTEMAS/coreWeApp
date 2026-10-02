@@ -1,90 +1,75 @@
 <template>
   <BaseModal
-    :modelValue="visible"
-    @update:modelValue="$emit('update:visible', $event)"
-    title="Reprogramar Cuotas"
+    :model-value="visible"
+    title="Reprogramar cuotas"
     size="lg"
+    @update:model-value="$emit('update:visible', $event)"
   >
-    <div ref="rescheduleForm" class="ri-body" v-if="enrollment">
-      <!-- Student info bar -->
-      <div class="ri-student-bar">
-        <div class="ri-student-main">
-          <span class="ri-student-name">{{ studentName }}</span>
-          <span class="ri-student-doc">{{ enrollment.document_number || enrollment.dni || '—' }}</span>
+    <div v-if="enrollment" ref="rescheduleForm" class="ri-body">
+      <div class="ri-head">
+        <div class="ri-student">
+          <strong>{{ studentName }}</strong>
+          <span>{{ enrollment.document_number || enrollment.dni || '—' }}</span>
         </div>
-        <span class="ri-program-pill">{{ enrollment.program_name || enrollment.program || '—' }}</span>
+        <span class="ds-pill info">{{ enrollment.program_name || enrollment.program || '—' }}</span>
       </div>
 
-      <!-- Mode tabs -->
-      <div class="ri-tabs">
-        <button :class="['ri-tab', { active: mode === 'shift' }]" @click="mode = 'shift'">
-          <i class="fa-solid fa-forward"></i> Correr fechas
+      <div class="ds-tabs" role="tablist" aria-label="Tipo de cambio">
+        <button type="button" role="tab" :aria-selected="mode === 'shift'" @click="mode = 'shift'">
+          <i class="fa-solid fa-forward" aria-hidden="true"></i> Correr fechas
         </button>
-        <button :class="['ri-tab', { active: mode === 'individual' }]" @click="mode = 'individual'">
-          <i class="fa-solid fa-pen-to-square"></i> Editar individualmente
+        <button type="button" role="tab" :aria-selected="mode === 'individual'" @click="mode = 'individual'">
+          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar individualmente
         </button>
-        <button :class="['ri-tab', { active: mode === 'campaign' }]" @click="mode = 'campaign'">
-          <i class="fa-solid fa-bullhorn"></i> Campaña de cobranza
+        <button type="button" role="tab" :aria-selected="mode === 'campaign'" @click="mode = 'campaign'">
+          <i class="fa-solid fa-bullhorn" aria-hidden="true"></i> Campaña de cobranza
         </button>
       </div>
 
-      <!-- Campaign mode: hint -->
-      <div v-if="mode === 'campaign'" class="ri-panel">
-        <div class="ri-campaign-hint">
-          <i class="fa-solid fa-circle-info"></i>
-          <span>
-            <strong>Pagar</strong>: las cuotas marcadas se registran pagadas con una sola data
-            de pago (mismo voucher / N° operacion para todas). <strong>Anular</strong>: la cuota
-            no se elimina — queda tachada en el historial con su monto original, el motivo y
-            quien lo hizo. Si el total baja, la diferencia se registra como descuento por cobranza.
-          </span>
+      <p v-if="mode === 'campaign'" class="ds-callout info">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>
+          <strong>Pagar</strong>: las cuotas marcadas se registran pagadas con una sola data
+          de pago (mismo voucher / N° operación para todas). <strong>Anular</strong>: la cuota
+          no se elimina — queda tachada en el historial con su monto original, el motivo y
+          quién lo hizo. Si el total baja, la diferencia se registra como descuento por cobranza.
+        </span>
+      </p>
+
+      <div v-if="mode === 'shift'" class="ri-shift">
+        <div class="ds-field ri-shift-days">
+          <label class="ds-label" for="ri-days">Días a posponer</label>
+          <input id="ri-days" v-model.number="shiftDays" type="number" min="1" class="ds-input" placeholder="15" />
         </div>
+        <span class="ds-help">Se aplica a todas las cuotas pendientes.</span>
       </div>
 
-      <!-- Shift mode -->
-      <div v-if="mode === 'shift'" class="ri-panel">
-        <div class="ri-shift-row">
-          <label class="ri-label">Dias a posponer</label>
-          <div class="ri-shift-input-wrap">
-            <input
-              type="number"
-              min="1"
-              v-model.number="shiftDays"
-              class="ri-shift-input"
-              placeholder="15"
-            />
-            <span class="ri-shift-hint">Se aplicara a todas las cuotas pendientes</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Preview table -->
       <div class="ri-preview">
-        <div class="ri-preview-title">Vista previa</div>
-        <table class="ri-table">
-          <thead>
-            <tr>
-              <th style="width:40px">N</th>
-              <th style="width:90px">Monto</th>
-              <th style="width:115px">{{ mode === 'campaign' ? 'Vencimiento' : 'Fecha actual' }}</th>
-              <th style="width:170px">{{ mode === 'campaign' ? 'Accion' : 'Nueva fecha' }}</th>
-              <th class="tc" style="width:100px">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in rows"
-              :key="row.installment_id"
-              :class="{ 'ri-row-paid': row.isPaid || row.isAnnulled, 'ri-row-error': rowMeta(row).error, 'ri-row-annul': mode === 'campaign' && row.campaignAction === 'annul' }"
-            >
-              <td class="fw700 tc">{{ row.installment_number }}</td>
-              <td class="mono" :class="{ 'ri-strike': row.isAnnulled }">S/. {{ formatMoney(row.amount) }}</td>
-              <td :class="{ 'ri-strike': row.isAnnulled }">{{ formatDate(row.old_due_date) }}</td>
-              <td>
-                <template v-if="row.isPaid || row.isAnnulled">—</template>
-                <template v-else-if="mode === 'campaign'">
-                  <div class="ri-campaign-cell">
-                    <select v-model="row.campaignAction" class="ri-select ri-select-sm">
+        <h4 class="ri-subtitle">Vista previa</h4>
+        <div class="ds-table-scroll">
+          <table class="ds-table ds-table--lista ds-table--densa">
+            <thead>
+              <tr>
+                <th class="tc" style="width:44px">N°</th>
+                <th class="num" style="width:100px">Monto</th>
+                <th style="width:115px">{{ mode === 'campaign' ? 'Vencimiento' : 'Fecha actual' }}</th>
+                <th style="width:190px">{{ mode === 'campaign' ? 'Acción' : 'Nueva fecha' }}</th>
+                <th class="tc" style="width:110px">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in rows"
+                :key="row.installment_id"
+                :class="{ 'is-closed': row.isPaid || row.isAnnulled, 'is-error': rowMeta(row).error, 'is-annul': mode === 'campaign' && row.campaignAction === 'annul' }"
+              >
+                <td class="tc fw700">{{ row.installment_number }}</td>
+                <td class="num mono" :class="{ 'is-strike': row.isAnnulled }">S/. {{ formatMoney(row.amount) }}</td>
+                <td :class="{ 'is-strike': row.isAnnulled }">{{ formatDate(row.old_due_date) }}</td>
+                <td>
+                  <template v-if="row.isPaid || row.isAnnulled">—</template>
+                  <div v-else-if="mode === 'campaign'" class="ri-action">
+                    <select v-model="row.campaignAction" class="ds-input" :aria-label="`Acción cuota ${row.installment_number}`">
                       <option value="keep">Mantener</option>
                       <option value="pay">Pagar</option>
                       <option value="annul">Anular</option>
@@ -94,129 +79,133 @@
                       v-if="row.campaignAction === 'adjust'"
                       v-model.number="row.new_amount"
                       type="number" min="0.01" step="0.01"
-                      class="ri-amount-input mono"
+                      class="ds-input mono ri-amount"
                       placeholder="0.00"
+                      :aria-label="`Nuevo monto cuota ${row.installment_number}`"
                     />
                   </div>
-                </template>
-                <BaseDatePicker
-                  v-else-if="mode === 'individual'"
-                  v-model="row.new_due_date"
-                  placeholder="dd/mm/aaaa"
-                  class="ri-datepicker"
-                />
-                <span v-else>{{ formatDate(row.new_due_date) }}</span>
-              </td>
-              <td class="tc">
-                <span v-if="row.isPaid" class="ri-pill ri-pill-muted">Pagada</span>
-                <span v-else-if="row.isAnnulled" class="ri-pill ri-pill-muted">Anulada</span>
-                <template v-else-if="mode === 'campaign'">
-                  <span v-if="row.campaignAction === 'pay'" class="ri-pill ri-pill-green">Se pagara</span>
-                  <span v-else-if="row.campaignAction === 'annul'" class="ri-pill ri-pill-red">Se anulara</span>
-                  <span v-else-if="row.campaignAction === 'adjust' && !(Number(row.new_amount) > 0)" class="ri-pill ri-pill-red">Monto invalido</span>
-                  <span v-else-if="row.campaignAction === 'adjust'" class="ri-pill ri-pill-green">Nuevo monto</span>
-                  <span v-else class="ri-pill ri-pill-muted">Sin cambio</span>
-                </template>
-                <template v-else>
-                  <span v-if="rowMeta(row).error" class="ri-pill ri-pill-red" :title="rowMeta(row).error">{{ rowMeta(row).errorShort }}</span>
-                  <span v-else-if="rowMeta(row).changed" class="ri-pill ri-pill-green">Se movera</span>
-                  <span v-else class="ri-pill ri-pill-muted">Sin cambio</span>
-                </template>
-              </td>
-            </tr>
-            <tr v-if="!rows.length">
-              <td colspan="5" class="ri-empty">Sin cuotas para reprogramar</td>
-            </tr>
-          </tbody>
-        </table>
+                  <BaseDatePicker
+                    v-else-if="mode === 'individual'"
+                    v-model="row.new_due_date"
+                    placeholder="dd/mm/aaaa"
+                  />
+                  <span v-else>{{ formatDate(row.new_due_date) }}</span>
+                </td>
+                <td class="tc">
+                  <span v-if="row.isPaid" class="ds-pill">Pagada</span>
+                  <span v-else-if="row.isAnnulled" class="ds-pill">Anulada</span>
+                  <template v-else-if="mode === 'campaign'">
+                    <span v-if="row.campaignAction === 'pay'" class="ds-pill ok">Se pagará</span>
+                    <span v-else-if="row.campaignAction === 'annul'" class="ds-pill bad">Se anulará</span>
+                    <span v-else-if="row.campaignAction === 'adjust' && !(Number(row.new_amount) > 0)" class="ds-pill bad">Monto inválido</span>
+                    <span v-else-if="row.campaignAction === 'adjust'" class="ds-pill ok">Nuevo monto</span>
+                    <span v-else class="ds-pill">Sin cambio</span>
+                  </template>
+                  <template v-else>
+                    <span v-if="rowMeta(row).error" class="ds-pill bad" :title="rowMeta(row).error">{{ rowMeta(row).errorShort }}</span>
+                    <span v-else-if="rowMeta(row).changed" class="ds-pill ok">Se moverá</span>
+                    <span v-else class="ds-pill">Sin cambio</span>
+                  </template>
+                </td>
+              </tr>
+              <tr v-if="!rows.length">
+                <td colspan="5" class="ds-empty--lista ri-empty">Esta venta no tiene cuotas para reprogramar.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Datos del pago consolidado: misma data para todas las cuotas "Pagar" -->
-      <div v-if="mode === 'campaign' && campaignStats.payCount > 0" class="ri-pay-block">
-        <div class="ri-pay-title">
-          <i class="fa-solid fa-money-bill-wave"></i>
+      <section v-if="mode === 'campaign' && campaignStats.payCount > 0" class="ri-pay">
+        <h4 class="ri-subtitle">
+          <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
           Pago consolidado — {{ campaignStats.payCount }} cuota(s) por
           <strong class="mono">S/. {{ formatMoney(campaignStats.payTotal) }}</strong>
-          <span class="ri-pay-hint">(misma data de pago para todas)</span>
-        </div>
+          <span class="ri-hint">(misma data de pago para todas)</span>
+        </h4>
         <!-- Descuento de campaña: 5% por pago adelantado, o S/50-S/100 fijos -->
-        <div class="ri-pay-discount-row">
-          <div class="ri-field">
-            <label class="ri-label">Descuento de campaña</label>
-            <div class="ri-discount-wrap">
-              <div class="ri-discount-toggle">
-                <button type="button" :class="{ active: payDiscountType === 'percent' }" @click="payDiscountType = 'percent'">%</button>
-                <button type="button" :class="{ active: payDiscountType === 'amount' }" @click="payDiscountType = 'amount'">S/.</button>
+        <div class="ri-discount">
+          <div class="ds-field">
+            <label class="ds-label" for="ri-discount">Descuento de campaña</label>
+            <div class="ri-discount-input">
+              <div class="ds-tabs" role="group" aria-label="Tipo de descuento">
+                <button type="button" :aria-pressed="payDiscountType === 'percent'" @click="payDiscountType = 'percent'">%</button>
+                <button type="button" :aria-pressed="payDiscountType === 'amount'" @click="payDiscountType = 'amount'">S/.</button>
               </div>
               <input
+                id="ri-discount"
                 v-model.number="payDiscount"
                 type="number" min="0" :step="payDiscountType === 'percent' ? 1 : 0.01"
                 :max="payDiscountType === 'percent' ? 99 : undefined"
-                class="ri-input ri-discount-input mono"
+                class="ds-input mono"
                 :placeholder="payDiscountType === 'percent' ? '5' : '50.00'"
               />
             </div>
           </div>
-          <div class="ri-pay-net" :class="{ 'ri-pay-net-error': payDiscountInvalid }">
-            <span class="ri-label">Total a pagar</span>
+          <div class="ri-net" :class="{ 'is-error': payDiscountInvalid }">
+            <span class="ds-label">Total a pagar</span>
             <strong class="mono">S/. {{ formatMoney(payNetTotal) }}</strong>
-            <span v-if="payDiscountInvalid" class="ri-pay-net-msg">El descuento no puede ser mayor o igual al total</span>
-            <span v-else-if="payDiscountSoles > 0" class="ri-pay-net-msg">
-              <template v-if="payDiscountType === 'percent'">{{ payDiscount }}% = S/. {{ formatMoney(payDiscountSoles) }} — </template>se repartira entre las cuotas y quedara en el historial como descuento por cobranza
+            <span v-if="payDiscountInvalid" class="ri-net-msg">El descuento no puede ser mayor o igual al total</span>
+            <span v-else-if="payDiscountSoles > 0" class="ri-net-msg">
+              <template v-if="payDiscountType === 'percent'">{{ payDiscount }}% = S/. {{ formatMoney(payDiscountSoles) }} — </template>se repartirá entre las cuotas y quedará en el historial como descuento por cobranza
             </span>
           </div>
         </div>
-        <div class="ri-pay-grid">
-          <div class="ri-field">
-            <label class="ri-label">Moneda <span class="ri-req">*</span></label>
-            <select v-model="payment.cat_currency" class="ri-select" required>
-              <option :value="null">Seleccionar...</option>
+        <div class="ri-grid">
+          <div class="ds-field">
+            <label class="ds-label" for="ri-cur">Moneda<span class="ds-req">*</span></label>
+            <select id="ri-cur" v-model="payment.cat_currency" class="ds-input" required>
+              <option :value="null">Seleccionar…</option>
               <option v-for="c in catalogs.catCurrency || []" :key="c.id" :value="c.id">{{ c.abbreviation || c.description }}</option>
             </select>
           </div>
-          <div class="ri-field">
-            <label class="ri-label">Medio de pago <span class="ri-req">*</span></label>
-            <select v-model="payment.cat_payment_medium" class="ri-select" required>
-              <option :value="null">Seleccionar...</option>
+          <div class="ds-field">
+            <label class="ds-label" for="ri-medium">Medio de pago<span class="ds-req">*</span></label>
+            <select id="ri-medium" v-model="payment.cat_payment_medium" class="ds-input" required>
+              <option :value="null">Seleccionar…</option>
               <option v-for="m in catalogs.catPaymentMedium || []" :key="m.id" :value="m.id">{{ m.description }}</option>
             </select>
           </div>
-          <div class="ri-field">
-            <label class="ri-label">Entidad empresa</label>
-            <select v-model="payment.cat_business_entity" class="ri-select">
-              <option :value="null">Seleccionar...</option>
+          <div class="ds-field">
+            <label class="ds-label" for="ri-entity">Entidad empresa</label>
+            <select id="ri-entity" v-model="payment.cat_business_entity" class="ds-input">
+              <option :value="null">Seleccionar…</option>
               <option v-for="b in catalogs.catBusinessEntity || []" :key="b.id" :value="b.id">{{ b.description }}</option>
             </select>
           </div>
-          <div class="ri-field">
-            <label class="ri-label">Cuenta bancaria</label>
-            <select v-model="payment.bank_account_id" class="ri-select" :disabled="!payment.cat_business_entity">
-              <option :value="null">{{ payment.cat_business_entity ? 'Seleccionar...' : 'Seleccione empresa...' }}</option>
+          <div class="ds-field">
+            <label class="ds-label" for="ri-account">Cuenta bancaria</label>
+            <select id="ri-account" v-model="payment.bank_account_id" class="ds-input" :disabled="!payment.cat_business_entity">
+              <option :value="null">{{ payment.cat_business_entity ? 'Seleccionar…' : 'Seleccione empresa…' }}</option>
               <option v-for="a in filteredAccounts" :key="a.account_id" :value="a.account_id">{{ a.bank_name }} - {{ a.currency }} - {{ a.account_number }}</option>
             </select>
           </div>
-          <div class="ri-field">
-            <label class="ri-label">N° Operacion</label>
-            <input v-model="payment.transaction_code" class="ri-input" placeholder="Numero de operacion" />
+          <div class="ds-field">
+            <label class="ds-label" for="ri-op">N° operación</label>
+            <input id="ri-op" v-model="payment.transaction_code" class="ds-input" placeholder="Número de operación" />
           </div>
-          <div class="ri-field">
-            <label class="ri-label">Fecha de pago</label>
-            <input v-model="payment.payment_date" type="date" class="ri-input" :max="todayIso" />
+          <div class="ds-field">
+            <label class="ds-label" for="ri-paydate">Fecha de pago</label>
+            <input id="ri-paydate" v-model="payment.payment_date" type="date" class="ds-input" :max="todayIso" />
           </div>
-          <div class="ri-field">
-            <label class="ri-label">Voucher</label>
-            <label class="ri-voucher-btn">
-              <i class="fa-solid fa-cloud-arrow-up"></i>
-              {{ payment.voucher_url ? 'Cambiar voucher' : 'Adjuntar voucher' }}
-              <input type="file" accept="image/*,.pdf" style="display:none" @change="uploadPayVoucher" />
-            </label>
-            <a v-if="payment.voucher_url" :href="payment.voucher_url" target="_blank" class="ri-voucher-view"><i class="fa-solid fa-image"></i> Ver</a>
+          <div class="ds-field">
+            <span class="ds-label">Voucher</span>
+            <div class="ri-voucher">
+              <label class="btn-exec btn-exec-outline btn-sm">
+                <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                {{ payment.voucher_url ? 'Cambiar voucher' : 'Adjuntar voucher' }}
+                <input type="file" accept="image/*,.pdf" class="ri-file" @change="uploadPayVoucher" />
+              </label>
+              <a v-if="payment.voucher_url" :href="payment.voucher_url" target="_blank" rel="noopener" class="ds-panel-link">
+                <i class="fa-solid fa-image" aria-hidden="true"></i> Ver
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Campaign summary -->
-      <div v-if="mode === 'campaign' && campaignChangesCount > 0" class="ri-campaign-summary">
+      <div v-if="mode === 'campaign' && campaignChangesCount > 0" class="ds-callout ri-summary">
         <span v-if="campaignStats.payCount">
           Se pagan <strong>{{ campaignStats.payCount }}</strong> cuota(s) en un solo pago de
           <strong class="mono">S/. {{ formatMoney(payNetTotal) }}</strong>
@@ -239,43 +228,37 @@
         </span>
       </div>
 
-      <!-- Reason + justification -->
-      <div class="ri-grid2">
-        <div class="ri-field">
-          <label class="ri-label">Motivo <span class="ri-req">*</span></label>
-          <select v-model="reasonCode" class="ri-select" required>
-            <option value="">Seleccionar...</option>
+      <div class="ri-reason">
+        <div class="ds-field">
+          <label class="ds-label" for="ri-reason">Motivo<span class="ds-req">*</span></label>
+          <select id="ri-reason" v-model="reasonCode" class="ds-input" required>
+            <option value="">Seleccionar…</option>
             <option v-for="opt in reasonOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
         </div>
-        <div class="ri-field ri-field-full">
-          <label class="ri-label">Justificacion <span class="ri-req">*</span></label>
+        <div class="ds-field">
+          <label class="ds-label" for="ri-why">Justificación<span class="ds-req">*</span></label>
           <textarea
+            id="ri-why"
             v-model="justificacion"
-            class="ri-textarea"
+            class="ds-input"
             required
             rows="2"
-            placeholder="Describe el motivo del cambio..."
+            placeholder="Describe el motivo del cambio…"
           ></textarea>
         </div>
       </div>
 
-      <!-- Edition end-date warning -->
-      <div v-if="editionEndDate && mode !== 'campaign'" class="ri-edition-note">
-        <i class="fa-solid fa-circle-info"></i>
-        Ninguna cuota puede superar el fin de la edicion: <strong>{{ formatDate(editionEndDate) }}</strong>
-      </div>
+      <p v-if="editionEndDate && mode !== 'campaign'" class="ds-callout">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>Ninguna cuota puede superar el fin de la edición: <strong>{{ formatDate(editionEndDate) }}</strong></span>
+      </p>
     </div>
 
     <template #footer>
-      <button class="ri-btn-cancel" @click="$emit('update:visible', false)">Cancelar</button>
-      <button
-        class="ri-btn-confirm"
-        :disabled="!canConfirm || saving"
-        @click="handleSave"
-      >
-        <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        <i v-else :class="mode === 'campaign' ? 'fa-solid fa-bullhorn' : 'fa-solid fa-calendar-check'"></i>
+      <button class="btn-exec btn-exec-outline" type="button" @click="$emit('update:visible', false)">Cancelar</button>
+      <button class="btn-exec btn-exec-primary" type="button" :disabled="!canConfirm || saving" @click="handleSave">
+        <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : (mode === 'campaign' ? 'fa-bullhorn' : 'fa-calendar-check')" aria-hidden="true"></i>
         <template v-if="mode === 'campaign'">
           Aplicar campaña ({{ campaignChangesCount }})
         </template>
@@ -295,7 +278,8 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { useToast } from 'vue-toastification'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import api from '@/services/api'
-import { toLocalIsoDate } from '@/shared/lib/localDate.js'
+import { toLocalIsoDate, toCalendarIsoDate, addDaysIso } from '@/shared/lib/localDate.js'
+import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -345,30 +329,7 @@ const studentName = computed(() => {
     || '—'
 })
 
-function toISO (d) {
-  if (!d) return null
-  const date = d instanceof Date ? d : new Date(d)
-  if (isNaN(date.getTime())) return null
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function formatDate (d) {
-  if (!d) return '—'
-  if (typeof d === 'string') {
-    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (m) return `${m[3]}/${m[2]}/${m[1]}`
-  }
-  const date = d instanceof Date ? d : new Date(d)
-  if (isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('es-PE')
-}
-
-function formatMoney (n) {
-  return Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
+const { formatDate, formatMoney } = useEnrollmentFormatters()
 
 function buildInitialRows () {
   return (props.installments || [])
@@ -377,8 +338,8 @@ function buildInitialRows () {
       installment_id: i.installment_id,
       installment_number: i.installment_number,
       amount: i.amount,
-      old_due_date: toISO(i.due_date),
-      new_due_date: toISO(i.due_date),
+      old_due_date: toCalendarIsoDate(i.due_date),
+      new_due_date: toCalendarIsoDate(i.due_date),
       isPaid: Number(i.cat_status) === PAID_STATUS || i.status === 'paid',
       isAnnulled: Number(i.cat_status) === ANNULLED_STATUS,
       campaignAction: 'keep',
@@ -391,29 +352,27 @@ function applyShift () {
   for (const r of rows.value) {
     if (r.isPaid || r.isAnnulled) continue
     if (!Number.isFinite(n) || n < 1) { r.new_due_date = r.old_due_date; continue }
-    const d = new Date(r.old_due_date)
-    d.setDate(d.getDate() + n)
-    r.new_due_date = toISO(d)
+    r.new_due_date = addDaysIso(r.old_due_date, n)
   }
 }
 
+// Todo se compara como texto 'YYYY-MM-DD' (orden lexicografico = orden de
+// fechas): con new Date() las cuotas se corrian un dia en Lima.
 const rowValidations = computed(() => {
-  const endLimit = props.editionEndDate ? new Date(props.editionEndDate) : null
-  if (endLimit) endLimit.setHours(0, 0, 0, 0)
+  const endLimit = toCalendarIsoDate(props.editionEndDate)
 
   const map = new Map()
   for (const r of rows.value) {
     if (r.isPaid || r.isAnnulled) { map.set(r.installment_id, { isPaid: true, error: null, errorShort: null, changed: false }); continue }
 
-    const oldD = new Date(r.old_due_date); oldD.setHours(0, 0, 0, 0)
-    const newD = new Date(r.new_due_date); newD.setHours(0, 0, 0, 0)
+    const newIso = toCalendarIsoDate(r.new_due_date)
 
     // ponytail: se permite mover la fecha hacia atras o adelante; solo se valida
     // que sea valida y que no supere el fin de la edicion.
     let error = null, errorShort = null, changed = false
-    if (isNaN(newD.getTime())) { error = 'Fecha invalida'; errorShort = 'Invalida' }
-    else if (newD.getTime() === oldD.getTime()) { changed = false }
-    else if (endLimit && newD > endLimit) { error = `Supera fin de edicion (${formatDate(endLimit)})`; errorShort = 'Fuera rango' }
+    if (!newIso) { error = 'Fecha invalida'; errorShort = 'Invalida' }
+    else if (newIso === r.old_due_date) { changed = false }
+    else if (endLimit && newIso > endLimit) { error = `Supera fin de edicion (${formatDate(endLimit)})`; errorShort = 'Fuera rango' }
     else { changed = true }
 
     map.set(r.installment_id, { isPaid: false, error, errorShort, changed })
@@ -508,7 +467,8 @@ async function uploadPayVoucher (event) {
       payment.voucher_url = res.data.url
       toast.success('Voucher subido')
     }
-  } catch {
+  } catch (err) {
+    console.error('[uploadPayVoucher]', err)
     toast.error('Error al subir voucher')
   }
   event.target.value = ''
@@ -631,329 +591,48 @@ async function handleSave () {
 </script>
 
 <style scoped>
-.ri-body { display: flex; flex-direction: column; gap: 16px; }
+.ri-body { display: flex; flex-direction: column; gap: 14px; }
+.ri-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ri-student { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ri-student strong { font-size: 14px; color: var(--ds-heading); }
+.ri-student span { font-size: 12px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.ri-subtitle { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--ds-heading); }
+.ri-hint { font-size: 12px; font-weight: 400; color: var(--ds-muted); }
 
-.ri-student-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px 16px;
-}
-.ri-student-main { display: flex; flex-direction: column; gap: 2px; }
-.ri-student-name { font-size: 13.5px; font-weight: 700; color: #111827; }
-.ri-student-doc { font-size: 11.5px; color: #6B7280; font-weight: 500; }
-.ri-program-pill {
-  font-size: 11px; font-weight: 600; color: #4338CA;
-  background: #EEF2FF; border: 1px solid #C7D2FE;
-  padding: 4px 12px; border-radius: 20px;
-}
-
-.ri-tabs { display: flex; gap: 0; border-bottom: 1px solid #F0F0F0; }
-.ri-tab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 10px 18px; font-size: 12.5px; font-weight: 500;
-  color: #A3A3A3; background: none; border: none;
-  border-bottom: 2px solid transparent; cursor: pointer;
-  font-family: inherit; transition: color .2s, border-color .2s;
-}
-.ri-tab:hover { color: #1A1A1A; }
-.ri-tab.active { color: #1A1A1A; font-weight: 600; border-bottom-color: #4338CA; }
-
-.ri-panel { padding: 4px 0; }
-
-.ri-shift-row { display: flex; align-items: flex-end; gap: 14px; }
-.ri-shift-input-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
-.ri-shift-input {
-  width: 100px; height: 38px; padding: 0 12px; font-size: 14px;
-  font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #1A1A1A;
-  border: 1px solid #E5E7EB; border-radius: 8px; outline: none;
-  text-align: center; transition: border-color .2s;
-}
-.ri-shift-input:focus { border-color: #4338CA; box-shadow: 0 0 0 3px rgba(67,56,202,.08); }
-.ri-shift-hint { font-size: 11.5px; color: #737373; }
-
-.ri-preview { display: flex; flex-direction: column; gap: 8px; }
-.ri-preview-title {
-  font-size: 11px; font-weight: 600; color: #6B7280;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-
-.ri-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.ri-table thead th {
-  background: #FAFAFA; padding: 9px 10px; text-align: left;
-  font-weight: 500; color: #A3A3A3; border-bottom: 1px solid #F0F0F0;
-  font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
-}
-.ri-table tbody td {
-  padding: 8px 10px; border-bottom: 1px solid #F5F5F5; vertical-align: middle;
-}
-.ri-row-paid td { background: #FAFAFA; color: #A3A3A3; }
-.ri-row-error td { background: #FFFBFB; }
-
-.ri-datepicker :deep(input) {
-  height: 32px; padding: 0 10px; font-size: 12px;
-  border: 1px solid #E8E8E8; border-radius: 6px; width: 100%; font-family: inherit;
-}
-
-.ri-empty { text-align: center; padding: 24px; color: #C4C4C4; }
-
-.ri-pill {
-  display: inline-flex; padding: 3px 10px;
-  border-radius: 6px; font-size: 10.5px; font-weight: 600;
-}
-.ri-pill-green { background: #ECFDF5; color: #065F46; }
-.ri-pill-red { background: #FEF2F2; color: #991B1B; }
-.ri-pill-muted { background: #F3F4F6; color: #6B7280; }
-
-/* Campaña de cobranza */
-.ri-campaign-hint {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A;
-  border-radius: 8px; font-size: 12px; color: #92400E; line-height: 1.45;
-}
-.ri-campaign-hint i { color: #F59E0B; margin-top: 2px; }
-.ri-campaign-cell { display: flex; align-items: center; gap: 6px; }
-/* Doble clase: gana a la regla generica .ri-select (padding 8px 12px) que
-   recortaba el texto verticalmente en el select compacto de la tabla. */
-.ri-select.ri-select-sm {
-  height: 32px; padding: 0 8px; font-size: 12px; width: auto;
-  line-height: 32px;
-}
-.ri-amount-input {
-  width: 80px; height: 30px; padding: 0 8px; font-size: 12px; font-weight: 600;
-  border: 1px solid #E5E7EB; border-radius: 6px; outline: none; text-align: right;
-}
-.ri-amount-input:focus { border-color: #4338CA; }
-.ri-strike { text-decoration: line-through; color: #A3A3A3; }
-.ri-row-annul td { background: #FFF7F7; }
-.ri-pay-block {
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 14px; background: #F7FDF9; border: 1px solid #A7F3D0; border-radius: 8px;
-}
-.ri-pay-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12.5px; font-weight: 600; color: #065F46;
-}
-.ri-pay-title i { color: #059669; }
-.ri-pay-hint { font-weight: 400; font-size: 11.5px; color: #047857; }
-.ri-pay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.ri-pay-discount-row {
-  display: flex; align-items: flex-end; gap: 20px;
-  padding-bottom: 10px; border-bottom: 1px dashed #A7F3D0;
-}
-.ri-discount-wrap { display: flex; align-items: center; gap: 8px; }
-.ri-discount-toggle {
-  display: inline-flex; border: 1px solid #A7F3D0; border-radius: 6px; overflow: hidden;
-}
-.ri-discount-toggle button {
-  padding: 0 12px; height: 36px; font-size: 12px; font-weight: 600;
-  background: #FFFFFF; color: #6B7280; border: none; cursor: pointer;
-  font-family: inherit; transition: all .15s;
-}
-.ri-discount-toggle button + button { border-left: 1px solid #A7F3D0; }
-.ri-discount-toggle button.active { background: #059669; color: #FFFFFF; }
-.ri-discount-input { width: 110px; text-align: right; font-weight: 600; }
-.ri-pay-net { display: flex; flex-direction: column; gap: 3px; }
-.ri-pay-net strong { font-size: 16px; color: #065F46; }
-.ri-pay-net-msg { font-size: 11px; color: #047857; }
-.ri-pay-net-error strong { color: #991B1B; }
-.ri-pay-net-error .ri-pay-net-msg { color: #991B1B; }
-.ri-input {
-  height: 36px; padding: 0 12px; font-size: 13px; font-family: inherit;
-  color: #374151; background: #FFFFFF;
-  border: 1px solid #E5E7EB; border-radius: 6px; outline: none;
-  transition: border-color .15s;
-}
-.ri-input:focus { border-color: #4338CA; box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.08); }
-.ri-voucher-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 36px; padding: 0 12px; font-size: 12px; font-weight: 500;
-  background: #FFFFFF; color: #1A1A1A; border: 1px solid #E5E7EB;
-  border-radius: 6px; cursor: pointer;
-}
-.ri-voucher-btn:hover { background: #F9FAFB; }
-.ri-voucher-view {
-  font-size: 11.5px; color: #4338CA; text-decoration: none; margin-top: 4px;
-  display: inline-flex; align-items: center; gap: 4px;
-}
-
-.ri-campaign-summary {
-  display: flex; flex-wrap: wrap; gap: 6px 18px;
-  padding: 10px 14px; background: #F9FAFB; border: 1px solid #E5E7EB;
-  border-radius: 8px; font-size: 12px; color: #374151;
-}
-.ri-summary-discount { color: #B45309; }
-
-.ri-grid2 { display: grid; grid-template-columns: 180px 1fr; gap: 14px; }
-
-.ri-field { display: flex; flex-direction: column; gap: 5px; }
-.ri-field-full { grid-column: 2 / span 1; }
-.ri-label {
-  font-size: 11px; font-weight: 600; color: #6B7280;
-  text-transform: uppercase; letter-spacing: 0.03em;
-}
-.ri-req { color: #DC2626; }
-
-.ri-select, .ri-textarea {
-  width: 100%; box-sizing: border-box;
-  padding: 8px 12px; font-size: 13px; font-family: inherit;
-  color: #374151; background: #FFFFFF;
-  border: 1px solid #E5E7EB; border-radius: 6px; outline: none;
-  transition: border-color .15s;
-}
-.ri-select:focus, .ri-textarea:focus {
-  border-color: #4338CA; box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.08);
-}
-.ri-textarea { min-height: 60px; resize: vertical; background: #FFFBEB; border-color: #F59E0B; }
-
-.ri-edition-note {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; background: #EFF6FF; border: 1px solid #BFDBFE;
-  border-radius: 8px; font-size: 12px; color: #1E40AF;
-}
-.ri-edition-note i { color: #3B82F6; }
-
-.ri-btn-cancel {
-  background: none; border: 1px solid #E5E7EB; color: #6B7280;
-  padding: 8px 16px; border-radius: 6px; font-size: 12.5px;
-  font-weight: 600; cursor: pointer; font-family: inherit;
-  transition: all .15s;
-}
-.ri-btn-cancel:hover { background: #F9FAFB; border-color: #D1D5DB; }
-
-.ri-btn-confirm {
-  background: #4338CA; color: #FFFFFF; border: none;
-  padding: 8px 20px; border-radius: 6px; font-size: 12.5px;
-  font-weight: 600; cursor: pointer; font-family: inherit;
-  display: inline-flex; align-items: center; gap: 7px;
-  transition: all .15s;
-}
-.ri-btn-confirm:hover:not(:disabled) { background: #3730A3; }
-.ri-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+.ri-shift { display: flex; align-items: flex-end; gap: 12px; }
+.ri-shift-days { width: 140px; }
+.ri-shift .ds-help { margin-bottom: 9px; }
 
 .tc { text-align: center; }
+.num { text-align: right; }
 .fw700 { font-weight: 700; }
-.mono { font-family: 'JetBrains Mono', monospace; }
+.mono { font-family: var(--ds-font-mono); }
+tr.is-closed td { color: var(--ds-muted); }
+tr.is-error td { background: var(--ds-soft-bad); }
+tr.is-annul td { background: var(--ds-soft-warn); }
+.is-strike { text-decoration: line-through; }
+.ri-action { display: flex; gap: 6px; }
+.ri-action .ds-input { height: 30px; padding: 4px 8px; }
+.ri-amount { width: 96px; text-align: right; }
+.ri-empty { text-align: center; color: var(--ds-muted); }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .ri-student-bar { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .ri-student-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ri-student-doc { color: #A0A099; }
-[data-coreui-theme="dark"] .ri-program-pill {
-  color: #A78BFA;
-  background: rgba(99,102,241,.16);
-  border-color: rgba(99,102,241,.35);
-}
-[data-coreui-theme="dark"] .ri-tabs { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .ri-tab { color: #8A8A80; }
-[data-coreui-theme="dark"] .ri-tab:hover { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ri-tab.active { color: #F4F4F0; border-bottom-color: #818CF8; }
-[data-coreui-theme="dark"] .ri-shift-input {
-  color: #F4F4F0;
-  background: #14140F;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ri-shift-input:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
-[data-coreui-theme="dark"] .ri-shift-hint { color: #A0A099; }
-[data-coreui-theme="dark"] .ri-preview-title { color: #A0A099; }
-[data-coreui-theme="dark"] .ri-table { color: #D4D4CC; }
-[data-coreui-theme="dark"] .ri-table thead th {
-  background: #1F1F1A;
-  color: #8A8A80;
-  border-bottom-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ri-table tbody td { border-bottom-color: #1F1F1A; }
-[data-coreui-theme="dark"] .ri-row-paid td { background: #1F1F1A; color: #6F6F66; }
-[data-coreui-theme="dark"] .ri-row-error td { background: rgba(239,68,68,.08); }
-[data-coreui-theme="dark"] .ri-datepicker :deep(input) {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ri-empty { color: #6F6F66; }
-[data-coreui-theme="dark"] .ri-pill-green { background: rgba(16,185,129,.14); color: #34D399; }
-[data-coreui-theme="dark"] .ri-pill-red { background: rgba(239,68,68,.14); color: #F87171; }
-[data-coreui-theme="dark"] .ri-pill-muted { background: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .ri-campaign-hint {
-  background: rgba(245,158,11,.12);
-  border-color: rgba(245,158,11,.35);
-  color: #FBBF24;
-}
-[data-coreui-theme="dark"] .ri-campaign-hint i { color: #FBBF24; }
-[data-coreui-theme="dark"] .ri-amount-input {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .ri-amount-input:focus { border-color: #818CF8; }
-[data-coreui-theme="dark"] .ri-strike { color: #6F6F66; }
-[data-coreui-theme="dark"] .ri-row-annul td { background: rgba(239,68,68,.08); }
-[data-coreui-theme="dark"] .ri-pay-block {
-  background: rgba(16,185,129,.08);
-  border-color: rgba(16,185,129,.35);
-}
-[data-coreui-theme="dark"] .ri-pay-title { color: #34D399; }
-[data-coreui-theme="dark"] .ri-pay-title i { color: #34D399; }
-[data-coreui-theme="dark"] .ri-pay-hint { color: #6EE7B7; }
-[data-coreui-theme="dark"] .ri-pay-discount-row { border-bottom-color: rgba(16,185,129,.35); }
-[data-coreui-theme="dark"] .ri-discount-toggle { border-color: rgba(16,185,129,.35); }
-[data-coreui-theme="dark"] .ri-discount-toggle button { background: #14140F; color: #A0A099; }
-[data-coreui-theme="dark"] .ri-discount-toggle button + button { border-left-color: rgba(16,185,129,.35); }
-[data-coreui-theme="dark"] .ri-discount-toggle button.active { background: #059669; color: #FFFFFF; }
-[data-coreui-theme="dark"] .ri-pay-net strong { color: #34D399; }
-[data-coreui-theme="dark"] .ri-pay-net-msg { color: #6EE7B7; }
-[data-coreui-theme="dark"] .ri-pay-net-error strong { color: #F87171; }
-[data-coreui-theme="dark"] .ri-pay-net-error .ri-pay-net-msg { color: #F87171; }
-[data-coreui-theme="dark"] .ri-input {
-  color: #F4F4F0;
-  background: #14140F;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ri-input:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
-[data-coreui-theme="dark"] .ri-input[type="date"] { color-scheme: dark; }
-[data-coreui-theme="dark"] .ri-voucher-btn {
-  background: #1A1A14;
-  color: #F4F4F0;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ri-voucher-btn:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .ri-voucher-view { color: #A78BFA; }
-[data-coreui-theme="dark"] .ri-campaign-summary {
-  background: #1F1F1A;
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .ri-summary-discount { color: #FBBF24; }
-[data-coreui-theme="dark"] .ri-label { color: #A0A099; }
-[data-coreui-theme="dark"] .ri-req { color: #F87171; }
-[data-coreui-theme="dark"] .ri-select,
-[data-coreui-theme="dark"] .ri-textarea {
-  color: #F4F4F0;
-  background: #14140F;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .ri-select:focus,
-[data-coreui-theme="dark"] .ri-textarea:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
-[data-coreui-theme="dark"] .ri-textarea { background: rgba(245,158,11,.10); border-color: rgba(245,158,11,.4); }
-[data-coreui-theme="dark"] .ri-edition-note {
-  background: rgba(59,130,246,.12);
-  border-color: rgba(59,130,246,.35);
-  color: #93C5FD;
-}
-[data-coreui-theme="dark"] .ri-edition-note i { color: #60A5FA; }
-[data-coreui-theme="dark"] .ri-btn-cancel { border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .ri-btn-cancel:hover { background: #1F1F1A; border-color: #3A3A33; }
-</style>
+.ri-pay { padding: 14px 16px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.ri-discount { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; }
+.ri-discount-input { display: flex; align-items: center; gap: 8px; }
+.ri-discount-input .ds-input { width: 110px; text-align: right; }
+.ri-net { display: flex; flex-direction: column; gap: 2px; }
+.ri-net strong { font-size: 16px; color: var(--ds-heading); }
+.ri-net-msg { font-size: 11.5px; color: var(--ds-ink-2); }
+.ri-net.is-error strong, .ri-net.is-error .ri-net-msg { color: var(--ds-bad-ink); }
+.ri-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 14px; }
+.ri-voucher { display: flex; align-items: center; gap: 10px; height: 36px; }
+.ri-file { display: none; }
 
-<style>
-/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
-   solo cuando el modal contiene este cuerpo (.ri-body). */
-[data-coreui-theme="dark"] .modal-card:has(.ri-body) {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+.ri-summary { flex-direction: column; gap: 4px; }
+.ri-summary-discount { color: var(--ds-ok-ink); }
+.ri-reason { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px; }
+
+@media (max-width: 700px) {
+  .ri-reason { grid-template-columns: 1fr; }
 }
-[data-coreui-theme="dark"] .modal-card:has(.ri-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .modal-card:has(.ri-body) .modal-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .modal-card:has(.ri-body) .btn-close { color: #A0A099; }
 </style>

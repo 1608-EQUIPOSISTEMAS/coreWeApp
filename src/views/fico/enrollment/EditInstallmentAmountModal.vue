@@ -1,86 +1,79 @@
 <template>
   <BaseModal
-    :modelValue="visible"
-    @update:modelValue="onClose"
+    :model-value="visible"
     :title="title"
     size="sm"
+    @update:model-value="onClose"
   >
-    <div class="eia-body" v-if="installment">
-      <div class="eia-meta">
-        <div class="eia-meta-pill">{{ isInitial ? 'Pago inicial' : `Cuota #${installment.installment_number}` }}</div>
-        <div v-if="isInitial" class="eia-meta-line">
-          <i class="fa-solid fa-circle-info"></i>
-          <span>El total y el descuento de la venta se ajustan con la diferencia</span>
-        </div>
-        <div v-else class="eia-meta-line">
-          <i class="fa-regular fa-calendar"></i>
-          <span>Vence el {{ formatDate(installment.due_date) }}</span>
-        </div>
-      </div>
+    <div v-if="installment" class="im-body">
+      <p class="im-meta">
+        <span class="ds-pill">{{ isInitial ? 'Pago inicial' : `Cuota #${installment.installment_number}` }}</span>
+        <span v-if="isInitial">El total y el descuento de la venta se ajustan con la diferencia.</span>
+        <span v-else>Vence el {{ fmt.formatDate(installment.due_date) }}</span>
+      </p>
 
-      <div class="eia-field">
-        <label class="eia-label">Nuevo monto</label>
-        <div class="eia-amount-wrap">
-          <span class="eia-amount-prefix">S/.</span>
-          <input
-            ref="amountInputRef"
-            v-model.number="newAmount"
-            type="number"
-            step="0.01"
-            min="0.01"
-            class="eia-amount-input"
-            placeholder="0.00"
-            @keydown.enter="trySubmit"
-          />
-        </div>
+      <div class="ds-field">
+        <label class="ds-label" for="eia-amount">Nuevo monto (S/.)<span class="ds-req">*</span></label>
+        <input
+          id="eia-amount"
+          ref="amountInputRef"
+          v-model.number="newAmount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          class="ds-input im-money"
+          placeholder="0.00"
+          @keydown.enter="trySubmit"
+        />
         <button
           v-if="isInitial && !removing"
           type="button"
-          class="eia-btn-remove"
+          class="im-remove"
           @click="newAmount = 0"
-        ><i class="fa-solid fa-trash-can"></i> Eliminar pago inicial</button>
+        >
+          <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Eliminar pago inicial
+        </button>
       </div>
 
-      <div v-if="removing" class="eia-diff eia-diff-down">
-        <span class="eia-diff-old">S/. {{ formatMoney(oldAmount) }}</span>
-        <span class="eia-diff-delta">Se anula la inicial y su pago; la venta queda con sus cuotas</span>
-      </div>
+      <p v-if="removing" class="ds-callout bad">
+        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+        <span>Se anula la inicial de S/. {{ fmt.formatMoney(oldAmount) }} y su pago; la venta queda con sus cuotas.</span>
+      </p>
 
-      <div v-else-if="hasDiff" class="eia-diff" :class="{ 'eia-diff-up': delta > 0, 'eia-diff-down': delta < 0 }">
-        <span class="eia-diff-old">S/. {{ formatMoney(oldAmount) }}</span>
-        <i class="fa-solid fa-arrow-right eia-diff-arrow"></i>
-        <span class="eia-diff-new">S/. {{ formatMoney(newAmount) }}</span>
-        <span class="eia-diff-delta">
-          ({{ delta > 0 ? '+' : '' }}S/. {{ formatMoney(Math.abs(delta)) }})
+      <p v-else-if="hasDiff" class="im-diff">
+        <span class="im-diff-old">S/. {{ fmt.formatMoney(oldAmount) }}</span>
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        <strong>S/. {{ fmt.formatMoney(newAmount) }}</strong>
+        <span :class="delta > 0 ? 'is-up' : 'is-down'">
+          ({{ delta > 0 ? '+' : '−' }}S/. {{ fmt.formatMoney(Math.abs(delta)) }})
         </span>
-      </div>
+      </p>
 
-      <div class="eia-field">
-        <label class="eia-warn-label">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          Justificacion (obligatorio)
-        </label>
+      <div class="ds-field">
+        <label class="ds-label" for="eia-why">Justificación<span class="ds-req">*</span></label>
         <textarea
+          id="eia-why"
           v-model="justificacion"
-          class="eia-textarea"
+          class="ds-input"
           rows="3"
-          placeholder="Explica el motivo del cambio de monto..."
+          placeholder="Explica el motivo del cambio de monto…"
         ></textarea>
       </div>
     </div>
 
     <template #footer>
-      <button class="eia-btn-cancel" :disabled="saving" @click="onClose(false)">
+      <button class="btn-exec btn-exec-outline" type="button" :disabled="saving" @click="onClose">
         Cancelar
       </button>
       <button
-        class="eia-btn-save"
+        class="btn-exec"
+        :class="removing ? 'btn-exec-danger' : 'btn-exec-primary'"
+        type="button"
         :disabled="!canSave || saving"
         @click="trySubmit"
       >
-        <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        <i v-else class="fa-solid fa-check"></i>
-        {{ saving ? 'Guardando...' : (removing ? 'Eliminar inicial' : 'Guardar cambio') }}
+        <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'" aria-hidden="true"></i>
+        {{ saving ? 'Guardando…' : (removing ? 'Eliminar inicial' : 'Guardar cambio') }}
       </button>
     </template>
   </BaseModal>
@@ -89,6 +82,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import BaseModal from '@/components/BaseModal.vue'
+import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -98,6 +92,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:visible', 'submit'])
+const fmt = useEnrollmentFormatters()
 
 // La cuota 0 no tiene vencimiento propio que mostrar; lo util es avisar que
 // corregirla mueve tambien el total de la venta.
@@ -141,204 +136,24 @@ function onClose () {
   if (props.saving) return
   emit('update:visible', false)
 }
-
-function formatMoney (n) {
-  return Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function formatDate (iso) {
-  if (!iso) return '—'
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso)
-}
 </script>
 
 <style scoped>
-.eia-body { display: flex; flex-direction: column; gap: 16px; }
-
-.eia-meta {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px;
-  background: #FAFAF8;
-  border: 1px solid #E8E8E3;
-  border-radius: 10px;
+.im-body { display: flex; flex-direction: column; gap: 14px; }
+.im-meta { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 12.5px; color: var(--ds-ink-2); }
+.im-money { font-family: var(--ds-font-mono); font-size: 16px; font-weight: 700; text-align: right; }
+.im-remove {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--ds-bad-ink);
 }
-.eia-meta-pill {
-  font-size: 12px; font-weight: 700;
-  color: #14140F;
-  background: #fff;
-  border: 1px solid #E8E8E3;
-  border-radius: 6px;
-  padding: 3px 9px;
-  letter-spacing: 0.02em;
+.im-remove:hover, .im-remove:focus-visible { text-decoration: underline; }
+.im-diff {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0;
+  font-family: var(--ds-font-mono); font-size: 12.5px; color: var(--ds-ink);
 }
-.eia-meta-line {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12.5px;
-  color: #6F6F66;
-}
-.eia-meta-line i { font-size: 11px; }
-
-.eia-field { display: flex; flex-direction: column; gap: 6px; }
-.eia-label {
-  font-size: 11px; font-weight: 600; color: #6F6F66;
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.eia-warn-label {
-  font-size: 11px; font-weight: 600; color: #B45309;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.eia-warn-label i { font-size: 11px; }
-
-.eia-amount-wrap {
-  display: flex; align-items: stretch;
-  border: 1px solid #E8E8E3;
-  border-radius: 10px;
-  background: #fff;
-  transition: border-color .15s, box-shadow .15s;
-}
-.eia-amount-wrap:focus-within {
-  border-color: #6366F1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-.eia-amount-prefix {
-  display: inline-flex; align-items: center;
-  padding: 0 12px;
-  font-size: 14px; font-weight: 700; color: #6F6F66;
-  border-right: 1px solid #E8E8E3;
-  background: #FAFAF8;
-  border-radius: 10px 0 0 10px;
-}
-.eia-amount-input {
-  flex: 1;
-  border: none; outline: none; background: transparent;
-  padding: 10px 12px;
-  font-size: 18px; font-weight: 700;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #14140F;
-  text-align: right;
-}
-.eia-amount-input::-webkit-outer-spin-button,
-.eia-amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.eia-amount-input { -moz-appearance: textfield; }
-
-.eia-diff {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 12px;
-  background: #FAFAF8;
-  border: 1px solid #E8E8E3;
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  align-self: flex-start;
-}
-.eia-diff-old { color: #6F6F66; text-decoration: line-through; }
-.eia-diff-arrow { color: #A0A099; font-size: 11px; }
-.eia-diff-new { color: #14140F; font-weight: 700; }
-.eia-diff-delta { font-size: 11.5px; color: #6F6F66; margin-left: 2px; }
-.eia-diff-up .eia-diff-delta { color: #047857; }
-.eia-diff-down .eia-diff-delta { color: #B91C1C; }
-
-.eia-btn-remove {
-  align-self: flex-start;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 0; border: none; background: none;
-  font-size: 12px; font-weight: 600; font-family: inherit;
-  color: var(--ds-bad-ink);
-  cursor: pointer;
-}
-.eia-btn-remove:hover { text-decoration: underline; }
-
-.eia-textarea {
-  width: 100%; box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid #E8E8E3;
-  border-radius: 10px;
-  background: #FFFBEB;
-  font-size: 13px;
-  font-family: inherit;
-  color: #14140F;
-  resize: vertical;
-  min-height: 70px;
-  transition: border-color .15s, box-shadow .15s;
-}
-.eia-textarea:focus {
-  outline: none;
-  border-color: #F59E0B;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
-}
-
-.eia-btn-cancel {
-  padding: 9px 16px;
-  font-size: 13px; font-weight: 500; font-family: inherit;
-  color: #6F6F66; background: #fff;
-  border: 1px solid #E8E8E3; border-radius: 8px;
-  cursor: pointer; transition: all .15s;
-}
-.eia-btn-cancel:hover:not(:disabled) { background: #FAFAF8; color: #14140F; }
-.eia-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.eia-btn-save {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 18px;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  color: #fff; background: #6366F1;
-  border: none; border-radius: 8px;
-  cursor: pointer; transition: background .15s;
-}
-.eia-btn-save:hover:not(:disabled) { background: #4F46E5; }
-.eia-btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
-.eia-btn-save i { font-size: 11px; }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .eia-meta { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .eia-meta-pill {
-  color: #F4F4F0;
-  background: #14140F;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .eia-meta-line { color: #A0A099; }
-[data-coreui-theme="dark"] .eia-label { color: #A0A099; }
-[data-coreui-theme="dark"] .eia-warn-label { color: #FBBF24; }
-[data-coreui-theme="dark"] .eia-amount-wrap { border-color: #2A2A22; background: #14140F; }
-[data-coreui-theme="dark"] .eia-amount-prefix {
-  color: #A0A099;
-  border-right-color: #2A2A22;
-  background: #1F1F1A;
-}
-[data-coreui-theme="dark"] .eia-amount-input { color: #F4F4F0; }
-[data-coreui-theme="dark"] .eia-diff { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .eia-diff-old { color: #8A8A80; }
-[data-coreui-theme="dark"] .eia-diff-arrow { color: #6F6F66; }
-[data-coreui-theme="dark"] .eia-diff-new { color: #F4F4F0; }
-[data-coreui-theme="dark"] .eia-diff-delta { color: #A0A099; }
-[data-coreui-theme="dark"] .eia-diff-up .eia-diff-delta { color: #34D399; }
-[data-coreui-theme="dark"] .eia-diff-down .eia-diff-delta { color: #F87171; }
-[data-coreui-theme="dark"] .eia-textarea {
-  border-color: rgba(245,158,11,.35);
-  background: rgba(245,158,11,.10);
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .eia-btn-cancel {
-  color: #A0A099;
-  background: #1A1A14;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .eia-btn-cancel:hover:not(:disabled) { background: #1F1F1A; color: #F4F4F0; }
-</style>
-
-<style>
-/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
-   solo cuando el modal contiene este cuerpo (.eia-body). */
-[data-coreui-theme="dark"] .modal-card:has(.eia-body) {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
-}
-[data-coreui-theme="dark"] .modal-card:has(.eia-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .modal-card:has(.eia-body) .modal-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .modal-card:has(.eia-body) .btn-close { color: #A0A099; }
+.im-diff i { font-size: 10px; color: var(--ds-muted); }
+.im-diff-old { color: var(--ds-muted); text-decoration: line-through; }
+.is-up { color: var(--ds-ok-ink); }
+.is-down { color: var(--ds-bad-ink); }
 </style>

@@ -13,7 +13,7 @@
 
     <div class="esp-body">
       <div class="esp-pills">
-        <span class="ds-pill" :class="STATUS_TONE[fmt.statusPill(enrollment.confirmation)]">{{ enrollment.confirmation || 'Pendiente' }}</span>
+        <span class="ds-pill" :class="fmt.statusTone(enrollment.confirmation)">{{ enrollment.confirmation || 'Pendiente' }}</span>
         <span class="ds-pill" :class="fmt.isContado(enrollment) ? '' : 'info'">{{ fmt.isContado(enrollment) ? 'Al contado' : 'Cuotas' }}</span>
         <span v-if="fmt.hasLaptopPromo(enrollment)" class="ds-pill cyan" title="Esta inscripción incluye laptop como beneficio">
           <i class="fa-solid fa-laptop" aria-hidden="true"></i> Traerá laptop
@@ -206,8 +206,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'view-full', 'deleted'])
 
 const fmt = useEnrollmentFormatters()
-// statusPill del formatter devuelve la clase vieja; aqui se traduce a tono ds.
-const STATUS_TONE = { 'pill-green': 'ok', 'pill-red': 'bad', 'pill-amber': 'warn' }
 const toast = useToast()
 const ficoService = inject(ServiceKeys.Fico)
 

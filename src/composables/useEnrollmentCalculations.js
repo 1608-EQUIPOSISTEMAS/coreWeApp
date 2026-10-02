@@ -1,3 +1,5 @@
+import { isPastDue } from '@/shared/lib/localDate.js'
+
 // Calculos puros del plan de pagos / saldos de una inscripcion. Sin estado
 // reactivo propio: cada funcion recibe el objeto de inscripcion (o la cuota)
 // y devuelve un valor derivado, apta para testear de forma aislada. Logica
@@ -8,8 +10,7 @@ export function useEnrollmentCalculations () {
   const isOverdue = (cuota) => {
     if (cuota.is_reserva) return false
     if (!cuota.due_date || cuota.status_alias === 'we_payment_status_paid') return false
-    const [d, m, y] = cuota.due_date.split('/')
-    return new Date(`${y}-${m}-${d}`) < new Date()
+    return isPastDue(cuota.due_date)
   }
 
   // ¿Es la próxima a vencer? (coincide con next_due_date del SP)

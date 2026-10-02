@@ -102,7 +102,7 @@
               :class="rowMarks(e)"
               :aria-selected="e.enrollment_id === selectedId"
               @click="onRowClick(e, $event)"
-              @keydown.enter.self="emit('select-row', e)"
+              @keydown.enter.self.stop="openDetail(e)"
             >
               <td class="tc">
                 <button class="btn-icon btn-icon-sm" type="button" title="Abrir detalle completo" aria-label="Abrir detalle completo" @click.stop="openDetail(e)">
@@ -142,7 +142,7 @@
                 {{ fmt.isContado(e) ? '—' : 'S/. ' + fmt.formatMoney(fmt.calcSaldo(e)) }}
               </td>
               <td class="tc">
-                <span class="ds-pill" :class="STATUS_TONE[fmt.statusPill(e.confirmation)]">{{ e.confirmation || 'Pendiente' }}</span>
+                <span class="ds-pill" :class="fmt.statusTone(e.confirmation)">{{ e.confirmation || 'Pendiente' }}</span>
               </td>
             </tr>
           </template>
@@ -185,8 +185,6 @@ function clearFilters () {
   colToggles.closeAll()
 }
 
-// statusPill del formatter devuelve la clase vieja; aqui se traduce a tono ds.
-const STATUS_TONE = { 'pill-green': 'ok', 'pill-red': 'bad', 'pill-amber': 'warn' }
 
 // Marcas de negocio que tinen la fila (mismo color que su etiqueta en el panel).
 function rowMarks (e) {

@@ -10,7 +10,6 @@ export default class ComercialService {
   }
   async leadList(payload) {
     const response = (await api.post('/comercial/leadlist', payload)).data;
-    console.log(response)
     return response.data;
   }
 
@@ -23,14 +22,12 @@ export default class ComercialService {
 
   async leadGet(payload) {
     const response = (await api.post('/comercial/leadget', payload)).data;
-    console.log(response)
     return response.data;
   }
 
   //comercial/searchcontact
   async searchContact(payload) {
     const response = (await api.post('/comercial/searchcontact', payload)).data;
-    console.log(response)
     return response.data;
   }
 
@@ -38,7 +35,6 @@ export default class ComercialService {
 
 async searchPhoneGet(payload) {
     const response = (await api.post('/comercial/searchphoneget', payload)).data;
-    console.log(response)
     return response;
   }
   
@@ -104,7 +100,6 @@ async searchPhoneGet(payload) {
   //enrollmentGet
   async enrollmentGet(payload) {
     const response = (await api.post('/comercial/enrollmentget', payload)).data;
-    console.log(response.data)
     return response.data;
   }
 
