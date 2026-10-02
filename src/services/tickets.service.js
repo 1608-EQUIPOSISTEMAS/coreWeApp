@@ -76,4 +76,28 @@ export default class TicketsService {
     const { data } = await api.get(`/tickets/${ruta}/${attachmentId}`, { responseType: 'blob' })
     return data
   }
+
+  // ── Documentos ──────────────────────────────────────────────────────────
+  // [{ id, titulo, descripcion, tipo: 'PDF'|'ENLACE', url, archivo: { nombre, mime, bytes }, subidoPor, creadoEn }]
+  async documents () {
+    return (await api.post('/tickets/documents', {})).data.data
+  }
+
+  // Siempre multipart, aunque sea un enlace: el backend lee los dos casos por
+  // la misma ruta. Solo viaja el campo del tipo elegido.
+  async createDocument ({ titulo, descripcion, tipo, url, archivo }) {
+    const fd = new FormData()
+    fd.append('titulo', titulo)
+    fd.append('descripcion', descripcion)
+    fd.append('tipo', tipo)
+    if (tipo === 'ENLACE') fd.append('url', url)
+    if (tipo === 'PDF' && archivo) fd.append('archivo', archivo)
+    return (await api.post('/tickets/documents/create', fd, { headers: { 'Content-Type': undefined } })).data.data
+  }
+
+  // Mismo motivo que attachmentBlob: el endpoint exige Authorization.
+  async documentBlob (documentId) {
+    const { data } = await api.get(`/tickets/documents/${documentId}/file`, { responseType: 'blob' })
+    return data
+  }
 }

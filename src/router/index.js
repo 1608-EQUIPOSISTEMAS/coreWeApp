@@ -57,6 +57,27 @@ const routes = [
             /* webpackChunkName: "tickets" */ '@/views/tickets/TicketsView.vue'
           ),
       },
+      // Documentos del módulo. Rutas estáticas: Vue Router las prioriza sobre
+      // 'tickets/:id', así que "documentos" nunca se lee como un id de ticket.
+      // Solo ADMIN: roles sin submodule = se abre solo por rol (CASO C).
+      {
+        path: 'tickets/documentos',
+        name: 'TicketsDocumentos',
+        meta: { module: 'TICKETS', roles: ['ADMIN'] },
+        component: () =>
+          import(
+            /* webpackChunkName: "tickets" */ '@/views/tickets/documentos/TicketDocumentsView.vue'
+          ),
+      },
+      {
+        path: 'tickets/documentos/nuevo',
+        name: 'TicketsDocumentoNuevo',
+        meta: { module: 'TICKETS', roles: ['ADMIN'] },
+        component: () =>
+          import(
+            /* webpackChunkName: "tickets" */ '@/views/tickets/documentos/TicketDocumentFormPage.vue'
+          ),
+      },
       {
         path: 'tickets/:id',
         name: 'TicketDetalle',

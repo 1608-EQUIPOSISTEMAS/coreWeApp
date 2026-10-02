@@ -29,14 +29,31 @@ export default [
     // Sin roles = siempre visible (solo lectura)
   },
   {
-    component: 'CNavItem',
+    component: 'CNavGroup',
     name: 'Tickets',
     to: '/tickets',
     icon: 'cil-envelope-open',
     module: 'TICKETS',
     // Sin roles: la visibilidad depende solo de la matriz de Configuración
     // (módulo TICKETS). ADMIN entra igual porque modulesForRoles() le otorga
-    // todos los módulos activos, sin necesidad de listarlo acá a mano.
+    // todos los módulos activos, sin necesidad de listarlo acá a mano. Los
+    // hijos no declaran submódulo: basta el módulo del grupo.
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Bandeja',
+        to: '/tickets',
+      },
+      {
+        // Solo ADMIN: es la biblioteca de manuales que el bot de Slack envía
+        // como solución. Roles sin submódulo = se abre solo por rol, la
+        // matriz no lo habilita (misma regla que el guard del router).
+        component: 'CNavItem',
+        name: 'Documentos',
+        to: '/tickets/documentos',
+        roles: ['ADMIN'],
+      },
+    ],
   },
   {
     component: 'CNavTitle',

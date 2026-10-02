@@ -38,6 +38,11 @@ const props = defineProps({
 
 const SISTEMA = 'Sistema'
 const RELOJ = { respuesta: 'primera respuesta', resolucion: 'resolución' }
+const RESPUESTA_MANUAL = {
+  RESUELTO: 'confirmó que el manual resolvió el problema',
+  NO_RESUELTO: 'indicó que el manual no fue suficiente',
+  SIN_RESPUESTA: 'dio el ticket por resuelto: no hubo respuesta al manual a tiempo',
+}
 
 // Cómo se lee cada tipo de evento. Todos salen de datos que el ERP ya guarda
 // (marcas del ticket y comentarios): el backend no lleva una bitácora aparte.
@@ -56,6 +61,15 @@ const FORMATO = {
     accion: `avisó que venció el plazo de ${RELOJ[e.detalle] ?? 'SLA'}`,
   }),
   COMENTARIO: e => ({ icono: 'fa-comment', tono: 'neutral', quien: e.actor ?? SISTEMA, accion: 'comentó', cita: e.detalle }),
+  // Manual de Documentos que el bot de Slack envió como posible solución.
+  MANUAL_ENVIADO: e => ({
+    icono: 'fa-book', tono: 'info', quien: SISTEMA,
+    accion: 'envió por Slack un manual como posible solución', cita: e.detalle,
+  }),
+  MANUAL_RESPUESTA: e => ({
+    icono: 'fa-book-open', tono: e.detalle === 'NO_RESUELTO' ? 'warn' : 'ok', quien: e.actor ?? SISTEMA,
+    accion: RESPUESTA_MANUAL[e.detalle] ?? 'respondió sobre el manual',
+  }),
 }
 
 const filas = computed(() => props.eventos.map(e => ({

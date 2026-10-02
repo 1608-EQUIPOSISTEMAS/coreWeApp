@@ -94,6 +94,9 @@ export function useFilteredNav() {
   function canSeeChild(child, parentModule) {
     if (child.roles && hasRole(child.roles)) return true
     if (child.submodule) return hasSubmodule(parentModule, child.submodule)
+    // Hijo con roles pero sin submódulo: solo por rol, igual que el guard del
+    // router (si no, el sidebar mostraría un link que el router no deja abrir).
+    if (child.roles) return false
     // Hijo sin submódulo declarado: basta el módulo del grupo.
     return !!parentModule && hasModule(parentModule)
   }
