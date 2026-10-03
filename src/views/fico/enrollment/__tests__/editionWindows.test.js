@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin } from '../editionWindows.js'
+import { isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin, addOneMonth } from '../editionWindows.js'
 
 const today = new Date(2026, 8, 28) // 28/09/2026 local
 
@@ -34,5 +34,15 @@ describe('isMovedOrigin', () => {
   it('una inscripción activa sí puede moverse', () => {
     expect(isMovedOrigin('we_inscription_way_act')).toBe(false)
     expect(isMovedOrigin(undefined)).toBe(false)
+  })
+})
+
+describe('addOneMonth', () => {
+  it('mismo día del mes siguiente, cruzando el año', () => {
+    expect(addOneMonth('2026-11-02')).toBe('2026-12-02')
+    expect(addOneMonth('2026-12-02')).toBe('2027-01-02')
+  })
+  it('cae al último día si el mes siguiente es más corto', () => {
+    expect(addOneMonth('2027-01-31')).toBe('2027-02-28')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tokenInscriptionFlags, tokenLinkAmount } from '../tokenInscriptionFlags.js'
+import { tokenInscriptionFlags, tokenLinkAmount, missingTokenAmountMessage } from '../tokenInscriptionFlags.js'
 
 // Forma real del token 838 de produccion (24/09/26), recortada.
 const token = {
@@ -53,5 +53,12 @@ describe('tokenLinkAmount', () => {
   })
   it('al contado cobra el total', () => {
     expect(tokenLinkAmount({ cat_type_payment: 'we_payment_way_single', total_amount: 330, montoOriginal: 950 })).toBe(330)
+  })
+})
+
+describe('missingTokenAmountMessage', () => {
+  it('en cuotas pide la reserva; al contado, el monto del link', () => {
+    expect(missingTokenAmountMessage({ cat_type_payment: 'we_payment_way_installments' })).toMatch(/Reserva/)
+    expect(missingTokenAmountMessage({ cat_type_payment: 'we_payment_way_cash' })).toMatch(/no puede ser 0/)
   })
 })

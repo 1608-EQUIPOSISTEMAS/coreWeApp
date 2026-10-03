@@ -60,3 +60,11 @@ export function tokenLinkAmount (insc) {
     ? (Number(insc.saved_money) || 0)
     : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
 }
+
+// Un link en 0 no cobra nada y FICO no tiene como notarlo (token 838, cuotas
+// sin reserva). En cuotas el link cobra solo la reserva.
+export function missingTokenAmountMessage (insc) {
+  return insc.cat_type_payment === 'we_payment_way_installments'
+    ? 'En cuotas el link cobra la Reserva: ingrese un monto mayor a 0.'
+    : 'El monto a pagar por el link no puede ser 0.'
+}

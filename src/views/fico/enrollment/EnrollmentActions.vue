@@ -216,6 +216,29 @@
               </div>
             </div>
 
+            <div class="eact-field">
+              <label>Cuotas de la diferencia <span class="eact-rp-saldo">Total destino: {{ fmt.formatMoney(ccDestinationTotal) }}</span></label>
+              <div v-if="ccNewInstallments.length" class="eact-rp-plan">
+                <div class="eact-rp-plan-head eact-cc-plan-grid">
+                  <span>#</span><span>Monto</span><span>Vencimiento</span><span></span>
+                </div>
+                <div v-for="(c, i) in ccNewInstallments" :key="i" class="eact-rp-plan-row eact-cc-plan-grid">
+                  <span class="eact-rp-plan-num">{{ i + 1 }}</span>
+                  <input v-model.number="c.amount" type="number" step="0.01" min="0.01" class="ds-input eact-input-amount" />
+                  <input v-model="c.due_date" type="date" class="ds-input" />
+                  <button class="btn-icon btn-icon-sm" type="button" title="Quitar cuota" aria-label="Quitar cuota" @click="ccNewInstallments.splice(i, 1)">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <button class="btn-exec btn-exec-outline btn-sm" type="button" :disabled="!(ccTotalAmount > 0)" @click="addCcInstallment">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar cuota
+                </button>
+              </div>
+              <small class="eact-price-hint">Opcional. El "Monto a registrar" queda como inicial pagada; estas cuotas quedan pendientes en la nueva inscripcion y salen en el correo.</small>
+            </div>
+
             <div class="eact-subsection-label">Datos del pago</div>
             <div class="eact-grid-3">
               <div class="eact-field">
@@ -540,7 +563,7 @@ import EmailPreviewStep from './EmailPreviewStep.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import PersonalAccountField from './PersonalAccountField.vue'
-import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin } from './editionWindows.js'
+import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin, addOneMonth } from './editionWindows.js'
 
 const props = defineProps({
   enrollment: { type: Object, default: null },
@@ -644,6 +667,7 @@ function resetAllForms () {
   ccProgramVersionId.value = null
   ccEditionId.value = null
   ccTotalAmount.value = 0
+  ccNewInstallments.value = []
   ccJustificacion.value = ''
   ccEditionsList.value = []
   ccEditionListPrice.value = 0
@@ -821,6 +845,21 @@ const ccNoEdition = computed(() =>
   (!!ccProgramVersionId.value && !ccLoadingEditions.value && ccEditionsList.value.length === 0)
 )
 
+// Cuotas que financian el CC (upgrade de membresia: paga parte hoy y el resto
+// en cuotas). Cada cuota nueva propone el mismo monto un mes despues de la
+// anterior, que es como FICO arma el cronograma.
+const ccNewInstallments = ref([])
+const ccFinancedTotal = computed(() => ccNewInstallments.value.reduce((s, c) => s + (Number(c.amount) || 0), 0))
+const ccDestinationTotal = computed(() => (Number(ccTotalAmount.value) || 0) + ccFinancedTotal.value)
+
+function addCcInstallment () {
+  const last = ccNewInstallments.value.at(-1)
+  ccNewInstallments.value.push({
+    amount: last?.amount ?? null,
+    due_date: last?.due_date ? addOneMonth(last.due_date) : ''
+  })
+}
+
 const ccForm = reactive({
   cat_currency: null,
   cat_method_payment: null,
@@ -935,7 +974,8 @@ async function handleCourseChangeConfirm () {
         name: f.name || 'Comprobante',
         type: f.type || null
       })),
-      ...personalAccountPayload(ccPersonalAccount.value)
+      ...personalAccountPayload(ccPersonalAccount.value),
+      new_installments: ccNewInstallments.value.map(c => ({ amount: Number(c.amount), due_date: c.due_date }))
     })
     toast.success('Cambio de curso realizado correctamente.')
     emit('action-completed')
@@ -1421,6 +1461,7 @@ async function handleRetire () {
 .eact-rp-plan { overflow: hidden; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
 .eact-rp-plan-head, .eact-rp-plan-row { display: grid; grid-template-columns: 32px 1fr 1fr; gap: 10px; align-items: center; padding: 6px 12px; }
 .eact-rp-plan-head { background: var(--ds-surface-2); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ds-muted); }
+.eact-cc-plan-grid { grid-template-columns: 32px 1fr 1fr 32px; }
 .eact-rp-plan-row { border-top: 1px solid var(--ds-border); }
 .eact-rp-plan-num { font-size: 12px; font-weight: 700; color: var(--ds-ink-2); }
 .eact-rp-plan-foot {

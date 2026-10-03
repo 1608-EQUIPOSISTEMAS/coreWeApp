@@ -5,8 +5,9 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { computeDiscounts, chargedTotal, chargesInCents } from '@/features/apply-discounts/computeDiscounts.js'
 import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
-import { tokenInscriptionFlags, tokenLinkAmount } from '@/features/enroll-lead/tokenInscriptionFlags.js'
+import { tokenInscriptionFlags, tokenLinkAmount, missingTokenAmountMessage } from '@/features/enroll-lead/tokenInscriptionFlags.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
+import { enrollmentVerdict, gradeVerdict } from '@/entities/enrollment/enrollmentVerdict.js'
 
 export function useLeadForm(options = {}) {
   const {
@@ -268,11 +269,14 @@ export function useLeadForm(options = {}) {
   const editions               = ref([])
   const currentEdition         = ref(null)
 
-  const hcEnrollmentData = ref([
-    { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso',    nota: null },
-    { fecha: '10 Jun 2024', programa: 'SQL Server Database',      edicion: '2024-II', estado: 'Finalizado', nota: 18 },
-    { fecha: '15 Ene 2024', programa: 'Python for Data',          edicion: '2024-I',  estado: 'Finalizado', nota: 12 },
-  ])
+  // Inscripciones REALES del cliente (sp_search_phone_get.enrollment_details).
+  // Antes la pestaña mostraba 3 filas de ejemplo fijas en el código.
+  const clientHistoryEnrollmentsRaw = ref([])
+  const clientHistoryEnrollments = computed(() => clientHistoryEnrollmentsRaw.value.map(e => ({
+    ...e,
+    verdict: enrollmentVerdict({ typeStatusAlias: e.type_status_alias, ficoStatusAlias: e.fico_status_alias, active: e.active }),
+    grade: gradeVerdict({ finalGrade: e.final_grade, editionEnded: e.edition_ended })
+  })))
 
   // ── FORM ─────────────────────────────────────────────────────
   const form = reactive({
@@ -620,8 +624,9 @@ export function useLeadForm(options = {}) {
   const reservaInmediata     = ref(0)
   const reservaDiferidaFecha = ref('')
 
+  // WEB tambien va en cuotas (decision 02/10/26, igual que Comercial): la
+  // pasarela cobra la reserva y el resto se cobra por otro canal.
   const isInstallmentMode = computed(() =>
-    !isChannelWeb.value &&
     !!insc.cat_payment_channel &&
     insc.cat_type_payment === 'we_payment_way_installments' &&
     Number(insc.montoOriginal) > 0
@@ -1125,7 +1130,12 @@ export function useLeadForm(options = {}) {
       if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
       return true
     }
-    if (isChannelWeb.value) return true
+    if (isChannelWeb.value) {
+      if (!insc.cat_type_payment) return false
+      // En cuotas, el monto que cobro la pasarela es la reserva.
+      if (insc.cat_type_payment === 'we_payment_way_installments' && !insc.saved_money) return false
+      return true
+    }
     return false
   }
 
@@ -1162,13 +1172,14 @@ export function useLeadForm(options = {}) {
     if (!phone || phone.length < 5) { toast.warning('Por favor ingrese un número de teléfono válido.'); return }
     if (dataSetted.value != phone) dataSetted.value = phone
     showClientHistory.value = true; loadingHistory.value = true
-    clientHistoryLegacy.value = []; clientHistoryLeads.value = []
+    clientHistoryLegacy.value = []; clientHistoryLeads.value = []; clientHistoryEnrollmentsRaw.value = []
     activeHistoryTab.value = 'asesoria'
     try {
       const response = await comercialService.searchPhoneGet({ phone })
       if (response) {
         clientHistoryLegacy.value = response.legacy_details || []
         clientHistoryLeads.value  = response.lead_details  || []
+        clientHistoryEnrollmentsRaw.value = response.enrollment_details || []
       }
     } catch (error) {
       console.error(error); toast.error('Error al obtener el historial.')
@@ -1375,7 +1386,7 @@ export function useLeadForm(options = {}) {
         full_name: insc.full_name, last_name: insc.last_name, mother_last_name: insc.mother_last_name,
         email: insc.email, cat_country, cat_insc_modality, cat_certificate_status,
         cat_payment_channel: insc.cat_payment_channel,
-        cat_type_payment: (isChannelGeneral.value || isChannelToken.value) ? cat_type_payment : null,
+        cat_type_payment: (isChannelGeneral.value || isChannelToken.value || isChannelWeb.value) ? cat_type_payment : null,
         cat_currency, cat_method_payment,
         cat_token_provider: insc.cat_token_provider,
         // Solo tiene sentido en el canal General: es una venta a empresa que se
@@ -1558,7 +1569,7 @@ export function useLeadForm(options = {}) {
     if (!validateInscriptionClientInfo()) { toast.warning('Complete los campos obligatorios de la inscripción'); return }
     if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) { toast.warning('Faltan datos obligatorios en el formulario del Lead.'); return }
     if (!insc.token_payment_type) { toast.warning('Debe seleccionar el tipo de pago (Débito/Crédito).'); return }
-    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage()); return }
+    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage(insc)); return }
 
     savingInsc.value = true
     try {
@@ -1607,14 +1618,6 @@ export function useLeadForm(options = {}) {
     finally { savingInsc.value = false }
   }
 
-  // Un link en 0 no cobra nada y FICO no tiene como notarlo (token 838, cuotas
-  // sin reserva). En cuotas el link cobra solo la reserva.
-  function missingTokenAmountMessage() {
-    return isInstallmentMode.value
-      ? 'En cuotas el link cobra la Reserva: ingrese un monto mayor a 0.'
-      : 'El monto a pagar por el link no puede ser 0.'
-  }
-
   // ── EDICION DE UN TOKEN YA CREADO ────────────────────────────
   // El token guarda los descuentos solo por ID; se buscan sus valores antes de
   // abrir el modal para que el total no se recalcule sin descuento.
@@ -1661,7 +1664,7 @@ export function useLeadForm(options = {}) {
 
   async function confirmarEdicionToken() {
     if (!inscriptionFieldsFilled()) return
-    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage()); return }
+    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage(insc)); return }
     savingInsc.value = true
     try {
       const resp = await ficoService.tokenEditInscription({
@@ -1884,7 +1887,7 @@ export function useLeadForm(options = {}) {
     searchingCustomer, searchingPhone, dataSetted,
     modelProgramVersion, loadingDetail,
     voucherUploaderRef, voucherTouched, discountResetKey, priceManuallySet,
-    programs, editions, currentEdition, selectedProgram, hcEnrollmentData, membershipList,
+    programs, editions, currentEdition, selectedProgram, clientHistoryEnrollments, membershipList,
     manualMode, numCuotasManual, reservaSplitEnabled, reservaInmediata, reservaDiferidaFecha,
 
     // Config

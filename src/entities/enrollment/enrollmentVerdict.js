@@ -34,3 +34,18 @@ export function paymentVerdict ({ summary, overdue = null, next = null }) {
   if (summary.paid <= 0) return { key: 'unpaid', label: 'Aún no paga', tone: 'warn', amount: summary.balance }
   return { key: 'on_track', label: 'Al día', tone: 'ok', amount: summary.balance, dueDate: next?.dueDate || null }
 }
+
+// Nota minima aprobatoria del aula: misma que PASS_THRESHOLD en
+// Backend/src/modules/edition/edition.entity.js (si cambia alla, cambia aca).
+export const PASS_GRADE = 12
+
+// finalGrade llega SOLO si el docente ya cargo la nota (graded_at); sin ella,
+// una edicion abierta es "En curso" y una cerrada queda sin nota (null).
+export function gradeVerdict ({ finalGrade, editionEnded }) {
+  if (finalGrade != null) {
+    const n = Number(finalGrade)
+    return { label: n.toFixed(n % 1 ? 1 : 0), tone: n >= PASS_GRADE ? 'ok' : 'bad' }
+  }
+  if (editionEnded === false) return { label: 'En curso', tone: 'info' }
+  return null
+}

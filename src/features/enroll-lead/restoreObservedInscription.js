@@ -79,7 +79,7 @@ function restoreDiscounts (insc, discounts) {
 // Se restaura en modo manual porque el plan guardado puede no coincidir con el
 // que calcularia el automatico: fechas movidas, cuotas desiguales, redondeos que
 // el asesor acordo con el alumno.
-function restoreInstallments (installments, plan) {
+export function restoreInstallments (installments, plan) {
   if (!installments || !plan?.length) return
   installments.manualMode.value = true
   installments.numCuotasManual.value = plan.length

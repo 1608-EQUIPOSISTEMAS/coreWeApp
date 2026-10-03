@@ -38,3 +38,11 @@ const MOVED_ORIGIN_STATUSES = ['we_enrollment_status_course_changed', 'we_enroll
 export function isMovedOrigin (statusAlias) {
   return MOVED_ORIGIN_STATUSES.includes(statusAlias)
 }
+
+// 'YYYY-MM-DD' + 1 mes, mismo día; si el mes siguiente no lo tiene (31/01) cae
+// en su último día. Aritmética sobre la cadena en UTC: inmune al TZ de Lima.
+export function addOneMonth (isoDate) {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(y, m, Math.min(d, lastDay))).toISOString().slice(0, 10)
+}

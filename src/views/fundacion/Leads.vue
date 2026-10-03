@@ -654,7 +654,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2" style="min-width: 230px;">
-                        <SearchSelect v-if="isCallAttempt(attempt.cat_type_attempt)" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
+                        <SearchSelect v-if="attemptAsksResult(attempt.cat_type_attempt)" v-model="attempt.calling_alias" :items="filteredCallingByType(attempt.cat_type_attempt)" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.calling_alias !== 'we_calling_pending' && attempt.calling_alias" class="exec-select-light w-100" />
                         <div v-else class="d-flex align-items-center h-100 text-muted small pt-2 px-1">
                           <i class="fa-regular fa-paper-plane me-2"></i>
                           <span>Mensaje / Gestión</span>
@@ -672,7 +672,7 @@
                         </div>
                       </td>
                       <td class="td-a align-top pt-2">
-                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && isCallAttempt(attempt.cat_type_attempt) && attempt.calling_alias !== 'we_calling_pending'"></textarea>
+                        <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attemptAsksResult(attempt.cat_type_attempt) && attempt.calling_alias !== 'we_calling_pending'"></textarea>
                       </td>
                       <td class="td-a align-top pt-2">
                         <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
@@ -1161,7 +1161,7 @@
 
 
 <script setup>
-import { isCallAttempt } from '@/shared/lib/contactAttempt.js'
+import { isCallAttempt, attemptAsksResult } from '@/shared/lib/contactAttempt.js'
 import { ref, reactive, onMounted, inject, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
@@ -2207,20 +2207,18 @@ function onOrderChange() {
 
 
 const filteredCallingByType = (catTypeAttempt) => {
-  if (isCallAttempt(catTypeAttempt)) return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
+  if (attemptAsksResult(catTypeAttempt)) return filtroCalling.value.filter(c => c.alias !== 'we_calling_bad_asesor')
   return filtroCalling.value.filter(c => c.alias === 'we_calling_pending')
 }
 
 const withNull = (items) => [{ id: -1, description: '(Vacío)', alias: '__null__' }, ...(items || [])]
 
 function handleTypeChange(attempt, newVal) {
-  attempt.cat_type_attempt = newVal;
+  attempt.cat_type_attempt = newVal
+  attempt.calling_alias = attemptAsksResult(newVal) ? 'we_calling_pending' : 'we_calling_message'
   if (!isCallAttempt(newVal)) {
-    attempt.calling_alias = 'we_calling_message';
-    if (attempt.timerActive) toggleTimer(attempt);
-    attempt.contact_duration = 0;
-  } else {
-    attempt.calling_alias = 'we_calling_pending';
+    if (attempt.timerActive) toggleTimer(attempt)
+    attempt.contact_duration = 0
   }
 }
 const membershipList = ref([]);

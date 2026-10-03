@@ -801,17 +801,21 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, i) in hcEnrollmentData" :key="i">
-                  <td><small>{{ item.fecha }}</small></td>
+                <tr v-if="clientHistoryEnrollments.length === 0">
+                  <td colspan="4" class="empty-state">Este cliente no tiene inscripciones registradas con este número.</td>
+                </tr>
+                <tr v-for="item in clientHistoryEnrollments" :key="item.enrollment_id">
+                  <td><small>{{ item.date }}</small></td>
                   <td>
-                    <div class="fw-bold">{{ item.programa }}</div>
-                    <small class="text-muted">Edición: {{ item.edicion }}</small>
+                    <div class="fw-bold">{{ item.program || 'Sin programa' }}</div>
+                    <small v-if="item.edition" class="text-muted">Edición {{ item.edition }}<template v-if="item.edition_start"> · inicia {{ item.edition_start }}</template></small>
                   </td>
                   <td>
-                    <span class="pill border" :class="item.estado === 'Finalizado' ? 'pill-teal' : 'pill-amber'">{{ item.estado }}</span>
+                    <span class="ds-pill" :class="item.verdict.tone">{{ item.verdict.label }}</span>
                   </td>
                   <td class="text-center">
-                    <span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span>
+                    <span v-if="item.grade" class="ds-pill" :class="item.grade.tone">{{ item.grade.label }}</span>
+                    <small v-else class="text-muted">—</small>
                   </td>
                 </tr>
               </tbody>
@@ -1378,9 +1382,41 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </template>
 
           <template v-if="isChannelWeb">
+            <div class="col-md-2">
+              <label class="exec-label">Moneda <span class="c-red">*</span></label>
+              <SearchSelect :viewOpen="6" v-model="insc.selectedCurrencyAlias" :items="currencyCatalog" label-field="description" required value-field="alias" placeholder="MONEDA..." class="exec-select-light w-100" />
+            </div>
+            <div class="col-md-3">
+              <label class="exec-label">
+                Modalidad de pago <span class="c-red">*</span>
+              </label>
+              <SearchSelect
+                :viewOpen="6"
+                v-model="insc.cat_type_payment"
+                required
+                :items="isOnlineProgram
+                  ? inscPaymentModes.filter(e => e.alias === 'we_payment_way_single')
+                  : inscPaymentModes"
+                placeholder="M. PAGO"
+                label-field="description"
+                value-field="alias"
+                class="exec-select-light w-100"
+                :disabled="isOnlineProgram"
+              />
+            </div>
+            <div class="col-md-3" v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+              <label class="exec-label">Pago por pasarela (Adelanto) <span class="c-red">*</span></label>
+              <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
+            </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--info-note-border, #bee5eb) !important; background-color: var(--info-note-bg, #e2f3f5) !important;">
-                <i class="fa-solid fa-globe me-2"></i> El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
+              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--ln-cyan-bd,#bee5eb) !important; background-color: var(--ln-cyan-bg,#e2f3f5) !important;">
+                <i class="fa-solid fa-globe me-2"></i>
+                <template v-if="insc.cat_type_payment === 'we_payment_way_installments'">
+                  El alumno pagó el <strong>adelanto</strong> por la pasarela web. Las cuotas restantes se cobrarán por otro canal. Se notificará al canal de <strong>Slack</strong> apenas envies.
+                </template>
+                <template v-else>
+                  El alumno realizó el pago directamente por la pasarela web. Se notificará al canal de <strong>Slack</strong> apenas envies.
+                </template>
               </div>
             </div>
           </template>
@@ -1760,7 +1796,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
 
       <div
-        v-for="(cuota, idx) in installmentPlan"
+        v-for="cuota in installmentPlan"
         :key="cuota.installment_number"
         class="installment-row"
         :class="{
@@ -1940,7 +1976,7 @@ const {
   searchingCustomer, searchingPhone,
   modelProgramVersion, loadingDetail,
   voucherUploaderRef, voucherTouched, discountResetKey, priceManuallySet,
-  programs, editions, currentEdition, selectedProgram, hcEnrollmentData, membershipList,
+  programs, editions, currentEdition, selectedProgram, clientHistoryEnrollments, membershipList,
   manualMode, numCuotasManual, reservaSplitEnabled, reservaInmediata, reservaDiferidaFecha,
   pastDateConfig, futureDateConfig, dateLimitConfig,
   leadStatusCatalog, leadInterestCatalog, countryCatalog, momentCatalog, clientCatalog,

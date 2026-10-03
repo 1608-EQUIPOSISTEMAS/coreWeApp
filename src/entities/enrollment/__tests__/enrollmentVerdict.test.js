@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { enrollmentVerdict, paymentVerdict } from '../enrollmentVerdict.js'
+import { enrollmentVerdict, paymentVerdict, gradeVerdict } from '../enrollmentVerdict.js'
 
 describe('enrollmentVerdict', () => {
   it('un retiro ya no sale en verde aunque active = Y', () => {
@@ -45,5 +45,16 @@ describe('paymentVerdict', () => {
 
   it('beca (total 0): sin monto a pagar', () => {
     expect(paymentVerdict({ summary: { total: 0, paid: 0, balance: 0 } }).key).toBe('free')
+  })
+})
+
+describe('gradeVerdict', () => {
+  it('aprueba con 12 (PASS_THRESHOLD del aula), no con 14', () => {
+    expect(gradeVerdict({ finalGrade: 12 })).toEqual({ label: '12', tone: 'ok' })
+    expect(gradeVerdict({ finalGrade: '11.5' })).toEqual({ label: '11.5', tone: 'bad' })
+  })
+  it('sin nota cargada: "En curso" si la edicion sigue abierta, nada si ya cerro', () => {
+    expect(gradeVerdict({ finalGrade: null, editionEnded: false })).toMatchObject({ label: 'En curso' })
+    expect(gradeVerdict({ finalGrade: null, editionEnded: true })).toBeNull()
   })
 })

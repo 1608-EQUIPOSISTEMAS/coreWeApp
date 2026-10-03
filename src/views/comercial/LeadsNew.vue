@@ -1,17 +1,17 @@
 <template>
-  <div class="ef-page form-shell">
+  <div class="ds-page ef-page form-shell">
 
-    <div class="ef-page-header">
-      <div class="ef-page-header-left">
-        <span class="ef-breadcrumb">CRM Comercial</span>
-        <h1 class="ef-page-title">Formulario Comercial</h1>
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Formulario Comercial</h1>
+        <p class="ds-sub">CRM Comercial · {{ isEdit ? 'Editar lead' : 'Nuevo lead' }}</p>
       </div>
-      <div class="ef-header-actions">
-        <button type="button" class="ef-btn-outline" @click="cancelar">
-          <i class="fa-solid fa-arrow-left"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
+      <div class="ds-head-actions">
+        <button type="button" class="btn-exec btn-exec-outline" @click="cancelar">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> {{ form.enrollment_id ? 'Volver' : 'Cancelar' }}
         </button>
       </div>
-    </div>
+    </header>
 
     <main ref="leadFormRoot" class="ef-body" v-if="loaded">
       <div class="ef-form-wrapper">
@@ -31,7 +31,7 @@
         </div>
 
         <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 text-primary"></i> Información del Lead</h6>
+          <h6 class="fieldset-title"><i class="fa-solid fa-bullseye me-2 c-info"></i> Información del Lead</h6>
           <div class="row g-3">
 
 <div class="col-md-5">
@@ -45,14 +45,14 @@
             </div>
 
             <div class="col-6 col-md-4">
-              <label class="exec-label">Celular de origen <span class="c-red">*</span></label>
+              <label class="exec-label">Celular de origen <span v-if="sellerPhoneOptions.length" class="c-red">*</span></label>
               <SearchSelect
                 v-model="form.origin_seller_phone"
                 :items="sellerPhoneOptions"
                 label-field="label"
                 value-field="value"
                 :disabled="sellerPhoneLocked"
-                required
+                :required="sellerPhoneOptions.length > 0"
                 placeholder="Selecciona celular…"
                 class="exec-select-light w-100"
               />
@@ -145,7 +145,7 @@
     @click="openProgramVersionDetail()"
     title="Ver detalles del programa"
   >
-    <i class="fa-solid fa-circle-info" style="color: var(--teal-600, #12274e);"></i>
+    <i class="fa-solid fa-circle-info" style="color: var(--ds-ink);"></i>
   </button>
 
 </div>
@@ -177,7 +177,7 @@
         </div>
 
         <div class="exec-fieldset mb-4" v-if="isEdit || validateLeadInfo()">
-          <h6 class="fieldset-title"><i class="fa-solid fa-user me-2 text-success"></i> Datos del Contacto</h6>
+          <h6 class="fieldset-title"><i class="fa-solid fa-user me-2 c-ok"></i> Datos del Contacto</h6>
           <div class="row g-3">
 
             <div class="col-6 col-md-3 col-lg-2">
@@ -229,7 +229,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   @click="openPhoneDetail()"
                   title="Ver historial del cliente"
                 >
-                  <i class="fa-solid fa-clock-rotate-left" style="color: var(--teal-600, #12274e);"></i>
+                  <i class="fa-solid fa-clock-rotate-left" style="color: var(--ds-ink);"></i>
                 </button>
               </div>
             </div>
@@ -327,7 +327,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         </div>
 
         <div class="exec-fieldset mb-4" v-if="isEdit || (validateLeadInfo() && validateContactInfo())">
-          <h6 class="fieldset-title"><i class="fa-solid fa-chart-line me-2 text-info"></i> Estado Comercial y Marketing</h6>
+          <h6 class="fieldset-title"><i class="fa-solid fa-chart-line me-2 c-info"></i> Estado Comercial y Marketing</h6>
           <div class="row g-3">
 
 <div class="col-md-3">
@@ -440,7 +440,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
         <div class="exec-fieldset mb-4" v-if="isEdit || (validateLeadInfo(), validateContactInfo(), validateCommercialInfo())">
           <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-            <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-phone-volume me-2 text-warning"></i> Seguimiento / Intentos de Contacto</h6>
+            <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-phone-volume me-2 c-warn"></i> Seguimiento / Intentos de Contacto</h6>
             <button type="button" class="btn-exec btn-exec-outline btn-exec-sm" @click="addContacto">
               <i class="fa-solid fa-plus me-1"></i> Añadir intento
             </button>
@@ -484,8 +484,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
                 <div class="mt-2 text-truncate" style="font-size: 10px;">
                   <span
-                    class="pill border w-100 justify-content-center"
-                    :class="c.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'"
+                    class="ds-pill border w-100 justify-content-center"
+                    :class="c.cat_creation_origin_alias === 'we_origin_manual' ? '' : 'warn'"
                     :title="c.cat_creation_origin_label || 'Gestión Manual'"
                   >
                     <i class="fa-solid me-1" :class="c.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
@@ -510,7 +510,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 </div>
 
                 <div v-if="c.was_rescheduled && !c.cat_reschedule_origin" class="mt-1" style="font-size:10px;">
-                  <span class="pill pill-amber border w-100 justify-content-center">
+                  <span class="ds-pill warn border w-100 justify-content-center">
                     <i class="fa-solid fa-calendar-pen me-1"></i> Reprogramado
                   </span>
                 </div>
@@ -625,7 +625,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <span>Al guardar, desaparecerá del listado comercial y no será visible para el equipo.</span>
           </div>
           <div class="delete-banner-label">
-            <span class="pill pill-red border">ELIMINADO</span>
+            <span class="ds-pill bad border">ELIMINADO</span>
           </div>
         </div>
       </Transition>
@@ -652,7 +652,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           class="ef-btn-warning"
           :disabled="!!form.enrollment_id || (form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id)"
           :title="form.program_modality_selected_alias !== 'we_modality_online' && !form.edition_id ? 'Debe seleccionar una edición para programas EN VIVO' : 'Inscribir alumno'"
-          @click="openInscription()"
+          @click="openRegularInscription()"
         >
           <i class="fa-solid fa-graduation-cap"></i> INSCRIBIR
         </button>
@@ -697,7 +697,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <li>
           <a class="exec-tabs__item" :class="{ 'exec-tabs__item--active': activeHistoryTab === 'historico' }" href="#" @click.prevent="activeHistoryTab = 'historico'">
             <i class="fa-solid fa-list me-1"></i> Histórico
-            <span v-if="clientHistoryLegacy.length" class="pill pill-slate border ms-1" style="font-size:.67rem;">{{ clientHistoryLegacy.length }}</span>
+            <span v-if="clientHistoryLegacy.length" class="ds-pill border ms-1" style="font-size:.67rem;">{{ clientHistoryLegacy.length }}</span>
           </a>
         </li>
         <li>
@@ -728,7 +728,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <tbody>
                 <tr v-for="(item, i) in clientHistoryLegacy" :key="i">
                   <td><small>{{ item.date }}</small></td>
-                  <td><div class="fw-bold text-primary">{{ item.program }}</div></td>
+                  <td><div class="fw-bold c-info">{{ item.program }}</div></td>
                   <td>{{ item.full_name }}</td>
                   <td>{{ item.cat_client_moment_label }}</td>
                 </tr>
@@ -757,9 +757,9 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                     <small class="text-muted">{{ formatDateTime(lead.date).split(' ').slice(3).join(' ') }}</small>
                   </td>
                   <td>
-                    <div class="fw-bold text-primary" style="font-size:.9rem">{{ lead.program || 'Sin programa' }}</div>
+                    <div class="fw-bold c-info" style="font-size:.9rem">{{ lead.program || 'Sin programa' }}</div>
                     <div v-if="lead.edition">
-                      <span class="pill pill-slate border mt-1">
+                      <span class="ds-pill border mt-1">
                         <i class="fa-regular fa-calendar me-1"></i> {{ lead.edition }}
                       </span>
                     </div>
@@ -771,15 +771,15 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                     </div>
                   </td>
                   <td>
-                    <span class="pill border" :class="{
-                      'pill-teal':  ['Inscrito','Pagó','Matriculado'].includes(lead.cat_status_lead_label),
-                      'pill-amber': ['Interesado','En Seguimiento','Prox. Inicio'].includes(lead.cat_status_lead_label),
-                      'pill-slate': ['Atendido'].includes(lead.cat_status_lead_label),
-                      'pill-red':   ['No Interesado','Rechazado'].includes(lead.cat_status_lead_label),
+                    <span class="ds-pill border" :class="{
+                      'ok':  ['Inscrito','Pagó','Matriculado'].includes(lead.cat_status_lead_label),
+                      'warn': ['Interesado','En Seguimiento','Prox. Inicio'].includes(lead.cat_status_lead_label),
+                      '': ['Atendido'].includes(lead.cat_status_lead_label),
+                      'bad':   ['No Interesado','Rechazado'].includes(lead.cat_status_lead_label),
                     }">{{ lead.cat_status_lead_label || 'Pendiente' }}</span>
                   </td>
                   <td class="text-center">
-                    <span class="pill pill-slate border">
+                    <span class="ds-pill border">
                       {{ lead.count_calling }} <i class="fa-solid fa-phone ms-1 text-muted" style="font-size:.65rem"></i>
                     </span>
                   </td>
@@ -801,17 +801,21 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, i) in hcEnrollmentData" :key="i">
-                  <td><small>{{ item.fecha }}</small></td>
+                <tr v-if="clientHistoryEnrollments.length === 0">
+                  <td colspan="4" class="empty-state">Este cliente no tiene inscripciones registradas con este número.</td>
+                </tr>
+                <tr v-for="item in clientHistoryEnrollments" :key="item.enrollment_id">
+                  <td><small>{{ item.date }}</small></td>
                   <td>
-                    <div class="fw-bold">{{ item.programa }}</div>
-                    <small class="text-muted">Edición: {{ item.edicion }}</small>
+                    <div class="fw-bold">{{ item.program || 'Sin programa' }}</div>
+                    <small v-if="item.edition" class="text-muted">Edición {{ item.edition }}<template v-if="item.edition_start"> · inicia {{ item.edition_start }}</template></small>
                   </td>
                   <td>
-                    <span class="pill border" :class="item.estado === 'Finalizado' ? 'pill-teal' : 'pill-amber'">{{ item.estado }}</span>
+                    <span class="ds-pill" :class="item.verdict.tone">{{ item.verdict.label }}</span>
                   </td>
                   <td class="text-center">
-                    <span class="fw-bold" :class="item.nota >= 14 ? 'text-primary' : 'text-danger'">{{ item.nota || '-' }}</span>
+                    <span v-if="item.grade" class="ds-pill" :class="item.grade.tone">{{ item.grade.label }}</span>
+                    <small v-else class="text-muted">—</small>
                   </td>
                 </tr>
               </tbody>
@@ -848,20 +852,20 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
         <div v-if="activeTab === 'info'" class="fade-in">
           <div class="text-center mb-4 mt-2">
-            <h4 class="fw-bold text-primary mb-0">{{ modelProgramVersion.program_name }}</h4>
+            <h4 class="fw-bold c-info mb-0">{{ modelProgramVersion.program_name }}</h4>
             <small class="text-muted">Versión: {{ modelProgramVersion.version_code }}</small>
           </div>
           <div class="row g-3 mb-4 text-center">
             <div class="col-4">
-              <small class="d-block text-secondary mb-1">Tipo</small>
-              <span class="pill pill-slate border">{{ modelProgramVersion.cat_type_program_label }}</span>
+              <small class="d-block c-ink2 mb-1">Tipo</small>
+              <span class="ds-pill border">{{ modelProgramVersion.cat_type_program_label }}</span>
             </div>
             <div class="col-4">
-              <small class="d-block text-secondary mb-1">Modalidad</small>
-              <span class="pill pill-teal border">{{ modelProgramVersion.cat_model_modality_label }}</span>
+              <small class="d-block c-ink2 mb-1">Modalidad</small>
+              <span class="ds-pill ok border">{{ modelProgramVersion.cat_model_modality_label }}</span>
             </div>
             <div class="col-4">
-              <small class="d-block text-secondary mb-1">Sesiones</small>
+              <small class="d-block c-ink2 mb-1">Sesiones</small>
               <span class="fw-bold fs-5">{{ modelProgramVersion.sessions }}</span>
             </div>
           </div>
@@ -871,12 +875,12 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <div class="col-6 border-end text-center">
                 <small class="text-muted d-block">Estudiante</small>
                 <div class="fw-bold">S/ {{ modelProgramVersion.price_student_soles }}</div>
-                <small class="text-secondary">$ {{ modelProgramVersion.price_student_dollars }}</small>
+                <small class="c-ink2">$ {{ modelProgramVersion.price_student_dollars }}</small>
               </div>
               <div class="col-6 text-center">
                 <small class="text-muted d-block">Profesional</small>
                 <div class="fw-bold">S/ {{ modelProgramVersion.price_profesional_soles }}</div>
-                <small class="text-secondary">$ {{ modelProgramVersion.price_profesional_dollars }}</small>
+                <small class="c-ink2">$ {{ modelProgramVersion.price_profesional_dollars }}</small>
               </div>
             </div>
           </div>
@@ -895,28 +899,28 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             <div v-for="edition in modelProgramVersion.editions_json" :key="edition.edition_num_id" class="edition-card mb-3">
               <div class="edition-card__header">
                 <div class="d-flex align-items-center gap-2">
-                  <span class="pill pill-slate border">{{ edition.global_code }}</span>
+                  <span class="ds-pill border">{{ edition.global_code }}</span>
                   <span class="fw-bold" style="font-size:.9rem">Inicio: {{ formatDate(edition.start_date) }}</span>
                 </div>
-                <span class="pill border"
-                  :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'pill-teal' : 'pill-red') : 'pill-slate'">
+                <span class="ds-pill border"
+                  :class="(edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? 'ok' : 'bad') : ''">
                   {{ (edition.vacant !== null && edition.vacant !== undefined) ? (edition.vacant > 0 ? `${edition.vacant} Vacantes` : 'Lleno') : 'Sin Vacantes' }}
                 </span>
               </div>
               <div class="edition-card__body">
                 <div class="row g-2" style="font-size:.85rem" v-if="!edition.edition_children || edition.edition_children.length == 0">
                   <div class="col-md-6">
-                    <strong class="text-secondary"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
+                    <strong class="c-ink2"><i class="fa-solid fa-chalkboard-user me-1"></i> Docente:</strong>
                     <div class="ms-3">{{ edition.instructor || 'Por asignar' }}</div>
                   </div>
                   <div class="col-md-6">
-                    <strong class="text-secondary"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
+                    <strong class="c-ink2"><i class="fa-regular fa-clock me-1"></i> Horario:</strong>
                     <div class="ms-3" v-for="(sch, i) in edition.schedules" :key="i">{{ sch.day_combination_label }} {{ sch.hour_combination_label }}</div>
                     <div class="ms-3 text-muted fst-italic" v-if="!edition.schedules?.length">Sin horario definido</div>
                   </div>
                 </div>
                 <div v-if="edition.edition_children && edition.edition_children.length > 0" class="mt-3">
-                  <div class="p-2 rounded border" style="background:var(--slate-50)">
+                  <div class="p-2 rounded border" style="background:var(--ds-surface-2)">
                     <div class="fieldset-title mb-2" style="border:none;padding:0;margin:0 0 8px 0;">Estructura Académica / Módulos</div>
                     <div class="table-responsive">
                       <table class="exec-table exec-table--sm">
@@ -925,7 +929,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                         </thead>
                         <tbody>
                           <tr v-for="child in edition.edition_children" :key="child.edition_num_id">
-                            <td class="fw-bold text-primary">{{ child.abbreviation }}</td>
+                            <td class="fw-bold c-info">{{ child.abbreviation }}</td>
                             <td>{{ formatDate(child.start_date) }}</td>
                             <td>
                               <div v-for="(csch,ci) in child.schedules" :key="ci" style="line-height:1.1">
@@ -993,7 +997,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
   <!-- Edición -->
   <div class="program-edition" v-if="form.program_modality_selected_alias !== 'we_modality_online'">
-    <i class="fa-solid fa-calendar-days me-1" style="color:var(--slate-400);font-size:.8rem;"></i>
+    <i class="fa-solid fa-calendar-days me-1" style="color:var(--ds-muted);font-size:.8rem;"></i>
     <SearchSelect
       v-model="form.edition_id"
       mode="remote"
@@ -1049,7 +1053,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 <div
   v-if="!clientProfileType"
   class="profile-badge"
-  style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);border:1px solid var(--ln-amber-bd,#fde68a);"
+  style="background:var(--ds-soft-warn);color:var(--ds-warn-ink);border:1px solid var(--ds-warn);"
   title="Ve a 'Datos del Contacto' y selecciona una Ocupación"
 >
   <i class="fa-solid fa-triangle-exclamation"></i>
@@ -1071,7 +1075,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 <!-- Categoría de entrada (solo eventos/congresos) -->
 <div v-if="isEventProgram" class="insc-section insc-section--event mb-3">
   <div class="insc-section-title">
-    <i class="fa-solid fa-ticket me-2 text-primary"></i>
+    <i class="fa-solid fa-ticket me-2 c-info"></i>
     Categoría de entrada
   </div>
   <div class="row g-2">
@@ -1089,7 +1093,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         @change="onEventCategoryChange"
       />
       <div v-if="insc.cat_event_category && !eventCategories.find(c => c.cat_event_category === insc.cat_event_category)?.has_price"
-           class="small mt-1 text-warning">
+           class="small mt-1 c-warn">
         <i class="fa-solid fa-triangle-exclamation me-1"></i>
         Esta categoría no tiene tarifa cargada para el programa: se mantiene el precio base. Verifica el monto.
       </div>
@@ -1119,7 +1123,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               :currency="selectedCurrency"
               :storeAsMinor="false"
               class="exec-input-light border-0 bg-transparent text-end p-0 fw-bold"
-              style="font-size:1.5rem;color:var(--teal-600,#0d9488);max-width:150px"
+              style="font-size:1.5rem;color:var(--ds-accent);max-width:150px"
               @update:model-value="priceManuallySet = true"
               placeholder="0.00"
             />
@@ -1154,11 +1158,11 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 title="Buscar cliente en base de datos"
               >
                 <i class="fa-solid" :class="searchingCustomer ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"
-                  style="color:var(--teal-600,#12274e);"></i>
+                  style="color:var(--ds-ink);"></i>
               </button>
             </div>
             <small v-if="insc.document && insc.document.length !== docConfig.maxLength && docConfig.isNumeric"
-                  class="text-warning d-block mt-1" style="font-size:.7rem">
+                  class="c-warn d-block mt-1" style="font-size:.7rem">
               <i class="fa-solid fa-circle-exclamation me-1"></i> Se esperan {{ docConfig.maxLength }} dígitos
             </small>
           </div>
@@ -1176,7 +1180,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             />
             <small
   v-if="insc.email && !isValidEmail(insc.email)"
-  class="text-danger d-block mt-1"
+  class="c-bad d-block mt-1"
   style="font-size:.7rem;font-weight:600"
 >
   <i class="fa-solid fa-circle-exclamation me-1"></i>
@@ -1323,8 +1327,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               />
             </div>
             <div v-if="isDocumentalSale" class="col-12">
-              <div class="p-2 rounded border text-muted" style="font-size:.8rem; background:var(--ln-soft-bg,#fafafa);">
-                <i class="fa-solid fa-circle-info me-2 text-info"></i>
+              <div class="p-2 rounded border text-muted" style="font-size:.8rem; background:var(--ds-surface-2);">
+                <i class="fa-solid fa-circle-info me-2 c-info"></i>
                 El pago se registra después. La inscripción nace con la inicial pendiente
                 y FICO la confirma con la orden adjunta.
               </div>
@@ -1379,7 +1383,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--ln-cyan-bd,#bee5eb) !important; background-color: var(--ln-cyan-bg,#e2f3f5) !important;">
+              <div class="p-2 rounded border ln-soft c-info" style="font-size:.85rem; border-color: var(--ds-soft-info) !important; background-color: var(--ds-soft-info) !important;">
                 <i class="fa-solid fa-link me-2"></i> Este pago se registrará en la hoja <strong>"TOKEN DIGITAL 2026"</strong>
               </div>
             </div>
@@ -1413,7 +1417,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <CurrencyInput v-model="insc.saved_money" :currency="selectedCurrency" required :storeAsMinor="true" :softMinorTyping="true" zero-counts-as-empty placeholder="0.00" />
             </div>
             <div class="col-md-12 mt-1">
-              <div class="p-2 rounded border bg-light text-info" style="font-size:.85rem; border-color: var(--ln-cyan-bd,#bee5eb) !important; background-color: var(--ln-cyan-bg,#e2f3f5) !important;">
+              <div class="p-2 rounded border ln-soft c-info" style="font-size:.85rem; border-color: var(--ds-soft-info) !important; background-color: var(--ds-soft-info) !important;">
                 <i class="fa-solid fa-globe me-2"></i>
                 <template v-if="insc.cat_type_payment === 'we_payment_way_installments'">
                   El alumno pagó el <strong>adelanto</strong> por la pasarela web. Las cuotas restantes se cobrarán por otro canal. Se notificará al canal de <strong>Slack</strong> apenas envies.
@@ -1492,7 +1496,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   v-for="ben in insc.dsct_benefit_ids"
                   :key="ben.value"
                   class="d-flex justify-content-between align-items-center"
-                  style="font-size:11px; color: var(--ln-red-tx,#b91c1c); padding: 1px 4px;"
+                  style="font-size:11px; color: var(--ds-bad-ink); padding: 1px 4px;"
                 >
                   <span>• {{ ben.label }}</span>
                 </div>
@@ -1524,7 +1528,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <label class="exec-label mb-1">
           {{ isDocumentalSale ? 'Orden de Servicio / de Compra' : 'Comprobante(s) de Pago' }}
           <span v-if="!isVoucherOptional" class="c-red">*</span>
-          <span v-else class="ms-1 pill pill-teal border" style="font-size:9px;padding:1px 7px;">
+          <span v-else class="ms-1 ds-pill ok border" style="font-size:9px;padding:1px 7px;">
             Opcional · Descuento 100%
           </span>
         </label>
@@ -1553,8 +1557,8 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- TOKEN: sin adjunto -->
       <div class="col-12" v-if="isChannelToken">
-        <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:var(--ln-soft-bg,#fafafa);">
-          <i class="fa-solid fa-circle-info me-2 text-info"></i>
+        <div class="p-3 rounded border text-muted" style="font-size:.83rem; background:var(--ds-surface-2);">
+          <i class="fa-solid fa-circle-info me-2 c-info"></i>
           Para pagos por link/token no se requiere adjuntar comprobante.
           El proveedor enviará la confirmación directamente.
         </div>
@@ -1628,7 +1632,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
           </div>
           <div class="summary-row" v-if="insc.dsct_porcent_id">
             <span class="label">Descuento</span>
-            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoPorcentaje) }}</span>
+            <span class="value c-bad">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoPorcentaje) }}</span>
           </div>
           <div class="summary-row" v-if="insc.dsct_stick_id">
             <span class="label">
@@ -1637,7 +1641,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                 (precio fijo S/ {{ fmt2(insc.val_fijo) }})
               </small>
             </span>
-            <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoFijo) }}</span>
+            <span class="value c-bad">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoDescuentoFijo) }}</span>
           </div>
           <template v-if="insc.dsct_benefit_ids.length > 0">
             <div
@@ -1654,14 +1658,14 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
               <span v-if="insc.beneficiosSoloBadge" class="value text-muted" style="font-size:.75rem;">
                 Solo etiqueta · incluido en la beca
               </span>
-              <span v-else class="value text-danger">
+              <span v-else class="value c-bad">
                 - {{ selectedCurrency.symbol }} {{ fmt2(insc.val_beneficios[i] || 0) }}
               </span>
             </div>
             <!-- Total beneficios si hay más de uno -->
             <div class="summary-row" v-if="insc.dsct_benefit_ids.length > 1 && !insc.beneficiosSoloBadge" style="opacity:.7; font-size:.78rem;">
               <span class="label text-muted">Subtotal beneficios</span>
-              <span class="value text-danger">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficioTotal) }}</span>
+              <span class="value c-bad">- {{ selectedCurrency.symbol }} {{ fmt2(insc.montoBeneficioTotal) }}</span>
             </div>
           </template>
           <div class="summary-divider"></div>
@@ -1684,16 +1688,16 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
     <!-- Cabecera -->
     <div class="installment-header">
       <div class="d-flex align-items-center gap-2">
-        <i class="fa-solid fa-table-list text-primary"></i>
+        <i class="fa-solid fa-table-list c-info"></i>
         <span class="fw-700" style="font-size:13px;">Plan de Cuotas</span>
-        <span class="pill border ms-1" :class="manualMode ? 'pill-amber' : 'pill-slate'" style="font-size:9px;">
+        <span class="ds-pill border ms-1" :class="manualMode ? 'warn' : ''" style="font-size:9px;">
           {{ manualMode ? 'MANUAL' : 'AUTOMÁTICO' }}
         </span>
       </div>
       <div class="d-flex align-items-center gap-3">
         <!-- Selector nro cuotas en modo manual -->
         <div v-if="manualMode" class="d-flex align-items-center gap-2">
-          <span style="font-size:11px;color:var(--slate-400)">N° cuotas:</span>
+          <span style="font-size:11px;color:var(--ds-muted)">N° cuotas:</span>
           <input
             type="number" v-model.number="numCuotasManual"
             min="1" max="12"
@@ -1702,7 +1706,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             style="width:58px;height:28px;padding:3px 6px;font-size:12px;"
           />
         </div>
-        <div v-else style="font-size:11px;color:var(--slate-400);">
+        <div v-else style="font-size:11px;color:var(--ds-muted);">
           <i class="fa-solid fa-calendar-days me-1"></i>
           {{ autoNumCuotas }} cuota{{ autoNumCuotas !== 1 ? 's' : '' }}
         </div>
@@ -1730,10 +1734,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- Badge + Título -->
       <div class="reserva-id">
-        <span class="cuota-num" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);">R</span>
+        <span class="cuota-num" style="background:var(--ds-soft-info);color:var(--ds-info-ink);">R</span>
         <div>
           <div class="fw-700" style="font-size:12px;">Reserva / Pago Inicial</div>
-          <div style="font-size:10px;color:var(--slate-400);">Abono inicial al confirmar</div>
+          <div style="font-size:10px;color:var(--ds-muted);">Abono inicial al confirmar</div>
         </div>
       </div>
 
@@ -1741,7 +1745,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       <div class="reserva-amounts">
         <!-- Sin split: monto directo -->
         <div v-if="!reservaSplitEnabled" class="reserva-single">
-          <span class="fw-700" style="font-size:15px;color:var(--ln-blue-strong,#1d4ed8);">
+          <span class="fw-700" style="font-size:15px;color:var(--ds-info-ink);">
             {{ selectedCurrency.symbol }} {{ fmt2(insc.saved_money) }}
           </span>
         </div>
@@ -1749,22 +1753,22 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <!-- Con split: 2 filas -->
         <template v-else>
           <div class="reserva-split-line">
-            <span class="reserva-tag" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);">Hoy</span>
+            <span class="reserva-tag" style="background:var(--ds-soft-info);color:var(--ds-info-ink);">Hoy</span>
             <CurrencyInput
               v-model="reservaInmediata"
               :currency="selectedCurrency"
               :storeAsMinor="false"
               class="exec-input-light text-end fw-700"
-              style="font-size:13px;color:var(--ln-blue-strong,#1d4ed8);max-width:110px;height:28px;padding:3px 8px;"
+              style="font-size:13px;color:var(--ds-info-ink);max-width:110px;height:28px;padding:3px 8px;"
               placeholder="0.00"
             />
           </div>
           <div class="reserva-split-line">
-            <span class="reserva-tag" style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);">Diferido</span>
-            <span class="fw-700" style="font-size:13px;color:var(--ln-amber-strong,#b45309);min-width:80px;text-align:right;">
+            <span class="reserva-tag" style="background:var(--ds-soft-warn);color:var(--ds-warn-ink);">Diferido</span>
+            <span class="fw-700" style="font-size:13px;color:var(--ds-warn-ink);min-width:80px;text-align:right;">
               {{ selectedCurrency.symbol }} {{ fmt2(reservaDiferida) }}
             </span>
-            <i class="fa-solid fa-arrow-right" style="color:#94a3b8;font-size:9px;"></i>
+            <i class="fa-solid fa-arrow-right" style="color:var(--ds-muted);font-size:9px;"></i>
             <BaseDatePicker
               v-model="reservaDiferidaFecha"
               :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: false, disableMobile: true }"
@@ -1780,7 +1784,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
       <!-- Acciones -->
       <div class="reserva-actions">
-        <span class="pill" style="background:var(--ln-blue-bg,#dbeafe);color:var(--ln-blue-tx,#1e40af);font-size:9px;">Inicial</span>
+        <span class="ds-pill" style="background:var(--ds-soft-info);color:var(--ds-info-ink);font-size:9px;">Inicial</span>
         <button
           type="button"
           class="btn-exec btn-exec-sm"
@@ -1807,7 +1811,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
       </div>
 
       <div
-        v-for="(cuota, idx) in installmentPlan"
+        v-for="cuota in installmentPlan"
         :key="cuota.installment_number"
         class="installment-row"
         :class="{
@@ -1843,10 +1847,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <!-- Estado -->
         <div class="text-center">
           <span v-if="cuota.is_reserva_diferida" 
-                class="pill" style="background:var(--ln-amber-bg,#fef3c7);color:var(--ln-amber-tx,#92400e);font-size:9.5px;">
+                class="ds-pill" style="background:var(--ds-soft-warn);color:var(--ds-warn-ink);font-size:9.5px;">
             Reserva
           </span>
-          <span class="pill pill-draft" v-else>Borrador</span>
+          <span class="ds-pill pill-draft" v-else>Borrador</span>
         </div>
       </div>
 
@@ -1856,7 +1860,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <span class="fw-700 text-muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
           Saldo financiado
         </span>
-        <span class="text-end fw-700" :class="installmentPlanValid ? 'c-green' : 'text-danger'">
+        <span class="text-end fw-700" :class="installmentPlanValid ? 'c-green' : 'c-bad'">
           {{ selectedCurrency.symbol }} {{ fmt2(installmentTotalSum) }}
         </span>
         <span></span>
@@ -1868,7 +1872,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
         <span class="fw-700" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">
           Total (Reserva + Cuotas)
         </span>
-        <span class="text-end fw-700" style="font-size:14px;color:var(--navy-900);">
+        <span class="text-end fw-700" style="font-size:14px;color:var(--ds-ink);">
          {{ fmt2(round2(
             (reservaSplitEnabled ? Number(reservaInmediata) : Number(insc.saved_money || 0))
             + installmentTotalSum
@@ -1880,7 +1884,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
 
     <!-- Nota -->
     <div class="installment-footer-note">
-      <i class="fa-solid fa-circle-info me-1 text-primary"></i>
+      <i class="fa-solid fa-circle-info me-1 c-info"></i>
       <span v-if="manualMode">Modo manual activo. Ajusta montos y fechas según lo acordado con el alumno.</span>
       <span v-else>Las fechas y montos son referenciales. Finanzas aprobará el plan antes de activarlo.</span>
     </div>
@@ -1966,8 +1970,12 @@ import BaseDatePicker from '@/components/BaseDatePicker.vue';
 import FileUploader from '@/components/FileUploader.vue'
 import LeadAiSummary from '@/widgets/lead-ai-summary/LeadAiSummary.vue'
 import { computeDiscounts } from '@/features/apply-discounts/computeDiscounts.js'
-import { restoreObservedInscription } from '@/features/enroll-lead/restoreObservedInscription.js'
+import { restoreObservedInscription, restoreInstallments } from '@/features/enroll-lead/restoreObservedInscription.js'
+import { tokenLinkAmount, missingTokenAmountMessage } from '@/features/enroll-lead/tokenInscriptionFlags.js'
 import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
+import { toLocalIsoDate, toCalendarIsoDate, addDaysIso } from '@/shared/lib/localDate.js'
+import { autoInstallmentCount, buildAutoInstallmentPlan, seedManualPlan, mergeDeferredReserve } from '@/entities/enrollment/installmentPlan.js'
+import { enrollmentVerdict, gradeVerdict } from '@/entities/enrollment/enrollmentVerdict.js'
   const toast = useToast()
 
   import CurrencyInput from '@/components/CurrencyInput.vue'
@@ -2045,10 +2053,19 @@ async function loadProgramChildren() {
         customEditionMode[c.child_program_version_id] = 'same'
       }
     }
-  } catch { programChildren.value = [] }
+  } catch (err) {
+    // Sin modulos el paquete se registra sin convalidaciones ni cuenta personal:
+    // se avisa en vez de seguir como si el programa no tuviera hijos.
+    console.error('[loadProgramChildren]', err)
+    toast.error('No se pudieron cargar los módulos del programa.')
+    programChildren.value = []
+  }
 }
 
-  const todayIso = new Date().toISOString().slice(0, 16)
+// Fecha y hora LOCAL ('YYYY-MM-DDTHH:MM'). Antes era toISOString (UTC): la fecha
+// de contacto por defecto salia 5 h adelantada y, desde las 19:00, con mañana.
+const nowLocal = new Date()
+const todayIso = `${toLocalIsoDate(nowLocal)}T${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`
 const showDeleteWarningModal = ref(false)
 const isDeleteStatus = computed(() => form.status_alias === 'we_lead_status_deleted')
   function currentHourIso() {
@@ -2372,11 +2389,6 @@ const minDateForNewAttempt = computed(() => {
   return maxHistoryDate < today ? today : maxHistoryDate
 })
 
-const hcEnrollmentData = ref([
-  { fecha: '05 Dic 2025', programa: 'Power BI para Analistas', edicion: '2025-I', estado: 'En Curso', nota: null },
-  { fecha: '10 Jun 2024', programa: 'SQL Server Database', edicion: '2024-II', estado: 'Finalizado', nota: 18 },
-  { fecha: '15 Ene 2024', programa: 'Python for Data', edicion: '2024-I', estado: 'Finalizado', nota: 12 },
-])
 
 function onChangeDescuentoPorcentual(opt) {
   if (!opt) {
@@ -2492,13 +2504,11 @@ function normalizeDateTime(v) {
   return s
 }
   async function loadLead(id) {
-    console.log(id)
     const data = await comercialService.leadGet({ id })
 
     const l = data?.lead || data || {}
 
     const modality_selected_alias = l.cat_program_modality_alias ?? l.program_modality_alias ?? null
-    console.log(l)
     Object.assign(form, {
       fechaContactoInicial: normalizeDateTime(l.first_contact_date || l.registration_date) || todayIso,
       query_alias: l.query_alias ?? null,
@@ -2579,10 +2589,7 @@ function normalizeDateTime(v) {
           cat_creation_origin_alias: originAlias || 'we_origin_manual',
           cat_creation_origin_label: originObj ? originObj.description : 'Gestión Manual'
         }
-      }),
-
-      enrollment_id: l.enrollment_id
-
+      })
     })
 
     createdLeadId.value   = l.id ?? l.lead_id ?? id
@@ -2591,7 +2598,6 @@ function normalizeDateTime(v) {
 const docConfig = computed(() => {
   // Buscamos el objeto completo en el catálogo usando el alias seleccionado
   const selected = docTypeCatalog.value.find(item => item.alias === insc.cat_type_document);
-    console.log(selected)
   // Obtenemos variable_1 (longitud). Si no existe, default a 15.
   const maxLength = selected?.variable_1 ? Number(selected.variable_1) : 15;
 
@@ -2634,7 +2640,6 @@ watch(() => insc.cat_type_document, (newVal) => {
 
   async function loadDataForCloning(sourceId) {
       try {
-      console.log(sourceId)
           const originalData = await comercialService.leadGet({ id: sourceId })
 
           Object.assign(form, { 
@@ -2725,7 +2730,10 @@ watch(() => insc.cat_type_document, (newVal) => {
           onPriceRestored: () => { priceManuallySet.value = true }
         })
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      // Si falla, el formulario sigue usable; solo no se detecta la observacion.
+      console.error('[checkObservedStatus]', err)
+    }
   }
 
   async function handleResubmit () {
@@ -2863,7 +2871,6 @@ async function searchCustomerByDocument() {
   try {
     const response = await customerService.customerInfoGet({ document: doc })
 
-    console.log(response)
 
     if (response && response.result === 1) {
       insc.full_name        = response.first_name       || ''
@@ -2897,10 +2904,11 @@ async function searchSunat() {
       toast.info('No se encontraron datos en SUNAT para el documento ingresado.', { timeout: 3000 })
     }
 
-  console.log('Buscando en SUNAT con documento:', insc.document)
 }
 
-const dataSetted = ref(null)
+// Ultimo telefono consultado con exito: evita repetir la busqueda si el asesor
+// vuelve a pulsar Enter sin cambiar el numero.
+const lastSearchedPhone = ref(null)
 const saveBlockReason = computed(() => {
   if (!validateLeadInfo())      return 'Falta completar la información del Lead (fecha de contacto, programa, etc.)'
   if (!validateContactInfo())   return 'Falta completar los Datos del Contacto (teléfono, status, país, nombre, estado del cliente)'
@@ -2916,18 +2924,17 @@ async function searchLeadByPhone() {
     return;
   }
 
-  if(dataSetted==phone)return
-
-  dataSetted.value = phone
-
-  if (!phone || phone.length < 6) return
+  // Antes comparaba la ref y no su .value: nunca coincidia y repetia la busqueda.
+  if (lastSearchedPhone.value === phone) return
+  if (phone.length < 6) return
   if (searchingPhone.value) return
 
   searchingPhone.value = true
 
   try {
     const response = await comercialService.searchPhoneGet({ phone });
-    console.log(response)
+    // Se marca recien con respuesta: si fallo, el asesor puede reintentar.
+    lastSearchedPhone.value = phone
 
   form.membership_moment_id  =  response.membership_tier_id
   form.cat_client_moment_alias = response.cat_client_moment
@@ -2962,6 +2969,14 @@ async function searchLeadByPhone() {
 const clientHistoryLegacy = ref([]) // Aquí guardaremos 'legacy_details'
 const loadingHistory = ref(false)   // Para el spinner de carga
 const clientHistoryLeads = ref([])
+// Inscripciones REALES del cliente (sp_search_phone_get.enrollment_details).
+// Antes la pestaña mostraba 3 filas de ejemplo fijas en el código.
+const clientHistoryEnrollmentsRaw = ref([])
+const clientHistoryEnrollments = computed(() => clientHistoryEnrollmentsRaw.value.map(e => ({
+  ...e,
+  verdict: enrollmentVerdict({ typeStatusAlias: e.type_status_alias, ficoStatusAlias: e.fico_status_alias, active: e.active }),
+  grade: gradeVerdict({ finalGrade: e.final_grade, editionEnded: e.edition_ended })
+})))
 
 async function openPhoneDetail() {
 
@@ -2973,7 +2988,6 @@ async function openPhoneDetail() {
   }
 
 
-  if(dataSetted!=phone)dataSetted.value = phone
 
 
 
@@ -2982,7 +2996,8 @@ async function openPhoneDetail() {
 
   // Reseteamos ambas listas
   clientHistoryLegacy.value = [];
-  clientHistoryLeads.value = []; // <--- 2. RESETEAR AQUÍ
+  clientHistoryLeads.value = [];
+  clientHistoryEnrollmentsRaw.value = [];
 
   activeHistoryTab.value = 'asesoria'; // (Opcional: Si quieres que se abra directo en esta pestaña para probar)
 
@@ -2994,7 +3009,8 @@ async function openPhoneDetail() {
         clientHistoryLegacy.value = response.legacy_details || [];
 
         // Mapeamos el detalle de Leads (CRM)
-        clientHistoryLeads.value = response.lead_details || []; // <--- 3. ASIGNAR DATA AQUÍ
+        clientHistoryLeads.value = response.lead_details || [];
+        clientHistoryEnrollmentsRaw.value = response.enrollment_details || [];
     }
 
   } catch (error) {
@@ -3421,10 +3437,9 @@ if (isInstallmentMode.value && !installmentPlanValid.value) {
 }
 
 if (isInstallmentMode.value && reservaSplitEnabled.value && reservaDiferidaFecha.value) {
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const fechaDif = new Date(reservaDiferidaFecha.value)
-  if (fechaDif < hoy) {
+  // Se compara como texto 'YYYY-MM-DD' en hora de Lima: new Date('YYYY-MM-DD')
+  // es medianoche UTC (19:00 del dia anterior aca) y rechazaba elegir "hoy".
+  if (toCalendarIsoDate(reservaDiferidaFecha.value) < toLocalIsoDate()) {
     toast.warning('La fecha de la cuota diferida no puede ser una fecha pasada.')
     return
   }
@@ -3508,8 +3523,9 @@ async function confirmarToken() {
     toast.warning('Debe seleccionar el tipo de pago (Debito/Credito).')
     return
   }
-  if (false && !insc.cat_token_provider) {
-    toast.warning('Debe seleccionar el proveedor del Token (PayPal, Culqi, etc.).')
+  // Antes se podia crear un link por S/ 0 (la copia de B2B ya lo bloqueaba).
+  if (!tokenLinkAmount(insc)) {
+    toast.warning(missingTokenAmountMessage(insc))
     return
   }
 
@@ -3540,10 +3556,7 @@ async function confirmarToken() {
     // Si es al contado, es el total. Antes mandabamos siempre total_amount, lo que
     // hacia que en cuotas el datatable mostrara S/300 cuando el alumno solo iba
     // a pagar S/150 por el link.
-    const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
-    const tokenAmount = isInstallments
-      ? (Number(insc.saved_money) || 0)
-      : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
+    const tokenAmount = tokenLinkAmount(insc)
 
     const tokenPayload = {
       lead_id: resolvedLeadId,
@@ -3609,7 +3622,6 @@ async function guardarEfectivo() {
 }
 
 async function guardar() {
-    console.log('[guardar] edition_id:', form.edition_id, '| edition_label:', form.edition_label)
 
   if (!comercialService) return console.error('comercialService no inyectado')
   if (!leadFieldsFilled()) return
@@ -3671,24 +3683,35 @@ async function loadTokenForEdit (tokenId) {
     insc.last_name         = d.last_name         || ''
     insc.mother_last_name  = d.mother_last_name  || ''
     insc.email             = d.email             || ''
-    insc.observations      = d.observations      || ''
+    // El formulario usa `observacions` (asi lo lee buildEnrollmentPayload); antes
+    // se restauraba en `observations` y la nota del asesor se perdia al editar.
+    insc.observacions      = d.observations      || ''
+    insc.requires_email_cc = d.requires_email_cc === true
+    insc.email_cc          = d.email_cc          || ''
     insc.saved_money       = Number(d.saved_money  || 0)
     insc.montoOriginal     = Number(d.list_price   || 0)
     insc.total_amount      = Number(d.total_amount || 0)
-    insc.installment_plan  = d.installment_plan  || null
-    insc.ticket_payment_urls = d.ticket_payment_urls || []
-    insc.attachments       = d.attachments       || []
     insc.student_attachment_url = d.student_attachment_url || null
+    // Plan guardado en modo manual: puede tener fechas/montos acordados que el
+    // automatico no reproduciria (misma regla que la subsanacion).
+    restoreInstallments({ manualMode, numCuotasManual, editableInstallments }, d.installment_plan)
 
     insc.cat_type_document      = aliasById(d.cat_type_document,       docTypeCatalog.value)          || null
     insc.cat_insc_modality      = aliasById(d.cat_insc_modality,       inscModalidades.value)         || null
     insc.cat_type_payment       = aliasById(d.cat_type_payment,        inscPaymentModes.value)        || null
     insc.cat_certificate_status = aliasById(d.cat_certificate_status,  certificateStatusCatalog.value) || null
-    insc.cat_method_payment     = aliasById(d.cat_method_payment,      paymentMethodCatalog.value)    || null
     insc.selectedCurrencyAlias  = aliasById(d.cat_currency,            currencyCatalog.value)         || null
+    insc.cat_b2b_doctype        = aliasById(d.cat_b2b_doctype,         b2bDoctypeCatalog.value)       || null
 
+    // El watch de cat_payment_channel limpia proveedor, medio y adjuntos en el
+    // flush siguiente: se espera a que corra y RECIEN se restauran (antes se
+    // escribian primero y el watch los borraba en silencio).
     insc.cat_payment_channel = d.cat_payment_channel || null
+    await nextTick()
     insc.cat_token_provider  = d.cat_token_provider  || null
+    insc.cat_method_payment  = aliasById(d.cat_method_payment, paymentMethodCatalog.value) || null
+    insc.ticket_payment_urls = d.ticket_payment_urls || []
+    insc.attachments         = d.attachments         || []
     insc.dsct_porcent_id     = d.dsct_porcent_id     || null
     insc.dsct_porcent_label  = d.dsct_porcent_label  || null
     insc.dsct_stick_id       = d.dsct_stick_id       || null
@@ -3707,7 +3730,12 @@ async function loadTokenForEdit (tokenId) {
         const typeId = discountCatalog.value.find(e => e.alias === typeAlias)?.id
         if (!typeId) return []
         return await discountService.discountCaller({ q: '', cat_discount_type: typeId }) || []
-      } catch { return [] }
+      } catch (err) {
+        // Sin el valor del descuento el total se recalcula SIN descuento: dinero.
+        console.error('[loadTokenForEdit.discounts]', typeAlias, err)
+        toast.error('No se pudieron cargar los descuentos del token: revisa el total antes de guardar.')
+        return []
+      }
     }
 
     if (insc.dsct_porcent_id) {
@@ -3749,15 +3777,16 @@ async function loadTokenForEdit (tokenId) {
 
 async function confirmarEdicionToken () {
   if (!inscriptionFieldsFilled()) return
+  if (!tokenLinkAmount(insc)) {
+    toast.warning(missingTokenAmountMessage(insc))
+    return
+  }
   savingInsc.value = true
   try {
     const enrollmentPayload = buildEnrollmentPayload()
     // Mismo razonamiento que tokenCreate: el monto del token = lo que se paga
     // por el link. Cuotas -> saved_money (inicial). Contado -> total_amount.
-    const isInstallments = insc.cat_type_payment === 'we_payment_way_installments'
-    const tokenAmountEdit = isInstallments
-      ? (Number(insc.saved_money) || 0)
-      : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
+    const tokenAmountEdit = tokenLinkAmount(insc)
     const resp = await ficoService.tokenEditInscription({
       token_id:    editTokenId.value,
       inscription: enrollmentPayload.inscription,
@@ -3791,8 +3820,18 @@ function openTokenInscription() {
   })
 }
 
+// Boton INSCRIBIR. Antes llamaba directo a openInscription, que dejaba el modo
+// y el canal del token si el asesor habia abierto TOKEN antes y lo cerro con la X.
+function openRegularInscription() {
+  isTokenMode.value = false
+  openInscription()
+  const channelId = alias => paymentChannelCatalog.value.find(c => c.alias === alias)?.id
+  if (insc.cat_payment_channel === channelId('we_channel_token')) {
+    insc.cat_payment_channel = channelId('we_channel_general') ?? null
+  }
+}
+
 function openInscription() {
-  if (!isTokenMode.value) isTokenMode.value = false
   if (!inscInitialized.value || observedData.value) {
     resetInscriptionData()
     insc.full_name              = form.full_name || ''
@@ -3833,7 +3872,10 @@ watch(() => form.program_version_id, () => {
 })
 
   function validateLeadInfo() {
-    const required = ['fechaContactoInicial', 'origin_seller_phone']
+    // El celular de origen solo se exige si el asesor tiene celulares asignados:
+    // antes era obligatorio siempre y un asesor sin celulares no podia guardar.
+    if (sellerPhoneOptions.value.length && !form.origin_seller_phone) return false
+    const required = ['fechaContactoInicial']
     for (const field of required) {
       if (field === 'edition_id') {
         if(route.query.clone_from)return true
@@ -3989,12 +4031,8 @@ function onEditionChange(opcion) {
   currentEdition.value    = opcion
   form.edition_label      = opcion.start_date_label || null  // ← AGREGAR
   form.edition_start_date = opcion.start_date || null
-  console.log(opcion.start_date)
-  console.log(opcion.end_date)
-  console.log(form.program_sessions)
   // Calcular sessions_per_week desde las fechas reales de la edición
   if (opcion.start_date && opcion.end_date && form.program_sessions > 0) {
-    console.log("PROCESANDO FECHAS")
     const inicio  = new Date(opcion.start_date)
     const fin     = new Date(opcion.end_date)
     const semanas = Math.max(1, Math.round((fin - inicio) / (7 * 24 * 60 * 60 * 1000)))
@@ -4003,14 +4041,6 @@ function onEditionChange(opcion) {
     form.program_sessions_per_week = 1 // fallback
   }
 
-  console.info('[Edición seleccionada]', {
-    start:    opcion.start_date,
-    end:      opcion.end_date,
-    sessions: form.program_sessions,
-    semanas:  Math.round((new Date(opcion.end_date) - new Date(opcion.start_date)) / (7 * 24 * 60 * 60 * 1000)),
-    sessions_per_week: form.program_sessions_per_week,
-    cuotas_resultado:  'ver autoNumCuotas'
-  })
 }
 
     const clientProfileType = computed(() => {
@@ -4102,8 +4132,6 @@ watch(calculatedBasePrice, (newPrice) => {
     insc.montoOriginal = newPrice
   }
 }, { immediate: true })
-  watch(() => insc.selectedCurrencyAlias, () => {
-  })
  
 
 // ══════════════════════════════════════════════════
@@ -4132,132 +4160,25 @@ const installmentRemainder = computed(() => {
   return rem > 0 ? rem : 0
 })
 
-const autoNumCuotas = computed(() => {
-  const type     = form.category_alias
-  const spw      = form.program_sessions_per_week || 1
-  const children = form.count_children || 0
+// Motor de cuotas: entities/enrollment/installmentPlan.js (regla de Comercial,
+// con tests; tambien lo usan B2B y Fundacion via useLeadForm).
+const autoNumCuotas = computed(() => autoInstallmentCount({
+  categoryAlias: form.category_alias,
+  sessionsPerWeek: form.program_sessions_per_week || 1,
+  childrenCount: form.count_children || 0
+}))
 
-  if (['we_program_type_course', 'we_program_type_minicourse'].includes(type)) return 1
-  if (type === 'we_program_type_pee')     return spw >= 2 ? 2 : 3
-  if (type === 'we_program_type_diploma') return spw >= 2 ? 4 : 5
-  if (type === 'we_program_type_specialization') {
-    if (children <= 2) return 2
-    return spw >= 2 ? 2 : 3
-  }
-  return 1
-})
- 
 const autoInstallmentPlan = computed(() => {
   if (!isInstallmentMode.value) return []
-  const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
-  const n               = autoNumCuotas.value
-  const startRaw        = form.edition_start_date
-  const sessionsPerWeek = form.program_sessions_per_week || 1
-  const isEsp           = form.category_alias === 'we_program_type_specialization'
-  const isCourse        = ['we_program_type_course', 'we_program_type_minicourse'].includes(form.category_alias)
-
-  if (saldo <= 0 || n < 1) return []
-
-  const cuotaBase = Math.floor(saldo / n)
-  const remainder = round2(saldo - cuotaBase * n)
-  const base = startRaw
-    ? new Date(String(startRaw).slice(0, 10) + 'T00:00:00')
-    : new Date()
-  const plan = []
-
-  // ── CURSO / MINICURSO: única cuota = inicio + 6 días ──────
-  if (isCourse) {
-    const d = new Date(base)
-    d.setDate(d.getDate() + 6)
-    plan.push({
-      installment_number: 1,
-      amount: round2(cuotaBase + remainder),
-      due_date: d.toISOString().slice(0, 10)
-    })
-    return plan
-  }
-
-  // ── ESPECIALIZACIÓN: snap a fechas clave ──────────────────
-  if (isEsp) {
-    // Cuota 1 → [1, 15, 30] con mínimo 7 días desde inicio
-    const minC1 = new Date(base)
-    minC1.setDate(minC1.getDate() + 7)
-    const d1 = snapToKeyDate(minC1, [1, 15, 30])
-
-    // Cuota 2 → [1, 15] siguiente después de cuota 1
-    const minC2 = new Date(d1)
-    minC2.setDate(minC2.getDate() + 1)
-    const d2 = snapToKeyDate(minC2, [1, 15])
-
-    // Cuota 3 (si aplica) → [1, 15, 30] siguiente después de cuota 2
-    const minC3 = new Date(d2)
-    minC3.setDate(minC3.getDate() + 1)
-    const d3 = snapToKeyDate(minC3, [1, 15, 30])
-
-    const keyDates = [d1, d2, d3]
-
-    for (let i = 0; i < n; i++) {
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: keyDates[i].toISOString().slice(0, 10)
-      })
-    }
-    return plan
-  }
-
-  // ── PEE / DIPLOMA: lógica existente sin cambios ───────────
-  if (sessionsPerWeek >= 2) {
-    const f1 = new Date(base)
-    f1.setDate(f1.getDate() + 15)
-    for (let i = 0; i < n; i++) {
-      const d = new Date(f1)
-      d.setDate(d.getDate() + i * 20)
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: d.toISOString().slice(0, 10)
-      })
-    }
-  } else {
-    const f1 = new Date(base)
-    f1.setMonth(f1.getMonth() + 1)
-    f1.setDate(15)
-    for (let i = 0; i < n; i++) {
-      let d
-      if (i === 0) { d = new Date(f1) }
-      else { d = new Date(f1); d.setMonth(d.getMonth() + i); d.setDate(1) }
-      plan.push({
-        installment_number: i + 1,
-        amount: i === n - 1 ? round2(cuotaBase + remainder) : cuotaBase,
-        due_date: d.toISOString().slice(0, 10)
-      })
-    }
-  }
-
-  return plan
+  return buildAutoInstallmentPlan({
+    balance: round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0)),
+    count: autoNumCuotas.value,
+    start: toCalendarIsoDate(form.edition_start_date),
+    today: toLocalIsoDate(),
+    categoryAlias: form.category_alias,
+    sessionsPerWeek: form.program_sessions_per_week || 1
+  })
 })
-
-
-// ── Helper: próxima fecha clave >= minDate ─────────────────
-function snapToKeyDate(afterDate, keys = [1, 15, 30]) {
-  const min = new Date(afterDate)
-  min.setHours(0, 0, 0, 0)
-
-  for (let mo = 0; mo <= 4; mo++) {
-    const year  = min.getFullYear()
-    const month = min.getMonth() + mo
-
-    for (const k of keys) {
-      const daysInMonth = new Date(year, month + 1, 0).getDate()
-      const day = Math.min(k, daysInMonth) // ej: Feb no tiene día 30
-      const candidate = new Date(year, month, day)
-      candidate.setHours(0, 0, 0, 0)
-      if (candidate >= min) return candidate
-    }
-  }
-  return min // fallback
-}
 
 // ── Modo manual ───────────────────────────────────────────────
 const manualMode           = ref(false)
@@ -4299,42 +4220,14 @@ const reservaSplitValid = computed(() =>
 )
 
 function defaultDiferidaFecha() {
-  const d = new Date()
-  d.setDate(d.getDate() + 7)
-  return d.toISOString().slice(0, 10)
+  return addDaysIso(toLocalIsoDate(), 7)
 }
 function seedEditableInstallments(n) {
-  const saldo = round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0))
-  if (saldo <= 0 || n < 1) { editableInstallments.value = []; return }
-
-  const cuotaBase = Math.floor(saldo / n)
-  const rem       = round2(saldo - cuotaBase * n)
-
-  // ✅ Usamos las fechas ya calculadas por autoInstallmentPlan como base
-  const autoPlan = autoInstallmentPlan.value
-
-  editableInstallments.value = Array.from({ length: n }, (_, i) => {
-    // Si existe la fecha en el plan automático, la reutilizamos
-    // Si no (el usuario pidió más cuotas que las auto), calculamos desde la última
-    let due_date
-    if (autoPlan[i]?.due_date) {
-      due_date = autoPlan[i].due_date
-    } else {
-      // Extiende desde la última fecha disponible sumando 1 mes
-      const lastDate = autoPlan[autoPlan.length - 1]?.due_date
-      const base = lastDate
-        ? new Date(lastDate + 'T00:00:00')
-        : new Date()
-      base.setMonth(base.getMonth() + (i - autoPlan.length + 1))
-      base.setDate(1)
-      due_date = base.toISOString().slice(0, 10)
-    }
-
-    return {
-      installment_number: i + 1,
-      amount: i === n - 1 ? round2(cuotaBase + rem) : cuotaBase,
-      due_date
-    }
+  editableInstallments.value = seedManualPlan({
+    balance: round2((Number(insc.total_amount) || 0) - (Number(insc.saved_money) || 0)),
+    count: n,
+    autoPlan: autoInstallmentPlan.value,
+    today: toLocalIsoDate()
   })
 }
 
@@ -4364,34 +4257,15 @@ function updateEditableDate(idx, val) {
 }
 
 
-// Plan efectivo que se usa en template y en el payload
-// REEMPLAZA el computed installmentPlan existente
+// Plan efectivo que se usa en template y en el payload. _editableIdx rastrea la
+// posicion real en editableInstallments (la reserva diferida usa -1).
 const installmentPlan = computed(() => {
-  // Añadimos _editableIdx para rastrear posición real en editableInstallments
-  const basePlan = (manualMode.value
-    ? editableInstallments.value
-    : autoInstallmentPlan.value
-  ).map((c, i) => ({ ...c, _editableIdx: i }))
-
-  if (!reservaSplitEnabled.value || reservaDiferida.value <= 0 || !reservaDiferidaFecha.value) {
-    return basePlan
-  }
-
-  const extraCuota = {
-    installment_number: 0,
-    amount: reservaDiferida.value,
-    due_date: reservaDiferidaFecha.value,
-    is_reserva_diferida: true,
-    _editableIdx: -1   // ← no existe en editableInstallments
-  }
-
-  return [...basePlan, extraCuota]
-    .sort((a, b) => {
-      if (!a.due_date) return 1
-      if (!b.due_date) return -1
-      return new Date(a.due_date) - new Date(b.due_date)
-    })
-    .map((c, i) => ({ ...c, installment_number: i + 1 }))
+  const basePlan = (manualMode.value ? editableInstallments.value : autoInstallmentPlan.value)
+    .map((c, i) => ({ ...c, _editableIdx: i }))
+  return mergeDeferredReserve(basePlan, {
+    amount: reservaSplitEnabled.value ? reservaDiferida.value : 0,
+    dueDate: reservaDiferidaFecha.value
+  })
 })
 
 
@@ -4467,14 +4341,15 @@ function toggleReschedule(contacto) {
 </script>
 
 <style scoped>
-/* ═══════════════════════════════════════════════════
+/* Colores solo con tokens ds-* (sin bloque dark: cambian solos). btn-exec y
+   ds-pill son globales y no se redefinen aca.
+   ═══════════════════════════════════════════════════
    PAGE LAYOUT — diseño basado en EnrollmentForm
    ═══════════════════════════════════════════════════ */
 .ef-page {
-  background: #FFFFFF;
+  background: var(--ds-surface);
   padding: 32px 32px 24px;
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1A1A1A;
+  color: var(--ds-ink);
   min-height: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -4495,7 +4370,7 @@ function toggleReschedule(contacto) {
 
 .ef-breadcrumb {
   font-size: 11px;
-  color: #A3A3A3;
+  color: var(--ds-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 500;
@@ -4504,7 +4379,7 @@ function toggleReschedule(contacto) {
 .ef-page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: var(--ds-ink);
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -4552,17 +4427,17 @@ function toggleReschedule(contacto) {
 .ef-btn-warning:disabled,
 .ef-btn-token:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ef-btn-primary { color: #fff; background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); }
-.ef-btn-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
+.ef-btn-primary { color: var(--ds-surface); background: var(--ds-brand); border-color: var(--ds-brand); }
+.ef-btn-primary:hover:not(:disabled) { background: var(--ds-brand); }
 
-.ef-btn-outline { color: #737373; background: #fff; border: 1px solid #E8E8E8; }
-.ef-btn-outline:hover:not(:disabled) { border-color: #D4D4D4; color: #1A1A1A; }
+.ef-btn-outline { color: var(--ds-ink-2); background: var(--ds-surface); border: 1px solid var(--ds-border); }
+.ef-btn-outline:hover:not(:disabled) { border-color: var(--ds-border-strong); color: var(--ds-ink); }
 
-.ef-btn-warning { color: #fff; background: #F59E0B; border-color: #F59E0B; }
-.ef-btn-warning:hover:not(:disabled) { background: #D97706; }
+.ef-btn-warning { color: var(--ds-surface); background: var(--ds-warn); border-color: var(--ds-warn); }
+.ef-btn-warning:hover:not(:disabled) { background: var(--ds-warn); }
 
-.ef-btn-token { color: #fff; background: #6366F1; border-color: #6366F1; }
-.ef-btn-token:hover:not(:disabled) { background: #4F46E5; }
+.ef-btn-token { color: var(--ds-surface); background: var(--ds-violet-ink); border-color: var(--ds-violet-ink); }
+.ef-btn-token:hover:not(:disabled) { background: var(--ds-violet-ink); }
 
 .ef-footer-actions {
   display: flex;
@@ -4570,7 +4445,7 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: 10px;
   padding: 24px 0 8px;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid var(--ds-border);
   margin-top: 8px;
 }
 
@@ -4578,8 +4453,8 @@ function toggleReschedule(contacto) {
    FIELDSETS / CARDS — restyle exec-* to ef-card look
    ═══════════════════════════════════════════════════ */
 .exec-fieldset {
-  background: #fff;
-  border: 1px solid #F0F0F0;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: 10px;
   padding: 24px;
   margin-bottom: 20px;
@@ -4589,12 +4464,12 @@ function toggleReschedule(contacto) {
 .fieldset-title {
   font-size: 11px;
   font-weight: 600;
-  color: #8C8C8C;
+  color: var(--ds-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0 0 20px 0;
   padding: 0 0 0 12px;
-  border-left: 3px solid #1A1A1A;
+  border-left: 3px solid var(--ds-ink);
   border-bottom: none;
   line-height: 1.4;
 }
@@ -4606,25 +4481,25 @@ function toggleReschedule(contacto) {
 .exec-label {
   font-size: 12px;
   font-weight: 600;
-  color: #737373;
+  color: var(--ds-ink-2);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: block;
   margin-bottom: 6px;
 }
 
-.c-red { color: #DC2626; font-weight: 700; margin-left: .15rem; }
+.c-red { color: var(--ds-bad-ink); font-weight: 700; margin-left: .15rem; }
 
 /* ── INPUTS / SELECTS / TEXTAREA ──────────────────── */
 .exec-input-light,
 .exec-select-light {
-  background: #fff;
-  border: 1px solid #E8E8E8;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
   padding: 0 12px;
   font-size: 13px;
   font-family: inherit;
-  color: #1A1A1A;
+  color: var(--ds-ink);
   transition: border-color .2s ease;
   height: 38px;
   outline: none;
@@ -4634,29 +4509,29 @@ function toggleReschedule(contacto) {
 .exec-input-light:focus,
 .exec-select-light:focus {
   outline: none;
-  border-color: #A3A3A3;
+  border-color: var(--ds-muted);
   box-shadow: none;
 }
 .exec-input-light:disabled,
 .exec-select-light:disabled {
-  background-color: #FAFAFA;
-  color: #A3A3A3;
+  background-color: var(--ds-surface-2);
+  color: var(--ds-muted);
   cursor: not-allowed;
   opacity: 1;
 }
 .exec-input-light.input-valid {
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5,150,105,.1);
+  border-color: var(--ds-ok-ink);
+  box-shadow: 0 0 0 3px var(--ds-soft-ok);
 }
 
 .exec-textarea {
-  background: #fff;
-  border: 1px solid #E8E8E8;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 13px;
   font-family: inherit;
-  color: #1A1A1A;
+  color: var(--ds-ink);
   transition: border-color .2s ease;
   resize: vertical;
   min-height: 72px;
@@ -4665,7 +4540,7 @@ function toggleReschedule(contacto) {
 }
 .exec-textarea:focus {
   outline: none;
-  border-color: #A3A3A3;
+  border-color: var(--ds-muted);
   box-shadow: none;
 }
 
@@ -4675,94 +4550,50 @@ function toggleReschedule(contacto) {
   align-items: flex-start;
   gap: 9px;
   padding: 10px 12px;
-  border: 1px solid #E8E8E8;
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ds-ink-2);
   line-height: 1.45;
   cursor: pointer;
 }
 .cc-toggle input { margin-top: 2px; flex-shrink: 0; }
-.cc-toggle strong { display: block; font-size: 12.5px; color: #1A1A1A; margin-bottom: 1px; }
-.cc-help { display: block; margin-top: 5px; font-size: 11.5px; color: #9CA3AF; line-height: 1.45; }
+.cc-toggle strong { display: block; font-size: 12.5px; color: var(--ds-ink); margin-bottom: 1px; }
+.cc-help { display: block; margin-top: 5px; font-size: 11.5px; color: var(--ds-muted); line-height: 1.45; }
 .exec-textarea:disabled {
-  background-color: #FAFAFA;
-  color: #A3A3A3;
+  background-color: var(--ds-surface-2);
+  color: var(--ds-muted);
   cursor: not-allowed;
 }
 
 /* ═══════════════════════════════════════════════════
    BUTTONS — exec-btn flavors restyled to ef look
    ═══════════════════════════════════════════════════ */
-.btn-exec {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 14px;
-  cursor: pointer;
-  transition: all .2s ease;
-  border: 1px solid transparent;
-  white-space: nowrap;
-  text-decoration: none;
-  line-height: 1.2;
-  font-family: inherit;
-}
-.btn-exec:disabled { opacity: .5; cursor: default; }
 
-.btn-exec-primary {
-  background: var(--we-navy, #002060);
-  color: #fff;
-  border-color: var(--we-navy, #002060);
-}
-.btn-exec-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
 
-.btn-exec-ghost {
-  background: transparent;
-  color: #737373;
-  border-color: #E8E8E8;
-}
-.btn-exec-ghost:hover:not(:disabled) {
-  background: #FAFAFA;
-  color: #1A1A1A;
-  border-color: #D4D4D4;
-}
 
-.btn-exec-outline {
-  background: #fff;
-  color: #737373;
-  border-color: #E8E8E8;
-}
-.btn-exec-outline:hover:not(:disabled) {
-  background: #FAFAFA;
-  border-color: #D4D4D4;
-  color: #1A1A1A;
-}
 
 .btn-exec-warning {
-  background: #F59E0B;
-  color: #fff;
-  border-color: #F59E0B;
+  background: var(--ds-warn);
+  color: var(--ds-surface);
+  border-color: var(--ds-warn);
 }
-.btn-exec-warning:hover:not(:disabled) { background: #D97706; }
+.btn-exec-warning:hover:not(:disabled) { background: var(--ds-warn); }
 
 .btn-exec-active {
-  background: var(--we-navy, #002060);
-  color: #fff;
-  border-color: var(--we-navy, #002060);
+  background: var(--ds-brand);
+  color: var(--ds-surface);
+  border-color: var(--ds-brand);
 }
 
 .btn-exec-danger-ghost {
   background: transparent;
-  border-color: #FCA5A5;
-  color: #B91C1C;
+  border-color: var(--ds-bad);
+  color: var(--ds-bad-ink);
 }
 .btn-exec-danger-ghost:hover:not(:disabled) {
-  background: #FEF2F2;
-  border-color: #F87171;
+  background: var(--ds-soft-bad);
+  border-color: var(--ds-bad);
 }
 
 .btn-exec-sm { padding: 5px 10px; font-size: 11.5px; }
@@ -4771,7 +4602,7 @@ function toggleReschedule(contacto) {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--teal-500, #14b8a6);
+  color: var(--ds-accent);
   padding: 0 .2rem;
   font-size: .9rem;
   vertical-align: middle;
@@ -4786,7 +4617,7 @@ function toggleReschedule(contacto) {
 .exec-switch span {
   position: absolute;
   inset: 0;
-  background: #e2e8f0;
+  background: var(--ds-border);
   border-radius: 9999px;
   transition: .2s;
   cursor: pointer;
@@ -4795,7 +4626,7 @@ function toggleReschedule(contacto) {
   content: '';
   width: 18px;
   height: 18px;
-  background: #fff;
+  background: var(--ds-surface);
   border-radius: 50%;
   position: absolute;
   top: 3px;
@@ -4803,7 +4634,7 @@ function toggleReschedule(contacto) {
   transition: .2s;
   box-shadow: 0 1px 2px rgba(0,0,0,.15);
 }
-.exec-switch input:checked + span { background: var(--teal-500, #14b8a6); }
+.exec-switch input:checked + span { background: var(--ds-accent); }
 .exec-switch input:checked + span::after { left: 21px; }
 .exec-switch-lg { width: 52px; height: 28px; }
 .exec-switch-lg span::after { width: 22px; height: 22px; top: 3px; left: 3px; }
@@ -4812,37 +4643,24 @@ function toggleReschedule(contacto) {
 .x-small { font-size: .72rem; }
 .fw-600 { font-weight: 600; }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .02em;
-}
-.pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--slate-600, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
-.pill-teal   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4 !important; }
-.pill-red    { background: #fef2f2; color: #b91c1c; border-color: #fecaca !important; }
-.pill-amber  { background: #fffbeb; color: #92400e; border-color: #fde68a !important; }
 
 .empty-state {
   text-align: center;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   font-size: 13px;
   font-style: italic;
   padding: 20px;
-  background: var(--slate-50, #f8fafc);
+  background: var(--ds-surface-2);
   border-radius: 6px;
-  border: 1px dashed var(--slate-300, #cbd5e1);
+  border: 1px dashed var(--ds-border-strong);
 }
 
 .edition-meta {
   font-size: .72rem;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   line-height: 1.7;
 }
-.edition-meta b { color: var(--slate-600, #475569); }
+.edition-meta b { color: var(--ds-ink-2); }
 
 .attempt-head {
   display: grid;
@@ -4852,9 +4670,9 @@ function toggleReschedule(contacto) {
   text-transform: uppercase;
   letter-spacing: .04em;
   font-weight: 700;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   padding: .4rem .75rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--ds-border);
 }
 .attempt-row {
   display: grid;
@@ -4862,17 +4680,17 @@ function toggleReschedule(contacto) {
   gap: .5rem;
   align-items: start;
   padding: .75rem;
-  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  border-bottom: 1px solid var(--ds-surface-2);
   transition: background .12s;
 }
 .attempt-row:last-child { border-bottom: none; }
-.attempt-row:hover { background: var(--slate-50, #f8fafc); }
+.attempt-row:hover { background: var(--ds-surface-2); }
 .attempt-row__num {
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   padding-top: .3rem;
   font-size: .88rem;
 }
@@ -4883,25 +4701,25 @@ function toggleReschedule(contacto) {
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: .6rem; transition: all .15s;
 }
-.timer-btn--start { background: #d1fae5; color: #059669; }
-.timer-btn--start:hover { background: #a7f3d0; }
-.timer-btn--stop  { background: #fee2e2; color: #dc2626; }
-.timer-btn--stop:hover  { background: #fecaca; }
+.timer-btn--start { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.timer-btn--start:hover { background: var(--ds-ok); }
+.timer-btn--stop  { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.timer-btn--stop:hover  { background: var(--ds-bad); }
 .timer-btn:disabled { opacity: .5; cursor: default; }
 .timer-display {
   font-size: .78rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--slate-600, #475569);
+  color: var(--ds-ink-2);
 }
-.timer-display--active { color: #dc2626; }
+.timer-display--active { color: var(--ds-bad-ink); }
 
 .exec-tabs {
   list-style: none;
   display: flex;
   gap: .2rem;
   padding: 0 1rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--ds-border);
   margin: 0;
 }
 .exec-tabs__item {
@@ -4909,22 +4727,22 @@ function toggleReschedule(contacto) {
   padding: .55rem .85rem;
   font-size: .8rem;
   font-weight: 500;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: all .15s;
 }
-.exec-tabs__item:hover { color: var(--slate-600, #475569); }
+.exec-tabs__item:hover { color: var(--ds-ink-2); }
 .exec-tabs__item--active {
-  color: var(--navy-900, #0f172a);
-  border-bottom-color: var(--teal-500, #14b8a6);
+  color: var(--ds-ink);
+  border-bottom-color: var(--ds-accent);
   font-weight: 700;
 }
 .exec-tabs__panel {
   padding: 1rem;
-  background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-top: none;
   border-radius: 0 0 6px 6px;
 }
@@ -4935,8 +4753,8 @@ function toggleReschedule(contacto) {
   border-collapse: collapse;
 }
 .exec-table thead tr {
-  background: var(--slate-50, #f8fafc);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border-bottom: 1px solid var(--ds-border);
 }
 .exec-table th {
   padding: 8px 12px;
@@ -4944,16 +4762,16 @@ function toggleReschedule(contacto) {
   text-transform: uppercase;
   letter-spacing: .05em;
   font-weight: 700;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   text-align: left;
 }
 .exec-table td {
   padding: 9px 12px;
-  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+  border-bottom: 1px solid var(--ds-surface-2);
   vertical-align: middle;
 }
 .exec-table tbody tr:last-child td { border-bottom: none; }
-.exec-table tbody tr:hover { background: var(--slate-50, #f8fafc); }
+.exec-table tbody tr:hover { background: var(--ds-surface-2); }
 .exec-table--sm th { padding: 6px 8px; font-size: .66rem; }
 .exec-table--sm td { padding: 6px 8px; }
 
@@ -4961,8 +4779,8 @@ function toggleReschedule(contacto) {
   display: flex;
   gap: 2rem;
   padding: .65rem 1rem;
-  background: var(--slate-50, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   margin-bottom: .75rem;
   font-size: .85rem;
@@ -4970,14 +4788,14 @@ function toggleReschedule(contacto) {
 
 .user-avatar {
   width: 26px; height: 26px; border-radius: 50%;
-  background: var(--navy-900, #0f172a); color: #fff;
+  background: var(--ds-ink); color: var(--ds-surface);
   display: flex; align-items: center; justify-content: center;
   font-size: .72rem; font-weight: 700; flex-shrink: 0;
 }
 
 .price-panel {
-  background: var(--slate-50, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   padding: 1rem;
 }
@@ -4985,23 +4803,23 @@ function toggleReschedule(contacto) {
   font-size: .7rem;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   font-weight: 700;
   margin-bottom: .75rem;
 }
 
 .edition-card {
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   overflow: hidden;
 }
 .edition-card__header {
-  background: var(--slate-50, #f8fafc);
+  background: var(--ds-surface-2);
   padding: .55rem .85rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--ds-border);
 }
 .edition-card__body { padding: .75rem .85rem; }
 
@@ -5011,7 +4829,7 @@ function toggleReschedule(contacto) {
   padding-right: 4px;
 }
 .editions-scroll-container::-webkit-scrollbar { width: 5px; }
-.editions-scroll-container::-webkit-scrollbar-thumb { background: var(--slate-200, #e2e8f0); border-radius: 4px; }
+.editions-scroll-container::-webkit-scrollbar-thumb { background: var(--ds-border); border-radius: 4px; }
 
 .insc-modal { display: flex; flex-direction: column; gap: 0; }
 
@@ -5020,8 +4838,8 @@ function toggleReschedule(contacto) {
   justify-content: space-between;
   align-items: flex-start;
   gap: 1.5rem;
-  background: #fff;
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   padding: 1.1rem 1.25rem;
 }
@@ -5029,7 +4847,7 @@ function toggleReschedule(contacto) {
 .program-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--navy-900, #0f172a);
+  color: var(--ds-ink);
   margin-bottom: .3rem;
   line-height: 1.3;
 }
@@ -5037,8 +4855,8 @@ function toggleReschedule(contacto) {
   display: inline-flex;
   align-items: center;
   font-size: .82rem;
-  color: var(--slate-400, #94a3b8);
-  background: var(--slate-100, #f1f5f9);
+  color: var(--ds-muted);
+  background: var(--ds-surface-2);
   padding: .15rem .55rem;
   border-radius: 4px;
 }
@@ -5047,17 +4865,17 @@ function toggleReschedule(contacto) {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
-  background: var(--slate-50, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   padding: .25rem .65rem;
   border-radius: 999px;
   font-size: .82rem;
-  color: var(--slate-600, #475569);
+  color: var(--ds-ink-2);
 }
 .user-icon {
   width: 18px; height: 18px;
-  background: var(--slate-300, #cbd5e1);
-  color: #fff;
+  background: var(--ds-border-strong);
+  color: var(--ds-surface);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: .6rem;
@@ -5071,13 +4889,13 @@ function toggleReschedule(contacto) {
   font-size: .78rem;
   font-weight: 600;
 }
-.profile-badge.is-student { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-.profile-badge.is-pro     { background: var(--slate-100, #f1f5f9); color: var(--navy-900, #0f172a); border: 1px solid var(--border, #e2e8f0); }
-.profile-badge.is-b2b     { background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.profile-badge.is-student { background: var(--ds-soft-info); color: var(--ds-info-ink); border: 1px solid var(--ds-soft-info); }
+.profile-badge.is-pro     { background: var(--ds-surface-2); color: var(--ds-ink); border: 1px solid var(--ds-border); }
+.profile-badge.is-b2b     { background: var(--ds-soft-violet); color: var(--ds-violet-ink); border: 1px solid var(--ds-soft-violet); }
 .insc-price-box {
   text-align: right;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--ds-soft-ok);
+  border: 1px solid var(--ds-ok);
   padding: .7rem 1.1rem;
   border-radius: 6px;
   min-width: 135px;
@@ -5088,24 +4906,24 @@ function toggleReschedule(contacto) {
   font-size: .68rem;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: #166534;
+  color: var(--ds-ok-ink);
   font-weight: 700;
   margin-bottom: .2rem;
 }
-.price-amount { font-weight: 800; color: #15803d; }
+.price-amount { font-weight: 800; color: var(--ds-ok-ink); }
 
 .summary-card {
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   overflow: hidden;
 }
 .summary-header {
-  background: var(--slate-50, #f8fafc);
+  background: var(--ds-surface-2);
   padding: .65rem 1.1rem;
   font-weight: 700;
-  color: var(--slate-600, #475569);
+  color: var(--ds-ink-2);
   font-size: .85rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--ds-border);
 }
 .summary-body { padding: 1rem 1.1rem; }
 .summary-row {
@@ -5117,7 +4935,7 @@ function toggleReschedule(contacto) {
 }
 .summary-divider {
   height: 0;
-  border-top: 1px dashed var(--border, #e2e8f0);
+  border-top: 1px dashed var(--ds-border);
   margin: .85rem 0;
 }
 .summary-row.total { margin-bottom: 0; align-items: flex-end; }
@@ -5125,13 +4943,13 @@ function toggleReschedule(contacto) {
   font-size: .72rem;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   font-weight: 700;
 }
 .value-total {
   font-size: 1.45rem;
   font-weight: 800;
-  color: var(--navy-900, #0f172a);
+  color: var(--ds-ink);
   line-height: 1;
 }
 
@@ -5146,8 +4964,8 @@ function toggleReschedule(contacto) {
   .attempt-row {
     display: flex;
     flex-direction: column;
-    background: var(--slate-50, #f8fafc);
-    border: 1px solid var(--border, #e2e8f0);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-border);
     border-radius: 6px;
     margin-bottom: .75rem;
     padding: .85rem;
@@ -5156,8 +4974,8 @@ function toggleReschedule(contacto) {
   .attempt-row__num {
     justify-content: flex-start;
     font-size: 1rem;
-    color: var(--teal-500, #14b8a6);
-    border-bottom: 1px solid var(--border, #e2e8f0);
+    color: var(--ds-accent);
+    border-bottom: 1px solid var(--ds-border);
     padding-bottom: .5rem;
   }
 }
@@ -5177,10 +4995,10 @@ function toggleReschedule(contacto) {
 
 /* ══ PLAN DE CUOTAS ══════════════════════════════════════════ */
 .installment-card {
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   overflow: hidden;
-  background: #fff;
+  background: var(--ds-surface);
 }
 
 .installment-header {
@@ -5188,15 +5006,15 @@ function toggleReschedule(contacto) {
   justify-content: space-between;
   align-items: center;
   padding: .65rem 1rem;
-  background: var(--slate-50, #f8fafc);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border-bottom: 1px solid var(--ds-border);
   gap: 1rem;
 }
 
 .installment-alert {
-  background: #fef3c7;
-  color: #92400e;
-  border-bottom: 1px solid #fde68a;
+  background: var(--ds-soft-warn);
+  color: var(--ds-warn-ink);
+  border-bottom: 1px solid var(--ds-warn);
   padding: .5rem 1rem;
   font-size: 11.5px;
   font-weight: 600;
@@ -5210,70 +5028,70 @@ function toggleReschedule(contacto) {
   gap: .5rem;
   align-items: center;
   padding: .45rem 1rem;
-  border-bottom: 1px solid var(--slate-50, #f8fafc);
+  border-bottom: 1px solid var(--ds-surface-2);
   font-size: 12.5px;
 }
 .installment-row:last-child { border-bottom: none; }
 .installment-row--head {
-  background: var(--slate-50, #f8fafc);
+  background: var(--ds-surface-2);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .06em;
   font-weight: 700;
-  color: var(--slate-400, #94a3b8);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--ds-muted);
+  border-bottom: 1px solid var(--ds-border);
 }
 .installment-row--invalid td,
-.installment-row--invalid { background: #fff5f5; }
+.installment-row--invalid { background: var(--ds-soft-bad); }
 .installment-row--total {
-  background: var(--slate-50, #f8fafc);
-  border-top: 2px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border-top: 2px solid var(--ds-border);
   font-size: 12.5px;
 }
 
 .cuota-num {
   font-weight: 700;
-  color: var(--slate-400, #94a3b8);
+  color: var(--ds-muted);
   text-align: center;
   font-size: 11px;
 }
 .cuota-date-fixed {
   font-size: 12px;
-  color: #15803d;
+  color: var(--ds-ok-ink);
   font-weight: 600;
 }
 .cuota-date-input {
   height: 30px;
   padding: 3px 8px;
   font-size: 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   width: 100%;
 }
 .cuota-amount-fixed {
   font-weight: 700;
-  color: #15803d;
+  color: var(--ds-ok-ink);
   font-size: 12.5px;
 }
 .cuota-amount-editable {
   display: flex;
   align-items: center;
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   overflow: hidden;
   height: 30px;
   justify-content: flex-end;
 }
-.cuota-amount-editable.is-invalid { border-color: #f87171; background: #fff5f5; }
+.cuota-amount-editable.is-invalid { border-color: var(--ds-bad); background: var(--ds-soft-bad); }
 .currency-prefix {
   padding: 0 5px;
   font-size: 11px;
-  color: var(--slate-400, #94a3b8);
-  border-right: 1px solid var(--border, #e2e8f0);
+  color: var(--ds-muted);
+  border-right: 1px solid var(--ds-border);
   height: 100%;
   display: flex;
   align-items: center;
-  background: var(--slate-50, #f8fafc);
+  background: var(--ds-surface-2);
   flex-shrink: 0;
 }
 .cuota-amount-input {
@@ -5288,8 +5106,8 @@ function toggleReschedule(contacto) {
 }
 .cuota-amount-input::-webkit-inner-spin-button { opacity: .5; }
 
-.pill-pending { background: #dbeafe; color: #1e40af; font-size: 9.5px; }
-.pill-draft   { background: #f1f5f9; color: #475569; font-size: 9.5px; }
+.pill-pending { background: var(--ds-soft-info); color: var(--ds-info-ink); font-size: 9.5px; }
+.pill-draft   { background: var(--ds-surface-2); color: var(--ds-ink-2); font-size: 9.5px; }
 /* CurrencyInput dentro del plan de cuotas */
 .cuota-currency-input {
   max-width: 130px;
@@ -5299,17 +5117,17 @@ function toggleReschedule(contacto) {
   font-weight: 600;
   text-align: right;
   border-radius: 4px;
-  border: 1px solid var(--border, #e2e8f0) !important;
+  border: 1px solid var(--ds-border) !important;
   transition: border-color .15s;
 }
 .cuota-currency-input:focus {
-  border-color: var(--teal-500, #14b8a6) !important;
-  box-shadow: 0 0 0 2px rgba(20,184,166,.12) !important;
+  border-color: var(--ds-accent) !important;
+  box-shadow: 0 0 0 2px var(--ds-soft-info) !important;
   outline: none;
 }
 .cuota-currency-input.is-invalid {
-  border-color: #f87171 !important;
-  background: #fff5f5 !important;
+  border-color: var(--ds-bad) !important;
+  background: var(--ds-soft-bad) !important;
 }
 
 .installment-reserva-row {
@@ -5317,8 +5135,8 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: 1rem;
   padding: .7rem 1rem;
-  background: #eff6ff;
-  border-bottom: 1px solid #bfdbfe;
+  background: var(--ds-soft-info);
+  border-bottom: 1px solid var(--ds-soft-info);
   transition: min-height .2s;
 }
 
@@ -5327,18 +5145,18 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: .5rem;
   padding: .35rem 1rem;
-  background: var(--slate-50);
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border-bottom: 1px solid var(--ds-border);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: var(--slate-400);
+  color: var(--ds-muted);
   font-weight: 700;
 }
 
 .installment-row--grand {
-  background: #f0fdf4;
-  border-top: 2px solid #bbf7d0;
+  background: var(--ds-soft-ok);
+  border-top: 2px solid var(--ds-ok);
   font-size: 12.5px;
   padding: .55rem 1rem;
   display: grid;
@@ -5350,13 +5168,13 @@ function toggleReschedule(contacto) {
 .installment-footer-note {
   padding: .5rem 1rem;
   font-size: 10.5px;
-  color: var(--slate-400);
-  border-top: 1px solid var(--border, #e2e8f0);
-  background: var(--slate-50);
+  color: var(--ds-muted);
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-surface-2);
 }
 .exec-input-light.input-invalid {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+  border-color: var(--ds-bad);
+  box-shadow: 0 0 0 3px var(--ds-soft-bad);
 }
 .program-link-btn {
   display: inline-flex;
@@ -5366,42 +5184,42 @@ function toggleReschedule(contacto) {
   height: 26px;
   border-radius: 5px;
   font-size: .75rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
+  background: var(--ds-soft-ok);
+  border: 1px solid var(--ds-ok);
+  color: var(--ds-ok-ink);
   text-decoration: none;
   flex-shrink: 0;
   transition: all .15s;
 }
 .program-link-btn:hover {
-  background: #dcfce7;
-  border-color: #86efac;
+  background: var(--ds-soft-ok);
+  border-color: var(--ds-ok);
 }
 .program-link-btn--disabled {
-  background: var(--slate-100, #f1f5f9);
-  border: 1px solid var(--slate-200, #e2e8f0);
-  color: var(--slate-300, #cbd5e1);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-border-strong);
   cursor: not-allowed;
 }
-.c-green { color: #15803d; }
+.c-green { color: var(--ds-ok-ink); }
 /* ══ ESTADO ELIMINADO ══════════════════════════════════════ */
 .delete-status-banner {
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: #fef2f2;
-  border: 1.5px solid #fca5a5;
+  background: var(--ds-soft-bad);
+  border: 1.5px solid var(--ds-bad);
   border-radius: 7px;
   padding: .85rem 1.2rem;
   margin-bottom: 1.25rem;
   animation: pulseRed 2s ease-in-out infinite;
 }
 @keyframes pulseRed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,.12); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--ds-soft-bad); }
+  50%       { box-shadow: 0 0 0 5px var(--ds-soft-bad); }
 }
 .delete-banner-icon {
-  color: #dc2626;
+  color: var(--ds-bad-ink);
   flex-shrink: 0;
   font-size: 1.4rem;
 }
@@ -5411,17 +5229,17 @@ function toggleReschedule(contacto) {
   display: flex;
   flex-direction: column;
   gap: .15rem;
-  color: #7f1d1d;
+  color: var(--ds-bad-ink);
 }
-.delete-banner-body strong { font-size: .9rem; color: #991b1b; }
+.delete-banner-body strong { font-size: .9rem; color: var(--ds-bad-ink); }
 .delete-banner-label { flex-shrink: 0; }
 
 .select--danger {
-  border-color: #f87171 !important;
-  background: #fff5f5 !important;
-  color: #b91c1c !important;
+  border-color: var(--ds-bad) !important;
+  background: var(--ds-soft-bad) !important;
+  color: var(--ds-bad-ink) !important;
   font-weight: 700 !important;
-  box-shadow: 0 0 0 3px rgba(239,68,68,.12) !important;
+  box-shadow: 0 0 0 3px var(--ds-soft-bad) !important;
 }
 
 /* Modal de confirmación eliminación */
@@ -5436,45 +5254,45 @@ function toggleReschedule(contacto) {
 .delete-confirm-icon {
   width: 64px; height: 64px;
   border-radius: 50%;
-  background: #fef2f2;
-  border: 2px solid #fca5a5;
+  background: var(--ds-soft-bad);
+  border: 2px solid var(--ds-bad);
   display: flex; align-items: center; justify-content: center;
-  color: #dc2626;
+  color: var(--ds-bad-ink);
 }
 .delete-confirm-title {
   font-size: 1.1rem;
   font-weight: 800;
-  color: #7f1d1d;
+  color: var(--ds-bad-ink);
   margin: 0;
 }
 .delete-confirm-desc {
   font-size: .88rem;
-  color: #374151;
+  color: var(--ds-ink);
   margin: 0;
   line-height: 1.6;
   max-width: 340px;
 }
 .delete-confirm-lead-info {
-  background: var(--slate-50, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
   border-radius: 6px;
   padding: .55rem 1rem;
   font-size: .83rem;
   width: 100%;
 }
 .btn-exec-danger {
-  background: #dc2626;
-  color: #fff;
-  border-color: #dc2626;
+  background: var(--ds-bad-ink);
+  color: var(--ds-surface);
+  border-color: var(--ds-bad-ink);
 }
-.btn-exec-danger:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+.btn-exec-danger:hover:not(:disabled) { background: var(--ds-bad-ink); border-color: var(--ds-bad-ink); }
 
 /* Transición suave del banner */
 .delete-warn-enter-active, .delete-warn-leave-active { transition: all .25s ease; }
 .delete-warn-enter-from, .delete-warn-leave-to { opacity: 0; transform: translateY(-8px); }
 .installment-row--diferida {
-  background: #fffbeb;
-  border-left: 3px solid #f59e0b;
+  background: var(--ds-soft-warn);
+  border-left: 3px solid var(--ds-warn);
 }
 .installment-reserva-row.is-split { align-items: flex-start; padding-top: .8rem; padding-bottom: .8rem; }
 
@@ -5516,7 +5334,7 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: .3rem;
   font-size: 10px;
-  color: #dc2626;
+  color: var(--ds-bad-ink);
   font-weight: 600;
   margin-top: .15rem;
 }
@@ -5533,14 +5351,14 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
-  border-left: 4px solid #F59E0B;
+  background: var(--ds-soft-warn);
+  border: 1px solid var(--ds-warn);
+  border-left: 4px solid var(--ds-warn);
   border-radius: 8px;
 }
 .obs-banner-icon {
   font-size: 22px;
-  color: #F59E0B;
+  color: var(--ds-warn);
   flex-shrink: 0;
 }
 .obs-banner-body {
@@ -5549,18 +5367,18 @@ function toggleReschedule(contacto) {
 .obs-banner-body strong {
   display: block;
   font-size: 13.5px;
-  color: #92400E;
+  color: var(--ds-warn-ink);
   margin-bottom: 4px;
 }
 .obs-banner-body p {
   margin: 0;
   font-size: 12.5px;
-  color: #B45309;
+  color: var(--ds-warn-ink);
   line-height: 1.5;
 }
 .obs-banner-hint {
   font-size: 11px;
-  color: #92400E;
+  color: var(--ds-warn-ink);
   opacity: .7;
   margin-top: 4px;
   font-style: italic;
@@ -5572,8 +5390,8 @@ function toggleReschedule(contacto) {
   padding: 8px 18px;
   font-size: 12.5px;
   font-weight: 600;
-  background: #0D9488;
-  color: #fff;
+  background: var(--ds-accent);
+  color: var(--ds-surface);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -5590,16 +5408,16 @@ function toggleReschedule(contacto) {
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #1A1A1A;
+  color: var(--ds-ink);
   cursor: pointer;
 }
-.validation-toggle-label input[type="checkbox"] { accent-color: #0D9488; }
+.validation-toggle-label input[type="checkbox"] { accent-color: var(--ds-accent); }
 .validation-row {
   padding: 10px 12px;
-  border: 1px solid #F0F0F0;
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
   margin-bottom: 8px;
-  background: #FAFAFA;
+  background: var(--ds-surface-2);
 }
 .validation-check {
   display: flex;
@@ -5608,16 +5426,16 @@ function toggleReschedule(contacto) {
   font-size: 13px;
   cursor: pointer;
 }
-.validation-check input[type="checkbox"] { accent-color: #0D9488; }
-.validation-name { font-weight: 600; color: #1A1A1A; }
+.validation-check input[type="checkbox"] { accent-color: var(--ds-accent); }
+.validation-name { font-weight: 600; color: var(--ds-ink); }
 .validation-badge-conv {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  background: #FFF8EB;
-  color: #92400E;
+  background: var(--ds-soft-warn);
+  color: var(--ds-warn-ink);
 }
 .validation-badge-insc {
   display: inline-block;
@@ -5625,8 +5443,8 @@ function toggleReschedule(contacto) {
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  background: #ECFDF5;
-  color: #065F46;
+  background: var(--ds-soft-ok);
+  color: var(--ds-ok-ink);
 }
 .validation-edition {
   margin-top: 8px;
@@ -5640,209 +5458,16 @@ function toggleReschedule(contacto) {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #475569;
+  color: var(--ds-ink-2);
   cursor: pointer;
 }
-.validation-radio input[type="radio"] { accent-color: #0D9488; }
+.validation-radio input[type="radio"] { accent-color: var(--ds-accent); }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .ef-page {
-  background: #0E0E0A;
-  color: #F4F4F0;
-  /* tokens para estilos inline del template (light usa el fallback) */
-  --teal-600: #8FAADC;
-  --ln-soft-bg: #1F1F1A;
-  --ln-red-tx: #F87171;
-  --ln-amber-bg: rgba(245, 158, 11, 0.14);
-  --ln-amber-bd: rgba(245, 158, 11, 0.35);
-  --ln-amber-tx: #FBBF24;
-  --ln-amber-strong: #FBBF24;
-  --ln-blue-bg: rgba(59, 130, 246, 0.16);
-  --ln-blue-tx: #60A5FA;
-  --ln-blue-strong: #60A5FA;
-  --ln-cyan-bg: rgba(6, 182, 212, 0.12);
-  --ln-cyan-bd: rgba(6, 182, 212, 0.30);
-}
-[data-coreui-theme="dark"] .ef-breadcrumb { color: #6F6F66; }
-[data-coreui-theme="dark"] .ef-page-title { color: #F4F4F0; }
-
-[data-coreui-theme="dark"] .exec-fieldset {
-  background: #1A1A14;
-  border-color: #2A2A22;
-}
-[data-coreui-theme="dark"] .fieldset-title {
-  color: #A0A099;
-  border-left-color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
-
-[data-coreui-theme="dark"] .exec-input-light,
-[data-coreui-theme="dark"] .exec-select-light,
-[data-coreui-theme="dark"] .exec-textarea {
-  background: #14140F;
-  border-color: #2A2A22;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .exec-input-light::placeholder,
-[data-coreui-theme="dark"] .exec-textarea::placeholder { color: #6F6F66; }
-[data-coreui-theme="dark"] .exec-input-light:focus,
-[data-coreui-theme="dark"] .exec-select-light:focus,
-[data-coreui-theme="dark"] .exec-textarea:focus { border-color: #6F6F66; }
-[data-coreui-theme="dark"] .exec-input-light:disabled,
-[data-coreui-theme="dark"] .exec-select-light:disabled,
-[data-coreui-theme="dark"] .exec-textarea:disabled {
-  background: #1F1F1A;
-  color: #6F6F66;
-}
-
-[data-coreui-theme="dark"] .ef-btn-primary,
-[data-coreui-theme="dark"] .btn-exec-primary { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-btn-primary:hover:not(:disabled),
-[data-coreui-theme="dark"] .btn-exec-primary:hover:not(:disabled) { background: #E4E4DD; }
-
-[data-coreui-theme="dark"] .ef-btn-outline,
-[data-coreui-theme="dark"] .btn-exec-outline,
-[data-coreui-theme="dark"] .btn-exec-ghost {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  color: #A0A099;
-}
-[data-coreui-theme="dark"] .ef-btn-outline:hover:not(:disabled),
-[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled),
-[data-coreui-theme="dark"] .btn-exec-ghost:hover:not(:disabled) {
-  background: #2A2A22;
-  border-color: #3A3A33;
-  color: #F4F4F0;
-}
-
-[data-coreui-theme="dark"] .ef-footer-actions { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .c-red { color: #F87171; }
-
-/* Botones restantes */
-[data-coreui-theme="dark"] .btn-exec-active { background: #F4F4F0; color: #14140F; border-color: #F4F4F0; }
-[data-coreui-theme="dark"] .btn-exec-danger-ghost { color: #F87171; border-color: rgba(239, 68, 68, 0.40); }
-[data-coreui-theme="dark"] .btn-exec-danger-ghost:hover:not(:disabled) { background: rgba(239, 68, 68, 0.14); border-color: #F87171; }
-
-/* Switch */
-[data-coreui-theme="dark"] .exec-switch span { background: #3A3A33; }
-
-/* Pills / badges */
-[data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .pill-teal { background: rgba(20, 184, 166, 0.14); color: #2DD4BF; border-color: rgba(20, 184, 166, 0.35) !important; }
-[data-coreui-theme="dark"] .pill-red { background: rgba(239, 68, 68, 0.14); color: #F87171; border-color: rgba(239, 68, 68, 0.35) !important; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-color: rgba(245, 158, 11, 0.35) !important; }
-[data-coreui-theme="dark"] .pill-pending { background: rgba(59, 130, 246, 0.16); color: #60A5FA; }
-[data-coreui-theme="dark"] .pill-draft { background: #24241E; color: #A0A099; }
-
-/* Estados vacíos y metadatos */
-[data-coreui-theme="dark"] .empty-state { background: #1F1F1A; border-color: #3A3A33; color: #8A8A80; }
-[data-coreui-theme="dark"] .edition-meta b { color: #A0A099; }
-
-/* Intentos de llamada */
-[data-coreui-theme="dark"] .attempt-head { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .attempt-row { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .attempt-row:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .timer-btn--start { background: rgba(16, 185, 129, 0.18); color: #34D399; }
-[data-coreui-theme="dark"] .timer-btn--start:hover { background: rgba(16, 185, 129, 0.30); }
-[data-coreui-theme="dark"] .timer-btn--stop { background: rgba(239, 68, 68, 0.18); color: #F87171; }
-[data-coreui-theme="dark"] .timer-btn--stop:hover { background: rgba(239, 68, 68, 0.30); }
-[data-coreui-theme="dark"] .timer-display { color: #A0A099; }
-[data-coreui-theme="dark"] .timer-display--active { color: #F87171; }
-
-/* Tabs */
-[data-coreui-theme="dark"] .exec-tabs { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .exec-tabs__item:hover { color: #A0A099; }
-[data-coreui-theme="dark"] .exec-tabs__item--active { color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-tabs__panel { background: #1A1A14; border-color: #2A2A22; }
-
-/* Tablas */
-[data-coreui-theme="dark"] .exec-table thead tr { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .exec-table td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .exec-table tbody tr:hover { background: #1F1F1A; }
-
-/* Paneles / tarjetas dentro de modales */
-[data-coreui-theme="dark"] .modal-info-bar,
-[data-coreui-theme="dark"] .price-panel,
-[data-coreui-theme="dark"] .delete-confirm-lead-info { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .user-avatar { background: #F4F4F0; color: #14140F; }
-[data-coreui-theme="dark"] .edition-card { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .edition-card__header { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .editions-scroll-container::-webkit-scrollbar-thumb { background: #3A3A33; }
-[data-coreui-theme="dark"] .insc-header { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .program-title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .program-edition { background: #24241E; }
-[data-coreui-theme="dark"] .user-badge { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .user-icon { background: #3A3A33; }
-[data-coreui-theme="dark"] .profile-badge.is-student { background: rgba(59, 130, 246, 0.14); color: #60A5FA; border-color: rgba(59, 130, 246, 0.35); }
-[data-coreui-theme="dark"] .profile-badge.is-pro { background: #24241E; color: #F4F4F0; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .profile-badge.is-b2b { background: rgba(168, 85, 247, 0.14); color: #C084FC; border-color: rgba(168, 85, 247, 0.35); }
-[data-coreui-theme="dark"] .insc-price-box { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); }
-[data-coreui-theme="dark"] .price-label { color: #34D399; }
-[data-coreui-theme="dark"] .price-amount { color: #34D399; }
-[data-coreui-theme="dark"] .summary-card { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .summary-header { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .summary-divider { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .value-total { color: #F4F4F0; }
-
-/* Plan de cuotas */
-[data-coreui-theme="dark"] .installment-card { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-header { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-alert { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border-bottom-color: rgba(245, 158, 11, 0.30); }
-[data-coreui-theme="dark"] .installment-row { border-bottom-color: #1F1F1A; }
-[data-coreui-theme="dark"] .installment-row--head { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-row--invalid td,
-[data-coreui-theme="dark"] .installment-row--invalid { background: rgba(239, 68, 68, 0.10); }
-[data-coreui-theme="dark"] .installment-row--total { background: #1F1F1A; border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-row--grand { background: rgba(16, 185, 129, 0.12); border-top-color: rgba(16, 185, 129, 0.35); }
-[data-coreui-theme="dark"] .installment-row--diferida { background: rgba(245, 158, 11, 0.12); }
-[data-coreui-theme="dark"] .installment-divider { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-footer-note { background: #1F1F1A; border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .installment-reserva-row { background: rgba(59, 130, 246, 0.10); border-bottom-color: rgba(59, 130, 246, 0.30); }
-[data-coreui-theme="dark"] .cuota-date-fixed,
-[data-coreui-theme="dark"] .cuota-amount-fixed { color: #34D399; }
-[data-coreui-theme="dark"] .cuota-date-input { background: #14140F; color: #F4F4F0; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .cuota-amount-editable { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .cuota-amount-editable.is-invalid { border-color: #F87171; background: rgba(239, 68, 68, 0.10); }
-[data-coreui-theme="dark"] .cuota-amount-input { color: #F4F4F0; }
-[data-coreui-theme="dark"] .currency-prefix { background: #1F1F1A; border-right-color: #2A2A22; }
-[data-coreui-theme="dark"] .cuota-currency-input { background: #14140F !important; color: #F4F4F0 !important; border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .cuota-currency-input.is-invalid { border-color: #F87171 !important; background: rgba(239, 68, 68, 0.10) !important; }
-
-/* Enlaces de programa */
-[data-coreui-theme="dark"] .program-link-btn { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #34D399; }
-[data-coreui-theme="dark"] .program-link-btn:hover { background: rgba(16, 185, 129, 0.22); border-color: rgba(16, 185, 129, 0.50); }
-[data-coreui-theme="dark"] .program-link-btn--disabled { background: #24241E; border-color: #2A2A22; color: #6F6F66; }
-[data-coreui-theme="dark"] .c-green { color: #34D399; }
-
-/* Estado eliminado */
-[data-coreui-theme="dark"] .delete-status-banner { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.40); }
-[data-coreui-theme="dark"] .delete-banner-body { color: #FCA5A5; }
-[data-coreui-theme="dark"] .delete-banner-body strong { color: #F87171; }
-[data-coreui-theme="dark"] .select--danger { background: rgba(239, 68, 68, 0.14) !important; color: #F87171 !important; }
-[data-coreui-theme="dark"] .delete-confirm-icon { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.40); }
-[data-coreui-theme="dark"] .delete-confirm-title { color: #FCA5A5; }
-[data-coreui-theme="dark"] .delete-confirm-desc { color: #A0A099; }
-[data-coreui-theme="dark"] .reserva-error { color: #F87171; }
-
-/* Banner de observación */
-[data-coreui-theme="dark"] .obs-banner { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.30); border-left-color: #F59E0B; }
-[data-coreui-theme="dark"] .obs-banner-body strong { color: #FDE68A; }
-[data-coreui-theme="dark"] .obs-banner-body p { color: #FCD34D; }
-[data-coreui-theme="dark"] .obs-banner-hint { color: #FCD34D; }
-
-/* Validaciones */
-[data-coreui-theme="dark"] .validation-toggle-label { color: #F4F4F0; }
-[data-coreui-theme="dark"] .validation-row { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .validation-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .validation-badge-conv { background: rgba(245, 158, 11, 0.14); color: #FBBF24; }
-[data-coreui-theme="dark"] .validation-badge-insc { background: rgba(16, 185, 129, 0.14); color: #34D399; }
-[data-coreui-theme="dark"] .validation-radio { color: #A0A099; }
-
-/* Filas de intentos en móvil (la base solo aplica bajo 991px) */
-@media (max-width: 991px) {
-  [data-coreui-theme="dark"] .attempt-row { background: #1F1F1A; border-color: #2A2A22; }
-  [data-coreui-theme="dark"] .attempt-row__num { border-bottom-color: #2A2A22; }
-}
+/* Colores de texto con tokens (Bootstrap text-* es fijo y se pierde en oscuro) */
+.c-ink2 { color: var(--ds-ink-2); }
+.c-info { color: var(--ds-info-ink); }
+.c-warn { color: var(--ds-warn-ink); }
+.c-bad { color: var(--ds-bad-ink); }
+.c-ok { color: var(--ds-ok-ink); }
+.ln-soft { background: var(--ds-surface-2); }
 </style>
