@@ -2,8 +2,9 @@
 // `today` se inyecta para poder testear la regla sin depender del reloj.
 
 // Días que un alumno puede entrar por CC a una edición ya empezada
-// (pedido de FICO 28/09/26: SAP SD → SAP PM del 20/09).
-export const COURSE_CHANGE_GRACE_DAYS = 15
+// (pedido de FICO 28/09/26: SAP SD → SAP PM del 20/09). Subió de 15 a 30 el
+// 05/10/26: los CC tardíos se repetían (N8N → KPIs E6-26 del 12/09, #13964).
+export const COURSE_CHANGE_GRACE_DAYS = 30
 
 // Parsea start_date (cadena calendario) a Date local sin sufrir TZ shift:
 // si el server Node corre en UTC, el ISO viene como '2026-05-09T00:00:00.000Z',

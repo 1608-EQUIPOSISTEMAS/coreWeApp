@@ -427,7 +427,9 @@ const puedeGuardarDestino = computed(() => {
   if (guardando.value) return false
   // Solo la reubicacion necesita un destino valido; las otras dos se guardan solas.
   if (salida.value !== 'reubicar') return true
-  return !!destProgramVersionId.value && !rpSinEdicion.value
+  // RP en el mismo programa exige edicion (resolveDestKind del backend).
+  return !!destProgramVersionId.value && !rpSinEdicion.value &&
+    (esCambioDeCurso.value || !!destEditionId.value)
 })
 
 // El backend manda el conteo con la MISMA regla que usa la RP para trasladarlas.
@@ -531,8 +533,12 @@ function abrirVeredicto (f) {
 const conGuardado = async (accion, exito) => {
   guardando.value = true
   try {
-    await accion()
-    toast.success(exito)
+    const res = await accion()
+    // El veredicto mueve al alumno aunque falle un paso de Odoo y lo deja
+    // anotado: un verde aqui hacia creer a FICO que no quedaba nada por hacer.
+    const pendientes = res?.data?.pending_steps?.length || 0
+    if (pendientes) toast.warning(`${exito}, pero quedan ${pendientes} paso(s) pendiente(s) en Odoo`)
+    else toast.success(exito)
     await cargar()
     return true
   } catch (e) {

@@ -103,13 +103,8 @@ export default [
         submodule: 'REPORTE',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
       },
-      {
-        component: 'CNavItem',
-        name: 'Bot Académico',
-        to: '/academica/bot',
-        submodule: 'BOT',
-        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
-      },
+      // Bot Académico fuera del sidebar (05/10/26): el módulo se retomará más
+      // adelante. La ruta /academica/bot y sus vistas siguen intactas.
       {
         // Flujo a cuatro manos: Academica elige el destino y FICO lo firma, por
         // eso FICO ve esta opcion aunque el grupo sea Academica.

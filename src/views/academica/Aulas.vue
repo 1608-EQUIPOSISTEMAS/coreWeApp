@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import AulasFilterModal from './AulasFilterModal.vue'
+import { aulaStatus } from '@/entities/aula/aulaStatus'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -44,20 +45,6 @@ function formatDate(iso) {
   return `${d}/${m}/${y}`
 }
 
-function todayLima() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function deriveStatus(row) {
-  if (row.active === 'N') return 'Finalizado'
-  const today = todayLima()
-  const start = row.start_date ? String(row.start_date).slice(0, 10) : null
-  const end = row.end_date ? String(row.end_date).slice(0, 10) : null
-  if (!start) return 'Proximo'
-  if (start > today) return 'Proximo'
-  if (end && end < today) return 'Finalizado'
-  return 'Activo'
-}
 
 function buildSchedule(row) {
   const parts = [row.day_combination_label, row.hour_combination_label].filter(Boolean)
@@ -71,7 +58,9 @@ function getCourseMetrics() {
     students: null,
     attendance: null,
     average: null,
-    atRisk: 0,
+    // null y no 0: sin dato medido, la tarjeta dice "--" en vez de afirmar
+    // que no hay nadie en riesgo.
+    atRisk: null,
   }
 }
 
@@ -92,7 +81,7 @@ function mapRow(row) {
     rawStart: row.start_date ? String(row.start_date).slice(0, 10) : null,
     rawEnd: row.end_date ? String(row.end_date).slice(0, 10) : null,
     schedule: buildSchedule(row),
-    status: deriveStatus(row),
+    status: aulaStatus(row.start_date, row.end_date),
     color: SEGMENT_COLORS[row.cat_segment] || FALLBACK_COLOR,
     ...metrics,
     // Conteo real (FICO aprobadas sin hijos) ya viene unido en la consulta.
@@ -157,15 +146,6 @@ const distinct = (key) =>
 const filtroModalidad = computed(() => distinct('modality'))
 const filtroSegmento = computed(() => distinct('agent'))
 const filtroDocente = computed(() => distinct('teacher'))
-
-// El locale Spanish de flatpickr usa ' a ' como rangeSeparator; el ingles ' to '.
-function handleDateChange(dateStr, type) {
-  const p = dateStr ? String(dateStr).split(/\s+(?:to|a)\s+/i) : []
-  const from = p[0] || null
-  const to = p[1] || p[0] || null
-  if (type === 'start') { advFilters.start_from = from; advFilters.start_to = to }
-  if (type === 'end') { advFilters.end_from = from; advFilters.end_to = to }
-}
 
 const selectedSet = (arr) => new Set((arr || []).map((i) => i.value ?? i.id ?? i))
 const inRange = (d, from, to) => !!d && (!from || d >= from) && (!to || d <= to)
@@ -265,14 +245,6 @@ const statusPillClass = (s) =>
           Gestion de cursos, asistencias y notas - {{ COURSES.length }} aulas en el periodo 2026-I
         </div>
       </div>
-      <div class="actions">
-        <button class="btn">
-          <i class="fa-solid fa-download"></i> Exportar
-        </button>
-        <button class="btn primary">
-          <i class="fa-solid fa-plus"></i> Nueva aula
-        </button>
-      </div>
     </header>
 
     <div class="kpi-grid">
@@ -367,9 +339,8 @@ const statusPillClass = (s) =>
       :filtro-modalidad="filtroModalidad"
       :filtro-segmento="filtroSegmento"
       :filtro-docente="filtroDocente"
-      @apply="showFilterModal = false"
-      @clear="clearAdvFilters"
-      @date-change="handleDateChange"
+      @apply="(f) => Object.assign(advFilters, f)"
+      @clear="clearAdvFilters(); showFilterModal = false"
     />
 
     <div v-if="layout === 'grid'" class="course-grid">

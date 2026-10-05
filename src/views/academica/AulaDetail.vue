@@ -1,7 +1,7 @@
 <script setup>
 import { FECHA_CORTE_RUBRICA, RUBRICA_V2, rubricaDe } from '@/features/rubrica-auditoria/rubrica.js'
-import { ref, reactive, computed, onMounted, inject, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, reactive, computed, onMounted, inject } from 'vue'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import apexchart from 'vue3-apexcharts'
 import Swal from 'sweetalert2'
@@ -18,12 +18,6 @@ const router = useRouter()
 const route = useRoute()
 
 const editionId = computed(() => Number(props.id))
-const currentUserId = computed(() => {
-  try {
-    const u = JSON.parse(localStorage.getItem('user') || '{}')
-    return u.user_id || u.id || null
-  } catch { return null }
-})
 
 // =====================================================================
 // HEADER / INFO DEL AULA
@@ -420,7 +414,6 @@ async function saveGrades() {
     const res = await editionService.classroomGradesSave({
       edition_id: editionId.value,
       items,
-      user_id: currentUserId.value,
     })
     if (res?.ok) {
       const map = { ...(gradesMap.value || {}) }
@@ -484,13 +477,13 @@ async function certifyInOdoo() {
     await loadGrades() // refresca la columna Cert. con los códigos recién emitidos
     const warn = []
     if (d.students_with_debt?.length) warn.push(`<b>Excluidos por deuda pendiente (no se certifican):</b> ${d.students_with_debt.join(', ')}`)
-    if (d.grades_missing?.length) warn.push(`<b>No encontrados en Odoo (ni por nombre):</b> ${d.grades_missing.join(', ')}`)
+    if (d.grades_missing?.length) warn.push(`<b>No están en el aula de Odoo (ni por nombre), sin nota ni certificado:</b> ${d.grades_missing.join(', ')}<br><small>Matricúlalos en el aula de Odoo o corrige su nombre y vuelve a certificar.</small>`)
     // La nota oficial es la de Odoo: que recalcule NO es una advertencia, por eso
     // va aparte de `warn` (si no, el diálogo salía en amarillo en cada certificación).
     const notaOficial = d.score_mismatches?.length
       ? `<b>Nota oficial con la que certificó Odoo:</b><br>${d.score_mismatches.join('<br>')}`
       : ''
-    if (d.pdf_errors?.length) warn.push(`<b>PDFs con error:</b><br>${d.pdf_errors.join('<br>')}`)
+    if (d.pdf_errors?.length) warn.push(`<b>No se generaron PDFs:</b><br>${d.pdf_errors.join('<br>')}`)
     Swal.fire({
       icon: warn.length ? 'warning' : 'success',
       title: d.new_certificates
@@ -906,6 +899,17 @@ const activeRubric = computed(() =>
 // del docente sin que nadie lo haya pedido.
 const isHistoricRubric = computed(() => activeRubric.value.version !== RUBRICA_V2.version)
 
+// Marcas de la rubrica (manuales o de la IA) que aun no se guardaron.
+const auditDirty = computed(() => {
+  const saved = auditMap.value?.[selectedSession.value]?.criteria || {}
+  return Object.entries(sessionDraft).some(([k, v]) => v !== !!saved[k])
+})
+
+const confirmDiscardAudit = () =>
+  !auditDirty.value || window.confirm('Hay criterios de auditoria sin guardar. ¿Descartarlos?')
+
+// Sin watch(auditMap): loadAudit y selectSession hidratan a mano. El watch
+// corria DESPUES de applyAiAutoFill y borraba las marcas de la IA.
 function hydrateDraft(sessionNum) {
   for (const k of Object.keys(sessionDraft)) delete sessionDraft[k]
   const saved = auditMap.value?.[sessionNum]?.criteria || {}
@@ -915,6 +919,7 @@ function hydrateDraft(sessionNum) {
 }
 
 function selectSession(n) {
+  if (n !== selectedSession.value && !confirmDiscardAudit()) return
   selectedSession.value = n
   hydrateDraft(n)
   lastSavedAt.value = auditMap.value?.[n]?.updated_at || null
@@ -928,7 +933,6 @@ async function saveSession() {
       edition_id: editionId.value,
       session_number: selectedSession.value,
       criteria: { ...sessionDraft },
-      user_id: currentUserId.value,
     }
     const res = await editionService.classroomAuditSave(payload)
     if (res?.ok) {
@@ -994,6 +998,7 @@ function openAiModal() {
 // generacion cuando no existe analisis previo en BD.
 async function onAnalyzeClick() {
   if (currentAiReport.value) {
+    if (!confirmDiscardAudit()) return
     await loadAudit()
     toast.info('Analisis IA cargado desde base de datos (no se regenero).', { timeout: 2500 })
     return
@@ -1595,10 +1600,12 @@ function goBack() {
   router.push({ name: 'AcademicaAulas' })
 }
 
-// Re-hidratar el draft cuando llega la data por primera vez
-watch(auditMap, (v) => {
-  if (v) hydrateDraft(selectedSession.value)
-}, { immediate: false })
+// Volver o salir del aula con notas o auditoria sin guardar las perdia en
+// silencio: la guarda de switchTab solo cubria el cambio de tab.
+onBeforeRouteLeave(() => {
+  if (dirtyGrades.size && !window.confirm('Hay notas sin guardar. ¿Salir y descartarlas?')) return false
+  return confirmDiscardAudit()
+})
 
 onMounted(async () => {
   await loadAula()

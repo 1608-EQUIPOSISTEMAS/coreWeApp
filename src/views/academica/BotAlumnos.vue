@@ -167,10 +167,13 @@
 </template>
 
 <script setup>
+import { useToast } from 'vue-toastification'
 import { ref, reactive, onActivated, inject } from 'vue'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { ServiceKeys } from '@/services'
+
+const toast = useToast()
 
 const botService = inject(ServiceKeys.Bot)
 
@@ -204,6 +207,7 @@ async function fetchStudents() {
     pagin.value.total = tableResp.total || 0
   } catch (error) {
     console.error("Error al obtener alumnos", error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar los alumnos')
   } finally {
     isLoading.value = false
   }
@@ -218,6 +222,7 @@ async function openStudentProfile(id) {
     selectedStudent.value = data
   } catch (error) {
     console.error("Error al cargar perfil", error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar el perfil del alumno')
   } finally {
     isLoadingProfile.value = false
   }

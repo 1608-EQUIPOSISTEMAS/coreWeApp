@@ -7,12 +7,15 @@ describe('isWithinCourseChangeWindow', () => {
   it('admite una edición que empezó hace 8 días (caso SAP PM 20/09)', () => {
     expect(isWithinCourseChangeWindow('2026-09-20', today)).toBe(true)
   })
-  it('admite justo el límite de 15 días y rechaza el día 16', () => {
-    expect(isWithinCourseChangeWindow('2026-09-13', today)).toBe(true)
-    expect(isWithinCourseChangeWindow('2026-09-12', today)).toBe(false)
+  it('admite justo el límite de 30 días y rechaza el día 31', () => {
+    expect(isWithinCourseChangeWindow('2026-08-29', today)).toBe(true)
+    expect(isWithinCourseChangeWindow('2026-08-28', today)).toBe(false)
+  })
+  it('admite una edición que empezó hace 23 días (caso #13964 → KPIs 12/09)', () => {
+    expect(isWithinCourseChangeWindow('2026-09-12', new Date(2026, 9, 5))).toBe(true)
   })
   it('no sufre el shift de TZ con un ISO en UTC', () => {
-    expect(isWithinCourseChangeWindow('2026-09-13T00:00:00.000Z', today)).toBe(true)
+    expect(isWithinCourseChangeWindow('2026-08-29T00:00:00.000Z', today)).toBe(true)
   })
   it('rechaza start_date vacío', () => {
     expect(isWithinCourseChangeWindow(null, today)).toBe(false)

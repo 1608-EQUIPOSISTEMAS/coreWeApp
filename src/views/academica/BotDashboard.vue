@@ -273,10 +273,13 @@
 </template>
 
 <script setup>
+import { useToast } from 'vue-toastification'
 import { ref, onActivated, inject, computed } from 'vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { ServiceKeys } from '@/services'
 import apexchart from 'vue3-apexcharts'
+
+const toast = useToast()
 const botService = inject(ServiceKeys.Bot)
 const isLoading = ref(true)
 const metrics = ref(null)
@@ -291,6 +294,7 @@ async function fetchMetrics() {
     metrics.value = response.data
   } catch (error) {
     console.error("Error obteniendo métricas del bot", error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar las metricas del bot')
   } finally {
     isLoading.value = false
   }

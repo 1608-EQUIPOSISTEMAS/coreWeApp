@@ -382,7 +382,7 @@ function confirmRepro() {
       <i class="fa-solid fa-arrows-rotate fa-spin"></i> Cargando…
     </div>
     <div v-else-if="!editions.length" class="empty-state">
-      <div class="big">Ninguna aula inicia esta semana</div>
+      <div class="big">Ninguna aula en curso esta semana</div>
       Usa las flechas para navegar entre semanas
     </div>
 
@@ -685,7 +685,7 @@ function confirmRepro() {
             </div>
             <div class="pop-actions">
               <button class="btn ghost" @click="pop.mode = 'pick'">Volver</button>
-              <button class="btn accent" :disabled="!pop.dateVal" @click="confirmRepro">
+              <button class="btn accent" :disabled="!pop.dateVal || pop.dateVal === pop.session.date" @click="confirmRepro">
                 Guardar
               </button>
             </div>

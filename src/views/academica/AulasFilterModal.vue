@@ -6,23 +6,23 @@
         <div class="flt-grid cols-1">
           <div class="flt-field">
             <label>Busqueda global</label>
-            <input v-model.trim="filters.q" type="text" class="flt-input" placeholder="Nombre, codigo o docente..." @keyup.enter="$emit('apply')" />
+            <input v-model.trim="draft.q" type="text" class="flt-input" placeholder="Nombre, codigo o docente..." @keyup.enter="apply" />
           </div>
         </div>
       </fieldset>
       <fieldset class="flt-fieldset">
         <legend class="flt-legend"><i class="fa-solid fa-graduation-cap"></i> Aula</legend>
         <div class="flt-grid cols-3">
-          <div class="flt-field"><label>Modalidad</label><MultiSelect v-model="filters.modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
-          <div class="flt-field"><label>Segmento</label><MultiSelect v-model="filters.segment_ids" :items="filtroSegmento" label-key="description" value-key="id" placeholder="Todos..." /></div>
-          <div class="flt-field"><label>Docente</label><MultiSelect v-model="filters.teacher_ids" :items="filtroDocente" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="flt-field"><label>Modalidad</label><MultiSelect v-model="draft.modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Todas..." /></div>
+          <div class="flt-field"><label>Segmento</label><MultiSelect v-model="draft.segment_ids" :items="filtroSegmento" label-key="description" value-key="id" placeholder="Todos..." /></div>
+          <div class="flt-field"><label>Docente</label><MultiSelect v-model="draft.teacher_ids" :items="filtroDocente" label-key="description" value-key="id" placeholder="Todos..." /></div>
         </div>
       </fieldset>
       <fieldset class="flt-fieldset flt-last">
         <legend class="flt-legend"><i class="fa-solid fa-calendar-days"></i> Rangos de Fecha</legend>
         <div class="flt-grid cols-2">
-          <div class="flt-field"><label>Fecha de Inicio</label><BaseDatePicker v-model="filters.start_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => $emit('date-change', s, 'start')" /></div>
-          <div class="flt-field"><label>Fecha de Fin</label><BaseDatePicker v-model="filters.end_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => $emit('date-change', s, 'end')" /></div>
+          <div class="flt-field"><label>Fecha de Inicio</label><BaseDatePicker v-model="draft.start_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => setRange(s, 'start')" /></div>
+          <div class="flt-field"><label>Fecha de Fin</label><BaseDatePicker v-model="draft.end_range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccionar rango..." @on-change="(d, s) => setRange(s, 'end')" /></div>
         </div>
       </fieldset>
     </div>
@@ -31,7 +31,7 @@
         <button class="btn-ghost" @click="$emit('clear')"><i class="fa-solid fa-trash-can"></i> Limpiar</button>
         <div class="flt-actions">
           <button class="btn-ghost" @click="$emit('update:visible', false)">Cancelar</button>
-          <button class="btn-exec" @click="$emit('apply')"><i class="fa-solid fa-filter"></i> Aplicar</button>
+          <button class="btn-exec" @click="apply"><i class="fa-solid fa-filter"></i> Aplicar</button>
         </div>
       </div>
     </template>
@@ -39,11 +39,12 @@
 </template>
 
 <script setup>
+import { reactive, watch } from 'vue'
 import MultiSelect from '@/components/MultiSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import BaseModal from '@/components/BaseModal.vue'
 
-defineProps({
+const props = defineProps({
   visible: { type: Boolean, default: false },
   filters: { type: Object, required: true },
   filtroModalidad: { type: Array, default: () => [] },
@@ -51,7 +52,25 @@ defineProps({
   filtroDocente: { type: Array, default: () => [] }
 })
 
-defineEmits(['update:visible', 'apply', 'clear', 'date-change'])
+const emit = defineEmits(['update:visible', 'apply', 'clear'])
+
+// Se edita un BORRADOR: antes el modal mutaba el filtro del padre en vivo y
+// "Cancelar" no revertia nada. Spread y no structuredClone (falla con reactive).
+const copy = (f) => ({ ...f, modality_ids: [...f.modality_ids], segment_ids: [...f.segment_ids], teacher_ids: [...f.teacher_ids] })
+const draft = reactive(copy(props.filters))
+watch(() => props.visible, (open) => { if (open) Object.assign(draft, copy(props.filters)) })
+
+// El locale Spanish de flatpickr usa ' a ' como rangeSeparator; el ingles ' to '.
+function setRange (dateStr, type) {
+  const p = dateStr ? String(dateStr).split(/\s+(?:to|a)\s+/i) : []
+  draft[`${type}_from`] = p[0] || null
+  draft[`${type}_to`] = p[1] || p[0] || null
+}
+
+function apply () {
+  emit('apply', copy(draft))
+  emit('update:visible', false)
+}
 </script>
 
 <style scoped>

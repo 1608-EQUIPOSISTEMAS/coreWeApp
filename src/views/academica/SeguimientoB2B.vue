@@ -3,6 +3,7 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
+import { aulaStatus } from '@/entities/aula/aulaStatus'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -30,12 +31,6 @@ const ORDER = ['', 'P', 'T', 'F', 'J']
 // de estado (ver badgeClass): Proximo en ambar, no en azul.
 const STATUS_COLORS = { Activo: '#10B981', Proximo: '#F59E0B', Finalizado: '#A0A099' }
 
-const currentUserId = computed(() => {
-  try {
-    const u = JSON.parse(localStorage.getItem('user') || '{}')
-    return u.user_id || u.id || null
-  } catch { return null }
-})
 
 function initials(name) {
   if (!name) return '--'
@@ -57,13 +52,10 @@ const fmtShort = (iso) => {
 // Estado del aula sobre el cronograma REAL derivado (sessions ya trae las
 // reprogramaciones aplicadas), con fallback a start/end de la edicion.
 function deriveStatus(e) {
-  const today = new Date().toISOString().slice(0, 10)
-  const first = e.sessions?.[0]?.date || e.start_date
-  const last = e.sessions?.[e.sessions.length - 1]?.date || e.end_date
-  if (!first) return 'Proximo'
-  if (first > today) return 'Proximo'
-  if (last && last < today) return 'Finalizado'
-  return 'Activo'
+  return aulaStatus(
+    e.sessions?.[0]?.date || e.start_date,
+    e.sessions?.[e.sessions.length - 1]?.date || e.end_date,
+  )
 }
 
 const AULAS = ref([])
@@ -195,7 +187,6 @@ async function setMark(aula, student, n, next, note = null) {
       session_number: n,
       status: next || null,
       note,
-      user_id: currentUserId.value,
     })
     // Se actualiza recien tras confirmar el guardado. Objeto nuevo para que
     // los computed que leen attendance se recalculen.

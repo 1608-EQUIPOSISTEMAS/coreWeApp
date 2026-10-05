@@ -350,6 +350,7 @@ async function loadAdvisors() {
     advisorOptions.value = data?.items || []
   } catch (error) {
     console.error('No se pudo cargar la lista de asesores', error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar la lista de asesores')
   }
 }
 
@@ -377,6 +378,7 @@ async function fetchData() {
     pagin.value.total = tableResp.total || 0
   } catch (error) {
     console.error(error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar los tickets')
     toast.error('Error al cargar la data del Bot')
   } finally {
     isLoading.value = false

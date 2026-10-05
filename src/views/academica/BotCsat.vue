@@ -127,11 +127,14 @@
 </template>
 
 <script setup>
+import { useToast } from 'vue-toastification'
 import { ref, reactive, computed, onActivated, inject } from 'vue'
 import BasePagination from '@/components/BasePagination.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
 import BaseDatePicker from '@/components/BaseDatePicker.vue'
 import { ServiceKeys } from '@/services'
+
+const toast = useToast()
 
 const botService = inject(ServiceKeys.Bot)
 
@@ -207,6 +210,7 @@ async function fetchCsat() {
     pagin.value.total = tableResp.total || 0
   } catch (error) {
     console.error("Error al obtener CSAT", error)
+    toast.error(error?.response?.data?.message || 'No se pudo cargar las encuestas CSAT')
   } finally {
     isLoading.value = false
   }

@@ -6,12 +6,6 @@
         <h1 class="ep-title">Panel del Bot WhatsApp</h1>
         <span class="ep-subtitle">Métricas, tickets, alumnos y calidad de la atención automatizada</span>
       </div>
-      <div class="ep-masthead-actions">
-        <span class="ep-bot-badge" title="Conexión activa">
-          <i class="fa-brands fa-whatsapp"></i>
-          Bot online
-        </span>
-      </div>
     </header>
 
     <section class="ep-section ep-tabs-section">
@@ -119,15 +113,6 @@ const activeComponent = computed(() => {
   font-weight: 400;
   margin-top: 2px;
 }
-.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
-.ep-bot-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px; font-size: 12px; font-weight: 600;
-  color: #047857; background: var(--e-accent-soft);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 999px;
-}
-.ep-bot-badge i { font-size: 13px; }
 
 /* === Tabs (estilo ep-tabs de Leads) === */
 .ep-section {
@@ -199,9 +184,4 @@ const activeComponent = computed(() => {
   color: #34D399;
   border-color: rgba(52, 211, 153, 0.32);
 }
-[data-coreui-theme="dark"] .bot-academica-page .ep-bot-badge {
-  color: #34D399;
-  background: rgba(16, 185, 129, 0.16);
-  border-color: rgba(52, 211, 153, 0.32);
-}
-</style>
+[data-coreui-theme="dark"] .bot-academica-page </style>
