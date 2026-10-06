@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { aulaStatus } from '@/entities/aula/aulaStatus'
+import { normalizeText as norm, initials } from '@/shared/lib/text'
+import { formatDayMonth } from '@/features/academica-week/useIsoWeekNav'
+import SessionMarkPopover from './components/SessionMarkPopover.vue'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -18,35 +21,27 @@ const aulaHref = (c) =>
 // Asistencia MANUAL de este modulo. Vive en b2b_attendance, no toca la Lista
 // de Notas (y la Lista de Notas no la toca a ella). Sin marcar != falta.
 const ESTADOS = {
-  '': { key: 'pend', label: 'Sin marcar', short: '-' },
-  P: { key: 'pres', label: 'Presente', short: 'P' },
-  T: { key: 'tard', label: 'Tardanza', short: 'T' },
-  F: { key: 'falta', label: 'Falta', short: 'F' },
-  J: { key: 'just', label: 'Justificado', short: 'J' },
+  '': { label: 'Sin marcar', short: '-', tone: '' },
+  P: { label: 'Presente', short: 'P', tone: 'ok' },
+  T: { label: 'Tardanza', short: 'T', tone: 'warn' },
+  F: { label: 'Falta', short: 'F', tone: 'bad' },
+  J: { label: 'Justificado', short: 'J', tone: 'info' },
 }
 // Orden del popover "Marcar sesion" (mismo patron que Control de Ediciones).
-const ORDER = ['', 'P', 'T', 'F', 'J']
+const MARK_OPTIONS = ['', 'P', 'T', 'F', 'J'].map((code) => ({ code, ...ESTADOS[code] }))
+const LEGEND = ['P', 'T', 'F', 'J', ''].map((code) => ({ code, ...ESTADOS[code] }))
 
-// Barra superior de la tarjeta + avatar del docente. Mismo color que el badge
-// de estado (ver badgeClass): Proximo en ambar, no en azul.
-const STATUS_COLORS = { Activo: '#10B981', Proximo: '#F59E0B', Finalizado: '#A0A099' }
-
-
-function initials(name) {
-  if (!name) return '--'
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
-}
+// Franja de la tarjeta, avatar del docente y badge de estado comparten tono:
+// Proximo en ambar y no en azul, porque el azul ya es el del conteo B2B y
+// la cabecera mostraria dos badges identicos pegados.
+const STATUS_TONE = { Activo: 'ok', Proximo: 'warn', Finalizado: '' }
+// El valor interno es 'Proximo' (aulaStatus); en pantalla va con tilde.
+const statusLabel = (s) => (s === 'Proximo' ? 'Próximo' : s)
 
 function formatDate(iso) {
   if (!iso) return '--'
   const [y, m, d] = String(iso).slice(0, 10).split('-')
   return y && m && d ? `${d}/${m}/${y}` : '--'
-}
-
-const fmtShort = (iso) => {
-  if (!iso) return ''
-  const [, m, d] = String(iso).slice(0, 10).split('-')
-  return `${Number(d)}/${Number(m)}`
 }
 
 // Estado del aula sobre el cronograma REAL derivado (sessions ya trae las
@@ -71,7 +66,7 @@ async function load() {
     AULAS.value = (Array.isArray(rows) ? rows : []).map((e) => ({
       ...e,
       status: deriveStatus(e),
-      teacherInitials: initials(e.instructor),
+      teacherInitials: initials(e.instructor) || '--',
       schedule: [e.day_label, e.hour_label].filter(Boolean).join(' ') || '--',
     }))
   } catch (err) {
@@ -90,8 +85,6 @@ const q = ref('')
 const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
 const countByStatus = (s) =>
   s === 'Todos' ? AULAS.value.length : AULAS.value.filter((c) => c.status === s).length
-
-const norm = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 // La busqueda tambien mira a los alumnos: si matchea por alumno, el aula se
 // muestra solo con los que coinciden (buscar una persona no debe obligar a
@@ -127,12 +120,9 @@ const conNota = computed(() =>
   filtered.value.reduce((a, c) => a + c.students.filter((s) => s.final_grade !== null).length, 0),
 )
 
-// El badge de conteo B2B ya ocupa el azul: si "Proximo" tambien fuera azul,
-// la cabecera mostraria dos badges identicos pegados. Proximo va en ambar.
-const badgeClass = (s) => (s === 'Activo' ? 'ok' : s === 'Finalizado' ? 'neutral' : 'warn')
 // Nota final: viene de la Lista de Notas, SOLO LECTURA. Escala 0-20.
-const gradeClass = (g) => (g === null ? 'na' : g >= 13 ? 'ok' : g >= 11 ? 'mid' : 'bad')
-const pctClass = (p) => (p === null ? 'na' : p >= 80 ? 'ok' : p >= 60 ? 'mid' : 'bad')
+const gradeTone = (g) => (g === null ? '' : g >= 13 ? 'ok' : g >= 11 ? 'warn' : 'bad')
+const pctTone = (p) => (p === null ? '' : p >= 80 ? 'ok' : p >= 60 ? 'warn' : 'bad')
 
 const savingKey = ref(null)
 const cellKey = (s, n) => `${s.enrollment_id}:${n}`
@@ -141,19 +131,18 @@ const estadoOf = (s, n) => ESTADOS[markOf(s, n)]
 // Motivo escrito por academica al justificar. Solo las celdas 'J' tienen uno.
 const noteOf = (s, n) => s.attendance_notes?.[String(n)] || ''
 
-// Popover "Marcar sesion": { aula, student, n, top, left, asking }
+// Popover "Marcar sesion": { aula, student, n, anchor, asking }
 // `asking` = el segundo paso, donde academica escribe el motivo de la 'J'.
 const pop = ref(null)
 const motivo = ref('')
 
 function openPop(event, aula, student, n) {
-  const r = event.currentTarget.getBoundingClientRect()
-  pop.value = {
-    aula, student, n, asking: false,
-    top: Math.min(r.bottom + 6, window.innerHeight - 280),
-    left: Math.min(r.left, window.innerWidth - 270),
-  }
+  pop.value = { aula, student, n, asking: false, anchor: event.currentTarget.getBoundingClientRect() }
 }
+
+const popTitle = computed(() =>
+  pop.value?.asking ? `Justificar sesión ${pop.value.n}` : `Marcar sesión ${pop.value?.n}`
+)
 
 function pick(status) {
   const { aula, student, n } = pop.value
@@ -244,678 +233,358 @@ function summarize(att, totalSessions) {
 </script>
 
 <template>
-  <div class="aulas-shell">
-    <header class="page-head">
-      <div class="titles">
-        <div class="eyebrow">Academica</div>
-        <h1>Seguimiento B2B</h1>
-        <div class="subtitle">
-          Alumnos de convenios corporativos en aulas En Vivo - {{ AULAS.length }} aulas con matricula B2B
-        </div>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Seguimiento B2B</h1>
+        <p class="ds-sub">
+          Alumnos de convenios corporativos en aulas En Vivo — {{ AULAS.length }} aulas con matrícula B2B
+        </p>
       </div>
     </header>
 
-    <div class="kpi-grid">
-      <div class="kpi" style="--bar: #10B981">
-        <div class="k-label">
-          <span>Aulas con B2B</span>
-          <i class="fa-solid fa-building k-icon"></i>
+    <div class="ds-kpis">
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ filtered.length }}</template>
+          </span>
+          <span class="ds-kpi-label">Aulas con B2B</span>
+          <span class="ds-kpi-note">de {{ AULAS.length }} totales</span>
         </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ filtered.length }}</template></div>
-        <div class="k-foot"><span>de {{ AULAS.length }} totales</span></div>
       </div>
-      <div class="kpi" style="--bar: #2563EB">
-        <div class="k-label">
-          <span>Alumnos B2B</span>
-          <i class="fa-solid fa-users k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ totalAlumnos }}</template>
+          </span>
+          <span class="ds-kpi-label">Alumnos B2B</span>
+          <span class="ds-kpi-note">matriculados</span>
         </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalAlumnos }}</template></div>
-        <div class="k-foot"><span>matriculados</span></div>
       </div>
-      <div class="kpi" style="--bar: #F59E0B">
-        <div class="k-label">
-          <span>Asistencia promedio</span>
-          <i class="fa-solid fa-arrow-trend-up k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" :class="pctTone(avgAsistencia)" aria-hidden="true"><i class="fa-solid fa-arrow-trend-up"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ avgAsistencia == null ? '--' : avgAsistencia + '%' }}</template>
+          </span>
+          <span class="ds-kpi-label">Asistencia promedio</span>
+          <span class="ds-kpi-note">sobre sesiones ya tomadas</span>
         </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ avgAsistencia == null ? '--' : avgAsistencia + '%' }}</template></div>
-        <div class="k-foot"><span>sobre sesiones ya tomadas</span></div>
       </div>
-      <div class="kpi" style="--bar: #EF4444">
-        <div class="k-label">
-          <span>Faltas registradas</span>
-          <i class="fa-solid fa-user-xmark k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon bad" aria-hidden="true"><i class="fa-solid fa-user-xmark"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading" class="skel-kpi"></span><template v-else>{{ totalFaltas }}</template>
+          </span>
+          <span class="ds-kpi-label">Faltas registradas</span>
+          <span class="ds-kpi-note">{{ conNota }} con nota final</span>
         </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalFaltas }}</template></div>
-        <div class="k-foot"><span>{{ conNota }} con nota final</span></div>
       </div>
     </div>
 
-    <div class="filter-bar">
-      <button
-        v-for="s in filterStates"
-        :key="s"
-        class="chip"
-        :class="{ active: filter === s }"
-        @click="filter = s"
-      >
-        <span v-if="filter === s" class="dot"></span>
-        {{ s }}
-        <span class="chip-count">{{ countByStatus(s) }}</span>
-      </button>
-      <span class="divider"></span>
-      <div class="input">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input v-model.trim="q" placeholder="Buscar por curso, docente, alumno o DNI..." />
-      </div>
-      <div class="spacer"></div>
-      <span class="muted">{{ filtered.length }} aulas - {{ totalAlumnos }} alumnos</span>
-      <span class="divider"></span>
-      <span v-for="k in ['P', 'T', 'F', 'J', '']" :key="k" class="legend">
-        <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
-      </span>
-    </div>
-
-    <div v-if="isLoading" class="course-grid">
-      <article v-for="n in 4" :key="'sk' + n" class="course-card skel-card">
-        <div class="c-bar skel"></div>
-        <div class="c-head">
-          <span class="skel" style="width: 90px; height: 18px"></span>
-          <span class="skel" style="width: 60px; height: 18px"></span>
+    <section class="ds-panel">
+      <div class="ds-panel-body toolbar">
+        <div class="ds-tabs" role="group" aria-label="Filtrar aulas por estado">
+          <button
+            v-for="s in filterStates"
+            :key="s"
+            type="button"
+            :aria-pressed="String(filter === s)"
+            @click="filter = s"
+          >
+            {{ statusLabel(s) }} <span class="count">{{ countByStatus(s) }}</span>
+          </button>
         </div>
-        <div class="skel" style="width: 70%; height: 20px; margin-bottom: 12px"></div>
-        <div class="skel" style="height: 48px; margin-bottom: 12px"></div>
-        <div class="skel" style="height: 90px"></div>
+        <input
+          v-model.trim="q"
+          class="ds-input search"
+          type="search"
+          placeholder="Buscar por curso, docente, alumno o DNI..."
+          aria-label="Buscar por curso, docente, alumno o DNI"
+        />
+        <span class="toolbar-count">{{ filtered.length }} aulas · {{ totalAlumnos }} alumnos</span>
+        <div class="legend">
+          <span v-for="l in LEGEND" :key="l.code" class="legend-item">
+            <span class="ds-pill mark" :class="l.tone">{{ l.short }}</span>{{ l.label }}
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <template v-if="isLoading">
+      <article v-for="n in 4" :key="'sk' + n" class="ds-panel">
+        <div class="ds-panel-body">
+          <span class="ds-skel skel-title"></span>
+          <span class="ds-skel skel-block"></span>
+          <span class="ds-skel skel-table"></span>
+        </div>
       </article>
-    </div>
+    </template>
 
-    <div v-else-if="!filtered.length" class="empty-state">
-      <i class="fa-regular fa-folder-open"></i>
-      <div class="big">Sin alumnos B2B</div>
-      <span v-if="q">Ninguna aula o alumno coincide con la busqueda</span>
-      <span v-else>Ninguna aula En Vivo en estado "{{ filter }}" tiene matricula B2B</span>
-    </div>
+    <p v-else-if="!filtered.length" class="ds-panel ds-empty ds-empty--lista">
+      <template v-if="q">Ninguna aula o alumno coincide con la búsqueda. Prueba con otro nombre o DNI.</template>
+      <template v-else>Ninguna aula En Vivo en estado "{{ filter }}" tiene matrícula B2B. Elige otro estado arriba.</template>
+    </p>
 
-    <div v-else class="course-grid">
+    <template v-else>
       <article
         v-for="c in filtered"
         :key="c.edition_num_id"
-        class="course-card"
-        :style="{ '--cbar': STATUS_COLORS[c.status] }"
+        class="ds-panel aula-card"
+        :class="STATUS_TONE[c.status]"
       >
-        <div class="c-bar"></div>
-        <div class="c-head">
+        <header class="ds-panel-head">
           <div>
-            <span class="c-code">{{ c.version_code || c.abbreviation }}</span>
-            <span class="c-edition">{{ c.specific_code }}</span>
+            <span class="code">{{ c.version_code || c.abbreviation }}</span>
+            <span class="edition">{{ c.specific_code }}</span>
+            <h3 class="ds-panel-title aula-title">{{ c.abbreviation }}</h3>
           </div>
-          <div class="row">
-            <span class="badge b2b">{{ c.students.length }} B2B</span>
-            <span class="badge" :class="badgeClass(c.status)">{{ c.status }}</span>
+          <div class="pills">
+            <span class="ds-pill info">{{ c.students.length }} B2B</span>
+            <span class="ds-pill" :class="STATUS_TONE[c.status]">{{ statusLabel(c.status) }}</span>
           </div>
-        </div>
-        <h3>{{ c.abbreviation }}</h3>
-        <div class="c-teacher">
-          <div class="av" :style="{ background: STATUS_COLORS[c.status] }">{{ c.teacherInitials }}</div>
-          <div>
-            <div class="tn">{{ c.instructor || '--' }}</div>
-            <div class="tr">Docente</div>
-          </div>
-          <div class="spacer"></div>
-          <div class="c-meta">
-            <div class="m">
-              <i class="fa-solid fa-graduation-cap"></i>
-              <strong>{{ c.total_sessions || '--' }}</strong> {{ c.total_sessions === 1 ? 'sesion' : 'sesiones' }}
-            </div>
-            <div class="m">
-              <i class="fa-regular fa-calendar"></i> {{ formatDate(c.start_date) }} -> {{ formatDate(c.end_date) }}
-            </div>
-            <div class="m">
-              <i class="fa-regular fa-clock"></i> {{ c.schedule }}
-            </div>
-          </div>
-        </div>
+        </header>
 
-        <div class="tbl-wrap">
-          <table class="course-table">
-            <thead>
-              <tr>
-                <th class="col-al">Alumno</th>
-                <th>DNI</th>
-                <th>Contacto</th>
-                <th v-for="s in c.sessions" :key="s.session_number" class="center s-col">
-                  S{{ s.session_number }}<div class="sub">{{ fmtShort(s.date) }}</div>
-                </th>
-                <th class="center a-col">Asist.</th>
-                <th class="center n-col" title="Se lee de la Lista de Notas - aqui no se edita">Nota final</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="st in c.students" :key="st.enrollment_id">
-                <td class="ct-name col-al">
-                  <a
-                    class="al-link"
-                    :href="aulaHref(c)"
-                    target="_blank"
-                    rel="noopener"
-                    :title="`Abrir el aula ${c.abbreviation} ${c.specific_code} en una pestana nueva`"
-                  >
-                    {{ st.full_name }}
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                  </a>
-                </td>
-                <td class="mono">{{ st.dni || '--' }}</td>
-                <td>
-                  <div class="ct">{{ st.email || '--' }}</div>
-                  <div class="ct sub">{{ st.phone || '' }}</div>
-                </td>
-                <td v-for="s in c.sessions" :key="s.session_number" class="center s-cell">
-                  <button
-                    class="s-btn"
-                    :class="'e-' + estadoOf(st, s.session_number).key"
-                    :disabled="savingKey === cellKey(st, s.session_number)"
-                    :title="`S${s.session_number} - ${fmtShort(s.date)} - ${estadoOf(st, s.session_number).label} (clic para marcar)`"
-                    @click="openPop($event, c, st, s.session_number)"
-                    @mouseenter="showTip($event, st, s.session_number)"
-                    @mouseleave="hideTip"
-                  >
-                    {{ estadoOf(st, s.session_number).short }}
-                  </button>
-                </td>
-                <td class="asist-cell">
-                  <div class="asist" :class="pctClass(st.summary.pct)">
-                    <div class="a-top">
-                      <b class="a-val">{{ st.summary.pct === null ? '--' : st.summary.pct + '%' }}</b>
-                      <span class="a-frac">{{ st.summary.taken }}/{{ c.total_sessions }}</span>
+        <div class="ds-panel-body">
+          <div class="teacher">
+            <div class="av" :class="STATUS_TONE[c.status]" aria-hidden="true">{{ c.teacherInitials }}</div>
+            <div>
+              <div class="tn">{{ c.instructor || '--' }}</div>
+              <div class="tr">Docente</div>
+            </div>
+            <div class="meta">
+              <span>
+                <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+                <strong>{{ c.total_sessions || '--' }}</strong> {{ c.total_sessions === 1 ? 'sesión' : 'sesiones' }}
+              </span>
+              <span>
+                <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ formatDate(c.start_date) }} → {{ formatDate(c.end_date) }}
+              </span>
+              <span>
+                <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ c.schedule }}
+              </span>
+            </div>
+          </div>
+
+          <div class="ds-table-scroll">
+            <table class="ds-table ds-table--lista attendance">
+              <thead>
+                <tr>
+                  <th class="col-al">Alumno</th>
+                  <th>DNI</th>
+                  <th>Contacto</th>
+                  <th v-for="s in c.sessions" :key="s.session_number" class="center s-col">
+                    S{{ s.session_number }}<div class="sub">{{ formatDayMonth(s.date) }}</div>
+                  </th>
+                  <th class="center a-col">Asist.</th>
+                  <th class="center n-col" title="Se lee de la Lista de Notas - aquí no se edita">Nota final</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="st in c.students" :key="st.enrollment_id">
+                  <td class="col-al">
+                    <a
+                      class="al-link"
+                      :href="aulaHref(c)"
+                      target="_blank"
+                      rel="noopener"
+                      :title="`Abrir el aula ${c.abbreviation} ${c.specific_code} en una pestaña nueva`"
+                    >
+                      {{ st.full_name }}
+                      <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                    </a>
+                  </td>
+                  <td class="mono">{{ st.dni || '--' }}</td>
+                  <td>
+                    <div class="ct">{{ st.email || '--' }}</div>
+                    <div class="ct sub">{{ st.phone || '' }}</div>
+                  </td>
+                  <td v-for="s in c.sessions" :key="s.session_number" class="center s-cell">
+                    <button
+                      class="ds-pill s-btn"
+                      type="button"
+                      :class="estadoOf(st, s.session_number).tone"
+                      :disabled="savingKey === cellKey(st, s.session_number)"
+                      :title="`S${s.session_number} - ${formatDayMonth(s.date)} - ${estadoOf(st, s.session_number).label} (clic para marcar)`"
+                      :aria-label="`Marcar sesión ${s.session_number} de ${st.full_name}: ${estadoOf(st, s.session_number).label}`"
+                      @click="openPop($event, c, st, s.session_number)"
+                      @mouseenter="showTip($event, st, s.session_number)"
+                      @mouseleave="hideTip"
+                    >
+                      {{ estadoOf(st, s.session_number).short }}
+                    </button>
+                  </td>
+                  <td>
+                    <div class="asist" :class="pctTone(st.summary.pct)">
+                      <div class="a-top">
+                        <b class="a-val">{{ st.summary.pct === null ? '--' : st.summary.pct + '%' }}</b>
+                        <span class="a-frac">{{ st.summary.taken }}/{{ c.total_sessions }}</span>
+                      </div>
+                      <div class="a-bar">
+                        <span :style="{ width: (st.summary.pct || 0) + '%' }"></span>
+                      </div>
                     </div>
-                    <div class="a-bar">
-                      <span :style="{ width: (st.summary.pct || 0) + '%' }"></span>
-                    </div>
-                  </div>
-                </td>
-                <td class="center">
-                  <span class="score-pill" :class="gradeClass(st.final_grade)">
-                    {{ st.final_grade === null ? '--' : Number(st.final_grade).toFixed(2) }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                  <td class="center">
+                    <span class="ds-pill mono" :class="gradeTone(st.final_grade)">
+                      {{ st.final_grade === null ? '--' : Number(st.final_grade).toFixed(2) }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </article>
-    </div>
 
-    <div class="page-foot" v-if="!isLoading && filtered.length">
-      <i class="fa-solid fa-circle-info"></i>
-      Clic en una celda para marcar Sin marcar / Presente / Tardanza / Falta / Justificado.
-      La justificacion pide un motivo y se lee pasando el cursor por la celda <b>J</b>; no baja el
-      porcentaje de asistencia ni cuenta como falta. Esta asistencia es
-      exclusiva del modulo B2B: no se escribe ni se lee en la Lista de Notas. La columna
-      <b>Nota final</b> si viene de la Lista de Notas y aqui es de solo lectura.
-    </div>
+      <p class="ds-callout">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>
+          Clic en una celda para marcar Sin marcar / Presente / Tardanza / Falta / Justificado.
+          La justificación pide un motivo y se lee pasando el cursor por la celda <b>J</b>; no baja el
+          porcentaje de asistencia ni cuenta como falta. Esta asistencia es
+          exclusiva del módulo B2B: no se escribe ni se lee en la Lista de Notas. La columna
+          <b>Nota final</b> sí viene de la Lista de Notas y aquí es de solo lectura.
+        </span>
+      </p>
+    </template>
 
-    <!-- Popover MARCAR SESION (mismo componente visual que Control de Ediciones) -->
-    <template v-if="pop">
-      <div class="pop-backdrop" @click="pop = null" @contextmenu.prevent="pop = null" />
-      <div class="pop" :style="{ top: pop.top + 'px', left: pop.left + 'px' }">
-        <template v-if="pop.asking">
-          <div class="pop-h">JUSTIFICAR SESION {{ pop.n }}</div>
+    <SessionMarkPopover
+      v-if="pop"
+      :anchor="pop.anchor"
+      :width="270"
+      :height="280"
+      :title="popTitle"
+      :options="MARK_OPTIONS"
+      :selected="markOf(pop.student, pop.n)"
+      @pick="pick"
+      @close="pop = null"
+    >
+      <template v-if="pop.asking" #step>
+        <div class="justify-step">
           <textarea
             v-model="motivo"
-            class="pop-ta"
+            class="ds-input"
             rows="3"
             maxlength="500"
             autofocus
-            placeholder="Motivo de la justificacion (lo vera quien pase por la celda)"
+            aria-label="Motivo de la justificación"
+            placeholder="Motivo de la justificación (lo verá quien pase por la celda)"
           ></textarea>
-          <div class="pop-actions">
-            <button class="pop-btn" @click="pop = null">Cancelar</button>
-            <button class="pop-btn primary" :disabled="!motivo.trim()" @click="saveJustification">
+          <div class="justify-actions">
+            <button class="btn-exec btn-exec-outline btn-sm" type="button" @click="pop = null">Cancelar</button>
+            <button class="btn-exec btn-exec-primary btn-sm" type="button" :disabled="!motivo.trim()" @click="saveJustification">
               Guardar
             </button>
           </div>
-        </template>
-        <template v-else>
-          <div class="pop-h">MARCAR SESION {{ pop.n }}</div>
-          <button
-            v-for="k in ORDER"
-            :key="k"
-            class="pop-opt"
-            :class="{ on: markOf(pop.student, pop.n) === k }"
-            @click="pick(k)"
-          >
-            <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>
-            {{ ESTADOS[k].label }}
-            <span v-if="markOf(pop.student, pop.n) === k" class="ck">
-              <i class="fa-solid fa-check"></i>
-            </span>
-          </button>
-        </template>
-      </div>
-    </template>
+        </div>
+      </template>
+    </SessionMarkPopover>
 
     <!-- Justificacion en hover: solo lectura, sin backdrop (no bloquea el clic) -->
-    <div v-if="tip" class="tip" :style="{ top: tip.top + 'px', left: tip.left + 'px' }">
-      <div class="tip-h"><span class="sw e-just">J</span> Justificacion S{{ tip.n }}</div>
+    <div v-if="tip" class="tip" role="tooltip" :style="{ top: tip.top + 'px', left: tip.left + 'px' }">
+      <div class="tip-h"><span class="ds-pill info mark">J</span> Justificación S{{ tip.n }}</div>
       <p class="tip-b">{{ tip.text }}</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Mismo sistema de diseno que Aulas.vue (tokens, KPIs, filter-bar, card). */
-.aulas-shell {
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --green-soft: #ECFDF4;
-  --green-ink: #047857;
-  --amber-soft: #FEF6E1;
-  --amber-ink: #B45309;
-  --red-soft: #FEECEC;
-  --red-ink: #B91C1C;
-  --blue-soft: #ECF2FE;
-  --blue-ink: #1D4ED8;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.row { display: flex; align-items: center; gap: 8px; }
-.spacer { flex: 1; }
-.muted { color: var(--ink-3); font-size: 12px; }
 .center { text-align: center; }
-.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; }
+.mark { width: 20px; height: 20px; padding: 0; justify-content: center; font-family: var(--ds-font-mono); }
 
-/* page-head */
-.page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-.page-head .titles { flex: 1; min-width: 0; }
-.page-head .eyebrow {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.page-head h1 { margin: 4px 0 2px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-.page-head .subtitle { color: var(--ink-3); font-size: 13.5px; }
-.page-head .actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+/* Barra de filtros: estado, busqueda, conteo y leyenda en una sola linea. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.count { margin-left: 4px; font-size: 11px; opacity: 0.7; }
+.search { flex: 0 1 300px; min-width: 220px; }
+.toolbar-count { margin-left: auto; font-size: 12px; color: var(--ds-muted); }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ds-ink-2); }
 
-/* buttons */
-.btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 12px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  border: 1px solid var(--line); background: white;
-  color: var(--ink-2); cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+/* Tarjeta por aula: franja superior y avatar con el tono del estado. */
+.aula-card { border-top: 3px solid var(--ds-muted); }
+.aula-card.ok { border-top-color: var(--ds-ok); }
+.aula-card.warn { border-top-color: var(--ds-warn); }
+.code {
+  padding: 2px 7px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  background: var(--ds-surface-2); font-family: var(--ds-font-mono); font-size: 11px; font-weight: 600; color: var(--ds-ink-2);
 }
-.btn:hover { background: var(--bg-soft); border-color: #DDD; }
-.btn:disabled { opacity: 0.6; cursor: default; }
+.edition { margin-left: 6px; font-size: 10.5px; font-weight: 600; color: var(--ds-muted); }
+.aula-title { margin-top: 6px; font-size: 16px; }
+.pills { display: flex; align-items: center; gap: 8px; align-self: flex-start; }
 
-/* KPIs */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
-.kpi {
-  background: white; border-radius: var(--radius);
-  padding: 14px 16px; border: 1px solid var(--line);
-  position: relative; overflow: hidden;
+.teacher {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-bottom: 12px; padding: 10px; border-radius: var(--ds-radius-sm); background: var(--ds-surface-2);
 }
-.kpi::before {
-  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
-  width: 3px; border-radius: 2px; background: var(--bar, var(--ink-4));
+.av {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px;
+  background: var(--ds-muted); color: var(--ds-on-brand); font-size: 11px; font-weight: 600;
 }
-.kpi .k-label {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.kpi .k-icon { color: var(--ink-4); font-size: 14px; }
-.kpi .k-value {
-  font-size: 30px; font-weight: 600; letter-spacing: -0.025em;
-  margin-top: 4px; line-height: 1.1;
-}
-.kpi .k-foot {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: 10px; font-size: 12px; color: var(--ink-3);
-}
+.av.ok { background: var(--ds-ok); }
+.av.warn { background: var(--ds-warn); }
+.tn { font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--ds-ink); }
+.tr { font-size: 11px; color: var(--ds-muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 16px; margin-left: auto; font-size: 12px; color: var(--ds-ink-2); }
+.meta span { display: inline-flex; align-items: center; gap: 6px; }
+.meta i { font-size: 11px; }
+.meta strong { font-weight: 600; color: var(--ds-ink); }
 
-/* filter bar */
-.filter-bar {
-  background: white; border-radius: var(--radius);
-  border: 1px solid var(--line);
-  padding: 12px 14px; margin-bottom: 14px;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-}
-.chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 999px;
-  background: white; border: 1px solid var(--line);
-  font-size: 12.5px; color: var(--ink-2); cursor: pointer;
-  transition: background 0.15s;
-}
-.chip:hover { background: var(--bg-soft); }
-.chip.active {
-  background: #ECF8F2; color: var(--green-ink);
-  border-color: #C8EFD8; font-weight: 500;
-}
-.chip .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
-.chip .chip-count { color: var(--ink-4); font-size: 11px; }
-.chip.active .chip-count { color: var(--green-ink); opacity: 0.7; }
-.divider { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
-.input {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 6px 10px; background: white; font-size: 13px;
-  min-width: 260px; color: var(--ink-3);
-}
-.input input {
-  border: none; outline: none; font-size: 13px;
-  flex: 1; background: transparent; color: var(--ink);
-}
-.input input::placeholder { color: var(--ink-4); }
-
-.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); }
-.sw {
-  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
-  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
-}
-
-/* estados de asistencia */
-.e-pend { background: var(--bg-soft); color: var(--ink-4); border: 1px solid var(--line); }
-.e-pres { background: var(--green-soft); color: var(--green-ink); }
-.e-tard { background: var(--amber-soft); color: var(--amber-ink); }
-.e-falta { background: var(--red-soft); color: var(--red-ink); }
-.e-just { background: var(--blue-soft); color: var(--blue-ink); }
-
-/* Badges de cabecera. Rectangulo redondeado compacto: sin icono, sin punto y
-   sin border-radius de pildora — eso era lo que los hacia anchos y blandos. */
-.badge {
-  display: inline-block;
-  padding: 3px 8px; border-radius: 6px;
-  font-size: 10px; font-weight: 700; line-height: 1.4;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-.badge.b2b { background: var(--blue-soft); color: var(--blue-ink); }
-.badge.ok { background: var(--green-soft); color: var(--green-ink); }
-.badge.warn { background: var(--amber-soft); color: var(--amber-ink); }
-.badge.neutral { background: var(--bg-soft); color: var(--ink-3); }
-
-/* course grid: una tarjeta por aula, a ancho completo (lleva la grilla de
-   asistencia dentro, no entra en 320px como las tarjetas de Aulas). */
-.course-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-.course-card {
-  background: white; border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  padding: 16px; position: relative; overflow: hidden;
-  transition: box-shadow 0.12s, border-color 0.12s;
-}
-.course-card:hover { border-color: #D4D4CC; box-shadow: var(--shadow-md); }
-.course-card .c-bar {
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--cbar, var(--green));
-}
-.course-card .c-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 10px; margin-bottom: 8px;
-}
-.course-card .c-code {
-  font-family: var(--font-mono); font-size: 11px;
-  font-weight: 600; color: var(--ink-3);
-  background: var(--bg-soft); padding: 2px 7px; border-radius: 5px;
-  border: 1px solid var(--line-soft);
-}
-.course-card .c-edition {
-  margin-left: 6px; font-size: 10.5px; color: var(--ink-4);
-  font-weight: 600; letter-spacing: 0.05em;
-}
-.course-card h3 {
-  margin: 0 0 4px; font-size: 16px; font-weight: 600;
-  letter-spacing: -0.015em; line-height: 1.25;
-}
-.course-card .c-teacher {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin: 12px 0; padding: 10px; background: var(--bg-soft); border-radius: 8px;
-}
-.course-card .c-teacher .av {
-  width: 28px; height: 28px; border-radius: 999px;
-  display: grid; place-items: center;
-  color: white; font-weight: 600; font-size: 11px;
-}
-.course-card .c-teacher .tn { font-size: 12.5px; font-weight: 500; line-height: 1.2; }
-.course-card .c-teacher .tr { font-size: 11px; color: var(--ink-3); }
-.course-card .c-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
-.course-card .c-meta .m { display: flex; align-items: center; gap: 6px; color: var(--ink-3); }
-.course-card .c-meta .m i { font-size: 11px; }
-.course-card .c-meta .m strong { color: var(--ink); font-weight: 500; }
-
-/* table */
-.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
-.course-table {
-  width: 100%; background: white;
-  border-collapse: collapse; font-size: 13px;
-}
-.course-table th, .course-table td {
-  text-align: left; padding: 9px 12px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.course-table th {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  background: var(--bg-soft); white-space: nowrap;
-}
-.course-table th.s-col { width: 58px; }
-.course-table th.a-col { width: 100px; }
-.course-table th.n-col { width: 84px; }
-.course-table th .sub { text-transform: none; letter-spacing: 0; }
-.course-table tbody tr:hover { background: #FAFAF6; }
-.course-table tbody tr:hover .col-al { background: #FAFAF6; }
-.course-table tr:last-child td { border-bottom: none; }
-.course-table .ct-name { font-weight: 500; }
-.col-al { position: sticky; left: 0; z-index: 2; background: white; min-width: 210px; }
-.course-table th.col-al { z-index: 3; background: var(--bg-soft); }
-.sub { font-size: 11px; color: var(--ink-3); font-weight: 400; font-family: var(--font-mono); }
-.sub.center { text-align: center; }
+/* Matriz alumno x sesion: el alumno queda fijo al hacer scroll horizontal. */
+.attendance th, .attendance td { text-align: left; }
+.attendance .center { text-align: center; }
+.attendance .col-al { position: sticky; left: 0; z-index: 2; min-width: 210px; background: var(--ds-surface); }
+.attendance thead th.col-al { z-index: 3; }
+.attendance th.s-col { width: 58px; }
+.attendance th.a-col { width: 100px; }
+.attendance th.n-col { width: 84px; }
+.sub { font-family: var(--ds-font-mono); font-size: 11px; font-weight: 400; color: var(--ds-muted); }
 .ct { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
 
-.al-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: inherit; text-decoration: none; cursor: pointer;
-}
-.al-link i { font-size: 9.5px; color: var(--ink-4); opacity: 0; transition: opacity 0.12s; }
-.al-link:hover { color: var(--blue-ink); text-decoration: underline; }
-.al-link:hover i { opacity: 1; }
+.al-link { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; }
+.al-link i { font-size: 9.5px; color: var(--ds-muted); opacity: 0; transition: opacity 0.12s; }
+.al-link:hover, .al-link:focus-visible { color: var(--ds-accent); text-decoration: underline; }
+.al-link:hover i, .al-link:focus-visible i { opacity: 1; }
 
-td.s-cell { padding: 5px 4px; }
+.attendance td.s-cell { padding: 5px 4px; }
 .s-btn {
-  width: 32px; height: 28px; border-radius: 7px; border: 1px solid transparent;
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: filter 0.12s, border-color 0.12s;
+  width: 32px; height: 28px; justify-content: center; border: 1px solid transparent;
+  font-family: var(--ds-font-mono); font-size: 12px; cursor: pointer; transition: border-color 0.12s;
 }
-.s-btn:hover:not(:disabled) { filter: brightness(0.95); border-color: #D4D4CC; }
+.s-btn:hover:not(:disabled) { border-color: var(--ds-border-strong); }
+.s-btn:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
 .s-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* Badges: hugging content. Nada de min-width — el ancho fijo dejaba aire
-   muerto a los lados con valores cortos ("--", "8.00"). */
-.score-pill {
-  display: inline-block; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 12px; font-weight: 600; border-radius: 6px; padding: 3px 7px; line-height: 1.3;
-}
-.score-pill.ok { background: var(--green-soft); color: var(--green-ink); }
-.score-pill.mid { background: var(--amber-soft); color: var(--amber-ink); }
-.score-pill.bad { background: var(--red-soft); color: var(--red-ink); }
-.score-pill.na { background: var(--bg-soft); color: var(--ink-4); }
+/* Asist.: el % manda, la fraccion lo contextualiza y la barra ata las dos. */
+.asist { width: 76px; margin: 0 auto; color: var(--ds-muted); }
+.asist.ok { color: var(--ds-ok-ink); }
+.asist.warn { color: var(--ds-warn-ink); }
+.asist.bad { color: var(--ds-bad-ink); }
+.a-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.a-val { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; line-height: 1; }
+.a-frac { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 10.5px; line-height: 1; color: var(--ds-muted); }
+.a-bar { height: 3px; margin-top: 5px; overflow: hidden; border-radius: 2px; background: var(--ds-surface-3); }
+.a-bar span { display: block; height: 100%; border-radius: 2px; background: currentColor; }
 
-/* ASIST.: un bloque, no dos piezas sueltas. El % manda (grande, a la
-   izquierda), la fraccion lo contextualiza (chica, a la derecha, alineada al
-   borde) y la barra ata las dos a un mismo ancho. */
-.asist-cell { padding: 8px 12px; }
-.asist { width: 76px; margin: 0 auto; }
-.asist .a-top {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
-}
-.asist .a-val {
-  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 14px; font-weight: 600; letter-spacing: -0.02em; line-height: 1;
-}
-.asist .a-frac {
-  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 10.5px; color: var(--ink-4); line-height: 1;
-}
-.asist .a-bar {
-  height: 3px; border-radius: 2px; background: var(--line); margin-top: 5px; overflow: hidden;
-}
-.asist .a-bar span { display: block; height: 100%; border-radius: 2px; background: currentColor; }
-.asist.ok { color: var(--green-ink); }
-.asist.mid { color: var(--amber-ink); }
-.asist.bad { color: var(--red-ink); }
-.asist.na { color: var(--ink-4); }
-.asist.na .a-val { color: var(--ink-4); }
+.skel-title { width: 40%; height: 20px; margin-bottom: 12px; }
+.skel-block { height: 48px; margin-bottom: 12px; }
+.skel-table { height: 90px; }
 
-.page-foot {
-  display: flex; align-items: flex-start; gap: 8px;
-  margin-top: 16px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
-}
-.page-foot i { margin-top: 2px; }
-.empty-state {
-  text-align: center; padding: 70px 20px; color: var(--ink-3);
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-}
-.empty-state i { font-size: 26px; color: var(--ink-4); }
-.empty-state .big { font-size: 17px; font-weight: 600; color: var(--ink-2); margin: 10px 0 4px; }
+.justify-step { padding: 0 4px 2px; }
+.justify-step textarea { min-width: 240px; margin-bottom: 6px; }
+.justify-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
-/* skeleton loading (mismo shimmer que Aulas) */
-.skel {
-  display: block;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.skel-kpi { width: 56px; height: 30px; }
-.skel-card { pointer-events: none; }
-.skel-card .c-bar { height: 3px; }
-
-@media (max-width: 1100px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ---------- popover "marcar sesion" (identico al de ControlEdiciones) ---------- */
-.pop-backdrop { position: fixed; inset: 0; z-index: 1090; }
-.pop {
-  position: fixed; z-index: 1091; background: var(--pop-bg, #fff);
-  border: 1px solid var(--line); border-radius: var(--radius);
-  box-shadow: 0 10px 30px -12px rgba(20,20,15,0.22);
-  padding: 6px; min-width: 190px; color: var(--ink);
-}
-.pop-h {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--ink-3); padding: 7px 10px 5px;
-}
-.pop-opt {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  border: none; background: transparent; border-radius: 8px; padding: 9px 10px;
-  font-family: inherit; font-size: 13px; color: var(--ink); text-align: left;
-  cursor: pointer; transition: 0.12s;
-}
-.pop-opt:hover { background: var(--bg-soft); }
-.pop-opt.on { background: var(--bg-soft); font-weight: 500; }
-.pop-opt .ck { margin-left: auto; color: var(--we-navy, #002060); display: flex; }
-.pop-ta {
-  width: 100%; min-width: 240px; resize: vertical; margin: 0 0 6px;
-  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
-  font-family: inherit; font-size: 13px; color: var(--ink); background: transparent;
-}
-.pop-ta:focus { outline: none; border-color: var(--we-navy, #002060); }
-.pop-actions { display: flex; justify-content: flex-end; gap: 6px; padding: 0 0 2px; }
-.pop-btn {
-  border: 1px solid var(--line); background: transparent; border-radius: 8px;
-  padding: 6px 12px; font-family: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer;
-}
-.pop-btn:hover { background: var(--bg-soft); }
-.pop-btn.primary { background: var(--we-navy, #002060); border-color: var(--we-navy, #002060); color: #fff; }
-.pop-btn.primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* popup de la justificacion (hover, solo lectura) */
+/* Justificacion en hover, solo lectura */
 .tip {
-  position: fixed; z-index: 1092; max-width: 280px;
-  background: var(--pop-bg, #fff); border: 1px solid var(--line); border-radius: var(--radius);
-  box-shadow: 0 10px 30px -12px rgba(20,20,15,0.22); padding: 10px 12px; color: var(--ink);
-  pointer-events: none;
+  position: fixed; z-index: 1092; max-width: 280px; padding: 10px 12px; pointer-events: none;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.35); color: var(--ds-ink);
 }
-.tip-h {
-  display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
-}
-.tip-b { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .aulas-shell {
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --green-soft: rgba(16,185,129,0.14);
-  --green-ink: #34D399;
-  --amber-soft: rgba(245,158,11,0.14);
-  --amber-ink: #FBBF24;
-  --red-soft: rgba(239,68,68,0.14);
-  --red-ink: #F87171;
-  --blue-soft: rgba(37,99,235,0.18);
-  --blue-ink: #60A5FA;
-  --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
-  --pop-bg: #1A1A14;
-}
-[data-coreui-theme="dark"] .aulas-shell .pop,
-[data-coreui-theme="dark"] .aulas-shell .tip { box-shadow: 0 10px 30px -12px rgba(0,0,0,0.6); }
-[data-coreui-theme="dark"] .aulas-shell .pop-ta { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .aulas-shell .pop-btn { border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .pop-btn:hover { background: #2A2A22; }
-[data-coreui-theme="dark"] .aulas-shell .pop-btn.primary { background: #8FAADC; border-color: #8FAADC; color: #14140F; }
-[data-coreui-theme="dark"] .aulas-shell .pop-opt .ck { color: #8FAADC; }
-[data-coreui-theme="dark"] .aulas-shell .btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aulas-shell .kpi { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .filter-bar { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .chip { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .chip:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .chip.active {
-  background: rgba(16,185,129,0.16); color: #34D399; border-color: rgba(16,185,129,0.3);
-}
-[data-coreui-theme="dark"] .aulas-shell .input { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .input input { color: #F4F4F0; }
-[data-coreui-theme="dark"] .aulas-shell .course-card { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .course-card:hover { border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aulas-shell .course-card .c-code { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .aulas-shell .course-card .c-teacher { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .course-table { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .course-table th { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .col-al { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .course-table th.col-al { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .course-table tbody tr:hover,
-[data-coreui-theme="dark"] .aulas-shell .course-table tbody tr:hover .col-al { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .empty-state { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .s-btn:hover:not(:disabled) { filter: brightness(1.15); border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aulas-shell .asist .a-bar { background: #2A2A22; }
-[data-coreui-theme="dark"] .aulas-shell .skel {
-  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
-  background-size: 200% 100%;
-}
+.tip-h { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: var(--ds-ink-2); }
+.tip-b { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-2); white-space: pre-wrap; }
 </style>

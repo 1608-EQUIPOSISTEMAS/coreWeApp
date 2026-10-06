@@ -3,42 +3,30 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import WeekNavigator from './components/WeekNavigator.vue'
+import SessionMarkPopover from './components/SessionMarkPopover.vue'
+import { useIsoWeekNav, formatDayMonth } from '@/features/academica-week/useIsoWeekNav'
+import { normalizeText as norm, initials } from '@/shared/lib/text'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-
 // Estados de gestion (mismos codigos que edition_session_control).
 const ESTADOS = {
-  '': { key: 'pend', label: 'Pendiente', short: '—' },
-  A: { key: 'dictada', label: 'Dictada', short: 'A' },
-  R: { key: 'repro', label: 'Reprogramada', short: 'R' },
-  T: { key: 'tard', label: 'Tardanza', short: 'T' }
+  '': { label: 'Pendiente', short: '—', tone: '' },
+  A: { label: 'Dictada', short: 'A', tone: 'ok' },
+  R: { label: 'Reprogramada', short: 'R', tone: 'bad' },
+  T: { label: 'Tardanza', short: 'T', tone: 'warn' }
 }
-const ORDER = ['', 'A', 'R', 'T']
+const MARK_OPTIONS = ['', 'A', 'R', 'T'].map((code) => ({ code, ...ESTADOS[code] }))
+const LEGEND = ['A', 'R', 'T', ''].map((code) => ({ code, ...ESTADOS[code] }))
+const DEFAULT_REPRO_MAX = 3
 
-// Evita el corrimiento UTC de un dia (mismo helper que ScheduleBoard.vue).
-function parseLocal(str) {
-  const [y, m, d] = String(str).slice(0, 10).split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-// Semana ISO de una fecha (el jueves de la semana define el anio ISO).
-function isoWeekOf(date) {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7))
-  const jan1 = new Date(d.getFullYear(), 0, 1)
-  return { year: d.getFullYear(), week: Math.ceil(((d - jan1) / 86400000 + 1) / 7) }
-}
-
-const { year: y0, week: w0 } = isoWeekOf(new Date())
-const year = ref(y0)
-const week = ref(w0)
+const weekNav = useIsoWeekNav()
 const data = ref(null)
 const isLoading = ref(false)
 const savingKey = ref(null)
-// Popover "Marcar sesion": { edition, session, top, left, mode: 'pick'|'date', dateVal }
+// Popover "Marcar sesion": { edition, session, anchor, mode: 'pick'|'date', dateVal }
 const pop = ref(null)
 
 // Dos caras de la misma semana: 'curso' gestiona sesion por sesion las aulas en
@@ -51,7 +39,7 @@ async function load() {
   isLoading.value = true
   pop.value = null
   try {
-    const semana = { year: year.value, week: week.value }
+    const semana = { year: weekNav.year.value, week: weekNav.week.value }
     if (mode.value === 'cierre') closureData.value = await editionService.weeklyClosures(semana)
     else data.value = await editionService.weeklyControl(semana)
   } catch (err) {
@@ -70,23 +58,8 @@ function setMode(next) {
   load()
 }
 
-// Un anio ISO tiene 53 semanas si empieza en jueves (o miercoles si es bisiesto).
-function weeksInYear(y) {
-  const jan1 = new Date(y, 0, 1).getDay()
-  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
-  return jan1 === 4 || (leap && jan1 === 3) ? 53 : 52
-}
-
 function moveWeek(delta) {
-  let w = week.value + delta
-  if (w < 1) {
-    year.value -= 1
-    w = weeksInYear(year.value)
-  } else if (w > weeksInYear(year.value)) {
-    year.value += 1
-    w = 1
-  }
-  week.value = w
+  weekNav.move(delta)
   load()
 }
 
@@ -96,13 +69,6 @@ onMounted(load)
 // la semana vieja porque moveWeek solo recarga el activo.
 const activeData = computed(() => (mode.value === 'cierre' ? closureData.value : data.value))
 
-const rangeLabel = computed(() => {
-  if (!activeData.value) return ''
-  const s = parseLocal(activeData.value.date_start)
-  const e = parseLocal(activeData.value.date_end)
-  return `${s.getDate()} ${MONTHS[s.getMonth()]} al ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`
-})
-
 const editions = computed(() => data.value?.editions || [])
 const maxSessions = computed(() =>
   editions.value.reduce((m, e) => Math.max(m, e.sessions.length), 0)
@@ -111,8 +77,6 @@ const maxSessions = computed(() =>
 // Filtros por columna: texto = contiene (sin distinguir tildes ni mayusculas),
 // el resto = lista de valores elegidos en el desplegable.
 const filters = ref({ curso: '', codigo: '', docente: '', ns: [], freq: [], actual: [], repros: [], tard: [] })
-const norm = (v) =>
-  String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const freqLabel = (e) => [e.day_label, e.hour_label].filter(Boolean).join(' · ') || '—'
 
 // Repros y tardanzas no se filtran por su numero exacto (nadie busca "3
@@ -198,17 +162,10 @@ const summary = computed(() => {
   return s
 })
 
-const fmtShort = (ymd) => {
-  if (!ymd) return ''
-  const d = parseLocal(ymd)
-  return `${d.getDate()}/${d.getMonth() + 1}`
-}
-
-const initials = (name) =>
-  String(name || '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-
 const cellKey = (e, n) => `${e.edition_num_id}:${n}`
 const estadoOf = (s) => ESTADOS[s.status || '']
+const reproMax = (edition) => edition.repro_max || DEFAULT_REPRO_MAX
+const reprosLeft = (edition) => Math.max(0, reproMax(edition) - edition.repro_count)
 
 async function save(edition, session, status, newDate) {
   savingKey.value = cellKey(edition, session.session_number)
@@ -232,25 +189,27 @@ async function save(edition, session, status, newDate) {
 }
 
 function openPop(event, edition, session) {
-  const r = event.currentTarget.getBoundingClientRect()
   pop.value = {
     edition,
     session,
     mode: 'pick',
     dateVal: session.new_date || session.planned_date,
-    top: Math.min(r.bottom + 6, window.innerHeight - 250),
-    left: Math.min(r.left, window.innerWidth - 210)
+    anchor: event.currentTarget.getBoundingClientRect()
   }
 }
+
+const popTitle = computed(() =>
+  pop.value?.mode === 'date' ? '¿A qué fecha se reprogramó?' : `Marcar sesión ${pop.value?.session.session_number}`
+)
 
 function pick(status) {
   const { edition, session } = pop.value
   if (status === 'R') {
     // Tope por curso: cada cambio de fecha (incluida una re-reprogramacion)
     // consume una; el backend tambien lo valida.
-    if (edition.repro_count >= (edition.repro_max || 3)) {
+    if (edition.repro_count >= reproMax(edition)) {
       pop.value = null
-      toast.warning(`Este curso ya usó sus ${edition.repro_max || 3} reprogramaciones`)
+      toast.warning(`Este curso ya usó sus ${reproMax(edition)} reprogramaciones`)
       return
     }
     // Reprogramada: pedir a que fecha se reprogramo antes de guardar.
@@ -269,761 +228,504 @@ function confirmRepro() {
 </script>
 
 <template>
-  <div class="cw-shell">
-    <header class="page-head">
-      <div class="titles">
-        <div class="eyebrow">Academica</div>
-        <h1>Control de Ediciones</h1>
-        <div v-if="mode === 'cierre'" class="subtitle">
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Control de Ediciones</h1>
+        <p v-if="mode === 'cierre'" class="ds-sub">
           Aulas que cierran en la semana y su checklist —
           <b>{{ filteredClosures.length }} {{ filteredClosures.length === 1 ? 'cierre' : 'cierres' }}</b>
           <template v-if="filteredClosures.length !== closures.length"> de {{ closures.length }}</template>
-        </div>
-        <div v-else class="subtitle">
+        </p>
+        <p v-else class="ds-sub">
           Gestión por sesión de las aulas en curso en la semana —
           <b>{{ filteredEditions.length }} {{ filteredEditions.length === 1 ? 'aula' : 'aulas' }}</b>
           <template v-if="filteredEditions.length !== editions.length"> de {{ editions.length }}</template>
-        </div>
+        </p>
       </div>
-      <div class="actions">
-        <div class="mode-switch">
-          <button :class="{ on: mode === 'curso' }" :disabled="isLoading" @click="setMode('curso')">
-            En curso
-          </button>
-          <button :class="{ on: mode === 'cierre' }" :disabled="isLoading" @click="setMode('cierre')">
-            Cierres
-          </button>
+      <div class="ds-head-actions">
+        <div class="ds-tabs" role="tablist" aria-label="Vista del control">
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="String(mode === 'curso')"
+            :disabled="isLoading"
+            @click="setMode('curso')"
+          >En curso</button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="String(mode === 'cierre')"
+            :disabled="isLoading"
+            @click="setMode('cierre')"
+          >Cierres</button>
         </div>
-        <div class="week-nav">
-          <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
-          <div class="center">
-            <div class="wk">Semana {{ week }}</div>
-            <div class="rg">{{ rangeLabel }}</div>
-          </div>
-          <button class="arrow" :disabled="isLoading" @click="moveWeek(1)" title="Semana siguiente">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
+        <WeekNavigator
+          :week="weekNav.week.value"
+          :start="activeData?.date_start"
+          :end="activeData?.date_end"
+          :disabled="isLoading"
+          @move="moveWeek"
+        />
       </div>
     </header>
 
     <template v-if="mode === 'curso'">
-    <div class="kpi-grid">
-      <div class="kpi" style="--bar: #2563EB">
-        <div class="k-label">
-          <span>Sesiones esta semana</span>
-          <i class="fa-regular fa-calendar k-icon"></i>
-        </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.total }}</template>
-        </div>
-        <div class="k-foot"><span>en el rango visible</span></div>
-      </div>
-      <div class="kpi" style="--bar: #10B981">
-        <div class="k-label">
-          <span>Dictadas</span>
-          <i class="fa-solid fa-check k-icon"></i>
-        </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.A }}</template>
-        </div>
-        <div class="k-foot"><span>marcadas como A</span></div>
-      </div>
-      <div class="kpi" style="--bar: #EF4444">
-        <div class="k-label">
-          <span>Reprogramadas</span>
-          <i class="fa-solid fa-rotate k-icon"></i>
-        </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.R }}</template>
-        </div>
-        <div class="k-foot"><span>corren las siguientes</span></div>
-      </div>
-      <div class="kpi" style="--bar: #F59E0B">
-        <div class="k-label">
-          <span>Tardanzas</span>
-          <i class="fa-solid fa-triangle-exclamation k-icon"></i>
-        </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.T }}</template>
-        </div>
-        <div class="k-foot"><span>dictadas con retraso</span></div>
-      </div>
-      <div class="kpi" style="--bar: #A0A099">
-        <div class="k-label">
-          <span>Pendientes</span>
-          <i class="fa-regular fa-clock k-icon"></i>
-        </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.pend }}</template>
-        </div>
-        <div class="k-foot"><span>sin marcar</span></div>
-      </div>
-    </div>
-
-    <div class="filter-bar">
-      <span class="bar-title">Leyenda</span>
-      <span class="divider"></span>
-      <span v-for="k in ['A', 'R', 'T', '']" :key="k" class="lg">
-        <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
-      </span>
-      <div class="spacer"></div>
-      <span class="muted">{{ filteredEditions.length }} resultados</span>
-    </div>
-
-    <div v-if="isLoading && !data" class="empty-state">
-      <i class="fa-solid fa-arrows-rotate fa-spin"></i> Cargando…
-    </div>
-    <div v-else-if="!editions.length" class="empty-state">
-      <div class="big">Ninguna aula en curso esta semana</div>
-      Usa las flechas para navegar entre semanas
-    </div>
-
-    <div v-else class="tbl-wrap">
-      <table class="week">
-        <thead>
-          <tr>
-            <th class="col-curso">Curso</th>
-            <th>Docente</th>
-            <th class="col-cod">Código</th>
-            <th class="num">#S</th>
-            <th>Frecuencia</th>
-            <th v-for="n in maxSessions" :key="n" class="s-col">S{{ n }}</th>
-            <th class="num">Actual</th>
-            <th class="num" title="Reprogramaciones">Repros</th>
-            <th class="num" title="Tardanzas">Tard.</th>
-          </tr>
-          <!-- Toda columna filtra desde esta fila: texto -> caja de escribir,
-               categoria -> desplegable. Las opciones salen de `editions` (todas)
-               y no de las filtradas, si no se irian achicando solas. -->
-          <tr class="flt-row">
-            <th class="col-curso">
-              <input v-model.trim="filters.curso" class="flt" type="text" placeholder="Curso / código…" />
-            </th>
-            <th><input v-model.trim="filters.docente" class="flt" type="text" placeholder="Docente…" /></th>
-            <th class="col-cod">
-              <input v-model.trim="filters.codigo" class="flt" type="text" placeholder="Código…" />
-            </th>
-            <th>
-              <ColumnFilterDropdown
-                column-label="#S"
-                :all-items="editions"
-                :value-extractor="e => String(e.total_sessions)"
-                v-model="filters.ns"
-              />
-            </th>
-            <th>
-              <ColumnFilterDropdown
-                column-label="Frecuencia"
-                :all-items="editions"
-                :value-extractor="freqLabel"
-                v-model="filters.freq"
-              />
-            </th>
-            <th :colspan="maxSessions"></th>
-            <th>
-              <ColumnFilterDropdown
-                column-label="Actual"
-                :all-items="editions"
-                :value-extractor="e => e.current_label || '(Vacío)'"
-                v-model="filters.actual"
-              />
-            </th>
-            <th>
-              <ColumnFilterDropdown
-                column-label="Repros"
-                :all-items="editions"
-                :value-extractor="countLabel('repro_count')"
-                v-model="filters.repros"
-              />
-            </th>
-            <th>
-              <ColumnFilterDropdown
-                column-label="Tard."
-                :all-items="editions"
-                :value-extractor="countLabel('tardy_count')"
-                v-model="filters.tard"
-              />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!filteredEditions.length">
-            <td :colspan="maxSessions + 8" class="no-match">
-              Ningún aula coincide con los filtros
-            </td>
-          </tr>
-          <tr v-for="e in filteredEditions" :key="e.edition_num_id">
-            <td class="col-curso">
-              <div class="curso-name">{{ e.abbreviation }}</div>
-              <div class="curso-ed">{{ e.specific_code }}</div>
-            </td>
-            <td>
-              <div class="doc-cell">
-                <span class="doc-av">{{ initials(e.instructor) || '·' }}</span>
-                <span class="doc-name">{{ e.instructor || '—' }}</span>
-              </div>
-            </td>
-            <td class="col-cod">
-              <span class="cod-pill">{{ e.class_code || '—' }}</span>
-            </td>
-            <td class="nS">{{ e.total_sessions }}</td>
-            <td>
-              <div class="freq-cell">
-                <div class="f">{{ e.day_label || '—' }}</div>
-                <div class="h">{{ e.hour_label }}</div>
-              </div>
-            </td>
-            <td
-              v-for="n in maxSessions"
-              :key="n"
-              class="s-cell"
-              :class="{ 's-now': currentIdx(e) === n - 1 }"
-            >
-              <span v-if="!e.sessions[n - 1]" class="s-empty">·</span>
-              <button
-                v-else
-                class="s-btn"
-                :disabled="savingKey === cellKey(e, n)"
-                @click="openPop($event, e, e.sessions[n - 1])"
-              >
-                <span class="s-date">
-                  <s v-if="e.sessions[n - 1].new_date" class="s-old">
-                    {{ fmtShort(e.sessions[n - 1].planned_date) }}
-                  </s>
-                  {{ fmtShort(e.sessions[n - 1].date) }}
-                </span>
-                <span class="s-badge" :class="'e-' + estadoOf(e.sessions[n - 1]).key">
-                  <span class="g" :class="'dot-' + estadoOf(e.sessions[n - 1]).key" />
-                  {{ estadoOf(e.sessions[n - 1]).short }}
-                </span>
-              </button>
-            </td>
-            <td class="num">
-              <span class="cur-pill" :class="{ done: e.current_label === 'CULMINÓ' }">
-                {{ e.current_label || '—' }}
-              </span>
-            </td>
-            <td
-              class="cnt"
-              :class="e.repro_count ? 'hot' : 'zero'"
-              :title="`${e.repro_count} de ${e.repro_max || 3} reprogramaciones usadas`"
-            >{{ e.repro_count }}</td>
-            <td class="cnt" :class="e.tardy_count ? 'warm' : 'zero'">{{ e.tardy_count }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="week-foot" v-if="editions.length">
-      <i class="fa-solid fa-circle" style="font-size: 7px; color: var(--accent)"></i>
-      Celda resaltada = sesión actual de cada curso (la primera aún no dictada). Haz clic en cualquier sesión para marcar su estado.
-    </div>
-    </template>
-
-    <!-- ============ CIERRE DE CURSOS ============ -->
-    <template v-else>
-      <div class="kpi-grid">
-        <div class="kpi" style="--bar: #2563EB">
-          <div class="k-label">
-            <span>Cierres esta semana</span>
-            <i class="fa-regular fa-flag k-icon"></i>
-          </div>
-          <div class="k-value">
-            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
-            <template v-else>{{ closureSummary.total }}</template>
-          </div>
-          <div class="k-foot"><span>aulas que terminan</span></div>
-        </div>
-        <div class="kpi" style="--bar: #10B981">
-          <div class="k-label">
-            <span>Cerradas</span>
-            <i class="fa-solid fa-check k-icon"></i>
-          </div>
-          <div class="k-value">
-            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
-            <template v-else>{{ closureSummary.listos }}</template>
-          </div>
-          <div class="k-foot"><span>con las {{ checkDefs.length }} tareas hechas</span></div>
-        </div>
-        <div class="kpi" style="--bar: #F59E0B">
-          <div class="k-label">
-            <span>Pendientes</span>
-            <i class="fa-regular fa-clock k-icon"></i>
-          </div>
-          <div class="k-value">
-            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
-            <template v-else>{{ closureSummary.pendientes }}</template>
-          </div>
-          <div class="k-foot"><span>les falta alguna tarea</span></div>
-        </div>
-        <div class="kpi" style="--bar: #A0A099">
-          <div class="k-label">
-            <span>Tareas hechas</span>
-            <i class="fa-solid fa-list-check k-icon"></i>
-          </div>
-          <div class="k-value">
-            <span v-if="isLoading && !closureData" class="skel skel-kpi"></span>
-            <template v-else>{{ closureSummary.tareas }}</template>
-          </div>
-          <div class="k-foot"><span>de {{ closureSummary.total * checkDefs.length }}</span></div>
-        </div>
-      </div>
-
-      <div v-if="isLoading && !closureData" class="empty-state">
-        <i class="fa-solid fa-arrows-rotate fa-spin"></i> Cargando…
-      </div>
-      <div v-else-if="!closures.length" class="empty-state">
-        <div class="big">Ningún aula cierra esta semana</div>
-        Usa la flecha › para revisar los cierres de la semana que viene
-      </div>
-
-      <div v-else class="tbl-wrap">
-        <table class="week">
-          <thead>
-            <tr>
-              <th class="col-curso">Curso</th>
-              <th class="col-cod">Código</th>
-              <th>Docente</th>
-              <th class="num">Cierra</th>
-              <th v-for="c in checkDefs" :key="c.field" class="chk-col">{{ c.label }}</th>
-              <th class="num">Avance</th>
-            </tr>
-            <tr class="flt-row">
-              <th class="col-curso">
-                <input v-model.trim="filters.curso" class="flt" type="text" placeholder="Curso / código…" />
-              </th>
-              <th class="col-cod">
-                <input v-model.trim="filters.codigo" class="flt" type="text" placeholder="Código…" />
-              </th>
-              <th><input v-model.trim="filters.docente" class="flt" type="text" placeholder="Docente…" /></th>
-              <th :colspan="checkDefs.length + 2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!filteredClosures.length">
-              <td :colspan="checkDefs.length + 5" class="no-match">
-                Ningún cierre coincide con los filtros
-              </td>
-            </tr>
-            <tr v-for="e in filteredClosures" :key="e.edition_num_id">
-              <td class="col-curso">
-                <div class="curso-name">{{ e.abbreviation }}</div>
-                <div class="curso-ed">{{ e.specific_code }}</div>
-              </td>
-              <td class="col-cod"><span class="cod-pill">{{ e.class_code || '—' }}</span></td>
-              <td>
-                <div class="doc-cell">
-                  <span class="doc-av">{{ initials(e.instructor) || '·' }}</span>
-                  <span class="doc-name">{{ e.instructor || '—' }}</span>
-                </div>
-              </td>
-              <td class="num"><span class="cur-pill">{{ fmtShort(e.closing_date) }}</span></td>
-              <td v-for="c in checkDefs" :key="c.field" class="chk-cell">
-                <button
-                  class="chk"
-                  :class="{ on: e.checks[c.field] }"
-                  :disabled="savingKey === `${e.edition_num_id}:${c.field}`"
-                  :title="c.label"
-                  @click="toggleCheck(e, c.field)"
-                >
-                  <i :class="e.checks[c.field] ? 'fa-solid fa-check' : 'fa-regular fa-square'"></i>
-                </button>
-              </td>
-              <td class="cnt" :class="e.done_count === checkDefs.length ? 'zero' : 'warm'">
-                {{ e.done_count }}/{{ checkDefs.length }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="week-foot" v-if="closures.length">
-        <i class="fa-solid fa-circle" style="font-size: 7px; color: var(--accent)"></i>
-        La fecha de cierre es la última sesión con reprogramaciones aplicadas, no el fin planificado.
-      </div>
-    </template>
-
-    <!-- Popover MARCAR SESIÓN -->
-    <template v-if="pop">
-      <div class="pop-backdrop" @click="pop = null" @contextmenu.prevent="pop = null" />
-      <div class="pop" :style="{ top: pop.top + 'px', left: pop.left + 'px' }">
-        <template v-if="pop.mode === 'pick'">
-          <div class="pop-h">MARCAR SESIÓN {{ pop.session.session_number }}</div>
-          <button
-            v-for="k in ORDER"
-            :key="k"
-            class="pop-opt"
-            :class="{ on: (pop.session.status || '') === k }"
-            @click="pick(k)"
-          >
-            <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>
-            {{ ESTADOS[k].label }}
-            <span v-if="(pop.session.status || '') === k" class="ck">
-              <i class="fa-solid fa-check"></i>
+      <div class="ds-kpis">
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !data" class="skel-kpi"></span>
+              <template v-else>{{ summary.total }}</template>
             </span>
-          </button>
-        </template>
-        <template v-else>
-          <div class="pop-h">¿A QUÉ FECHA SE REPROGRAMÓ?</div>
-          <div class="pop-date">
-            <input type="date" v-model="pop.dateVal" />
-            <div class="pop-hint">
-              Fecha original: <b>{{ fmtShort(pop.session.planned_date) }}</b> —
-              las sesiones siguientes corren desde la nueva fecha,
-              manteniendo la frecuencia del curso.
-              <br />
-              Quedan <b>{{ Math.max(0, (pop.edition.repro_max || 3) - pop.edition.repro_count) }}</b>
-              de {{ pop.edition.repro_max || 3 }} reprogramaciones para este curso.
-            </div>
-            <div class="pop-actions">
-              <button class="btn ghost" @click="pop.mode = 'pick'">Volver</button>
-              <button class="btn accent" :disabled="!pop.dateVal || pop.dateVal === pop.session.date" @click="confirmRepro">
-                Guardar
-              </button>
-            </div>
+            <span class="ds-kpi-label">Sesiones esta semana</span>
+            <span class="ds-kpi-note">en el rango visible</span>
           </div>
-        </template>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon ok" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !data" class="skel-kpi"></span>
+              <template v-else>{{ summary.A }}</template>
+            </span>
+            <span class="ds-kpi-label">Dictadas</span>
+            <span class="ds-kpi-note">marcadas como A</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon bad" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !data" class="skel-kpi"></span>
+              <template v-else>{{ summary.R }}</template>
+            </span>
+            <span class="ds-kpi-label">Reprogramadas</span>
+            <span class="ds-kpi-note">corren las siguientes</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon warn" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !data" class="skel-kpi"></span>
+              <template v-else>{{ summary.T }}</template>
+            </span>
+            <span class="ds-kpi-label">Tardanzas</span>
+            <span class="ds-kpi-note">dictadas con retraso</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !data" class="skel-kpi"></span>
+              <template v-else>{{ summary.pend }}</template>
+            </span>
+            <span class="ds-kpi-label">Pendientes</span>
+            <span class="ds-kpi-note">sin marcar</span>
+          </div>
+        </div>
       </div>
+
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">¿Cómo va cada sesión de la semana?</h3>
+          <div class="legend">
+            <span v-for="l in LEGEND" :key="l.code" class="legend-item">
+              <span class="ds-pill mark" :class="l.tone">{{ l.short }}</span>{{ l.label }}
+            </span>
+          </div>
+          <span class="ds-panel-hint">{{ filteredEditions.length }} resultados</span>
+        </header>
+
+        <div v-if="isLoading && !data" class="ds-panel-body">
+          <span v-for="n in 6" :key="n" class="ds-skel skel-row"></span>
+        </div>
+        <p v-else-if="!editions.length" class="ds-empty ds-empty--lista">
+          Ninguna aula en curso esta semana. Usa las flechas para navegar entre semanas.
+        </p>
+
+        <div v-else class="ds-table-scroll">
+          <table class="ds-table ds-table--lista matrix">
+            <thead>
+              <tr>
+                <th class="col-curso">Curso</th>
+                <th>Docente</th>
+                <th class="col-cod">Código</th>
+                <th class="center">#S</th>
+                <th>Frecuencia</th>
+                <th v-for="n in maxSessions" :key="n" class="s-col">S{{ n }}</th>
+                <th class="center">Actual</th>
+                <th class="center" title="Reprogramaciones">Repros</th>
+                <th class="center" title="Tardanzas">Tard.</th>
+              </tr>
+              <!-- Toda columna filtra desde esta fila: texto -> caja de escribir,
+                   categoria -> desplegable. Las opciones salen de `editions` (todas)
+                   y no de las filtradas, si no se irian achicando solas. -->
+              <tr class="flt-row">
+                <th class="col-curso">
+                  <input v-model.trim="filters.curso" class="ds-input flt" type="text" placeholder="Curso / código…" aria-label="Filtrar por curso o código" />
+                </th>
+                <th>
+                  <input v-model.trim="filters.docente" class="ds-input flt" type="text" placeholder="Docente…" aria-label="Filtrar por docente" />
+                </th>
+                <th class="col-cod">
+                  <input v-model.trim="filters.codigo" class="ds-input flt" type="text" placeholder="Código…" aria-label="Filtrar por código de clase" />
+                </th>
+                <th>
+                  <ColumnFilterDropdown
+                    column-label="#S"
+                    :all-items="editions"
+                    :value-extractor="e => String(e.total_sessions)"
+                    v-model="filters.ns"
+                  />
+                </th>
+                <th>
+                  <ColumnFilterDropdown
+                    column-label="Frecuencia"
+                    :all-items="editions"
+                    :value-extractor="freqLabel"
+                    v-model="filters.freq"
+                  />
+                </th>
+                <th :colspan="maxSessions"></th>
+                <th>
+                  <ColumnFilterDropdown
+                    column-label="Actual"
+                    :all-items="editions"
+                    :value-extractor="e => e.current_label || '(Vacío)'"
+                    v-model="filters.actual"
+                  />
+                </th>
+                <th>
+                  <ColumnFilterDropdown
+                    column-label="Repros"
+                    :all-items="editions"
+                    :value-extractor="countLabel('repro_count')"
+                    v-model="filters.repros"
+                  />
+                </th>
+                <th>
+                  <ColumnFilterDropdown
+                    column-label="Tard."
+                    :all-items="editions"
+                    :value-extractor="countLabel('tardy_count')"
+                    v-model="filters.tard"
+                  />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!filteredEditions.length">
+                <td :colspan="maxSessions + 8" class="ds-empty ds-empty--lista">
+                  Ningún aula coincide con los filtros. Quita un filtro para ver más.
+                </td>
+              </tr>
+              <tr v-for="e in filteredEditions" :key="e.edition_num_id">
+                <td class="col-curso">
+                  <div class="curso-name">{{ e.abbreviation }}</div>
+                  <div class="mono-sub">{{ e.specific_code }}</div>
+                </td>
+                <td>
+                  <div class="doc-cell">
+                    <span class="doc-av" aria-hidden="true">{{ initials(e.instructor) || '·' }}</span>
+                    <span class="nowrap">{{ e.instructor || '—' }}</span>
+                  </div>
+                </td>
+                <td class="col-cod mono nowrap">{{ e.class_code || '—' }}</td>
+                <td class="center mono">{{ e.total_sessions }}</td>
+                <td>
+                  <div class="nowrap">{{ e.day_label || '—' }}</div>
+                  <div class="sub nowrap">{{ e.hour_label }}</div>
+                </td>
+                <td
+                  v-for="n in maxSessions"
+                  :key="n"
+                  class="s-cell"
+                  :class="{ 's-now': currentIdx(e) === n - 1 }"
+                >
+                  <span v-if="!e.sessions[n - 1]" class="s-empty">·</span>
+                  <button
+                    v-else
+                    class="s-btn"
+                    type="button"
+                    :disabled="savingKey === cellKey(e, n)"
+                    :aria-label="`Marcar sesión ${n} de ${e.abbreviation}: ${estadoOf(e.sessions[n - 1]).label}`"
+                    @click="openPop($event, e, e.sessions[n - 1])"
+                  >
+                    <span class="s-date">
+                      <s v-if="e.sessions[n - 1].new_date" class="s-old">
+                        {{ formatDayMonth(e.sessions[n - 1].planned_date) }}
+                      </s>
+                      {{ formatDayMonth(e.sessions[n - 1].date) }}
+                    </span>
+                    <span class="ds-pill s-badge" :class="estadoOf(e.sessions[n - 1]).tone">
+                      <span class="s-dot" aria-hidden="true" />
+                      {{ estadoOf(e.sessions[n - 1]).short }}
+                    </span>
+                  </button>
+                </td>
+                <td class="center">
+                  <span class="ds-pill mono" :class="e.current_label === 'CULMINÓ' ? 'ok' : 'info'">
+                    {{ e.current_label || '—' }}
+                  </span>
+                </td>
+                <td
+                  class="cnt"
+                  :class="e.repro_count ? 'bad' : 'zero'"
+                  :title="`${e.repro_count} de ${reproMax(e)} reprogramaciones usadas`"
+                >{{ e.repro_count }}</td>
+                <td class="cnt" :class="e.tardy_count ? 'warn' : 'zero'">{{ e.tardy_count }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <footer v-if="editions.length" class="ds-panel-foot">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>Celda resaltada = sesión actual de cada curso (la primera aún no dictada). Haz clic en cualquier sesión para marcar su estado.</span>
+        </footer>
+      </section>
     </template>
+
+    <template v-else>
+      <div class="ds-kpis">
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-regular fa-flag"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !closureData" class="skel-kpi"></span>
+              <template v-else>{{ closureSummary.total }}</template>
+            </span>
+            <span class="ds-kpi-label">Cierres esta semana</span>
+            <span class="ds-kpi-note">aulas que terminan</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon ok" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !closureData" class="skel-kpi"></span>
+              <template v-else>{{ closureSummary.listos }}</template>
+            </span>
+            <span class="ds-kpi-label">Cerradas</span>
+            <span class="ds-kpi-note">con las {{ checkDefs.length }} tareas hechas</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon warn" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !closureData" class="skel-kpi"></span>
+              <template v-else>{{ closureSummary.pendientes }}</template>
+            </span>
+            <span class="ds-kpi-label">Pendientes</span>
+            <span class="ds-kpi-note">les falta alguna tarea</span>
+          </div>
+        </div>
+        <div class="ds-kpi">
+          <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
+          <div class="ds-kpi-body">
+            <span class="ds-kpi-value">
+              <span v-if="isLoading && !closureData" class="skel-kpi"></span>
+              <template v-else>{{ closureSummary.tareas }}</template>
+            </span>
+            <span class="ds-kpi-label">Tareas hechas</span>
+            <span class="ds-kpi-note">de {{ closureSummary.total * checkDefs.length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">¿Qué aulas terminan y qué les falta para cerrar?</h3>
+          <span class="ds-panel-hint">{{ filteredClosures.length }} resultados</span>
+        </header>
+
+        <div v-if="isLoading && !closureData" class="ds-panel-body">
+          <span v-for="n in 6" :key="n" class="ds-skel skel-row"></span>
+        </div>
+        <p v-else-if="!closures.length" class="ds-empty ds-empty--lista">
+          Ningún aula cierra esta semana. Usa la flecha › para revisar los cierres de la semana que viene.
+        </p>
+
+        <div v-else class="ds-table-scroll">
+          <table class="ds-table ds-table--lista matrix">
+            <thead>
+              <tr>
+                <th class="col-curso">Curso</th>
+                <th class="col-cod">Código</th>
+                <th>Docente</th>
+                <th class="center">Cierra</th>
+                <th v-for="c in checkDefs" :key="c.field" class="chk-col">{{ c.label }}</th>
+                <th class="center">Avance</th>
+              </tr>
+              <tr class="flt-row">
+                <th class="col-curso">
+                  <input v-model.trim="filters.curso" class="ds-input flt" type="text" placeholder="Curso / código…" aria-label="Filtrar por curso o código" />
+                </th>
+                <th class="col-cod">
+                  <input v-model.trim="filters.codigo" class="ds-input flt" type="text" placeholder="Código…" aria-label="Filtrar por código de clase" />
+                </th>
+                <th>
+                  <input v-model.trim="filters.docente" class="ds-input flt" type="text" placeholder="Docente…" aria-label="Filtrar por docente" />
+                </th>
+                <th :colspan="checkDefs.length + 2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!filteredClosures.length">
+                <td :colspan="checkDefs.length + 5" class="ds-empty ds-empty--lista">
+                  Ningún cierre coincide con los filtros. Quita un filtro para ver más.
+                </td>
+              </tr>
+              <tr v-for="e in filteredClosures" :key="e.edition_num_id">
+                <td class="col-curso">
+                  <div class="curso-name">{{ e.abbreviation }}</div>
+                  <div class="mono-sub">{{ e.specific_code }}</div>
+                </td>
+                <td class="col-cod mono nowrap">{{ e.class_code || '—' }}</td>
+                <td>
+                  <div class="doc-cell">
+                    <span class="doc-av" aria-hidden="true">{{ initials(e.instructor) || '·' }}</span>
+                    <span class="nowrap">{{ e.instructor || '—' }}</span>
+                  </div>
+                </td>
+                <td class="center"><span class="ds-pill info mono">{{ formatDayMonth(e.closing_date) }}</span></td>
+                <td v-for="c in checkDefs" :key="c.field" class="center">
+                  <button
+                    class="chk"
+                    type="button"
+                    :class="{ on: e.checks[c.field] }"
+                    :disabled="savingKey === `${e.edition_num_id}:${c.field}`"
+                    :title="c.label"
+                    :aria-label="c.label"
+                    :aria-pressed="!!e.checks[c.field]"
+                    @click="toggleCheck(e, c.field)"
+                  >
+                    <i :class="e.checks[c.field] ? 'fa-solid fa-check' : 'fa-regular fa-square'" aria-hidden="true"></i>
+                  </button>
+                </td>
+                <td class="cnt" :class="e.done_count === checkDefs.length ? 'zero' : 'warn'">
+                  {{ e.done_count }}/{{ checkDefs.length }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <footer v-if="closures.length" class="ds-panel-foot">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>La fecha de cierre es la última sesión con reprogramaciones aplicadas, no el fin planificado.</span>
+        </footer>
+      </section>
+    </template>
+
+    <SessionMarkPopover
+      v-if="pop"
+      :anchor="pop.anchor"
+      :width="210"
+      :height="250"
+      :title="popTitle"
+      :options="MARK_OPTIONS"
+      :selected="pop.session.status || ''"
+      @pick="pick"
+      @close="pop = null"
+    >
+      <template v-if="pop.mode === 'date'" #step>
+        <div class="repro-step">
+          <input v-model="pop.dateVal" class="ds-input mono" type="date" aria-label="Nueva fecha de la sesión" />
+          <p class="repro-hint">
+            Fecha original: <b>{{ formatDayMonth(pop.session.planned_date) }}</b> —
+            las sesiones siguientes corren desde la nueva fecha,
+            manteniendo la frecuencia del curso.
+            <br />
+            Quedan <b>{{ reprosLeft(pop.edition) }}</b>
+            de {{ reproMax(pop.edition) }} reprogramaciones para este curso.
+          </p>
+          <div class="repro-actions">
+            <button class="btn-exec btn-exec-ghost btn-sm" type="button" @click="pop.mode = 'pick'">Volver</button>
+            <button
+              class="btn-exec btn-exec-primary btn-sm"
+              type="button"
+              :disabled="!pop.dateVal || pop.dateVal === pop.session.date"
+              @click="confirmRepro"
+            >Guardar</button>
+          </div>
+        </div>
+      </template>
+    </SessionMarkPopover>
   </div>
 </template>
 
 <style scoped>
-/* Mismos tokens que Aulas.vue: cambiarlos aca sin tocarlos alla desincroniza
-   las dos vistas academicas. El dark mode del final solo redefine variables. */
-.cw-shell {
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --green-soft: #ECFDF4;
-  --green-ink: #047857;
-  --amber-soft: #FEF6E1;
-  --amber-ink: #B45309;
-  --red-soft: #FEECEC;
-  --red-ink: #B91C1C;
-  --blue-soft: #ECF2FE;
-  --blue-ink: #1D4ED8;
-  --accent: var(--we-navy, #002060);
-  --surface: #ffffff;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
-  --shadow-lg: 0 10px 30px -12px rgba(20,20,15,0.22);
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+/* Matriz aula x sesion: columna del curso fija al hacer scroll horizontal y
+   la fila de filtros fija bajo el encabezado. */
+.matrix { min-width: 1160px; }
+.matrix th, .matrix td { text-align: left; }
+.matrix .center { text-align: center; }
+.matrix .col-curso { position: sticky; left: 0; z-index: 2; min-width: 232px; background: var(--ds-surface); }
+.matrix thead th.col-curso { z-index: 3; }
+.matrix .col-cod { width: 124px; }
+.flt-row th { top: 36px; padding: 6px 8px; }
+.flt { height: 30px; min-width: 60px; font-size: 12px; }
 
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-.cw-shell button { font-family: inherit; cursor: pointer; }
-.cw-shell button:disabled { opacity: 0.55; cursor: default; }
-.spacer { flex: 1; }
-.muted { color: var(--ink-3); font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-left: auto; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ds-ink-2); }
+.mark { width: 22px; height: 22px; padding: 0; justify-content: center; font-family: var(--ds-font-mono); }
 
-/* ---------- page-head ---------- */
-.page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-.page-head .titles { flex: 1; min-width: 0; }
-.page-head .eyebrow {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.page-head h1 { margin: 4px 0 2px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-.page-head .subtitle { color: var(--ink-3); font-size: 13.5px; }
-.page-head .actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.curso-name { font-weight: 600; }
+.mono, .mono-sub { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; }
+.mono-sub { margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
+.sub { margin-top: 1px; font-size: 11px; color: var(--ds-muted); }
+.nowrap { white-space: nowrap; }
 
-.btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 12px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  border: 1px solid var(--line); background: var(--surface);
-  color: var(--ink-2); transition: background 0.15s, border-color 0.15s;
-}
-.btn:hover { background: var(--bg-soft); border-color: #DDD; }
-.btn.ghost { background: transparent; }
-.btn.ghost:hover { background: var(--bg-soft); }
-.btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn.accent:hover { background: var(--we-navy-dark, #001540); }
-
-.week-nav {
-  display: flex; align-items: center; gap: 2px;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 3px;
-}
-.week-nav .arrow {
-  width: 30px; height: 34px; border-radius: 7px; border: none;
-  background: transparent; color: var(--ink-3);
-  display: grid; place-items: center; transition: 0.15s;
-}
-.week-nav .arrow:hover { background: var(--bg-soft); color: var(--ink); }
-.week-nav .center { text-align: center; padding: 0 12px; min-width: 138px; }
-.week-nav .center .wk { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
-.week-nav .center .rg { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-
-/* ---------- KPIs ---------- */
-.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
-.kpi {
-  background: var(--surface); border-radius: var(--radius);
-  padding: 14px 16px; border: 1px solid var(--line);
-  position: relative; overflow: hidden;
-}
-.kpi::before {
-  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
-  width: 3px; border-radius: 2px; background: var(--bar, var(--ink-4));
-}
-.kpi .k-label {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.kpi .k-icon { color: var(--ink-4); font-size: 14px; }
-.kpi .k-value { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; line-height: 1.1; }
-.kpi .k-foot { margin-top: 10px; font-size: 12px; color: var(--ink-3); }
-
-/* ---------- barra de leyenda (mismo card que el filter-bar de Aulas) ---------- */
-.filter-bar {
-  background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line);
-  padding: 12px 14px; margin-bottom: 14px;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
-}
-.filter-bar .bar-title {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.divider { width: 1px; height: 22px; background: var(--line); margin: 0 -4px; }
-.lg { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
-.sw {
-  width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
-  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-}
-
-/* ---------- estado colors (tokens compartidos => dark mode gratis) ---------- */
-.e-pend { background: var(--bg-soft); color: var(--ink-3); border: 1px solid var(--line); }
-.e-dictada { background: var(--green-soft); color: var(--green-ink); }
-.e-repro { background: var(--red-soft); color: var(--red-ink); }
-.e-tard { background: var(--amber-soft); color: var(--amber-ink); }
-.dot-pend { background: var(--ink-3); }
-.dot-dictada { background: var(--green-ink); }
-.dot-repro { background: var(--red-ink); }
-.dot-tard { background: var(--amber-ink); }
-
-/* ---------- table ---------- */
-.tbl-wrap {
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); overflow: auto;
-}
-table.week { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1160px; font-size: 13px; }
-table.week th, table.week td { text-align: left; }
-table.week thead th {
-  position: sticky; top: 0; z-index: 6; background: var(--bg-soft); color: var(--ink-3);
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap;
-}
-table.week thead th.s-col { text-align: center; width: 92px; }
-table.week thead th.num, table.week td.num { text-align: center; }
-table.week thead th.num { width: 62px; }
-
-.col-curso { position: sticky; left: 0; z-index: 5; background: var(--surface); min-width: 232px; }
-table.week thead th.col-curso { z-index: 7; background: var(--bg-soft); }
-
-/* fila de filtros por columna */
-.flt-row th { position: sticky; top: 37px; z-index: 6; background: var(--bg-soft); padding: 6px 8px; }
-.flt-row th.col-curso { z-index: 7; }
-.flt {
-  width: 100%; min-width: 60px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--surface); color: var(--ink); font-family: inherit;
-  font-size: 12px; padding: 5px 8px;
-}
-.flt::placeholder { color: var(--ink-4); }
-.flt:focus { outline: none; border-color: var(--accent); }
-.no-match { text-align: center; color: var(--ink-3); padding: 28px 0 !important; font-size: 13px; }
-
-table.week tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
-table.week tbody tr:last-child td { border-bottom: none; }
-table.week tbody tr:hover td, table.week tbody tr:hover .col-curso { background: var(--bg-soft); }
-
-.curso-name { font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em; }
-.curso-ed { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); margin-top: 2px; }
-.col-cod { width: 124px; }
-.cod-pill { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
-
-/* switch En curso | Cierres */
-.mode-switch {
-  display: inline-flex; background: var(--bg-soft); border: 1px solid var(--line);
-  border-radius: 999px; padding: 3px; gap: 2px;
-}
-.mode-switch button {
-  border: 0; background: transparent; color: var(--ink-3);
-  font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px;
-  transition: background 0.15s, color 0.15s;
-}
-.mode-switch button.on { background: var(--accent); color: #fff; box-shadow: var(--shadow-md); }
-
-/* casillas del cierre */
-.chk-col { width: 92px; font-size: 10.5px !important; line-height: 1.25; }
-.chk-cell { text-align: center; }
-.chk {
-  width: 30px; height: 30px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink-4);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.chk:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.chk.on { background: var(--green-soft); border-color: var(--green); color: var(--green-ink); }
 .doc-cell { display: flex; align-items: center; gap: 8px; }
 .doc-av {
-  width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff;
-  font-size: 9.5px; font-weight: 700; display: grid; place-items: center; flex: none;
-}
-.doc-name { font-size: 13px; white-space: nowrap; }
-.freq-cell .f { font-size: 13px; white-space: nowrap; }
-.freq-cell .h { font-size: 11px; color: var(--ink-3); margin-top: 1px; white-space: nowrap; }
-.nS {
-  text-align: center; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 13px; font-weight: 600; color: var(--ink-2);
+  flex: none; width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 999px; background: var(--ds-brand); color: var(--ds-on-brand);
+  font-size: 9.5px; font-weight: 700;
 }
 
-/* celda de la sesion actual resaltada */
-table.week td.s-now { background: var(--blue-soft); }
-table.week tbody tr:hover td.s-now { background: var(--blue-soft); filter: brightness(0.985); }
-
-/* session cell */
-td.s-cell { text-align: center; padding: 8px; }
-.s-empty { color: var(--ink-4); font-size: 13px; }
+/* Celda de sesion: fecha efectiva arriba (tachada la original si se movio) y
+   el estado debajo. La sesion actual de cada curso va resaltada. */
+.matrix th.s-col { width: 92px; text-align: center; }
+.matrix td.s-cell { padding: 8px; text-align: center; }
+.matrix td.s-now, .matrix tbody tr:hover td.s-now { background: var(--ds-soft-info); }
+.s-empty { color: var(--ds-muted); }
 .s-btn {
   display: inline-flex; flex-direction: column; align-items: center; gap: 5px;
-  width: 76px; padding: 6px 4px; border-radius: 8px;
-  border: 1px solid transparent; background: transparent; transition: 0.13s;
+  width: 76px; padding: 6px 4px; border: 1px solid transparent; border-radius: var(--ds-radius-sm);
+  background: transparent; cursor: pointer; transition: border-color 0.13s, background 0.13s;
 }
-.s-btn:hover { border-color: var(--line); background: var(--surface); box-shadow: var(--shadow-md); }
-.s-date {
-  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap;
-}
-.s-old { color: var(--ink-4); font-weight: 400; font-size: 11px; margin-right: 3px; }
-.s-badge {
-  width: 100%; height: 22px; border-radius: 999px;
-  display: flex; align-items: center; justify-content: center; gap: 5px;
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
-}
-.s-badge .g { width: 5px; height: 5px; border-radius: 999px; }
+.s-btn:hover:not(:disabled) { border-color: var(--ds-border); background: var(--ds-surface); }
+.s-btn:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
+.s-btn:disabled { opacity: 0.55; cursor: default; }
+.s-date { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; color: var(--ds-ink); white-space: nowrap; }
+.s-old { margin-right: 3px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
+.s-badge { width: 100%; height: 22px; justify-content: center; gap: 5px; }
+.s-dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
 
-/* sesión actual + contadores */
-.cur-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
-  color: var(--blue-ink); background: var(--blue-soft);
-  border-radius: 999px; padding: 3px 9px; white-space: nowrap;
-}
-.cur-pill.done { color: var(--green-ink); background: var(--green-soft); }
-.cnt {
-  text-align: center; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 14px; font-weight: 600;
-}
-.cnt.zero { color: var(--ink-4); }
-.cnt.hot { color: var(--red-ink); }
-.cnt.warm { color: var(--amber-ink); }
+/* Contadores: el tono sale de tener o no reprogramaciones/tardanzas. */
+.matrix td.cnt { text-align: center; font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; }
+.matrix td.cnt.zero { color: var(--ds-muted); }
 
-.week-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--ink-3); }
-.week-foot i { color: var(--blue-ink) !important; }
+.matrix th.chk-col { width: 92px; font-size: 10.5px; line-height: 1.25; }
+.chk {
+  width: 30px; height: 30px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface); color: var(--ds-muted); cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.chk:hover:not(:disabled) { border-color: var(--ds-accent); color: var(--ds-accent); }
+.chk:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
+.chk:disabled { opacity: 0.55; cursor: default; }
+.chk.on { background: var(--ds-soft-ok); border-color: var(--ds-ok); color: var(--ds-ok-ink); }
 
-/* ---------- popover ---------- */
-.pop-backdrop { position: fixed; inset: 0; z-index: 1090; }
-.pop {
-  position: fixed; z-index: 1091; background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px; min-width: 190px;
-  font-family: inherit; color: var(--ink);
-}
-.pop-h {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--ink-3); padding: 7px 10px 5px;
-}
-.pop-opt {
-  display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: transparent;
-  border-radius: 8px; padding: 9px 10px; font-size: 13px; color: var(--ink); text-align: left; transition: 0.12s;
-}
-.pop-opt:hover { background: var(--bg-soft); }
-.pop-opt.on { background: var(--bg-soft); font-weight: 500; }
-.pop-opt .ck { margin-left: auto; color: var(--accent); display: flex; }
-.pop-date { padding: 4px 10px 10px; max-width: 230px; }
-.pop-date input[type='date'] {
-  width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
-  font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); background: var(--surface);
-}
-.pop-hint { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; margin: 8px 0 10px; }
-.pop-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.skel-row { margin: 10px 0; }
 
-.empty-state {
-  text-align: center; padding: 70px 20px; color: var(--ink-3);
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-}
-.empty-state .big { font-size: 18px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
-
-/* skeleton (mismo shimmer que Aulas) */
-.skel {
-  display: block;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.skel-kpi { width: 56px; height: 30px; }
-
-@media (max-width: 1400px) {
-  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 900px) {
-  .page-head { flex-wrap: wrap; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .cw-shell {
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --surface: #1A1A14;
-  --green-soft: rgba(16,185,129,0.14);
-  --green-ink: #34D399;
-  --amber-soft: rgba(245,158,11,0.14);
-  --amber-ink: #FBBF24;
-  --red-soft: rgba(239,68,68,0.14);
-  --red-ink: #F87171;
-  --blue-soft: rgba(37,99,235,0.18);
-  --blue-ink: #60A5FA;
-  --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
-  --shadow-lg: 0 10px 30px -12px rgba(0,0,0,0.6);
-}
-[data-coreui-theme="dark"] .cw-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .cw-shell .btn.accent { border-color: #2f4a8a; color: #fff; }
-[data-coreui-theme="dark"] .cw-shell .btn.accent:hover { background: #1a3a75; }
-[data-coreui-theme="dark"] .cw-shell .doc-av { background: #2f4a8a; }
-[data-coreui-theme="dark"] .cw-shell .flt { background: #1F1F1A; color: #F4F4F0; }
-[data-coreui-theme="dark"] .cw-shell .skel {
-  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
-  background-size: 200% 100%;
-}
+.repro-step { max-width: 230px; padding: 4px 10px 10px; }
+.repro-hint { margin: 8px 0 10px; font-size: 11.5px; line-height: 1.45; color: var(--ds-ink-2); }
+.repro-actions { display: flex; justify-content: flex-end; gap: 8px; }
 </style>

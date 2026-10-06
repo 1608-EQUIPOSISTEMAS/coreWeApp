@@ -45,12 +45,18 @@ function withBootstrap(map) {
 export function createCatalogService () {
   let map = null
 
+  // Un cache que solo trae las monedas de respaldo NO es un catalogo: es lo que
+  // quedaba guardado cuando /cataloglist fallaba una vez (backend reiniciando en
+  // un deploy) y, como habia "algo" en localStorage, nunca se volvia a pedir.
+  // El usuario quedaba sin dias, horas, feriados ni segmentos hasta limpiar el
+  // navegador a mano (visto el 06/10/26 en el Cronograma).
   function loadFromLocal() {
     try {
       const raw = localStorage.getItem(LS_KEY)
       if (!raw) return null
       const obj = JSON.parse(raw)
-      return obj && typeof obj === 'object' ? obj : null
+      if (!obj || typeof obj !== 'object') return null
+      return Object.keys(obj).some(k => k !== 'we_currency') ? obj : null
     } catch {
       return null
     }
@@ -75,9 +81,10 @@ export function createCatalogService () {
       saveToLocal(map)
       return map
     } catch (e) {
-      // fallback offline: al menos garantiza bootstrap
+      // Sin red: se trabaja con lo que haya, pero el respaldo NO se guarda, asi
+      // el proximo ensureLoaded vuelve a pedir el catalogo real.
+      console.error('[catalog] no se pudo cargar /catalog/cataloglist', e)
       map = withBootstrap(loadFromLocal() || {})
-      saveToLocal(map)
       return map
     }
   }

@@ -1,142 +1,124 @@
 <template>
-  <div class="exec-shell list-shell">
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">Gestión Académica</span>
-            <h1 class="brand-title">Listado de Instructores</h1>
-          </div>
-        </div>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Docentes</h1>
+        <p class="ds-sub">
+          {{ isLoading ? 'Cargando docentes…' : `${formatValue(pagin.total, 'num')} docentes${activeFilterChips.length ? ' con los filtros aplicados' : ' registrados'}` }}
+        </p>
+      </div>
+      <div class="ds-head-actions">
+        <button class="btn-exec btn-exec-primary" type="button" @click="goNew">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo docente
+        </button>
       </div>
     </header>
 
-    <main class="exec-body">
-      <div class="toolbar-chips mb-3">
-        <BaseFilterChips
-          :items="activeFilterChips"
-          @remove="clearFilter"
-          @clear-all="clearFilters"
+    <BaseFilterChips
+      :items="activeFilterChips"
+      @remove="clearFilter"
+      @clear-all="clearFilters"
+    />
+
+    <section class="ds-panel">
+      <div class="ds-panel-body">
+        <BasePagination
+          v-model="pagin"
+          @open-filters="openFilterModal"
+          @change="handlePaginationChange"
         />
-      </div>
-
-      <div class="exec-toolbar">
-        <div class="toolbar-pagination">
-          <BasePagination
-            v-model="pagin"
-            @open-filters="openFilterModal"
-            @change="handlePaginationChange"
-          />
-        </div>
-        
-        <div class="toolbar-actions">
-          <button class="btn-exec btn-exec-primary w-sm-100" @click="goNew">
-            <i class="fa-solid fa-plus"></i> Nuevo Instructor
-          </button>
-        </div>
-      </div>
-
-      <div class="table-shell">
         <div class="table-responsive-custom">
-          <table class="exec-table">
+          <table class="ds-table ds-table--lista">
             <thead>
-              <tr class="thead-sub">
-                <th class="ts ts-c text-center" style="width: 80px;">Acciones</th>
-                <th class="ts ts-c">Estado</th>
-                <th class="ts ts-c">Instructor</th>
-                <th class="ts ts-c">Documento</th>
-                <th class="ts ts-c">Registro</th>
-                <th class="ts ts-c">Última modif.</th>
+              <tr>
+                <th class="ins-col-action"><span class="visually-hidden">Acciones</span></th>
+                <th>Estado</th>
+                <th>Docente</th>
+                <th>Documento</th>
+                <th>Registro</th>
+                <th>Última modif.</th>
               </tr>
             </thead>
             <tbody>
               <template v-if="isLoading">
-                <tr v-for="n in 8" :key="'sk' + n" class="skel-row">
-                  <td v-for="col in 6" :key="col"><span class="skel"></span></td>
+                <tr v-for="n in 8" :key="'sk' + n">
+                  <td colspan="6"><span class="ds-skel"></span></td>
                 </tr>
               </template>
+              <tr v-else-if="!instructors.length">
+                <td colspan="6" class="ds-empty ds-empty--lista">
+                  No hay instructores con estos filtros. Quita un filtro o usa "Limpiar todo" para ver la lista completa.
+                </td>
+              </tr>
               <template v-else>
-              <tr v-for="i in instructors" :key="i.instructor_id" class="tbody-row">
-                <td class="td-a text-center nowrap">
-                  <button class="btn-icon btn-icon-sm" @click="editInstructor(i)" title="Editar">
-                    <i class="fa-solid fa-pen-to-square text-warning"></i>
-                  </button>
-                </td>
-
-                <td class="td-a">
-                  <span class="pill border" :class="i.instructor_active === 'Y' ? 'pill-teal' : 'pill-red'">
-                    {{ i.instructor_active === 'Y' ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </td>
-
-                <td class="td-a">
-                  <div class="fw-600 text-dark">{{ buildFullName(i) }}</div>
-                </td>
-                <td class="td-a">
-                  <div class="text-mono small mt-1 accent-text">
-                    <span v-if="i.cat_type_document_label">{{ i.cat_type_document_label|| 'S/N' }}:</span>
+                <tr v-for="i in instructors" :key="i.instructor_id">
+                  <td class="ins-col-action">
+                    <button
+                      class="btn-icon btn-icon-sm"
+                      type="button"
+                      title="Editar instructor"
+                      aria-label="Editar instructor"
+                      @click="editInstructor(i)"
+                    >
+                      <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                  <td>
+                    <span class="ds-pill" :class="i.instructor_active === 'Y' ? 'ok' : 'bad'">
+                      <i class="fa-solid" :class="i.instructor_active === 'Y' ? 'fa-circle-check' : 'fa-circle-xmark'" aria-hidden="true"></i>
+                      {{ i.instructor_active === 'Y' ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td class="ins-name">{{ buildFullName(i) }}</td>
+                  <td class="ins-mono">
+                    <span v-if="i.cat_type_document_label">{{ i.cat_type_document_label }}:</span>
                     {{ i.document_number || 'S/N' }}
-                  </div>
-                </td>
-                <td class="td-a small text-muted">{{ formatDate(i.registration_date) }}</td>
-                <td class="td-a small text-muted">{{ formatDate(i.modification_date) }}</td>
-              </tr>
-
-              <tr v-if="!instructors.length">
-                <td colspan="6" class="empty-state">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <p>No se encontraron instructores con los filtros actuales.</p>
-                </td>
-              </tr>
+                  </td>
+                  <td class="ins-date">{{ formatDate(i.registration_date) }}</td>
+                  <td class="ins-date">{{ formatDate(i.modification_date) }}</td>
+                </tr>
               </template>
             </tbody>
           </table>
         </div>
       </div>
-    </main>
+    </section>
   </div>
 
-  <BaseModal v-model="showFilterModal" title="Filtros de Instructores" size="lg">
-    <div class="px-4 py-3 form-contrast">
-      <div class="exec-fieldset mb-4">
-        <h6 class="fieldset-title">Búsqueda General y Estado</h6>
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="exec-label">Estado Instructor</label>
-            <SearchSelect
-              v-model="filters.estado_instructor"
-              :items="filtroEstadoInstructor"
-              label-field="description"
-              value-field="value"
-              placeholder="Todos..."
-              class="w-100"
-            />
-          </div>
-
-          <div class="col-md-8">
-            <label class="exec-label">Búsqueda (q)</label>
-            <input
-              v-model.trim="filters.q"
-              type="text"
-              class="form-control w-100"
-              placeholder="Buscar por nombre, documento..."
-              @keyup.enter="applyFilters"
-            />
-          </div>
-        </div>
+  <BaseModal v-model="showFilterModal" title="Filtrar instructores" size="md">
+    <div class="ds-form-grid">
+      <div class="ds-field">
+        <label class="ds-label">Estado</label>
+        <SearchSelect
+          v-model="filters.estado_instructor"
+          :items="filtroEstadoInstructor"
+          label-field="description"
+          value-field="value"
+          placeholder="Todos..."
+        />
+      </div>
+      <div class="ds-field">
+        <label class="ds-label" for="ins-flt-q">Búsqueda</label>
+        <input
+          id="ins-flt-q"
+          v-model.trim="filters.q"
+          type="search"
+          class="ds-input"
+          placeholder="Nombre o documento"
+          @keyup.enter="applyFilters"
+        />
       </div>
     </div>
 
     <template #footer>
-      <div class="d-flex justify-content-between w-100 align-items-center">
-        <button class="btn-exec btn-exec-outline" @click="clearFilters">
-          <i class="fa-solid fa-eraser me-1"></i> Limpiar todo
+      <div class="ins-modal-foot">
+        <button class="btn-exec btn-exec-ghost" type="button" @click="clearFilters">
+          <i class="fa-solid fa-eraser" aria-hidden="true"></i> Limpiar todo
         </button>
-        <div class="d-flex gap-2">
-          <button class="btn-exec btn-exec-outline" @click="showFilterModal = false">Cerrar</button>
-          <button class="btn-exec btn-exec-primary" @click="applyFilters">
-            <i class="fa-solid fa-filter me-1"></i> Aplicar Filtros
+        <div class="ins-modal-actions">
+          <button class="btn-exec btn-exec-outline" type="button" @click="showFilterModal = false">Cerrar</button>
+          <button class="btn-exec btn-exec-primary" type="button" @click="applyFilters">
+            <i class="fa-solid fa-filter" aria-hidden="true"></i> Aplicar filtros
           </button>
         </div>
       </div>
@@ -145,195 +127,22 @@
 </template>
 
 <style scoped>
-/* ═══════════════════════════════════════════════
-   ESTRUCTURA BASE DE LA VISTA
-   (Asumiendo uso de CSS Global para botones, inputs y pills)
-═══════════════════════════════════════════════ */
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+/* Columna angosta: solo el botón de editar; el estado va primero porque es lo
+   que se revisa al barrer la lista (activos vs. inactivos). */
+.ins-col-action { width: 48px; text-align: center; }
+.ins-name { font-weight: 600; color: var(--ds-heading); }
+.ins-mono { font-family: var(--ds-font-mono); font-size: 12px; white-space: nowrap; }
+.ins-date { color: var(--ds-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Masthead */
-.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #ffffff); border-bottom: 1px solid var(--navy-700, #334155); }
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #ffffff); }
-
-.exec-body { flex: 1; padding: 24px 28px; }
-
-/* ═══════════════════════════════════════════════
-   TOOLBAR RESPONSIVE
-═══════════════════════════════════════════════ */
-.exec-toolbar { 
-  display: flex; 
-  flex-wrap: wrap; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-bottom: 20px; 
-  gap: 16px; 
-}
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-@media (max-width: 768px) {
-  .exec-toolbar {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
-  .toolbar-actions {
-    justify-content: flex-end;
-  }
-  .toolbar-pagination {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .w-sm-100 {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   DATA GRID (TABLA)
-═══════════════════════════════════════════════ */
-.table-shell { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.table-responsive-custom { width: 100%; overflow-x: auto; }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-
-/* Cabeceras */
-.thead-sub .ts { padding: 10px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid var(--border, #e2e8f0); text-align: left; background: #fafbfc; color: var(--text-secondary, #475569); }
-.thead-sub .ts.text-center { text-align: center; }
-
-/* Filas Body */
-.tbody-row { transition: background 0.15s; }
-.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; color: var(--text-primary, #0f172a); }
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background: var(--slate-50, #f8fafc); cursor: pointer; }
-
-/* Celdas específicas */
-.td-a { border-left: 1px solid transparent; }
-
-/* Utilidades Texto de Tabla */
-.text-center { text-align: center; } 
-.nowrap { white-space: nowrap; }
-
-/* Empty state */
-.empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
-.empty-state svg { display: block; margin: 0 auto 10px auto; color: var(--slate-300, #cbd5e1); }
-
-/* ═══════════════════════════════════════════════
-   MODAL DE FILTROS & CONTRASTE
-═══════════════════════════════════════════════ */
-.exec-fieldset { background: var(--white, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
-.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-
-/* Contraste forzado para inputs dentro del modal */
-.form-contrast .form-control,
-.form-contrast :deep(.searchselect-control),
-.form-contrast :deep(.multiselect-control) {
-  background-color: var(--slate-50, #f8fafc) !important;
-  border-color: var(--slate-300, #cbd5e1) !important;
-}
-
-.form-contrast .form-control:focus,
-.form-contrast :deep(.searchselect-control:focus-within),
-.form-contrast :deep(.multiselect-control:focus-within) {
-  background-color: var(--white, #ffffff) !important;
-  border-color: var(--teal-500, #12274e) !important;
-  box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1) !important;
-}
-
-/* skeleton loading (mismo shimmer que Aulas/BotTickets) */
-.skel {
-  display: block; height: 14px; border-radius: 4px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-}
-@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.skel-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .exec-shell {
-  color: #F4F4F0;
-  --white: #1A1A14;
-  --slate-50: #1F1F1A;
-  --slate-100: #24241E;
-  --slate-300: #3A3A33;
-  --slate-400: #8A8A80;
-  --teal-500: #8FAADC; /* navy WE derivado claro para dark */
-  --teal-600: #8FAADC;
-  --border: #2A2A22;
-  --text-primary: #F4F4F0;
-  --text-secondary: #A0A099;
-  --text-muted: #8A8A80;
-}
-[data-coreui-theme="dark"] .pill-teal { background: rgba(52,211,153,.16); color: #34D399; border-color: rgba(52,211,153,.35) !important; }
-[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.35) !important; }
-[data-coreui-theme="dark"] .thead-sub .ts { background: #1F1F1A; }
-[data-coreui-theme="dark"] .exec-table .text-dark { color: #F4F4F0 !important; }
-[data-coreui-theme="dark"] .skel {
-  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
-  background-size: 200% 100%;
-}
-[data-coreui-theme="dark"] .skel-row td { border-bottom-color: #24241E; }
-
-/* Contenido del modal de filtros (teleported a body: los tokens del shell no llegan) */
-[data-coreui-theme="dark"] .exec-fieldset { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .fieldset-title { color: #A0A099; border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
-[data-coreui-theme="dark"] .form-contrast .form-control,
-[data-coreui-theme="dark"] .form-contrast :deep(.searchselect-control),
-[data-coreui-theme="dark"] .form-contrast :deep(.multiselect-control) {
-  background-color: #1F1F1A !important;
-  border-color: #3A3A33 !important;
-  color: #F4F4F0 !important;
-}
-[data-coreui-theme="dark"] .form-contrast .form-control::placeholder { color: #6A6A60; }
-[data-coreui-theme="dark"] .form-contrast .form-control:focus,
-[data-coreui-theme="dark"] .form-contrast :deep(.searchselect-control:focus-within),
-[data-coreui-theme="dark"] .form-contrast :deep(.multiselect-control:focus-within) {
-  background-color: #1A1A14 !important;
-  border-color: #8FAADC !important;
-  box-shadow: 0 0 0 3px rgba(143,170,220,0.15) !important;
-}
-[data-coreui-theme="dark"] .btn-exec-outline { border-color: #3A3A33; color: #A0A099; }
-[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; color: #F4F4F0; border-color: #3A3A33; }
-</style>
-
-<style>
-/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
-   solo cuando el modal contiene el formulario de filtros (.form-contrast). */
-[data-coreui-theme="dark"] .modal-card:has(.form-contrast) {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
-}
-[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .modal-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .modal-card:has(.form-contrast) .btn-close { color: #A0A099; }
+/* El pie del BaseModal no trae layout propio: "Limpiar" a la izquierda y las
+   acciones a la derecha; a 400 px se apilan sin desbordar. */
+.ins-modal-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.ins-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 </style>
 
 <script setup>
 import { ref, reactive, onMounted, inject } from 'vue'
+import { formatValue } from '@/shared/lib/formatValue'
 import { useRouter } from 'vue-router'
 import BaseModal from '@/components/BaseModal.vue'
 import SearchSelect from '@/components/SearchSelect.vue'
@@ -344,7 +153,6 @@ import { useTablePersistence } from '@/composables/useTablePersistence'
 
 const router = useRouter()
 const instructorService = inject(ServiceKeys.Instructor)
-// const catalog = inject('catalog') // Descomentar si usas catálogos
 
 // === Estado UI ===
 const showFilterModal = ref(false)

@@ -1,5 +1,7 @@
-// Etiqueta CUENTA PERSONAL (Claude / ChatGPT) que Academica usa para saber a
-// quien entregar una cuenta por modulo. La regla comercial:
+// Etiqueta CUENTA PERSONAL (Claude / ChatGPT): el alumno usa SU PROPIA cuenta y
+// Academica NO le entrega una en ese modulo. Solo los modulos de Claude/ChatGPT
+// la llevan, cada uno con el proveedor de su nombre (lo resuelve el backend al
+// crear los hijos). La regla comercial:
 //   - curso suelto con el beneficio             -> la cuenta es del curso
 //   - especializacion + beneficio S/200         -> todos los modulos
 //   - especializacion + beneficio S/100         -> solo los modulos que marca la asesora

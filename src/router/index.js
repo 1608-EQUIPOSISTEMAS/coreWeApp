@@ -152,7 +152,7 @@ const routes = [
         path: 'producto',
         name: 'Producto',
         component: RouterViewStub,
-        redirect: { name: 'ProductoDashboard' },
+        redirect: { name: 'program' },
         meta: { module: 'PRODUCTO', roles: ['ADMIN', 'PRODUCTO', 'GERENCIA'] },
         children: [
           {
@@ -455,6 +455,13 @@ const routes = [
           name: 'PlanComercial',
           component: () => import('@/views/comercial/PlanComercial.vue'),
           meta: { submodule: 'PLAN_COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Ventas por canal (Marketing - Gestión). Mismos roles que /dashboard/ventas-canal.
+        {
+          path: 'RptMktProduct',
+          name: 'ReportMktProduct',
+          component: () => import('@/views/comercial/ReportMktProduct.vue'),
+          meta: { submodule: 'MARKETING_GESTION', roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         // Informe del area contra sus objetivos (una pagina, como el Academico).
         {

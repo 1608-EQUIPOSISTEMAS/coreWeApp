@@ -1,439 +1,450 @@
 <template>
-  <div class="exec-shell">
-
-    <!-- ══════════════ MASTHEAD ══════════════ -->
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">Escenario de programación · Borrador</span>
-            <h1 class="brand-title">{{ plan ? `${plan.name}` : 'Planificación' }}</h1>
-          </div>
-        </div>
-
-        <div class="masthead-actions" v-if="plan">
-          <button type="button" class="btn-exec btn-exec-ghost" :disabled="busy" @click="showSeed = true">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Duplicar año
-          </button>
-          <!-- La vista de presentación real, comiendo del plan. Pestaña aparte. -->
-          <button type="button" class="btn-exec btn-exec-teal" :disabled="busy" @click="openPreview">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            Ver cómo se vería
-          </button>
-          <!-- saveOnly y no save(): save() relanza el error para cortar la
-               cadena de "Guardar y ver", y desde un @click eso queda como
-               promesa sin capturar en la consola. -->
-          <button type="button" class="btn-exec btn-exec-primary" :disabled="!dirty || busy" @click="saveOnly">
-            Guardar<span v-if="dirty" class="btn-exec-dot"></span>
-          </button>
-          <button type="button" class="btn-exec btn-exec-danger" :disabled="busy || !pendingCount" @click="confirmPublish">
-            Pasar al cronograma real ({{ pendingCount }})
-          </button>
-        </div>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Planificación</h1>
+        <p v-if="plan" class="ds-sub">
+          {{ plan.name }} · {{ plan.year }} · {{ pendingCount }} por pasar al cronograma real · {{ publishedCount - carryOverCount }} ya publicadas
+        </p>
+        <p v-else class="ds-sub">Escenarios de programación en borrador, antes de crear las ediciones reales.</p>
       </div>
 
-      <!-- Segunda fila del masthead: mismo reparto que el cronograma real
-           (filtros a la izquierda, KPIs a la derecha). -->
-      <div class="masthead-filters" v-if="plan">
-        <div class="filter-group">
-          <label class="filter-label">PERÍODO</label>
-          <div class="filter-period-nav">
-            <button type="button" class="filter-nav-btn" @click="changeMonth(-1)">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <select v-model.number="month" class="exec-select" style="min-width:110px;">
-              <option v-for="(m, i) in MONTHS" :key="i" :value="i + 1">{{ m }}</option>
-            </select>
-            <!-- El año no se elige: lo fija el escenario. -->
-            <span class="exec-year">{{ plan.year }}</span>
-            <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-sep"></div>
-
-        <div class="filter-group">
-          <label class="filter-label">ESCENARIO</label>
-          <div class="filter-period-nav">
-            <select class="exec-select" style="min-width:200px;" :value="planId" @change="selectPlan($event.target.value)">
-              <option v-for="p in plans" :key="p.plan_id" :value="p.plan_id">{{ p.name }} · {{ p.year }}</option>
-            </select>
-            <button type="button" class="btn-exec btn-exec-ghost btn-exec-xs" @click="showNewPlan = true" title="Nuevo escenario">+</button>
-          </div>
-        </div>
-
-        <div class="filter-spacer"></div>
-
-        <div class="masthead-kpis">
-          <div class="inline-kpi">
-            <span class="inline-kpi-label">SEMANAS</span>
-            <span class="inline-kpi-value">{{ filteredWeeks.filter(w => w.items.length).length }}</span>
-          </div>
-          <div class="inline-kpi">
-            <span class="inline-kpi-label">EN EL MES</span>
-            <span class="inline-kpi-value accent">{{ monthItems.length }}</span>
-          </div>
-          <div class="inline-kpi">
-            <span class="inline-kpi-label">EN EL AÑO</span>
-            <span class="inline-kpi-value">{{ planItemCount }}</span>
-          </div>
-          <div class="inline-kpi" v-if="carryOversThisMonth.length">
-            <span class="inline-kpi-label">EN CURSO</span>
-            <span class="inline-kpi-value">{{ carryOversThisMonth.length }}</span>
-          </div>
-          <div class="inline-kpi" v-if="publishedCount - carryOverCount > 0">
-            <span class="inline-kpi-label">PUBLICADAS</span>
-            <span class="inline-kpi-value" style="color:var(--gold-400)">{{ publishedCount - carryOverCount }}</span>
-          </div>
-        </div>
+      <!-- Guardar es la acción de todos los días; publicar se hace una vez por
+           escenario y ya pide confirmación, por eso va como secundaria. -->
+      <div v-if="plan" class="ds-head-actions">
+        <button type="button" class="btn-exec btn-exec-outline" :disabled="busy" @click="showSeed = true">
+          <i class="fa-solid fa-clone" aria-hidden="true"></i> Duplicar año
+        </button>
+        <!-- La vista de presentación real, comiendo del plan. Pestaña aparte. -->
+        <button type="button" class="btn-exec btn-exec-outline" :disabled="busy" @click="openPreview">
+          <i class="fa-solid fa-eye" aria-hidden="true"></i> Ver cómo se vería
+        </button>
+        <button type="button" class="btn-exec btn-exec-outline" :disabled="busy || !pendingCount" @click="confirmPublish">
+          <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i> Pasar al cronograma real ({{ pendingCount }})
+        </button>
+        <!-- saveOnly y no save(): save() relanza el error para cortar la
+             cadena de "Guardar y ver", y desde un @click eso queda como
+             promesa sin capturar en la consola. -->
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="!dirty || busy" @click="saveOnly">
+          <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Guardar
+          <span v-if="dirty" class="unsaved-dot" title="Hay cambios sin guardar"></span>
+        </button>
       </div>
     </header>
 
-    <!-- ══════════════ CUERPO ══════════════ -->
-    <main class="exec-body pb-5 mb-5">
-      <div class="view-table" v-if="plan">
-        <div class="table-shell">
-          <div class="table-responsive-custom">
-
-            <table class="exec-table">
-              <thead>
-                <!-- FILA 1: Grupos. Sin ACADÉMICA: los links del aula son de una
-                     edición que existe, y en un borrador no hay aula todavía. -->
-                <tr class="thead-group">
-                  <th class="th-act" rowspan="2">
-                    <div class="d-flex justify-content-center">
-                      <button type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openItem(null)">+ Nueva</button>
-                    </div>
-                  </th>
-                  <th colspan="2" class="th-group th-group-a">IDENTIFICACIÓN</th>
-                  <th colspan="6" class="th-group th-group-b">CRONOGRAMA</th>
-                  <th colspan="3" class="th-group th-group-c">SEGUIMIENTO</th>
-                  <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
-                </tr>
-
-                <!-- FILA 2: Columnas -->
-                <tr class="thead-sub">
-                  <th class="ts ts-a">PROGRAMA</th>
-                  <th class="ts ts-a">DETALLE</th>
-
-                  <th class="ts ts-b text-center" title="Días desde la edición anterior del mismo programa">D.A.</th>
-                  <th class="ts ts-b text-center">F. INICIO</th>
-                  <th class="ts ts-b text-center" title="Días hasta la siguiente edición del mismo programa">D.P.</th>
-                  <th class="ts ts-b text-center">F. FIN</th>
-                  <th class="ts ts-b">HORARIO</th>
-                  <th class="ts ts-b">DOCENTE</th>
-
-                  <th class="ts ts-c text-center" style="min-width:120px;max-width:200px">FICHA / MEJORA</th>
-                  <th class="ts ts-c text-center" style="min-width:100px;max-width:180px">CONFIRM.</th>
-                  <th class="ts ts-c text-center" style="min-width:64px;" title="Nueva Metodología">N. MET.</th>
-
-                  <th class="ts ts-d">OBSERVACIÓN</th>
-                  <th class="ts ts-d">EDICIÓN</th>
-                </tr>
-
-                <!-- FILA 3: Filtros de columna -->
-                <tr class="thead-filter">
-                  <td class="tf"></td>
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Programa" :all-items="monthItems" :value-extractor="(i) => i.program_abreviature || i.abbreviation" v-model="columnFilters.program" />
-                  </td>
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Detalle" :all-items="monthItems" :value-extractor="(i) => `${i.version_code || ''} ${i.cat_segment_label || i.cat_segment || ''}`" v-model="columnFilters.detail" />
-                  </td>
-                  <td class="tf"></td><!-- D.A. -->
-                  <td class="tf"></td>
-                  <td class="tf"></td><!-- D.P. -->
-                  <td class="tf"></td>
-                  <td class="tf"></td>
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Docente" :all-items="monthItems" :value-extractor="(i) => i.instructor_label || i.instructor" v-model="columnFilters.instructor" />
-                  </td>
-                  <td class="tf"></td>
-                  <td class="tf"></td>
-                  <td class="tf"></td>
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Observación" :all-items="monthItems" :value-extractor="(i) => i.notes" v-model="columnFilters.notes" />
-                  </td>
-                  <td class="tf"></td>
-                </tr>
-              </thead>
-
-              <tbody>
-                <!-- Vienen del año anterior y siguen dictándose este mes. No son
-                     del plan: existen de verdad, por eso no tienen acciones. -->
-                <template v-if="carryOversThisMonth.length">
-                  <tr class="week-header-row week-header-carry" :class="{ 'is-collapsed': !carryOpen }" @click="carryOpen = !carryOpen">
-                    <td :colspan="COL_COUNT" class="week-header-cell">
-                      <div class="week-header-inner">
-                        <svg class="week-chevron" :class="{ 'week-chevron-open': carryOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        <span class="week-label">En curso · vienen de {{ plan.year - 1 }}</span>
-                        <span class="week-badge">{{ carryOversThisMonth.length }} Ediciones</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-for="e in carryOversThisMonth" :key="e.uid" v-show="carryOpen"
-                      class="tbody-row row-published" :class="segClass(e) ? 'row-segment-' + segClass(e) : ''">
-                    <td class="td-act">
-                      <div class="action-btns">
-                        <button class="action-btn" :class="isPackage(e) ? 'action-btn-tree' : 'action-btn-neutral'"
-                                :disabled="!isPackage(e)" @click.stop="openTree(e)" title="Módulos">
-                          <i class="fa-solid fa-book-bookmark"></i>
-                        </button>
-                      </div>
-                    </td>
-                    <td class="td-a td-prog">
-                      <div class="prog-name"><span class="prog-link">{{ e.program_abreviature || e.abbreviation || '—' }}</span></div>
-                      <div class="prog-sub text-muted small">
-                        <span class="text-mono">{{ e.version_code }}</span>
-                        <span class="float-end">Seg: {{ e.cat_segment_label || e.cat_segment || '—' }}</span>
-                      </div>
-                    </td>
-                    <td class="td-a" style="min-width:80px;max-width:120px;">
-                      <div class="small text-muted">{{ e.program_type ? 'Tipo: ' + e.program_type : '' }}</div>
-                      <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
-                    </td>
-                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'antes')">{{ brecha(e, 'antes') }}</span></td>
-                    <td class="td-b">
-                      <div class="date-link">{{ formatDate(e.start_date) }}</div>
-                      <div class="small text-muted">{{ dayLabel(e.start_date) }}</div>
-                    </td>
-                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'despues')">{{ brecha(e, 'despues') }}</span></td>
-                    <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
-                    <td class="td-b">
-                      <div class="small fw-600 text-dark">{{ dayCombLabel(e) || '—' }}</div>
-                      <div class="small text-muted">{{ hourCombLabel(e) }}</div>
-                    </td>
-                    <td class="td-b" style="min-width:100px;max-width:130px;">
-                      <div class="small text-truncate" style="max-width:160px;" :title="e.instructor_label || e.instructor">
-                        {{ e.instructor_label || e.instructor || '—' }}
-                      </div>
-                    </td>
-                    <td class="td-c text-center">
-                      <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha"></span>
-                      <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora"></span>
-                    </td>
-                    <td class="td-c text-center">
-                      <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
-                      <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
-                    </td>
-                    <td class="td-c text-center">
-                      <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
-                    </td>
-                    <td class="td-d"><div class="small text-truncate" style="max-width:200px;" :title="e.notes">{{ e.notes }}</div></td>
-                    <td class="td-d">
-                      <div class="text-mono fw-600 small"><b>{{ e.global_code }}</b></div>
-                      <div class="pill pill-amber">Viene de {{ plan.year - 1 }}</div>
-                    </td>
-                  </tr>
-                </template>
-
-                <template v-for="week in filteredWeeks" :key="week.schedule">
-                  <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="toggleWeek(week.schedule)">
-                    <td :colspan="COL_COUNT" class="week-header-cell">
-                      <div class="week-header-inner">
-                        <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        <span class="week-label">Semana {{ week.schedule }}</span>
-                        <span class="week-badge">{{ week.items.length }} Ediciones</span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <tr
-                    v-for="e in week.items"
-                    :key="e.uid"
-                    v-show="week.isOpen"
-                    class="tbody-row"
-                    :class="[
-                      segClass(e) ? 'row-segment-' + segClass(e) : '',
-                      { 'row-published': e.published_edition_id }
-                    ]"
-                  >
-                    <!-- ACCIONES -->
-                    <td class="td-act">
-                      <div class="action-btns">
-                        <button class="action-btn" :class="isPackage(e) ? 'action-btn-tree' : 'action-btn-neutral'"
-                                :disabled="!isPackage(e)" @click.stop="openTree(e)" title="Módulos">
-                          <i class="fa-solid fa-book-bookmark"></i>
-                        </button>
-                        <template v-if="!e.published_edition_id">
-                          <button class="action-btn action-btn-view" @click.stop="move(e, -7)" title="Una semana antes">
-                            <i class="fa-solid fa-backward-step"></i>
-                          </button>
-                          <button class="action-btn action-btn-view" @click.stop="move(e, 7)" title="Una semana después">
-                            <i class="fa-solid fa-forward-step"></i>
-                          </button>
-                          <button class="action-btn" :class="isPackage(e) ? 'action-btn-hier' : 'action-btn-edit'" @click.stop="openItem(e)" title="Editar">
-                            <i v-if="!isPackage(e)" class="fa-solid fa-file-pen"></i>
-                            <i v-else class="fa-solid fa-sitemap"></i>
-                          </button>
-                          <button class="action-btn action-btn-audit" @click.stop="duplicate(e)" title="Duplicar en el plan">
-                            <i class="fa-solid fa-clone"></i>
-                          </button>
-                          <button class="action-btn action-btn-tree" @click.stop="removeItem(e)" title="Quitar del plan">
-                            <i class="fa-solid fa-trash-can"></i>
-                          </button>
-                        </template>
-                      </div>
-                    </td>
-
-                    <!-- IDENTIFICACIÓN -->
-                    <td class="td-a td-prog">
-                      <div class="prog-name">
-                        <span class="prog-link">{{ e.program_abreviature || e.abbreviation || '—' }}</span>
-                      </div>
-                      <div class="prog-sub text-muted small">
-                        <span class="text-mono">{{ e.version_code }}</span>
-                        <b v-if="e.program_sessions || e.sessions">{{ ' (' + (e.program_sessions || e.sessions) + ')' }}</b>
-                        <span class="float-end">Seg: {{ e.cat_segment_label || e.cat_segment || '—' }}</span>
-                      </div>
-                    </td>
-
-                    <td class="td-a" style="min-width:80px;max-width:120px;">
-                      <div class="small text-muted">{{ e.program_type ? 'Tipo: ' + e.program_type : '' }}</div>
-                      <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
-                    </td>
-
-                    <!-- CRONOGRAMA -->
-                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'antes')">{{ brecha(e, 'antes') }}</span></td>
-                    <td class="td-b">
-                      <div class="date-link">{{ formatDate(e.start_date) }}</div>
-                      <div class="small text-muted">{{ dayLabel(e.start_date) }}</div>
-                    </td>
-                    <td class="td-b text-center"><span class="gap-chip" :class="brechaClass(e, 'despues')">{{ brecha(e, 'despues') }}</span></td>
-                    <td class="td-b text-center">
-                      <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
-                    </td>
-                    <td class="td-b">
-                      <div class="small fw-600 text-dark">{{ dayCombLabel(e) || '—' }}</div>
-                      <div class="small text-muted">{{ hourCombLabel(e) }}</div>
-                    </td>
-                    <td class="td-b" style="min-width:100px;max-width:130px;">
-                      <div class="small text-truncate" style="max-width:160px;" :title="e.instructor_label || e.instructor">
-                        {{ e.instructor_label || e.instructor || '—' }}
-                      </div>
-                    </td>
-
-                    <!-- SEGUIMIENTO: en el plan los switches solo marcan el
-                         borrador, no llaman a ningún endpoint. -->
-                    <td class="td-c text-center">
-                      <label class="exec-switch scale-75" title="Ficha / Expediente">
-                        <input type="checkbox" v-model="e.expedient" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
-                      </label>
-                      <label class="exec-switch scale-75" title="Mejora / Upgrade">
-                        <input type="checkbox" v-model="e.upgrade" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
-                      </label>
-                    </td>
-                    <td class="td-c text-center">
-                      <label class="exec-switch scale-75" title="Pre-Confirmación">
-                        <input type="checkbox" v-model="e.preconfirmation" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
-                      </label>
-                      <label class="exec-switch scale-75" title="Confirmación">
-                        <input type="checkbox" v-model="e.confirmation" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
-                      </label>
-                    </td>
-                    <td class="td-c text-center">
-                      <label class="exec-switch scale-75" title="Nueva Metodología">
-                        <input type="checkbox" v-model="e.new_methodology" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
-                      </label>
-                    </td>
-
-                    <!-- REFERENCIA -->
-                    <td class="td-d">
-                      <textarea class="exec-textarea" rows="2" v-model="e.notes"
-                                :readonly="!!e.published_edition_id" @change="touch" placeholder="…"></textarea>
-                    </td>
-                    <td class="td-d">
-                      <!-- Un arrastre y una publicada por el plan se ven parecido
-                           (las dos existen en el cronograma real) pero no son lo
-                           mismo: la primera viene del año anterior y nunca fue
-                           decisión de este plan. -->
-                      <template v-if="e.carry_over">
-                        <div class="text-mono fw-600 small"><b>{{ e.global_code }}</b></div>
-                        <div class="pill pill-amber">Viene de {{ plan.year - 1 }}</div>
-                      </template>
-                      <template v-else-if="e.published_edition_id">
-                        <div class="pill pill-green">Ed. {{ e.published_edition_id }}</div>
-                      </template>
-                      <template v-else>
-                        <!-- El código lo numera el cronograma al publicar: es único
-                             por versión de programa y el del año anterior no sirve. -->
-                        <div class="text-muted small">Al publicar</div>
-                      </template>
-                    </td>
-                  </tr>
-                </template>
-
-                <tr v-if="!monthItems.length && !carryOversThisMonth.length">
-                  <td :colspan="COL_COUNT" class="text-center text-muted py-5">
-                    {{ MONTHS[month - 1] }} de {{ plan.year }} está vacío. Duplica el año anterior o agrega una edición.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
+    <!-- Escenario y periodo a la izquierda, conteos a la derecha: mismo reparto
+         que el cronograma real. -->
+    <section v-if="plan" class="ds-panel">
+      <div class="ds-panel-body plan-toolbar">
+        <div class="ds-field">
+          <label class="ds-label" for="pl-escenario">Escenario</label>
+          <div class="plan-inline">
+            <select id="pl-escenario" class="ds-input plan-select-scenario" :value="planId" @change="selectPlan($event.target.value, $event.target)">
+              <option v-for="p in plans" :key="p.plan_id" :value="p.plan_id">{{ p.name }} · {{ p.year }}</option>
+            </select>
+            <button type="button" class="btn-exec btn-exec-outline" title="Nuevo escenario" aria-label="Nuevo escenario" @click="showNewPlan = true">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
-      </div>
 
-      <div v-else class="pl-empty">Crea un escenario para empezar a planificar.</div>
-    </main>
+        <div class="ds-field">
+          <label class="ds-label" for="pl-mes">Mes</label>
+          <div class="plan-inline">
+            <button type="button" class="btn-exec btn-exec-outline" title="Mes anterior" aria-label="Mes anterior" @click="changeMonth(-1)">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <select id="pl-mes" v-model.number="month" class="ds-input plan-select-month">
+              <option v-for="(m, i) in MONTHS" :key="i" :value="i + 1">{{ m }}</option>
+            </select>
+            <!-- El año no se elige: lo fija el escenario. Va pegado al mes para
+                 que se lea "Agosto 2027" de un vistazo. -->
+            <span class="plan-year">{{ plan.year }}</span>
+            <button type="button" class="btn-exec btn-exec-outline" title="Mes siguiente" aria-label="Mes siguiente" @click="changeMonth(1)">
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <dl class="plan-stats">
+          <div>
+            <dt>Semanas</dt>
+            <dd>{{ filteredWeeks.filter(w => w.items.length).length }}</dd>
+          </div>
+          <div>
+            <dt>En el mes</dt>
+            <dd class="is-accent">{{ monthItems.length }}</dd>
+          </div>
+          <div>
+            <dt>En el año</dt>
+            <dd>{{ planItemCount }}</dd>
+          </div>
+          <div v-if="carryOversThisMonth.length">
+            <dt>En curso</dt>
+            <dd>{{ carryOversThisMonth.length }}</dd>
+          </div>
+          <div v-if="publishedCount - carryOverCount > 0">
+            <dt>Publicadas</dt>
+            <dd class="is-ok">{{ publishedCount - carryOverCount }}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section v-if="plan" class="ds-panel">
+      <header class="ds-panel-head">
+        <div>
+          <h3 class="ds-panel-title">Ediciones de {{ MONTHS[month - 1] }} {{ plan.year }}</h3>
+          <p class="ds-panel-sub">D.A. y D.P. en rojo: menos de {{ DIAS_MINIMOS_ENTRE_EDICIONES }} días con la edición vecina del mismo programa.</p>
+        </div>
+        <button type="button" class="btn-exec btn-exec-outline btn-sm" @click="openItem(null)">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva edición
+        </button>
+      </header>
+
+      <div class="ds-table-scroll plan-scroll">
+        <table class="ds-table ds-table--densa plan-grid">
+          <thead>
+            <!-- FILA 1: Grupos. Sin Académica: los links del aula son de una
+                 edición que existe, y en un borrador no hay aula todavía. -->
+            <tr class="plan-groups">
+              <th class="col-act" rowspan="2"><span class="visually-hidden">Acciones</span></th>
+              <th colspan="2" class="sep grp-a">Identificación</th>
+              <th colspan="6" class="sep grp-b">Cronograma</th>
+              <th colspan="3" class="sep grp-c">Seguimiento</th>
+              <th colspan="2" class="sep grp-d">Referencia</th>
+            </tr>
+
+            <!-- FILA 2: Columnas -->
+            <tr>
+              <th class="sep">Programa</th>
+              <th>Detalle</th>
+
+              <th class="sep text-center" title="Días desde la edición anterior del mismo programa">D.A.</th>
+              <th class="text-center">F. inicio</th>
+              <th class="text-center" title="Días hasta la siguiente edición del mismo programa">D.P.</th>
+              <th class="text-center">F. fin</th>
+              <th>Horario</th>
+              <th>Docente</th>
+
+              <th class="sep text-center col-ficha">Ficha / mejora</th>
+              <th class="text-center col-confirm">Confirm.</th>
+              <th class="text-center col-met" title="Nueva Metodología">N. met.</th>
+
+              <th class="sep">Observación</th>
+              <th>Edición</th>
+            </tr>
+
+            <!-- FILA 3: Filtros de columna -->
+            <tr class="plan-filters">
+              <td></td>
+              <td class="sep">
+                <ColumnFilterDropdown column-label="Programa" :all-items="monthItems" :value-extractor="(i) => i.program_abreviature || i.abbreviation" v-model="columnFilters.program" />
+              </td>
+              <td>
+                <ColumnFilterDropdown column-label="Detalle" :all-items="monthItems" :value-extractor="(i) => `${i.version_code || ''} ${i.cat_segment_label || i.cat_segment || ''}`" v-model="columnFilters.detail" />
+              </td>
+              <td class="sep"></td><!-- D.A. -->
+              <td></td>
+              <td></td><!-- D.P. -->
+              <td></td>
+              <td></td>
+              <td>
+                <ColumnFilterDropdown column-label="Docente" :all-items="monthItems" :value-extractor="(i) => i.instructor_label || i.instructor" v-model="columnFilters.instructor" />
+              </td>
+              <td class="sep"></td>
+              <td></td>
+              <td></td>
+              <td class="sep">
+                <ColumnFilterDropdown column-label="Observación" :all-items="monthItems" :value-extractor="(i) => i.notes" v-model="columnFilters.notes" />
+              </td>
+              <td></td>
+            </tr>
+          </thead>
+
+          <tbody>
+            <!-- Vienen del año anterior y siguen dictándose este mes. No son
+                 del plan: existen de verdad, por eso no tienen acciones. -->
+            <template v-if="carryOversThisMonth.length">
+              <tr class="week-row week-row--carry" @click="carryOpen = !carryOpen">
+                <td :colspan="COL_COUNT">
+                  <div class="week-row-inner">
+                    <i class="fa-solid fa-chevron-down week-chevron" :class="{ 'is-open': carryOpen }" aria-hidden="true"></i>
+                    <span>En curso · vienen de {{ plan.year - 1 }}</span>
+                    <span class="ds-pill warn week-count">{{ carryOversThisMonth.length }} ediciones</span>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="e in carryOversThisMonth" :key="e.uid" v-show="carryOpen"
+                  class="plan-row row-published" :class="segClass(e) ? 'row-segment-' + segClass(e) : ''">
+                <td class="col-act">
+                  <div class="row-actions">
+                    <button type="button" class="btn-icon btn-icon-sm" :disabled="!isPackage(e)" @click.stop="openTree(e)" title="Módulos" aria-label="Ver módulos">
+                      <i class="fa-solid fa-book-bookmark" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+                <td class="sep col-prog">
+                  <span class="prog-name">{{ e.program_abreviature || e.abbreviation || '—' }}</span>
+                  <div class="cell-sub prog-sub">
+                    <span class="mono">{{ e.version_code }}</span>
+                    <span>Seg: {{ e.cat_segment_label || e.cat_segment || '—' }}</span>
+                  </div>
+                </td>
+                <td class="col-detail">
+                  <div class="cell-sub">{{ e.program_type ? 'Tipo: ' + e.program_type : '' }}</div>
+                  <div class="cell-sub">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                </td>
+                <td class="sep text-center"><span class="ds-pill" :class="TONO_BRECHA[brechaClass(e, 'antes')]">{{ brecha(e, 'antes') }}</span></td>
+                <td>
+                  <div class="cell-date">{{ formatDate(e.start_date) }}</div>
+                  <div class="cell-sub">{{ dayLabel(e.start_date) }}</div>
+                </td>
+                <td class="text-center"><span class="ds-pill" :class="TONO_BRECHA[brechaClass(e, 'despues')]">{{ brecha(e, 'despues') }}</span></td>
+                <td class="text-center"><span class="mono">{{ formatDate(e.end_date) }}</span></td>
+                <td>
+                  <div class="cell-strong">{{ dayCombLabel(e) || '—' }}</div>
+                  <div class="cell-sub">{{ hourCombLabel(e) }}</div>
+                </td>
+                <td class="col-teacher">
+                  <div class="text-truncate" :title="e.instructor_label || e.instructor">
+                    {{ e.instructor_label || e.instructor || '—' }}
+                  </div>
+                </td>
+                <td class="sep text-center">
+                  <span class="status-dot" :class="{ 'is-on': e.expedient }" title="Ficha"></span>
+                  <span class="status-dot" :class="{ 'is-on': e.upgrade }" title="Mejora"></span>
+                </td>
+                <td class="text-center">
+                  <span class="status-dot" :class="{ 'is-on': e.preconfirmation }" title="Pre-Confirmación"></span>
+                  <span class="status-dot" :class="{ 'is-on': e.confirmation }" title="Confirmación"></span>
+                </td>
+                <td class="text-center">
+                  <span class="status-dot" :class="{ 'is-on': e.new_methodology }" title="Nueva Metodología"></span>
+                </td>
+                <td class="sep"><div class="text-truncate col-note-ro" :title="e.notes">{{ e.notes }}</div></td>
+                <td>
+                  <div class="mono cell-strong">{{ e.global_code }}</div>
+                  <span class="ds-pill warn">Viene de {{ plan.year - 1 }}</span>
+                </td>
+              </tr>
+            </template>
+
+            <template v-for="week in filteredWeeks" :key="week.schedule">
+              <tr v-if="week.items.length > 0" class="week-row" @click="toggleWeek(week.schedule)">
+                <td :colspan="COL_COUNT">
+                  <div class="week-row-inner">
+                    <i class="fa-solid fa-chevron-down week-chevron" :class="{ 'is-open': week.isOpen }" aria-hidden="true"></i>
+                    <span>Semana {{ week.schedule }}</span>
+                    <span class="ds-pill info week-count">{{ week.items.length }} ediciones</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                v-for="e in week.items"
+                :key="e.uid"
+                v-show="week.isOpen"
+                class="plan-row"
+                :class="[
+                  segClass(e) ? 'row-segment-' + segClass(e) : '',
+                  { 'row-published': e.published_edition_id }
+                ]"
+              >
+                <!-- ACCIONES -->
+                <td class="col-act">
+                  <div class="row-actions">
+                    <button type="button" class="btn-icon btn-icon-sm" :disabled="!isPackage(e)" @click.stop="openTree(e)" title="Módulos" aria-label="Ver módulos">
+                      <i class="fa-solid fa-book-bookmark" aria-hidden="true"></i>
+                    </button>
+                    <template v-if="!e.published_edition_id">
+                      <button type="button" class="btn-icon btn-icon-sm" @click.stop="move(e, -7)" title="Una semana antes" aria-label="Mover una semana antes">
+                        <i class="fa-solid fa-backward-step" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn-icon btn-icon-sm" @click.stop="move(e, 7)" title="Una semana después" aria-label="Mover una semana después">
+                        <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn-icon btn-icon-sm" @click.stop="openItem(e)" title="Editar" aria-label="Editar edición del plan">
+                        <i v-if="!isPackage(e)" class="fa-solid fa-file-pen" aria-hidden="true"></i>
+                        <i v-else class="fa-solid fa-sitemap" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn-icon btn-icon-sm" @click.stop="duplicate(e)" title="Duplicar en el plan" aria-label="Duplicar en el plan">
+                        <i class="fa-solid fa-clone" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn-icon btn-icon-sm act-remove" @click.stop="removeItem(e)" title="Quitar del plan" aria-label="Quitar del plan">
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                      </button>
+                    </template>
+                  </div>
+                </td>
+
+                <!-- IDENTIFICACIÓN -->
+                <td class="sep col-prog">
+                  <span class="prog-name">{{ e.program_abreviature || e.abbreviation || '—' }}</span>
+                  <div class="cell-sub prog-sub">
+                    <span>
+                      <span class="mono">{{ e.version_code }}</span>
+                      <b v-if="e.program_sessions || e.sessions">{{ ' (' + (e.program_sessions || e.sessions) + ')' }}</b>
+                    </span>
+                    <span>Seg: {{ e.cat_segment_label || e.cat_segment || '—' }}</span>
+                  </div>
+                </td>
+
+                <td class="col-detail">
+                  <div class="cell-sub">{{ e.program_type ? 'Tipo: ' + e.program_type : '' }}</div>
+                  <div class="cell-sub">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+                </td>
+
+                <!-- CRONOGRAMA -->
+                <td class="sep text-center"><span class="ds-pill" :class="TONO_BRECHA[brechaClass(e, 'antes')]">{{ brecha(e, 'antes') }}</span></td>
+                <td>
+                  <div class="cell-date">{{ formatDate(e.start_date) }}</div>
+                  <div class="cell-sub">{{ dayLabel(e.start_date) }}</div>
+                </td>
+                <td class="text-center"><span class="ds-pill" :class="TONO_BRECHA[brechaClass(e, 'despues')]">{{ brecha(e, 'despues') }}</span></td>
+                <td class="text-center"><span class="mono">{{ formatDate(e.end_date) }}</span></td>
+                <td>
+                  <div class="cell-strong">{{ dayCombLabel(e) || '—' }}</div>
+                  <div class="cell-sub">{{ hourCombLabel(e) }}</div>
+                </td>
+                <td class="col-teacher">
+                  <div class="text-truncate" :title="e.instructor_label || e.instructor">
+                    {{ e.instructor_label || e.instructor || '—' }}
+                  </div>
+                </td>
+
+                <!-- SEGUIMIENTO: en el plan los switches solo marcan el
+                     borrador, no llaman a ningún endpoint. -->
+                <td class="sep text-center">
+                  <label class="exec-switch scale-75" title="Ficha / Expediente">
+                    <input type="checkbox" v-model="e.expedient" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
+                  </label>
+                  <label class="exec-switch scale-75" title="Mejora / Upgrade">
+                    <input type="checkbox" v-model="e.upgrade" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
+                  </label>
+                </td>
+                <td class="text-center">
+                  <label class="exec-switch scale-75" title="Pre-Confirmación">
+                    <input type="checkbox" v-model="e.preconfirmation" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
+                  </label>
+                  <label class="exec-switch scale-75" title="Confirmación">
+                    <input type="checkbox" v-model="e.confirmation" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
+                  </label>
+                </td>
+                <td class="text-center">
+                  <label class="exec-switch scale-75" title="Nueva Metodología">
+                    <input type="checkbox" v-model="e.new_methodology" :disabled="!!e.published_edition_id" @change="touch" /><span></span>
+                  </label>
+                </td>
+
+                <!-- REFERENCIA -->
+                <td class="sep">
+                  <textarea class="cell-note" rows="2" v-model="e.notes" aria-label="Observación"
+                            :readonly="!!e.published_edition_id" @change="touch" placeholder="…"></textarea>
+                </td>
+                <td>
+                  <!-- Un arrastre y una publicada por el plan se ven parecido
+                       (las dos existen en el cronograma real) pero no son lo
+                       mismo: la primera viene del año anterior y nunca fue
+                       decisión de este plan. -->
+                  <template v-if="e.carry_over">
+                    <div class="mono cell-strong">{{ e.global_code }}</div>
+                    <span class="ds-pill warn">Viene de {{ plan.year - 1 }}</span>
+                  </template>
+                  <template v-else-if="e.published_edition_id">
+                    <span class="ds-pill ok">Ed. {{ e.published_edition_id }}</span>
+                  </template>
+                  <template v-else>
+                    <!-- El código lo numera el cronograma al publicar: es único
+                         por versión de programa y el del año anterior no sirve. -->
+                    <span class="ds-pill" title="El código se asigna al publicar">Pendiente</span>
+                  </template>
+                </td>
+              </tr>
+            </template>
+
+            <tr v-if="!monthItems.length && !carryOversThisMonth.length">
+              <td :colspan="COL_COUNT" class="ds-empty ds-empty--lista">
+                {{ MONTHS[month - 1] }} de {{ plan.year }} está vacío. Duplica el año anterior o agrega una edición con "Nueva edición".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sin escenarios no se ve la barra de filtros (ni su "+"), así que el vacío
+         trae el único botón que deja salir de él. -->
+    <section v-else class="ds-panel">
+      <div class="ds-panel-body plan-empty">
+        <p class="ds-empty">Todavía no hay escenarios. Crea uno para empezar a planificar el año.</p>
+        <button type="button" class="btn-exec btn-exec-primary" @click="showNewPlan = true">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo escenario
+        </button>
+      </div>
+    </section>
 
     <!-- ════ MODAL: NUEVO ESCENARIO ════ -->
     <BaseModal v-model="showNewPlan" title="Nuevo escenario" size="sm">
-      <div class="p-3">
-        <label class="form-label small">Nombre</label>
-        <input class="form-control form-control-sm mb-2" v-model.trim="newPlan.name" placeholder="Programación 2028" />
-        <label class="form-label small">Año</label>
-        <input class="form-control form-control-sm" type="number" v-model.number="newPlan.year" />
+      <div class="ds-stack modal-stack">
+        <div class="ds-field">
+          <label class="ds-label" for="np-nombre">Nombre</label>
+          <input id="np-nombre" class="ds-input" v-model.trim="newPlan.name" placeholder="Programación 2028" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label" for="np-anio">Año</label>
+          <input id="np-anio" class="ds-input" type="number" v-model.number="newPlan.year" />
+        </div>
       </div>
       <template #footer>
-        <button class="btn btn-sm btn-secondary" @click="showNewPlan = false">Cancelar</button>
-        <button class="btn btn-sm btn-primary" :disabled="busy" @click="createPlan">Crear</button>
+        <button type="button" class="btn-exec btn-exec-outline" @click="showNewPlan = false">Cancelar</button>
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="busy" @click="createPlan">Crear escenario</button>
       </template>
     </BaseModal>
 
     <!-- ════ MODAL: DUPLICAR ════ -->
     <BaseModal v-model="showSeed" title="Duplicar un año al escenario" size="sm">
-      <div class="p-3">
-        <label class="form-label small">Año de origen</label>
-        <input class="form-control form-control-sm mb-2" type="number" v-model.number="seed.sourceYear" />
+      <div class="ds-stack modal-stack">
+        <div class="ds-field">
+          <label class="ds-label" for="sd-anio">Año de origen</label>
+          <input id="sd-anio" class="ds-input" type="number" v-model.number="seed.sourceYear" />
+        </div>
 
-        <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" id="sd-todo" v-model="seed.todoElAnio" />
-          <label class="form-check-label small" for="sd-todo">
+        <label class="choice" for="sd-todo">
+          <input type="checkbox" id="sd-todo" v-model="seed.todoElAnio" />
+          <span>
             <strong>Los 12 meses</strong>
-            <span class="d-block text-muted">Sin marcar, trae solo {{ MONTHS[month - 1] }}.</span>
-          </label>
-        </div>
+            <span class="choice-help">Sin marcar, trae solo {{ MONTHS[month - 1] }}.</span>
+          </span>
+        </label>
 
-        <label class="form-label small d-block">Cómo correr las fechas</label>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" id="md-wd" value="weekday" v-model="seed.mode" />
-          <label class="form-check-label small" for="md-wd">
-            <strong>Mismo día de la semana</strong>
-            <span class="d-block text-muted">Un miércoles sigue siendo miércoles: respeta el horario de la edición.</span>
+        <fieldset class="choice-group">
+          <legend class="ds-label">Cómo correr las fechas</legend>
+          <label class="choice" for="md-wd">
+            <input type="radio" id="md-wd" value="weekday" v-model="seed.mode" />
+            <span>
+              <strong>Mismo día de la semana</strong>
+              <span class="choice-help">Un miércoles sigue siendo miércoles: respeta el horario de la edición.</span>
+            </span>
           </label>
-        </div>
-        <div class="form-check mt-2">
-          <input class="form-check-input" type="radio" id="md-sd" value="same_date" v-model="seed.mode" />
-          <label class="form-check-label small" for="md-sd">
-            <strong>Misma fecha exacta</strong>
-            <span class="d-block text-muted">El 3 de junio sigue siendo 3 de junio, aunque caiga otro día.</span>
+          <label class="choice" for="md-sd">
+            <input type="radio" id="md-sd" value="same_date" v-model="seed.mode" />
+            <span>
+              <strong>Misma fecha exacta</strong>
+              <span class="choice-help">El 3 de junio sigue siendo 3 de junio, aunque caiga otro día.</span>
+            </span>
           </label>
-        </div>
+        </fieldset>
 
-        <p class="small text-muted mt-3 mb-0">
-          <template v-if="seed.todoElAnio">Reemplaza el escenario completo. Lo ya publicado no se toca.</template>
-          <template v-else>Reemplaza ese mes si ya lo habías traído. Lo ya publicado no se toca.</template>
+        <p class="ds-callout warn">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+          <span v-if="seed.todoElAnio">Reemplaza el escenario completo. Lo ya publicado no se toca.</span>
+          <span v-else>Reemplaza ese mes si ya lo habías traído. Lo ya publicado no se toca.</span>
         </p>
       </div>
       <template #footer>
-        <button class="btn btn-sm btn-secondary" @click="showSeed = false">Cancelar</button>
-        <button class="btn btn-sm btn-primary" :disabled="busy" @click="runSeed">
+        <button type="button" class="btn-exec btn-exec-outline" @click="showSeed = false">Cancelar</button>
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="busy" @click="runSeed">
           {{ busy ? 'Copiando…' : 'Duplicar' }}
         </button>
       </template>
@@ -441,117 +452,121 @@
 
     <!-- ════ MODAL: MÓDULOS DEL PAQUETE ════ -->
     <BaseModal v-model="showTree" :title="`Módulos · ${treeItem?.abbreviation || treeItem?.program_abreviature || ''}`" size="lg">
-      <div class="p-3">
-        <table class="table table-sm align-middle mb-0">
-          <thead><tr><th style="width:40px">#</th><th>Módulo</th><th>Docente</th><th style="width:110px">Inicio</th><th style="width:110px">Fin</th></tr></thead>
+      <div class="ds-table-scroll">
+        <table class="ds-table">
+          <thead><tr><th class="col-order">#</th><th>Módulo</th><th>Docente</th><th class="col-date">Inicio</th><th class="col-date">Fin</th></tr></thead>
           <tbody>
             <tr v-for="(child, i) in (treeItem?.children || [])" :key="i">
-              <td class="small text-muted">{{ child.sort_order }}</td>
-              <td class="small">{{ child.abbreviation }}</td>
-              <td class="small text-muted">{{ child.instructor_label || '—' }}</td>
-              <td class="small text-mono">{{ formatDate(child.start_date) }}</td>
-              <td class="small text-mono">{{ formatDate(child.end_date) }}</td>
+              <td class="num">{{ child.sort_order }}</td>
+              <td>{{ child.abbreviation }}</td>
+              <td>{{ child.instructor_label || '—' }}</td>
+              <td class="mono">{{ formatDate(child.start_date) }}</td>
+              <td class="mono">{{ formatDate(child.end_date) }}</td>
             </tr>
             <tr v-if="!(treeItem?.children || []).length">
-              <td colspan="5" class="text-center text-muted py-3">Sin módulos.</td>
+              <td colspan="5" class="ds-empty">Este paquete no tiene módulos en el plan.</td>
             </tr>
           </tbody>
         </table>
       </div>
       <template #footer>
-        <button class="btn btn-sm btn-secondary" @click="showTree = false">Cerrar</button>
+        <button type="button" class="btn-exec btn-exec-outline" @click="showTree = false">Cerrar</button>
       </template>
     </BaseModal>
 
     <!-- ════ MODAL: EDITAR ════ -->
     <BaseModal v-model="showItem" :title="form.uid ? 'Editar edición del plan' : 'Nueva edición del plan'" size="lg">
-      <div class="p-3">
-        <div class="row g-2">
-          <div class="col-12" v-if="!form.uid">
-            <label class="form-label small">Programa</label>
-            <SearchSelect
-              v-model="form.program_version_id" mode="remote"
-              :fetcher="q => programService.programVersionCaller({ q, active: 'Y' })"
-              label-field="program_type_for_iu" value-field="program_version_id"
-              :model-label="form.abbreviation" placeholder="Buscar programa…"
-              :minChars="0" :cache="false" @change="onProgramChange" />
-          </div>
-          <div class="col-12" v-else>
-            <label class="form-label small">Programa</label>
-            <input class="form-control form-control-sm" :value="form.abbreviation" disabled />
-          </div>
+      <div class="ds-form-grid">
+        <div class="ds-field span-all" v-if="!form.uid">
+          <label class="ds-label">Programa</label>
+          <SearchSelect
+            v-model="form.program_version_id" mode="remote"
+            :fetcher="q => programService.programVersionCaller({ q, active: 'Y' })"
+            label-field="program_type_for_iu" value-field="program_version_id"
+            :model-label="form.abbreviation" placeholder="Buscar programa…"
+            :minChars="0" :cache="false" @change="onProgramChange" />
+        </div>
+        <!-- El programa de una edición ya armada no se cambia: se muestra como
+             dato, no como un input gris que no se lee. -->
+        <dl class="ds-field span-all field-static" v-else>
+          <dt class="ds-label">Programa</dt>
+          <dd>{{ form.abbreviation }}</dd>
+        </dl>
 
-          <div class="col-6">
-            <label class="form-label small">Docente</label>
-            <SearchSelect
-              v-model="form.instructor_id" mode="remote"
-              :fetcher="q => instructorService.instructorCaller({ q })"
-              label-field="full_name" value-field="instructor_id"
-              :model-label="form.instructor_label" placeholder="Buscar docente…"
-              :minChars="0" :cache="false" @change="o => form.instructor_label = o?.full_name || ''" />
-          </div>
-          <div class="col-3">
-            <label class="form-label small">Segmento</label>
-            <SearchSelect
-              v-model="form.cat_segment_id" :items="catalogs.catSegments"
-              label-field="description" value-field="id" placeholder="OPCIONAL"
-              @change="o => form.cat_segment_label = o?.description || ''" />
-          </div>
-          <div class="col-3">
-            <label class="form-label small">Vacantes</label>
-            <input class="form-control form-control-sm" type="number" v-model.number="form.vacant" />
-          </div>
-
-          <div class="col-3">
-            <label class="form-label small">Inicio</label>
-            <BaseDatePicker v-model="form.start_date" placeholder="dd/mm/aaaa" />
-          </div>
-          <div class="col-3">
-            <label class="form-label small">Fin</label>
-            <BaseDatePicker v-model="form.end_date" placeholder="dd/mm/aaaa" />
-          </div>
-          <div class="col-3">
-            <label class="form-label small">Días</label>
-            <SearchSelect
-              v-model="form.cat_day_combination_id" :items="catalogs.dayCombinationList"
-              label-field="description" value-field="id" placeholder="Días"
-              @change="o => form.day_combination_label = o?.description || ''" />
-          </div>
-          <div class="col-3">
-            <label class="form-label small">Horario</label>
-            <SearchSelect
-              v-model="form.cat_hour_combination_id" :items="catalogs.hourCombinationList"
-              label-field="description" value-field="id" placeholder="Horario"
-              @change="o => form.hour_combination_label = o?.description || ''" />
-          </div>
-
-          <div class="col-12">
-            <label class="form-label small">Observación</label>
-            <input class="form-control form-control-sm" v-model.trim="form.notes" />
-          </div>
+        <div class="ds-field">
+          <label class="ds-label">Docente</label>
+          <SearchSelect
+            v-model="form.instructor_id" mode="remote"
+            :fetcher="q => instructorService.instructorCaller({ q })"
+            label-field="full_name" value-field="instructor_id"
+            :model-label="form.instructor_label" placeholder="Buscar docente…"
+            :minChars="0" :cache="false" @change="o => form.instructor_label = o?.full_name || ''" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label">Segmento</label>
+          <SearchSelect
+            v-model="form.cat_segment_id" :items="catalogs.catSegments"
+            label-field="description" value-field="id" placeholder="Opcional"
+            @change="o => form.cat_segment_label = o?.description || ''" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label" for="it-vacantes">Vacantes</label>
+          <input id="it-vacantes" class="ds-input" type="number" v-model.number="form.vacant" />
         </div>
 
-        <div class="mt-3" v-if="form.isPackage && form.children.length">
-          <div class="form-label small">Módulos</div>
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr><th style="width:40px">#</th><th>Módulo</th><th style="width:140px">Inicio</th><th style="width:140px">Fin</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="(child, i) in form.children" :key="i">
-                <td class="small text-muted">{{ child.sort_order }}</td>
-                <td class="small">{{ child.abbreviation }}</td>
-                <td><BaseDatePicker v-model="child.start_date" placeholder="dd/mm/aaaa" /></td>
-                <td><BaseDatePicker v-model="child.end_date" placeholder="dd/mm/aaaa" /></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="ds-field">
+          <label class="ds-label">Inicio</label>
+          <BaseDatePicker v-model="form.start_date" placeholder="dd/mm/aaaa" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label">Fin</label>
+          <BaseDatePicker v-model="form.end_date" placeholder="dd/mm/aaaa" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label">Días</label>
+          <SearchSelect
+            v-model="form.cat_day_combination_id" :items="catalogs.dayCombinationList"
+            label-field="description" value-field="id" placeholder="Días"
+            @change="o => form.day_combination_label = o?.description || ''" />
+        </div>
+        <div class="ds-field">
+          <label class="ds-label">Horario</label>
+          <SearchSelect
+            v-model="form.cat_hour_combination_id" :items="catalogs.hourCombinationList"
+            label-field="description" value-field="id" placeholder="Horario"
+            @change="o => form.hour_combination_label = o?.description || ''" />
+        </div>
+
+        <div class="ds-field span-all">
+          <label class="ds-label" for="it-notas">Observación</label>
+          <input id="it-notas" class="ds-input" v-model.trim="form.notes" />
+        </div>
+
+        <div class="ds-field span-all" v-if="form.isPackage && form.children.length">
+          <span class="ds-label">Módulos</span>
+          <div class="ds-table-scroll">
+            <table class="ds-table">
+              <thead>
+                <tr><th class="col-order">#</th><th>Módulo</th><th class="col-date-edit">Inicio</th><th class="col-date-edit">Fin</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="(child, i) in form.children" :key="i">
+                  <td class="num">{{ child.sort_order }}</td>
+                  <td>{{ child.abbreviation }}</td>
+                  <td><BaseDatePicker v-model="child.start_date" placeholder="dd/mm/aaaa" /></td>
+                  <td><BaseDatePicker v-model="child.end_date" placeholder="dd/mm/aaaa" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <template #footer>
-        <button class="btn btn-sm btn-secondary" @click="showItem = false">Cancelar</button>
-        <button class="btn btn-sm btn-dark" :disabled="busy" @click="saveAndPreview">Guardar y ver cómo se vería ↗</button>
-        <button class="btn btn-sm btn-primary" @click="applyItem">Guardar en el plan</button>
+        <button type="button" class="btn-exec btn-exec-outline" @click="showItem = false">Cancelar</button>
+        <button type="button" class="btn-exec btn-exec-outline" :disabled="busy" @click="saveAndPreview">
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Guardar y ver cómo se vería
+        </button>
+        <button type="button" class="btn-exec btn-exec-primary" @click="applyItem">Guardar en el plan</button>
       </template>
     </BaseModal>
   </div>
@@ -566,12 +581,14 @@
 // que llama a los MISMOS stored procedures que el modal de Producto > Cronograma
 // y no toca Odoo.
 //
-// El diseño es a propósito el mismo de Producto > Cronograma (`exec-table`):
-// planificar y ejecutar se miran igual, y el que arma el 2027 no tiene que
-// aprender una segunda pantalla. Lo único que NO se copió es el bloque
+// La grilla repite a propósito la estructura de Producto > Cronograma (grupos de
+// columnas, semanas plegables): planificar y ejecutar se leen igual, y el que
+// arma el 2027 no tiene que aprender una segunda pantalla. El aspecto ya es el
+// del sistema de diseño (ds-*). Lo único que NO se copió es el bloque
 // ACADÉMICA (links de WhatsApp/Teams/Ficha/Notas): esos links son de un aula que
 // existe, y en un borrador no hay aula.
-import { ref, reactive, computed, inject, onMounted } from 'vue'
+import { ref, reactive, computed, inject, onMounted, onBeforeUnmount } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
@@ -669,6 +686,10 @@ const brechaClass = (item, lado) => {
   return dias < DIAS_MINIMOS_ENTRE_EDICIONES ? 'gap-tight' : 'gap-ok'
 }
 
+// Traduce la brecha al tono de .ds-pill: rojo = las dos ediciones se pisan;
+// sin vecina queda neutro.
+const TONO_BRECHA = { 'gap-tight': 'bad', 'gap-ok': 'ok', 'gap-none': '' }
+
 // Lo que el plan programa para el mes: arranca dentro de él, igual que en el
 // cronograma real (una edición vive en el mes en que empieza).
 const monthItems = computed(() =>
@@ -751,7 +772,28 @@ async function loadPlans () {
   if (!planId.value && plans.value.length) await selectPlan(plans.value[0].plan_id)
 }
 
-async function selectPlan (id) {
+// Cambiar de escenario o salir con cambios sin guardar los perdía en silencio.
+async function confirmDiscardChanges () {
+  if (!dirty.value) return true
+  return confirmAction({
+    title: 'Hay cambios sin guardar',
+    text: 'Si sigues, se pierden los cambios de este escenario.',
+    confirmText: 'Descartar cambios', cancelText: 'Seguir editando', icon: 'warning', danger: true
+  })
+}
+
+onBeforeRouteLeave(() => confirmDiscardChanges())
+
+const warnBeforeUnload = e => { if (dirty.value) e.preventDefault() }
+window.addEventListener('beforeunload', warnBeforeUnload)
+onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeUnload))
+
+async function selectPlan (id, selectEl = null) {
+  if (!(await confirmDiscardChanges())) {
+    // El <select> ya cambió en pantalla: devolverlo al escenario actual.
+    if (selectEl) selectEl.value = planId.value
+    return
+  }
   planId.value = Number(id) || null
   if (!planId.value) { plan.value = null; return }
   plan.value = await planService.get(planId.value)
@@ -1026,673 +1068,142 @@ onMounted(loadPlans)
 </script>
 
 <style scoped>
-/* Diseño "exec" del cronograma real (views/producto/Editions.vue).
-   El repo replica este design system con <style scoped> propio en cada vista
-   (Leads, B2B, reportes…), sin hoja compartida; se sigue esa convención en vez
-   de extraer una global, que tocaría ~20 archivos.
-   Lo NO copiado a propósito: el bloque ACADÉMICA (chips de WhatsApp/Teams/Ficha/
-   Notas) — son links de un aula que existe, y un borrador no tiene aula. */
-/* @@@ tokens (1-56) */
-/* ═══════════════════════════════════════════════
-   TOKENS DE DISEÑO
-═══════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-.exec-shell {
-  font-family: 'Hanken Grotesk', system-ui, sans-serif;
-  background: #f8fafc;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: #0f172a;
-
-  --navy-900: #0f172a;
-  --navy-800: #1e293b;
-  --navy-700: #334155;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-100: #f1f5f9;
-  --teal-600:  #002060; /* navy WE */
-  --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-
-  /* Color de grupos de columna */
-  --col-a-bg:     #eff6ff;
-  --col-a-head:   #1e40af;
-  --col-a-border: #bfdbfe;
-  --col-a-td:     #f8fbff;
-  --col-a-tdbdr:  #e0eeff;
-
-  --col-b-bg:     #f0fdf4;
-  --col-b-head:   #166534;
-  --col-b-border: #bbf7d0;
-  --col-b-td:     #f7fdf9;
-  --col-b-tdbdr:  #d5f5e0;
-
-  --col-c-bg:     #fff7ed;
-  --col-c-head:   #92400e;
-  --col-c-border: #fed7aa;
-  --col-c-td:     #fffbf5;
-  --col-c-tdbdr:  #fde8c8;
-
-  --col-d-bg:     #fafafa;
-  --col-d-head:   #374151;
-  --col-d-border: #e5e7eb;
-  --col-d-td:     #fdfdfd;
-  --col-d-tdbdr:  #ebebeb;
-}
-
-/* @@@ masthead (57-156) */
-/* ═══════════════════════════════════════════════
-   MASTHEAD
-═══════════════════════════════════════════════ */
-.exec-masthead {
-  background: var(--navy-900);
-  color: var(--white);
-  border-bottom: 1px solid var(--navy-700);
-  flex-shrink: 0;
-}
-
-.masthead-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 28px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-
-.brand-rule {
-  width: 3px; height: 42px;
-  background: var(--teal-500);
-  border-radius: 2px; flex-shrink: 0;
-}
-
-.brand-eyebrow {
-  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px;
-}
-
-.brand-title {
-  font-size: 18px; font-weight: 700; margin: 0;
-  letter-spacing: -0.01em; color: var(--white);
-  transition: opacity 0.15s;
-}
-.brand-title:hover { opacity: 0.85; }
-
-.masthead-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-/* Controles inline para ACADEMICA (una sola fila junto al brand) */
-.masthead-inline-filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  margin-left: auto;
-}
-
-/* Filtros */
-.masthead-filters {
-  display: flex; align-items: center; gap: 0;
-  padding: 0 28px; min-height: 50px;
-}
-
-.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 8px 20px 8px 0; }
-
-.filter-label {
-  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 600; cursor: default;
-}
-
-.filter-period-nav { display: flex; align-items: center; gap: 4px; }
-
-.filter-nav-btn {
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
-  color: var(--slate-300); width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 3px; cursor: pointer; transition: all 0.15s;
-}
-.filter-nav-btn:hover { background: rgba(255,255,255,0.16); color: var(--white); }
-
-.exec-select {
-  background: transparent; border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-  color: var(--white); font-family: 'Hanken Grotesk', inherit;
-  font-size: 12.5px; font-weight: 500; padding: 3px 0;
-  outline: none; cursor: pointer; min-width: 110px; appearance: auto;
-}
-.exec-select option { color: var(--text-primary); background: var(--white); }
-
-.filter-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
-.filter-spacer { flex: 1; }
-
-/* KPIs inline */
-.masthead-kpis { display: flex; gap: 28px; align-items: center; }
-.inline-kpi { text-align: right; }
-.inline-kpi-label {
-  display: block; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 600; margin-bottom: 2px;
-}
-.inline-kpi-value {
-  font-size: 15px; font-weight: 700; color: var(--white);
-  font-variant-numeric: tabular-nums; font-family: 'IBM Plex Mono', monospace;
-}
-.inline-kpi-value.accent { color: #6366f1; }
-
-/* Filtros activos en masthead */
-.filter-chips-bar { flex: 1; padding: 8px 0; }
-
-/* @@@ botones (157-189) */
-/* ═══════════════════════════════════════════════
-   BOTONES EJECUTIVOS
-═══════════════════════════════════════════════ */
-.btn-exec {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 4px;
-  border: solid 1px white;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
-  cursor: pointer; border: none; font-family: inherit;
-  transition: background 0.15s, opacity 0.15s; position: relative;
-}
-
-.btn-exec-ghost {
-  background: rgba(255,255,255,0.07); color: var(--slate-300);
-  border: 1px solid rgba(206, 206, 206, 0.784);
-}
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.13); color: var(--white); }
-
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-primary:disabled { opacity: 0.55; cursor: default; }
-
-.btn-exec-teal { background: rgba(13,148,136,0.28); color: #5eead4; border: 1px solid rgba(13,148,136,0.4); }
-.btn-exec-teal:hover { background: rgba(13,148,136,0.4); }
-
-.btn-exec-xs { padding: 4px 10px; font-size: 11px; }
-
-.btn-exec-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--gold-400); display: inline-block;
-  margin-left: 2px;
-}
-
-/* @@@ body-tabla (190-227) */
-/* ═══════════════════════════════════════════════
-   CUERPO
-═══════════════════════════════════════════════ */
-.exec-body {
-  flex: 1;
-  padding: 12px 24px 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.view-table {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.table-shell {
-  flex: 1;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.table-responsive-custom {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
-}
-
-/* @@@ tabla (228-373) */
-/* ═══════════════════════════════════════════════
-   TABLA EJECUTIVA
-═══════════════════════════════════════════════ */
-.exec-table {
-  width: 100%; border-collapse: collapse;
-  font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 12.5px; min-width: 1200px;
-}
-
-.exec-table-dense td { padding: 5px 8px !important; }
-
-/* ── Fila 1: Grupos principales ── */
-.exec-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.thead-group th {
-  padding: 8px 10px; font-size: 10px;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  font-weight: 700; border-bottom: 1px solid var(--border);
-}
-
-.th-act {
-  background:rgb(217, 217, 237);
-  width: 86px; padding: 8px 10px;
-  border-right: 2px solid var(--navy-700);
-}
-
-.th-group { text-align: center; }
-
-.th-group-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 2px solid var(--col-a-border); }
-.th-group-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 2px solid var(--col-b-border); }
-.th-group-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 2px solid var(--col-c-border); }
-.th-group-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 2px solid var(--col-d-border); }
-.th-group-e { background: #ede9fe; color: #5b21b6; border-left: 2px solid #c4b5fd; }
-
-/* ── Fila 2: Columnas individuales ── */
-.thead-sub .ts {
-  padding: 6px 10px; font-size: 10px;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  font-weight: 600; border-bottom: 2px solid var(--border);
-}
-
-.ts-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 1px solid var(--col-a-border); }
-.ts-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 1px solid var(--col-b-border); }
-.ts-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 1px solid var(--col-c-border); }
-.ts-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 1px solid var(--col-d-border); }
-
-/* ── Fila 3: Filtros de columna ── */
-.thead-filter .tf {
-  padding: 5px 6px;
-  background: var(--bg-subtle, #f8fafc);
-  border-bottom: 2px solid var(--border);
-  vertical-align: middle;
-}
-/* flatpickr renderiza su propio input (altInput), fuera del alcance de los
-   estilos del trigger: hay que igualarlo a mano o la fila queda despareja. */
-.thead-filter :deep(.exec-flatpickr-input) {
-  width: 100%;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 11px;
-  font-family: inherit;
-  color: #1e293b;
-  background: #fff;
-  box-sizing: border-box;
-  outline: none;
-}
-.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #002060; }
-
-/* ── Encabezado de Semana ── */
-.week-header-row { cursor: pointer; }
-.week-header-row:hover .week-header-cell { filter: brightness(0.97); }
-
-.week-header-cell {
-  padding: 0 !important;
-  background: var(--navy-800) !important;
-  border-bottom: 1px solid var(--navy-700) !important;
-}
-
-.week-header-inner {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px;
-}
-
-.week-chevron {
-  color: var(--slate-400); transition: transform 0.2s ease; flex-shrink: 0;
-}
-.week-chevron-open { transform: rotate(180deg); }
-
-.week-label {
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--slate-300);
-}
-
-.week-badge {
-  margin-left: auto; background: var(--teal-600); color: var(--white);
-  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 10px;
-  letter-spacing: 0.04em; border: solid 1px white;
-}
-
-/* ── Skeleton Loading ── */
-.skeleton-row td { padding: 8px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-.sk-cell {
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.4s ease-in-out infinite;
-}
-@keyframes sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ── Filas de datos ── */
-.tbody-row td {
-  padding: 1px 4px; border-bottom: 1px solid #f8fafc;
-  vertical-align: middle;
-}
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background-color: #f0f9ff !important; transition: background 0.1s; }
-
-.td-act {
-  background: var(--navy-900) !important;
-  border-right: 2px solid var(--navy-800) !important;
-  padding: 0px 8px !important;
-}
-.tbody-row:hover .td-act { background: #152c711d !important; }
-
-.td-a { background: var(--col-a-td); border-left: 1px solid var(--col-a-tdbdr); }
-.td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
-.td-c { background: var(--col-c-td); border-left: 1px solid var(--col-c-tdbdr); }
-.td-d { background: var(--col-d-td); border-left: 1px solid var(--col-d-tdbdr); }
-.td-e { background: #faf5ff; border-left: 1px solid #e9d5ff; }
-.ts-e { background: #f5f3ff; color: #6d28d9; border-left: 1px solid #ddd6fe; }
-.link-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; text-decoration: none; transition: all .15s; }
-.link-wa { background: #dcfce7; color: #16a34a; }
-.link-wa:hover { background: #25d366; color: #fff; }
-.link-teams { background: #ede9fe; color: #6264a7; }
-.link-teams:hover { background: #6264a7; color: #fff; }
-
-/* @@@ seguimiento (503-643) */
-/* ── Dots read-only para SEGUIMIENTO ── */
-.status-dot-ro {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin: 0 3px;
-  vertical-align: middle;
-}
-.dot-ro-on  { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
-.dot-ro-off { background: #cbd5e1; }
-
-.td-prog { max-width: 200px; }
-
-/* ── Botones de Acción en tabla ── */
-.action-btns { display: flex; justify-content: center; gap: 4px; }
-
-.action-btn {
-  width: 26px; height: 26px; border-radius: 4px; border: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s; flex-shrink: 0; border: solid 1px #0a0a1e32;
-}
-
-.action-btn-view   { background: rgba(14,165,233,0.12); color: #0284c7; }
-.action-btn-view:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-tree   { background: rgba(239,68,68,0.1); color: #dc2626; }
-.action-btn-tree:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-neutral { background: rgba(148,163,184,0.12); color: #64748b; }
-.action-btn-neutral:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-edit  { background: rgba(245,158,11,0.12); color: #d97706; }
-.action-btn-edit:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-hier  { background: rgba(99,102,241,0.12); color: #6366f1; }
-.action-btn-hier:hover {  background: rgba(244, 243, 243, 0.767); }
-
-/* ── Botón descarga PDF (modal jerarquía) ── */
-.btn-pdf-dl {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;
-  background: rgba(220,38,38,0.08); color: #dc2626;
-  transition: background 0.15s, transform 0.1s;
-}
-.btn-pdf-dl:hover:not(:disabled) { background: rgba(220,38,38,0.18); transform: scale(1.08); }
-.btn-pdf-dl:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ── Programa ── */
-.prog-name { font-weight: 600; }
-.prog-link { color: #1d4ed8; }
-.prog-link:hover { text-decoration: underline; }
-.prog-sub { font-size: 11px; line-height: 1.3; }
-
-/* ── Fecha / Date link ── */
-.date-link {
-  color: #0369a1; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px; cursor: pointer;
-}
-.date-link:hover { text-decoration: underline; }
-
-/* ── Badges y Pills ── */
-.pill {
-  display: inline-block; padding: 2px 8px; border-radius: 3px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
-}
-.pill-blue   { background: #dbeafe; color: #1d4ed8; }
-.pill-violet { background: #ede9fe; color: #6d28d9; }
-.pill-amber  { background: #fef3c7; color: #92400e; }
-.pill-teal   { background: #ccfbf1; color: #0f766e; }
-.pill-slate  { background: #f1f5f9; color: #475569; }
-
-/* Semáforo de D.A. / D.P.: rojo = las dos ediciones se pisan. */
-.gap-chip {
-  display: inline-block; min-width: 30px; padding: 2px 6px; border-radius: 3px;
-  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.gap-tight { background: #fee2e2; color: #b91c1c; }
-.gap-ok    { background: #ecfdf5; color: #047857; }
-.gap-none  { color: #94a3b8; }
-
-/* Segmento pill */
-.seg-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%;
-  font-size: 10px; font-weight: 800; letter-spacing: 0;
-}
-.seg-a1 { background: #dbeafe; color: #1e40af; }
-.seg-a2 { background: #fed7aa; color: #92400e; }
-.seg-a3 { background: #fef9c3; color: #854d0e; }
-.seg-a4 { background: #fde8c8; color: #9a3412; }
-.seg-a5 { background: #fecdd3; color: #9f1239; }
-.seg-a6 { background: #e6d5fa; color: #6d28d9; }
-.seg-a7 { background: #ccd8ed; color: #1e3a8a; }
-
-/* Tipo tag */
-.tipo-tag {
-  display: inline-block; padding: 2px 7px;
-  border: 1px solid var(--border); border-radius: 3px;
-  font-size: 10px; font-weight: 500; color: var(--text-secondary);
-  background: var(--white);
-}
-
-/* ── Textarea ── */
-.exec-textarea {
-  width: 100%; resize: none; background-color: transparent;
-  border: 1px solid transparent; border-radius: 3px;
-  font-size: 11.5px; font-family: inherit;
-  line-height: 1.4; transition: all 0.2s;
-  padding: 3px 5px; color: var(--text-primary);
-}
-.exec-textarea:hover { background-color: #f8fafc; border-color: var(--border); }
-.exec-textarea:focus { background-color: var(--white); border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
-.exec-textarea::placeholder { color: var(--text-muted); }
-
-/* ── Segmento colores de fila ── */
-tr.row-segment-a1 { --seg-bg: #eff6ff; --seg-border: #93c5fd; }
-tr.row-segment-a2 { --seg-bg: #fbebd8; --seg-border: #fbb56a; }
-tr.row-segment-a3 { --seg-bg: #f9f6d8; --seg-border: #fde047; }
-tr.row-segment-a4 { --seg-bg: #f8f4c9; --seg-border: #edce33; }
-tr.row-segment-a5 { --seg-bg: #f9d5d8; --seg-border: #fb7185; }
-tr.row-segment-a6 { --seg-bg: #ecdcfa; --seg-border: #a855f7; } /* A6 = morado pastel (aplica también a hijos) */
-tr.row-segment-a7 { --seg-bg: #d9e2f2; --seg-border: #1e3a8a; } /* A7 = CERRADO: pastel azul acero, el borde navy marca el cierre */
-
-tr[class*="row-segment-"] .td-a,
-tr[class*="row-segment-"] .td-b,
-tr[class*="row-segment-"] .td-c,
-tr[class*="row-segment-"] .td-d {
-  background-color: var(--seg-bg) !important;
-}
-tr[class*="row-segment-"] .td-a {
-  border-left: 3px solid var(--seg-border) !important;
-}
-tr[class*="row-segment-"]:hover .td-a,
-tr[class*="row-segment-"]:hover .td-b,
-tr[class*="row-segment-"]:hover .td-c,
-tr[class*="row-segment-"]:hover .td-d {
-  filter: brightness(0.97);
-}
-
-/* ── Long press ── */
-.row-pressing .td-a,
-.row-pressing .td-b,
-.row-pressing .td-c,
-.row-pressing .td-d {
-  background-color: #dbeafe !important;
-  cursor: progress !important;
-  transition: background-color 0.3s;
-}
-
-
-/* ── Propios de Planificación ── */
-/* Ya publicada = existe en el cronograma real: se atenúa y pierde las acciones
-   destructivas, para que nadie siga jugando con una edición que ya es de verdad. */
-.row-published td { opacity: .6; }
-
+/* Planificación en ds-*: solo lo propio de la grilla del plan. Tarjetas, tablas,
+   pills y botones salen de design-system.css; aquí no se redefinen. */
+
+/* ── Barra de escenario y periodo ── */
+.plan-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 24px; }
+.plan-inline { display: flex; align-items: center; gap: 6px; }
+.plan-select-scenario { min-width: 220px; }
+.plan-select-month { width: 130px; }
+.plan-year { padding: 0 4px; font-size: 13px; font-weight: 700; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+
+/* Conteos del mes a la derecha: compactos, porque arriba de una grilla de
+   cientos de filas una fila de tarjetas KPI se come la pantalla. */
+.plan-stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0 0 0 auto; }
+.plan-stats > div { text-align: right; }
+.plan-stats dt { font-size: 11.5px; font-weight: 600; color: var(--ds-muted); }
+.plan-stats dd { margin: 0; font-size: 18px; font-weight: 800; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.plan-stats dd.is-accent { color: var(--ds-accent); }
+.plan-stats dd.is-ok { color: var(--ds-ok-ink); }
+
+/* Punto de "cambios sin guardar" dentro del botón primario. */
+.unsaved-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ds-warn); }
+
+/* ── Grilla ── */
+/* Alto acotado: le da al encabezado un contenedor donde quedarse fijo y el
+   scroll horizontal vive aquí, nunca en la página (400 px). */
+.plan-scroll { max-height: 70vh; overflow: auto; }
+.plan-grid { min-width: 1150px; }
+.plan-grid td { vertical-align: middle; }
+
+/* El thead entero queda fijo (grupos + columnas + filtros): la fila de filtros
+   cambia de alto según el dropdown y no se puede anclar por píxeles. Fondo
+   opaco para que las filas no se vean por debajo al hacer scroll. */
+.plan-grid thead { position: sticky; top: 0; z-index: 2; }
+.plan-grid thead th,
+.plan-grid thead td { background: var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); vertical-align: middle; }
+.plan-grid thead td { padding: 5px 6px; border-top: 0; }
+.plan-groups th { text-align: center; font-weight: 700; }
+.plan-grid .sep { border-left: 1px solid var(--ds-border); }
+
+/* Grupos de columnas: el color va solo en la cabecera (§5.5.1). El tinte va
+   sobre un fondo opaco porque en oscuro los --ds-soft-* son translúcidos. */
+.plan-groups .grp-a { background: linear-gradient(var(--ds-soft-info), var(--ds-soft-info)), var(--ds-surface); color: var(--ds-info-ink); }
+.plan-groups .grp-b { background: linear-gradient(var(--ds-soft-ok), var(--ds-soft-ok)), var(--ds-surface); color: var(--ds-ok-ink); }
+.plan-groups .grp-c { background: linear-gradient(var(--ds-soft-orange), var(--ds-soft-orange)), var(--ds-surface); color: var(--ds-orange-ink); }
+.plan-groups .grp-d { background: var(--ds-surface-2); color: var(--ds-ink-2); }
+
+.col-act { width: 1%; white-space: nowrap; }
+.col-prog { min-width: 170px; max-width: 220px; }
+.col-detail { min-width: 80px; max-width: 120px; }
+.col-teacher { min-width: 100px; max-width: 150px; }
+.col-ficha { min-width: 110px; }
+.col-confirm { min-width: 100px; }
+.col-met { min-width: 64px; }
+.col-note-ro { max-width: 200px; }
+
+.row-actions { display: flex; justify-content: center; gap: 4px; }
+/* Quitar es la única acción que pierde trabajo: se distingue por color. */
+.act-remove { color: var(--ds-bad-ink); }
+
+.prog-name { font-weight: 700; color: var(--ds-accent); }
+.prog-sub { display: flex; justify-content: space-between; gap: 6px; }
+.cell-sub { font-size: 11px; line-height: 1.35; color: var(--ds-muted); }
+.cell-strong { font-weight: 600; color: var(--ds-ink); }
+.cell-date { font-family: var(--ds-font-mono); font-weight: 600; color: var(--ds-heading); }
+.mono { font-family: var(--ds-font-mono); }
+
+/* Observación editable en la celda: sin marco hasta que se toca, para que la
+   grilla se lea como tabla y no como formulario. */
+.cell-note { display: block; width: 100%; min-width: 160px; padding: 3px 5px; resize: none; font: inherit; font-size: 11.5px; line-height: 1.4; color: var(--ds-ink); background: transparent; border: 1px solid transparent; border-radius: var(--ds-radius-control); }
+.cell-note:hover { border-color: var(--ds-border); }
+.cell-note:focus { outline: none; border-color: var(--ds-accent); background: var(--ds-surface); }
+.cell-note::placeholder { color: var(--ds-muted); }
+
+/* Seguimiento de un arrastre: solo lectura, un punto en vez de un switch. */
+.status-dot { display: inline-block; width: 8px; height: 8px; margin: 0 3px; border-radius: 50%; vertical-align: middle; background: var(--ds-border-strong); }
+.status-dot.is-on { background: var(--ds-ok); }
+
+/* ── Encabezado de semana (fila plegable) ── */
+.week-row { cursor: pointer; }
+.week-row > td { padding: 0; background: var(--ds-surface-3); }
+.week-row:hover > td { background: var(--ds-surface-2); }
+.week-row-inner { display: flex; align-items: center; gap: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--ds-heading); }
+.week-chevron { font-size: 10px; color: var(--ds-muted); transform: rotate(-90deg); transition: transform 0.2s ease; }
+.week-chevron.is-open { transform: none; }
+.week-count { margin-left: auto; }
 /* El grupo de arrastres se distingue del de semanas: no es programación del
    plan, es el calendario que ya viene ocupado. */
-.week-header-carry .week-header-cell { background: #78350f; }
-.week-header-carry .week-badge { background: rgba(255,255,255,.18); }
-.pill-amber { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-[data-coreui-theme="dark"] .week-header-carry .week-header-cell { background: #3F2E12; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(252,211,77,.14); color: #FCD34D; border-color: rgba(252,211,77,.3); }
-/* El año no es un selector: lo fija el escenario. Se muestra igual que el mes
-   para que se lea "Agosto 2027" de un vistazo.
-   El color sale del mismo token que usa styles/style.scss para el masthead
-   claro: con var(--white) quedaba blanco sobre blanco. */
-.exec-year {
-  font-size: 12px; font-weight: 700; letter-spacing: .02em;
-  color: var(--text-primary, #0f172a); padding: 0 10px;
-}
-/* Los KPIs y los botones son bloques distintos: sin este margen se tocan
-   cuando la fila se parte. */
-.masthead-kpis { margin-right: 24px; }
-.btn-exec-danger { background: rgba(220,38,38,.85); color: #fff; }
-.btn-exec-danger:hover:not(:disabled) { background: rgba(220,38,38,1); }
-.btn-exec-danger:disabled { opacity: .45; cursor: default; }
-.pl-empty { padding: 64px; text-align: center; opacity: .6; }
-.action-btn:disabled { opacity: .35; cursor: default; }
+.week-row--carry > td,
+.week-row--carry:hover > td { background: linear-gradient(var(--ds-soft-warn), var(--ds-soft-warn)), var(--ds-surface); }
+.week-row--carry .week-row-inner { color: var(--ds-warn-ink); }
 
+/* ── Filas del plan ── */
+.plan-row:hover > td { background-color: var(--ds-surface-2); }
 
-/* ── Modo oscuro ── */
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal { background: rgba(143,170,220,.15) !important; color: #8FAADC !important; border-color: rgba(143,170,220,.4) !important; }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal:hover { background: rgba(143,170,220,.25) !important; }
-[data-coreui-theme="dark"] .inline-kpi-value.accent { color: #8FAADC !important; }
-[data-coreui-theme="dark"] .thead-filter .tf { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .skeleton-row td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .sk-cell {
-  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
-  background-size: 200% 100%;
-}
-[data-coreui-theme="dark"] .tbody-row td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .tbody-row:hover td { background-color: #252B33 !important; }
-[data-coreui-theme="dark"] .dot-ro-on { box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
-[data-coreui-theme="dark"] .dot-ro-off { background: #3A3A33; }
-[data-coreui-theme="dark"] .action-btn { border-color: rgba(255,255,255,.14); }
-[data-coreui-theme="dark"] .action-btn-view { color: #38BDF8; }
-[data-coreui-theme="dark"] .action-btn-tree { color: #F87171; }
-[data-coreui-theme="dark"] .action-btn-neutral { color: #A0A099; }
-[data-coreui-theme="dark"] .action-btn-edit { color: #FBBF24; }
-[data-coreui-theme="dark"] .action-btn-hier,
-[data-coreui-theme="dark"] .action-btn-audit { color: #A5B4FC; }
-[data-coreui-theme="dark"] .action-btn-view:hover,
-[data-coreui-theme="dark"] .action-btn-tree:hover,
-[data-coreui-theme="dark"] .action-btn-neutral:hover,
-[data-coreui-theme="dark"] .action-btn-edit:hover,
-[data-coreui-theme="dark"] .action-btn-hier:hover,
-[data-coreui-theme="dark"] .action-btn-audit:hover { background: rgba(255,255,255,.15); }
-[data-coreui-theme="dark"] .prog-link { color: #7BA3F0; }
-[data-coreui-theme="dark"] .date-link { color: #7DD3FC; }
-[data-coreui-theme="dark"] .pill-blue { background: rgba(59,130,246,.2); color: #93C5FD; }
-[data-coreui-theme="dark"] .pill-violet { background: rgba(139,92,246,.2); color: #C4B5FD; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,.18); color: #FCD34D; }
-[data-coreui-theme="dark"] .pill-teal { background: rgba(45,212,191,.18); color: #5EEAD4; }
-[data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; }
-[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; }
-[data-coreui-theme="dark"] .gap-tight { background: rgba(239,68,68,.16); color: #F87171; }
-[data-coreui-theme="dark"] .gap-ok    { background: rgba(52,211,153,.14); color: #6EE7B7; }
-[data-coreui-theme="dark"] .gap-none  { color: #6B6B63; }
-[data-coreui-theme="dark"] .seg-a1 { background: rgba(59,130,246,.25); color: #93C5FD; }
-[data-coreui-theme="dark"] .seg-a2 { background: rgba(249,115,22,.25); color: #FDBA74; }
-[data-coreui-theme="dark"] .seg-a3 { background: rgba(234,179,8,.25); color: #FDE047; }
-[data-coreui-theme="dark"] .seg-a4 { background: rgba(217,119,6,.25); color: #FCD34D; }
-[data-coreui-theme="dark"] .seg-a5 { background: rgba(244,63,94,.25); color: #FDA4AF; }
-[data-coreui-theme="dark"] .seg-a6 { background: rgba(168,85,247,.25); color: #C4B5FD; }
-[data-coreui-theme="dark"] .seg-a7 { background: rgba(143,170,220,.25); color: #A5C0E8; }
-[data-coreui-theme="dark"] .exec-textarea:hover { background-color: #1F1F1A; }
-[data-coreui-theme="dark"] tr.row-segment-a2 { --seg-bg: #332413; }
-[data-coreui-theme="dark"] tr.row-segment-a3 { --seg-bg: #302B12; }
-[data-coreui-theme="dark"] tr.row-segment-a4 { --seg-bg: #2E2710; }
-[data-coreui-theme="dark"] tr.row-segment-a5 { --seg-bg: #331A1E; }
-[data-coreui-theme="dark"] tr.row-segment-a6 { --seg-bg: #2A2038; }
-[data-coreui-theme="dark"] tr.row-segment-a7 { --seg-bg: #232B3B; --seg-border: #8FAADC; }
-[data-coreui-theme="dark"] .row-pressing .td-a,
-[data-coreui-theme="dark"] .row-pressing .td-b,
-[data-coreui-theme="dark"] .row-pressing .td-c,
-[data-coreui-theme="dark"] .row-pressing .td-d { background-color: #2A3A55 !important; }
-[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-switch input:checked + span { background: #8FAADC; }
-[data-coreui-theme="dark"] .row-highlight { background-color: rgba(59,130,246,.18) !important; }
-[data-coreui-theme="dark"] .row-highlight td:first-child { border-left-color: #60A5FA; }
-[data-coreui-theme="dark"] .section-label { background: #1A1A14; color: #60A5FA; }
-[data-coreui-theme="dark"] .form-label-sm { color: #A0A099; }
-[data-coreui-theme="dark"] .hierarchy-container { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .status-card { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .switch-label { color: #D0D0C8; }
-[data-coreui-theme="dark"] .accordion-header:hover { background-color: #24241E; }
-[data-coreui-theme="dark"] .line-item { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .line-item:hover { border-color: #3A3A33; }
-[data-coreui-theme="dark"] .line-item.is-zero { background: #1A1A14; }
-[data-coreui-theme="dark"] .line-item__name { color: #8A8A80; }
-[data-coreui-theme="dark"] .line-item__count { color: #F4F4F0; }
-[data-coreui-theme="dark"] .line-item.is-zero .line-item__count { color: #4A4A42; }
-[data-coreui-theme="dark"] .segment-circle { background: rgba(99,102,241,.25); color: #C7D2FE; }
-[data-coreui-theme="dark"] .row-segment-a1 td { background-color: #202A3D !important; }
-[data-coreui-theme="dark"] .row-segment-a2 td { background-color: #332413 !important; }
-[data-coreui-theme="dark"] .row-segment-a3 td { background-color: #302B12 !important; }
-[data-coreui-theme="dark"] .row-segment-a4 td { background-color: #2E2710 !important; }
-[data-coreui-theme="dark"] .row-segment-a5 td { background-color: #331A1E !important; }
-[data-coreui-theme="dark"] .row-segment-a6 td { background-color: #2A2038 !important; }
-[data-coreui-theme="dark"] .row-segment-a7 td { background-color: #232B3B !important; }
-[data-coreui-theme="dark"] .kpi-card { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .kpi-header { color: #D0D0C8; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .field-name { color: #A0A099; }
-[data-coreui-theme="dark"] .field-old { color: #F87171; }
-[data-coreui-theme="dark"] .field-new { color: #34D399; }
-[data-coreui-theme="dark"] .btn-exec-outline { border-color: #3A3A33; color: #A0A099; }
-[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; color: #F4F4F0; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .form-control::placeholder { color: #6A6A60; }
-[data-coreui-theme="dark"] .form-control:focus,
-[data-coreui-theme="dark"] .form-select:focus {
-  background-color: #1A1A14 !important;
-  border-color: #8FAADC !important;
-  box-shadow: 0 0 0 3px rgba(143,170,220,0.15) !important;
-}
-[data-coreui-theme="dark"] .bg-white { background-color: #1A1A14 !important; }
-[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
-[data-coreui-theme="dark"] .bg-warning.text-dark { color: #14140F !important; }
-[data-coreui-theme="dark"] .table-light { --cui-table-bg: #24241E; --cui-table-color: #A0A099; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .table-light th { background-color: #24241E !important; color: #A0A099; }
-[data-coreui-theme="dark"] .alert-light { background-color: #1F1F1A; border-color: #2A2A22 !important; color: #D0D0C8; }
-[data-coreui-theme="dark"] .border-light { border-color: #2A2A22 !important; }
+/* Ya publicada = existe en el cronograma real: se atenúa y pierde las acciones
+   destructivas, para que nadie siga jugando con una edición que ya es de verdad. */
+.row-published > td { opacity: 0.6; }
 
+/* Color de segmento: misma paleta que el cronograma (styles/cronograma-fila.css)
+   y Aulas (A1 azul, A2 ámbar, A3 turquesa, A4 naranja, A6 violeta) para que un
+   segmento se lea igual en todo el ERP. A5 = cancelado (rojo) y A7 = cerrado (neutro con barra de marca). El
+   tinte va como imagen sobre el background-color, así el hover sigue visible. */
+tr.row-segment-a1 { --seg-tint: var(--ds-soft-info); --seg-bar: var(--ds-accent); }
+tr.row-segment-a2 { --seg-tint: var(--ds-soft-warn); --seg-bar: var(--ds-warn); }
+tr.row-segment-a3 { --seg-tint: var(--ds-soft-cyan); --seg-bar: var(--ds-cyan-ink); }
+tr.row-segment-a4 { --seg-tint: var(--ds-soft-orange); --seg-bar: var(--ds-orange-ink); }
+tr.row-segment-a5 { --seg-tint: var(--ds-soft-bad); --seg-bar: var(--ds-bad); }
+tr.row-segment-a6 { --seg-tint: var(--ds-soft-violet); --seg-bar: var(--ds-violet-ink); }
+tr.row-segment-a7 { --seg-tint: var(--ds-soft-neutral); --seg-bar: var(--ds-heading); }
+.plan-grid tr[class*="row-segment-"] > td:not(.col-act) { background-image: linear-gradient(var(--seg-tint), var(--seg-tint)); }
+.plan-grid tr[class*="row-segment-"] > td.col-prog { box-shadow: inset 3px 0 0 var(--seg-bar); }
+
+/* ── Modales ── */
+.modal-stack { gap: 14px; }
+.span-all { grid-column: 1 / -1; }
+.field-static { margin: 0; }
+.field-static dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--ds-heading); }
+.col-order { width: 40px; }
+.col-date { width: 110px; }
+.col-date-edit { width: 150px; }
+
+.choice-group { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; }
+.choice-group legend { float: none; width: auto; padding: 0; }
+.choice { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 12.5px; color: var(--ds-ink); cursor: pointer; }
+.choice input { margin-top: 3px; accent-color: var(--ds-brand); }
+.choice-help { display: block; font-size: 11.5px; color: var(--ds-muted); }
+
+.plan-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 18px; }
+
+/* A 400 px los selectores ocupan el ancho y los conteos bajan alineados a la
+   izquierda; la grilla sigue con su propio scroll horizontal. */
+@media (max-width: 600px) {
+  .plan-toolbar > .ds-field { flex: 1 1 100%; }
+  .plan-select-scenario { min-width: 0; flex: 1; }
+  .plan-select-month { flex: 1; width: auto; }
+  .plan-stats { margin-left: 0; }
+  .plan-stats > div { text-align: left; }
+}
 </style>

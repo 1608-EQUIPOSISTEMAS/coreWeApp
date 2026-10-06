@@ -1,30 +1,30 @@
 <template>
-  <div v-if="loading" class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i></div>
-  <div v-else-if="!items || items.length === 0" class="text-center text-muted p-3 small">Sin datos.</div>
-  <div v-else class="table-responsive" style="max-height:280px;overflow-y:auto;">
-    <table class="table table-borderless mb-0 align-middle w-100 clean-table">
-      <thead class="sticky-top">
-        <tr><th class="text-center" style="width:40px;">#</th><th>FECHA</th><th class="text-end pe-3">ESTADO</th></tr>
+  <div v-if="loading" class="gt-skel" aria-busy="true">
+    <span v-for="n in 3" :key="n" class="ds-skel"></span>
+  </div>
+  <p v-else-if="!items || items.length === 0" class="ds-empty">Sin datos.</p>
+  <div v-else class="ds-table-scroll gt-scroll">
+    <table class="ds-table ds-table--densa gt-tabla">
+      <thead>
+        <tr><th class="gt-idx">#</th><th>Fecha</th><th class="num">Estado</th></tr>
       </thead>
       <tbody>
-        <tr v-for="(item, idx) in items" :key="idx" :class="item.type === 'current' ? 'row-highlight' : 'row-normal'">
-          <td class="text-center fw-bold text-muted small">
-            <div v-if="item.type === 'current'" class="text-primary"><i class="fa-solid fa-caret-right"></i></div>
-            <div v-else>{{ idx + 1 }}</div>
+        <tr v-for="(item, idx) in items" :key="idx" :class="{ 'gt-actual': item.type === 'current' }">
+          <td class="gt-idx">
+            <i v-if="item.type === 'current'" class="fa-solid fa-caret-right gt-caret" aria-hidden="true"></i>
+            <span v-else>{{ idx + 1 }}</span>
           </td>
           <td>
-            <div class="d-flex flex-column lh-sm py-1">
-              <span class="fw-bold text-dark" style="font-size:0.85rem;">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.hoursLabel }}</span>
-                <span class="text-muted text-uppercase" style="font-size:0.7rem;">{{ item.daysLabel }}</span>
-              </div>
-            </div>
+            <span class="gt-fecha">{{ formatDate(item.start_date_eff) + ' [' + item.global_code + ']' }}</span>
+            <span class="gt-meta">
+              <span>{{ item.hoursLabel }}</span>
+              <span>{{ item.daysLabel }}</span>
+            </span>
           </td>
-          <td class="text-end pe-3">
-            <div v-if="item.type === 'current'"><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">SELECCIÓN</span></div>
-            <div v-else-if="item.gapInfo"><span class="badge rounded-pill px-3" :class="gapBadgeClass(item.gapInfo)">{{ item.gapInfo.label }}</span></div>
-            <div v-else><span class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">OK</span></div>
+          <td class="num">
+            <span v-if="item.type === 'current'" class="ds-pill info">SELECCIÓN</span>
+            <span v-else-if="item.gapInfo" class="ds-pill" :class="gapTone(item.gapInfo)">{{ item.gapInfo.label }}</span>
+            <span v-else class="ds-pill ok">OK</span>
           </td>
         </tr>
       </tbody>
@@ -46,27 +46,32 @@ defineProps({
   formatDate: { type: Function, required: true }
 })
 
-function gapBadgeClass (gapInfo) {
-  if (gapInfo.color.includes('danger')) return 'bg-danger-subtle text-danger border border-danger-subtle'
-  if (gapInfo.color.includes('warning')) return 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
-  return 'bg-info-subtle text-info-emphasis border border-info-subtle'
+// gapInfo.color llega como clase de Bootstrap ('text-warning', etc.) desde
+// Editions.vue; aqui solo se traduce a tono ds-* sin tocar ese contrato.
+const TONO_POR_COLOR = { danger: 'bad', warning: 'warn', success: 'ok', info: 'info' }
+
+function gapTone (gapInfo) {
+  const clave = Object.keys(TONO_POR_COLOR).find(k => gapInfo.color?.includes(k))
+  return TONO_POR_COLOR[clave] || 'info'
 }
 </script>
 
 <style scoped>
-.clean-table thead th {
-  background-color: #f8fafc; color: #64748b; font-weight: 700;
-  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 10px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 2;
-}
-.clean-table tbody td { padding: 10px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
-.clean-table tbody tr:last-child td { border-bottom: none; }
+.gt-skel { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
 
-.row-highlight { background-color: #eff6ff !important; }
-.row-highlight td:first-child { border-left: 3px solid #3b82f6; }
+/* El popover tiene alto fijo: la tabla scrollea por dentro con la cabecera fija
+   (fondo opaco para que las filas no se transparenten debajo en oscuro). */
+.gt-scroll { max-height: 280px; overflow-y: auto; }
+.gt-tabla thead th { position: sticky; top: 0; z-index: 1; background: var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); }
+.gt-tabla td { vertical-align: middle; }
+.gt-idx { width: 40px; text-align: center; color: var(--ds-muted); }
 
-[data-coreui-theme="dark"] .clean-table thead th { background-color: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .clean-table tbody td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .row-highlight { background-color: rgba(59,130,246,.18) !important; }
-[data-coreui-theme="dark"] .row-highlight td:first-child { border-left-color: #60A5FA; }
+.gt-fecha { display: block; font-weight: 700; color: var(--ds-ink); }
+.gt-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 10.5px; text-transform: uppercase; color: var(--ds-muted); }
+
+/* La edicion que se esta editando: tinte info + barra a la izquierda, para
+   ubicarla entre las demas sin leer las fechas. */
+.gt-actual td { background: var(--ds-soft-info); }
+.gt-actual td:first-child { box-shadow: inset 3px 0 0 var(--ds-accent); }
+.gt-caret { color: var(--ds-accent); }
 </style>

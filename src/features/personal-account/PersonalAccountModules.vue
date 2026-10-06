@@ -10,7 +10,7 @@
       />
       <span>{{ m.sort_order ? `${m.sort_order}. ` : '' }}{{ m.child_name }}</span>
     </label>
-    <small v-if="!modelValue.length" class="pam-hint">Marca al menos un módulo: Académica entrega una cuenta por cada uno.</small>
+    <small v-if="!modelValue.length" class="pam-hint">Marca al menos un módulo: en esos el alumno usa su propia cuenta.</small>
   </fieldset>
 </template>
 

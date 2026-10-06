@@ -3,7 +3,9 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
-import { isoWeekOf } from '@/utils/isoWeek'
+import { addDaysIso } from '@/shared/lib/localDate'
+import WeekNavigator from './components/WeekNavigator.vue'
+import { useIsoWeekNav, formatDayMonth } from '@/features/academica-week/useIsoWeekNav'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -14,25 +16,15 @@ const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábad
 
 // Mismos codigos que Control de Ediciones (edition_session_control).
 const ESTADOS = {
-  '': { key: 'pend', label: 'Programada', short: '—' },
-  A: { key: 'dictada', label: 'Dictada', short: 'A' },
-  R: { key: 'repro', label: 'Reprogramada', short: 'R' },
-  T: { key: 'tard', label: 'Tardanza', short: 'T' }
+  '': { label: 'Programada', short: '—', tone: '' },
+  A: { label: 'Dictada', short: 'A', tone: 'ok' },
+  R: { label: 'Reprogramada', short: 'R', tone: 'bad' },
+  T: { label: 'Tardanza', short: 'T', tone: 'warn' }
 }
+const LEGEND = ['A', 'R', 'T', ''].map((code) => ({ code, ...ESTADOS[code] }))
 
-// Evita el corrimiento UTC de un dia (mismo helper que ControlEdiciones.vue).
-function parseLocal(str) {
-  const [y, m, d] = String(str).slice(0, 10).split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-const toYmd = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-const todayYmd = toYmd(new Date())
-// Se navega por el lunes de la semana: sumar 7 dias cruza de anio sin
-// aritmetica de "semana 53".
-const monday = ref(isoWeekOf(todayYmd).monday)
-const week = computed(() => isoWeekOf(monday.value).week)
+const weekNav = useIsoWeekNav()
+const { todayYmd } = weekNav
 const data = ref(null)
 const isLoading = ref(false)
 
@@ -42,8 +34,8 @@ async function load() {
     // Mismo cronograma EFECTIVO que Control de Ediciones (reprogramaciones
     // incluidas) mas la auditoria de cada sesion — aqui solo se pivotea por dia.
     data.value = await editionService.teacherFollowup({
-      date_start: monday.value,
-      date_end: isoWeekOf(monday.value).sunday
+      date_start: weekNav.monday.value,
+      date_end: weekNav.sunday.value
     })
   } catch (err) {
     console.error('Error cargando vista semanal:', err)
@@ -55,25 +47,16 @@ async function load() {
 }
 
 function moveWeek(delta) {
-  const d = parseLocal(monday.value)
-  d.setDate(d.getDate() + 7 * delta)
-  monday.value = toYmd(d)
+  weekNav.move(delta)
   load()
 }
 
 function goToday() {
-  monday.value = isoWeekOf(todayYmd).monday
+  weekNav.goToday()
   load()
 }
 
 onMounted(load)
-
-const rangeLabel = computed(() => {
-  if (!data.value) return ''
-  const s = parseLocal(data.value.date_start)
-  const e = parseLocal(data.value.date_end)
-  return `${s.getDate()} ${MONTHS[s.getMonth()]} al ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`
-})
 
 // Minutos desde medianoche del inicio de "07:00 pm - 10:00 pm" para ordenar
 // las clases del dia; hora no reconocida va al final.
@@ -103,14 +86,12 @@ const auditFilter = ref(AUDIT_FILTERS[0])
 // Pivote: sesiones cuya fecha efectiva cae en la semana, agrupadas por dia.
 const allDays = computed(() => {
   if (!data.value) return []
-  const monday = parseLocal(data.value.date_start)
   const out = []
   const byDate = new Map()
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    const key = toYmd(d)
-    const day = { date: key, name: DAY_NAMES[i], num: d.getDate(), month: MONTHS[d.getMonth()], classes: [] }
+    const key = addDaysIso(data.value.date_start, i)
+    const [, m, d] = key.split('-').map(Number)
+    const day = { date: key, name: DAY_NAMES[i], num: d, month: MONTHS[m - 1], classes: [] }
     out.push(day)
     byDate.set(key, day)
   }
@@ -149,411 +130,210 @@ const summary = computed(() => {
 })
 const totalWeek = computed(() => summary.value.total)
 
-const fmtShort = (ymd) => {
-  if (!ymd) return ''
-  const d = parseLocal(ymd)
-  return `${d.getDate()}/${d.getMonth() + 1}`
-}
 const estadoOf = (s) => ESTADOS[s.status || '']
 const openAula = (id) => id && router.push({ name: 'AcademicaAulaDetail', params: { id } })
 </script>
 
 <template>
-  <div class="cw-shell">
-    <header class="page-head">
-      <div class="titles">
-        <div class="eyebrow">Academica</div>
-        <h1>Vista Semanal</h1>
-        <div class="subtitle">
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Vista Semanal</h1>
+        <p class="ds-sub">
           Clases dictándose cada día de la semana —
           <b>{{ totalWeek }} {{ totalWeek === 1 ? 'clase' : 'clases' }}</b>
-        </div>
+        </p>
       </div>
-      <div class="actions">
-        <button class="btn" :disabled="isLoading" @click="goToday">
-          <i class="fa-regular fa-calendar-check"></i> Hoy
+      <div class="ds-head-actions">
+        <button class="btn-exec btn-exec-outline" type="button" :disabled="isLoading" @click="goToday">
+          <i class="fa-regular fa-calendar-check" aria-hidden="true"></i> Hoy
         </button>
-        <div class="week-nav">
-          <button class="arrow" :disabled="isLoading" @click="moveWeek(-1)" title="Semana anterior">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
-          <div class="center">
-            <div class="wk">Semana {{ week }}</div>
-            <div class="rg">{{ rangeLabel }}</div>
-          </div>
-          <button class="arrow" :disabled="isLoading" @click="moveWeek(1)" title="Semana siguiente">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
+        <WeekNavigator
+          :week="weekNav.week.value"
+          :start="data?.date_start"
+          :end="data?.date_end"
+          :disabled="isLoading"
+          @move="moveWeek"
+        />
       </div>
     </header>
 
-    <div class="kpi-grid">
-      <div class="kpi" style="--bar: #2563EB">
-        <div class="k-label">
-          <span>Clases esta semana</span>
-          <i class="fa-regular fa-calendar k-icon"></i>
+    <div class="ds-kpis">
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading && !data" class="skel-kpi"></span>
+            <template v-else>{{ summary.total }}</template>
+          </span>
+          <span class="ds-kpi-label">Clases esta semana</span>
+          <span class="ds-kpi-note">en los 7 días</span>
         </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.total }}</template>
-        </div>
-        <div class="k-foot"><span>en los 7 días</span></div>
       </div>
-      <div class="kpi" style="--bar: #10B981">
-        <div class="k-label">
-          <span>Dictadas</span>
-          <i class="fa-solid fa-check k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon ok" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading && !data" class="skel-kpi"></span>
+            <template v-else>{{ summary.A }}</template>
+          </span>
+          <span class="ds-kpi-label">Dictadas</span>
+          <span class="ds-kpi-note">{{ summary.T }} con tardanza</span>
         </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.A }}</template>
-        </div>
-        <div class="k-foot"><span>{{ summary.T }} con tardanza</span></div>
       </div>
-      <div class="kpi" style="--bar: #EF4444">
-        <div class="k-label">
-          <span>Reprogramadas</span>
-          <i class="fa-solid fa-rotate k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon bad" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading && !data" class="skel-kpi"></span>
+            <template v-else>{{ summary.R }}</template>
+          </span>
+          <span class="ds-kpi-label">Reprogramadas</span>
+          <span class="ds-kpi-note">movidas de fecha</span>
         </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.R }}</template>
-        </div>
-        <div class="k-foot"><span>movidas de fecha</span></div>
       </div>
-      <div class="kpi" style="--bar: #0E7490">
-        <div class="k-label">
-          <span>Nueva metodología</span>
-          <i class="fa-solid fa-flask k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-flask"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading && !data" class="skel-kpi"></span>
+            <template v-else>{{ summary.nm }}</template>
+          </span>
+          <span class="ds-kpi-label">Nueva metodología</span>
+          <span class="ds-kpi-note">clases marcadas NM</span>
         </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.nm }}</template>
-        </div>
-        <div class="k-foot"><span>clases marcadas NM</span></div>
       </div>
-      <div class="kpi" style="--bar: #7C3AED">
-        <div class="k-label">
-          <span>Auditadas</span>
-          <i class="fa-solid fa-clipboard-check k-icon"></i>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+        <div class="ds-kpi-body">
+          <span class="ds-kpi-value">
+            <span v-if="isLoading && !data" class="skel-kpi"></span>
+            <template v-else>{{ summary.audited }}</template>
+          </span>
+          <span class="ds-kpi-label">Auditadas</span>
+          <span class="ds-kpi-note">de {{ summary.due }} clases ya dictadas</span>
         </div>
-        <div class="k-value">
-          <span v-if="isLoading && !data" class="skel skel-kpi"></span>
-          <template v-else>{{ summary.audited }}</template>
-        </div>
-        <div class="k-foot"><span>de {{ summary.due }} clases ya dictadas</span></div>
       </div>
     </div>
 
-    <div class="filter-bar">
-      <span class="bar-title">Leyenda</span>
-      <span class="divider"></span>
-      <span v-for="k in ['A', 'R', 'T', '']" :key="k" class="lg">
-        <span class="sw" :class="'e-' + ESTADOS[k].key">{{ ESTADOS[k].short }}</span>{{ ESTADOS[k].label }}
-      </span>
-      <span class="lg">
-        <span class="sw e-nm">NM</span>Nueva metodología
-      </span>
-      <div class="spacer"></div>
-      <div class="seg" role="group" aria-label="Filtrar por auditoría">
-        <button
-          v-for="f in AUDIT_FILTERS"
-          :key="f.key"
-          :class="{ on: auditFilter.key === f.key }"
-          :aria-pressed="auditFilter.key === f.key"
-          @click="auditFilter = f"
-        >{{ f.label }}</button>
-      </div>
-      <span class="muted">Clic en una clase para abrir su aula</span>
-    </div>
-
-    <div v-if="isLoading && !data" class="empty-state">
-      <i class="fa-solid fa-arrows-rotate fa-spin"></i> Cargando…
-    </div>
-    <div v-else-if="!totalWeek" class="empty-state">
-      <div class="big">Sin clases esta semana</div>
-      Usa las flechas para navegar entre semanas
-    </div>
-
-    <div v-else class="grid-wrap">
-      <div class="day-grid">
-        <div v-for="d in days" :key="d.date" class="day-col" :class="{ today: d.date === todayYmd }">
-          <div class="day-head">
-            <span class="dn">{{ d.name }}</span>
-            <span class="dd">{{ d.num }} {{ d.month }}</span>
-            <span v-if="d.classes.length" class="dc">{{ d.classes.length }}</span>
-          </div>
-          <div v-if="!d.classes.length" class="day-empty">Sin clases</div>
+    <section class="ds-panel">
+      <header class="ds-panel-head">
+        <div class="legend">
+          <span v-for="l in LEGEND" :key="l.code" class="legend-item">
+            <span class="ds-pill mark" :class="l.tone">{{ l.short }}</span>{{ l.label }}
+          </span>
+          <span class="legend-item">
+            <span class="ds-pill cyan mark">NM</span>Nueva metodología
+          </span>
+        </div>
+        <div class="ds-tabs" role="group" aria-label="Filtrar por auditoría">
           <button
-            v-for="c in d.classes"
-            :key="c.edition.edition_num_id + ':' + c.session.session_number"
-            class="cls"
-            :class="{ 'cls-nm': c.edition.new_methodology }"
-            @click="openAula(c.edition.edition_num_id)"
-          >
-            <div class="cls-top">
-              <span class="hr">{{ c.edition.hour_label || '—' }}</span>
-              <span class="sn">S{{ c.session.session_number }}/{{ c.edition.total_sessions }}</span>
+            v-for="f in AUDIT_FILTERS"
+            :key="f.key"
+            type="button"
+            :aria-pressed="String(auditFilter.key === f.key)"
+            @click="auditFilter = f"
+          >{{ f.label }}</button>
+        </div>
+        <span class="ds-panel-hint">Clic en una clase para abrir su aula</span>
+      </header>
+
+      <div v-if="isLoading && !data" class="ds-panel-body">
+        <span v-for="n in 6" :key="n" class="ds-skel skel-row"></span>
+      </div>
+      <p v-else-if="!totalWeek" class="ds-empty ds-empty--lista">
+        Sin clases esta semana. Usa las flechas para navegar entre semanas.
+      </p>
+
+      <div v-else class="ds-panel-body grid-wrap">
+        <div class="day-grid">
+          <div v-for="d in days" :key="d.date" class="day-col" :class="{ today: d.date === todayYmd }">
+            <div class="day-head">
+              <span class="dn">{{ d.name }}</span>
+              <span class="dd">{{ d.num }} {{ d.month }}</span>
+              <span v-if="d.classes.length" class="dc">{{ d.classes.length }}</span>
             </div>
-            <div class="cls-name">{{ c.edition.abbreviation }}</div>
-            <div class="cls-code">{{ c.edition.specific_code }}</div>
-            <div class="cls-doc">{{ c.edition.instructor || 'Sin docente' }}</div>
-            <div v-if="c.edition.new_methodology" class="cls-badge e-nm">Nueva metodología</div>
-            <div v-if="c.session.status" class="cls-badge" :class="'e-' + estadoOf(c.session).key">
-              {{ estadoOf(c.session).label }}
-              <template v-if="c.session.new_date"> · era {{ fmtShort(c.session.planned_date) }}</template>
-            </div>
-            <div v-if="isAudited(c.session)" class="cls-badge e-audit">
-              <i class="fa-solid fa-clipboard-check"></i> Auditada · {{ auditorOf(c.session) }}
-            </div>
-          </button>
+            <div v-if="!d.classes.length" class="day-empty">Sin clases</div>
+            <button
+              v-for="c in d.classes"
+              :key="c.edition.edition_num_id + ':' + c.session.session_number"
+              class="cls"
+              type="button"
+              :class="{ 'cls-nm': c.edition.new_methodology }"
+              @click="openAula(c.edition.edition_num_id)"
+            >
+              <div class="cls-top">
+                <span class="hr">{{ c.edition.hour_label || '—' }}</span>
+                <span class="ds-pill info sn">S{{ c.session.session_number }}/{{ c.edition.total_sessions }}</span>
+              </div>
+              <div class="cls-name">{{ c.edition.abbreviation }}</div>
+              <div class="cls-code">{{ c.edition.specific_code }}</div>
+              <div class="cls-doc">{{ c.edition.instructor || 'Sin docente' }}</div>
+              <div class="cls-badges">
+                <span v-if="c.edition.new_methodology" class="ds-pill cyan">Nueva metodología</span>
+                <span v-if="c.session.status" class="ds-pill" :class="estadoOf(c.session).tone">
+                  {{ estadoOf(c.session).label }}
+                  <template v-if="c.session.new_date"> · era {{ formatDayMonth(c.session.planned_date) }}</template>
+                </span>
+                <span v-if="isAudited(c.session)" class="ds-pill violet">
+                  <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Auditada · {{ auditorOf(c.session) }}
+                </span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-/* Mismos tokens que Aulas.vue / ControlEdiciones.vue. La estructura sigue
-   siendo el kanban de 7 columnas; solo cambia la piel. */
-.cw-shell {
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --green-soft: #ECFDF4;
-  --green-ink: #047857;
-  --amber-soft: #FEF6E1;
-  --amber-ink: #B45309;
-  --red-soft: #FEECEC;
-  --red-ink: #B91C1C;
-  --blue-soft: #ECF2FE;
-  --blue-ink: #1D4ED8;
-  --nm-soft: #ECFEFF; --nm-ink: #0E7490; /* nueva metodologia */
-  --audit-soft: #F3EEFF; --audit-ink: #6D28D9;
-  --accent: var(--we-navy, #002060);
-  --surface: #ffffff;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ds-ink-2); }
+.mark { min-width: 22px; height: 22px; padding: 0 4px; justify-content: center; font-family: var(--ds-font-mono); }
+.skel-row { margin: 10px 0; }
 
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-.cw-shell button { font-family: inherit; cursor: pointer; }
-.cw-shell button:disabled { opacity: 0.55; cursor: default; }
-.spacer { flex: 1; }
-.muted { color: var(--ink-3); font-size: 12px; }
-
-/* ---------- page-head ---------- */
-.page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-.page-head .titles { flex: 1; min-width: 0; }
-.page-head .eyebrow {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.page-head h1 { margin: 4px 0 2px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-.page-head .subtitle { color: var(--ink-3); font-size: 13.5px; }
-.page-head .actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 12px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  border: 1px solid var(--line); background: var(--surface);
-  color: var(--ink-2); transition: background 0.15s, border-color 0.15s;
-}
-.btn:hover { background: var(--bg-soft); border-color: #DDD; }
-
-.week-nav {
-  display: flex; align-items: center; gap: 2px;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 3px;
-}
-.week-nav .arrow {
-  width: 30px; height: 34px; border-radius: 7px; border: none;
-  background: transparent; color: var(--ink-3);
-  display: grid; place-items: center; transition: 0.15s;
-}
-.week-nav .arrow:hover { background: var(--bg-soft); color: var(--ink); }
-.week-nav .center { text-align: center; padding: 0 12px; min-width: 138px; }
-.week-nav .center .wk { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
-.week-nav .center .rg { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-
-/* ---------- KPIs ---------- */
-.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
-.kpi {
-  background: var(--surface); border-radius: var(--radius);
-  padding: 14px 16px; border: 1px solid var(--line);
-  position: relative; overflow: hidden;
-}
-.kpi::before {
-  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
-  width: 3px; border-radius: 2px; background: var(--bar, var(--ink-4));
-}
-.kpi .k-label {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.kpi .k-icon { color: var(--ink-4); font-size: 14px; }
-.kpi .k-value { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; line-height: 1.1; }
-.kpi .k-foot { margin-top: 10px; font-size: 12px; color: var(--ink-3); }
-
-/* ---------- barra de leyenda ---------- */
-.filter-bar {
-  background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line);
-  padding: 12px 14px; margin-bottom: 14px;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
-}
-.filter-bar .bar-title {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.divider { width: 1px; height: 22px; background: var(--line); margin: 0 -4px; }
-.lg { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
-.sw {
-  width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
-  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-}
-
-.e-pend { background: var(--bg-soft); color: var(--ink-3); border: 1px solid var(--line); }
-.e-dictada { background: var(--green-soft); color: var(--green-ink); }
-.e-repro { background: var(--red-soft); color: var(--red-ink); }
-.e-tard { background: var(--amber-soft); color: var(--amber-ink); }
-.e-nm { background: var(--nm-soft); color: var(--nm-ink); }
-.e-audit { background: var(--audit-soft); color: var(--audit-ink); gap: 4px; text-transform: none; }
-
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
-.seg button {
-  border: none; background: transparent; color: var(--ink-3);
-  font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px;
-}
-.seg button.on { background: var(--audit-soft); color: var(--audit-ink); font-weight: 600; }
-
-/* ---------- kanban de 7 dias ---------- */
-.grid-wrap { overflow-x: auto; padding-bottom: 6px; }
+/* Kanban de 7 dias: una columna por dia, la de hoy resaltada. */
+.grid-wrap { overflow-x: auto; }
 .day-grid { display: grid; grid-template-columns: repeat(7, minmax(196px, 1fr)); gap: 12px; min-width: 1180px; }
 .day-col {
-  background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-lg);
-  padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 180px;
+  display: flex; flex-direction: column; gap: 8px; min-height: 180px; padding: 10px;
+  background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
 }
-.day-col.today { border-color: var(--blue-ink); background: var(--blue-soft); }
+.day-col.today { background: var(--ds-soft-info); border-color: var(--ds-accent); }
 
-.day-head {
-  display: flex; align-items: baseline; gap: 7px;
-  padding: 2px 4px 8px; border-bottom: 1px solid var(--line);
+.day-head { display: flex; align-items: baseline; gap: 7px; padding: 2px 4px 8px; border-bottom: 1px solid var(--ds-border); }
+.dn { font-size: 12px; font-weight: 700; color: var(--ds-ink-2); }
+.day-col.today .dn { color: var(--ds-info-ink); }
+.dd { font-size: 11.5px; color: var(--ds-muted); }
+.dc {
+  margin-left: auto; padding: 1px 7px; border: 1px solid var(--ds-border); border-radius: 999px;
+  background: var(--ds-surface); font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 10.5px; font-weight: 600; color: var(--ds-ink-2);
 }
-.day-head .dn {
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--ink-3);
-}
-.day-col.today .day-head .dn { color: var(--blue-ink); }
-.day-head .dd { font-size: 11.5px; color: var(--ink-4); }
-.day-head .dc {
-  margin-left: auto; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px;
-}
-.day-col.today .day-head .dc { color: var(--blue-ink); border-color: transparent; }
+.day-col.today .dc { border-color: transparent; color: var(--ds-info-ink); }
+.day-empty { padding: 22px 0; text-align: center; font-size: 12px; color: var(--ds-muted); }
 
-.day-empty { color: var(--ink-4); font-size: 12px; text-align: center; padding: 22px 0; }
-
-/* tarjeta de clase: mismo lenguaje que .course-card de Aulas, en chico */
+/* Tarjeta de clase; la de nueva metodologia lleva una franja cian a la izquierda. */
 .cls {
-  display: block; width: 100%; text-align: left;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 10px 11px;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
-  position: relative; overflow: hidden;
+  position: relative; display: block; width: 100%; padding: 10px 11px; overflow: hidden;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  font: inherit; color: var(--ds-ink); text-align: left; cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s;
 }
-.cls:hover { border-color: #D4D4CC; box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.cls.cls-nm::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--nm-ink);
-}
+.cls:hover { border-color: var(--ds-border-strong); transform: translateY(-1px); }
+.cls:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
 .cls.cls-nm { padding-left: 14px; }
+.cls.cls-nm::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--ds-cyan-ink); }
 .cls-top { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-.cls-top .hr {
-  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.hr {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--ds-font-mono); font-size: 10.5px; font-weight: 600; color: var(--ds-ink-2);
 }
-.cls-top .sn {
-  margin-left: auto; flex: none;
-  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 10px; font-weight: 600; color: var(--blue-ink);
-  background: var(--blue-soft); border-radius: 999px; padding: 2px 7px;
-}
-.cls-name { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.25; }
-.cls-code { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
-.cls-doc { font-size: 12px; color: var(--ink-3); margin-top: 5px; }
-.cls-badge {
-  display: inline-flex; align-items: center; margin-top: 7px;
-  border-radius: 999px; padding: 2px 8px;
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-}
-
-.empty-state {
-  text-align: center; padding: 70px 20px; color: var(--ink-3);
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-}
-.empty-state .big { font-size: 18px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
-
-/* skeleton (mismo shimmer que Aulas) */
-.skel {
-  display: block;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.skel-kpi { width: 56px; height: 30px; }
-
-@media (max-width: 1100px) {
-  .page-head { flex-wrap: wrap; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .cw-shell {
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --surface: #1A1A14;
-  --green-soft: rgba(16,185,129,0.14);
-  --green-ink: #34D399;
-  --amber-soft: rgba(245,158,11,0.14);
-  --amber-ink: #FBBF24;
-  --red-soft: rgba(239,68,68,0.14);
-  --red-ink: #F87171;
-  --blue-soft: rgba(37,99,235,0.18);
-  --blue-ink: #60A5FA;
-  --nm-soft: rgba(14,116,144,0.20); --nm-ink: #67E8F9;
-  --audit-soft: rgba(124,58,237,0.20); --audit-ink: #C4B5FD;
-  --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
-}
-[data-coreui-theme="dark"] .cw-shell .btn:hover { background: #2A2A22; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .cw-shell .cls:hover { border-color: #3A3A33; }
-[data-coreui-theme="dark"] .cw-shell .skel {
-  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
-  background-size: 200% 100%;
-}
+.sn { flex: none; margin-left: auto; font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; }
+.cls-name { font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--ds-heading); }
+.cls-code { margin-top: 2px; font-family: var(--ds-font-mono); font-size: 10.5px; color: var(--ds-muted); }
+.cls-doc { margin-top: 5px; font-size: 12px; color: var(--ds-ink-2); }
+.cls-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.cls-badges:empty { display: none; }
 </style>

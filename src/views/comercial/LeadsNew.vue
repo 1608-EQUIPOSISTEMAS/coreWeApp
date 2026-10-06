@@ -1501,7 +1501,7 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
                   <span>• {{ ben.label }}</span>
                 </div>
               </div>
-              <!-- CUENTA PERSONAL S/100 en una especializacion: Academica entrega la cuenta solo en estos modulos -->
+              <!-- CUENTA PERSONAL S/100 en una especializacion: solo estos modulos van con cuenta propia -->
               <PersonalAccountModules
                 v-if="needsPersonalAccountModules"
                 v-model="insc.personal_account_modules"

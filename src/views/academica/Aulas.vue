@@ -5,7 +5,9 @@ import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import AulasFilterModal from './AulasFilterModal.vue'
+import StudentSearchPanel from './StudentSearchPanel.vue'
 import { aulaStatus } from '@/entities/aula/aulaStatus'
+import { formatValue } from '@/shared/lib/formatValue'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
@@ -16,15 +18,17 @@ function openAula(id) {
   router.push({ name: 'AcademicaAulaDetail', params: { id } })
 }
 
+// Color de identidad del segmento (barra de la tarjeta y avatar). Tokens y no
+// hex para que cambie solo con el modo oscuro. A5 no figura: se descarta al cargar.
+// Mismos tonos que el cronograma (styles/cronograma-fila.css): A3 turquesa, A4 naranja.
 const SEGMENT_COLORS = {
-  A1: '#2563EB',
-  A2: '#F59E0B',
-  A3: '#EAB308',
-  A4: '#84CC16',
-  A5: '#EF4444',
-  A6: '#8B5CF6',
+  A1: 'var(--ds-accent)',
+  A2: 'var(--ds-warn)',
+  A3: 'var(--ds-cyan-ink)',
+  A4: 'var(--ds-orange-ink)',
+  A6: 'var(--ds-violet-ink)',
 }
-const FALLBACK_COLOR = '#6366F1'
+const FALLBACK_COLOR = 'var(--ds-accent-2)'
 
 function initials(name) {
   if (!name) return '--'
@@ -51,21 +55,7 @@ function buildSchedule(row) {
   return parts.length ? parts.join(' ') : '--'
 }
 
-// Defaults para metricas que aun no tienen SP propio.
-// `students` se sobrescribe con el conteo real (FICO aprobadas) en loadCourses.
-function getCourseMetrics() {
-  return {
-    students: null,
-    attendance: null,
-    average: null,
-    // null y no 0: sin dato medido, la tarjeta dice "--" en vez de afirmar
-    // que no hay nadie en riesgo.
-    atRisk: null,
-  }
-}
-
 function mapRow(row) {
-  const metrics = getCourseMetrics(row)
   return {
     id: row.edition_num_id ?? row.global_code,
     code: row.global_code || row.version_code || '--',
@@ -83,7 +73,6 @@ function mapRow(row) {
     schedule: buildSchedule(row),
     status: aulaStatus(row.start_date, row.end_date),
     color: SEGMENT_COLORS[row.cat_segment] || FALLBACK_COLOR,
-    ...metrics,
     // Conteo real (FICO aprobadas sin hijos) ya viene unido en la consulta.
     students: row.students == null ? null : Number(row.students),
   }
@@ -117,7 +106,34 @@ async function loadCourses() {
   }
 }
 
-onMounted(loadCourses)
+// Estado de certificacion de las aulas terminadas (consulta a Odoo, aparte
+// para no demorar la lista). Pedido de Academica: que avise lo pendiente.
+const certStatus = ref(new Map())
+// Hasta que Odoo responde, el KPI "Por certificar" dice "—" y no un 0 falso.
+const certChecked = ref(false)
+const certFailed = ref(false)
+async function loadCertStatus() {
+  try {
+    const rows = await editionService.classroomsCertificationStatus()
+    certStatus.value = new Map(rows.filter((r) => r.status).map((r) => [Number(r.edition_num_id), r.status]))
+    certChecked.value = true
+  } catch (err) {
+    certFailed.value = true
+    toast.warning(err?.response?.data?.message || 'No se pudo consultar en Odoo qué aulas faltan certificar')
+  }
+}
+const certOf = (c) => certStatus.value.get(Number(c.id)) || null
+const onlyPendingCert = ref(false)
+const pendingCertCount = computed(() => COURSES.value.filter((c) => certOf(c)?.pending).length)
+function togglePendingCert() {
+  onlyPendingCert.value = !onlyPendingCert.value
+  if (onlyPendingCert.value) filter.value = 'Todos' // las pendientes ya terminaron: que el chip de estado no las esconda
+}
+
+onMounted(() => {
+  loadCourses()
+  loadCertStatus()
+})
 
 const layout = ref('grid')
 const filter = ref('Activo')
@@ -156,6 +172,7 @@ const filtered = computed(() => {
   const teach = selectedSet(advFilters.teacher_ids)
   return COURSES.value.filter((c) => {
     if (filter.value !== 'Todos' && c.status !== filter.value) return false
+    if (onlyPendingCert.value && !certOf(c)?.pending) return false
     if (mods.size && !mods.has(c.modality)) return false
     if (segs.size && !segs.has(c.agent)) return false
     if (teach.size && !teach.has(c.teacher)) return false
@@ -217,120 +234,147 @@ const totalStudents = computed(() => {
   const list = activeCourses.value.filter((c) => Number.isFinite(c.students))
   return list.length ? list.reduce((a, c) => a + c.students, 0) : null
 })
-const totalAtRisk = computed(() => {
-  const list = activeCourses.value.filter((c) => Number.isFinite(c.atRisk))
-  return list.length ? list.reduce((a, c) => a + c.atRisk, 0) : null
-})
-const avgAttendance = computed(() => {
-  const list = activeCourses.value.filter((c) => Number.isFinite(c.attendance))
-  if (!list.length) return null
-  return Math.round(list.reduce((a, c) => a + c.attendance, 0) / list.length)
+const avgStudentsPerActive = computed(() => {
+  const list = activeCourses.value.filter((c) => Number.isFinite(c.students))
+  return list.length ? Math.round(totalStudents.value / list.length) : null
 })
 
 const filterStates = ['Todos', 'Activo', 'Proximo', 'Finalizado']
 const countByStatus = (s) =>
   s === 'Todos' ? COURSES.value.length : COURSES.value.filter((c) => c.status === s).length
 
-const statusPillClass = (s) =>
-  s === 'Activo' ? 'ok' : s === 'Finalizado' ? 'neutral' : 'info'
+// Estado del aula → texto y tono de .ds-pill. El valor interno 'Proximo' viene
+// de aulaStatus y se usa en los filtros: solo cambia lo que se lee.
+const STATUS_UI = {
+  Todos: { label: 'Todas', tone: '' },
+  Activo: { label: 'Activo', tone: 'ok' },
+  Proximo: { label: 'Próximo', tone: 'info' },
+  Finalizado: { label: 'Finalizado', tone: '' },
+}
+const statusLabel = (s) => STATUS_UI[s]?.label ?? s
+const statusTone = (s) => STATUS_UI[s]?.tone ?? ''
+
+const totalProximo = computed(() => countByStatus('Proximo'))
+
+const kpis = computed(() => [
+  {
+    key: 'activas',
+    icon: 'fa-graduation-cap',
+    tone: 'ok',
+    value: formatValue(totalActive.value, 'num'),
+    label: 'Aulas activas',
+    note: `de ${formatValue(COURSES.value.length, 'num')} aulas en total`,
+  },
+  {
+    key: 'alumnos',
+    icon: 'fa-users',
+    tone: '',
+    value: formatValue(totalStudents.value, 'num'),
+    label: 'Alumnos en aulas activas',
+    note: avgStudentsPerActive.value == null ? 'Sin conteo de matriculados' : `${formatValue(avgStudentsPerActive.value, 'num')} por aula en promedio`,
+  },
+  {
+    key: 'proximas',
+    icon: 'fa-calendar-plus',
+    tone: '',
+    value: formatValue(totalProximo.value, 'num'),
+    label: 'Próximas a iniciar',
+    note: 'Aún no empiezan su dictado',
+  },
+  {
+    key: 'certificar',
+    icon: 'fa-certificate',
+    tone: pendingCertCount.value ? 'warn' : 'ok',
+    value: formatValue(certChecked.value ? pendingCertCount.value : null, 'num'),
+    label: 'Por certificar',
+    note: certChecked.value ? 'Terminadas sin certificado en Odoo' : certFailed.value ? 'Odoo no respondió' : 'Consultando Odoo…',
+  },
+])
+
+const subtitle = computed(() => {
+  if (isLoading.value) return 'Cargando aulas…'
+  const total = COURSES.value.length
+  return `${formatValue(filtered.value.length, 'num')} de ${formatValue(total, 'num')} aulas · cursos, asistencias y notas`
+})
 </script>
 
 <template>
-  <div class="aulas-shell">
-    <header class="page-head">
-      <div class="titles">
-        <div class="eyebrow">Academica</div>
-        <h1>Aulas</h1>
-        <div class="subtitle">
-          Gestion de cursos, asistencias y notas - {{ COURSES.length }} aulas en el periodo 2026-I
-        </div>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Aulas</h1>
+        <p class="ds-sub">{{ subtitle }}</p>
       </div>
     </header>
 
-    <div class="kpi-grid">
-      <div class="kpi" style="--bar: #10B981">
-        <div class="k-label">
-          <span>Aulas activas</span>
-          <i class="fa-solid fa-graduation-cap k-icon"></i>
-        </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalActive }}</template></div>
-        <div class="k-foot">
-          <span>de {{ COURSES.length }} totales</span>
-        </div>
-      </div>
-      <div class="kpi" style="--bar: #2563EB">
-        <div class="k-label">
-          <span>Alumnos en curso</span>
-          <i class="fa-solid fa-users k-icon"></i>
-        </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalStudents ?? '--' }}</template></div>
-        <div class="k-foot">
-          <span>matriculados</span>
-        </div>
-      </div>
-      <div class="kpi" style="--bar: #F59E0B">
-        <div class="k-label">
-          <span>Asistencia promedio</span>
-          <i class="fa-solid fa-arrow-trend-up k-icon"></i>
-        </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ avgAttendance == null ? '--' : avgAttendance + '%' }}</template></div>
-        <div class="k-foot">
-          <span>en aulas activas</span>
-        </div>
-      </div>
-      <div class="kpi" style="--bar: #EF4444">
-        <div class="k-label">
-          <span>Alumnos en riesgo</span>
-          <i class="fa-solid fa-triangle-exclamation k-icon"></i>
-        </div>
-        <div class="k-value"><span v-if="isLoading" class="skel skel-kpi"></span><template v-else>{{ totalAtRisk ?? '--' }}</template></div>
-        <div class="k-foot">
-          <span>requieren seguimiento</span>
+    <StudentSearchPanel />
+
+    <div class="ds-kpis">
+      <div v-for="k in kpis" :key="k.key" class="ds-kpi">
+        <span class="ds-kpi-icon" :class="k.tone" aria-hidden="true"><i class="fa-solid" :class="k.icon"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span v-if="isLoading" class="skel-kpi"></span>
+            <span v-else class="ds-kpi-value">{{ k.value }}</span>
+          </div>
+          <span class="ds-kpi-label">{{ k.label }}</span>
+          <span class="ds-kpi-note">{{ k.note }}</span>
         </div>
       </div>
     </div>
 
-    <div class="filter-bar">
-      <button
-        v-for="s in filterStates"
-        :key="s"
-        class="chip"
-        :class="{ active: filter === s }"
-        @click="filter = s"
-      >
-        <span v-if="filter === s" class="dot"></span>
-        {{ s }}
-        <span class="chip-count">{{ countByStatus(s) }}</span>
-      </button>
-      <span class="divider"></span>
-      <div class="input">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input v-model="advFilters.q" placeholder="Buscar por nombre, codigo o docente..." />
-      </div>
-      <button class="chip" :class="{ active: activeFilterChips.length > 0 }" @click="showFilterModal = true">
-        <i class="fa-solid fa-filter"></i> Mas filtros
-        <span v-if="activeFilterChips.length" class="chip-count">{{ activeFilterChips.length }}</span>
-      </button>
-      <div class="spacer"></div>
-      <span class="muted">{{ filtered.length }} resultados</span>
-      <div class="toggle-group">
-        <button :class="{ active: layout === 'grid' }" @click="layout = 'grid'">
-          <i class="fa-solid fa-table-cells"></i> Tarjetas
+    <section class="ds-panel">
+      <div class="ds-panel-body aulas-toolbar">
+        <div class="ds-tabs" role="group" aria-label="Estado del aula">
+          <button
+            v-for="s in filterStates"
+            :key="s"
+            type="button"
+            :aria-pressed="String(filter === s)"
+            @click="filter = s"
+          >
+            {{ statusLabel(s) }} <span class="tab-count">{{ countByStatus(s) }}</span>
+          </button>
+          <button
+            v-if="pendingCertCount"
+            type="button"
+            :aria-pressed="String(onlyPendingCert)"
+            title="Aulas terminadas con aprobados al día que aún no tienen certificado en Odoo"
+            @click="togglePendingCert"
+          >
+            <i class="fa-solid fa-certificate" aria-hidden="true"></i> Por certificar
+            <span class="tab-count">{{ pendingCertCount }}</span>
+          </button>
+        </div>
+        <input
+          v-model="advFilters.q"
+          class="ds-input aulas-search"
+          type="search"
+          aria-label="Buscar aula"
+          placeholder="Buscar por nombre, código o docente"
+        />
+        <button class="btn-exec btn-exec-outline" type="button" @click="showFilterModal = true">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i> Más filtros
+          <span v-if="activeFilterChips.length" class="ds-chip">{{ activeFilterChips.length }}</span>
         </button>
-        <button :class="{ active: layout === 'list' }" @click="layout = 'list'">
-          <i class="fa-solid fa-list"></i> Tabla
-        </button>
+        <span class="aulas-count">{{ formatValue(filtered.length, 'num') }} resultados</span>
+        <div class="ds-tabs" role="group" aria-label="Vista">
+          <button type="button" :aria-pressed="String(layout === 'grid')" @click="layout = 'grid'">
+            <i class="fa-solid fa-table-cells" aria-hidden="true"></i> Tarjetas
+          </button>
+          <button type="button" :aria-pressed="String(layout === 'list')" @click="layout = 'list'">
+            <i class="fa-solid fa-list" aria-hidden="true"></i> Tabla
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div v-if="activeFilterChips.length" class="filter-strip">
-      <span class="filter-strip-badge">
-        <i class="fa-solid fa-circle-half-stroke"></i>
-        Filtros activos
-        <span class="filter-strip-count">{{ activeFilterChips.length }}</span>
-      </span>
-      <BaseFilterChips :items="activeFilterChips" @remove="clearAdvFilter" @clear-all="clearAdvFilters" />
-    </div>
+    <BaseFilterChips
+      v-if="activeFilterChips.length"
+      :items="activeFilterChips"
+      @remove="clearAdvFilter"
+      @clear-all="clearAdvFilters"
+    />
 
     <AulasFilterModal
       :visible="showFilterModal"
@@ -343,536 +387,235 @@ const statusPillClass = (s) =>
       @clear="clearAdvFilters(); showFilterModal = false"
     />
 
-    <div v-if="layout === 'grid'" class="course-grid">
+    <p v-if="!isLoading && !filtered.length" class="ds-panel ds-empty ds-empty--lista">
+      No hay aulas con estos filtros. Cambia el estado o quita un filtro para ver más.
+    </p>
+
+    <div v-else-if="layout === 'grid'" class="aula-grid">
       <template v-if="isLoading">
-        <article v-for="n in 8" :key="'sk' + n" class="course-card skel-card">
-          <div class="c-bar skel"></div>
-          <div class="c-head">
-            <span class="skel" style="width: 90px; height: 18px"></span>
-            <span class="skel" style="width: 60px; height: 18px"></span>
-          </div>
-          <div class="skel" style="width: 70%; height: 20px; margin-bottom: 12px"></div>
-          <div class="skel" style="height: 48px; margin-bottom: 12px"></div>
-          <div class="skel" style="width: 85%; height: 14px; margin-bottom: 8px"></div>
-          <div class="skel" style="width: 60%; height: 14px"></div>
+        <article v-for="n in 8" :key="'sk' + n" class="aula-card aula-card--skel" aria-hidden="true">
+          <span class="ds-skel" style="width: 40%; height: 18px"></span>
+          <span class="ds-skel" style="width: 70%; height: 20px"></span>
+          <span class="ds-skel" style="height: 48px"></span>
+          <span class="ds-skel" style="width: 85%"></span>
+          <span class="ds-skel" style="width: 60%"></span>
         </article>
       </template>
       <template v-else>
-      <article
-        v-for="c in filtered"
-        :key="c.id"
-        class="course-card"
-        :style="{ '--cbar': c.color }"
-        @click="openAula(c.id)"
-      >
-        <div class="c-bar"></div>
-        <div class="c-head">
-          <div>
-            <span class="c-code">{{ c.code }}</span>
-            <span class="c-edition">{{ c.edition }}</span>
+        <article
+          v-for="c in filtered"
+          :key="c.id"
+          class="aula-card"
+          :style="{ '--aula-color': c.color }"
+          tabindex="0"
+          :aria-label="`Abrir aula ${c.name} ${c.edition}`"
+          @click="openAula(c.id)"
+          @keydown.enter="openAula(c.id)"
+        >
+          <div class="aula-card-head">
+            <div>
+              <span class="aula-code">{{ c.code }}</span>
+              <span class="aula-edition">{{ c.edition }}</span>
+            </div>
+            <div class="aula-pills">
+              <span class="ds-pill" :class="statusTone(c.status)">{{ statusLabel(c.status) }}</span>
+              <span v-if="certOf(c)" class="ds-pill" :class="certOf(c).tone">{{ certOf(c).label }}</span>
+            </div>
           </div>
-          <div class="row">
-            <span v-if="c.atRisk > 0" class="alert-flag">
-              <i class="fa-solid fa-triangle-exclamation"></i> {{ c.atRisk }}
+          <h3 class="aula-name">{{ c.name }}</h3>
+          <div class="aula-teacher">
+            <span class="aula-avatar" aria-hidden="true">{{ c.teacherInitials }}</span>
+            <div>
+              <div class="aula-teacher-name">{{ c.teacher }}</div>
+              <div class="aula-teacher-role">Docente</div>
+            </div>
+          </div>
+          <div class="aula-meta">
+            <span>
+              <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+              <strong>{{ c.sessions || '—' }}</strong> {{ c.sessions === 1 ? 'sesión' : 'sesiones' }}
             </span>
-            <span class="status-pill" :class="statusPillClass(c.status)">
-              <span class="dot"></span>{{ c.status }}
+            <span>
+              <i class="fa-solid fa-users" aria-hidden="true"></i>
+              <strong>{{ formatValue(c.students, 'num') }}</strong> alumnos
+            </span>
+            <span>
+              <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ c.startDate }} → {{ c.endDate }}
+            </span>
+            <span>
+              <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ c.schedule }}
             </span>
           </div>
-        </div>
-        <h3>{{ c.name }}</h3>
-        <div class="c-teacher">
-          <div class="av" :style="{ background: c.color }">{{ c.teacherInitials }}</div>
-          <div>
-            <div class="tn">{{ c.teacher }}</div>
-            <div class="tr">Docente</div>
+          <div class="aula-foot">
+            <div class="aula-stat">
+              <b>{{ formatValue(c.sessions, 'num') }}</b>Sesiones
+            </div>
+            <button class="btn-exec btn-exec-outline btn-sm aula-open" type="button" @click.stop="openAula(c.id)">
+              Ver aula <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
           </div>
-        </div>
-        <div class="c-meta">
-          <div class="m">
-            <i class="fa-solid fa-graduation-cap"></i>
-            <strong>{{ c.sessions || '--' }}</strong> {{ c.sessions === 1 ? 'sesion' : 'sesiones' }}
-          </div>
-          <div class="m">
-            <i class="fa-solid fa-users"></i> <strong>{{ c.students ?? '--' }}</strong> alumnos
-          </div>
-          <div class="m">
-            <i class="fa-regular fa-calendar"></i> {{ c.startDate }} -> {{ c.endDate }}
-          </div>
-          <div class="m">
-            <i class="fa-regular fa-clock"></i> {{ c.schedule }}
-          </div>
-        </div>
-        <div class="c-stats">
-          <div class="s">
-            <b>{{ c.attendance || '-' }}{{ c.attendance ? '%' : '' }}</b>Asistencia
-          </div>
-          <div class="s">
-            <b>{{ c.average || '-' }}</b>Prom. nota
-          </div>
-          <div class="spacer"></div>
-          <button class="btn sm" @click.stop="openAula(c.id)">
-            Ver aula <i class="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
-      </article>
+        </article>
       </template>
     </div>
 
-    <table v-else class="course-table">
-      <thead>
-        <tr>
-          <th>Codigo</th>
-          <th>Curso</th>
-          <th>Docente</th>
-          <th>Modalidad</th>
-          <th class="center">Alumnos</th>
-          <th class="center">Asist.</th>
-          <th class="center">Prom.</th>
-          <th>Riesgo</th>
-          <th>Estado</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template v-if="isLoading">
-          <tr v-for="n in 8" :key="'skr' + n" class="skel-row">
-            <td v-for="col in 10" :key="col"><span class="skel" style="height: 14px"></span></td>
-          </tr>
-        </template>
-        <template v-else>
-        <tr v-for="c in filtered" :key="c.id" @click="openAula(c.id)">
-          <td class="mono">{{ c.code }}</td>
-          <td class="ct-name">
-            {{ c.name }}<div class="sub">{{ c.edition }}</div>
-          </td>
-          <td>
-            <div class="row">
-              <div class="t-av" :style="{ background: c.color }">{{ c.teacherInitials }}</div>
-              {{ c.teacher }}
-            </div>
-          </td>
-          <td>{{ c.modality }}</td>
-          <td class="center mono">{{ c.students ?? '--' }}</td>
-          <td class="center mono">{{ c.attendance ? c.attendance + '%' : '-' }}</td>
-          <td class="center mono bold">{{ c.average || '-' }}</td>
-          <td>
-            <span v-if="c.atRisk > 0" class="alert-flag">
-              <i class="fa-solid fa-triangle-exclamation"></i> {{ c.atRisk }}
-            </span>
-            <span v-else class="muted small">-</span>
-          </td>
-          <td>
-            <span class="status-pill" :class="statusPillClass(c.status)">
-              <span class="dot"></span>{{ c.status }}
-            </span>
-          </td>
-          <td class="right">
-            <button class="row-action">
-              <i class="fa-solid fa-chevron-right"></i>
-            </button>
-          </td>
-        </tr>
-        </template>
-      </tbody>
-    </table>
+    <section v-else class="ds-panel">
+      <div class="ds-panel-body">
+        <div class="ds-table-scroll">
+          <table class="ds-table ds-table--lista">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Curso</th>
+                <th>Docente</th>
+                <th>Modalidad</th>
+                <th class="num">Alumnos</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-if="isLoading">
+                <tr v-for="n in 8" :key="'skr' + n">
+                  <td colspan="7"><span class="ds-skel"></span></td>
+                </tr>
+              </template>
+              <template v-else>
+                <tr
+                  v-for="c in filtered"
+                  :key="c.id"
+                  class="link"
+                  tabindex="0"
+                  @click="openAula(c.id)"
+                  @keydown.enter="openAula(c.id)"
+                >
+                  <td class="mono">{{ c.code }}</td>
+                  <td>
+                    <span class="aula-row-name">{{ c.name }}</span>
+                    <span class="aula-row-sub">{{ c.edition }}</span>
+                  </td>
+                  <td>
+                    <span class="aula-row-teacher">
+                      <span class="aula-avatar aula-avatar--sm" :style="{ '--aula-color': c.color }" aria-hidden="true">{{ c.teacherInitials }}</span>
+                      {{ c.teacher }}
+                    </span>
+                  </td>
+                  <td>{{ c.modality }}</td>
+                  <td class="num">{{ formatValue(c.students, 'num') }}</td>
+                  <td>
+                    <span class="aula-pills">
+                      <span class="ds-pill" :class="statusTone(c.status)">{{ statusLabel(c.status) }}</span>
+                      <span v-if="certOf(c)" class="ds-pill" :class="certOf(c).tone">{{ certOf(c).label }}</span>
+                    </span>
+                  </td>
+                  <td class="num">
+                    <button
+                      class="btn-icon btn-icon-sm"
+                      type="button"
+                      title="Abrir aula"
+                      aria-label="Abrir aula"
+                      @click.stop="openAula(c.id)"
+                    >
+                      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.aulas-shell {
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --green-soft: #ECFDF4;
-  --green-ink: #047857;
-  --amber-soft: #FEF6E1;
-  --amber-ink: #B45309;
-  --red-soft: #FEECEC;
-  --red-ink: #B91C1C;
-  --blue-soft: #ECF2FE;
-  --blue-ink: #1D4ED8;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+/* Barra de filtros: estado, búsqueda, más filtros y vista en una sola línea */
+.aulas-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.aulas-search { flex: 1 1 240px; max-width: 360px; }
+.aulas-count { margin-left: auto; font-size: 12px; color: var(--ds-muted); white-space: nowrap; }
+.tab-count { margin-left: 4px; font-size: 11px; opacity: 0.7; font-variant-numeric: tabular-nums; }
 
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.row { display: flex; align-items: center; gap: 8px; }
-.spacer { flex: 1; }
-.muted { color: var(--ink-3); font-size: 12px; }
-.small { font-size: 11.5px; }
-.bold { font-weight: 600; }
-.center { text-align: center; }
-.right { text-align: right; }
-.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-
-/* page-head */
-.page-head {
-  display: flex; align-items: flex-start; gap: 16px;
-  margin-bottom: 18px;
-}
-.page-head .titles { flex: 1; min-width: 0; }
-.page-head .eyebrow {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.page-head h1 {
-  margin: 4px 0 2px; font-size: 26px; font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.page-head .subtitle { color: var(--ink-3); font-size: 13.5px; }
-.page-head .actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-
-/* buttons */
-.btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 12px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  border: 1px solid var(--line); background: white;
-  color: var(--ink-2); cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.btn:hover { background: var(--bg-soft); border-color: #DDD; }
-.btn.primary {
-  background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060);
-}
-.btn.primary:hover { background: var(--we-navy-dark, #001540); }
-.btn.sm { padding: 5px 9px; font-size: 12.5px; }
-
-/* KPIs */
-.kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 14px; margin-bottom: 18px;
-}
-.kpi {
-  background: white; border-radius: var(--radius);
-  padding: 14px 16px; border: 1px solid var(--line);
-  position: relative; overflow: hidden;
-}
-.kpi::before {
-  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
-  width: 3px; border-radius: 2px;
-  background: var(--bar, var(--ink-4));
-}
-.kpi .k-label {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.kpi .k-icon { color: var(--ink-4); font-size: 14px; }
-.kpi .k-value {
-  font-size: 30px; font-weight: 600; letter-spacing: -0.025em;
-  margin-top: 4px; line-height: 1.1;
-}
-.kpi .k-foot {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: 10px; font-size: 12px; color: var(--ink-3);
-}
-.kpi .k-delta { font-weight: 500; }
-.kpi .k-delta.up { color: var(--green-ink); }
-.kpi .k-delta.down { color: var(--red-ink); }
-
-/* filter bar */
-.filter-bar {
-  background: white; border-radius: var(--radius);
-  border: 1px solid var(--line);
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-}
-.chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 999px;
-  background: white; border: 1px solid var(--line);
-  font-size: 12.5px; color: var(--ink-2); cursor: pointer;
-  transition: background 0.15s;
-}
-.chip:hover { background: var(--bg-soft); }
-.chip.active {
-  background: #ECF8F2; color: var(--green-ink);
-  border-color: #C8EFD8; font-weight: 500;
-}
-.chip .dot {
-  width: 6px; height: 6px; border-radius: 999px; background: currentColor;
-}
-.chip .chip-count { color: var(--ink-4); font-size: 11px; }
-.chip.active .chip-count { color: var(--green-ink); opacity: 0.7; }
-.divider { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
-.input {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 6px 10px; background: white; font-size: 13px;
-  min-width: 240px; color: var(--ink-3);
-}
-.input input {
-  border: none; outline: none; font-size: 13px;
-  flex: 1; background: transparent; color: var(--ink);
-}
-.input input::placeholder { color: var(--ink-4); }
-
-.toggle-group {
-  display: inline-flex; padding: 3px;
-  background: var(--bg-soft); border: 1px solid var(--line);
-  border-radius: 8px;
-}
-.toggle-group button {
-  border: none; background: transparent;
-  padding: 5px 10px; border-radius: 6px;
-  font-size: 12.5px; color: var(--ink-3); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.toggle-group button.active {
-  background: white; color: var(--ink);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  font-weight: 500;
-}
-
-/* Strip de filtros activos: mismo patron visual que el de FICO enrollment. */
-.filter-strip {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 8px 14px; margin: -8px 0 14px;
-  border: 1px solid rgba(16, 185, 129, 0.32); border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
-}
-.filter-strip-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11.5px; font-weight: 600; color: var(--green-ink);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.filter-strip-badge i { font-size: 11px; }
-.filter-strip-count {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 18px; padding: 0 5px;
-  background: var(--green); color: #fff; border-radius: 9px;
-  font-size: 10.5px; font-weight: 700;
-}
-.filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
-.filter-strip :deep(.active-filters .label) { display: none; }
-
-/* status pills */
-.status-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 999px;
-  font-size: 10.5px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.status-pill .dot {
-  width: 5px; height: 5px; border-radius: 999px; background: currentColor;
-}
-.status-pill.ok { background: var(--green-soft); color: var(--green-ink); }
-.status-pill.warn { background: var(--amber-soft); color: var(--amber-ink); }
-.status-pill.danger { background: var(--red-soft); color: var(--red-ink); }
-.status-pill.info { background: var(--blue-soft); color: var(--blue-ink); }
-.status-pill.neutral { background: var(--bg-soft); color: var(--ink-3); }
-
-.alert-flag {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 600;
-  padding: 2px 8px; border-radius: 999px;
-  background: var(--red-soft); color: var(--red-ink);
-}
-
-/* course grid */
-.course-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
-}
-.course-card {
-  background: white; border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  padding: 16px; cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
-  position: relative; overflow: hidden;
-}
-.course-card:hover {
-  border-color: #D4D4CC;
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-.course-card .c-bar {
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--cbar, var(--green));
-}
-.course-card .c-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 10px; margin-bottom: 12px;
-}
-.course-card .c-code {
-  font-family: var(--font-mono); font-size: 11px;
-  font-weight: 600; color: var(--ink-3);
-  background: var(--bg-soft); padding: 2px 7px; border-radius: 5px;
-  border: 1px solid var(--line-soft);
-}
-.course-card .c-edition {
-  margin-left: 6px; font-size: 10.5px; color: var(--ink-4);
-  font-weight: 600; letter-spacing: 0.05em;
-}
-.course-card h3 {
-  margin: 0 0 4px; font-size: 16px; font-weight: 600;
-  letter-spacing: -0.015em; line-height: 1.25;
-}
-.course-card .c-teacher {
-  display: flex; align-items: center; gap: 8px;
-  margin: 12px 0;
-  padding: 10px; background: var(--bg-soft); border-radius: 8px;
-}
-.course-card .c-teacher .av {
-  width: 28px; height: 28px; border-radius: 999px;
-  display: grid; place-items: center;
-  color: white; font-weight: 600; font-size: 11px;
-}
-.course-card .c-teacher .tn { font-size: 12.5px; font-weight: 500; line-height: 1.2; }
-.course-card .c-teacher .tr { font-size: 11px; color: var(--ink-3); }
-.course-card .c-meta {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px;
-  font-size: 12px;
-}
-.course-card .c-meta .m {
-  display: flex; align-items: center; gap: 6px; color: var(--ink-3);
-}
-.course-card .c-meta .m i { font-size: 11px; }
-.course-card .c-meta .m strong { color: var(--ink); font-weight: 500; }
-.course-card .c-stats {
-  display: flex; align-items: center; gap: 14px;
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--line-soft);
-}
-.course-card .c-stats .s { font-size: 11px; color: var(--ink-3); }
-.course-card .c-stats .s b {
-  color: var(--ink); font-size: 14px; font-weight: 600; display: block;
-}
-
-/* table */
-.course-table {
-  width: 100%; background: white;
-  border: 1px solid var(--line); border-radius: var(--radius);
-  border-collapse: collapse; overflow: hidden;
-  font-size: 13px;
-}
-.course-table th, .course-table td {
-  text-align: left; padding: 10px 14px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.course-table th {
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  background: var(--bg-soft);
-}
-.course-table tr { cursor: pointer; }
-.course-table tbody tr:hover { background: #FAFAF6; }
-.course-table tr:last-child td { border-bottom: none; }
-.course-table .ct-name { font-weight: 500; }
-.course-table .ct-name .sub {
-  font-size: 11px; color: var(--ink-3); font-weight: 400;
-}
-.t-av {
-  width: 22px; height: 22px; border-radius: 999px; color: white;
-  display: grid; place-items: center; font-size: 9.5px; font-weight: 700;
-}
-.row-action {
-  width: 24px; height: 24px; border-radius: 6px;
-  background: transparent; border: none;
-  display: grid; place-items: center; color: var(--ink-3);
+/* Grilla de tarjetas de aula: propia de esta vista */
+.aula-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--ds-gap); }
+.aula-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 16px 16px;
+  overflow: hidden;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
   cursor: pointer;
+  transition: border-color 0.12s;
 }
-.row-action:hover { background: var(--bg-soft); color: var(--ink); }
+/* Barra superior con el color del segmento */
+.aula-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--aula-color, var(--ds-accent));
+}
+.aula-card:hover { border-color: var(--ds-border-strong); }
+.aula-card:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
+.aula-card--skel { cursor: default; pointer-events: none; }
+.aula-card--skel::before { background: var(--ds-surface-3); }
 
-/* skeleton loading (mismo shimmer que BotTickets) */
-.skel {
-  display: block;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
+.aula-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.aula-pills { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.aula-code {
+  padding: 2px 7px;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-ink-2);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
 }
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.skel-kpi { width: 56px; height: 30px; }
-.skel-card { cursor: default; pointer-events: none; }
-.skel-card .c-bar { height: 3px; }
+.aula-edition { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--ds-muted); }
+.aula-name { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--ds-heading); }
 
-@media (max-width: 1100px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+.aula-teacher { display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--ds-surface-2); border-radius: var(--ds-radius-sm); }
+.aula-teacher-name { font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--ds-ink); }
+.aula-teacher-role { font-size: 11px; color: var(--ds-muted); }
+/* Iniciales en --ds-surface: blancas sobre el color en claro y oscuras en modo
+   oscuro, donde los tonos del segmento se aclaran y el blanco perdería contraste. */
+.aula-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ds-surface);
+  background: var(--aula-color, var(--ds-accent));
 }
+.aula-avatar--sm { width: 22px; height: 22px; font-size: 9.5px; }
 
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .aulas-shell {
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --green-soft: rgba(16,185,129,0.14);
-  --green-ink: #34D399;
-  --amber-soft: rgba(245,158,11,0.14);
-  --amber-ink: #FBBF24;
-  --red-soft: rgba(239,68,68,0.14);
-  --red-ink: #F87171;
-  --blue-soft: rgba(37,99,235,0.18);
-  --blue-ink: #60A5FA;
-  --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.35);
-}
-[data-coreui-theme="dark"] .aulas-shell .btn {
-  background: #1F1F1A;
-  border-color: #2A2A22;
-  color: #D4D4CC;
-}
-[data-coreui-theme="dark"] .aulas-shell .btn:hover {
-  background: #2A2A22;
-  border-color: #3A3A33;
-}
-[data-coreui-theme="dark"] .aulas-shell .btn.primary {
-  background: var(--we-navy, #002060);
-  border-color: #2f4a8a;
-  color: #fff;
-}
-[data-coreui-theme="dark"] .aulas-shell .btn.primary:hover { background: #1a3a75; }
-[data-coreui-theme="dark"] .aulas-shell .kpi { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .filter-bar { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .filter-strip {
-  border-color: rgba(52, 211, 153, 0.32);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
-}
-[data-coreui-theme="dark"] .aulas-shell .chip { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .chip:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .chip.active {
-  background: rgba(16,185,129,0.16);
-  color: #34D399;
-  border-color: rgba(16,185,129,0.3);
-}
-[data-coreui-theme="dark"] .aulas-shell .input { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aulas-shell .input input { color: #F4F4F0; }
-[data-coreui-theme="dark"] .aulas-shell .toggle-group { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .aulas-shell .toggle-group button.active {
-  background: #2A2A22; color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .aulas-shell .course-card { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .course-card:hover { border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aulas-shell .course-card .c-code { background: #1F1F1A; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .aulas-shell .course-card .c-teacher { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .course-table { background: #1A1A14; }
-[data-coreui-theme="dark"] .aulas-shell .course-table th { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .course-table tbody tr:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aulas-shell .skel {
-  background: linear-gradient(90deg, #1F1F1A 25%, #2A2A22 50%, #1F1F1A 75%);
-  background-size: 200% 100%;
+.aula-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; font-size: 12px; color: var(--ds-ink-2); }
+.aula-meta span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.aula-meta i { font-size: 11px; color: var(--ds-muted); }
+.aula-meta strong { font-weight: 600; color: var(--ds-ink); }
+
+.aula-foot { display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px solid var(--ds-border); }
+.aula-stat { font-size: 11px; color: var(--ds-muted); }
+.aula-stat b { display: block; font-size: 14px; font-weight: 700; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.aula-open { margin-left: auto; }
+
+.mono { font-family: var(--ds-font-mono); }
+.aula-row-name { display: block; font-weight: 600; color: var(--ds-ink); }
+.aula-row-sub { display: block; font-size: 11px; color: var(--ds-muted); }
+.aula-row-teacher { display: inline-flex; align-items: center; gap: 8px; }
+
+@media (max-width: 900px) {
+  .aulas-search { max-width: none; }
+  .aulas-count { margin-left: 0; }
+  .aula-grid { grid-template-columns: 1fr; }
 }
 </style>

@@ -184,4 +184,4 @@ const activeComponent = computed(() => {
   color: #34D399;
   border-color: rgba(52, 211, 153, 0.32);
 }
-[data-coreui-theme="dark"] .bot-academica-page </style>
+</style>

@@ -21,9 +21,9 @@
         <span
           v-if="fmt.hasPersonalAccount(enrollment)"
           class="ds-pill orange"
-          :title="`Académica entrega una cuenta ${enrollment.personal_account}${enrollment.personal_account_modules?.length ? ` en ${enrollment.personal_account_modules.length} módulo(s)` : ''}`"
+          title="Usa su propia cuenta: Académica no le entrega una en ese módulo"
         >
-          <i class="fa-solid fa-user-shield" aria-hidden="true"></i> Cuenta personal · {{ enrollment.personal_account }}
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i> Cuenta propia · {{ fmt.personalAccountProviders(enrollment).join(' + ') }}
         </span>
       </div>
 

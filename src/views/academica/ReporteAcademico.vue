@@ -679,7 +679,7 @@ function openAula(id) {
 </script>
 
 <template>
-  <div class="rpt">
+  <div class="ds-page rpt">
     <!-- ============ BANDA: titulo, periodo y lo urgente ============ -->
     <header class="band">
       <div>
@@ -700,10 +700,10 @@ function openAula(id) {
     </div>
 
     <!-- ============ OBJETIVOS DEL AREA ============ -->
-    <div class="panel-grid">
-      <article v-if="certGoal" class="bpanel">
+    <div class="ds-row ds-row--mitad">
+      <article v-if="certGoal" class="ds-panel">
         <h2 class="panel-band">Objetivo · {{ certGoal.meta }} % de alumnos certificados</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <div class="goal">
             <strong class="goal-value" :class="certTone">{{ formatValue(certGoal.tasa, 'pct') }}</strong>
             <span class="goal-of">meta {{ certGoal.meta }} %</span>
@@ -713,25 +713,25 @@ function openAula(id) {
             <b :style="{ left: certGoal.meta + '%' }"></b>
           </div>
           <p class="goal-note">
-            {{ certGoal.certificados }} de {{ certGoal.evaluados }} alumnos que terminaron en los últimos 6 meses
-            tienen certificado<template v-if="certGoal.faltan"> · faltan <b>{{ certGoal.faltan }}</b> para la meta</template>.
+            {{ formatValue(certGoal.certificados, 'num') }} de {{ formatValue(certGoal.evaluados, 'num') }} alumnos que terminaron en los últimos 6 meses
+            tienen certificado<template v-if="certGoal.faltan"> · faltan <b>{{ formatValue(certGoal.faltan, 'num') }}</b> para la meta</template>.
           </p>
-          <table v-if="certGoal.programas_bajos.length" class="goal-table">
-            <caption>Programas que menos certifican</caption>
+          <table v-if="certGoal.programas_bajos.length" class="ds-table panel-table">
+            <caption class="panel-table-caption">Programas que menos certifican</caption>
             <tbody>
               <tr v-for="p in certGoal.programas_bajos" :key="p.programa">
-                <td class="goal-name">{{ p.programa }}</td>
-                <td class="goal-sub">{{ p.certificados }} de {{ p.evaluados }}</td>
-                <td class="goal-fig bad">{{ formatValue(p.tasa, 'pct') }}</td>
+                <td>{{ p.programa }}</td>
+                <td class="nowrap">{{ formatValue(p.certificados, 'num') }} de {{ formatValue(p.evaluados, 'num') }}</td>
+                <td class="num bad">{{ formatValue(p.tasa, 'pct') }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </article>
 
-      <article class="bpanel">
+      <article class="ds-panel">
         <h2 class="panel-band">Objetivo · auditoría promedio {{ auditGoal.meta }}</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <div class="goal">
             <strong class="goal-value" :class="auditTone">{{ fmt20(kpis.avg20) }}</strong>
             <span class="goal-of">/20 · meta {{ auditGoal.meta }}</span>
@@ -744,8 +744,8 @@ function openAula(id) {
             <b>{{ teachersGoal.alcanzan }}</b> de {{ teachersGoal.evaluados }} docentes auditados ya promedian
             {{ auditGoal.meta }} o más.
           </p>
-          <table v-if="weakCriteria.length" class="goal-table">
-            <caption>
+          <table v-if="weakCriteria.length" class="ds-table panel-table">
+            <caption class="panel-table-caption">
               Criterios que más restan al promedio
               <span v-if="auditGoal.ventana?.ampliada" class="goal-window">
                 · últimos 90 días ({{ auditGoal.auditorias_periodo }} auditorías manuales en el periodo, muy pocas para medir)
@@ -753,69 +753,69 @@ function openAula(id) {
             </caption>
             <tbody>
               <tr v-for="c in weakCriteria" :key="c.key">
-                <td class="goal-name">{{ criterionLabel(c.key) }}</td>
-                <td class="goal-sub">se cumple en {{ formatValue(c.pct, 'pct') }}</td>
-                <td class="goal-fig ok" :title="`Si se cumpliera siempre, el promedio subiría ${c.aporte} puntos`">+{{ c.aporte }} pts</td>
+                <td>{{ criterionLabel(c.key) }}</td>
+                <td class="nowrap">se cumple en {{ formatValue(c.pct, 'pct') }}</td>
+                <td class="num ok" :title="`Si se cumpliera siempre, el promedio subiría ${c.aporte} puntos`">+{{ c.aporte }} pts</td>
               </tr>
             </tbody>
           </table>
-          <p v-else class="goal-empty">
+          <p v-else class="ds-callout warn goal-empty">
             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            Sin auditorías manuales de rúbrica en los últimos 90 días: sin ellas no se sabe qué criterio corregir para llegar a {{ auditGoal.meta }}.
+            <span>Sin auditorías manuales de rúbrica en los últimos 90 días: sin ellas no se sabe qué criterio corregir para llegar a {{ auditGoal.meta }}.</span>
           </p>
         </div>
       </article>
     </div>
 
     <!-- ============ GRAFICOS (2 columnas) ============ -->
-    <div class="panel-grid">
-      <article v-if="outcomesData.categorias.length" class="bpanel">
+    <div class="ds-row ds-row--mitad">
+      <article v-if="outcomesData.categorias.length" class="ds-panel">
         <h2 class="panel-band">Resultados del alumno por mes</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <ReportBars :grafico="outcomesData" titulo="Aprobados, jalados por nota y sin entrega final por mes" apilado />
         </div>
-        <p class="bpanel-foot">{{ outcomesFoot }}</p>
+        <p class="ds-panel-foot">{{ outcomesFoot }}</p>
       </article>
 
-      <article v-if="weeklyData.categorias.length" class="bpanel">
+      <article v-if="weeklyData.categorias.length" class="ds-panel">
         <h2 class="panel-band">Sesiones por semana</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <ReportBars :grafico="weeklyData" titulo="Sesiones programadas, dictadas y auditadas por semana" />
         </div>
-        <p class="bpanel-foot">{{ weeklyFoot }}</p>
+        <p class="ds-panel-foot">{{ weeklyFoot }}</p>
       </article>
 
-      <article v-if="certData.categorias.length" class="bpanel">
+      <article v-if="certData.categorias.length" class="ds-panel">
         <h2 class="panel-band">Certificación</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <ReportBars :grafico="certData" titulo="Aprobados y certificados emitidos por mes" :alto="170" />
-          <table v-if="waiting.length" class="wait-table">
-            <caption>Los que más esperan su certificado</caption>
+          <table v-if="waiting.length" class="ds-table panel-table">
+            <caption class="panel-table-caption">Los que más esperan su certificado</caption>
             <tbody>
               <tr v-for="w in waiting" :key="w.alumno + w.aula">
-                <td class="wait-name">{{ w.alumno }}</td>
-                <td class="wait-aula">{{ w.aula }}</td>
-                <td class="wait-days">{{ w.dias }} días</td>
+                <td>{{ w.alumno }}</td>
+                <td>{{ w.aula }}</td>
+                <td class="num bad">{{ formatValue(w.dias, 'num') }} días</td>
               </tr>
             </tbody>
           </table>
         </div>
       </article>
 
-      <article v-if="teachersData.categorias.length" class="bpanel">
+      <article v-if="teachersData.categorias.length" class="ds-panel">
         <h2 class="panel-band">Calidad por docente</h2>
-        <div class="bpanel-body">
+        <div class="ds-panel-body">
           <ReportBars :grafico="teachersData" titulo="Docentes con el promedio de auditoría más bajo" horizontal :meta="auditGoal.meta" />
         </div>
-        <p class="bpanel-foot">
+        <p class="ds-panel-foot">
           Los 5 promedios más bajos del periodo (/20). Línea punteada = objetivo {{ auditGoal.meta }}.
           Promedio de todas las aulas: {{ fmt20(kpis.avg20) }}.
         </p>
       </article>
     </div>
 
-    <!-- ============ TABLA DETALLE (filtros + tabla en una sola card) ============ -->
-    <div class="card table-card">
+    <!-- ============ TABLA DETALLE (filtros + tabla en un solo panel) ============ -->
+    <div class="ds-panel">
       <h2 class="panel-band">Detalle por aula · Auditorías por sesión</h2>
       <div class="table-filters">
         <div class="filter-row">
@@ -839,12 +839,12 @@ function openAula(id) {
           </div>
         </div>
         <div class="filter-row filter-row-2">
-          <div class="filter-group">
+          <div class="ds-tabs" role="group" aria-label="Estado del aula">
             <button
               v-for="s in filterStates"
               :key="s"
-              class="chip"
-              :class="{ active: filterStatus === s }"
+              type="button"
+              :aria-pressed="String(filterStatus === s)"
               @click="filterStatus = s"
             >
               {{ s }} <span class="chip-count">{{ countByStatus(s) }}</span>
@@ -864,7 +864,7 @@ function openAula(id) {
           </div>
         </div>
       </div>
-      <div class="fu-scroll">
+      <div class="ds-table-scroll">
         <table class="detail-table fu-table">
           <thead>
             <tr class="fu-grouprow">
@@ -985,31 +985,33 @@ function openAula(id) {
 </template>
 
 <style scoped>
-/* ── Informe de una página: banda + grilla de paneles con cabecera de color ──
-   Solo tokens --ds-*: el navy de marca no cambia con el tema y el resto sí. */
+/* ── Informe de una página (DESIGN_SYSTEM §5.2.2): banda + grilla de paneles con
+   cabecera de color. Solo tokens --ds-*: el navy de marca no cambia con el tema
+   y el resto sí, así que la vista no lleva bloque oscuro propio. */
+.rpt {
+  font-family: Inter, 'Hanken Grotesk', -apple-system, system-ui, sans-serif;
+  font-size: 14px;
+  /* Mismo ancho que fico/inscripciones (EnrollmentPage) */
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
 .band {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  padding: 16px 24px; margin-bottom: var(--ds-gap);
+  padding: 16px 24px;
   background: var(--ds-brand); color: var(--ds-on-brand); border-radius: var(--ds-radius);
 }
 .band-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
 .band-title { margin: 2px 0 0; font-size: 24px; font-weight: 800; color: var(--ds-on-brand); }
 .band-period { font-weight: 500; opacity: .8; }
 /* 5 cifras a todo el ancho (ds-kpi del sistema); pasan a 2-3 por fila en pantallas chicas. */
-.headline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ds-gap); margin-bottom: var(--ds-gap); }
+.headline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ds-gap); }
 @media (max-width: 1100px) { .headline { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
 
-.panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-gap); margin-bottom: var(--ds-gap); }
-.bpanel {
-  display: flex; flex-direction: column; overflow: hidden;
-  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
-}
 .panel-band {
   margin: 0; padding: 10px 16px; text-align: center;
   font-size: 15px; font-weight: 700; color: var(--ds-on-brand); background: var(--ds-brand);
 }
-.bpanel-body { flex: 1; padding: 14px 16px 6px; }
-.bpanel-foot { margin: 0; padding: 10px 16px 14px; font-size: 12px; color: var(--ds-ink-2); border-top: 1px solid var(--ds-border); }
 
 /* Objetivos: la cifra contra la meta es lo único grande del panel. */
 .goal { display: flex; align-items: baseline; gap: 10px; }
@@ -1027,311 +1029,182 @@ function openAula(id) {
 .goal-bar > b { position: absolute; top: -4px; width: 3px; height: 18px; margin-left: -1px; border-radius: 2px; background: var(--ds-ink); }
 .goal-note { margin: 0 0 6px; font-size: 13px; color: var(--ds-ink-2); }
 .goal-note b { color: var(--ds-ink); }
-.goal-table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12.5px; }
-.goal-table caption { caption-side: top; text-align: left; padding: 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); }
-.goal-table td { padding: 7px 4px; border-top: 1px solid var(--ds-border); color: var(--ds-ink); vertical-align: top; }
-.goal-name { font-weight: 600; }
-.goal-sub { color: var(--ds-ink-2); white-space: nowrap; }
-.goal-fig { text-align: right; font-weight: 800; white-space: nowrap; }
-.goal-fig.bad { color: var(--ds-bad-ink); }
-.goal-fig.ok { color: var(--ds-ok-ink); }
 .goal-window { font-weight: 500; text-transform: none; letter-spacing: 0; }
-.goal-empty { margin: 10px 0 0; padding: 10px 12px; border-radius: var(--ds-radius-sm); font-size: 12.5px; color: var(--ds-warn-ink); background: var(--ds-soft-warn); }
-.goal-empty i { margin-right: 6px; }
+.goal-empty { margin-top: 10px; }
 
-.wait-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 12.5px; }
-.wait-table caption { caption-side: top; text-align: left; padding: 0 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); }
-.wait-table td { padding: 6px 4px; border-top: 1px solid var(--ds-border); color: var(--ds-ink); }
-.wait-name { font-weight: 600; }
-.wait-aula { color: var(--ds-ink-2); }
-.wait-days { text-align: right; font-weight: 700; color: var(--ds-bad-ink); white-space: nowrap; }
-
-@media (max-width: 900px) {
-  .panel-grid { grid-template-columns: 1fr; }
-}
-
-.rpt {
-  --navy: #1b2a5b;
-  --navy-2: #16244f;
-  --bg: #f4f6fa;
-  --line: #e6e9f0;
-  --line-soft: #f0f2f6;
-  --ink: #0f172a;
-  --slate: #475569;
-  --slate-2: #64748b;
-  --mut: #94a3b8;
-  --mut-2: #b6bccb;
-  --eyebrow: #8a93a5;
-  --green: #12a150;
-  --green-ink: #12703a;
-  --green-soft: #e7f6ee;
-  --red: #d64545;
-  --red-deep: #b23b3b;
-  --red-soft: #fdecec;
-  --amber: #f0932b;
-  --amber-ink: #c97a1a;
-  --amber-soft: #fdf3e6;
-  --blue: #2f6bdb;
-  --blue-soft: #eef2fb;
-  --indigo: #5b6cf0;
-  --indigo-ink: #3f4fb8;
-  --donut-empty: #c4cad6;
-
-  font-family: Inter, 'Hanken Grotesk', -apple-system, system-ui, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  /* Mismo ancho que fico/inscripciones (EnrollmentPage) */
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.spacer { flex: 1; }
+/* Tablas cortas dentro de un panel (ds-table) con su título como caption. */
+.panel-table { margin-top: 8px; }
+.panel-table-caption { caption-side: top; text-align: left; padding: 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); }
+.nowrap { white-space: nowrap; }
 
 /* Colores semanticos por nota (misma rubrica 19/17/15) */
-.sg-good  { color: var(--green-ink); }
-.sg-ok    { color: var(--blue); }
-.sg-warn  { color: var(--amber-ink); }
-.sg-bad   { color: var(--red); }
-.sg-empty { color: var(--slate-2); }
+.sg-good  { color: var(--ds-ok-ink); }
+.sg-ok    { color: var(--ds-accent); }
+.sg-warn  { color: var(--ds-warn-ink); }
+.sg-bad   { color: var(--ds-bad-ink); }
+.sg-empty { color: var(--ds-ink-2); }
 
-/* ============ CARDS GENERICAS ============ */
-.card {
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
-}
 .teacher-cell { display: flex; align-items: center; gap: 10px; }
 .avatar {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto;
-  background: var(--navy); color: #fff; font-size: 11px; font-weight: 700;
+  background: var(--ds-brand); color: var(--ds-on-brand); font-size: 11px; font-weight: 700;
 }
 
 /* ============ FOCOS (chips "requieren atencion" en el header del detalle) ============ */
 .foco {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 13px 7px 11px; border-radius: 999px;
-  border: 1px solid var(--line); background: #fff; cursor: pointer;
-  font-size: 12.5px; color: var(--slate); font-weight: 600;
+  border: 1px solid var(--ds-border); background: var(--ds-surface); cursor: pointer;
+  font-size: 12.5px; color: var(--ds-ink-2); font-weight: 600;
   transition: border-color .15s, background .15s, box-shadow .15s;
 }
-.foco:hover { background: var(--bg); }
+.foco:hover { background: var(--ds-surface-2); }
 /* En 0 el foco se ve (el director sabe que se revisó) pero no filtra nada. */
 .foco:disabled { opacity: .45; cursor: default; }
 .foco:disabled:hover { background: transparent; }
 .foco i { font-size: 11px; }
 .foco-count { font-weight: 800; font-variant-numeric: tabular-nums; }
-.foco-label { color: var(--slate-2); font-weight: 500; }
-.foco-red i, .foco-red .foco-count { color: var(--red); }
-.foco-amber i, .foco-amber .foco-count { color: var(--amber-ink); }
+.foco-label { color: var(--ds-ink-2); font-weight: 500; }
+.foco-red i, .foco-red .foco-count { color: var(--ds-bad-ink); }
+.foco-amber i, .foco-amber .foco-count { color: var(--ds-warn-ink); }
+/* color-mix en vez de un hex: el borde suave sale del mismo token y sigue al tema. */
 .foco-red.active {
-  background: var(--red-soft); border-color: #f3c9c9;
-  box-shadow: 0 0 0 3px rgba(214, 69, 69, .08);
+  background: var(--ds-soft-bad); border-color: color-mix(in srgb, var(--ds-bad) 35%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-bad) 8%, transparent);
 }
-.foco-red.active .foco-label { color: var(--red); }
+.foco-red.active .foco-label { color: var(--ds-bad-ink); }
 .foco-amber.active {
-  background: var(--amber-soft); border-color: #f0ddb0;
-  box-shadow: 0 0 0 3px rgba(201, 122, 26, .08);
+  background: var(--ds-soft-warn); border-color: color-mix(in srgb, var(--ds-warn) 35%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-warn) 8%, transparent);
 }
-.foco-amber.active .foco-label { color: var(--amber-ink); }
-/* ============ FILTROS (dentro de la card de la tabla) ============ */
-.table-filters { padding: 14px 18px; border-bottom: 1px solid var(--line-soft); }
+.foco-amber.active .foco-label { color: var(--ds-warn-ink); }
+
+/* ============ FILTROS (dentro del panel de la tabla) ============ */
+.table-filters { padding: 14px 18px; border-bottom: 1px solid var(--ds-border); }
 .filter-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;
 }
-.filter-row-2 { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.filter-row-2 { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ds-border); }
 .filter-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .v-tab {
   padding: 7px 12px; border-radius: 8px; border: none;
   font-size: 13px; font-weight: 700; cursor: pointer;
-  background: var(--bg); color: var(--slate); transition: background .15s;
+  background: var(--ds-surface-2); color: var(--ds-ink-2); transition: background .15s;
 }
-.v-tab:hover { background: #eaedf4; }
-.v-tab.active { background: var(--navy); color: #fff; }
+.v-tab:hover { background: var(--ds-surface-3); }
+.v-tab.active { background: var(--ds-brand); color: var(--ds-on-brand); }
+.spacer { flex: 1; }
+.chip-count {
+  margin-left: 4px; padding: 1px 6px; border-radius: 999px;
+  font-size: 10.5px; color: var(--ds-muted); background: var(--ds-surface-3);
+}
+/* Sobre el navy del estado elegido: blanco translúcido, igual en los dos temas. */
+[aria-pressed="true"] > .chip-count { color: var(--ds-on-brand); background: rgba(255, 255, 255, .18); }
+.select, .input {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--ds-border); border-radius: 8px;
+  padding: 7px 10px; background: var(--ds-surface); font-size: 13px; color: var(--ds-muted);
+}
+.input { min-width: 230px; }
+.select select, .input input {
+  border: none; outline: none; font-size: 13px;
+  background: transparent; color: var(--ds-ink);
+}
+.select select { cursor: pointer; max-width: 200px; }
+.input input { flex: 1; }
+.input input::placeholder { color: var(--ds-muted); }
 
 /* ============ PAGINACION ============ */
 .table-pager {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line-soft);
+  gap: 12px; padding: 12px 18px; border-top: 1px solid var(--ds-border);
 }
-.pager-info { font-size: 12.5px; color: var(--mut); }
+.pager-info { font-size: 12.5px; color: var(--ds-muted); }
 .pager-controls { display: flex; align-items: center; gap: 4px; }
 .pager-btn {
   min-width: 32px; height: 32px; padding: 0 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--line); border-radius: 8px; background: #fff;
-  font-size: 12.5px; font-weight: 600; color: var(--slate);
+  border: 1px solid var(--ds-border); border-radius: 8px; background: var(--ds-surface);
+  font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2);
   cursor: pointer; transition: background .15s;
 }
-.pager-btn:hover:not(:disabled) { background: var(--bg); }
+.pager-btn:hover:not(:disabled) { background: var(--ds-surface-2); }
 .pager-btn:disabled { opacity: .45; cursor: default; }
-.pager-num.active { background: var(--navy); border-color: var(--navy); color: #fff; }
-.filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 11px; border-radius: 999px;
-  background: #fff; border: 1px solid var(--line);
-  font-size: 12px; font-weight: 600; color: var(--slate);
-  cursor: pointer; transition: background .15s;
-}
-.chip:hover { background: var(--bg); }
-.chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-.chip-count {
-  color: var(--mut); font-size: 10.5px;
-  background: var(--bg); padding: 1px 6px; border-radius: 999px;
-}
-.chip.active .chip-count { color: #fff; background: rgba(255, 255, 255, .18); }
-.select {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 7px 10px; background: #fff; font-size: 13px; color: var(--mut);
-}
-.select select {
-  border: none; outline: none; font-size: 13px;
-  background: transparent; color: var(--ink); cursor: pointer; max-width: 200px;
-}
-.input {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 7px 10px; background: #fff; font-size: 13px;
-  min-width: 230px; color: var(--mut);
-}
-.input input {
-  border: none; outline: none; font-size: 13px;
-  flex: 1; background: transparent; color: var(--ink);
-}
-.input input::placeholder { color: var(--mut-2); }
+.pager-num.active { background: var(--ds-brand); border-color: var(--ds-brand); color: var(--ds-on-brand); }
 
-/* ============ TABLA DETALLE ============ */
-.table-card { overflow: hidden; }
+/* ============ TABLA DETALLE ============
+   Propia y no ds-table: por el rowspan de la semana, la primera celda de cada
+   fila no es siempre la misma columna (ds-table resalta td:first-child). */
 .detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .detail-table thead tr {
-  background: #fafbfd; color: var(--eyebrow);
+  background: var(--ds-surface-2); color: var(--ds-muted);
   font-size: 11px; letter-spacing: .05em; text-align: left;
 }
 .detail-table th { padding: 14px 8px; font-weight: 700; }
 .detail-table .th-first { padding-left: 18px; }
 .detail-table .th-center { text-align: center; }
-.detail-table td { padding: 15px 8px; border-top: 1px solid var(--line-soft); }
+.detail-table td { padding: 15px 8px; border-top: 1px solid var(--ds-border); }
 .detail-table .td-first { padding-left: 18px; }
 .detail-table .td-center { text-align: center; }
 .row-clickable { cursor: pointer; transition: background .15s; }
-.row-clickable:hover { background: #fbfcfe; }
+.row-clickable:hover { background: var(--ds-surface-2); }
 
 .aula-cell { display: flex; flex-direction: column; gap: 1px; }
-.aula-name { font-weight: 700; color: var(--navy); }
-.aula-edition { font-size: 12px; color: var(--mut); }
-.teacher-name { font-weight: 600; color: #334155; }
+.aula-name { font-weight: 700; color: var(--ds-heading); }
+.aula-edition { font-size: 12px; color: var(--ds-muted); }
+.teacher-name { font-weight: 600; color: var(--ds-ink); }
 .state-msg {
-  text-align: center; padding: 36px 12px !important; font-size: 13px; color: var(--mut);
+  text-align: center; padding: 36px 12px !important; font-size: 13px; color: var(--ds-muted);
 }
 .state-msg i { margin-right: 6px; }
 .table-foot {
-  padding: 14px 18px; font-size: 12px; color: var(--mut);
-  border-top: 1px solid var(--line-soft);
+  padding: 14px 18px; font-size: 12px; color: var(--ds-muted);
+  border-top: 1px solid var(--ds-border);
 }
 
 /* ============ MATRIZ SEGUIMIENTO DOCENTES ============ */
 /* La matriz crece con el curso mas largo de la pagina: scroll horizontal
-   propio para que el body de la vista nunca se desborde. */
-.fu-scroll { overflow-x: auto; }
+   propio (ds-table-scroll) para que el body de la vista nunca se desborde. */
 .fu-table { min-width: 100%; }
 .fu-table th, .fu-table td { white-space: nowrap; }
 .fu-grouprow th {
-  padding: 8px; border-bottom: 1px solid var(--line);
+  padding: 8px; border-bottom: 1px solid var(--ds-border);
   font-size: 10px; letter-spacing: .12em; text-align: center;
 }
 .fu-grouprow .th-first { text-align: left; }
-.fu-gr-audit { color: var(--blue); }
+.fu-gr-audit { color: var(--ds-accent); }
 .fu-th-week { width: 108px; }
 .fu-th-s { min-width: 62px; }
 .fu-table td { padding: 10px 8px; vertical-align: middle; }
 
 /* Cabecera de semana: una celda con rowspan por bloque, como el Sheet. */
 .fu-week {
-  background: #fafbfd; border-left: 3px solid var(--navy);
+  background: var(--ds-surface-2); border-left: 3px solid var(--ds-heading);
   text-align: center; line-height: 1.25;
 }
-.fu-week-num { display: block; font-weight: 800; color: var(--navy); font-size: 13px; }
-.fu-week-range { display: block; font-size: 11px; color: var(--mut); }
-.fu-date { font-weight: 700; color: var(--slate); font-variant-numeric: tabular-nums; }
+.fu-week-num { display: block; font-weight: 800; color: var(--ds-heading); font-size: 13px; }
+.fu-week-range { display: block; font-size: 11px; color: var(--ds-muted); }
+.fu-date { font-weight: 700; color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
 
 .fu-cov {
   display: inline-block; padding: 2px 8px; border-radius: 6px;
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
-  background: #f1f5f9; color: var(--slate-2);
+  background: var(--ds-surface-3); color: var(--ds-ink-2);
 }
-.fu-cov.on { background: var(--blue-soft); color: var(--blue); }
+.fu-cov.on { background: var(--ds-soft-info); color: var(--ds-info-ink); }
 
 .fu-cell { text-align: center; line-height: 1.2; }
-.fu-c-date { display: block; font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.fu-c-date { display: block; font-size: 11px; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
 .fu-c-note {
   display: block; margin-top: 2px; font-weight: 800; font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-.fu-c-flag { display: block; margin-top: 2px; font-size: 11px; color: var(--mut-2); }
-.fu-st-A { color: var(--green); }
-.fu-st-R { color: var(--amber); }
-.fu-st-T { color: var(--red); }
-.fu-on { background: rgba(47, 107, 219, .06); }
-.fu-nosched { font-size: 12px; color: var(--mut-2); font-style: italic; }
-
-/* ============ RESPONSIVE ============ */
-@media (max-width: 1100px) {
-  .hero { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .act2, .act3 { grid-template-columns: 1fr; }
-}
-
-/* ══════════ DARK MODE ══════════ */
-/* --navy NO se voltea: sigue siendo fondo de hero/botones/avatars (navy + texto
-   blanco funciona en ambos temas). Los usos de --navy como TEXTO se corrigen
-   selector por selector mas abajo. */
-[data-coreui-theme="dark"] .rpt {
-  --bg: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #24241E;
-  --ink: #F4F4F0;
-  --slate: #C9C9C1;
-  --slate-2: #A0A099;
-  --mut: #8A8A80;
-  --mut-2: #8A8A80;
-  --eyebrow: #8A8A80;
-  --green: #34D399;
-  --green-ink: #34D399;
-  --green-soft: rgba(16, 185, 129, .14);
-  --red: #F87171;
-  --red-deep: #F87171;
-  --red-soft: rgba(239, 68, 68, .14);
-  --amber: #FBBF24;
-  --amber-ink: #FBBF24;
-  --amber-soft: rgba(245, 158, 11, .14);
-  --blue: #60A5FA;
-  --blue-soft: rgba(59, 130, 246, .14);
-  --indigo: #818CF8;
-  --indigo-ink: #A5B4FC;
-  --donut-empty: #6E6E64;
-}
-/* usos de --navy como texto */
-
-[data-coreui-theme="dark"] .rpt .aula-name,
-[data-coreui-theme="dark"] .rpt .filter-title { color: #8FAADC; }
-/* superficies */
-
-[data-coreui-theme="dark"] .rpt .card { background: #1A1A14; }
-
-[data-coreui-theme="dark"] .rpt .foco,
-[data-coreui-theme="dark"] .rpt .chip,
-[data-coreui-theme="dark"] .rpt .select,
-[data-coreui-theme="dark"] .rpt .input,
-[data-coreui-theme="dark"] .rpt .pager-btn { background: #1F1F1A; }
-[data-coreui-theme="dark"] .rpt .v-tab:hover { background: #2A2A22; }
-
-[data-coreui-theme="dark"] .rpt .row-clickable:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .rpt .detail-table thead tr { background: #1F1F1A; }
-[data-coreui-theme="dark"] .rpt .fu-week { background: #1F1F1A; }
-[data-coreui-theme="dark"] .rpt .fu-cov { background: #24241E; }
-[data-coreui-theme="dark"] .rpt .fu-on { background: rgba(143, 170, 220, .10); }
-[data-coreui-theme="dark"] .rpt .foco-red.active { border-color: rgba(239, 68, 68, .4); box-shadow: 0 0 0 3px rgba(239, 68, 68, .1); }
-[data-coreui-theme="dark"] .rpt .foco-amber.active { border-color: rgba(245, 158, 11, .4); box-shadow: 0 0 0 3px rgba(245, 158, 11, .1); }
-[data-coreui-theme="dark"] .rpt .teacher-name { color: #DDDDD6; }
+.fu-c-flag { display: block; margin-top: 2px; font-size: 11px; color: var(--ds-muted); }
+.fu-st-A { color: var(--ds-ok); }
+.fu-st-R { color: var(--ds-warn); }
+.fu-st-T { color: var(--ds-bad); }
+.fu-on { background: var(--ds-soft-info); }
+.fu-nosched { font-size: 12px; color: var(--ds-muted); font-style: italic; }
 </style>

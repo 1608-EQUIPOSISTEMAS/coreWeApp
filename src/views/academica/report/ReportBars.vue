@@ -13,8 +13,7 @@ import { isDark } from '@/utils/chartTheme'
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend)
 
 // Barras del informe académico. `grafico` = { categorias, series: [{ nombre, tono, datos }] }
-// (features/reporte-academico/reportCharts.js). El canvas no lee variables CSS:
-// los colores repiten los valores de los tokens --ds-* claro/oscuro.
+// (features/reporte-academico/reportCharts.js).
 const props = defineProps({
   grafico: { type: Object, required: true },
   titulo: { type: String, required: true },
@@ -25,11 +24,17 @@ const props = defineProps({
   alto: { type: Number, default: 240 }
 })
 
-const TONOS = {
-  claro: { ok: '#12A150', bad: '#D64545', warn: '#E08A1E', accent: '#3A63B8', soft: '#C9D6EC', meta: '#94A3B8' },
-  oscuro: { ok: '#34D399', bad: '#F87171', warn: '#E9B872', accent: '#8FAADC', soft: '#3A4A66', meta: '#8A8A80' }
-}
-const tonos = computed(() => (isDark.value ? TONOS.oscuro : TONOS.claro))
+// El canvas no lee variables CSS, así que el color se resuelve en JS desde los
+// mismos tokens --ds-*: una sola fuente de verdad en vez de repetir los hex.
+// `isDark` solo está para que el computed se recalcule al cambiar el tema.
+const TOKEN_POR_TONO = { ok: '--ds-ok', bad: '--ds-bad', warn: '--ds-warn', accent: '--ds-accent', soft: '--ds-bar', meta: '--ds-muted' }
+const tonos = computed(() => {
+  void isDark.value
+  const estilo = getComputedStyle(document.documentElement)
+  return Object.fromEntries(
+    Object.entries(TOKEN_POR_TONO).map(([tono, token]) => [tono, estilo.getPropertyValue(token).trim()])
+  )
+})
 
 // Nota /20 contra la meta: rojo bajo 15, ámbar hasta la meta, verde desde ella.
 const colorPorNota = (n) => (n < 15 ? tonos.value.bad : n < (props.meta ?? 17) ? tonos.value.warn : tonos.value.ok)

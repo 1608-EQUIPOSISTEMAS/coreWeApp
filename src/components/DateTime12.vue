@@ -209,7 +209,11 @@
 /* ═══════════════════════════════════════════════
    FLATPICKR OVERRIDES (Asegura integración)
 ═══════════════════════════════════════════════ */
-:deep(.flatpickr-input) {
+/* Con altInput, flatpickr crea un SEGUNDO input visible (clase form-control,
+   sin el atributo scoped): Bootstrap lo pintaba blanco en modo oscuro. Se le
+   aplican las mismas reglas que al input original. */
+:deep(.flatpickr-input),
+:deep(.dt12__input--date.form-control) {
   border: none !important;
   background: transparent !important;
   padding: 0 !important;
@@ -223,11 +227,13 @@
   cursor: pointer;
 }
 
-:deep(.flatpickr-input::placeholder) {
+:deep(.flatpickr-input::placeholder),
+:deep(.dt12__input--date.form-control::placeholder) {
   color: var(--slate-400, #94a3b8) !important;
 }
 
-:deep(.flatpickr-input:disabled) {
+:deep(.flatpickr-input:disabled),
+:deep(.dt12__input--date.form-control:disabled) {
   color: var(--slate-400, #94a3b8) !important;
   cursor: not-allowed !important;
 }

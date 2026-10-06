@@ -1,256 +1,264 @@
 <template>
-  <div class="board-shell">
-    <!-- ════ HEADER ════ -->
-    <header class="crono-head">
-      <div class="month-badge">{{ monthAbbr }}</div>
-      <div class="crono-title">
-        <!-- El aviso de simulación va en el título y no en un tooltip: esta
-             vista es idéntica a la real y se usa para presentar, así que tiene
-             que ser imposible confundir un plan con la programación vigente. -->
-        <div class="eyebrow" :class="{ 'is-sim': isPlanPreview }">
-          <template v-if="isPlanPreview">SIMULACIÓN · NO ES EL CRONOGRAMA REAL{{ planName ? ` · ${planName}` : '' }}</template>
-          <template v-else>VISTA DE SOLO LECTURA · CRONOGRAMA</template>
+  <div class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <div class="sb-title-row">
+          <h1 class="ds-title">Cronograma</h1>
+          <!-- El aviso de simulación va pegado al título y no en un tooltip: esta
+               vista es idéntica a la real y se usa para presentar, así que tiene
+               que ser imposible confundir un plan con la programación vigente. -->
+          <span v-if="isPlanPreview" class="ds-pill warn">
+            <i class="fa-solid fa-flask" aria-hidden="true"></i>
+            Simulación · no es el cronograma real{{ planName ? ` · ${planName}` : '' }}
+          </span>
         </div>
-        <h1>{{ periodLabel }}</h1>
+        <p class="ds-sub">{{ periodLabel }} · {{ kpiSums.count }} ediciones · solo lectura</p>
       </div>
-      <div class="grow"></div>
 
-      <div class="month-nav">
-        <button type="button" class="arrow" @click="changeMonth(-1)" title="Mes anterior">‹</button>
-        <select v-model.number="selectedMonth" @change="fetchAll" class="seg-select">
-          <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
+      <div class="ds-head-actions">
+        <div class="sb-month-nav">
+          <button type="button" class="btn-icon sb-nav-btn" title="Mes anterior" aria-label="Mes anterior" @click="changeMonth(-1)">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <select v-model.number="selectedMonth" class="ds-input sb-ctl" aria-label="Mes" @change="fetchAll">
+            <option v-for="(m, i) in months" :key="i" :value="i + 1">{{ m }}</option>
+          </select>
+          <select v-model.number="selectedYear" class="ds-input sb-ctl" aria-label="Año" @change="fetchAll">
+            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+          </select>
+          <button type="button" class="btn-icon sb-nav-btn" title="Mes siguiente" aria-label="Mes siguiente" @click="changeMonth(1)">
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <input v-model.trim="search" class="ds-input sb-ctl sb-search" type="search" aria-label="Buscar edición" placeholder="Buscar curso, docente, código…" />
+
+        <select v-model="lineFilter" class="ds-input sb-ctl" aria-label="Línea">
+          <option value="">Todas las líneas</option>
+          <option v-for="l in courseLines" :key="l" :value="l">{{ l }}</option>
         </select>
-        <select v-model.number="selectedYear" @change="fetchAll" class="seg-select">
-          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-        </select>
-        <button type="button" class="arrow" @click="changeMonth(1)" title="Mes siguiente">›</button>
+
+        <button type="button" class="btn-exec btn-exec-outline" @click="fetchAll">
+          <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Actualizar
+        </button>
       </div>
-
-      <div class="crono-search">
-        <span>⌕</span>
-        <input v-model.trim="search" type="search" placeholder="Buscar curso, docente, código…" />
-      </div>
-
-      <select v-model="lineFilter" class="line-filter">
-        <option value="">Todas las líneas</option>
-        <option v-for="l in courseLines" :key="l" :value="l">{{ l }}</option>
-      </select>
-
-      <button type="button" class="refresh" @click="fetchAll" title="Recargar">↻</button>
     </header>
 
-    <!-- ════ KPIs ════ -->
-    <div class="kpis">
+    <div class="ds-kpis">
       <!-- inscripciones con su desglose: de qué canal sale cada alumno -->
-      <div class="kpi kpi-canales">
-        <div class="lbl"><span class="dot" style="background:var(--c-orange)"></span>Inscripciones</div>
-        <div class="val">
-          <span v-if="isLoading" class="skel-kpi" style="width:320px"></span>
-          <template v-else>
-            <b class="big">{{ kpiSums.inscritos }}</b>
-            <span class="eq">=</span>
-            <span v-for="(c, i) in AULA_CHANNELS" :key="c.key" class="chit" :title="c.desc">
-              <i v-if="i" class="sep">/</i>
-              <span class="dot" :style="{ background: c.color }"></span>{{ c.title }}<b>{{ kpiSums.ch[c.key] }}</b>
+      <div class="ds-kpi sb-kpi-canales">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span v-if="isLoading" class="skel-kpi"></span>
+            <span v-else class="ds-kpi-value">{{ kpiSums.inscritos }}</span>
+          </div>
+          <span class="ds-kpi-label">Inscripciones</span>
+          <div v-if="!isLoading" class="sb-channels">
+            <span v-for="c in AULA_CHANNELS" :key="c.key" class="sb-chit" :title="c.desc">
+              <span class="sb-dot" :style="{ background: c.color }"></span>{{ c.title }} <b>{{ kpiSums.ch[c.key] }}</b>
             </span>
-          </template>
+          </div>
         </div>
       </div>
 
-      <div class="kpi">
-        <div class="lbl"><span class="dot" style="background:var(--c-sky)"></span>Programas</div>
-        <div class="val">
-          <span v-if="isLoading" class="skel-kpi" style="width:48px"></span>
-          <template v-else><b>{{ kpiSums.count }}</b><span>ediciones</span></template>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span v-if="isLoading" class="skel-kpi"></span>
+            <span v-else class="ds-kpi-value">{{ kpiSums.count }}</span>
+          </div>
+          <span class="ds-kpi-label">Programas</span>
+          <span class="ds-kpi-note">Ediciones del mes con los filtros puestos</span>
         </div>
       </div>
 
-      <div class="kpi">
-        <div class="lbl"><span class="dot" style="background:var(--c-purple)"></span>Ventas vs Objetivo</div>
-        <div class="val">
-          <span v-if="isLoading" class="skel-kpi"></span>
-          <template v-else>
-            <b>{{ kpiVsObjetivo.ventas }}</b>
-            <span class="vs">/ {{ kpiVsObjetivo.objetivo }}</span>
-            <span class="kpct" :style="{ background: soft(kpiVsObjetivo.color), color: kpiVsObjetivo.color }">{{ kpiVsObjetivo.pct }}%</span>
-          </template>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-bullseye"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span v-if="isLoading" class="skel-kpi"></span>
+            <template v-else>
+              <span class="ds-kpi-value">{{ kpiVsObjetivo.ventas }}</span>
+              <span class="sb-kpct" :style="{ background: soft(kpiVsObjetivo.color), color: kpiVsObjetivo.color }">{{ kpiVsObjetivo.pct }}%</span>
+            </template>
+          </div>
+          <span class="ds-kpi-label">Ventas vs objetivo</span>
+          <span class="ds-kpi-note">Objetivo del mes: {{ kpiVsObjetivo.objetivo }}</span>
         </div>
       </div>
-
     </div>
 
-    <!-- ════ TABLA ════ -->
-    <div class="crono-tbl">
-      <table class="crono">
-        <thead>
-          <tr>
-            <th title="Cuenta apertura / Cuenta programada">CA · CP</th>
-            <th>CURSO · IDENTIFICACIÓN</th>
-            <th>CRONOGRAMA</th>
-            <th>DOCENTE</th>
-            <th>SEGUIMIENTO</th>
-            <th class="th-group">
-              <div class="g-title">AULA / INSCRITOS</div>
-              <div class="g-cols"><span>VEN</span><span>SEG</span><span>B2B</span><span>MEM</span><span>BEC</span><span class="hot">AULA</span></div>
-            </th>
-            <th>OBJETIVO</th>
-            <th class="c-num" title="Consultas (leads)">CONS.</th>
-            <th class="c-num">OBS.</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <!-- skeleton -->
-          <template v-if="isLoading">
-            <tr v-for="n in 7" :key="'sk' + n" class="skrow">
-              <td v-for="c in 9" :key="c"><span class="sk" :style="{ width: (55 + ((n + c) * 13) % 40) + '%' }"></span></td>
+    <section class="sb-board">
+      <div class="crono-tbl">
+        <table class="crono">
+          <thead>
+            <tr>
+              <th title="Cuenta apertura / Cuenta programada">CA · CP</th>
+              <th>CURSO · IDENTIFICACIÓN</th>
+              <th>CRONOGRAMA</th>
+              <th>DOCENTE</th>
+              <th>SEGUIMIENTO</th>
+              <th class="th-group">
+                <div class="g-title">AULA / INSCRITOS</div>
+                <div class="g-cols"><span>VEN</span><span>SEG</span><span>B2B</span><span>MEM</span><span>BEC</span><span class="hot">AULA</span></div>
+              </th>
+              <th>OBJETIVO</th>
+              <th class="c-num" title="Consultas (leads)">CONS.</th>
+              <th class="c-num">OBS.</th>
             </tr>
-          </template>
+          </thead>
 
-          <!-- contenido -->
-          <template v-else>
-            <template v-for="week in displayWeeks" :key="week.schedule">
-              <tr class="week-row">
-                <td :colspan="9">
-                  <div class="week-bar" :class="{ collapsed: !week.isOpen }" @click="toggleWeek(week.schedule)">
-                    <button type="button" class="caret"><span>▾</span></button>
-                    <span class="wk-chip"></span>
-                    <h3>Semana {{ week.schedule }}</h3>
-                    <span class="ed-pill">{{ week.count }} ediciones</span>
-                    <span class="grow"></span>
-                    <span class="stat">{{ week.summary }}</span>
-                  </div>
-                </td>
+          <tbody>
+            <!-- skeleton -->
+            <template v-if="isLoading">
+              <tr v-for="n in 7" :key="'sk' + n" class="skrow">
+                <td v-for="c in 9" :key="c"><span class="ds-skel" :style="{ width: (55 + ((n + c) * 13) % 40) + '%' }"></span></td>
               </tr>
-
-              <template v-for="it in (week.isOpen ? week.items : [])" :key="it.e.edition_num_id">
-                <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta', 'segrow-' + (it.e.cat_segment || 'none').toLowerCase()]" :style="{ '--seg': it.sc.tint }" @click="openAulaInfo(it)">
-                  <!-- CA / CP -->
-                  <td>
-                    <div class="cacp">
-                      <div class="kv"><span class="k">CA</span><span class="v">{{ it.e.calc_da ?? 0 }}</span></div>
-                      <div class="kv"><span class="k">CP</span><span class="v">{{ it.e.calc_dp ?? 0 }}</span></div>
-                    </div>
-                  </td>
-
-                  <!-- Curso / Identificación -->
-                  <td class="c-curso">
-                    <div :class="it.depth > 0 ? 'child-wrap' : null">
-                      <div v-if="it.depth > 0" class="child-connector" :style="{ marginLeft: ((it.depth - 1) * 18) + 'px' }"><span class="node"></span></div>
-                      <div class="curso">
-                        <div class="top">
-                          <span class="lvl-badge" :style="{ background: soft(it.sc.color), color: it.sc.color }">{{ it.e.cat_segment || '—' }}</span>
-                          <span class="name">{{ it.e.program_abreviature || '—' }}</span>
-                          <span v-if="isNewMet(it.e)" class="nm-badge" title="Curso con la nueva metodología">NM</span>
-                        </div>
-                        <div class="area">{{ lineLabel(it.e) }} · {{ typeLabel(it.e) }}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- Cronograma -->
-                  <td>
-                    <div class="cro">
-                      <div class="dates">
-                        <span class="date-chip">{{ fmtShort(it.e.start_date) }}</span>
-                        <span class="arrow-to">→</span>
-                        <span class="date-end">{{ fmtShort(it.e.end_date) }}</span>
-                        <span class="ses" v-if="it.e.program_sessions">· {{ it.e.program_sessions }} ses</span>
-                      </div>
-                      <div class="when"><b>{{ daysLabel(it.e) }}</b> · {{ hourLabel(it.e) }}</div>
-                    </div>
-                  </td>
-
-                  <!-- Docente: clic = copiar TODOS los docentes, no abre el modal.
-                       Con más de 2, el hover muestra un popover con la lista completa. -->
-                  <td class="doc-copy" @click.stop="copyDocentes(it.e)" :title="docentes(it.e).length > 2 ? '' : 'Clic para copiar: ' + docentes(it.e).join(', ')">
-                    <div class="docs">
-                      <div class="lbl">{{ docentes(it.e).length > 1 ? 'DOCENTES' : 'DOCENTE' }}</div>
-                      <div v-for="(d, i) in docentes(it.e).slice(0, 2)" :key="i" class="name" :class="{ multi: docentes(it.e).length > 1 }" :title="d">{{ d }}</div>
-                      <div v-if="docentes(it.e).length > 2" class="more">+{{ docentes(it.e).length - 2 }} más</div>
-                      <div v-if="docentes(it.e).length > 2" class="doc-pop">
-                        <div class="lbl">DOCENTES ({{ docentes(it.e).length }})</div>
-                        <div v-for="(d, i) in docentes(it.e)" :key="'p' + i" class="pop-name">{{ d }}</div>
-                        <div class="pop-hint">Clic para copiar todos</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- Seguimiento -->
-                  <td>
-                    <div class="segui">
-                      <div class="item"><span class="g" :class="it.e.expedient ? 'ok' : 'no'"></span>Ficha</div>
-                      <div class="item"><span class="g" :class="it.e.confirmation ? 'ok' : 'no'"></span>Docente</div>
-                    </div>
-                  </td>
-
-                  <!-- Aula / Inscritos -->
-                  <td>
-                    <div class="aula-cell">
-                      <span class="acol" :class="{ zero: !it.e.cnt_ventas }">{{ it.e.cnt_ventas ?? 0 }}</span>
-                      <span class="acol" :class="{ zero: !it.e.cnt_segui }">{{ it.e.cnt_segui ?? 0 }}</span>
-                      <span class="acol" :class="{ zero: !it.e.cnt_b2b }">{{ it.e.cnt_b2b ?? 0 }}</span>
-                      <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
-                      <span class="acol bec">{{ it.e.cnt_becas ?? 0 }}</span>
-                      <span class="acol total" :class="{ empty: !(it.e.cnt_aula ?? 0) }"
-                        :style="(it.e.cnt_aula ?? 0) ? { background: aulaColor(it.e.cnt_aula) } : null">{{ it.e.cnt_aula ?? 0 }}</span>
-                    </div>
-                  </td>
-
-                  <!-- Objetivo -->
-                  <td>
-                    <div class="obj">
-                      <template v-if="it.e.meta_vacantes">
-                        <div class="orow">
-                          <span class="frac"><b>{{ it.e.cnt_ventas ?? 0 }}</b> <span class="t">/ {{ it.e.meta_vacantes }}</span></span>
-                          <span class="pct" :style="{ background: soft(it.fl.color), color: it.fl.color }">{{ it.fl.pct }}%</span>
-                        </div>
-                        <div class="track"><i :style="{ width: it.fl.w + '%', background: it.fl.color }"></i></div>
-                      </template>
-                      <span v-else class="sinmeta-txt">Sin meta</span>
-                    </div>
-                  </td>
-
-                  <!-- Consultas -->
-                  <td class="cons" :class="{ zero: !it.e.cnt_consultas }">{{ it.e.cnt_consultas ?? 0 }}</td>
-
-                  <!-- Obs -->
-                  <td class="obs" :title="it.e.notes">{{ it.e.notes || '—' }}</td>
-                </tr>
-              </template>
             </template>
 
-            <!-- vacío -->
-            <tr v-if="!displayWeeks.length">
-              <td :colspan="9">
-                <div class="empty-state">
-                  <div class="icon">⌖</div>
-                  <div class="big">No hay ediciones para este filtro</div>
-                  <div class="sub">Prueba con otro mes, línea o término de búsqueda.</div>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+            <!-- contenido -->
+            <template v-else>
+              <template v-for="week in displayWeeks" :key="week.schedule">
+                <tr class="week-row">
+                  <td :colspan="9">
+                    <div class="week-bar" :class="{ collapsed: !week.isOpen }" @click="toggleWeek(week.schedule)">
+                      <button type="button" class="caret"><span>▾</span></button>
+                      <span class="wk-chip"></span>
+                      <h3>Semana {{ week.schedule }}</h3>
+                      <span class="ed-pill">{{ week.count }} ediciones</span>
+                      <span class="grow"></span>
+                      <span class="stat">{{ week.summary }}</span>
+                    </div>
+                  </td>
+                </tr>
 
-    <div class="crono-foot">
-      <span class="dot"></span>
-      <span>Haz clic en un curso para ver de dónde sale su AULA · Ficha / Confirmado: punto verde = Sí · <span class="nm-badge">NM</span> = curso con la nueva metodología.</span>
-    </div>
+                <template v-for="it in (week.isOpen ? week.items : [])" :key="it.e.edition_num_id">
+                  <tr class="ed" :class="[it.fam ? 'fam' : 'solo', 'clickable', { fused: it.fused }, it.e.meta_vacantes ? 'meta' : 'sinmeta', 'segrow-' + (it.e.cat_segment || 'none').toLowerCase()]" :style="{ '--seg': it.sc.tint }" @click="openAulaInfo(it)">
+                    <!-- CA / CP -->
+                    <td>
+                      <div class="cacp">
+                        <div class="kv"><span class="k">CA</span><span class="v">{{ it.e.calc_da ?? 0 }}</span></div>
+                        <div class="kv"><span class="k">CP</span><span class="v">{{ it.e.calc_dp ?? 0 }}</span></div>
+                      </div>
+                    </td>
+
+                    <!-- Curso / Identificación -->
+                    <td class="c-curso">
+                      <div :class="it.depth > 0 ? 'child-wrap' : null">
+                        <div v-if="it.depth > 0" class="child-connector" :style="{ marginLeft: ((it.depth - 1) * 18) + 'px' }"><span class="node"></span></div>
+                        <div class="curso">
+                          <div class="top">
+                            <span class="lvl-badge" :style="{ background: soft(it.sc.color), color: it.sc.color }">{{ it.e.cat_segment || '—' }}</span>
+                            <span class="name">{{ it.e.program_abreviature || '—' }}</span>
+                            <span v-if="isNewMet(it.e)" class="nm-badge" title="Curso con la nueva metodología">NM</span>
+                          </div>
+                          <div class="area">{{ lineLabel(it.e) }} · {{ typeLabel(it.e) }}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Cronograma -->
+                    <td>
+                      <div class="cro">
+                        <div class="dates">
+                          <span class="date-chip">{{ fmtShort(it.e.start_date) }}</span>
+                          <span class="arrow-to">→</span>
+                          <span class="date-end">{{ fmtShort(it.e.end_date) }}</span>
+                          <span class="ses" v-if="it.e.program_sessions">· {{ it.e.program_sessions }} ses</span>
+                        </div>
+                        <div class="when"><b>{{ daysLabel(it.e) }}</b> · {{ hourLabel(it.e) }}</div>
+                      </div>
+                    </td>
+
+                    <!-- Docente: clic = copiar TODOS los docentes, no abre el modal.
+                         Con más de 2, el hover muestra un popover con la lista completa. -->
+                    <td class="doc-copy" @click.stop="copyDocentes(it.e)" :title="docentes(it.e).length > 2 ? '' : 'Clic para copiar: ' + docentes(it.e).join(', ')">
+                      <div class="docs">
+                        <div class="lbl">{{ docentes(it.e).length > 1 ? 'DOCENTES' : 'DOCENTE' }}</div>
+                        <div v-for="(d, i) in docentes(it.e).slice(0, 2)" :key="i" class="name" :class="{ multi: docentes(it.e).length > 1 }" :title="d">{{ d }}</div>
+                        <div v-if="docentes(it.e).length > 2" class="more">+{{ docentes(it.e).length - 2 }} más</div>
+                        <div v-if="docentes(it.e).length > 2" class="doc-pop">
+                          <div class="lbl">DOCENTES ({{ docentes(it.e).length }})</div>
+                          <div v-for="(d, i) in docentes(it.e)" :key="'p' + i" class="pop-name">{{ d }}</div>
+                          <div class="pop-hint">Clic para copiar todos</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Seguimiento -->
+                    <td>
+                      <div class="segui">
+                        <div class="item"><span class="g" :class="it.e.expedient ? 'ok' : 'no'"></span>Ficha</div>
+                        <div class="item"><span class="g" :class="it.e.confirmation ? 'ok' : 'no'"></span>Docente</div>
+                      </div>
+                    </td>
+
+                    <!-- Aula / Inscritos -->
+                    <td>
+                      <div class="aula-cell">
+                        <span class="acol" :class="{ zero: !it.e.cnt_ventas }">{{ it.e.cnt_ventas ?? 0 }}</span>
+                        <span class="acol" :class="{ zero: !it.e.cnt_segui }">{{ it.e.cnt_segui ?? 0 }}</span>
+                        <span class="acol" :class="{ zero: !it.e.cnt_b2b }">{{ it.e.cnt_b2b ?? 0 }}</span>
+                        <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
+                        <span class="acol bec">{{ it.e.cnt_becas ?? 0 }}</span>
+                        <span class="acol total" :class="{ empty: !(it.e.cnt_aula ?? 0) }"
+                          :style="(it.e.cnt_aula ?? 0) ? { background: aulaColor(it.e.cnt_aula) } : null">{{ it.e.cnt_aula ?? 0 }}</span>
+                      </div>
+                    </td>
+
+                    <!-- Objetivo -->
+                    <td>
+                      <div class="obj">
+                        <template v-if="it.e.meta_vacantes">
+                          <div class="orow">
+                            <span class="frac"><b>{{ it.e.cnt_ventas ?? 0 }}</b> <span class="t">/ {{ it.e.meta_vacantes }}</span></span>
+                            <span class="pct" :style="{ background: soft(it.fl.color), color: it.fl.color }">{{ it.fl.pct }}%</span>
+                          </div>
+                          <div class="track"><i :style="{ width: it.fl.w + '%', background: it.fl.color }"></i></div>
+                        </template>
+                        <span v-else class="sinmeta-txt">Sin meta</span>
+                      </div>
+                    </td>
+
+                    <!-- Consultas -->
+                    <td class="cons" :class="{ zero: !it.e.cnt_consultas }">{{ it.e.cnt_consultas ?? 0 }}</td>
+
+                    <!-- Obs -->
+                    <td class="obs" :title="it.e.notes">{{ it.e.notes || '—' }}</td>
+                  </tr>
+                </template>
+              </template>
+
+              <!-- vacío -->
+              <tr v-if="!displayWeeks.length">
+                <td :colspan="9">
+                  <p class="ds-empty ds-empty--lista">No hay ediciones para este filtro. Prueba con otro mes, línea o término de búsqueda.</p>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="crono-foot">
+        <span class="dot"></span>
+        <span>Haz clic en un curso para ver de dónde sale su AULA · Ficha / Confirmado: punto verde = Sí · <span class="nm-badge">NM</span> = curso con la nueva metodología.</span>
+      </div>
+    </section>
 
     <!-- ════ RESÚMENES DEL MES ════ -->
     <div class="sumgrid">
       <div class="sumcard">
-        <div class="sum-title">CANTIDAD DE PROGRAMAS POR CATEGORÍA</div>
+        <h3 class="sum-title">Programas por categoría</h3>
         <table class="sumtbl">
           <thead><tr><th v-for="c in catSummary.cols" :key="c.label">{{ c.label }}</th><th class="tot">TOTAL</th></tr></thead>
           <tbody><tr><td v-for="c in catSummary.cols" :key="c.label">{{ c.n }}</td><td class="tot">{{ catSummary.total }}</td></tr></tbody>
         </table>
       </div>
-      <div class="sumcard sum-lines">
-        <div class="sum-title">CANTIDAD DE PROGRAMAS PROGRAMADOS POR LÍNEAS</div>
+      <div class="sumcard">
+        <h3 class="sum-title">Programas programados por línea</h3>
         <table class="sumtbl">
           <thead><tr><th v-for="l in lineSummary" :key="l.label">{{ l.label }}</th></tr></thead>
           <tbody><tr><td v-for="l in lineSummary" :key="l.label">{{ l.n }}</td></tr></tbody>
@@ -260,7 +268,7 @@
 
     <div class="sumgrid">
       <div class="sumcard">
-        <div class="sum-title">TIPOS DE CURSO</div>
+        <h3 class="sum-title">Tipos de curso</h3>
         <table class="deftbl">
           <thead><tr><th>N°</th><th>TIPO</th><th>N° DE TIPO</th><th>DEFINICIÓN</th></tr></thead>
           <tbody>
@@ -274,7 +282,7 @@
         </table>
       </div>
       <div class="sumcard">
-        <div class="sum-title">SEGMENTOS</div>
+        <h3 class="sum-title">Segmentos</h3>
         <table class="deftbl">
           <thead><tr><th>N°</th><th>SEG</th><th>N° PROG</th><th>DEFINICIÓN</th></tr></thead>
           <tbody>
@@ -290,21 +298,18 @@
     </div>
 
     <!-- ════ MODAL: de dónde sale el AULA (Información: todos · Alumnos: líderes/gerencia) ════ -->
-    <div v-if="aulaModal" class="am-overlay" @click.self="aulaModal = null">
-      <div class="am-card" :class="{ wide: amTab === 'alumnos' }">
+    <!-- La tabla de Alumnos (5 columnas con correo) pide más ancho que la explicación. -->
+    <BaseModal :model-value="!!aulaModal" title="¿De dónde sale el AULA?" :size="amTab === 'alumnos' ? 'lg' : 'md'" @update:model-value="aulaModal = null">
+      <template v-if="aulaModal">
         <div class="am-head">
-          <div>
-            <div class="am-eyebrow">¿DE DÓNDE SALE EL AULA?</div>
-            <div class="am-title">{{ aulaModal.e.program_abreviature || '—' }}</div>
-            <div class="am-sub">{{ lineLabel(aulaModal.e) }} · {{ typeLabel(aulaModal.e) }}</div>
-          </div>
-          <button type="button" class="am-close" @click="aulaModal = null">✕</button>
+          <div class="am-title">{{ aulaModal.e.program_abreviature || '—' }}</div>
+          <div class="am-sub">{{ lineLabel(aulaModal.e) }} · {{ typeLabel(aulaModal.e) }}</div>
         </div>
 
-        <div class="am-tabs">
-          <button type="button" :class="{ on: amTab === 'info' }" @click="amTab = 'info'">Información</button>
-          <button type="button" :class="{ on: amTab === 'arbol' }" @click="amTab = 'arbol'">Árbol</button>
-          <button v-if="canSeeStudents" type="button" :class="{ on: amTab === 'alumnos' }" @click="showStudentsTab">
+        <div class="ds-tabs am-tabs" role="tablist" aria-label="Detalle del aula">
+          <button type="button" role="tab" :aria-selected="String(amTab === 'info')" @click="amTab = 'info'">Información</button>
+          <button type="button" role="tab" :aria-selected="String(amTab === 'arbol')" @click="amTab = 'arbol'">Árbol</button>
+          <button v-if="canSeeStudents" type="button" role="tab" :aria-selected="String(amTab === 'alumnos')" @click="showStudentsTab">
             Alumnos<span v-if="amStudents"> · {{ amStudents.length }}</span>
           </button>
         </div>
@@ -383,7 +388,7 @@
                   <td class="am-extra">
                     <!-- Promo LAPTOP (descuento "LAPTOP PROMO"): el alumno trae su equipo -->
                     <span v-if="s.has_laptop_promo" class="am-laptop" title="Esta inscripcion incluye laptop como beneficio">
-                      <i class="fa-solid fa-laptop"></i> Traerá laptop
+                      <i class="fa-solid fa-laptop" aria-hidden="true"></i> Traerá laptop
                     </span>
                     <template v-if="s.ch.tag === 'SEG' && s.parent_codes?.length">Viene de {{ s.parent_codes.join(', ') }}</template>
                     <template v-else-if="s.ch.tag === 'MEM' && s.membership_tier_name">{{ s.membership_tier_name }}</template>
@@ -394,8 +399,8 @@
             </table>
           </div>
         </template>
-      </div>
-    </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -405,6 +410,7 @@ import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { objetivoDeCanales } from '@/shared/lib/cronograma'
 import { ServiceKeys } from '@/services'
+import BaseModal from '@/components/BaseModal.vue'
 
 const editionService = inject(ServiceKeys.Edition)
 const dashboardService = inject(ServiceKeys.Dashboard)
@@ -428,24 +434,23 @@ const CURRENT_YEAR = new Date().getFullYear()
 const years = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i)
 const MABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-// Paleta por segmento (badge). Las líneas/tipos reales vienen de la data.
-// Colores vía tokens CSS (--c-*): en dark el <style> los aclara y todo esto se adapta solo
-// `color` = tinta del badge (tokens oscuros, legibles sobre blanco).
-// `tint` = hue vivo para el fondo de la fila: los --c-* mezclados al 13% dan un beige/gris
-// sucio (el ámbar #a96208 deja de leerse naranja); el hue saturado sí pastelea en ambos temas.
+// Paleta por segmento, solo con tokens del sistema de diseño: claro y oscuro salen solos.
+// `color` = tinta del badge (variante -ink, con contraste AA sobre su pastel).
+// `tint` = hue para el fondo de la fila. Donde la tinta es parda (ámbar, rojo) se usa el
+// relleno: el ámbar oscuro mezclado al 13% da un beige sucio que ya no se lee naranja.
 const SEG_COLORS = {
-  A1: { color: 'var(--c-blue)', tint: '#3b82f6' },
-  A2: { color: 'var(--c-amber)', tint: '#f59e0b' },
-  A3: { color: 'var(--c-teal)', tint: '#14b8a6' },
-  A4: { color: 'var(--c-orange)', tint: '#f97316' },
-  A5: { color: 'var(--c-red)', tint: '#ef4444' },
-  A6: { color: 'var(--c-violet)', tint: '#7c3aed' },
-  A7: { color: 'var(--c-navy)', tint: '#1e3a8a' }, // CERRADO
+  A1: { color: 'var(--ds-info-ink)', tint: 'var(--ds-info-ink)' },
+  A2: { color: 'var(--ds-warn-ink)', tint: 'var(--ds-warn)' },
+  A3: { color: 'var(--ds-cyan-ink)', tint: 'var(--ds-cyan-ink)' },
+  A4: { color: 'var(--ds-orange-ink)', tint: 'var(--ds-orange-ink)' },
+  A5: { color: 'var(--ds-bad-ink)', tint: 'var(--ds-bad)' },
+  A6: { color: 'var(--ds-violet-ink)', tint: 'var(--ds-violet-ink)' },
+  A7: { color: 'var(--ds-heading)', tint: 'var(--ds-brand)' }, // CERRADO
 }
-const DEFAULT_SEG = { color: 'var(--ink-2)' }
+const DEFAULT_SEG = { color: 'var(--ds-ink-2)' }
 function segColor(e) { return SEG_COLORS[(e.cat_segment || '').toUpperCase()] || DEFAULT_SEG }
 
-// Fondo suave de chips: color-mix en vez de hex+'1A' para aceptar var(--ink) (tema oscuro)
+// Fondo suave de chips: color-mix en vez de hex+'1A' para aceptar var(--ds-ink) (tema oscuro)
 const soft = c => `color-mix(in oklab, ${c} 11%, transparent)`
 
 const today = new Date()
@@ -587,15 +592,15 @@ function studentChannel(s) {
 
 // Explicación de cada canal del contador de aula (por qué van separados)
 const AULA_CHANNELS = [
-  { key: 'cnt_ventas', tag: 'VEN', title: 'Venta directa', color: 'var(--ink)',
+  { key: 'cnt_ventas', tag: 'VEN', title: 'Venta directa', color: 'var(--ds-ink)',
     desc: 'Matrículas vendidas directamente sobre esta edición. Es el número que compite contra el objetivo del mes.' },
-  { key: 'cnt_segui', tag: 'SEG', title: 'Seguimiento', color: 'var(--c-sky)',
+  { key: 'cnt_segui', tag: 'SEG', title: 'Seguimiento', color: 'var(--ds-accent)',
     desc: 'Alumnos que vienen arrastrados de un programa padre (paquetes) o de una reprogramación. No son venta nueva de esta edición, por eso se cuentan aparte.' },
-  { key: 'cnt_memb', tag: 'MEM', title: 'Membresía', color: 'var(--c-purple)',
+  { key: 'cnt_memb', tag: 'MEM', title: 'Membresía', color: 'var(--ds-violet-ink)',
     desc: 'Alumnos que entran usando su membresía (WE PLUS, GOLD, PLATINUM, BLACK). No pagan esta edición de forma individual.' },
-  { key: 'cnt_b2b', tag: 'B2B', title: 'Convenio B2B', color: 'var(--c-teal)',
+  { key: 'cnt_b2b', tag: 'B2B', title: 'Convenio B2B', color: 'var(--ds-cyan-ink)',
     desc: 'Alumnos inscritos por convenio con empresas o instituciones. Se negocian por contrato, fuera de la venta directa.' },
-  { key: 'cnt_becas', tag: 'BEC', title: 'Becas', color: 'var(--c-amber)',
+  { key: 'cnt_becas', tag: 'BEC', title: 'Becas', color: 'var(--ds-warn-ink)',
     desc: 'Alumnos becados: ocupan asiento pero no facturan, por eso NO suman al total de AULA.' },
 ]
 
@@ -606,7 +611,6 @@ const courseLines = computed(() =>
   [...new Set(monthItemsActive.value.map(e => e.program_line_business).filter(Boolean))].sort()
 )
 
-const monthAbbr = computed(() => MABBR[selectedMonth.value - 1].toUpperCase())
 const periodLabel = computed(() => `${months[selectedMonth.value - 1]} ${selectedYear.value}`)
 
 // ── Carga: ediciones del mes + objetivos + consultas, fusionados por edición ──
@@ -615,7 +619,8 @@ async function fetchAll() {
   isLoading.value = true
   try {
     const { items } = await editionService.editionByWeekList({
-      page: 1, size: 200,
+      // Mismo tope que el backend: con 200 un mes grande se truncaba sin aviso.
+      page: 1, size: 500,
       selectedMonth: selectedMonth.value,
       selectedYear: selectedYear.value
     })
@@ -627,7 +632,11 @@ async function fetchAll() {
     // se escribia en e.consultas, campo que la tabla ni siquiera pinta.
     const goals = await dashboardService
       .programGoalsList({ year: selectedYear.value, month_num: selectedMonth.value })
-      .catch(() => ({ items: [] }))
+      .catch(() => {
+        // Sin objetivos el tablero igual sirve, pero no puede mostrar 0% como si fuera real.
+        toast.warning('No se pudieron cargar los objetivos del mes: el % de logro no está disponible.')
+        return { items: [] }
+      })
 
     // El objetivo se DERIVA del reparto por canal, igual que en Gerencia >
     // Objetivos, que es donde se edita. Leer `meta_vacantes` (el total guardado)
@@ -707,17 +716,17 @@ function fillOf(e) {
   const ventas = e.cnt_ventas ?? 0
   const obj = e.meta_vacantes ?? 0
   const pct = obj > 0 ? Math.round((ventas / obj) * 100) : 0
-  let color = 'var(--c-orange)'
-  if (pct > 100) color = 'var(--s4-fg)'
-  else if (pct >= 50) color = 'var(--ink)' /* neutro: sigue al tema (en dark #1b1917 sería invisible) */
+  let color = 'var(--ds-orange-ink)'
+  if (pct > 100) color = 'var(--ds-ok-ink)'
+  else if (pct >= 50) color = 'var(--ds-ink)' /* neutro: sigue al tema */
   return { pct, color, w: Math.min(100, pct) }
 }
 
 // Semáforo AULA: <15 naranja · 15–34 negro (lleno) · 35+ verde.
 function aulaColor(n) {
-  if (n >= 35) return 'var(--s4-fg)'
-  if (n < 15) return 'var(--c-orange)'
-  return 'var(--ink)'
+  if (n >= 35) return 'var(--ds-ok-ink)'
+  if (n < 15) return 'var(--ds-orange-ink)'
+  return 'var(--ds-ink)'
 }
 
 // ── Filtros (texto + línea) ──
@@ -772,7 +781,9 @@ const displayWeeks = computed(() => filteredWeeks.value
     // dentro de la familia solo el último miembro conserva su línea divisoria
     items.forEach((it, i) => { it.fused = it.fam && !!items[i + 1] && items[i + 1].depth > 0 })
     const live = items.filter(it => it.st.live).length
-    const avg = items.length ? Math.round(items.reduce((s, it) => s + it.fl.pct, 0) / items.length) : 0
+    // Solo promedian las ediciones con objetivo: una sin meta da 0% y hundía el promedio.
+    const conMeta = items.filter(it => (it.e.meta_vacantes ?? 0) > 0)
+    const avg = conMeta.length ? Math.round(conMeta.reduce((s, it) => s + it.fl.pct, 0) / conMeta.length) : 0
     return {
       schedule: w.schedule, count: items.length, items,
       isOpen: !closedWeeks.value[w.schedule],
@@ -797,15 +808,18 @@ const kpiSums = computed(() => {
   return {
     // count SI cuenta los eventos: es cuántas filas hay en la tabla de abajo.
     count: all.length, ventas: sum('cnt_ventas'), objetivo: sum('meta_vacantes'),
+    // Numerador del % de logro: solo ventas de ediciones CON objetivo. Sumar las
+    // de ediciones sin meta contra un denominador que no las incluye inflaba el %.
+    ventasConMeta: aulas.filter(e => (e.meta_vacantes ?? 0) > 0).reduce((s, e) => s + (e.cnt_ventas ?? 0), 0),
     ch, inscritos: sum('cnt_aula') + ch.cnt_becas,
   }
 })
 const kpiVsObjetivo = computed(() => {
-  const { ventas, objetivo } = kpiSums.value
+  const { ventasConMeta: ventas, objetivo } = kpiSums.value
   const pct = objetivo > 0 ? Math.round((ventas / objetivo) * 100) : 0
-  let color = 'var(--c-orange)'
-  if (pct > 100) color = 'var(--s4-fg)'
-  else if (pct >= 50) color = 'var(--ink)'
+  let color = 'var(--ds-orange-ink)'
+  if (pct > 100) color = 'var(--ds-ok-ink)'
+  else if (pct >= 50) color = 'var(--ds-ink)'
   return { ventas, objetivo, pct, color }
 })
 
@@ -820,8 +834,8 @@ const TYPE_DEFS = [
   { key: 'N1', def: 'Curso nuevo de una línea existente' },
   { key: 'N2', def: 'Curso nuevo de una línea nueva. Ejemplo: Marketing Digital, Contrataciones' },
 ]
-// Tintes como color-mix sobre var(--surface): el mismo valor sirve en claro y oscuro
-const tint = (c, p = 12) => `color-mix(in oklab, ${c} ${p}%, var(--surface))`
+// Tintes como color-mix sobre var(--ds-surface): el mismo valor sirve en claro y oscuro
+const tint = (c, p = 12) => `color-mix(in oklab, ${c} ${p}%, var(--ds-surface))`
 // Sin tinte propio: cada fila se pinta con el mismo pastel del segmento en el cronograma
 // (SEG_COLORS.tint, ver segSummary). Leyenda y tabla no pueden divergir.
 const SEG_DEFS = [
@@ -905,257 +919,175 @@ onMounted(fetchAll)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap');
+/* Colores solo con tokens --ds-*: claro y oscuro salen de design-system.css,
+   sin bloque de modo oscuro propio. Los tokens viven en :root, así
+   que también llegan al modal (BaseModal se teleporta a <body>). */
 
-/* ===== Tokens del design system (light) ===== */
-.board-shell {
-  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --accent: #002060; /* navy corporativo WE */
-  --bg: #f3f2f1;
-  --surface: #ffffff;
-  --surface-2: #faf9f8;
-  --surface-3: #f1efed;
-  --border: #e8e6e3;
-  --border-strong: #d8d4d0;
-  --ink: #1b1917;
-  --ink-2: #57534e;
-  --ink-3: #8d877f;
-  --track: #ece9e6;
-  --s4-fg: #1d7a40;
-  --shadow: 0 1px 2px rgba(28,25,23,.04), 0 1px 1px rgba(28,25,23,.03);
-  --r-lg: 16px;
-  /* acentos (los usa también el JS vía var(--c-*); en dark se aclaran abajo) */
-  --c-blue: #2256c9;   /* A1 */
-  --c-amber: #a96208;  /* A2 · BEC */
-  --c-teal: #0a7a5c;   /* A3 · B2B */
-  --c-orange: #d9603b; /* A4 · semáforo bajo */
-  --c-red: #c0362c;    /* A5 */
-  --c-violet: #7c3aed; /* A6 */
-  --c-navy: #1e3a8a;   /* A7 cerrado */
-  --c-sky: #2a6fdb;    /* SEG · KPI programas */
-  --c-purple: #6b5cf0; /* MEM */
-  --c-wine: #7A1F3D;   /* NM = nueva metodología */
-
-  font-family: var(--font-sans);
-  color: var(--ink);
-  /* sin fondo propio: hereda el del layout del ERP para no duplicar fondos */
-  padding: 2px 2px 1rem;
-  -webkit-font-smoothing: antialiased;
-}
-.board-shell button { font-family: inherit; cursor: pointer; }
-
-/* ===== Header ===== */
-.crono-head { display: flex; align-items: center; gap: 12px; margin: 2px 2px 10px; flex-wrap: wrap; }
-.month-badge {
-  width: 38px; height: 38px; border-radius: 11px; flex: none; position: relative;
-  background: var(--ink); color: var(--surface); display: grid; place-items: center;
-  font-weight: 800; font-size: 11px; letter-spacing: .04em; box-shadow: var(--shadow);
-}
-.month-badge::before, .month-badge::after {
-  content: ""; position: absolute; top: 5px; width: 4px; height: 4px; border-radius: 50%;
-  background: color-mix(in oklab, var(--surface) 60%, transparent);
-}
-.month-badge::before { left: 10px; } .month-badge::after { right: 10px; }
-.crono-title .eyebrow { font-size: 9.5px; font-weight: 700; letter-spacing: .13em; color: var(--ink-3); }
-/* Simulación: mismo lugar, color de advertencia. Sale del token naranja del
-   tablero, así que también se lee en dark. */
-.crono-title .eyebrow.is-sim { color: var(--c-orange); }
-.crono-title h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.015em; margin: 1px 0 0; }
-.crono-head .grow, .week-bar .grow { flex: 1; }
-
-.month-nav { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 13px; box-shadow: var(--shadow); padding: 5px; }
-.month-nav .arrow { width: 26px; height: 26px; border-radius: 7px; border: none; background: transparent; color: var(--ink-2);
-  display: grid; place-items: center; font-size: 15px; line-height: 1; transition: .15s; }
-.month-nav .arrow:hover { background: var(--surface-3); color: var(--ink); }
-.seg-select { border: none; background: transparent; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink);
-  padding: 0 5px; height: 26px; border-radius: 7px; outline: none; cursor: pointer; }
-.seg-select:hover { background: var(--surface-3); }
-
-.crono-search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; box-shadow: var(--shadow); padding: 0 11px; color: var(--ink-3); font-size: 12.5px; min-width: 210px; }
-.crono-search input { border: none; outline: none; background: transparent; font-family: inherit; font-size: 12.5px;
-  color: var(--ink); padding: 7px 0; flex: 1; }
-.crono-search input::placeholder { color: var(--ink-3); }
-
-.line-filter { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
-  padding: 6px 10px; font-size: 12.5px; font-weight: 600; font-family: inherit; color: var(--ink); outline: none; cursor: pointer; }
-.refresh { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
-  color: var(--ink-2); display: grid; place-items: center; box-shadow: var(--shadow); font-size: 14px; }
-.refresh:hover { background: var(--surface-3); color: var(--ink); }
+/* ===== Encabezado ===== */
+.sb-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sb-month-nav { display: flex; align-items: center; gap: 4px; }
+.sb-nav-btn { width: 32px; height: 36px; padding: 0; }
+/* .ds-input es width:100% (formularios); en la barra cada control mide su contenido */
+.sb-ctl { width: auto; }
+.sb-search { min-width: 210px; }
 
 /* ===== KPIs ===== */
-/* Fila continua: las tarjetas se estiran para tapar el sobrante (flex-grow) en
-   vez de dejarlo como un boquete entre ellas. */
-.kpis { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 13px 16px;
-  display: flex; align-items: baseline; gap: 12px; min-width: 0; flex: 1 1 auto; }
-.kpi .lbl { display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; letter-spacing: .07em; color: var(--ink-3); text-transform: uppercase; }
-.kpi .lbl .dot { width: 7px; height: 7px; border-radius: 50%; }
-.kpi .val { display: flex; align-items: baseline; gap: 6px; margin-left: auto; }
-.kpi .val b { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.kpi .val span { font-size: 11px; color: var(--ink-3); font-weight: 600; }
-.kpi .val .vs { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink-3); }
-.kpi .val .kpct { font-family: var(--font-mono); font-size: 10px; font-weight: 800; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
+/* Inscripciones: el total manda y el desglose por canal lo sostiene */
+.sb-kpi-canales { grid-column: span 2; }
+.sb-channels { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.sb-chit { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ds-muted); white-space: nowrap; }
+.sb-chit b { font-weight: 800; color: var(--ds-ink); font-variant-numeric: tabular-nums; }
+.sb-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.sb-kpct { font-family: var(--ds-font-mono); font-size: 11px; font-weight: 800; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 
-/* Inscripciones: el total manda y el desglose lo sostiene, separado con "/"
-   para que se lea como una frase. Va primera y no crece: mide su contenido,
-   así el sobrante se lo reparten Programas y Ventas vs Objetivo. */
-.kpi-canales { flex-grow: 0; }
-.kpi-canales .val { flex-wrap: nowrap; gap: 8px; margin-left: 16px; overflow: hidden; }
-.kpi-canales .val .big { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.kpi-canales .val .eq { font-size: 15px; font-weight: 700; color: var(--ink-3); opacity: .5; margin: 0 2px; }
-.kpi-canales .val .chit { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700;
-  letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
-.kpi-canales .val .chit .dot { width: 6px; height: 6px; border-radius: 50%; }
-.kpi-canales .val .chit b { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); font-variant-numeric: tabular-nums; }
-.kpi-canales .val .chit .sep { font-style: normal; font-weight: 400; font-size: 13px; color: var(--ink-3); opacity: .35; margin-right: 4px; }
+/* tabla + su leyenda van juntas: el gap de .ds-page las separaría demasiado */
+.sb-board { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 
 /* ===== Tabla ===== */
-.crono-tbl { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
+/* El scroll horizontal vive aquí y no en la página: a 400 px la tabla (1150 px) se desliza sola */
+.crono-tbl { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
   overflow: auto; max-height: calc(100vh - 110px); }
 .crono-tbl::-webkit-scrollbar { width: 10px; height: 10px; }
-.crono-tbl::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--surface); }
+.crono-tbl::-webkit-scrollbar-thumb { background: var(--ds-border-strong); border-radius: 999px; border: 2px solid var(--ds-surface); }
 table.crono { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1150px; }
 table.crono th, table.crono td { text-align: left; }
 table.crono thead th {
-  position: sticky; top: 0; z-index: 6; background: var(--surface-3); color: var(--ink-2);
-  font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  position: sticky; top: 0; z-index: 6; background: var(--ds-surface-3); color: var(--ds-ink-2);
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 7px 10px; border-bottom: 1px solid var(--ds-border); white-space: nowrap;
 }
-/* separación vertical estilo hoja de cálculo, en el hairline cálido del sistema */
+/* separación vertical estilo hoja de cálculo */
 table.crono thead th:not(:last-child),
 table.crono tbody tr.ed td:not(:last-child),
-table.crono tbody tr.skrow td:not(:last-child) { border-right: 1px solid var(--border-strong); }
+table.crono tbody tr.skrow td:not(:last-child) { border-right: 1px solid var(--ds-border-strong); }
 .th-group { text-align: center !important; }
-.th-group .g-title { font-size: 10px; letter-spacing: .1em; color: var(--accent); margin-bottom: 4px; }
+.th-group .g-title { font-size: 10px; letter-spacing: .1em; color: var(--ds-heading); margin-bottom: 4px; }
 .th-group .g-cols { display: flex; gap: 8px; justify-content: center; }
 .th-group .g-cols span { width: 26px; text-align: center; }
-.th-group .g-cols span.hot { color: var(--ink); font-weight: 800; width: 32px; }
+.th-group .g-cols span.hot { color: var(--ds-ink); font-weight: 800; width: 32px; }
 th.c-num, td.c-num { text-align: center; }
 
 /* fila banda de semana */
-tr.week-row td { background: var(--bg); padding: 0; border-bottom: 1px solid var(--border); }
+tr.week-row td { background: var(--ds-surface-3); padding: 0; border-bottom: 1px solid var(--ds-border); }
 .week-bar { display: flex; align-items: center; gap: 10px; padding: 5px 12px; cursor: pointer; }
-.week-bar .caret { width: 22px; height: 22px; border: none; background: transparent; color: var(--ink-3); display: grid;
-  place-items: center; border-radius: 6px; transition: .15s; }
-.week-bar .caret:hover { background: var(--surface-3); color: var(--ink); }
+.week-bar .grow { flex: 1; }
+.week-bar .caret { width: 22px; height: 22px; border: none; background: transparent; color: var(--ds-muted); display: grid;
+  place-items: center; border-radius: 6px; transition: .15s; cursor: pointer; }
+.week-bar .caret:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
 .week-bar .caret span { display: inline-block; transition: transform .18s; font-size: 12px; }
 .week-bar.collapsed .caret span { transform: rotate(-90deg); }
-.week-bar .wk-chip { width: 6px; height: 15px; border-radius: 3px; background: var(--ink); }
-.week-bar h3 { font-size: 13px; font-weight: 800; margin: 0; }
-.week-bar .ed-pill { font-size: 10.5px; font-weight: 600; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1px 9px; }
-.week-bar .stat { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.week-bar .wk-chip { width: 6px; height: 15px; border-radius: 3px; background: var(--ds-ink); }
+.week-bar h3 { font-size: 13px; font-weight: 800; margin: 0; color: var(--ds-ink); }
+.week-bar .ed-pill { font-size: 10.5px; font-weight: 600; color: var(--ds-ink-2); background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 20px; padding: 1px 9px; }
+.week-bar .stat { font-size: 11px; color: var(--ds-muted); font-weight: 600; }
 
 /* celdas del cuerpo */
-table.crono tbody td { padding: 5px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; background: var(--surface); }
+table.crono tbody td { padding: 5px 10px; border-bottom: 1px solid var(--ds-border); vertical-align: middle; background: var(--ds-surface); color: var(--ds-ink); }
 table.crono tbody tr.ed.clickable { cursor: pointer; }
-table.crono tbody tr.ed:hover td { background: var(--surface-2); }
+table.crono tbody tr.ed:hover td { background: var(--ds-surface-2); }
 
 /* estado por fondo pastel muy suave: con meta naranja · sin meta azul
-   (color-mix sobre --surface: el mismo tinte funciona en claro y oscuro) */
-tr.ed.meta td { background: color-mix(in oklab, var(--c-orange) 7%, var(--surface)); }
-tr.ed.sinmeta td { background: color-mix(in oklab, var(--c-sky) 6%, var(--surface)); }
-tr.ed.meta:hover td { background: color-mix(in oklab, var(--c-orange) 13%, var(--surface)); }
-tr.ed.sinmeta:hover td { background: color-mix(in oklab, var(--c-sky) 11%, var(--surface)); }
+   (color-mix sobre --ds-surface: el mismo tinte funciona en claro y oscuro) */
+tr.ed.meta td { background: color-mix(in oklab, var(--ds-orange-ink) 7%, var(--ds-surface)); }
+tr.ed.sinmeta td { background: color-mix(in oklab, var(--ds-accent) 6%, var(--ds-surface)); }
+tr.ed.meta:hover td { background: color-mix(in oklab, var(--ds-orange-ink) 13%, var(--ds-surface)); }
+tr.ed.sinmeta:hover td { background: color-mix(in oklab, var(--ds-accent) 11%, var(--ds-surface)); }
 
 /* CA/CP */
 .cacp { display: flex; flex-direction: column; gap: 1px; }
 .cacp .kv { display: flex; align-items: center; gap: 6px; }
-.cacp .k { font-size: 8.5px; font-weight: 700; color: var(--ink-3); width: 14px; }
-.cacp .v { font-family: var(--font-mono); font-weight: 400; font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cacp .k { font-size: 8.5px; font-weight: 700; color: var(--ds-muted); width: 14px; }
+.cacp .v { font-family: var(--ds-font-mono); font-weight: 400; font-size: 11.5px; color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
 
 /* curso */
 .curso { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .curso .top { display: flex; align-items: center; gap: 7px; }
-.lvl-badge { font-size: 9px; font-weight: 800; font-family: var(--font-mono); border-radius: 4px; padding: 1px 6px; flex: none; }
+.lvl-badge { font-size: 9px; font-weight: 800; font-family: var(--ds-font-mono); border-radius: 4px; padding: 1px 6px; flex: none; }
 .curso .name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.curso .area { font-size: 10.5px; color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.curso .area { font-size: 10.5px; color: var(--ds-muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* NM: píldora sólida vino. Sólida y no pastel como .lvl-badge, porque debe
-   distinguirse de un vistazo sobre los tintes de fila (meta/sinmeta/A6/A7). */
-.nm-badge { font-size: 8.5px; font-weight: 800; font-family: var(--font-mono); letter-spacing: .04em;
-  border-radius: 4px; padding: 1px 5px; flex: none; background: var(--c-wine); color: #fff; }
+   distinguirse de un vistazo sobre los tintes de fila (meta/sinmeta/A6/A7).
+   Texto en --ds-surface: en oscuro el vino se aclara y el texto se invierte. */
+.nm-badge { font-size: 8.5px; font-weight: 800; font-family: var(--ds-font-mono); letter-spacing: .04em;
+  border-radius: 4px; padding: 1px 5px; flex: none; background: var(--ds-rose-ink); color: var(--ds-surface); }
 
 /* cronograma: inicio resaltado (chip oscuro) · fin más claro */
 .cro { display: flex; flex-direction: column; gap: 2px; }
-.cro .dates { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
-.date-chip { font-family: var(--font-mono); font-size: 10.5px; font-weight: 800; background: var(--ink); color: var(--surface); border-radius: 5px; padding: 1px 6px; }
-.cro .arrow-to { color: var(--ink-3); }
-.cro .date-end { color: var(--ink-3); }
-.cro .ses { color: var(--ink-3); font-weight: 600; }
-.cro .when { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; }
-.cro .when b { color: var(--ink-2); font-weight: 700; }
+.cro .dates { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ds-ink-2); white-space: nowrap; }
+.date-chip { font-family: var(--ds-font-mono); font-size: 10.5px; font-weight: 800; background: var(--ds-ink); color: var(--ds-surface); border-radius: 5px; padding: 1px 6px; }
+.cro .arrow-to { color: var(--ds-muted); }
+.cro .date-end { color: var(--ds-muted); }
+.cro .ses { color: var(--ds-muted); font-weight: 600; }
+.cro .when { font-size: 10.5px; color: var(--ds-muted); white-space: nowrap; }
+.cro .when b { color: var(--ds-ink-2); font-weight: 700; }
 
 /* docente */
 .docs { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.docs .lbl { font-size: 8.5px; font-weight: 700; letter-spacing: .06em; color: var(--ink-3); }
+.docs .lbl { font-size: 8.5px; font-weight: 700; letter-spacing: .06em; color: var(--ds-muted); }
 .docs .name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .docs .name.multi { font-weight: 600; font-size: 11.5px; }
-.docs .more { font-size: 10.5px; font-weight: 700; color: var(--ink-3); cursor: default; }
+.docs .more { font-size: 10.5px; font-weight: 700; color: var(--ds-muted); cursor: default; }
 
 /* popover con la lista completa de docentes (hover sobre la celda) */
-td.doc-copy { position: relative; }
+td.doc-copy { position: relative; cursor: copy; }
 .doc-pop {
   display: none; position: absolute; z-index: 40; top: calc(100% - 6px); left: 10px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(28, 25, 23, .16);
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 10px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 18%);
   padding: 10px 14px; min-width: 210px; max-width: 300px;
 }
 td.doc-copy:hover .doc-pop { display: block; }
-.doc-pop .pop-name { font-size: 12px; font-weight: 600; color: var(--ink, #1b1917); padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.doc-pop .pop-hint { margin-top: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: var(--ink-3); border-top: 1px dashed var(--border); padding-top: 5px; }
+.doc-pop .pop-name { font-size: 12px; font-weight: 600; color: var(--ds-ink); padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-pop .pop-hint { margin-top: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: var(--ds-muted); border-top: 1px dashed var(--ds-border); padding-top: 5px; }
 
 /* seguimiento: en una sola línea para compactar la fila */
 .segui { display: flex; gap: 10px; }
-.segui .item { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.segui .item { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--ds-ink-2); white-space: nowrap; }
 .segui .g { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-.g.ok { background: var(--s4-fg); } .g.no { background: var(--ink-3); }
+.g.ok { background: var(--ds-ok); } .g.no { background: var(--ds-muted); }
 
-/* aula: el color del total lo pone aulaColor(): <15 naranja · 15–34 negro · 35+ verde */
+/* aula: el color del total lo pone aulaColor(): <15 naranja · 15–34 tinta · 35+ verde */
 .aula-cell { display: flex; gap: 8px; justify-content: center; align-items: center; }
-.aula-cell .acol { width: 26px; text-align: center; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.aula-cell .acol.zero { color: var(--ink-3); font-weight: 500; opacity: .6; }
+.aula-cell .acol { width: 26px; text-align: center; font-family: var(--ds-font-mono); font-size: 12.5px; font-weight: 700; color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
+.aula-cell .acol.zero { color: var(--ds-muted); font-weight: 500; opacity: .6; }
 /* becas siempre en gris apagado: no suman al aula, no deben llamar la atención */
-.aula-cell .acol.bec { color: var(--ink-3); font-weight: 500; opacity: .6; }
+.aula-cell .acol.bec { color: var(--ds-muted); font-weight: 500; opacity: .6; }
 /* el total AULA es el punto focal de la fila: píldora sólida con el color del
-   semáforo (el ojo va primero a las formas rellenas de color) */
-/* color: --surface y no #fff: cuando el semáforo devuelve var(--ink) en dark, la píldora
-   queda clara y el texto debe invertirse (mismo patrón que .month-badge / .date-chip) */
-.aula-cell .acol.total { font-weight: 800; font-size: 12.5px; color: var(--surface); border-radius: 7px; padding: 3px 0; width: 32px; flex: none; }
-.aula-cell .acol.total.empty { background: var(--surface-3); color: var(--ink-3); font-weight: 600; }
+   semáforo (el ojo va primero a las formas rellenas de color).
+   Texto en --ds-surface y no blanco: cuando el semáforo devuelve --ds-ink en
+   oscuro la píldora queda clara y el texto debe invertirse (igual que .date-chip). */
+.aula-cell .acol.total { font-weight: 800; font-size: 12.5px; color: var(--ds-surface); border-radius: 7px; padding: 3px 0; width: 32px; flex: none; }
+.aula-cell .acol.total.empty { background: var(--ds-surface-3); color: var(--ds-muted); font-weight: 600; }
 
 /* objetivo */
 .obj { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }
 /* "orow"/"acol" y no "row"/"col": Bootstrap global del ERP secuestra esas clases */
 .obj .orow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .obj .frac { font-size: 12px; font-weight: 700; white-space: nowrap; }
-.obj .frac b { font-family: var(--font-mono); }
-.obj .frac .t { color: var(--ink-3); font-weight: 600; font-family: var(--font-mono); }
-.obj .pct { font-size: 9.5px; font-weight: 800; font-family: var(--font-mono); border-radius: 20px; padding: 1px 7px; white-space: nowrap; }
-.obj .track { height: 4px; border-radius: 20px; background: var(--track); overflow: hidden; }
+.obj .frac b { font-family: var(--ds-font-mono); }
+.obj .frac .t { color: var(--ds-muted); font-weight: 600; font-family: var(--ds-font-mono); }
+.obj .pct { font-size: 9.5px; font-weight: 800; font-family: var(--ds-font-mono); border-radius: 20px; padding: 1px 7px; white-space: nowrap; }
+.obj .track { height: 4px; border-radius: 20px; background: var(--ds-surface-3); overflow: hidden; }
 .obj .track > i { display: block; height: 100%; border-radius: 20px; transition: width .4s; }
-.sinmeta-txt { font-size: 11.5px; color: var(--ink-3); font-style: italic; }
+.sinmeta-txt { font-size: 11.5px; color: var(--ds-muted); font-style: italic; }
 
-/* consultas en negro */
-td.cons { text-align: center; font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); }
-td.cons.zero { color: var(--ink-3); font-weight: 500; opacity: .6; }
-td.obs { color: var(--ink-3); font-size: 10.5px; font-style: italic; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td.cons { text-align: center; font-family: var(--ds-font-mono); font-size: 13px; font-weight: 700; color: var(--ds-ink); }
+td.cons.zero { color: var(--ds-muted); font-weight: 500; opacity: .6; }
+td.obs { color: var(--ds-muted); font-size: 10.5px; font-style: italic; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ============================================================
    PADRE ↔ HIJO — solo líneas: tinte, fusión y conector (sin etiquetas)
    ============================================================ */
-tr.ed.fam td { background: color-mix(in oklab, var(--accent) 4%, var(--surface)); }
-tr.ed.fam:hover td { background: color-mix(in oklab, var(--accent) 8%, var(--surface-2)); }
+tr.ed.fam td { background: color-mix(in oklab, var(--ds-heading) 4%, var(--ds-surface)); }
+tr.ed.fam:hover td { background: color-mix(in oklab, var(--ds-heading) 8%, var(--ds-surface-2)); }
 
 /* Tinte de fila por segmento: SIEMPRE manda el color del tipado (A1 azul, A2 ámbar,
    A3 teal, A4 naranja, A6 violeta, A7 navy). Va después de .fam/.meta/.sinmeta y lleva
    el prefijo table.crono tbody para ganarle también al hover genérico.
-   --seg lo pone la fila (segColor); sin segmento (.segrow-none) se queda el tinte meta/sinmeta. */
-/* 13% del hue vivo = el mismo pastel que ya tenían A6/A7. El hover no oscurece:
-   el tinte ES la identidad del segmento, no un estado. */
+   --seg lo pone la fila (segColor); sin segmento (.segrow-none) se queda el tinte meta/sinmeta.
+   El hover no oscurece: el tinte ES la identidad del segmento, no un estado. */
 table.crono tbody tr.ed:not(.segrow-none) td,
-table.crono tbody tr.ed:not(.segrow-none):hover td { background: color-mix(in oklab, var(--seg) 13%, var(--surface)); }
-table.crono tbody tr.ed.segrow-a7 td:first-child { box-shadow: inset 3px 0 0 var(--c-navy); }
+table.crono tbody tr.ed:not(.segrow-none):hover td { background: color-mix(in oklab, var(--seg) 13%, var(--ds-surface)); }
+table.crono tbody tr.ed.segrow-a7 td:first-child { box-shadow: inset 3px 0 0 var(--ds-heading); }
 /* miembros fusionados: sin línea divisoria dentro de la familia */
 tr.ed.fused td { border-bottom-color: transparent; }
 
@@ -1163,154 +1095,92 @@ tr.ed.fused td { border-bottom-color: transparent; }
 .child-wrap { display: flex; align-items: stretch; gap: 12px; padding-left: 6px; }
 .child-connector { position: relative; width: 20px; flex: none; }
 .child-connector::before { /* vertical */
-  content: ""; position: absolute; left: 8px; top: -14px; bottom: 50%; width: 2px; background: var(--accent);
+  content: ""; position: absolute; left: 8px; top: -14px; bottom: 50%; width: 2px; background: var(--ds-heading);
 }
 .child-connector::after { /* codo horizontal */
-  content: ""; position: absolute; left: 8px; top: 50%; width: 12px; height: 2px; background: var(--accent);
+  content: ""; position: absolute; left: 8px; top: 50%; width: 12px; height: 2px; background: var(--ds-heading);
 }
 .child-connector .node { position: absolute; left: 5px; top: calc(50% - 3px); width: 8px; height: 8px; border-radius: 50%;
-  background: var(--surface); border: 2px solid var(--accent); }
+  background: var(--ds-surface); border: 2px solid var(--ds-heading); }
 
-/* ===== skeleton ===== */
 tr.skrow td { padding: 16px 12px; }
-.sk { display: block; height: 13px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-3), var(--track), var(--surface-3));
-  background-size: 200% 100%; animation: cgsk 1.3s infinite; }
-@keyframes cgsk { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
 
-/* ===== modal "¿de dónde sale el AULA?" ===== */
-.am-overlay { position: fixed; inset: 0; z-index: 1080; background: rgba(28,25,23,.4); backdrop-filter: blur(2px);
-  display: grid; place-items: center; padding: 20px; animation: cgfade .15s ease; }
-@keyframes cgfade { from { opacity: 0 } to { opacity: 1 } }
-.am-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  box-shadow: 0 20px 60px -20px rgba(28,25,23,.4); width: min(560px, 100%); max-height: 90vh; overflow: auto;
-  font-family: var(--font-sans); animation: amup .18s ease; transition: width .2s ease; }
-.am-card.wide { width: min(880px, 100%); }
-@keyframes amup { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
-.am-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
-.am-head > div { flex: 1; min-width: 0; }
-.am-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: .1em; color: var(--accent); }
-.am-title { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-top: 2px; }
-.am-sub { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
-.am-close { width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: var(--ink-3);
-  display: grid; place-items: center; font-size: 13px; flex: none; }
-.am-close:hover { background: var(--surface-3); color: var(--ink); }
-.am-tabs { display: flex; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--border); }
-.am-tabs button { background: none; border: none; padding: 11px 2px 12px; margin-bottom: -1px; font-size: 13.5px; font-weight: 600;
-  color: var(--ink-3); border-bottom: 2px solid transparent; }
-.am-tabs button:hover { color: var(--ink-2); }
-.am-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
-.am-body { padding: 8px 20px; }
-.am-students { max-height: 56vh; overflow: auto; padding-bottom: 14px; }
-.am-loading { padding: 26px 0; text-align: center; color: var(--ink-3); font-size: 13px; }
+/* ===== leyenda bajo la tabla ===== */
+.crono-foot { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ds-muted); flex-wrap: wrap; }
+.crono-foot .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ds-ok); flex: none; }
+
+/* ===== resúmenes del mes ===== */
+.sumgrid { display: grid; grid-template-columns: auto 1fr; gap: var(--ds-gap); align-items: start; }
+.sumgrid + .sumgrid { grid-template-columns: 1fr 1fr; }
+.sumcard { min-width: 0; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius); padding: 12px 16px; overflow-x: auto; }
+.sum-title { margin: 0 0 8px; font-size: 13.5px; font-weight: 700; color: var(--ds-heading); }
+.sumtbl { border-collapse: collapse; }
+.sumtbl th, .sumtbl td { border: 1px solid var(--ds-border-strong); padding: 3px 12px; text-align: center; white-space: nowrap; }
+.sumtbl th { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--ds-ink-2); background: var(--ds-surface-3); }
+.sumtbl td { font-family: var(--ds-font-mono); font-size: 12px; font-weight: 700; color: var(--ds-ink); }
+.sumtbl .tot { background: var(--ds-surface-3); }
+.sumtbl td.tot { font-weight: 800; }
+.deftbl { border-collapse: collapse; width: 100%; }
+.deftbl th, .deftbl td { border: 1px solid var(--ds-border-strong); padding: 3px 9px; text-align: left; }
+.deftbl th { font-size: 9.5px; font-weight: 700; letter-spacing: .05em; color: var(--ds-ink-2); background: var(--ds-surface-3); white-space: nowrap; }
+.deftbl td { font-size: 11px; color: var(--ds-ink-2); }
+.deftbl td.num { font-family: var(--ds-font-mono); font-weight: 700; text-align: center; color: var(--ds-ink); width: 1%; white-space: nowrap; }
+.deftbl td.tag { font-family: var(--ds-font-mono); font-weight: 800; text-align: center; color: var(--ds-ink); width: 1%; white-space: nowrap; }
+.deftbl td.def { line-height: 1.35; }
+
+/* ===== modal "¿de dónde sale el AULA?" (dentro de BaseModal) ===== */
+.am-head { margin-bottom: 12px; }
+.am-title { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-heading); }
+.am-sub { font-size: 12px; color: var(--ds-muted); font-weight: 500; margin-top: 1px; }
+.am-tabs { margin-bottom: 4px; }
+.am-body { padding: 4px 0; }
+.am-students { max-height: 56vh; overflow: auto; }
+.am-loading { padding: 26px 0; text-align: center; color: var(--ds-muted); font-size: 13px; }
 .am-tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
-.am-tbl th { position: sticky; top: 0; background: var(--surface); text-align: left; font-size: 10.5px; font-weight: 700;
-  letter-spacing: .07em; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.am-tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: middle; }
+.am-tbl th { position: sticky; top: 0; background: var(--ds-surface); text-align: left; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .07em; color: var(--ds-muted); padding: 8px 10px; border-bottom: 1px solid var(--ds-border); white-space: nowrap; }
+.am-tbl td { padding: 9px 10px; border-bottom: 1px solid var(--ds-border); font-size: 12.5px; vertical-align: middle; }
 .am-tbl tr:last-child td { border-bottom: none; }
-.am-tbl .am-name { font-weight: 700; color: var(--ink); }
-.am-tbl .am-agent { font-family: var(--font-mono); font-weight: 700; color: var(--ink-2); white-space: nowrap; }
-.am-tbl .am-mail { color: var(--ink-2); word-break: break-all; }
-.am-tbl .am-extra { color: var(--ink-3); font-size: 12px; }
-/* Promo LAPTOP: mismos colores que la etiqueta "Traera laptop" del panel FICO */
-.am-laptop { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 10px; font-weight: 800; border-radius: 5px; padding: 2px 7px; margin-right: 6px; background: #ECFEFF; color: #155E75; border: 1px solid #A5F3FC; }
-.am-laptop i { font-size: 9px; color: #0891B2; }
-.am-tbl tr.row-laptop td { background: #ECFEFF; }
-.am-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.am-tbl .am-name { font-weight: 700; color: var(--ds-ink); }
+.am-tbl .am-agent { font-family: var(--ds-font-mono); font-weight: 700; color: var(--ds-ink-2); white-space: nowrap; }
+.am-tbl .am-mail { color: var(--ds-ink-2); word-break: break-all; }
+.am-tbl .am-extra { color: var(--ds-muted); font-size: 12px; }
+/* Promo LAPTOP: la misma marca de negocio "laptop" (cian) que usa el panel FICO */
+.am-laptop { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 10px; font-weight: 800; border-radius: 5px; padding: 2px 7px; margin-right: 6px;
+  background: var(--ds-soft-cyan); color: var(--ds-cyan-ink); border: 1px solid color-mix(in oklab, var(--ds-cyan-ink) 30%, transparent); }
+.am-laptop i { font-size: 9px; }
+.am-tbl tr.row-laptop td { background: var(--ds-soft-cyan); }
+.am-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ds-border); }
 .am-row:last-child { border-bottom: none; }
-td.doc-copy { cursor: copy; }
 
 /* Tab Árbol */
 .am-tree-grp { margin-bottom: 16px; }
 .am-tree-grp:last-child { margin-bottom: 0; }
-.am-tree-parent { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); padding-bottom: 6px; }
-.am-tree-ptag { font-size: 9px; font-weight: 800; font-family: var(--font-mono); letter-spacing: .06em; border-radius: 4px; padding: 1px 6px; background: color-mix(in oklab, var(--accent) 12%, transparent); color: var(--accent); flex: none; }
-.am-tree-code { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
-.am-tree-child { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0 6px 10px; margin-left: 6px; border-left: 2px solid var(--border-strong); }
-.am-tree-child.cur { background: color-mix(in oklab, var(--accent) 8%, transparent); border-radius: 0 8px 8px 0; border-left-color: var(--accent); }
-.am-tree-node { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); margin-top: 5px; flex: none; }
-.am-tree-child.cur .am-tree-node { background: var(--accent); }
-.am-tree-txt { font-size: 12.5px; color: var(--ink); }
-.am-tree-meta { font-size: 10.5px; font-family: var(--font-mono); color: var(--ink-3); margin-top: 1px; }
-.am-tree-curtag { font-size: 9px; font-weight: 800; font-family: var(--font-mono); border-radius: 4px; padding: 1px 6px; margin-left: 6px; background: var(--accent); color: var(--surface); }
-.am-tag { flex: none; font-family: var(--font-mono); font-size: 10px; font-weight: 800; border-radius: 5px; padding: 3px 8px; margin-top: 1px; }
+.am-tree-parent { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ds-ink); padding-bottom: 6px; }
+.am-tree-ptag { font-size: 9px; font-weight: 800; font-family: var(--ds-font-mono); letter-spacing: .06em; border-radius: 4px; padding: 1px 6px; background: color-mix(in oklab, var(--ds-heading) 12%, transparent); color: var(--ds-heading); flex: none; }
+.am-tree-code { font-family: var(--ds-font-mono); font-size: 11px; color: var(--ds-muted); }
+.am-tree-child { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0 6px 10px; margin-left: 6px; border-left: 2px solid var(--ds-border-strong); }
+.am-tree-child.cur { background: color-mix(in oklab, var(--ds-heading) 8%, transparent); border-radius: 0 8px 8px 0; border-left-color: var(--ds-heading); }
+.am-tree-node { width: 7px; height: 7px; border-radius: 50%; background: var(--ds-muted); margin-top: 5px; flex: none; }
+.am-tree-child.cur .am-tree-node { background: var(--ds-heading); }
+.am-tree-txt { font-size: 12.5px; color: var(--ds-ink); }
+.am-tree-meta { font-size: 10.5px; font-family: var(--ds-font-mono); color: var(--ds-muted); margin-top: 1px; }
+.am-tree-curtag { font-size: 9px; font-weight: 800; font-family: var(--ds-font-mono); border-radius: 4px; padding: 1px 6px; margin-left: 6px; background: var(--ds-heading); color: var(--ds-surface); }
+.am-tag { flex: none; font-family: var(--ds-font-mono); font-size: 10px; font-weight: 800; border-radius: 5px; padding: 3px 8px; margin-top: 1px; }
 .am-txt { min-width: 0; }
-.am-t { font-size: 13.5px; font-weight: 700; color: var(--ink); }
-.am-t b { font-family: var(--font-mono); margin-left: 4px; }
-.am-d { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); margin-top: 2px; }
-.am-foot { padding: 14px 20px 18px; border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 var(--r-lg) var(--r-lg); }
-.am-formula { font-size: 13px; font-weight: 700; color: var(--ink); }
-.am-formula b { font-family: var(--font-mono); font-size: 15px; }
-.am-formula span { font-size: 11.5px; color: var(--ink-3); font-weight: 500; margin-left: 4px; }
-.am-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 8%, transparent); border-radius: 8px; padding: 8px 12px; }
+.am-t { font-size: 13.5px; font-weight: 700; color: var(--ds-ink); }
+.am-t b { font-family: var(--ds-font-mono); margin-left: 4px; }
+.am-d { font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-2); margin-top: 2px; }
+.am-foot { margin: 8px -16px -16px; padding: 14px 16px 16px; border-top: 1px solid var(--ds-border); background: var(--ds-surface-2); }
+.am-formula { font-size: 13px; font-weight: 700; color: var(--ds-ink); }
+.am-formula b { font-family: var(--ds-font-mono); font-size: 15px; }
+.am-formula span { font-size: 11.5px; color: var(--ds-muted); font-weight: 500; margin-left: 4px; }
+.am-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--ds-heading);
+  background: color-mix(in oklab, var(--ds-heading) 8%, transparent); border-radius: 8px; padding: 8px 12px; }
 
-/* ===== vacío + pie ===== */
-.empty-state { text-align: center; padding: 70px 20px; color: var(--ink-3); }
-.empty-state .icon { font-size: 34px; margin-bottom: 10px; opacity: .5; }
-.empty-state .big { font-size: 18px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
-.empty-state .sub { font-size: 12.5px; }
-/* ===== resúmenes del mes ===== */
-.sumgrid { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 10px; align-items: start; }
-.sumgrid + .sumgrid { grid-template-columns: 1fr 1fr; }
-.sumcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 10px 14px; overflow-x: auto; }
-.sum-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--ink-3); margin-bottom: 7px; }
-.sumtbl { border-collapse: collapse; }
-.sumtbl th, .sumtbl td { border: 1px solid var(--border-strong); padding: 3px 12px; text-align: center; white-space: nowrap; }
-.sumtbl th { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--ink-2); background: var(--surface-3); }
-.sumtbl td { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink); }
-.sumtbl .tot { background: var(--surface-3); }
-.sumtbl td.tot { font-weight: 800; }
-.deftbl { border-collapse: collapse; width: 100%; }
-.deftbl th, .deftbl td { border: 1px solid var(--border-strong); padding: 3px 9px; text-align: left; }
-.deftbl th { font-size: 9.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-2); background: var(--surface-3); white-space: nowrap; }
-.deftbl td { font-size: 11px; color: var(--ink-2); }
-.deftbl td.num { font-family: var(--font-mono); font-weight: 700; text-align: center; color: var(--ink); width: 1%; white-space: nowrap; }
-.deftbl td.tag { font-family: var(--font-mono); font-weight: 800; text-align: center; color: var(--ink); width: 1%; white-space: nowrap; }
-.deftbl td.def { line-height: 1.35; }
-
-.crono-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
-.crono-foot .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s4-fg); flex: none; }
-.crono-foot b { color: var(--accent); }
-
-/* ════════════════════════════════════════
-   DARK MODE — misma paleta cálida que FICO inscripciones (EnrollmentPage)
-   Solo se redefinen tokens: todo el resto del CSS y los colores que
-   inyecta el JS (var(--c-*)) se adaptan solos.
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .board-shell {
-  --accent: #8FAADC; /* derivado claro del navy WE: el puro #002060 no se lee en dark */
-  --bg: #14140F;
-  --surface: #1A1A14;
-  --surface-2: #1F1F1A;
-  --surface-3: #24241E;
-  --border: #2A2A22;
-  --border-strong: #3A3A33;
-  --ink: #F4F4F0;
-  --ink-2: #A0A099;
-  --ink-3: #8A8A80;
-  --track: #2A2A22;
-  --s4-fg: #34D399;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 1px rgba(0,0,0,.3);
-  --c-blue: #7BA3F0;
-  --c-amber: #D9A04C;
-  --c-teal: #3FB598;
-  --c-orange: #E8845F;
-  --c-red: #EF7B72;
-  --c-violet: #A78BFA;
-  --c-navy: #8FA8E0;
-  --c-sky: #74A4EC;
-  --c-purple: #9D91F5;
-  --c-wine: #B84A6B; /* el #7A1F3D puro se pierde sobre el fondo oscuro */
-}
-[data-coreui-theme="dark"] .board-shell .am-laptop { background: rgba(8,145,178,.18); color: #67E8F9; border-color: rgba(103,232,249,.35); }
-[data-coreui-theme="dark"] .board-shell .am-laptop i { color: #22D3EE; }
-[data-coreui-theme="dark"] .board-shell .am-tbl tr.row-laptop td { background: rgba(8,145,178,.14); }
-[data-coreui-theme="dark"] .board-shell .am-overlay { background: rgba(0,0,0,.55); }
-[data-coreui-theme="dark"] .board-shell .am-card { box-shadow: 0 20px 60px -20px rgba(0,0,0,.7); }
-[data-coreui-theme="dark"] .board-shell .doc-pop { box-shadow: 0 10px 28px rgba(0,0,0,.55); }
-
-@media (max-width: 1100px) {
-  .kpis { grid-template-columns: repeat(2, 1fr); }
-  .cg-detail-grid { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) {
+  .sb-kpi-canales { grid-column: auto; }
+  .sumgrid, .sumgrid + .sumgrid { grid-template-columns: minmax(0, 1fr); }
+  .sb-search { min-width: 0; flex: 1 1 100%; }
 }
 </style>

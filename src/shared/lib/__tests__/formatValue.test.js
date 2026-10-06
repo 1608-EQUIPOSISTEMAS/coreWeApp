@@ -28,3 +28,12 @@ describe('formatCompact', () => {
     expect(formatCompact(null, 'soles')).toBe('—')
   })
 })
+
+describe('formatValue monto (dinero exacto)', () => {
+  it('conserva los céntimos que soles redondea', () => {
+    expect(formatValue(1200.5, 'monto')).toBe('S/ 1,200.50')
+    expect(formatValue(1200.5, 'soles')).toBe('S/ 1,201')
+    expect(formatValue(0, 'monto')).toBe('S/ 0.00')
+    expect(formatValue(null, 'monto')).toBe('—')
+  })
+})

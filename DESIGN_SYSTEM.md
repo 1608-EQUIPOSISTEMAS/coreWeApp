@@ -309,8 +309,11 @@ reporte de área, sus reglas de estilo pasan a `design-system.css` como `ds-repo
 
 ### 5.4 Detalle de un registro
 
-`ds-head` (título = nombre del registro, subtítulo = código y fecha, pills de
-estado en `.ds-head-actions` junto a las acciones) → `.ds-kpis` con las 3–4
+`ds-head` (título = nombre del registro, subtítulo = código y fecha; el **pill
+de estado va pegado al título**, con icono, en la misma línea: `display:flex;
+gap:10px` — nunca suelto en `.ds-head-actions`, arriba a la derecha no se ve y
+el usuario lo pidió dos veces: FICO 01/10/26 y Aulas 06/10/26; las acciones sí
+van en `.ds-head-actions`; y el estado se calcula, nunca un "Activo" fijo) → `.ds-kpis` con las 3–4
 cifras que importan → `.ds-row--hero` o `--mitad` con paneles (datos, pagos,
 historial). Referencia de contenido: `views/fico/enrollment/EnrollmentPage.vue`.
 
@@ -361,6 +364,32 @@ Una cifra no se repite entre la ficha y la pestaña (el total vive en Finanzas).
   nativo para catálogos largos.
 - Botones al pie: secundario a la izquierda, primario a la derecha; el primario
   dice lo que pasa ("Guardar alumno") y el toast repite el verbo ("Alumno guardado").
+- **Formulario de página completa** (ficha de un registro con varios paneles:
+  `ProgramsForm.vue`, `InstructorsForm.vue`): Cancelar + Guardar van en
+  `.ds-head-actions`, no al pie de cada panel; un solo Guardar para toda la ficha.
+  El pie `.ds-panel-actions` queda para el formulario de un solo panel.
+- **Bloques repetibles** (versiones de un programa, cuentas de un docente): una
+  tarjeta por ítem dentro del panel, con borde `--ds-border` y fondo
+  `--ds-surface-2`; el botón "Agregar …" va en la cabecera del panel
+  (`btn-exec-outline` chico) y el de quitar, en la tarjeta con `aria-label`.
+  Sin ítems ⇒ `.ds-empty` con la instrucción.
+- **Interruptor:** mientras no exista uno `ds-*`, se usa `.exec-switch` global
+  con su texto al lado ("Activo en el sistema"). No se crea otro en el scoped.
+
+### 5.5.1 Grilla editable (precios, carga masiva)
+
+Referencia: `views/producto/Prices.vue` (06/10/26).
+
+- `ds-table ds-table--densa` dentro de `ds-table-scroll` con alto máximo; la
+  cabecera puede ir en dos filas (grupo + columna) y la primera columna sticky
+  con fondo opaco `--ds-surface` (si no, al hacer scroll se transparenta en oscuro).
+- Grupos de columnas: fondo `--ds-soft-info` / `--ds-soft-ok` en la cabecera, nada
+  más. El color no se repite en las celdas.
+- **Fila con cambios sin guardar:** tinte `--ds-soft-warn` sobre fondo opaco y una
+  barra de 3 px `--ds-warn` en la primera celda; Guardar y Deshacer aparecen solo
+  en esa fila.
+- La regla "tabla ≤ 10 filas" no aplica: una grilla de edición o la vista previa
+  de un pegado muestran todas las filas.
 
 ### 5.6 Modal
 
@@ -393,7 +422,7 @@ se usa `confirmAction()` (§7).
 | Monto | `CurrencyInput` | |
 | Paginación + botón de filtros | `BasePagination` | `v-model="{ size, page, total }"`, emite `change`, `open-filters` |
 | Filtros aplicados | `BaseFilterChips` | `items` |
-| Aviso antes de guardar | `<p class="ds-callout warn">` + icono + `<span>` | Neutro, `.info`, `.warn`, `.bad`. Para la consecuencia que el usuario debe leer ANTES de confirmar ("no se revierte en Odoo"). No es un toast |
+| Aviso antes de guardar | `<p class="ds-callout warn">` + icono + `<span>` | Neutro, `.info`, `.warn`, `.bad`; `.violet` solo para la marca de negocio "cambio de curso" (como `.ds-pill.violet`). Para la consecuencia que el usuario debe leer ANTES de confirmar ("no se revierte en Odoo"). No es un toast |
 | Monto con moneda | `currencySymbol(id, catCurrency)` (`entities/enrollment/currencySymbol.js`) | `S/.` o `$` según la moneda del monto (la cuota) o de la venta; nunca `S/.` fijo en el template. Un total mezclado vuelve a `S/.` |
 | Dato ya registrado | `<dl>` etiqueta/valor, no un `<select disabled>` | Un formulario gris deshabilitado no se lee; el select aparece solo cuando se puede editar |
 | Color de texto | `var(--ds-ink)`, `--ds-ink-2`, `--ds-*-ink` (o una clase scoped que los use) | Nunca `text-dark` / `text-secondary` / `text-primary` de Bootstrap: tienen color fijo y en modo oscuro el texto desaparece (pasó en `/comercial/leads` al quitar sus bloques dark) |
@@ -405,6 +434,8 @@ se usa `confirmAction()` (§7).
 | Gráfico | `views/dashboard/ResultChart.vue` o vue-chartjs | Ver §9 |
 | Panel de indicador (ranking, medidor, dona, métricas, tabla corta) | `views/dashboard/ResultWidget.vue` | Recibe un objeto `widget` (contrato de `results.entity.js`). Fuera del dashboard lo arma un módulo puro del feature, nunca el template |
 | Carga global con blur | `meta: { showLoader: true }` en la ruta | Opt-in; el resto usa skeleton |
+| Navegar por semana ISO | `views/academica/components/WeekNavigator.vue` + `features/academica-week/useIsoWeekNav.js` | "‹ Semana N ›" + rango; fechas como texto `YYYY-MM-DD` (nunca `new Date('YYYY-MM-DD')`). Lo usan Control de Ediciones y Semanal |
+| Marcar el estado de una sesión | `views/academica/components/SessionMarkPopover.vue` | Popover anclado con lista de estados (`options` con tono) y slot `#step` para el paso 2 (fecha de una R, motivo de una J). Control de Ediciones y Seguimiento B2B |
 
 **No usar en código nuevo:** `CCard`, `CButton`, `CTable`, `CModal` de CoreUI en
 vistas (CoreUI queda para el shell: header y sidebar); clases Bootstrap `card`,
@@ -448,11 +479,15 @@ vistas (CoreUI queda para el shell: header y sidebar); clases Bootstrap `card`,
 
 - **Cifras:** siempre con `formatValue(valor, unidad)` (`S/ 1,200`, `12.5%`,
   `48 h`, `—` si no hay dato; nunca `0` inventado). En espacios chicos,
-  `formatCompact` (`S/ 1.3 M`).
+  `formatCompact` (`S/ 1.3 M`). `soles` redondea al sol (KPIs, totales); un
+  pago, cuota o deuda concreta va con `monto` (`S/ 1,200.50`).
 - **Colores de gráfico:** el canvas no lee variables CSS, así que el color va
-  en JS dentro de un `computed` con `isDark` (`@/utils/chartTheme`), con los
-  mismos valores de los tokens: principal `#3A63B8` / `#8FAADC`, referencia
-  `#A9B6CC` / `#5A5A50` punteada.
+  en JS dentro de un `computed` con `isDark` (`@/utils/chartTheme`). Patrón
+  preferido: leer el token con `getComputedStyle(document.documentElement)
+  .getPropertyValue('--ds-ok')` dentro de ese `computed` (ver
+  `views/academica/report/ReportBars.vue`), así no se repiten hex. Valores de
+  referencia: principal `#3A63B8` / `#8FAADC`, referencia `#A9B6CC` / `#5A5A50`
+  punteada.
 - **Una serie en color, el resto en gris.** El ojo tiene que ir a la diferencia
   contra la referencia (típico, meta, mes anterior). Sin arcoíris.
 - Leyenda solo si hay más de una serie; símbolo igual a lo que dibuja (línea
@@ -487,6 +522,7 @@ vieja), ni SVG inline para iconos que existen en FontAwesome.
   las pantallas que lo usan.
 
 ---
+- SweetAlert2 (`Swal.fire`) ya sigue el tema desde `design-system.css` (`.swal2-popup` con `--ds-surface`/`--ds-ink`): no hace falta estilo propio por diálogo.
 
 ## 12. Accesibilidad y responsive
 
@@ -512,6 +548,7 @@ vieja), ni SVG inline para iconos que existen en FontAwesome.
 - [ ] Probado a 400 px
 - [ ] Ruta nueva ⇒ alta en Roles y Permisos (`CLAUDE.md`)
 - [ ] Regla de negocio nueva ⇒ test
+- [ ] `npx vite build` pasa (eslint y vitest NO revisan el CSS: un selector colgado en el `<style>` rompe el build de producción)
 
 ---
 
@@ -538,8 +575,27 @@ Hoy conviven 4 encabezados y ~11.900 hex en 122 `.vue`. Al tocar una vista
 cubre el global y su bloque oscuro; 4) revisar claro, oscuro y 400 px.
 
 **Estado:** `views/dashboard/` (panel de líder y "Mi día a día") migrado.
-`views/academica/ReporteAcademico.vue`: solo el bloque "Resultados del alumno"
-usa `ds-*`; el resto sigue legacy a pedido (el rediseño completo se revirtió
-el 28/09/26: perdía la matriz de auditorías por sesión).
+Académica (06/10/26): Aulas, detalle del aula (salvo el PDF, que se imprime
+fuera del tema), Semanal, Control de Ediciones, Seguimiento B2B,
+Reprogramaciones, Tickets y el Reporte Académico en `ds-*` (el reporte se
+migró sin reescribirlo: misma matriz de auditorías por sesión; el rediseño
+completo se revirtió el 28/09/26). El Bot está oculto del sidebar y sigue legacy.
+Producto (06/10/26): completo en `ds-*` — Programas, Docentes, Lista de Precios,
+Carga de Links, Reporte, Cronograma (`Editions.vue` + modal A5 + análisis de
+tiempos), Planificación y Cronograma Vista (este último conserva su diseño denso
+del 14/07; solo cambió su capa de color a tokens). Comercial › Marketing -
+Gestión nació en `ds-*`.
+B2B y Fundación (06/10/26): completos en `ds-*` — bandejas y formularios de
+leads (misma transformación que Comercial, sin su lógica), Empresas, Consultas
+corporativas, Contratos, Eventos y Objetivos.
+
+**Color de segmento (A1–A7):** es identidad, no estado, y se lee igual en todo el
+ERP: A1 azul, A2 ámbar, A3 turquesa, A4 naranja, A5 rojo (cancelado), A6 violeta,
+A7 navy (cerrado). Fuente: `--cro-a1…a7` en `styles/cronograma-fila.css` (o las
+tintas `-ink` equivalentes en vistas que no importan ese archivo). No inventar
+otro mapeo: A4 en verde ya confundió dos pantallas.
+
+**Interruptor:** `.exec-switch` (global) ya tiene modo oscuro en
+`design-system.css`; ninguna vista lo parcha.
 Siguen los módulos por uso: FICO inscripciones → Comercial leads → Académica
 aulas → Producto cronograma → Configuración → B2B/Fundación.

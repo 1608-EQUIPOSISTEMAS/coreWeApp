@@ -1,12 +1,15 @@
 // Cifras en pantalla (es-PE). Una sola regla para KPIs, tablas y gráficos: si
 // cada vista formatea a su manera conviven "S/ 1,200", "1200.00" y "S/.1200".
 // `unidad` es la del contrato de resultados: soles | usd | pct | horas | texto | num.
+// `monto` = soles con céntimos: para un pago o una deuda concreta, donde redondear
+// a S/ 1,201 lo que fue S/ 1,200.50 es un dato falso (soles es para KPIs y totales).
 const es = (n, decimales = 0) => Number(n).toLocaleString('es-PE', { maximumFractionDigits: decimales })
 
 export function formatValue (valor, unidad) {
   if (valor === null || valor === undefined || valor === '') return '—'
   if (unidad === 'texto') return valor
   if (unidad === 'soles') return `S/ ${es(valor)}`
+  if (unidad === 'monto') return `S/ ${Number(valor).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   if (unidad === 'usd') return `US$ ${es(valor)}`
   if (unidad === 'pct') return `${es(valor, 1)}%`
   if (unidad === 'horas') return `${es(valor, 1)} h`

@@ -7,98 +7,92 @@
   >
     <div ref="migrationForm" class="a5-body" v-if="visible">
       <!-- Resumen edicion origen -->
-      <div class="a5-origin-card">
-        <div class="a5-origin-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <div class="a5-origen">
+        <i class="fa-solid fa-circle-xmark a5-origen-icono" aria-hidden="true"></i>
+        <div class="a5-origen-texto">
+          <div class="a5-origen-titulo">{{ origin?.global_code || '---' }} <span class="ds-pill bad">A5 (Cancelar)</span></div>
+          <div class="a5-origen-sub">{{ origin?.program_name || '' }} &middot; {{ formatDate(origin?.start_date) }}</div>
         </div>
-        <div class="a5-origin-text">
-          <div class="a5-origin-title">{{ origin?.global_code || '---' }} <span class="a5-segment-pill">A5 (Cancelar)</span></div>
-          <div class="a5-origin-sub">{{ origin?.program_name || '' }} &middot; {{ formatDate(origin?.start_date) }}</div>
-        </div>
-        <div class="a5-origin-count" v-if="enrollments.length > 0">
-          <span class="a5-origin-count-num">{{ enrollments.length }}</span>
-          <span class="a5-origin-count-lbl">alumnos vigentes</span>
+        <div class="a5-origen-conteo" v-if="enrollments.length > 0">
+          <span class="a5-origen-num">{{ enrollments.length }}</span>
+          <span class="a5-origen-lbl">alumnos vigentes</span>
         </div>
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" class="a5-loading">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        Cargando alumnos vigentes...
+      <div v-if="loading" class="a5-skel" aria-busy="true">
+        <span v-for="n in 4" :key="n" class="ds-skel"></span>
       </div>
 
       <!-- Error de carga. Va ANTES del estado vacio a proposito: una lista que no
            se pudo cargar NO es una lista vacia. Cuando ambos casos se veian igual,
            un fallo del endpoint mostraba "sin alumnos" y dejaba cancelar ediciones
            que si tenian gente adentro. -->
-      <div v-else-if="loadError" class="a5-empty">
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <div class="a5-empty-title">No se pudo verificar si hay alumnos</div>
-        <div class="a5-empty-sub">
+      <div v-else-if="loadError" class="ds-alert a5-error" role="alert">
+        <span>
+          <b>No se pudo verificar si hay alumnos.</b>
           Falló la consulta de inscripciones vigentes, así que no se puede cancelar la edición.
           Reintenta; si sigue fallando, avisa a sistemas.
-        </div>
-        <button type="button" class="a5-btn-ghost mt-2" @click="loadData">Reintentar</button>
+        </span>
+        <button type="button" class="btn-exec btn-exec-outline btn-sm" @click="loadData">Reintentar</button>
       </div>
 
       <!-- Sin alumnos -->
-      <div v-else-if="enrollments.length === 0" class="a5-empty">
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-        <div class="a5-empty-title">Sin alumnos inscritos</div>
-        <div class="a5-empty-sub">Esta edicion no tiene inscripciones vigentes. Puedes cancelarla directamente.</div>
-      </div>
+      <p v-else-if="enrollments.length === 0" class="ds-empty ds-empty--lista">
+        <b>Sin alumnos inscritos.</b> Esta edicion no tiene inscripciones vigentes. Puedes cancelarla directamente.
+      </p>
 
       <!-- Tabla de destinos propuestos -->
       <template v-else>
         <!-- Bulk action -->
-        <div class="a5-bulk-bar">
-          <span class="a5-bulk-label">Proponer la misma edicion destino para todos:</span>
-          <select class="a5-bulk-select" v-model="bulkTargetId" :disabled="loadingEditions">
-            <option :value="null">— Seleccionar —</option>
-            <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
-          </select>
-          <button type="button" class="a5-btn-ghost" @click="applyBulkTarget" :disabled="!bulkTargetId">Aplicar a todos</button>
+        <div class="a5-masivo">
+          <div class="ds-field a5-masivo-campo">
+            <label class="ds-label" for="a5-destino-masivo">Proponer la misma edicion destino para todos</label>
+            <select id="a5-destino-masivo" class="ds-input" v-model="bulkTargetId" :disabled="loadingEditions">
+              <option :value="null">— Seleccionar —</option>
+              <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
+            </select>
+          </div>
+          <button type="button" class="btn-exec btn-exec-outline" @click="applyBulkTarget" :disabled="!bulkTargetId">Aplicar a todos</button>
         </div>
 
-        <div class="a5-table-wrap">
-          <table class="a5-table">
+        <div class="ds-table-scroll a5-scroll">
+          <table class="ds-table ds-table--densa a5-tabla">
             <thead>
               <tr>
                 <th style="width:34%;">Alumno</th>
                 <th style="width:22%;">Programa</th>
-                <th class="text-center" style="width:8%;">Tipo</th>
-                <th class="text-end" style="width:10%;">Monto pag.</th>
+                <th class="a5-centro" style="width:8%;">Tipo</th>
+                <th class="num" style="width:10%;">Monto pag.</th>
                 <th style="width:26%;">Destino propuesto</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="e in enrollments" :key="e.enrollment_id" :class="{ 'a5-row-warn': needsTarget(e) && !selections[e.enrollment_id] }">
+              <tr v-for="e in enrollments" :key="e.enrollment_id" :class="{ 'a5-fila-pendiente': needsTarget(e) && !selections[e.enrollment_id] }">
                 <td>
-                  <div class="a5-stu-name">{{ e.full_name }}</div>
-                  <div class="a5-stu-doc">{{ e.document_number }}</div>
+                  <span class="a5-principal">{{ e.full_name }}</span>
+                  <span class="a5-secundario">{{ e.document_number }}</span>
                 </td>
                 <td>
-                  <div class="a5-prog-name">{{ e.program_name }}</div>
-                  <div class="a5-prog-sub" v-if="e.is_child">
+                  <span class="a5-principal">{{ e.program_name }}</span>
+                  <span class="a5-secundario" v-if="e.is_child">
                     Hijo de {{ e.parent_program_name }} &middot; {{ e.parent_edition_code }}
-                  </div>
+                  </span>
                 </td>
-                <td class="text-center">
-                  <span class="a5-type-pill" :class="e.is_child ? 'a5-pill-child' : 'a5-pill-parent'">
+                <td class="a5-centro">
+                  <span class="ds-pill" :class="{ info: !e.is_child }">
                     {{ e.is_child ? 'HIJO' : 'TOP' }}
                   </span>
                 </td>
-                <td class="text-end">
-                  <span class="a5-amt">{{ formatAmount(e.amount_paid) }}</span>
-                </td>
+                <td class="num">{{ formatValue(e.amount_paid, 'monto') }}</td>
                 <td>
-                  <select v-if="needsTarget(e)" class="a5-row-select" v-model="selections[e.enrollment_id]">
+                  <select v-if="needsTarget(e)" class="ds-input" v-model="selections[e.enrollment_id]" :aria-label="`Destino de ${e.full_name}`">
                     <option :value="null">— Seleccionar —</option>
                     <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                   </select>
                   <!-- Un modulo de paquete no lleva destino propio: el caso vive en
                        su venta y mover la venta le vuelve a crear los modulos. -->
-                  <span v-else class="a5-child-note">Viaja con su venta del paquete</span>
+                  <span v-else class="a5-nota">Viaja con su venta del paquete</span>
                 </td>
               </tr>
             </tbody>
@@ -106,64 +100,52 @@
         </div>
 
         <!-- Justificacion -->
-        <div class="a5-just">
-          <label class="a5-just-label">Justificacion de la cancelacion <span class="a5-required">*</span></label>
+        <div class="ds-field">
+          <label class="ds-label" for="a5-justificacion">Justificacion de la cancelacion<span class="ds-req">*</span></label>
           <textarea
+            id="a5-justificacion"
             v-model="justificacion"
-            class="a5-textarea"
+            class="ds-input"
             rows="3"
             placeholder="Motivo de la cancelacion (lo ve Academica al contactar al alumno)..."
             required
           ></textarea>
         </div>
 
-        <div class="a5-warning">
-          <i class="fa-solid fa-circle-info"></i>
-          <b>No se mueve a nadie todavia.</b> La edicion queda cancelada y sus alumnos pasan a
-          <b>Academica &rsaquo; Reprogramaciones</b> con este destino marcado como propuesta de Producto.
-          Academica contacta a cada alumno para confirmarlo (o cambiarlo por otra edicion, reserva de vacante
-          o reembolso) y recien el <b>veredicto de FICO</b> ejecuta el movimiento, Odoo y el correo.
-        </div>
+        <p class="ds-callout warn">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>
+            <b>No se mueve a nadie todavia.</b> La edicion queda cancelada y sus alumnos pasan a
+            <b>Academica &rsaquo; Reprogramaciones</b> con este destino marcado como propuesta de Producto.
+            Academica contacta a cada alumno para confirmarlo (o cambiarlo por otra edicion, reserva de vacante
+            o reembolso) y recien el <b>veredicto de FICO</b> ejecuta el movimiento, Odoo y el correo.
+          </span>
+        </p>
       </template>
     </div>
 
     <template #footer>
-      <button class="a5-btn-cancel" @click="handleClose" :disabled="saving">Cancelar</button>
+      <button class="btn-exec btn-exec-outline" type="button" @click="handleClose" :disabled="saving">Cancelar</button>
       <button
         v-if="enrollments.length === 0"
-        class="a5-btn-confirm"
+        class="btn-exec btn-exec-danger"
+        type="button"
         :disabled="saving || loading || loadError"
         @click="handleSubmitEmpty"
       >
-        <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
         Cancelar edicion
       </button>
       <button
         v-else
-        class="a5-btn-confirm"
+        class="btn-exec btn-exec-danger"
+        type="button"
         :disabled="!canConfirm || saving"
         @click="handleSubmit"
       >
-        <i v-if="saving" class="fa-solid fa-spinner fa-spin"></i>
-        Cancelar y derivar {{ enrollments.length }} a Reprogramaciones
+        <i v-if="saving" class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+        {{ saving ? 'Cancelando…' : `Cancelar y derivar ${enrollments.length} a Reprogramaciones` }}
       </button>
     </template>
-
-    <!-- Doble confirmacion -->
-    <div v-if="showConfirm" class="a5-confirm-overlay" @click.self="showConfirm = false">
-      <div class="a5-confirm-box">
-        <div class="a5-confirm-title">Confirmar cancelacion</div>
-        <div class="a5-confirm-text">
-          Vas a marcar la edicion <b>{{ origin?.global_code }}</b> como <b>A5</b> y derivar
-          <b>{{ enrollments.length }}</b> inscripcion(es) a Reprogramaciones con el destino propuesto.<br/><br/>
-          Los alumnos <b>no se mueven aun</b>: no se envia ningun correo hasta que FICO de el veredicto.
-        </div>
-        <div class="a5-confirm-actions">
-          <button class="a5-btn-cancel" @click="showConfirm = false">Volver</button>
-          <button class="a5-btn-confirm" @click="cancelarYDerivar">Confirmar</button>
-        </div>
-      </div>
-    </div>
   </BaseModal>
 </template>
 
@@ -173,6 +155,8 @@ import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 import { useToast } from 'vue-toastification'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
+import { confirmAction } from '@/composables/useConfirm'
+import { formatValue } from '@/shared/lib/formatValue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -192,7 +176,6 @@ const loading = ref(false)
 const loadError = ref(false)
 const loadingEditions = ref(false)
 const saving = ref(false)
-const showConfirm = ref(false)
 
 const enrollments = ref([])
 const availableEditions = ref([])
@@ -284,7 +267,6 @@ function resetState () {
   bulkTargetId.value = null
   justificacion.value = ''
   Object.keys(selections).forEach(k => delete selections[k])
-  showConfirm.value = false
 }
 
 function handleClose () {
@@ -295,10 +277,27 @@ function handleClose () {
 const migrationForm = ref(null)
 const requiredFieldsFilled = useRequiredFieldsGuard(migrationForm)
 
-function handleSubmit () {
+// SweetAlert recibe `html` como markup: el codigo de edicion viene de la BD y
+// se escapa igual, para que nunca se interprete como HTML.
+function escapeHtml (value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
+}
+
+async function handleSubmit () {
   if (!requiredFieldsFilled()) return
   if (!canConfirm.value) return
-  showConfirm.value = true
+  // Doble confirmacion: cancelar a A5 no se deshace desde aqui.
+  const confirmado = await confirmAction({
+    title: 'Confirmar cancelacion',
+    html: `Vas a marcar la edicion <b>${escapeHtml(props.origin?.global_code)}</b> como <b>A5</b> y derivar ` +
+      `<b>${enrollments.value.length}</b> inscripcion(es) a Reprogramaciones con el destino propuesto.<br/><br/>` +
+      'Los alumnos <b>no se mueven aun</b>: no se envia ningun correo hasta que FICO de el veredicto.',
+    confirmText: 'Confirmar',
+    cancelText: 'Volver',
+    icon: 'warning',
+    danger: true
+  })
+  if (confirmado) await cancelarYDerivar()
 }
 
 async function handleSubmitEmpty () {
@@ -311,7 +310,6 @@ async function handleSubmitEmpty () {
 }
 
 async function cancelarYDerivar () {
-  showConfirm.value = false
   saving.value = true
   try {
     const payload = {
@@ -346,187 +344,45 @@ function formatDate (raw) {
   if (!m) return raw
   return `${m[3]}/${m[2]}/${m[1]}`
 }
-
-function formatAmount (n) {
-  const v = Number(n) || 0
-  return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 </script>
 
 <style scoped>
-.a5-body { display: flex; flex-direction: column; gap: 16px; }
+.a5-body { display: flex; flex-direction: column; gap: var(--ds-gap); }
 
-.a5-origin-card {
-  display: flex; align-items: center; gap: 14px;
-  background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
-  padding: 14px 18px;
+/* Cabecera roja: la edicion que se va a cancelar se lee antes que la tabla. */
+.a5-origen {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px;
+  padding: 14px 18px; border-radius: var(--ds-radius);
+  background: var(--ds-soft-bad); color: var(--ds-bad-ink);
 }
-.a5-origin-icon { color: #B91C1C; display: flex; }
-.a5-origin-text { flex: 1; }
-.a5-origin-title { font-size: 14px; font-weight: 700; color: #7F1D1D; display: flex; align-items: center; gap: 8px; }
-.a5-origin-sub { font-size: 12px; color: #991B1B; margin-top: 2px; }
-.a5-segment-pill {
-  background: #DC2626; color: #fff; font-size: 10px; font-weight: 700;
-  padding: 3px 8px; border-radius: 999px; letter-spacing: 0.05em;
-}
-.a5-origin-count { text-align: right; }
-.a5-origin-count-num { display: block; font-size: 22px; font-weight: 700; color: #7F1D1D; line-height: 1; }
-.a5-origin-count-lbl { font-size: 10px; color: #B91C1C; text-transform: uppercase; letter-spacing: 0.05em; }
+.a5-origen-icono { font-size: 20px; }
+.a5-origen-texto { flex: 1; min-width: 0; }
+.a5-origen-titulo { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 14px; font-weight: 700; }
+.a5-origen-sub { margin-top: 2px; font-size: 12px; }
+.a5-origen-conteo { text-align: right; }
+.a5-origen-num { display: block; font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.a5-origen-lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; }
 
-.a5-loading, .a5-empty {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 40px 20px; color: #6B7280; gap: 10px;
-}
-.a5-empty-title { font-size: 14px; font-weight: 600; color: #374151; }
-.a5-empty-sub { font-size: 12px; color: #6B7280; }
+.a5-skel { display: flex; flex-direction: column; gap: 12px; padding: 12px 0; }
 
-.a5-bulk-bar {
-  display: flex; align-items: center; gap: 10px;
-  background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px;
-  padding: 10px 14px;
-}
-.a5-bulk-label { font-size: 12px; font-weight: 600; color: #374151; }
-.a5-bulk-select {
-  flex: 1; max-width: 320px;
-  border: 1px solid #D1D5DB; border-radius: 6px; padding: 6px 10px; font-size: 12.5px;
-  background: #fff;
-}
+.a5-error { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 13px; font-weight: 500; }
+.a5-error > span { flex: 1; min-width: 220px; }
 
-.a5-table-wrap {
-  border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden;
-  max-height: 380px; overflow-y: auto;
-}
-.a5-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.a5-table thead th {
-  background: #F3F4F6; padding: 9px 12px; text-align: left;
-  font-size: 11px; font-weight: 600; color: #4B5563;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  position: sticky; top: 0;
-  border-bottom: 1px solid #E5E7EB;
-}
-.a5-table tbody td { padding: 10px 12px; border-top: 1px solid #F3F4F6; vertical-align: middle; }
-.a5-row-warn td { background: #FFFBEB; }
+.a5-masivo { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
+.a5-masivo-campo { flex: 1; min-width: 220px; max-width: 420px; }
 
-.a5-stu-name { font-weight: 600; color: #111827; font-size: 13px; }
-.a5-stu-doc { font-size: 11px; color: #6B7280; margin-top: 1px; }
-.a5-prog-name { font-weight: 500; color: #374151; }
-.a5-prog-sub { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
-.a5-amt { font-weight: 600; color: #059669; font-size: 12.5px; }
+/* Lista larga dentro del modal: scroll propio con cabecera fija y opaca. El
+   min-width evita que los selects se aplasten a 400 px (la tabla scrollea en X). */
+.a5-scroll { max-height: 380px; overflow-y: auto; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.a5-tabla { min-width: 720px; }
+.a5-tabla thead th { position: sticky; top: 0; z-index: 1; background: var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); }
+.a5-tabla td { vertical-align: middle; }
+.a5-centro { text-align: center; }
 
-.a5-type-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-.a5-pill-parent { background: #DBEAFE; color: #1E40AF; }
-.a5-pill-child { background: #E0E7FF; color: #4338CA; }
+/* Venta sin destino elegido: es lo que bloquea el boton de confirmar. */
+.a5-fila-pendiente td { background: var(--ds-soft-warn); }
 
-.a5-child-note { font-size: 11px; color: #9CA3AF; font-style: italic; }
-
-.a5-row-select {
-  width: 100%; border: 1px solid #D1D5DB; border-radius: 6px;
-  padding: 6px 8px; font-size: 12px; background: #fff;
-}
-
-.a5-just { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-.a5-just-label { font-size: 11px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.03em; }
-.a5-required { color: #DC2626; }
-.a5-textarea {
-  width: 100%; box-sizing: border-box; padding: 10px 12px;
-  border: 1.5px solid #F59E0B; border-radius: 6px; font-size: 13px;
-  font-family: inherit; color: #374151; background: #FFFBEB;
-  resize: vertical; min-height: 72px;
-}
-.a5-textarea:focus { outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
-
-.a5-warning {
-  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px;
-  padding: 10px 14px; font-size: 12px; color: #92400E; line-height: 1.5;
-}
-.a5-warning i { margin-right: 6px; color: #B45309; }
-
-.a5-btn-cancel, .a5-btn-confirm, .a5-btn-ghost {
-  font-family: inherit; font-size: 12.5px; font-weight: 600;
-  border-radius: 6px; padding: 8px 16px; cursor: pointer;
-  transition: all 0.15s;
-}
-.a5-btn-cancel { background: none; border: 1px solid #E5E7EB; color: #6B7280; }
-.a5-btn-cancel:hover:not(:disabled) { background: #F9FAFB; }
-.a5-btn-ghost { background: #fff; border: 1px solid #D1D5DB; color: #374151; }
-.a5-btn-ghost:hover:not(:disabled) { background: #F9FAFB; }
-.a5-btn-confirm { background: #DC2626; color: #fff; border: none; display: inline-flex; align-items: center; gap: 8px; }
-.a5-btn-confirm:hover:not(:disabled) { background: #B91C1C; }
-.a5-btn-confirm:disabled, .a5-btn-cancel:disabled, .a5-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.a5-confirm-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center; z-index: 9999;
-}
-.a5-confirm-box {
-  background: #fff; border-radius: 10px; padding: 24px; max-width: 420px; width: 90%;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-.a5-confirm-title { font-size: 16px; font-weight: 700; color: #7F1D1D; margin-bottom: 12px; }
-.a5-confirm-text { font-size: 13px; color: #374151; line-height: 1.5; margin-bottom: 20px; }
-.a5-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
-
-.text-center { text-align: center; }
-.text-end { text-align: right; }
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .a5-origin-card { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); }
-[data-coreui-theme="dark"] .a5-origin-icon { color: #F87171; }
-[data-coreui-theme="dark"] .a5-origin-title { color: #FCA5A5; }
-[data-coreui-theme="dark"] .a5-origin-sub { color: #F87171; }
-[data-coreui-theme="dark"] .a5-origin-count-num { color: #FCA5A5; }
-[data-coreui-theme="dark"] .a5-origin-count-lbl { color: #F87171; }
-[data-coreui-theme="dark"] .a5-loading,
-[data-coreui-theme="dark"] .a5-empty { color: #A0A099; }
-[data-coreui-theme="dark"] .a5-empty-title { color: #D0D0C8; }
-[data-coreui-theme="dark"] .a5-empty-sub { color: #8A8A80; }
-[data-coreui-theme="dark"] .a5-bulk-bar { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .a5-bulk-label { color: #D0D0C8; }
-[data-coreui-theme="dark"] .a5-bulk-select,
-[data-coreui-theme="dark"] .a5-row-select { background: #14140F; border-color: #3A3A33; color: #F4F4F0; }
-[data-coreui-theme="dark"] .a5-table-wrap { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .a5-table thead th { background: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .a5-table tbody td { border-top-color: #24241E; }
-[data-coreui-theme="dark"] .a5-row-warn td { background: rgba(245,158,11,.12); }
-[data-coreui-theme="dark"] .a5-stu-name { color: #F4F4F0; }
-[data-coreui-theme="dark"] .a5-stu-doc { color: #8A8A80; }
-[data-coreui-theme="dark"] .a5-prog-name { color: #D0D0C8; }
-[data-coreui-theme="dark"] .a5-prog-sub { color: #8A8A80; }
-[data-coreui-theme="dark"] .a5-child-note { color: #8A8A80; }
-[data-coreui-theme="dark"] .a5-amt { color: #34D399; }
-[data-coreui-theme="dark"] .a5-pill-parent { background: rgba(59,130,246,.2); color: #93C5FD; }
-[data-coreui-theme="dark"] .a5-pill-child { background: rgba(99,102,241,.2); color: #C7D2FE; }
-[data-coreui-theme="dark"] .a5-just-label { color: #A0A099; }
-[data-coreui-theme="dark"] .a5-required { color: #F87171; }
-[data-coreui-theme="dark"] .a5-textarea {
-  border-color: rgba(245,158,11,.45);
-  background: rgba(245,158,11,.10);
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .a5-textarea:focus { border-color: #FBBF24; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
-[data-coreui-theme="dark"] .a5-warning { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #FBBF24; }
-[data-coreui-theme="dark"] .a5-warning i { color: #FBBF24; }
-[data-coreui-theme="dark"] .a5-btn-cancel { border-color: #3A3A33; color: #A0A099; }
-[data-coreui-theme="dark"] .a5-btn-cancel:hover:not(:disabled) { background: #1F1F1A; }
-[data-coreui-theme="dark"] .a5-btn-ghost { background: #1F1F1A; border-color: #3A3A33; color: #D0D0C8; }
-[data-coreui-theme="dark"] .a5-btn-ghost:hover:not(:disabled) { background: #24241E; }
-[data-coreui-theme="dark"] .a5-confirm-overlay { background: rgba(0,0,0,0.65); }
-[data-coreui-theme="dark"] .a5-confirm-box { background: #1A1A14; box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
-[data-coreui-theme="dark"] .a5-confirm-title { color: #FCA5A5; }
-[data-coreui-theme="dark"] .a5-confirm-text { color: #D0D0C8; }
-</style>
-
-<style>
-/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
-   solo cuando el modal contiene este cuerpo (.a5-body). */
-[data-coreui-theme="dark"] .modal-card:has(.a5-body) {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
-}
-[data-coreui-theme="dark"] .modal-card:has(.a5-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .modal-card:has(.a5-body) .modal-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .modal-card:has(.a5-body) .btn-close { color: #A0A099; }
+.a5-principal { display: block; font-weight: 600; color: var(--ds-ink); }
+.a5-secundario { display: block; margin-top: 1px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
+.a5-nota { font-size: 11px; font-style: italic; color: var(--ds-muted); }
 </style>

@@ -1,207 +1,223 @@
 <template>
-  <div class="ef-page">
+  <div class="ds-page">
 
-    <div class="ef-page-header">
-      <div class="ef-page-header-left">
-        <span class="ef-breadcrumb">Fundación</span>
-        <h1 class="ef-page-title">Recursos de Eventos</h1>
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Recursos de eventos</h1>
+        <p class="ds-sub">Banner, botones, categorías de entrada y sesiones que lleva el correo de confirmación de cada congreso.</p>
       </div>
-      <div class="ef-header-actions">
-        <button type="button" class="ef-btn-primary" :disabled="!selectedEditionId || saving" @click="guardar">
-          <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-          {{ saving ? 'Guardando...' : 'Guardar' }}
+      <div class="ds-head-actions">
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="!selectedEditionId || saving" @click="guardar">
+          <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'" aria-hidden="true"></i>
+          {{ saving ? 'Guardando…' : 'Guardar recursos' }}
         </button>
       </div>
-    </div>
+    </header>
 
-    <main class="ef-body">
-
-      <!-- SELECTOR DE EVENTO -->
-      <div class="exec-fieldset mb-4">
-        <h6 class="fieldset-title"><i class="fa-solid fa-calendar-star me-2"></i> Congreso / Evento</h6>
-        <div class="row g-3 align-items-end">
-          <div class="col-md-8">
-            <label class="exec-label">Selecciona el congreso o evento a gestionar</label>
-            <SearchSelect
-              v-model="selectedEditionId"
-              :items="eventOptions"
-              label-field="label"
-              value-field="edition_num_id"
-              :viewOpen="8"
-              placeholder="Buscar congreso o evento..."
-              class="exec-select-light w-100"
-              @change="onEventChange"
-            />
-          </div>
-          <div class="col-md-4">
-            <div v-if="selected" class="ev-flags">
-              <span class="ev-flag" :class="selected.has_banner_image ? 'is-on' : 'is-off'">
-                <i class="fa-solid" :class="selected.has_banner_image ? 'fa-check' : 'fa-xmark'"></i> Banner
-              </span>
-              <span class="ev-flag" :class="selected.has_resources ? 'is-on' : 'is-off'">
-                <i class="fa-solid" :class="selected.has_resources ? 'fa-check' : 'fa-xmark'"></i> Links y textos
-              </span>
-            </div>
-          </div>
+    <!-- SELECTOR DE EVENTO -->
+    <section class="ds-panel">
+      <header class="ds-panel-head">
+        <h3 class="ds-panel-title"><i class="fa-solid fa-calendar-star" aria-hidden="true"></i> Congreso o evento</h3>
+        <div v-if="selected" class="ev-flags">
+          <span class="ds-pill" :class="{ ok: selected.has_banner_image }">
+            <i class="fa-solid" :class="selected.has_banner_image ? 'fa-check' : 'fa-xmark'" aria-hidden="true"></i> Banner
+          </span>
+          <span class="ds-pill" :class="{ ok: selected.has_resources }">
+            <i class="fa-solid" :class="selected.has_resources ? 'fa-check' : 'fa-xmark'" aria-hidden="true"></i> Links y textos
+          </span>
+        </div>
+      </header>
+      <div class="ds-panel-body ds-stack">
+        <div class="ds-field">
+          <label class="ds-label">Selecciona el congreso o evento a gestionar</label>
+          <SearchSelect
+            v-model="selectedEditionId"
+            :items="eventOptions"
+            label-field="label"
+            value-field="edition_num_id"
+            :viewOpen="8"
+            placeholder="Buscar congreso o evento..."
+            class="w-100"
+            @change="onEventChange"
+          />
         </div>
 
         <!-- Un fallo al cargar NO es "no hay eventos": decirlo así mandaba al
              usuario a revisar el tipo de programa por un error del servidor. -->
-        <div v-if="loadError" class="ev-empty ev-empty-error mt-3">
-          <i class="fa-solid fa-triangle-exclamation me-2"></i>
-          No se pudo cargar la lista de eventos. <strong>{{ loadError }}</strong>
-          <button type="button" class="ev-retry" @click="loadEvents">
-            <i class="fa-solid fa-rotate-right me-1"></i>Reintentar
+        <p v-if="loadError" class="ds-alert ev-alert">
+          <span>
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            No se pudo cargar la lista de eventos. {{ loadError }}
+          </span>
+          <button type="button" class="btn-exec btn-exec-outline btn-sm" @click="loadEvents">
+            <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Reintentar
           </button>
-        </div>
+        </p>
 
-        <div v-else-if="!loadingList && eventOptions.length === 0" class="ev-empty mt-3">
-          <i class="fa-solid fa-circle-info me-2"></i>
-          No hay ediciones de <strong>Congreso / Evento</strong>. Revisa en
-          <em>Producto → Programas</em> que el programa tenga ese tipo; también
-          aparecen aquí las ediciones que ya tengan recursos o inscritos con
-          categoría de entrada.
-        </div>
+        <p v-else-if="!loadingList && eventOptions.length === 0" class="ds-callout info">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>
+            No hay ediciones de <strong>Congreso / Evento</strong>. Revisa en
+            <em>Producto → Programas</em> que el programa tenga ese tipo; también
+            aparecen aquí las ediciones que ya tengan recursos o inscritos con
+            categoría de entrada.
+          </span>
+        </p>
       </div>
+    </section>
 
-      <div v-if="loadingResources" class="ev-loading">
-        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-        <p class="text-muted fw-600">Cargando recursos del evento...</p>
+    <!-- Skeleton con la forma de los paneles que vienen: no una pantalla en blanco. -->
+    <section v-if="loadingResources" class="ds-panel" aria-busy="true" aria-label="Cargando recursos del evento">
+      <div class="ds-panel-body ds-stack">
+        <span v-for="n in 5" :key="n" class="ds-skel"></span>
       </div>
+    </section>
 
-      <template v-else-if="selectedEditionId">
-        <!-- BANNER -->
-        <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-image me-2"></i> Banner del correo</h6>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="exec-label">Imagen</label>
-              <input type="file" class="exec-input-light w-100" accept="image/jpeg,image/png" @change="onBannerFile" />
-              <div class="ev-hint">JPG o PNG, máximo 2 MB. Viaja incrustado en el correo, así que el peso se multiplica por cada inscrito.</div>
-              <button v-if="form.banner_preview" type="button" class="ev-remove" @click="removeBanner">
-                <i class="fa-solid fa-xmark me-1"></i>Quitar banner
-              </button>
-            </div>
-            <div class="col-md-6">
-              <label class="exec-label">Vista previa</label>
-              <div class="ev-preview">
-                <img v-if="form.banner_preview" :src="form.banner_preview" alt="Banner del evento" />
-                <span v-else class="ev-preview-empty">Sin banner cargado — el correo usará el del programa</span>
-              </div>
+    <template v-else-if="selectedEditionId">
+      <!-- BANNER -->
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title"><i class="fa-solid fa-image" aria-hidden="true"></i> Banner del correo</h3>
+        </header>
+        <div class="ds-panel-body ds-form-grid">
+          <div class="ds-field">
+            <label class="ds-label" for="ev-banner">Imagen</label>
+            <input id="ev-banner" type="file" class="ds-input ev-file" accept="image/jpeg,image/png" @change="onBannerFile" />
+            <span class="ds-help">JPG o PNG, máximo 2 MB. Viaja incrustado en el correo, así que el peso se multiplica por cada inscrito.</span>
+            <button v-if="form.banner_preview" type="button" class="btn-exec btn-exec-outline btn-sm ev-remove" @click="removeBanner">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i> Quitar banner
+            </button>
+          </div>
+          <div class="ds-field">
+            <span class="ds-label">Vista previa</span>
+            <div class="ev-preview">
+              <img v-if="form.banner_preview" :src="form.banner_preview" alt="Banner del evento" />
+              <span v-else class="ds-empty">Sin banner cargado: el correo usará el del programa.</span>
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- BOTONES DEL CORREO -->
-        <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-link me-2"></i> Botones del correo</h6>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="exec-label"><i class="fa-solid fa-certificate me-1"></i> Datos para el certificado</label>
-              <input type="url" class="exec-input-light w-100" v-model="form.certificate_form_link" placeholder="https://forms.gle/..." />
-            </div>
-            <div class="col-md-6">
-              <label class="exec-label"><i class="fa-solid fa-address-card me-1"></i> Tarjeta de presentación</label>
-              <input type="url" class="exec-input-light w-100" v-model="form.business_card_link" placeholder="https://forms.gle/..." />
-            </div>
-            <div class="col-12">
-              <div class="ev-hint">
-                Cada botón se muestra solo si tiene link. Los que dejes vacíos simplemente no aparecen en el correo.
-                El grupo de WhatsApp no está aquí: va por categoría de entrada, más abajo.
-              </div>
-            </div>
+      <!-- BOTONES DEL CORREO -->
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title"><i class="fa-solid fa-link" aria-hidden="true"></i> Botones del correo</h3>
+        </header>
+        <div class="ds-panel-body ds-form-grid">
+          <div class="ds-field">
+            <label class="ds-label" for="ev-cert"><i class="fa-solid fa-certificate" aria-hidden="true"></i> Datos para el certificado</label>
+            <input id="ev-cert" type="url" class="ds-input" v-model="form.certificate_form_link" placeholder="https://forms.gle/..." />
           </div>
+          <div class="ds-field">
+            <label class="ds-label" for="ev-card"><i class="fa-solid fa-address-card" aria-hidden="true"></i> Tarjeta de presentación</label>
+            <input id="ev-card" type="url" class="ds-input" v-model="form.business_card_link" placeholder="https://forms.gle/..." />
+          </div>
+          <span class="ds-help ev-span">
+            Cada botón se muestra solo si tiene link. Los que dejes vacíos simplemente no aparecen en el correo.
+            El grupo de WhatsApp no está aquí: va por categoría de entrada, más abajo.
+          </span>
         </div>
+      </section>
 
-        <!-- CATEGORIAS DE ENTRADA -->
-        <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-ticket me-2"></i> Categorías de entrada</h6>
-          <div class="ev-hint mb-3">
-            Enciende solo las que se venden en este congreso: unos tienen VIP, PREMIUM y VIRTUAL,
-            otros suman GENERAL. Las apagadas no aparecen al registrar la inscripción.
-            Cada categoría lleva su propio grupo de WhatsApp, que es el que recibe el inscrito en su correo.
+      <!-- CATEGORIAS DE ENTRADA -->
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <div>
+            <h3 class="ds-panel-title"><i class="fa-solid fa-ticket" aria-hidden="true"></i> Categorías de entrada</h3>
+            <p class="ds-panel-sub">
+              Enciende solo las que se venden en este congreso: unos tienen VIP, PREMIUM y VIRTUAL,
+              otros suman GENERAL. Las apagadas no aparecen al registrar la inscripción.
+              Cada categoría lleva su propio grupo de WhatsApp, que es el que recibe el inscrito en su correo.
+            </p>
           </div>
-
-          <div v-if="loadingCategories" class="text-muted small">
-            <i class="fas fa-spinner fa-spin me-2"></i>Cargando categorías...
+        </header>
+        <div class="ds-panel-body ds-stack">
+          <div v-if="loadingCategories" class="ev-cats" aria-busy="true" aria-label="Cargando categorías">
+            <div v-for="n in 4" :key="n" class="ev-cat ds-stack">
+              <span class="ds-skel"></span>
+              <span class="ds-skel"></span>
+            </div>
           </div>
 
           <div v-else class="ev-cats">
             <div v-for="c in categories" :key="c.cat_event_category"
                  class="ev-cat" :class="{ 'is-off': !c.enabled }">
-              <div class="ev-cat-head">
-                <label class="ev-switch">
+              <label class="ev-cat-head">
+                <span class="exec-switch">
                   <input type="checkbox" v-model="c.enabled" />
-                  <span>{{ c.description }}</span>
-                </label>
-              </div>
+                  <span></span>
+                </span>
+                <span class="ev-cat-name">{{ c.description }}</span>
+              </label>
 
-              <div class="ev-cat-body">
-                <div class="row g-2">
-                  <div class="col-6 col-lg-3">
-                    <label class="exec-label">Alumno S/.</label>
-                    <input type="number" min="0" step="0.01" class="exec-input-light w-100"
-                           :disabled="!c.enabled" v-model.number="c.price_student_soles" />
-                  </div>
-                  <div class="col-6 col-lg-3">
-                    <label class="exec-label">Alumno US$</label>
-                    <input type="number" min="0" step="0.01" class="exec-input-light w-100"
-                           :disabled="!c.enabled" v-model.number="c.price_student_dollars" />
-                  </div>
-                  <div class="col-6 col-lg-3">
-                    <label class="exec-label">Profesional S/.</label>
-                    <input type="number" min="0" step="0.01" class="exec-input-light w-100"
-                           :disabled="!c.enabled" v-model.number="c.price_profesional_soles" />
-                  </div>
-                  <div class="col-6 col-lg-3">
-                    <label class="exec-label">Profesional US$</label>
-                    <input type="number" min="0" step="0.01" class="exec-input-light w-100"
-                           :disabled="!c.enabled" v-model.number="c.price_profesional_dollars" />
-                  </div>
-                  <div class="col-12">
-                    <label class="exec-label"><i class="fa-brands fa-whatsapp me-1" style="color:#25d366"></i> Grupo de WhatsApp de {{ c.description }}</label>
-                    <input type="url" class="exec-input-light w-100" :disabled="!c.enabled"
-                           v-model="c.whatsapp_link" placeholder="https://chat.whatsapp.com/..." />
-                  </div>
+              <div class="ev-prices">
+                <div class="ds-field">
+                  <label class="ds-label">Alumno S/.</label>
+                  <input type="number" min="0" step="0.01" class="ds-input"
+                         :disabled="!c.enabled" v-model.number="c.price_student_soles" />
+                </div>
+                <div class="ds-field">
+                  <label class="ds-label">Alumno US$</label>
+                  <input type="number" min="0" step="0.01" class="ds-input"
+                         :disabled="!c.enabled" v-model.number="c.price_student_dollars" />
+                </div>
+                <div class="ds-field">
+                  <label class="ds-label">Profesional S/.</label>
+                  <input type="number" min="0" step="0.01" class="ds-input"
+                         :disabled="!c.enabled" v-model.number="c.price_profesional_soles" />
+                </div>
+                <div class="ds-field">
+                  <label class="ds-label">Profesional US$</label>
+                  <input type="number" min="0" step="0.01" class="ds-input"
+                         :disabled="!c.enabled" v-model.number="c.price_profesional_dollars" />
+                </div>
+                <div class="ds-field ev-span">
+                  <label class="ds-label"><i class="fa-brands fa-whatsapp ev-wa" aria-hidden="true"></i> Grupo de WhatsApp de {{ c.description }}</label>
+                  <input type="url" class="ds-input" :disabled="!c.enabled"
+                         v-model="c.whatsapp_link" placeholder="https://chat.whatsapp.com/..." />
                 </div>
               </div>
             </div>
           </div>
 
-          <div v-if="!loadingCategories && !categories.some(c => c.enabled)" class="ev-empty mt-3">
-            <i class="fa-solid fa-circle-info me-2"></i>
-            Sin ninguna categoría activa, el formulario de inscripción vuelve a ofrecer las cuatro.
-            Enciende al menos una.
-          </div>
+          <p v-if="!loadingCategories && !categories.some(c => c.enabled)" class="ds-callout warn">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <span>
+              Sin ninguna categoría activa, el formulario de inscripción vuelve a ofrecer las cuatro.
+              Enciende al menos una.
+            </span>
+          </p>
         </div>
+      </section>
 
-        <!-- DETALLE DE SESIONES -->
-        <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-clock me-2"></i> Detalle de sesiones</h6>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="exec-label"><i class="fa-solid fa-video me-1"></i> Entradas VIRTUAL</label>
-              <textarea class="exec-input-light w-100" rows="5" v-model="form.session_detail_virtual"
-                        placeholder="Día 1: Viernes 19 de Junio de 5pm a 9:20pm - Vía Zoom (Hora Perú)"></textarea>
-            </div>
-            <div class="col-md-6">
-              <label class="exec-label"><i class="fa-solid fa-location-dot me-1"></i> Entradas VIP, GENERAL y PREMIUM</label>
-              <textarea class="exec-input-light w-100" rows="5" v-model="form.session_detail_onsite"
-                        placeholder="Día 1: Viernes 19 de Junio de 5pm a 9:20pm - Hotel Marriott, Miraflores"></textarea>
-            </div>
-            <div class="col-12">
-              <div class="ev-hint">El correo pinta el texto que corresponde a la categoría de entrada del inscrito. Si solo cargas uno, se usa ese para todos.</div>
-            </div>
+      <!-- DETALLE DE SESIONES -->
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title"><i class="fa-solid fa-clock" aria-hidden="true"></i> Detalle de sesiones</h3>
+        </header>
+        <div class="ds-panel-body ds-form-grid">
+          <div class="ds-field">
+            <label class="ds-label" for="ev-virtual"><i class="fa-solid fa-video" aria-hidden="true"></i> Entradas VIRTUAL</label>
+            <textarea id="ev-virtual" class="ds-input" rows="5" v-model="form.session_detail_virtual"
+                      placeholder="Día 1: Viernes 19 de Junio de 5pm a 9:20pm - Vía Zoom (Hora Perú)"></textarea>
           </div>
+          <div class="ds-field">
+            <label class="ds-label" for="ev-onsite"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Entradas VIP, GENERAL y PREMIUM</label>
+            <textarea id="ev-onsite" class="ds-input" rows="5" v-model="form.session_detail_onsite"
+                      placeholder="Día 1: Viernes 19 de Junio de 5pm a 9:20pm - Hotel Marriott, Miraflores"></textarea>
+          </div>
+          <span class="ds-help ev-span">El correo pinta el texto que corresponde a la categoría de entrada del inscrito. Si solo cargas uno, se usa ese para todos.</span>
         </div>
-      </template>
+      </section>
+    </template>
 
-      <div v-else-if="!loadingList && eventOptions.length > 0" class="ev-placeholder">
-        <i class="fa-solid fa-hand-pointer fa-2x mb-3"></i>
-        <p>Selecciona un evento arriba para gestionar su banner, sus links y su detalle de sesiones.</p>
-      </div>
+    <section v-else-if="!loadingList && eventOptions.length > 0" class="ds-panel">
+      <p class="ds-empty ds-empty--lista">
+        <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+        Selecciona un evento arriba para gestionar su banner, sus links y su detalle de sesiones.
+      </p>
+    </section>
 
-    </main>
   </div>
 </template>
 
@@ -456,115 +472,37 @@ onMounted(loadEvents)
 </script>
 
 <style scoped>
-/* Mismo lenguaje visual que el resto de Fundación (ver fundacion/LeadsNew.vue). */
-.ef-page {
-  background: #FFFFFF;
-  padding: 32px 32px 24px;
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1A1A1A;
-  min-height: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.ef-page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
-.ef-page-header-left { display: flex; flex-direction: column; gap: 2px; }
-.ef-breadcrumb { font-size: 11px; color: #A3A3A3; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
-.ef-page-title { font-size: 22px; font-weight: 700; color: #1A1A1A; margin: 0; letter-spacing: -0.02em; }
-.ef-header-actions { display: flex; align-items: center; gap: 10px; }
-.ef-body { padding: 0; }
+/* Solo lo propio de esta pantalla: estructura, colores y controles salen de
+   ds-* (DESIGN_SYSTEM.md). */
+.ev-flags { display: flex; gap: 6px; flex-wrap: wrap; }
+.ev-alert { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.ev-span { grid-column: 1 / -1; }
+/* El input file nativo trae su propio botón: con el alto fijo de .ds-input se corta. */
+.ev-file { height: auto; }
+.ev-remove { align-self: flex-start; margin-top: 8px; }
 
-.ef-btn-primary {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 10px 22px; font-size: 13px; font-weight: 600; border-radius: 8px;
-  cursor: pointer; transition: all .2s ease; font-family: inherit;
-  color: #fff; background: var(--we-navy, #002060); border: 1px solid var(--we-navy, #002060);
-}
-.ef-btn-primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
-.ef-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-
-.exec-fieldset { background: #fff; border: 1px solid #F0F0F0; border-radius: 10px; padding: 24px; }
-.fieldset-title {
-  font-size: 11px; font-weight: 600; color: #8C8C8C; text-transform: uppercase;
-  letter-spacing: 0.06em; margin: 0 0 20px 0; padding: 0 0 0 12px;
-  border-left: 3px solid #1A1A1A; line-height: 1.4;
-}
-.exec-label {
-  font-size: 12px; font-weight: 600; color: #737373; text-transform: uppercase;
-  letter-spacing: 0.03em; display: block; margin-bottom: 6px;
-}
-.exec-input-light {
-  border: 1px solid #E8E8E8; border-radius: 8px; padding: 9px 12px;
-  font-size: 13px; font-family: inherit; color: #1A1A1A; background: #fff;
-}
-.exec-input-light:focus { outline: none; border-color: var(--we-navy, #002060); }
-textarea.exec-input-light { resize: vertical; line-height: 1.5; }
-
-.ev-hint { font-size: 11.5px; color: #A3A3A3; margin-top: 6px; line-height: 1.45; }
-.ev-remove {
-  background: none; border: none; padding: 0; margin-top: 8px;
-  font-size: 12px; font-weight: 600; color: #DC2626; cursor: pointer;
-}
 .ev-preview {
-  border: 1px dashed #E8E8E8; border-radius: 8px; padding: 10px;
-  min-height: 96px; display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 96px; padding: 10px;
+  border: 1px dashed var(--ds-border-strong); border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-2);
 }
-.ev-preview img { max-width: 100%; max-height: 140px; border-radius: 4px; }
-.ev-preview-empty { font-size: 12px; color: #A3A3A3; text-align: center; }
+.ev-preview img { max-width: 100%; max-height: 140px; border-radius: var(--ds-radius-control); }
 
-.ev-flags { display: flex; gap: 8px; flex-wrap: wrap; }
-.ev-flag {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
-}
-.ev-flag.is-on  { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.ev-flag.is-off { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
-
-.ev-empty {
-  font-size: 12.5px; color: #92400e; background: #fffbeb;
-  border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; line-height: 1.5;
-}
-/* Una tarjeta por categoria. La apagada se atenua pero sigue visible: hay que
-   poder ver su precio antes de decidir si se enciende. */
-.ev-cats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+/* Una tarjeta por categoria (bloque repetible, §5.5). La apagada se atenua pero
+   sigue visible: hay que poder ver su precio antes de decidir si se enciende. */
+.ev-cats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .ev-cat {
-  border: 1px solid #E5E5E5; border-radius: 10px; padding: 14px;
-  background: #FCFCFC; transition: opacity .15s, border-color .15s;
+  padding: 14px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
+  background: var(--ds-surface-2); transition: opacity .15s;
 }
-.ev-cat.is-off { opacity: .55; background: #F8F8F8; }
-.ev-cat-head { margin-bottom: 10px; }
-.ev-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; }
-.ev-switch input { width: 16px; height: 16px; cursor: pointer; accent-color: #002060; }
-.ev-switch span { font-size: 13px; font-weight: 700; color: #1A1A1A; letter-spacing: .02em; }
-.ev-cat .exec-label { font-size: 10.5px; }
-.ev-cat input:disabled { background: #F1F1F1; cursor: not-allowed; }
+.ev-cat.is-off { opacity: .55; }
+.ev-cat-head { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 12px; cursor: pointer; }
+.ev-cat-name { font-size: 13px; font-weight: 700; color: var(--ds-heading); }
+.ev-prices { display: grid; gap: 10px 12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.ev-wa { color: var(--ds-ok); }
 
-.ev-empty-error { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
-.ev-retry {
-  display: inline-block; margin-left: 10px; font-size: 11.5px; font-weight: 700;
-  padding: 3px 10px; border-radius: 8px; border: 1px solid #fecaca;
-  background: #fff; color: #991b1b;
+@media (prefers-reduced-motion: reduce) {
+  .ev-cat { transition: none; }
 }
-.ev-loading, .ev-placeholder {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 220px; color: #A3A3A3; font-size: 13px; text-align: center;
-}
-
-[data-coreui-theme="dark"] .ef-page { background: #1A1A14; color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-page-title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ef-breadcrumb { color: #6F6F66; }
-[data-coreui-theme="dark"] .exec-fieldset { background: #201F18; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .fieldset-title { border-left-color: #8FAADC; color: #A0A099; }
-[data-coreui-theme="dark"] .exec-label { color: #A0A099; }
-[data-coreui-theme="dark"] .exec-input-light { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .ev-preview { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .ev-hint, [data-coreui-theme="dark"] .ev-preview-empty { color: #6F6F66; }
-[data-coreui-theme="dark"] .ev-flag.is-off { background: rgba(148,163,184,.12); color: #94a3b8; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .ev-empty { background: rgba(245,158,11,.12); color: #FCD34D; border-color: rgba(245,158,11,.35); }
-[data-coreui-theme="dark"] .ev-cat { background: #1F1E17; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .ev-cat.is-off { background: #1B1A14; }
-[data-coreui-theme="dark"] .ev-switch span { color: #F4F4F0; }
-[data-coreui-theme="dark"] .ev-switch input { accent-color: #8FAADC; }
-[data-coreui-theme="dark"] .ev-cat input:disabled { background: #17160F; }
-[data-coreui-theme="dark"] .ev-empty-error { background: rgba(239,68,68,.12); color: #FCA5A5; border-color: rgba(239,68,68,.35); }
-[data-coreui-theme="dark"] .ev-retry { background: transparent; color: #FCA5A5; border-color: rgba(239,68,68,.35); }
 </style>

@@ -166,11 +166,45 @@ export default class EditionService {
     return response
   }
 
+  // Aulas terminadas: aprobados al dia vs certificados en Odoo (filtro "Por certificar").
+  async classroomsCertificationStatus() {
+    const response = (await api.post('/edition/classroomscertificationstatus', {}, {
+      meta: { skipLoader: true },
+      timeout: 60000
+    })).data
+    return response.data || []
+  }
+
+  // Vista previa de la certificacion (solo lee Odoo): grupos de alumnos.
+  async classroomOdooCertifyPreview(payload) {
+    const response = (await api.post('/edition/classroomodoocertifypreview', payload, {
+      meta: { skipLoader: true },
+      timeout: 60000
+    })).data
+    return response
+  }
+
   // Datos del Reporte Academico: una sola llamada ligera (ediciones curso +
   // resumen de auditoria juntos). Reemplaza al par editionList(500) +
   // classroomAuditSummaryList que tardaba 15s+ contra la BD remota.
   async academicReport(payload = {}) {
     const response = (await api.post('/edition/academicreport', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || []
+  }
+
+  // Gasto del mes en auditorias IA (informativo): { audits, spentPen }.
+  async aiAuditSpend() {
+    const response = (await api.post('/edition/aiauditspend', {}, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data || null
+  }
+
+  // Buscador de alumno de Aulas: personas con sus aulas y resumen de cursos.
+  async studentSearch(payload) {
+    const response = (await api.post('/edition/studentsearch', payload, {
       meta: { skipLoader: true }
     })).data
     return response.data || []

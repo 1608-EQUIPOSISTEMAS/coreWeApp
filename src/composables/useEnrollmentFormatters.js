@@ -65,9 +65,17 @@ export function useEnrollmentFormatters () {
     return /\bLAPTOP\b/.test(haystack)
   }
 
-  // Etiqueta CUENTA PERSONAL ('CLAUDE' | 'CHATGPT' | null): columna propia por
-  // inscripcion, porque en una especializacion va por modulo y no por venta.
-  const hasPersonalAccount = e => !!e?.personal_account
+  // Etiqueta CUENTA PROPIA: el alumno usa su propia cuenta de Claude/ChatGPT y
+  // Academica NO le entrega una (el beneficio CUENTA es un descuento de S/100).
+  // Columna guardada + beneficios de la venta: el registro directo FICO, por
+  // donde entran los members, solo graba el beneficio.
+  const personalAccountProviders = e => {
+    if (!e) return []
+    const haystack = `${e.main_discount || ''} ${e.additional_discounts || ''}`.toUpperCase()
+    const fromBenefits = ['CLAUDE', 'CHATGPT'].filter(p => haystack.includes(`CUENTA ${p}`))
+    return [...new Set([e.personal_account, ...fromBenefits].filter(Boolean))]
+  }
+  const hasPersonalAccount = e => personalAccountProviders(e).length > 0
 
   // Becado que ya pago su certificado (etiqueta Certificar). Flag calculado
   // por sp_fico_enrollment_list (beca_certificada).
@@ -139,7 +147,7 @@ export function useEnrollmentFormatters () {
 
   return {
     formatMoney, formatDate, formatDateTime,
-    statusPill, statusTone, isPendiente, isContado, hasLaptopPromo, hasPersonalAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
+    statusPill, statusTone, isPendiente, isContado, hasLaptopPromo, personalAccountProviders, hasPersonalAccount, hasCertPaid, getReserva, getPagado, calcSaldo, rowClass, isOverdue,
     cuotaRowClass, cuotaStatusPill, cuotaStatusLabel, isCuotaAnulada,
     auditIcon, auditLabel
   }

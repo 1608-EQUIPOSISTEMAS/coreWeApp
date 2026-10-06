@@ -7,6 +7,11 @@ import apexchart from 'vue3-apexcharts'
 import Swal from 'sweetalert2'
 import { ServiceKeys } from '@/services'
 import { useAiJob } from '@/composables/useAiJob.js'
+import { previewSections, readyCount } from '@/features/certificacion/previewSections'
+import { isDark } from '@/utils/chartTheme'
+import { formatValue } from '@/shared/lib/formatValue'
+import BaseModal from '@/components/BaseModal.vue'
+import { aulaStatus } from '@/entities/aula/aulaStatus'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -19,11 +24,21 @@ const route = useRoute()
 
 const editionId = computed(() => Number(props.id))
 
+// Estado real del aula por sus fechas (antes decia "Activo" fijo en toda aula,
+// incluso las terminadas). Va junto al titulo, como en el detalle de FICO.
+const AULA_STATE_UI = {
+  Activo: { label: 'En curso', tone: 'ok', icon: 'fa-circle-play' },
+  Proximo: { label: 'Por iniciar', tone: 'info', icon: 'fa-clock' },
+  Finalizado: { label: 'Finalizada', tone: '', icon: 'fa-flag-checkered' },
+}
+
 // =====================================================================
 // HEADER / INFO DEL AULA
 // =====================================================================
 const aula = ref(null)
 const isLoadingAula = ref(false)
+const aulaState = computed(() =>
+  aula.value ? AULA_STATE_UI[aulaStatus(aula.value.start_date, aula.value.end_date)] : null)
 
 async function loadAula() {
   isLoadingAula.value = true
@@ -187,15 +202,16 @@ function validatedPrevLabel(v) {
 // Motivo de salida legible + la tarjeta en la que cae. Prioriza el estado de
 // tipo (retiro/cambio/etc); luego baja manual; luego FICO no confirmado.
 // `title` es el titulo de la tarjeta (plural) y `label` el badge de la fila.
+// `tone` es el de .ds-pill (neutro = sin tono).
 const HISTORY_REASON = {
-  we_enrollment_status_retired:        { key: 'ret',  label: 'Retirado',        title: 'Retirados',          icon: 'fa-user-xmark',           cls: 'hb-ret' },
-  we_enrollment_status_course_changed: { key: 'cc',   label: 'Cambio de curso', title: 'Cambios de curso',   icon: 'fa-right-left',           cls: 'hb-cc' },
-  we_enrollment_status_reprogrammed:   { key: 'rp',   label: 'Reprogramado',    title: 'Reprogramados',      icon: 'fa-calendar-day',         cls: 'hb-rp' },
-  we_enrollment_status_observed:       { key: 'obs',  label: 'Observado',       title: 'Observados',         icon: 'fa-triangle-exclamation', cls: 'hb-obs' },
+  we_enrollment_status_retired:        { key: 'ret',  label: 'Retirado',        title: 'Retirados',          icon: 'fa-user-xmark',           tone: 'bad' },
+  we_enrollment_status_course_changed: { key: 'cc',   label: 'Cambio de curso', title: 'Cambios de curso',   icon: 'fa-right-left',           tone: 'info' },
+  we_enrollment_status_reprogrammed:   { key: 'rp',   label: 'Reprogramado',    title: 'Reprogramados',      icon: 'fa-calendar-day',         tone: 'rose' },
+  we_enrollment_status_observed:       { key: 'obs',  label: 'Observado',       title: 'Observados',         icon: 'fa-triangle-exclamation', tone: 'neutro' },
 }
-const HISTORY_BAJA = { key: 'baja', label: 'Dado de baja', title: 'Dados de baja', icon: 'fa-ban', cls: 'hb-baja' }
-const HISTORY_FICO = { key: 'fico', title: 'FICO no confirmado', icon: 'fa-hourglass-half', cls: 'hb-fico' }
-const HISTORY_OTRO = { key: 'otro', title: 'Otros', icon: 'fa-circle-question', cls: 'hb-otro' }
+const HISTORY_BAJA = { key: 'baja', label: 'Dado de baja', title: 'Dados de baja', icon: 'fa-ban', tone: 'neutro' }
+const HISTORY_FICO = { key: 'fico', title: 'FICO no confirmado', icon: 'fa-hourglass-half', tone: 'warn' }
+const HISTORY_OTRO = { key: 'otro', title: 'Otros', icon: 'fa-circle-question', tone: 'neutro' }
 
 function historyReason(h) {
   const m = HISTORY_REASON[h.type_status_alias]
@@ -443,19 +459,48 @@ async function saveGrades() {
 // proceso de certificación masiva completo (cargar → aprobados → PDFs).
 const isCertifying = ref(false)
 const certCodeOf = (s) => gradesMap.value?.[s.enrollment_id]?.odoo_cert_code || null
+
+function certificationPreviewHtml(preview) {
+  const sections = previewSections(preview).map((s) => `
+    <p style="margin:10px 0 2px"><span class="ds-pill ${s.tone}">${s.names.length || ''}</span> <b>${escapeHtml(s.label)}</b></p>
+    ${s.names.length ? `<p style="margin:0;font-size:12.5px">${s.names.map(escapeHtml).join(', ')}</p>` : ''}
+    ${s.hint ? `<p style="margin:2px 0 0;font-size:12px;opacity:.8">${escapeHtml(s.hint)}</p>` : ''}`)
+  return `<div style="text-align:left"><p style="margin:0 0 4px"><b>Grupo en Odoo:</b> ${escapeHtml(preview.group_name)}</p>${sections.join('')}</div>`
+}
+
 async function certifyInOdoo() {
   if (dirtyGrades.size) {
     toast.warning('Guarda los cambios de notas antes de certificar')
     return
   }
+  // Primero la vista previa (solo lee Odoo): quien entra y por que los demas
+  // no, ANTES de confirmar. Pedido de Academica: "que avise los casos".
+  isCertifying.value = true
+  let preview
+  try {
+    const res = await editionService.classroomOdooCertifyPreview({ edition_id: editionId.value })
+    if (!res?.ok) {
+      Swal.fire({ icon: 'error', title: 'No se pudo revisar el aula en Odoo', text: res?.message || 'Error desconocido' })
+      return
+    }
+    preview = res.data
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'No se pudo revisar el aula en Odoo', text: err?.response?.data?.message || err.message })
+    return
+  } finally {
+    isCertifying.value = false
+  }
+  const ready = readyCount(preview)
   const confirm = await Swal.fire({
-    title: '¿Certificar en Odoo?',
-    html: 'Se aplicarán las <b>notas guardadas</b> a las Evaluaciones de Odoo y se ejecutará el <b>proceso de certificación masiva</b>.<br>Solo se certifican <b>aprobados sin deuda pendiente</b>.',
-    icon: 'question',
+    title: ready ? `¿Certificar ${ready} alumno${ready > 1 ? 's' : ''}?` : 'No hay alumnos nuevos para certificar',
+    html: certificationPreviewHtml(preview),
+    icon: ready ? 'question' : 'info',
     showCancelButton: true,
+    showConfirmButton: ready > 0,
     confirmButtonText: 'Sí, certificar',
-    cancelButtonText: 'Cancelar',
-    confirmButtonColor: '#002060',
+    cancelButtonText: ready ? 'Cancelar' : 'Cerrar',
+    confirmButtonColor: 'var(--we-navy)',
+    width: 640,
   })
   if (!confirm.isConfirmed) return
 
@@ -777,6 +822,8 @@ const topStudents = computed(() => {
     .sort((a, b) => b.final - a.final)
     .slice(0, 3)
 })
+// Oro, plata y bronce de los primeros puestos, en tonos de .ds-pill.
+const TOP_TONES = ['warn', 'neutro', 'orange']
 
 // Promedio de nota final del aula (solo alumnos con alguna nota), para el KPI.
 const aulaGradeAverage = computed(() => {
@@ -793,11 +840,11 @@ const aulaGradeAverage = computed(() => {
 const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 14)
 
 const TYPE_STATUS_BADGE = {
-  we_enrollment_status_tracking: { label: 'SEG', cls: 'tb-seg' },
-  we_enrollment_status_reprogrammed: { label: 'RP', cls: 'tb-rp' },
-  we_enrollment_status_course_changed: { label: 'CC', cls: 'tb-cc' },
-  we_enrollment_status_observed: { label: 'OBS', cls: 'tb-obs' },
-  we_inscription_way_act: { label: 'ACT', cls: 'tb-act' },
+  we_enrollment_status_tracking: { label: 'SEG', tone: 'warn' },
+  we_enrollment_status_reprogrammed: { label: 'RP', tone: 'rose' },
+  we_enrollment_status_course_changed: { label: 'CC', tone: 'info' },
+  we_enrollment_status_observed: { label: 'OBS', tone: 'neutro' },
+  we_inscription_way_act: { label: 'ACT', tone: 'ok' },
 }
 const typeStatusBadge = (alias) => TYPE_STATUS_BADGE[alias]
 
@@ -984,11 +1031,18 @@ const aiSyllabusFile = ref(null)
 const isRunningAi = ref(false)
 const aiError = ref('')
 
+// Cada analisis cuesta (~S/ 2): el modal muestra lo gastado en el mes.
+const aiSpend = ref(null)
+
 function openAiModal() {
   aiError.value = ''
   aiTranscript.value = ''
   aiSyllabusFile.value = null
   showAiModal.value = true
+  aiSpend.value = null
+  editionService.aiAuditSpend()
+    .then((s) => { aiSpend.value = s })
+    .catch(() => { aiSpend.value = null }) // solo informativo: si falla, no se muestra
 }
 
 // Click handler del boton principal. Si la sesion ya tiene un ai_report
@@ -1111,30 +1165,28 @@ async function runAiAudit() {
     // esa respuesta como excepcion, asi que el mensaje real esta en
     // err.response.data.message, no en err.message.
     const backendMsg = err?.response?.data?.message
+    // La sesion ya tenia analisis (el backend no paga dos veces): mostrarlo.
+    if (err?.response?.data?.row) {
+      await loadAudit()
+      showAiModal.value = false
+      toast.info(backendMsg, { timeout: 4000 })
+      return
+    }
     aiError.value = backendMsg || err?.message || 'Error inesperado'
+    // Sin respuesta (timeout, red, proxy) el analisis puede seguir corriendo y
+    // guardarse igual en el servidor: recargar lo guardado en vez de invitar a
+    // reintentar, que era pagar Gemini dos veces.
+    if (!err?.response) {
+      aiError.value = 'Se perdio la conexion, pero el analisis puede seguir en curso. Espera unos minutos y recarga el aula antes de volver a intentar.'
+      loadAudit()
+    }
   } finally {
     isRunningAi.value = false
   }
 }
 
 const currentAiReport = computed(() => auditMap.value?.[selectedSession.value]?.ai_report || null)
-const currentAiMeta = computed(() => auditMap.value?.[selectedSession.value]?.ai_metadata || null)
 const currentAiGeneratedAt = computed(() => auditMap.value?.[selectedSession.value]?.ai_generated_at || null)
-
-function aiScoreClass(score) {
-  if (score >= 4) return 'aisc-good'
-  if (score >= 3) return 'aisc-ok'
-  if (score >= 2) return 'aisc-warn'
-  return 'aisc-bad'
-}
-
-// Convierte la puntuacion global IA (escala interna 1-5) a la escala academica
-// peruana 0-20 que ve el usuario. Devuelve '--' si no hay valor o no es numerico.
-function toScore20(score1to5) {
-  const n = Number(score1to5)
-  if (!Number.isFinite(n)) return '--'
-  return (n * 4).toFixed(1)
-}
 
 // Nota numerica (Number | null) en escala /20, lista para promediar/comparar.
 // null si el dato no esta disponible (no rompe los reduce).
@@ -1235,6 +1287,12 @@ function notaLevel(n) {
 function scoreLevel(s) {
   return Math.max(1, Math.min(5, Math.round(Number(s) || 0)))
 }
+// Tono del sistema de diseño por nivel. Los niveles 4 y 5 comparten verde: la
+// pantalla distingue bueno/atencion/malo; el matiz fino de 5 niveles queda
+// solo en el PDF, que se imprime fuera del tema.
+const LEVEL_TONE = { 1: 'bad', 2: 'warn', 3: 'info', 4: 'ok', 5: 'ok' }
+const levelTone = (level) => LEVEL_TONE[level]
+const notaTone = (n) => levelTone(notaLevel(n))
 // Formatea una nota: entero sin decimales, resto con 1 decimal, '--' si no hay.
 function fmtNota(n) {
   if (!Number.isFinite(n)) return '--'
@@ -1301,7 +1359,10 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-// Paleta de 5 niveles (valores claros, fijos para que el PDF no dependa del tema).
+// ── EXCEPCION AL SISTEMA DE DISEÑO: PDF ───────────────────────────────────
+// Desde aqui hasta el fin de exportSessionPdf los colores son hex fijos a
+// proposito: el reporte se abre en otra ventana y se imprime, fuera del tema y
+// sin acceso a los tokens --ds-*. Paleta de 5 niveles en valores claros.
 const PDF_PALETTE = {
   1: ['#fde8e6', '#c0362c'], 2: ['#fdeccb', '#a96208'], 3: ['#dde8fd', '#2256c9'],
   4: ['#d9f3df', '#1d7a40'], 5: ['#cdf1e4', '#0a7a5c'],
@@ -1440,6 +1501,7 @@ function exportSessionPdf() {
   w.focus()
   setTimeout(() => { try { w.print() } catch { /* el usuario puede imprimir manualmente */ } }, 400)
 }
+// ── FIN DE LA EXCEPCION DEL PDF ───────────────────────────────────────────
 
 // =====================================================================
 // EVOLUCION POR SESION (chart) + COBERTURA DE MUESTRA
@@ -1471,97 +1533,96 @@ const generalChartSeries = computed(() => {
   ]
 })
 
-const generalChartOptions = computed(() => ({
-  chart: {
-    type: 'line',
-    height: 320,
-    toolbar: { show: false },
-    fontFamily: 'inherit',
-    animations: { enabled: true, speed: 400 },
-    zoom: { enabled: false },
-  },
-  colors: ['#6366f1', '#94a3b8', '#f59e0b'],
-  stroke: {
-    curve: 'smooth',
-    width: [3, 2, 2],
-    dashArray: [0, 5, 5],
-  },
-  markers: {
-    size: [6, 4, 4],
-    strokeWidth: 2,
-    strokeColors: '#fff',
-    hover: { sizeOffset: 2 },
-  },
-  dataLabels: { enabled: false },
-  legend: {
-    position: 'top',
-    horizontalAlign: 'right',
-    fontSize: '11px',
-    fontWeight: 600,
-    markers: { width: 8, height: 8, radius: 8 },
-    itemMargin: { horizontal: 10, vertical: 0 },
-  },
-  grid: {
-    borderColor: 'rgba(0,0,0,.06)',
-    strokeDashArray: 4,
-    padding: { top: 6, right: 24, bottom: 0, left: 8 },
-  },
-  xaxis: {
-    categories: generalRows.value.map((r) => `S${r.n}`),
-    labels: { style: { fontSize: '11px', colors: '#64748b' } },
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-    tooltip: { enabled: false },
-  },
-  yaxis: {
-    min: 0,
-    max: 20,
-    tickAmount: 4,
-    labels: {
-      style: { fontSize: '11px', colors: '#64748b' },
-      formatter: (v) => Number(v).toFixed(0),
+// ApexCharts pinta un SVG con colores pasados en JS: no resuelve var(--ds-*).
+// Se leen los tokens ya resueltos en :root; leer isDark dentro del computed lo
+// vuelve a calcular al cambiar de tema (chartTheme observa data-coreui-theme).
+function readDsToken(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+const generalChartOptions = computed(() => {
+  const mode = isDark.value ? 'dark' : 'light'
+  const t = (name) => readDsToken(`--ds-${name}`)
+  const verdictLine = (y, text, tone) => ({
+    y,
+    borderColor: t(`${tone}-ink`),
+    strokeDashArray: 3,
+    label: {
+      text, position: 'right', offsetX: -6,
+      borderColor: 'transparent',
+      style: { color: t(`${tone}-ink`), background: t(`soft-${tone}`), fontSize: '9.5px', fontWeight: 700 },
     },
-  },
-  annotations: {
-    yaxis: [
-      {
-        y: 19,
-        borderColor: '#047857',
-        strokeDashArray: 3,
-        label: {
-          text: 'EXCELENTE', position: 'right', offsetX: -6,
-          style: { color: '#047857', background: 'rgba(4,120,87,.08)',
-            fontSize: '9.5px', fontWeight: 700 },
-        },
+  })
+  return {
+    chart: {
+      type: 'line',
+      height: 320,
+      toolbar: { show: false },
+      fontFamily: 'inherit',
+      background: 'transparent',
+      animations: { enabled: true, speed: 400 },
+      zoom: { enabled: false },
+    },
+    theme: { mode },
+    // Una serie en color (consolidada); IA y rubrica son referencias.
+    colors: [t('accent'), t('muted'), t('warn')],
+    stroke: {
+      curve: 'smooth',
+      width: [3, 2, 2],
+      dashArray: [0, 5, 5],
+    },
+    markers: {
+      size: [6, 4, 4],
+      strokeWidth: 2,
+      strokeColors: t('surface'),
+      hover: { sizeOffset: 2 },
+    },
+    dataLabels: { enabled: false },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'right',
+      fontSize: '11px',
+      fontWeight: 600,
+      labels: { colors: t('ink-2') },
+      markers: { width: 8, height: 8, radius: 8 },
+      itemMargin: { horizontal: 10, vertical: 0 },
+    },
+    grid: {
+      borderColor: t('border'),
+      strokeDashArray: 4,
+      padding: { top: 6, right: 24, bottom: 0, left: 8 },
+    },
+    xaxis: {
+      categories: generalRows.value.map((r) => `S${r.n}`),
+      labels: { style: { fontSize: '11px', colors: t('ink-2') } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      tooltip: { enabled: false },
+    },
+    yaxis: {
+      min: 0,
+      max: 20,
+      tickAmount: 4,
+      labels: {
+        style: { fontSize: '11px', colors: t('ink-2') },
+        formatter: (v) => Number(v).toFixed(0),
       },
-      {
-        y: 17,
-        borderColor: '#1D4ED8',
-        strokeDashArray: 3,
-        label: {
-          text: 'BUENO', position: 'right', offsetX: -6,
-          style: { color: '#1D4ED8', background: 'rgba(29,78,216,.08)',
-            fontSize: '9.5px', fontWeight: 700 },
-        },
-      },
-      {
-        y: 15,
-        borderColor: '#B45309',
-        strokeDashArray: 3,
-        label: {
-          text: 'EN PROCESO', position: 'right', offsetX: -6,
-          style: { color: '#B45309', background: 'rgba(180,83,9,.08)',
-            fontSize: '9.5px', fontWeight: 700 },
-        },
-      },
-    ],
-  },
-  tooltip: {
-    shared: true,
-    intersect: false,
-    y: { formatter: (v) => (v == null ? 'sin data' : `${v} / 20`) },
-  },
-}))
+    },
+    annotations: {
+      yaxis: [
+        verdictLine(19, 'EXCELENTE', 'ok'),
+        verdictLine(17, 'BUENO', 'info'),
+        verdictLine(15, 'EN PROCESO', 'warn'),
+      ],
+    },
+    tooltip: {
+      theme: mode,
+      shared: true,
+      intersect: false,
+      y: { formatter: (v) => (v == null ? 'sin data' : `${v} / 20`) },
+    },
+  }
+})
 
 const generalCoverage = computed(() => {
   const rows = generalRows.value
@@ -1622,562 +1683,611 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="aula-detail">
-    <header class="page-head">
-      <button class="back-btn" @click="goBack">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <div class="head-left">
-        <div class="head-tags">
-          <span class="tag mono">{{ aula?.global_code || '--' }}</span>
-          <span class="tag muted">EDICION {{ aula?.specific_code || '--' }}</span>
-          <span class="status-pill ok"><span class="dot"></span> ACTIVO</span>
+  <div class="ds-page aula-detail">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <button class="ad-back" type="button" @click="goBack">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Aulas
+        </button>
+        <div class="ad-title-row">
+          <h1 class="ds-title">{{ aula?.program_abreviature || (isLoadingAula ? 'Cargando...' : 'Aula') }}</h1>
+          <span v-if="aulaState" class="ds-pill" :class="aulaState.tone">
+            <i class="fa-solid" :class="aulaState.icon" aria-hidden="true"></i> {{ aulaState.label }}
+          </span>
         </div>
-        <h1>{{ aula?.program_abreviature || (isLoadingAula ? 'Cargando...' : 'Aula') }}</h1>
-        <div class="info-row">
-          <div class="info-cell">
-            <div class="ic-label">Docente</div>
-            <div class="ic-value docente">
-              <span class="av">{{ teacherInitials }}</span>
-              <span>{{ aula?.instructor || '--' }}</span>
-            </div>
-          </div>
-          <div class="info-cell">
-            <div class="ic-label">Modalidad</div>
-            <div class="ic-value">{{ aula?.cat_model_modality_label || '--' }}</div>
-          </div>
-          <div class="info-cell">
-            <div class="ic-label">Horario</div>
-            <div class="ic-value">{{ headerSchedule }}</div>
-          </div>
-          <div class="info-cell">
-            <div class="ic-label">Inicio &rarr; Fin</div>
-            <div class="ic-value">{{ formatDate(aula?.start_date) }} &rarr; {{ formatDate(aula?.end_date) }}</div>
-          </div>
-          <div class="info-cell">
-            <div class="ic-label">Sesiones</div>
-            <div class="ic-value mono">{{ sessionsTotal || '--' }}</div>
-          </div>
-        </div>
+        <p class="ds-sub">
+          <span class="ad-mono">{{ aula?.global_code || '--' }}</span> · edición {{ aula?.specific_code || '--' }}
+        </p>
       </div>
-      <div class="head-kpis">
-        <div class="hk">
-          <div class="hk-label">Alumnos</div>
-          <div class="hk-value mono">
-            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
-            <template v-else>{{ students.length }}</template>
+    </header>
+
+    <section class="ds-panel" aria-label="Datos del aula">
+      <dl class="ds-panel-body ad-facts">
+        <div>
+          <dt>Docente</dt>
+          <dd class="ad-teacher">
+            <span class="ad-avatar" aria-hidden="true">{{ teacherInitials }}</span>
+            {{ aula?.instructor || '--' }}
+          </dd>
+        </div>
+        <div><dt>Modalidad</dt><dd>{{ aula?.cat_model_modality_label || '--' }}</dd></div>
+        <div><dt>Horario</dt><dd>{{ headerSchedule }}</dd></div>
+        <div><dt>Inicio → fin</dt><dd>{{ formatDate(aula?.start_date) }} → {{ formatDate(aula?.end_date) }}</dd></div>
+        <div><dt>Sesiones</dt><dd class="ad-mono">{{ sessionsTotal || '--' }}</dd></div>
+      </dl>
+    </section>
+
+    <div class="ds-kpis">
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span class="ds-kpi-value">
+              <span v-if="isLoadingStudents" class="skel-kpi" style="width: 48px"></span>
+              <template v-else>{{ formatValue(students.length, 'num') }}</template>
+            </span>
           </div>
+          <span class="ds-kpi-label">Alumnos</span>
           <!-- El aula cuenta uno menos que las ventas del paquete padre cuando
                hay convalidados. Se avisa aqui para que no parezca un descuadre. -->
           <button
             v-if="historyValidated.length"
-            class="hk-sub"
+            class="ad-kpi-link"
+            type="button"
             title="Compraron el paquete pero ya llevaron este curso. Ver detalle en Historial."
             @click="switchTab('historial')"
           >
             +{{ historyValidated.length }} convalidado{{ historyValidated.length > 1 ? 's' : '' }}
           </button>
-        </div>
-        <div class="hk">
-          <div class="hk-label">Aprobados</div>
-          <div class="hk-value mono" :class="{ muted: !isLoadingStudents && !gradesSummary.approved }">
-            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
-            <template v-else>{{ gradesSummary.approved }}</template>
-          </div>
-        </div>
-        <div class="hk">
-          <div class="hk-label">Prom. final</div>
-          <div class="hk-value mono" :class="{ muted: !isLoadingStudents && aulaGradeAverage == null }">
-            <span v-if="isLoadingStudents" class="skel-kpi" style="width:48px"></span>
-            <template v-else>{{ aulaGradeAverage == null ? '--' : fmtNota(aulaGradeAverage) }}</template>
-          </div>
+          <span v-else class="ds-kpi-note">Activos en la lista de notas</span>
         </div>
       </div>
-    </header>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" :class="{ ok: gradesSummary.approved > 0 }" aria-hidden="true"><i class="fa-solid fa-user-check"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span class="ds-kpi-value">
+              <span v-if="isLoadingStudents" class="skel-kpi" style="width: 48px"></span>
+              <template v-else>{{ formatValue(gradesSummary.approved, 'num') }}</template>
+            </span>
+          </div>
+          <span class="ds-kpi-label">Aprobados</span>
+          <span class="ds-kpi-note">{{ gradesSummary.pct(gradesSummary.approved) }}% del aula</span>
+        </div>
+      </div>
+      <div class="ds-kpi">
+        <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-star-half-stroke"></i></span>
+        <div class="ds-kpi-body">
+          <div class="ds-kpi-row">
+            <span class="ds-kpi-value">
+              <span v-if="isLoadingStudents" class="skel-kpi" style="width: 48px"></span>
+              <template v-else>{{ aulaGradeAverage == null ? '--' : fmtNota(aulaGradeAverage) }}</template>
+            </span>
+          </div>
+          <span class="ds-kpi-label">Promedio final</span>
+          <span class="ds-kpi-note">Aprueba desde {{ GRADE_RULES.PASS_THRESHOLD }}</span>
+        </div>
+      </div>
+    </div>
 
-    <nav class="tabs">
+    <div class="ds-tabs ad-tabs" role="tablist" aria-label="Secciones del aula">
       <button
         v-for="t in TABS"
         :key="t.id"
-        class="tab"
-        :class="{ active: activeTab === t.id }"
+        type="button"
+        role="tab"
+        :aria-selected="String(activeTab === t.id)"
         @click="switchTab(t.id)"
       >
-        <i class="fa-solid" :class="t.icon"></i>
+        <i class="fa-solid" :class="t.icon" aria-hidden="true"></i>
         {{ t.label }}
-        <span v-if="t.id === 'notas'" class="tab-count">{{ students.length }}</span>
+        <span v-if="t.id === 'notas'" class="ad-tab-count">{{ students.length }}</span>
       </button>
-    </nav>
+    </div>
 
     <!-- ============================================================ -->
     <!-- NOTAS (Lista de Notas editable)                              -->
     <!-- ============================================================ -->
-    <section v-if="activeTab === 'notas'" class="tab-body">
-      <div class="toolbar">
-        <div class="input">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input v-model="studentQuery" placeholder="Buscar alumno por nombre o DNI" />
-        </div>
-        <div class="chip-group">
+    <section v-if="activeTab === 'notas'" class="ds-stack">
+      <div class="ad-toolbar">
+        <input
+          v-model="studentQuery"
+          class="ds-input ad-search"
+          type="search"
+          placeholder="Buscar alumno por nombre o DNI"
+          aria-label="Buscar alumno por nombre o DNI"
+        />
+        <div class="ds-tabs" role="group" aria-label="Filtrar alumnos">
           <button
             v-for="f in FILTERS"
             :key="f.id"
-            class="chip"
-            :class="{ active: studentFilter === f.id }"
+            type="button"
+            :aria-pressed="String(studentFilter === f.id)"
             @click="studentFilter = f.id"
           >
-            <span v-if="studentFilter === f.id" class="dot"></span>
             {{ f.label }}
           </button>
         </div>
-        <div class="legend">
-          <span class="lg"><span class="debt-swatch"></span> Con deuda pendiente</span>
-        </div>
-        <div class="spacer"></div>
-        <div class="csv-menu-wrap">
+        <span class="ad-legend"><span class="ad-debt-swatch" aria-hidden="true"></span> Con deuda pendiente</span>
+        <span class="ad-grow"></span>
+        <div class="ad-csv">
           <button
-            class="btn"
+            class="btn-exec btn-exec-outline btn-sm"
+            type="button"
             :disabled="!students.length"
             title="Importar o exportar la lista de notas en CSV"
+            :aria-expanded="String(showCsvMenu)"
             @click="showCsvMenu = !showCsvMenu"
           >
-            <i class="fa-solid fa-file-csv"></i> CSV <i class="fa-solid fa-chevron-down csv-caret"></i>
+            <i class="fa-solid fa-file-csv" aria-hidden="true"></i> CSV
+            <i class="fa-solid fa-chevron-down ad-caret" aria-hidden="true"></i>
           </button>
           <template v-if="showCsvMenu">
             <!-- backdrop invisible: cierra el menu al clickear fuera sin listeners -->
-            <div class="csv-menu-backdrop" @click="showCsvMenu = false"></div>
-            <div class="csv-menu">
-              <button @click="showCsvMenu = false; openImportModal()">
-                <i class="fa-solid fa-file-arrow-up"></i> Importar notas finales
+            <div class="ad-csv-backdrop" @click="showCsvMenu = false"></div>
+            <div class="ad-csv-menu">
+              <button type="button" @click="showCsvMenu = false; openImportModal()">
+                <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i> Importar notas finales
               </button>
-              <button @click="showCsvMenu = false; exportNotasCsv()">
-                <i class="fa-solid fa-file-arrow-down"></i> Exportar CSV
+              <button type="button" @click="showCsvMenu = false; exportNotasCsv()">
+                <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Exportar CSV
               </button>
             </div>
           </template>
         </div>
         <button
-          class="btn"
+          class="btn-exec btn-exec-outline btn-sm"
+          type="button"
           :disabled="isGeneratingObs || !students.length"
           title="Genera borradores de observacion por alumno con la IA local"
           @click="generateObservations()"
         >
-          <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
+          <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'" aria-hidden="true"></i>
           {{ isGeneratingObs ? obsProgressLabel : 'Generar observaciones (IA)' }}
         </button>
         <button
-          class="btn"
+          class="btn-exec btn-exec-outline btn-sm"
+          type="button"
           :disabled="isCertifying || !students.length"
           title="Aplica las notas guardadas en Odoo y genera los certificados de los aprobados"
           @click="certifyInOdoo()"
         >
-          <i class="fa-solid" :class="isCertifying ? 'fa-spinner fa-spin' : 'fa-certificate'"></i>
+          <i class="fa-solid" :class="isCertifying ? 'fa-spinner fa-spin' : 'fa-certificate'" aria-hidden="true"></i>
           {{ isCertifying ? 'Certificando...' : 'Certificar en Odoo' }}
         </button>
         <button
-          class="btn primary"
+          class="btn-exec btn-exec-primary btn-sm"
+          type="button"
           :disabled="!dirtyGrades.size || isSavingGrades"
           @click="saveGrades"
         >
-          <i class="fa-solid" :class="isSavingGrades ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+          <i class="fa-solid" :class="isSavingGrades ? 'fa-spinner fa-spin' : 'fa-floppy-disk'" aria-hidden="true"></i>
           {{ isSavingGrades ? 'Guardando...' : 'Guardar cambios' + (dirtyGrades.size ? ` (${dirtyGrades.size})` : '') }}
         </button>
       </div>
 
-      <div v-if="isLoadingStudents && !students.length" class="state-msg">
-        <i class="fa-solid fa-spinner fa-spin"></i> Cargando alumnos...
-      </div>
-      <div v-else-if="!students.length" class="state-msg muted">
-        <i class="fa-regular fa-folder-open"></i> Sin alumnos matriculados en esta aula.
-      </div>
-      <div v-else class="att-matrix-scroll">
-        <table class="att-matrix grades-table">
-          <thead>
-            <tr class="th-groups">
-              <th class="sticky-c0" rowspan="2">N&deg;</th>
-              <th class="sticky-c1" rowspan="2">Apellidos y nombres</th>
-              <th rowspan="2">Ocup.</th>
-              <th rowspan="2">Mod.</th>
-              <th rowspan="2">Seguimiento</th>
-              <th rowspan="2">B2B</th>
-              <th rowspan="2">Becas</th>
-              <th rowspan="2">Membresia</th>
-              <th class="th-group-att" :colspan="(sessionsTotal || 1) + 1">Nota de tests &middot; 6/20</th>
-              <th class="th-group-part" :colspan="(sessionsTotal || 1) + 1">Participacion &middot; 2/20</th>
-              <th class="th-group-pi" colspan="3">Proyecto integrador &middot; 6+8/20</th>
-              <th rowspan="2" class="th-summary">Nota final</th>
-              <th rowspan="2">Resultado</th>
-              <th rowspan="2" title="N&deg; del certificado emitido en Odoo">Cert. Odoo</th>
-            </tr>
-            <tr>
-              <th v-for="n in sessionNumbers" :key="'t' + n" class="th-session att">S{{ n }}</th>
-              <th class="th-session att th-total">TEST</th>
-              <th v-for="n in sessionNumbers" :key="'p' + n" class="th-session part">S{{ n }}</th>
-              <th class="th-session part th-total">PTS</th>
-              <th class="th-session pi th-total">PARCIAL</th>
-              <th class="th-session pi th-total">FINAL</th>
-              <th class="th-session pi"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
-              <tr :class="{ 'row-debt': hasDebt(s), 'row-laptop': s.has_laptop_promo, 'row-certify': mustCertify(s) }">
-                <td class="sticky-c0 mono small">{{ String(idx + 1).padStart(2, '0') }}</td>
-                <td class="sticky-c1">
-                  <div class="student-name-cell">
-                    <span class="av-sm">{{ initialsOf(s.full_name) }}</span>
-                    <div>
-                      <div class="sn-name" :title="apellidosNombres(s)">
-                        {{ apellidosNombres(s) }}
+      <section v-if="isLoadingStudents && !students.length" class="ds-panel" aria-busy="true">
+        <div class="ds-panel-body ds-stack">
+          <span v-for="n in 6" :key="n" class="ds-skel"></span>
+        </div>
+      </section>
+      <section v-else-if="!students.length" class="ds-panel">
+        <p class="ds-empty ds-empty--lista">Sin alumnos matriculados en esta aula. Si falta alguien, revisa su venta en FICO.</p>
+      </section>
+      <section v-else class="ds-panel">
+        <div class="ds-table-scroll ad-grades-scroll">
+          <table class="ds-table ds-table--densa ad-grades">
+            <thead>
+              <tr>
+                <th class="ad-c0" rowspan="2">N°</th>
+                <th class="ad-c1" rowspan="2">Apellidos y nombres</th>
+                <th rowspan="2">Ocup.</th>
+                <th rowspan="2">Mod.</th>
+                <th rowspan="2">Seguimiento</th>
+                <th rowspan="2">B2B</th>
+                <th rowspan="2">Becas</th>
+                <th rowspan="2">Membresía</th>
+                <th class="ad-group ok" :colspan="(sessionsTotal || 1) + 1">Nota de tests · 6/20</th>
+                <th class="ad-group warn" :colspan="(sessionsTotal || 1) + 1">Participación · 2/20</th>
+                <th class="ad-group info" colspan="3">Proyecto integrador · 6+8/20</th>
+                <th rowspan="2">Nota final</th>
+                <th rowspan="2">Resultado</th>
+                <th rowspan="2" title="N° del certificado emitido en Odoo">Cert. Odoo</th>
+              </tr>
+              <tr>
+                <th v-for="n in sessionNumbers" :key="'t' + n" class="ad-session">S{{ n }}</th>
+                <th class="ad-session ad-strong">TEST</th>
+                <th v-for="n in sessionNumbers" :key="'p' + n" class="ad-session">S{{ n }}</th>
+                <th class="ad-session ad-strong">PTS</th>
+                <th class="ad-session ad-strong">PARCIAL</th>
+                <th class="ad-session ad-strong">FINAL</th>
+                <th class="ad-session"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="(s, idx) in filteredStudents" :key="s.enrollment_id">
+                <tr :class="{ 'row-debt': hasDebt(s), 'row-laptop': s.has_laptop_promo, 'row-certify': mustCertify(s) }">
+                  <td class="ad-c0 ad-mono">{{ String(idx + 1).padStart(2, '0') }}</td>
+                  <td class="ad-c1">
+                    <div class="ad-student">
+                      <span class="ad-avatar" aria-hidden="true">{{ initialsOf(s.full_name) }}</span>
+                      <div class="ad-student-text">
+                        <div class="ad-student-name" :title="apellidosNombres(s)">{{ apellidosNombres(s) }}</div>
+                        <div class="ad-student-sub" :title="s.email || ''">{{ s.email || handleOfName(s.full_name) }}</div>
                       </div>
-                      <div class="sn-handle" :title="s.email || ''">
-                        {{ s.email || handleOfName(s.full_name) }}
-                      </div>
+                      <i
+                        v-if="hasDebt(s)"
+                        class="fa-solid fa-circle-exclamation ad-debt-ico"
+                        :title="`Deuda pendiente: ${s.fin_overdue} cuota(s) vencida(s)`"
+                      ></i>
+                      <span
+                        v-if="s.personal_account"
+                        class="ds-pill neutro"
+                        :title="`Usa su propia cuenta de ${s.personal_account}: no entregar cuenta`"
+                      >Cuenta propia {{ s.personal_account }}</span>
                     </div>
-                    <i
-                      v-if="hasDebt(s)"
-                      class="fa-solid fa-circle-exclamation debt-ico"
-                      :title="`Deuda pendiente: ${s.fin_overdue} cuota(s) vencida(s)`"
-                    ></i>
-                  </div>
-                </td>
-                <td class="td-center">
-                  <span class="ocup-pill" :class="ocupLabel(s).toLowerCase()">{{ ocupLabel(s) }}</span>
-                </td>
-                <td>
-                  <span v-if="modalityLabel(s) !== '--'" class="mod-pill" :class="modalityLabel(s).toLowerCase()">
-                    {{ modalityLabel(s) }}
-                  </span>
-                  <span v-else class="muted">--</span>
-                </td>
-                <td>
-                  <div v-if="(s.parent_codes && s.parent_codes.length) || s.parent_code" class="seg-stack">
-                    <span v-for="pc in (s.parent_codes && s.parent_codes.length ? s.parent_codes : [s.parent_code])"
-                          :key="pc"
-                          class="type-badge tb-seg mono"
-                          :title="s.type_status_label || 'Programa padre'">
-                      {{ pc }}
+                  </td>
+                  <td class="ad-center">
+                    <span class="ds-pill" :class="ocupLabel(s) === 'E' ? 'info' : 'neutro'">{{ ocupLabel(s) }}</span>
+                  </td>
+                  <td>
+                    <span v-if="modalityLabel(s) !== '--'" class="ds-pill" :class="modalityLabel(s) === 'FLEX' ? 'info' : 'neutro'">
+                      {{ modalityLabel(s) }}
                     </span>
-                  </div>
-                  <span v-else-if="typeStatusBadge(s.type_status_alias)"
-                        class="type-badge"
-                        :class="typeStatusBadge(s.type_status_alias).cls">
-                    {{ typeStatusBadge(s.type_status_alias).label }}
-                  </span>
-                  <span v-else class="muted small">--</span>
-                </td>
-                <td>
-                  <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
-                  <span v-else class="muted small">--</span>
-                </td>
-                <td class="td-center">
-                  <span v-if="s.is_beca" class="type-badge tb-beca"><i class="fa-solid fa-graduation-cap"></i> Beca</span>
-                  <span v-if="mustCertify(s)" class="type-badge tb-certify" title="Becado que pago su certificado: hay que certificarlo">
-                    <i class="fa-solid fa-certificate"></i> Certificar
-                  </span>
-                  <span v-if="!s.is_beca" class="muted small">--</span>
-                </td>
-                <td class="td-center">
-                  <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
-                    <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
-                  </span>
-                  <span v-else class="muted small">--</span>
-                </td>
-                <td v-for="n in sessionNumbers" :key="'t' + n" class="td-att">
-                  <input
-                    class="grade-input"
-                    type="number"
-                    min="0"
-                    :max="GRADE_RULES.TEST_MAX_PER_SESSION"
-                    step="1"
-                    :value="draftFor(s).tests[String(n)]"
-                    @input="draftFor(s).tests[String(n)] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
-                  />
-                </td>
-                <td class="td-total mono">{{ fmtNota(testScore(draftFor(s))) }}</td>
-                <td v-for="n in sessionNumbers" :key="'p' + n" class="td-part">
-                  <input
-                    type="checkbox"
-                    class="part-check"
-                    :checked="draftFor(s).participation[String(n)] === true"
-                    @change="draftFor(s).participation[String(n)] = $event.target.checked; markDirty(s.enrollment_id)"
-                  />
-                </td>
-                <td class="td-total mono">{{ partScore(draftFor(s)) }}</td>
-                <td class="td-total mono">{{ fmtNota(partialScore(draftFor(s))) }}</td>
-                <td class="td-total mono">{{ fmtNota(finalDelivScore(draftFor(s))) }}</td>
-                <td class="td-center">
-                  <button
-                    class="expand-btn"
-                    :title="expandedRow === s.enrollment_id ? 'Cerrar criterios' : 'Editar criterios de entregables'"
-                    @click="expandedRow = expandedRow === s.enrollment_id ? null : s.enrollment_id"
-                  >
-                    <i class="fa-solid" :class="expandedRow === s.enrollment_id ? 'fa-chevron-up' : 'fa-pen-to-square'"></i>
-                  </button>
-                </td>
-                <td class="td-summary">
-                  <span
-                    v-if="hasAnyGrade(draftFor(s))"
-                    class="score-badge strong"
-                    :class="'sv-' + notaLevel(finalGrade(draftFor(s)))"
-                  >{{ fmtNota(finalGrade(draftFor(s))) }}</span>
-                  <span v-else class="muted small">--</span>
-                </td>
-                <td>
-                  <span
-                    v-if="hasAnyGrade(draftFor(s))"
-                    class="result-pill"
-                    :class="finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'ok' : 'bad'"
-                  >{{ finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'APROBADO' : 'DESAPROBADO' }}</span>
-                  <span v-else class="muted small">--</span>
-                </td>
-                <td class="td-center">
-                  <span
-                    v-if="certCodeOf(s)"
-                    class="cert-pill"
-                    :title="'Certificado emitido en Odoo: ' + certCodeOf(s)"
-                  ><i class="fa-solid fa-certificate"></i> N&deg; {{ certCodeOf(s) }}</span>
-                  <span v-else class="muted small">--</span>
-                </td>
-              </tr>
-              <tr v-if="expandedRow === s.enrollment_id" class="deliv-subrow">
-                <td :colspan="gradesColspan">
-                  <div class="deliv-grid">
-                    <div class="deliv-group">
-                      <div class="deliv-title">Entregable parcial <span class="muted">(criterios 0-20 &middot; ponderado /20)</span></div>
-                      <label v-for="c in PARTIAL_CRITERIA" :key="'pc' + c.key" class="deliv-field">
-                        <span>{{ c.key }}. {{ c.label }} <b class="mono">{{ Math.round(c.weight * 100) }}%</b></span>
-                        <input
-                          class="grade-input wide"
-                          type="number"
-                          min="0"
-                          :max="c.max"
-                          step="0.5"
-                          :value="draftFor(s).partial_criteria[c.key]"
-                          @input="draftFor(s).partial_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
-                        />
-                      </label>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td>
+                    <div v-if="(s.parent_codes && s.parent_codes.length) || s.parent_code" class="ad-pill-stack">
+                      <span
+                        v-for="pc in (s.parent_codes && s.parent_codes.length ? s.parent_codes : [s.parent_code])"
+                        :key="pc"
+                        class="ds-pill warn ad-mono"
+                        :title="s.type_status_label || 'Programa padre'"
+                      >{{ pc }}</span>
                     </div>
-                    <div class="deliv-group">
-                      <div class="deliv-title">Entregable final <span class="muted">(criterios 0-20 &middot; ponderado /20)</span></div>
-                      <label v-for="c in FINAL_CRITERIA" :key="'fc' + c.key" class="deliv-field">
-                        <span>{{ c.key }}. {{ c.label }} <b class="mono">{{ Math.round(c.weight * 100) }}%</b></span>
-                        <input
-                          class="grade-input wide"
-                          type="number"
-                          min="0"
-                          :max="c.max"
-                          step="0.5"
-                          :value="draftFor(s).final_criteria[c.key]"
-                          @input="draftFor(s).final_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
-                        />
-                      </label>
-                    </div>
-                    <div class="deliv-group">
-                      <div class="deliv-title">Datos del aula</div>
-                      <label class="deliv-field">
-                        <span>N&deg; de grupo</span>
-                        <input
-                          class="grade-input wide"
-                          type="number"
-                          min="1"
-                          step="1"
-                          :value="draftFor(s).group_number"
-                          @input="draftFor(s).group_number = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
-                        />
-                      </label>
-                      <label class="deliv-field">
-                        <span>Correo Odoo (certificacion)</span>
-                        <span class="mono small" :title="s.platform_user || s.email || ''">
-                          {{ s.platform_user || s.email || '--' }}
-                        </span>
-                      </label>
-                      <div class="deliv-flags">
-                        <span v-if="s.has_certificate" class="type-badge tb-seg"><i class="fa-solid fa-certificate"></i> Certificado</span>
-                        <span v-if="s.has_laptop_promo" class="type-badge tb-laptop" title="Esta inscripcion incluye laptop como beneficio">
-                          <i class="fa-solid fa-laptop"></i> Traera laptop
-                        </span>
-                        <span v-if="b2bLabel(s)" class="type-badge tb-obs mono">{{ b2bLabel(s) }}</span>
-                        <span v-if="s.membership_active" class="type-badge tb-member" :title="`Membresia activa: ${s.membership_tier_name}`">
-                          <i class="fa-solid fa-crown"></i> {{ s.membership_tier_name }}
-                        </span>
+                    <span
+                      v-else-if="typeStatusBadge(s.type_status_alias)"
+                      class="ds-pill"
+                      :class="typeStatusBadge(s.type_status_alias).tone"
+                    >{{ typeStatusBadge(s.type_status_alias).label }}</span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td>
+                    <span v-if="b2bLabel(s)" class="ds-pill ad-mono">{{ b2bLabel(s) }}</span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td class="ad-center">
+                    <span v-if="s.is_beca" class="ds-pill info"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> Beca</span>
+                    <span v-if="mustCertify(s)" class="ds-pill ok ad-pill-gap" title="Becado que pago su certificado: hay que certificarlo">
+                      <i class="fa-solid fa-certificate" aria-hidden="true"></i> Certificar
+                    </span>
+                    <span v-if="!s.is_beca" class="ad-muted">--</span>
+                  </td>
+                  <td class="ad-center">
+                    <span v-if="s.membership_active" class="ds-pill warn" :title="`Membresia activa: ${s.membership_tier_name}`">
+                      <i class="fa-solid fa-crown" aria-hidden="true"></i> {{ s.membership_tier_name }}
+                    </span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td v-for="n in sessionNumbers" :key="'t' + n" class="ad-cell-input">
+                    <input
+                      class="ad-grade-input"
+                      type="number"
+                      min="0"
+                      :max="GRADE_RULES.TEST_MAX_PER_SESSION"
+                      step="1"
+                      :aria-label="`Test sesion ${n}`"
+                      :value="draftFor(s).tests[String(n)]"
+                      @input="draftFor(s).tests[String(n)] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
+                    />
+                  </td>
+                  <td class="ad-total ad-mono">{{ fmtNota(testScore(draftFor(s))) }}</td>
+                  <td v-for="n in sessionNumbers" :key="'p' + n" class="ad-cell-input">
+                    <input
+                      type="checkbox"
+                      class="ad-part-check"
+                      :aria-label="`Participacion sesion ${n}`"
+                      :checked="draftFor(s).participation[String(n)] === true"
+                      @change="draftFor(s).participation[String(n)] = $event.target.checked; markDirty(s.enrollment_id)"
+                    />
+                  </td>
+                  <td class="ad-total ad-mono">{{ partScore(draftFor(s)) }}</td>
+                  <td class="ad-total ad-mono">{{ fmtNota(partialScore(draftFor(s))) }}</td>
+                  <td class="ad-total ad-mono">{{ fmtNota(finalDelivScore(draftFor(s))) }}</td>
+                  <td class="ad-center">
+                    <button
+                      class="btn-icon btn-icon-sm"
+                      type="button"
+                      :title="expandedRow === s.enrollment_id ? 'Cerrar criterios' : 'Editar criterios de entregables'"
+                      :aria-label="expandedRow === s.enrollment_id ? 'Cerrar criterios' : 'Editar criterios de entregables'"
+                      :aria-expanded="String(expandedRow === s.enrollment_id)"
+                      @click="expandedRow = expandedRow === s.enrollment_id ? null : s.enrollment_id"
+                    >
+                      <i class="fa-solid" :class="expandedRow === s.enrollment_id ? 'fa-chevron-up' : 'fa-pen-to-square'" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                  <td class="ad-center">
+                    <span
+                      v-if="hasAnyGrade(draftFor(s))"
+                      class="ds-pill ad-mono"
+                      :class="notaTone(finalGrade(draftFor(s)))"
+                    >{{ fmtNota(finalGrade(draftFor(s))) }}</span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td>
+                    <span
+                      v-if="hasAnyGrade(draftFor(s))"
+                      class="ds-pill"
+                      :class="finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'ok' : 'bad'"
+                    >{{ finalGrade(draftFor(s)) >= GRADE_RULES.PASS_THRESHOLD ? 'APROBADO' : 'DESAPROBADO' }}</span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td class="ad-center">
+                    <span
+                      v-if="certCodeOf(s)"
+                      class="ds-pill info"
+                      :title="'Certificado emitido en Odoo: ' + certCodeOf(s)"
+                    ><i class="fa-solid fa-certificate" aria-hidden="true"></i> N° {{ certCodeOf(s) }}</span>
+                    <span v-else class="ad-muted">--</span>
+                  </td>
+                </tr>
+                <tr v-if="expandedRow === s.enrollment_id" class="ad-deliv-row">
+                  <td :colspan="gradesColspan">
+                    <div class="ad-deliv">
+                      <div>
+                        <div class="ad-deliv-title">Entregable parcial <span class="ad-muted">(criterios 0-20 · ponderado /20)</span></div>
+                        <label v-for="c in PARTIAL_CRITERIA" :key="'pc' + c.key" class="ad-deliv-field">
+                          <span>{{ c.key }}. {{ c.label }} <b class="ad-mono">{{ Math.round(c.weight * 100) }}%</b></span>
+                          <input
+                            class="ad-grade-input ad-grade-input--wide"
+                            type="number"
+                            min="0"
+                            :max="c.max"
+                            step="0.5"
+                            :value="draftFor(s).partial_criteria[c.key]"
+                            @input="draftFor(s).partial_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
+                          />
+                        </label>
+                      </div>
+                      <div>
+                        <div class="ad-deliv-title">Entregable final <span class="ad-muted">(criterios 0-20 · ponderado /20)</span></div>
+                        <label v-for="c in FINAL_CRITERIA" :key="'fc' + c.key" class="ad-deliv-field">
+                          <span>{{ c.key }}. {{ c.label }} <b class="ad-mono">{{ Math.round(c.weight * 100) }}%</b></span>
+                          <input
+                            class="ad-grade-input ad-grade-input--wide"
+                            type="number"
+                            min="0"
+                            :max="c.max"
+                            step="0.5"
+                            :value="draftFor(s).final_criteria[c.key]"
+                            @input="draftFor(s).final_criteria[c.key] = $event.target.value === '' ? null : Math.min(Number($event.target.value), 20); markDirty(s.enrollment_id)"
+                          />
+                        </label>
+                      </div>
+                      <div>
+                        <div class="ad-deliv-title">Datos del aula</div>
+                        <label class="ad-deliv-field">
+                          <span>N° de grupo</span>
+                          <input
+                            class="ad-grade-input ad-grade-input--wide"
+                            type="number"
+                            min="1"
+                            step="1"
+                            :value="draftFor(s).group_number"
+                            @input="draftFor(s).group_number = $event.target.value === '' ? null : Number($event.target.value); markDirty(s.enrollment_id)"
+                          />
+                        </label>
+                        <div class="ad-deliv-field">
+                          <span>Correo Odoo (certificación)</span>
+                          <span class="ad-mono ad-small" :title="s.platform_user || s.email || ''">
+                            {{ s.platform_user || s.email || '--' }}
+                          </span>
+                        </div>
+                        <div class="ad-deliv-flags">
+                          <span v-if="s.has_certificate" class="ds-pill warn"><i class="fa-solid fa-certificate" aria-hidden="true"></i> Certificado</span>
+                          <span v-if="s.has_laptop_promo" class="ds-pill cyan" title="Esta inscripcion incluye laptop como beneficio">
+                            <i class="fa-solid fa-laptop" aria-hidden="true"></i> Traerá laptop
+                          </span>
+                          <span v-if="b2bLabel(s)" class="ds-pill ad-mono">{{ b2bLabel(s) }}</span>
+                          <span v-if="s.membership_active" class="ds-pill warn" :title="`Membresia activa: ${s.membership_tier_name}`">
+                            <i class="fa-solid fa-crown" aria-hidden="true"></i> {{ s.membership_tier_name }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="ad-deliv-obs">
+                        <div class="ad-deliv-title">
+                          Observación (acta)
+                          <button
+                            class="btn-exec btn-exec-outline btn-sm"
+                            type="button"
+                            :disabled="isGeneratingObs"
+                            title="Regenerar con IA solo para este alumno"
+                            @click="generateObservations([s.enrollment_id])"
+                          >
+                            <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'" aria-hidden="true"></i>
+                            Regenerar
+                          </button>
+                        </div>
+                        <textarea
+                          class="ds-input ad-obs"
+                          :class="{ 'ad-obs--ia': iaDraftObs.has(s.enrollment_id) }"
+                          rows="2"
+                          maxlength="2000"
+                          aria-label="Observacion del alumno para el acta"
+                          placeholder="Observacion del alumno para el acta de notas..."
+                          :value="draftFor(s).observation"
+                          @input="draftFor(s).observation = $event.target.value; markDirty(s.enrollment_id)"
+                        ></textarea>
+                        <div v-if="iaDraftObs.has(s.enrollment_id)" class="ad-muted ad-small">
+                          <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Borrador IA sin guardar — revisa y guarda.
+                        </div>
                       </div>
                     </div>
-                    <div class="deliv-group obs-group">
-                      <div class="deliv-title">
-                        Observacion (acta)
-                        <button
-                          class="btn btn-xs"
-                          :disabled="isGeneratingObs"
-                          title="Regenerar con IA solo para este alumno"
-                          @click="generateObservations([s.enrollment_id])"
-                        >
-                          <i class="fa-solid" :class="isGeneratingObs ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i>
-                          Regenerar
-                        </button>
-                      </div>
-                      <textarea
-                        class="obs-textarea"
-                        :class="{ 'ia-draft': iaDraftObs.has(s.enrollment_id) }"
-                        rows="2"
-                        maxlength="2000"
-                        placeholder="Observacion del alumno para el acta de notas..."
-                        :value="draftFor(s).observation"
-                        @input="draftFor(s).observation = $event.target.value; markDirty(s.enrollment_id)"
-                      ></textarea>
-                      <div v-if="iaDraftObs.has(s.enrollment_id)" class="muted small">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Borrador IA sin guardar — revisa y guarda.
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <!-- Leyenda fija: estas dos preguntas llegaban por chat en cada aula
            ("que es este numero?" y "por que el ERP dice 18.6 y Odoo 20?").
            Va visible bajo la tabla, no en un title: el usuario manda captura,
            y en una captura el tooltip no sale. -->
-      <p v-if="students.length" class="grades-note">
-        <b>Cert. Odoo</b> = N&deg; del certificado ya emitido en Odoo. Un <b>--</b> significa que ese alumno todavia no tiene certificado
-        (desaprobado, con deuda pendiente, o el aula aun no se certifico).
-        &middot; <b>Nota final</b> = acta interna del ERP: incluye los tests de sesion, y la <b>sesion sin test cargado cuenta 0</b>,
-        asi que baja mientras falten quizzes por cargar. El certificado se emite con la <b>nota oficial de Odoo</b>, que solo
-        promedia parcial, final y participacion: por eso suele ser mas alta que esta.
+      <p v-if="students.length" class="ds-callout">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>
+          <b>Cert. Odoo</b> = N° del certificado ya emitido en Odoo. Un <b>--</b> significa que ese alumno todavía no tiene certificado
+          (desaprobado, con deuda pendiente, o el aula aún no se certificó).
+          · <b>Nota final</b> = acta interna del ERP: incluye los tests de sesión, y la <b>sesión sin test cargado cuenta 0</b>,
+          así que baja mientras falten quizzes por cargar. El certificado se emite con la <b>nota oficial de Odoo</b>, que solo
+          promedia parcial, final y participación: por eso suele ser más alta que esta.
+        </span>
       </p>
 
       <!-- Resumenes del formato oficial -->
-      <div v-if="students.length" class="summary-grid">
-        <div class="summary-card">
-          <h3 class="sum-title"><i class="fa-solid fa-users"></i> Resumen de alumnos</h3>
-          <div class="sum-rows">
-            <div class="sum-row"><span>Total de alumnos inscritos</span><b class="mono">{{ gradesSummary.total }}</b></div>
-            <div class="sum-row"><span>Modalidad regular</span><b class="mono">{{ gradesSummary.regular }} &middot; {{ gradesSummary.pct(gradesSummary.regular) }}%</b></div>
-            <div class="sum-row"><span>Modalidad Flex</span><b class="mono">{{ gradesSummary.flex }} &middot; {{ gradesSummary.pct(gradesSummary.flex) }}%</b></div>
-            <div class="sum-row"><span>Alumnos de seguimiento</span><b class="mono">{{ gradesSummary.tracking }} &middot; {{ gradesSummary.pct(gradesSummary.tracking) }}%</b></div>
-            <div class="sum-row"><span>Certificados</span><b class="mono">{{ gradesSummary.certified }} &middot; {{ gradesSummary.pct(gradesSummary.certified) }}%</b></div>
-            <div class="sum-row"><span>Aprobados</span><b class="mono ok-ink">{{ gradesSummary.approved }} &middot; {{ gradesSummary.pct(gradesSummary.approved) }}%</b></div>
-            <div class="sum-row"><span>Desaprobados</span><b class="mono bad-ink">{{ gradesSummary.failed }} &middot; {{ gradesSummary.pct(gradesSummary.failed) }}%</b></div>
+      <div v-if="students.length" class="ad-summary">
+        <section class="ds-panel">
+          <header class="ds-panel-head"><h3 class="ds-panel-title">Resumen de alumnos</h3></header>
+          <dl class="ds-panel-body ad-sumlist">
+            <div><dt>Total de alumnos inscritos</dt><dd>{{ gradesSummary.total }}</dd></div>
+            <div><dt>Modalidad regular</dt><dd>{{ gradesSummary.regular }} · {{ gradesSummary.pct(gradesSummary.regular) }}%</dd></div>
+            <div><dt>Modalidad Flex</dt><dd>{{ gradesSummary.flex }} · {{ gradesSummary.pct(gradesSummary.flex) }}%</dd></div>
+            <div><dt>Alumnos de seguimiento</dt><dd>{{ gradesSummary.tracking }} · {{ gradesSummary.pct(gradesSummary.tracking) }}%</dd></div>
+            <div><dt>Certificados</dt><dd>{{ gradesSummary.certified }} · {{ gradesSummary.pct(gradesSummary.certified) }}%</dd></div>
+            <div><dt>Aprobados</dt><dd class="ok">{{ gradesSummary.approved }} · {{ gradesSummary.pct(gradesSummary.approved) }}%</dd></div>
+            <div><dt>Desaprobados</dt><dd class="bad">{{ gradesSummary.failed }} · {{ gradesSummary.pct(gradesSummary.failed) }}%</dd></div>
+          </dl>
+        </section>
+        <section class="ds-panel">
+          <header class="ds-panel-head"><h3 class="ds-panel-title">Test por sesión</h3></header>
+          <div class="ds-panel-body ds-table-scroll">
+            <table class="ds-table ad-session-table">
+              <thead>
+                <tr><th></th><th v-for="st in sessionStats" :key="'h' + st.session" class="num">S{{ st.session }}</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Con puntos</td>
+                  <td v-for="st in sessionStats" :key="'c' + st.session" class="num">{{ st.withTest }}</td>
+                </tr>
+                <tr>
+                  <td>%</td>
+                  <td v-for="st in sessionStats" :key="'pc' + st.session" class="num">{{ st.withTestPct }}%</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div class="summary-card">
-          <h3 class="sum-title"><i class="fa-solid fa-clipboard-question"></i> Test por sesion</h3>
-          <table class="sum-table">
-            <thead>
-              <tr><th></th><th v-for="st in sessionStats" :key="'h' + st.session">S{{ st.session }}</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Con puntos</td>
-                <td v-for="st in sessionStats" :key="'c' + st.session" class="mono">{{ st.withTest }}</td>
-              </tr>
-              <tr class="muted">
-                <td>%</td>
-                <td v-for="st in sessionStats" :key="'pc' + st.session" class="mono">{{ st.withTestPct }}%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="summary-card">
-          <h3 class="sum-title"><i class="fa-solid fa-hand"></i> Participaciones por sesion</h3>
-          <table class="sum-table">
-            <thead>
-              <tr><th></th><th v-for="st in sessionStats" :key="'h2' + st.session">S{{ st.session }}</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Participaciones</td>
-                <td v-for="st in sessionStats" :key="'c2' + st.session" class="mono">{{ st.participated }}</td>
-              </tr>
-              <tr class="muted">
-                <td>%</td>
-                <td v-for="st in sessionStats" :key="'pc2' + st.session" class="mono">{{ st.participatedPct }}%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-if="aulaSummaryIa" class="summary-card obs-summary-card">
-          <h3 class="sum-title">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Resumen del aula (IA)
-            <button class="btn btn-xs" title="Copiar al portapapeles" @click="copyAulaSummary">
-              <i class="fa-regular fa-copy"></i> Copiar
+        </section>
+        <section class="ds-panel">
+          <header class="ds-panel-head"><h3 class="ds-panel-title">Participaciones por sesión</h3></header>
+          <div class="ds-panel-body ds-table-scroll">
+            <table class="ds-table ad-session-table">
+              <thead>
+                <tr><th></th><th v-for="st in sessionStats" :key="'h2' + st.session" class="num">S{{ st.session }}</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Participaciones</td>
+                  <td v-for="st in sessionStats" :key="'c2' + st.session" class="num">{{ st.participated }}</td>
+                </tr>
+                <tr>
+                  <td>%</td>
+                  <td v-for="st in sessionStats" :key="'pc2' + st.session" class="num">{{ st.participatedPct }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section v-if="aulaSummaryIa" class="ds-panel ad-summary-wide">
+          <header class="ds-panel-head">
+            <h3 class="ds-panel-title"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Resumen del aula (IA)</h3>
+            <button class="btn-exec btn-exec-outline btn-sm" type="button" title="Copiar al portapapeles" @click="copyAulaSummary">
+              <i class="fa-regular fa-copy" aria-hidden="true"></i> Copiar
             </button>
-          </h3>
-          <p class="obs-summary-text">{{ aulaSummaryIa }}</p>
-          <div class="muted small">Borrador generado por la IA local — verificar antes de usar en reportes.</div>
-        </div>
-        <div class="summary-card">
-          <h3 class="sum-title"><i class="fa-solid fa-trophy"></i> Primeros puestos</h3>
-          <div v-if="!topStudents.length" class="muted small">Sin notas registradas todavia.</div>
-          <div v-else class="sum-rows">
-            <div v-for="(t, i) in topStudents" :key="t.s.enrollment_id" class="sum-row top-row">
-              <span class="top-pos" :class="'pos-' + (i + 1)">{{ i + 1 }}&ordf;</span>
-              <span class="top-name">
-                <span class="sn-name">{{ t.s.full_name }}</span>
-                <span class="muted small">{{ t.s.email || '--' }} &middot; {{ t.s.phone || '--' }}</span>
-              </span>
-              <b class="mono">{{ fmtNota(t.final) }}</b>
-            </div>
+          </header>
+          <div class="ds-panel-body">
+            <p class="ad-summary-text">{{ aulaSummaryIa }}</p>
           </div>
-        </div>
+          <footer class="ds-panel-foot warn">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <span>Borrador generado por la IA local — verificar antes de usar en reportes.</span>
+          </footer>
+        </section>
+        <section class="ds-panel">
+          <header class="ds-panel-head"><h3 class="ds-panel-title">Primeros puestos</h3></header>
+          <div class="ds-panel-body">
+            <p v-if="!topStudents.length" class="ds-empty">Sin notas registradas todavía. Carga notas en la tabla de arriba.</p>
+            <ol v-else class="ad-top">
+              <li v-for="(t, i) in topStudents" :key="t.s.enrollment_id">
+                <span class="ds-pill" :class="TOP_TONES[i]">{{ i + 1 }}ª</span>
+                <span class="ad-top-name">
+                  <span class="ad-student-name">{{ t.s.full_name }}</span>
+                  <span class="ad-muted ad-small">{{ t.s.email || '--' }} · {{ t.s.phone || '--' }}</span>
+                </span>
+                <b class="ad-mono">{{ fmtNota(t.final) }}</b>
+              </li>
+            </ol>
+          </div>
+        </section>
       </div>
 
-      <p class="footer-note">
-        <i class="fa-solid fa-circle-info"></i>
-        Nota final = TEST &times; 30% + Entregable parcial &times; 30% + Entregable final &times; 40% + Participacion (0-2).
-        Aprobado desde {{ GRADE_RULES.PASS_THRESHOLD }}. Los totales definitivos se recalculan al guardar.
+      <p class="ds-callout">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>
+          Nota final = TEST × 30% + Entregable parcial × 30% + Entregable final × 40% + Participación (0-2).
+          Aprobado desde {{ GRADE_RULES.PASS_THRESHOLD }}. Los totales definitivos se recalculan al guardar.
+        </span>
       </p>
     </section>
 
     <!-- ============================================================ -->
     <!-- HISTORIAL (alumnos que estuvieron pero ya no estan)          -->
     <!-- ============================================================ -->
-    <section v-else-if="activeTab === 'historial'" class="tab-body">
-      <div v-if="isLoadingHistory" class="state-msg muted">
-        <i class="fa-solid fa-spinner fa-spin"></i> Cargando historial...
-      </div>
-      <div v-else-if="!historyLeft.length && !historyValidated.length" class="state-msg muted">
-        <i class="fa-regular fa-folder-open"></i>
-        Sin movimientos: ningun alumno se ha retirado o cambiado de este aula.
-      </div>
-      <div v-else class="hist-wrap">
+    <section v-else-if="activeTab === 'historial'" class="ds-stack">
+      <section v-if="isLoadingHistory" class="ds-panel" aria-busy="true">
+        <div class="ds-panel-body ds-stack">
+          <span v-for="n in 4" :key="n" class="ds-skel"></span>
+        </div>
+      </section>
+      <section v-else-if="!historyLeft.length && !historyValidated.length" class="ds-panel">
+        <p class="ds-empty ds-empty--lista">Sin movimientos: ningún alumno se ha retirado o cambiado de esta aula.</p>
+      </section>
+      <template v-else>
         <!-- CONVALIDADOS: nunca estuvieron y nunca van a estar. Bloque propio
              porque no tienen "fecha de salida" ni "motivo": la tabla de abajo
              los mostraria con todo en "--" y se leeria como dato faltante. -->
-        <section v-if="historyValidated.length" class="hist-card">
-          <header class="hist-head">
-            <span class="hist-ic hb-conv"><i class="fa-solid fa-award"></i></span>
-            <h3 class="hist-title">Convalidados</h3>
-            <span class="hist-count">{{ historyValidated.length }}</span>
+        <section v-if="historyValidated.length" class="ds-panel">
+          <header class="ds-panel-head">
+            <h3 class="ds-panel-title ad-hist-title">
+              <span class="ds-pill violet" aria-hidden="true"><i class="fa-solid fa-award"></i></span>
+              Convalidados
+            </h3>
+            <span class="ds-chip">{{ historyValidated.length }}</span>
           </header>
-          <!-- Mismo armazon que la Lista de Notas (att-matrix-scroll/att-matrix):
-               se reusan sus clases en vez de copiar el CSS, asi las dos tablas no
-               pueden divergir. hist-matrix solo alinea a la izquierda el texto. -->
-          <div class="att-matrix-scroll">
-            <table class="att-matrix hist-matrix">
+          <div class="ds-panel-body ds-table-scroll">
+            <table class="ds-table ds-table--densa ad-hist">
               <thead>
                 <tr>
-                  <th class="sticky-c1">Alumno</th>
+                  <th>Alumno</th>
                   <th>Paquete</th>
-                  <th>Ya lo llevo en</th>
+                  <th>Ya lo llevó en</th>
                   <th>Convalidado el</th>
                   <th>Asesor</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="v in historyValidated" :key="'v' + v.validation_id">
-                  <td class="sticky-c1">
-                    <div class="student-name-cell">
-                      <span class="av-sm">{{ initialsOf(v.full_name) }}</span>
-                      <div>
-                        <div class="sn-name" :title="apellidosNombres(v)">
+                  <td>
+                    <div class="ad-student">
+                      <span class="ad-avatar" aria-hidden="true">{{ initialsOf(v.full_name) }}</span>
+                      <div class="ad-student-text">
+                        <div class="ad-student-name ad-wrap" :title="apellidosNombres(v)">
                           {{ apellidosNombres(v) }}
-                          <span class="hist-badge hb-conv">Convalidado</span>
+                          <span class="ds-pill violet">Convalidado</span>
                         </div>
-                        <div class="sn-handle">{{ v.dni || 'Sin DNI' }}</div>
+                        <div class="ad-student-sub">{{ v.dni || 'Sin DNI' }}</div>
                       </div>
                     </div>
                   </td>
@@ -2186,13 +2296,13 @@ onMounted(async () => {
                        venir de otra institucion o de experiencia. Se marca en ambar
                        en vez de inventar una edicion. -->
                   <td
-                    :class="{ 'hist-warn': !validatedPrevLabel(v) }"
+                    :class="{ warn: !validatedPrevLabel(v) }"
                     :title="validatedPrevLabel(v) ? '' : 'La convalidacion no apunta a ninguna matricula del ERP (otra institucion o experiencia).'"
                   >
-                    {{ validatedPrevLabel(v) || 'Sin matricula previa en el ERP' }}
+                    {{ validatedPrevLabel(v) || 'Sin matrícula previa en el ERP' }}
                   </td>
                   <td>{{ formatDate(v.validated_at) }}</td>
-                  <td class="mono">{{ v.agent_code || '--' }}</td>
+                  <td class="ad-mono">{{ v.agent_code || '--' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -2202,1842 +2312,935 @@ onMounted(async () => {
         <!-- Una tarjeta por motivo (Retirados, Reprogramados, ...). El titulo de
              la tarjeta ya dice el motivo, asi que no hay columna "Motivo": el
              badge de la fila solo se conserva para los casos cuyo texto varia. -->
-        <section v-for="g in historyGroups" :key="g.key" class="hist-card">
-          <header class="hist-head">
-            <span class="hist-ic" :class="g.cls"><i class="fa-solid" :class="g.icon"></i></span>
-            <h3 class="hist-title">{{ g.title }}</h3>
-            <span class="hist-count">{{ g.rows.length }}</span>
+        <section v-for="g in historyGroups" :key="g.key" class="ds-panel">
+          <header class="ds-panel-head">
+            <h3 class="ds-panel-title ad-hist-title">
+              <span class="ds-pill" :class="g.tone" aria-hidden="true"><i class="fa-solid" :class="g.icon"></i></span>
+              {{ g.title }}
+            </h3>
+            <span class="ds-chip">{{ g.rows.length }}</span>
           </header>
-          <div class="att-matrix-scroll">
-            <table class="att-matrix hist-matrix">
+          <div class="ds-panel-body ds-table-scroll">
+            <table class="ds-table ds-table--densa ad-hist">
               <thead>
                 <tr>
-                  <th class="sticky-c1">Alumno</th>
+                  <th>Alumno</th>
                   <th>Matriculado</th>
                   <th>Fecha de salida</th>
                   <th>Realizado por</th>
-                  <th>Justificacion</th>
+                  <th>Justificación</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="h in g.rows" :key="h.enrollment_id">
-                  <td class="sticky-c1">
-                    <div class="student-name-cell">
-                      <span class="av-sm">{{ initialsOf(h.full_name) }}</span>
-                      <div>
-                        <div class="sn-name" :title="apellidosNombres(h)">
+                  <td>
+                    <div class="ad-student">
+                      <span class="ad-avatar" aria-hidden="true">{{ initialsOf(h.full_name) }}</span>
+                      <div class="ad-student-text">
+                        <div class="ad-student-name ad-wrap" :title="apellidosNombres(h)">
                           {{ apellidosNombres(h) }}
-                          <span class="hist-badge" :class="g.cls">{{ historyReason(h).label }}</span>
+                          <span class="ds-pill" :class="g.tone">{{ historyReason(h).label }}</span>
                         </div>
-                        <div class="sn-handle">{{ h.dni || 'Sin DNI' }}</div>
+                        <div class="ad-student-sub">{{ h.dni || 'Sin DNI' }}</div>
                       </div>
                     </div>
                   </td>
                   <td>{{ formatDate(h.enrolled_on) }}</td>
                   <td>{{ formatDateTime(h.left_at) }}</td>
                   <td>{{ h.performed_by || '--' }}</td>
-                  <td class="hist-just">{{ h.justificacion || '--' }}</td>
+                  <td class="ad-hist-just">{{ h.justificacion || '--' }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </section>
-      </div>
+      </template>
     </section>
 
     <!-- ============================================================ -->
     <!-- AUDITORIA (rubrica)                                         -->
     <!-- ============================================================ -->
-    <section v-else-if="activeTab === 'auditoria'" class="tab-body">
-      <div v-if="!sessionsTotal" class="state-msg muted">
-        <i class="fa-regular fa-folder-open"></i> El aula no tiene sesiones definidas.
-      </div>
+    <section v-else-if="activeTab === 'auditoria'" class="ds-stack">
+      <section v-if="!sessionsTotal" class="ds-panel">
+        <p class="ds-empty ds-empty--lista">El aula no tiene sesiones definidas. Se configuran en la edición del cronograma.</p>
+      </section>
 
-      <div v-else class="audit-rd">
+      <template v-else>
         <!-- Tira de sesiones con nota consolidada -->
-        <div class="ar-sess-strip">
-          <span class="ar-sess-lbl">Sesion</span>
-          <button
-            v-for="n in sessionNumbers"
-            :key="n"
-            class="ar-sess-pill"
-            :class="{ active: selectedSession === n }"
-            @click="selectSession(n)"
-          >
-            <span class="ar-dot" :class="sessionDotCls(n)"></span>
-            <span class="slabel">S{{ n }}</span>
-            <span class="note" :class="{ pend: sessionConsolidatedNote(n) == null }">
-              {{ sessionConsolidatedNote(n) == null ? '—' : '(' + fmtNota(sessionConsolidatedNote(n)) + ')' }}
-            </span>
-          </button>
+        <div class="ad-sessions">
+          <span class="ad-sessions-label">Sesión</span>
+          <div class="ds-tabs" role="group" aria-label="Sesiones del aula">
+            <button
+              v-for="n in sessionNumbers"
+              :key="n"
+              class="ad-session-btn"
+              type="button"
+              :aria-pressed="String(selectedSession === n)"
+              @click="selectSession(n)"
+            >
+              <span class="ad-dot" :class="sessionDotCls(n)" aria-hidden="true"></span>
+              S{{ n }}
+              <span class="ad-session-note" :class="{ pend: sessionConsolidatedNote(n) == null }">
+                {{ sessionConsolidatedNote(n) == null ? '—' : '(' + fmtNota(sessionConsolidatedNote(n)) + ')' }}
+              </span>
+            </button>
+          </div>
         </div>
 
         <!-- Scorecard consolidado -->
-        <div class="ar-scorecard">
-          <div class="sc-hero">
-            <div class="sc-ring" :class="'lvl-' + notaLevel(currentConsolidated20)">
-              <svg width="92" height="92" viewBox="0 0 92 92">
-                <circle cx="46" cy="46" r="40" class="ring-track" stroke-width="9" fill="none" />
+        <section class="ds-panel ad-score">
+          <div class="ad-score-hero">
+            <div class="ad-ring" :class="notaTone(currentConsolidated20)">
+              <svg width="92" height="92" viewBox="0 0 92 92" role="img" :aria-label="`Nota consolidada ${fmtNota(currentConsolidated20)} de 20`">
+                <circle cx="46" cy="46" r="40" class="ad-ring-track" stroke-width="9" fill="none" />
                 <circle
-                  cx="46" cy="46" r="40" class="ring-prog" stroke-width="9" fill="none"
+                  cx="46" cy="46" r="40" class="ad-ring-prog" stroke-width="9" fill="none"
                   stroke-linecap="round"
                   :stroke-dasharray="RING_CIRC"
                   :stroke-dashoffset="ringOffset(currentConsolidated20)"
                 />
               </svg>
-              <div class="ring-num"><b>{{ fmtNota(currentConsolidated20) }}</b><span>/ 20</span></div>
+              <div class="ad-ring-num"><b>{{ fmtNota(currentConsolidated20) }}</b><span>/ 20</span></div>
             </div>
             <div>
-              <div class="label">NOTA CONSOLIDADA</div>
-              <div class="big">{{ currentConsolidated20 == null ? 'Sin datos' : 'Estabilizada' }}</div>
-              <div class="prov" :class="{ firm: currentFirm }">
-                <i class="fa-solid" :class="currentFirm ? 'fa-circle-check' : 'fa-clock'"></i>
-                {{ currentFirm ? 'Evaluacion completa' : 'Provisional · falta area academica' }}
-              </div>
+              <div class="ad-score-label">Nota consolidada</div>
+              <div class="ad-score-big">{{ currentConsolidated20 == null ? 'Sin datos' : 'Estabilizada' }}</div>
+              <span class="ds-pill" :class="currentFirm ? 'ok' : 'warn'">
+                <i class="fa-solid" :class="currentFirm ? 'fa-circle-check' : 'fa-clock'" aria-hidden="true"></i>
+                {{ currentFirm ? 'Evaluación completa' : 'Provisional · falta área académica' }}
+              </span>
             </div>
           </div>
-          <div class="sc-evals">
-            <div class="sc-eval">
-              <div class="head"><span class="badge-ia">IA</span><span class="tag">AUDITORIA AUTOMATICA</span></div>
-              <div class="score"><b>{{ fmtNota(currentIaScore20) }}</b><span>/ 20</span></div>
-              <div class="bar"><i :class="'fill-' + notaLevel(currentIaScore20)" :style="{ width: barWidth(currentIaScore20) }"></i></div>
-              <div class="weight">Peso {{ PESO_IA_PCT }}%</div>
+          <div class="ad-score-evals">
+            <div class="ad-score-eval">
+              <div class="ad-score-eval-head"><span class="ds-pill info">IA</span><span class="ad-score-label">Auditoría automática</span></div>
+              <div class="ad-score-value"><b>{{ fmtNota(currentIaScore20) }}</b><span>/ 20</span></div>
+              <div class="ds-track"><i class="ad-fill" :class="notaTone(currentIaScore20)" :style="{ width: barWidth(currentIaScore20) }"></i></div>
+              <div class="ad-score-weight">Peso {{ PESO_IA_PCT }}%</div>
             </div>
-            <div class="sc-eval">
-              <div class="head"><span class="tag">AREA ACADEMICA</span></div>
-              <div class="score"><b>{{ fmtNota(currentAcScore20) }}</b><span>/ 20</span></div>
-              <div class="bar"><i class="fill-accent" :style="{ width: barWidth(currentAcScore20) }"></i></div>
-              <div class="weight">Peso {{ PESO_MANUAL_PCT }}% · {{ totalScore }}/{{ activeRubric.totalItems }} criterios marcados</div>
+            <div class="ad-score-eval">
+              <div class="ad-score-eval-head"><span class="ad-score-label">Área académica</span></div>
+              <div class="ad-score-value"><b>{{ fmtNota(currentAcScore20) }}</b><span>/ 20</span></div>
+              <div class="ds-track"><i :style="{ width: barWidth(currentAcScore20) }"></i></div>
+              <div class="ad-score-weight">Peso {{ PESO_MANUAL_PCT }}% · {{ totalScore }}/{{ activeRubric.totalItems }} criterios marcados</div>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- Control segmentado + accion IA -->
-        <div class="ar-toolbar">
-          <div class="ar-segmented">
-            <button :class="{ on: auditView === 'resumen' }" @click="auditView = 'resumen'">
-              <i class="fa-solid fa-chart-line"></i> Resumen
+        <div class="ad-toolbar">
+          <div class="ds-tabs" role="tablist" aria-label="Vista de la auditoria">
+            <button type="button" role="tab" :aria-selected="String(auditView === 'resumen')" @click="auditView = 'resumen'">
+              <i class="fa-solid fa-chart-line" aria-hidden="true"></i> Resumen
             </button>
-            <button :class="{ on: auditView === 'ia' }" @click="auditView = 'ia'">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Auditoria IA
+            <button type="button" role="tab" :aria-selected="String(auditView === 'ia')" @click="auditView = 'ia'">
+              <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Auditoría IA
             </button>
-            <button :class="{ on: auditView === 'academica' }" @click="auditView = 'academica'">
-              <i class="fa-solid fa-clipboard-check"></i> Evaluacion Academica
+            <button type="button" role="tab" :aria-selected="String(auditView === 'academica')" @click="auditView = 'academica'">
+              <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Evaluación académica
             </button>
           </div>
-          <div class="ar-grow"></div>
+          <span class="ad-grow"></span>
           <button
             v-if="!currentAiReport"
-            class="ar-btn"
+            class="btn-exec btn-exec-outline"
+            type="button"
             title="Generar analisis con IA (consume creditos)"
             @click="onAnalyzeClick"
           >
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
             Analizar con IA
           </button>
           <button
             v-else
-            class="ar-btn primary"
+            class="btn-exec btn-exec-outline"
+            type="button"
             title="Exportar el reporte de la sesion en PDF para entregar al docente"
             @click="exportSessionPdf"
           >
-            <i class="fa-solid fa-file-pdf"></i>
+            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
             Exportar PDF
           </button>
         </div>
 
         <!-- ===================== RESUMEN ===================== -->
-        <div v-if="auditView === 'resumen'" class="ar-stack">
-          <div v-if="!currentAiReport" class="ar-empty">
-            <div class="big">Sesion {{ selectedSession }} sin analisis IA</div>
-            Genera la auditoria IA para ver el resumen, o registra la evaluacion academica.
-          </div>
+        <template v-if="auditView === 'resumen'">
+          <section v-if="!currentAiReport" class="ds-panel">
+            <p class="ds-empty ds-empty--lista">
+              <strong class="ad-empty-title">Sesión {{ selectedSession }} sin análisis IA</strong>
+              Genera la auditoría IA para ver el resumen, o registra la evaluación académica.
+            </p>
+          </section>
           <template v-else>
-            <div class="ar-metrics">
-              <div class="ar-metric">
-                <div class="lbl">NOTA IA</div>
-                <div class="big">{{ fmtNota(currentIaScore20) }} <span class="suf">/ 20</span></div>
-              </div>
-              <div class="ar-metric">
-                <div class="lbl">NOTA AREA ACADEMICA</div>
-                <div class="big">{{ fmtNota(currentAcScore20) }} <span class="suf">/ 20</span></div>
-              </div>
-              <div class="ar-metric">
-                <div class="lbl">TEMAS CUBIERTOS</div>
-                <div class="big">{{ currentMetricas.temas_cubiertos ?? '--' }} <span class="suf">/ {{ currentMetricas.temas_totales ?? '--' }}</span></div>
-              </div>
-              <div class="ar-metric">
-                <div class="lbl">BALANCE PRACTICA / TEORIA</div>
-                <div class="big sm">{{ currentMetricas.porcentaje_practica ?? '--' }}% · {{ currentMetricas.porcentaje_teoria ?? '--' }}%</div>
-                <div class="split-bar">
-                  <div class="p" :style="{ width: (currentMetricas.porcentaje_practica || 0) + '%' }"></div>
-                  <div class="t" :style="{ width: (currentMetricas.porcentaje_teoria || 0) + '%' }"></div>
-                </div>
-                <div class="split-legend"><span><i class="li-p"></i>Practica</span><span><i class="li-t"></i>Teoria</span></div>
-              </div>
-            </div>
-
-            <div class="ar-fo-grid">
-              <div class="ar-fo str" v-if="currentAiReport.fortalezas_top3?.length">
-                <div class="fo-head"><span class="ic"><i class="fa-solid fa-thumbs-up"></i></span>Fortalezas</div>
-                <div class="fo-item" v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i">
-                  <div class="t">{{ f.titulo }}</div><div class="d">{{ f.detalle }}</div>
+            <div class="ds-kpis">
+              <div class="ds-kpi">
+                <span class="ds-kpi-icon" :class="notaTone(currentIaScore20)" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <div class="ds-kpi-body">
+                  <div class="ds-kpi-row"><span class="ds-kpi-value">{{ fmtNota(currentIaScore20) }}</span><span class="ad-suffix">/ 20</span></div>
+                  <span class="ds-kpi-label">Nota IA</span>
                 </div>
               </div>
-              <div class="ar-fo opp" v-if="currentAiReport.oportunidades_top5?.length">
-                <div class="fo-head"><span class="ic"><i class="fa-solid fa-bullseye"></i></span>Oportunidades</div>
-                <div class="fo-item" v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i">
-                  <div class="t">{{ o.titulo }}</div><div class="d">{{ o.detalle }}</div>
+              <div class="ds-kpi">
+                <span class="ds-kpi-icon" :class="notaTone(currentAcScore20)" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+                <div class="ds-kpi-body">
+                  <div class="ds-kpi-row"><span class="ds-kpi-value">{{ fmtNota(currentAcScore20) }}</span><span class="ad-suffix">/ 20</span></div>
+                  <span class="ds-kpi-label">Nota área académica</span>
                 </div>
               </div>
-            </div>
-
-            <div class="ar-card ar-compare-card">
-              <div class="ar-card-head">
-                <span class="ic"><i class="fa-solid fa-chart-column"></i></span>
-                <div>
-                  <div class="ar-eyebrow">EVOLUCION DEL DOCENTE</div>
-                  <h3 class="ar-card-title">Comparacion por sesion</h3>
-                </div>
-              </div>
-              <div class="ar-compare">
-                <div
-                  v-for="s in compareSessions"
-                  :key="s.n"
-                  class="cmp-col"
-                  :class="{ current: s.n === selectedSession }"
-                  @click="selectSession(s.n)"
-                >
-                  <div class="cmp-bars">
-                    <template v-if="s.hasIa">
-                      <div class="cmp-bar ia" :style="{ height: ((s.ia20 || 0) / 20 * 100) + '%' }"><span class="v">{{ fmtNota(s.ia20) }}</span></div>
-                      <div class="cmp-bar ac" :style="{ height: ((s.ac20 || 0) / 20 * 100) + '%' }"><span class="v">{{ s.ac20 ? fmtNota(s.ac20) : '·' }}</span></div>
-                    </template>
-                    <div v-else class="cmp-pend">pend.</div>
+              <div class="ds-kpi">
+                <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
+                <div class="ds-kpi-body">
+                  <div class="ds-kpi-row">
+                    <span class="ds-kpi-value">{{ currentMetricas.temas_cubiertos ?? '--' }}</span>
+                    <span class="ad-suffix">/ {{ currentMetricas.temas_totales ?? '--' }}</span>
                   </div>
-                  <div class="cmp-x">S{{ s.n }}</div>
+                  <span class="ds-kpi-label">Temas cubiertos</span>
                 </div>
               </div>
-              <div class="split-legend center"><span><i class="li-ia"></i>Auditoria IA</span><span><i class="li-ac"></i>Area academica</span></div>
+              <div class="ds-kpi">
+                <span class="ds-kpi-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
+                <div class="ds-kpi-body ad-grow">
+                  <div class="ds-kpi-row">
+                    <span class="ds-kpi-value">{{ currentMetricas.porcentaje_practica ?? '--' }}% · {{ currentMetricas.porcentaje_teoria ?? '--' }}%</span>
+                  </div>
+                  <span class="ds-kpi-label">Balance práctica / teoría</span>
+                  <div class="ad-split" aria-hidden="true">
+                    <i class="ad-split-p" :style="{ width: (currentMetricas.porcentaje_practica || 0) + '%' }"></i>
+                    <i class="ad-split-t" :style="{ width: (currentMetricas.porcentaje_teoria || 0) + '%' }"></i>
+                  </div>
+                  <div class="ad-legend-row"><span><i class="ad-split-p"></i>Práctica</span><span><i class="ad-split-t"></i>Teoría</span></div>
+                </div>
+              </div>
             </div>
+
+            <div
+              v-if="currentAiReport.fortalezas_top3?.length || currentAiReport.oportunidades_top5?.length"
+              class="ds-row"
+              :class="currentAiReport.fortalezas_top3?.length && currentAiReport.oportunidades_top5?.length ? 'ds-row--mitad' : 'ds-row--completa'"
+            >
+              <section v-if="currentAiReport.fortalezas_top3?.length" class="ds-panel">
+                <header class="ds-panel-head">
+                  <h3 class="ds-panel-title"><span class="ds-pill ok" aria-hidden="true"><i class="fa-solid fa-thumbs-up"></i></span> Fortalezas</h3>
+                </header>
+                <ul class="ds-panel-body ad-fo">
+                  <li v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i"><b>{{ f.titulo }}</b><span>{{ f.detalle }}</span></li>
+                </ul>
+              </section>
+              <section v-if="currentAiReport.oportunidades_top5?.length" class="ds-panel">
+                <header class="ds-panel-head">
+                  <h3 class="ds-panel-title"><span class="ds-pill warn" aria-hidden="true"><i class="fa-solid fa-bullseye"></i></span> Oportunidades</h3>
+                </header>
+                <ul class="ds-panel-body ad-fo">
+                  <li v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i"><b>{{ o.titulo }}</b><span>{{ o.detalle }}</span></li>
+                </ul>
+              </section>
+            </div>
+
+            <section class="ds-panel">
+              <header class="ds-panel-head">
+                <h3 class="ds-panel-title">¿Cómo evolucionó el docente sesión a sesión?</h3>
+                <span class="ds-panel-hint">Clic en una sesión para abrirla</span>
+              </header>
+              <div class="ds-panel-body">
+                <div class="ad-compare" role="img" aria-label="Comparacion por sesion: auditoria IA y area academica">
+                  <div
+                    v-for="s in compareSessions"
+                    :key="s.n"
+                    class="ad-cmp-col"
+                    :class="{ current: s.n === selectedSession }"
+                    @click="selectSession(s.n)"
+                  >
+                    <div class="ad-cmp-bars">
+                      <template v-if="s.hasIa">
+                        <div class="ad-cmp-bar ia" :style="{ height: ((s.ia20 || 0) / 20 * 100) + '%' }"><span>{{ fmtNota(s.ia20) }}</span></div>
+                        <div class="ad-cmp-bar ac" :style="{ height: ((s.ac20 || 0) / 20 * 100) + '%' }"><span>{{ s.ac20 ? fmtNota(s.ac20) : '·' }}</span></div>
+                      </template>
+                      <div v-else class="ad-cmp-pend">pend.</div>
+                    </div>
+                    <div class="ad-cmp-x">S{{ s.n }}</div>
+                  </div>
+                </div>
+                <div class="ad-legend-row ad-legend-row--center"><span><i class="ia"></i>Auditoría IA</span><span><i class="ac"></i>Área académica</span></div>
+              </div>
+            </section>
           </template>
-        </div>
+        </template>
 
         <!-- ===================== AUDITORIA IA ===================== -->
-        <div v-else-if="auditView === 'ia'" class="ar-stack">
-          <div v-if="!currentAiReport" class="ar-empty">
-            <div class="big">Sesion {{ selectedSession }} sin analisis IA</div>
-            La auditoria IA se genera tras realizarse la sesion. Usa "Analizar con IA" para cargarla.
-          </div>
+        <template v-else-if="auditView === 'ia'">
+          <section v-if="!currentAiReport" class="ds-panel">
+            <p class="ds-empty ds-empty--lista">
+              <strong class="ad-empty-title">Sesión {{ selectedSession }} sin análisis IA</strong>
+              La auditoría IA se genera tras realizarse la sesión. Usa "Analizar con IA" para cargarla.
+            </p>
+          </section>
           <template v-else>
-            <div class="ar-card ar-ia-toolbar">
-              <div>
-                <div class="ar-eyebrow accent">● ANALISIS IA</div>
-                <div class="ar-metaline" v-if="currentAiGeneratedAt">
-                  Generado <b>{{ formatDateTime(currentAiGeneratedAt) }}</b> · {{ currentAiReport.criterios?.length || 0 }} criterios evaluados
+            <section class="ds-panel">
+              <header class="ds-panel-head ad-wrap-head">
+                <div>
+                  <h3 class="ds-panel-title">Análisis IA</h3>
+                  <p v-if="currentAiGeneratedAt" class="ds-panel-sub">
+                    Generado <b>{{ formatDateTime(currentAiGeneratedAt) }}</b> · {{ currentAiReport.criterios?.length || 0 }} criterios evaluados
+                  </p>
                 </div>
-              </div>
-              <div class="ar-grow"></div>
-              <div class="ar-sort">
-                <button :class="{ on: iaSort === 'orden' }" @click="iaSort = 'orden'">Orden</button>
-                <button :class="{ on: iaSort === 'bajo' }" @click="iaSort = 'bajo'">Puntaje ↑</button>
-                <button :class="{ on: iaSort === 'alto' }" @click="iaSort = 'alto'">Puntaje ↓</button>
-              </div>
-            </div>
+                <div class="ds-tabs" role="group" aria-label="Ordenar criterios">
+                  <button type="button" :aria-pressed="String(iaSort === 'orden')" @click="iaSort = 'orden'">Orden</button>
+                  <button type="button" :aria-pressed="String(iaSort === 'bajo')" @click="iaSort = 'bajo'">Puntaje ↑</button>
+                  <button type="button" :aria-pressed="String(iaSort === 'alto')" @click="iaSort = 'alto'">Puntaje ↓</button>
+                </div>
+              </header>
+            </section>
 
-            <div class="ar-crit-grid">
-              <article v-for="c in sortedAiCriterios" :key="c.id" class="ar-crit" :class="'bc-' + scoreLevel(c.score)">
-                <div class="crit-top">
-                  <span class="num">#{{ c.id }}</span>
-                  <h4 class="crit-title">{{ c.nombre }}</h4>
-                  <span class="score-badge" :class="'sv-' + scoreLevel(c.score)">{{ c.score }}/5</span>
-                </div>
-                <div class="scorebar">
-                  <i v-for="i in 5" :key="i" :class="{ fill: i <= c.score }"></i>
-                </div>
-                <p class="crit-text">{{ c.comentario }}</p>
-                <div v-if="c.evidencia_timestamps?.length" class="stamps">
-                  <span v-for="t in c.evidencia_timestamps" :key="t" class="stamp">{{ t }}</span>
+            <div class="ad-crit-grid">
+              <article v-for="c in sortedAiCriterios" :key="c.id" class="ds-panel ad-crit" :class="levelTone(scoreLevel(c.score))">
+                <div class="ds-panel-body ds-stack ad-crit-body">
+                  <div class="ad-crit-top">
+                    <span class="ad-crit-num ad-mono">#{{ c.id }}</span>
+                    <h4 class="ad-crit-title">{{ c.nombre }}</h4>
+                    <span class="ds-pill ad-mono" :class="levelTone(scoreLevel(c.score))">{{ c.score }}/5</span>
+                  </div>
+                  <div class="ad-crit-bar" aria-hidden="true">
+                    <i v-for="i in 5" :key="i" :class="{ fill: i <= c.score }"></i>
+                  </div>
+                  <p class="ad-crit-text">{{ c.comentario }}</p>
+                  <div v-if="c.evidencia_timestamps?.length" class="ad-stamps">
+                    <span v-for="t in c.evidencia_timestamps" :key="t" class="ds-chip ad-mono">{{ t }}</span>
+                  </div>
                 </div>
               </article>
             </div>
 
-            <div class="ar-fo-grid">
-              <div class="ar-fo str" v-if="currentAiReport.fortalezas_top3?.length">
-                <div class="fo-head"><span class="ic"><i class="fa-solid fa-thumbs-up"></i></span>Fortalezas</div>
-                <div class="fo-item" v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i">
-                  <div class="t">{{ f.titulo }}</div><div class="d">{{ f.detalle }}</div>
-                </div>
-              </div>
-              <div class="ar-fo opp" v-if="currentAiReport.oportunidades_top5?.length">
-                <div class="fo-head"><span class="ic"><i class="fa-solid fa-bullseye"></i></span>Oportunidades</div>
-                <div class="fo-item" v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i">
-                  <div class="t">{{ o.titulo }}</div><div class="d">{{ o.detalle }}</div>
-                </div>
-              </div>
+            <div
+              v-if="currentAiReport.fortalezas_top3?.length || currentAiReport.oportunidades_top5?.length"
+              class="ds-row"
+              :class="currentAiReport.fortalezas_top3?.length && currentAiReport.oportunidades_top5?.length ? 'ds-row--mitad' : 'ds-row--completa'"
+            >
+              <section v-if="currentAiReport.fortalezas_top3?.length" class="ds-panel">
+                <header class="ds-panel-head">
+                  <h3 class="ds-panel-title"><span class="ds-pill ok" aria-hidden="true"><i class="fa-solid fa-thumbs-up"></i></span> Fortalezas</h3>
+                </header>
+                <ul class="ds-panel-body ad-fo">
+                  <li v-for="(f, i) in currentAiReport.fortalezas_top3" :key="i"><b>{{ f.titulo }}</b><span>{{ f.detalle }}</span></li>
+                </ul>
+              </section>
+              <section v-if="currentAiReport.oportunidades_top5?.length" class="ds-panel">
+                <header class="ds-panel-head">
+                  <h3 class="ds-panel-title"><span class="ds-pill warn" aria-hidden="true"><i class="fa-solid fa-bullseye"></i></span> Oportunidades</h3>
+                </header>
+                <ul class="ds-panel-body ad-fo">
+                  <li v-for="(o, i) in currentAiReport.oportunidades_top5" :key="i"><b>{{ o.titulo }}</b><span>{{ o.detalle }}</span></li>
+                </ul>
+              </section>
             </div>
           </template>
-        </div>
+        </template>
 
         <!-- ===================== EVALUACION ACADEMICA ===================== -->
-        <div v-else class="ar-stack">
-          <div class="ar-card ar-acad-head">
-            <div>
-              <div class="ar-eyebrow">RUBRICA DEL AREA ACADEMICA</div>
-              <div class="ar-metaline">
-                {{ isHistoricRubric
-                  ? `Auditoria calificada con la rubrica vigente hasta el ${formatDate(FECHA_CORTE_RUBRICA)}.`
-                  : `Marca cada criterio cumplido durante la sesion ${selectedSession}.` }}
+        <template v-else>
+          <section class="ds-panel">
+            <header class="ds-panel-head ad-wrap-head">
+              <div>
+                <h3 class="ds-panel-title">Rúbrica del área académica</h3>
+                <p class="ds-panel-sub">
+                  {{ isHistoricRubric
+                    ? `Auditoria calificada con la rubrica vigente hasta el ${formatDate(FECHA_CORTE_RUBRICA)}.`
+                    : `Marca cada criterio cumplido durante la sesion ${selectedSession}.` }}
+                </p>
               </div>
-            </div>
-            <div class="ar-grow"></div>
-            <div class="ar-acad-prog">
-              <div class="big">{{ totalScore }} / {{ activeRubric.totalItems }}</div>
-              <div class="ar-metaline">{{ totalProgress }}% completado</div>
-            </div>
-          </div>
+              <div class="ad-acad-prog">
+                <div class="ad-acad-big ad-mono">{{ totalScore }} / {{ activeRubric.totalItems }}</div>
+                <div class="ds-panel-hint">{{ totalProgress }}% completado</div>
+              </div>
+            </header>
+          </section>
 
-          <div v-if="isHistoricRubric" class="ar-card ar-rub-legacy">
-            <i class="fa-solid fa-clock-rotate-left"></i>
+          <p v-if="isHistoricRubric" class="ds-callout info">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
             <span>
-              Rubrica anterior ({{ activeRubric.totalItems }} criterios de
-              {{ activeRubric.puntosPorCriterio }} punto). Se muestra como se lleno y no se edita:
-              volver a guardarla la recalificaria con la rubrica vigente y cambiaria la nota del docente.
+              Rúbrica anterior ({{ activeRubric.totalItems }} criterios de
+              {{ activeRubric.puntosPorCriterio }} punto). Se muestra como se llenó y no se edita:
+              volver a guardarla la recalificaría con la rúbrica vigente y cambiaría la nota del docente.
             </span>
-          </div>
+          </p>
 
-          <div class="ar-rub-grid" :class="{ 'is-readonly': isHistoricRubric }">
-            <div v-for="cat in activeRubric.categorias" :key="cat.key" class="ar-rub-cat">
-              <div class="rc-head">
-                <h3>{{ cat.label }}</h3>
-                <span class="rc-prog">{{ categoryScore(cat) }} / {{ cat.items.length }}</span>
-              </div>
-              <div class="rc-bar"><i :style="{ width: (categoryScore(cat) / cat.items.length * 100) + '%' }"></i></div>
+          <div class="ds-row ds-row--mitad ad-rub-grid" :class="{ 'is-readonly': isHistoricRubric }">
+            <section v-for="cat in activeRubric.categorias" :key="cat.key" class="ds-panel">
+              <header class="ds-panel-head">
+                <h3 class="ds-panel-title">{{ cat.label }}</h3>
+                <span class="ds-panel-hint ad-mono">{{ categoryScore(cat) }} / {{ cat.items.length }}</span>
+              </header>
+              <div class="ds-track ad-rub-track"><i :style="{ width: (categoryScore(cat) / cat.items.length * 100) + '%' }"></i></div>
               <div
                 v-for="it in cat.items"
                 :key="it.key"
-                class="rub-row"
+                class="ad-rub-row"
                 :class="{ on: sessionDraft[it.key] }"
+                role="checkbox"
+                :aria-checked="String(!!sessionDraft[it.key])"
+                :aria-disabled="String(isHistoricRubric)"
                 @click="isHistoricRubric || (sessionDraft[it.key] = !sessionDraft[it.key])"
               >
-                <span class="cbx"><i class="fa-solid fa-check"></i></span>
-                <span class="rtext">{{ it.label }}</span>
+                <span class="ad-cbx" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+                <span>{{ it.label }}</span>
               </div>
-            </div>
+            </section>
           </div>
 
-          <div class="ar-savebar">
-            <span class="prog-text">Criterios marcados <b>{{ totalScore }} / {{ activeRubric.totalItems }}</b> · {{ totalProgress }}%</span>
-            <span v-if="lastSavedAt" class="ar-saved">Guardado {{ formatDate(lastSavedAt) }}</span>
-            <span class="ar-grow"></span>
-            <button v-if="!isHistoricRubric" class="ar-btn primary" :disabled="isSavingSession" @click="saveSession">
-              <i v-if="isSavingSession" class="fa-solid fa-spinner fa-spin"></i>
-              <i v-else class="fa-solid fa-save"></i>
-              Guardar sesion
+          <div class="ad-savebar">
+            <span class="ad-savebar-text">Criterios marcados <b class="ad-mono">{{ totalScore }} / {{ activeRubric.totalItems }}</b> · {{ totalProgress }}%</span>
+            <span v-if="lastSavedAt" class="ad-muted ad-small">Guardado {{ formatDate(lastSavedAt) }}</span>
+            <span class="ad-grow"></span>
+            <button v-if="!isHistoricRubric" class="btn-exec btn-exec-primary" type="button" :disabled="isSavingSession" @click="saveSession">
+              <i class="fa-solid" :class="isSavingSession ? 'fa-spinner fa-spin' : 'fa-floppy-disk'" aria-hidden="true"></i>
+              {{ isSavingSession ? 'Guardando...' : 'Guardar sesión' }}
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </template>
     </section>
 
     <!-- ============================================================ -->
     <!-- GENERAL: consolidado IA + rubrica manual                     -->
     <!-- ============================================================ -->
-    <section v-else-if="activeTab === 'general'" class="tab-body">
-      <div v-if="!sessionsTotal" class="state-msg muted">
-        <i class="fa-regular fa-folder-open"></i> El aula no tiene sesiones definidas.
-      </div>
-      <div v-else class="audit-rd">
+    <section v-else-if="activeTab === 'general'" class="ds-stack">
+      <section v-if="!sessionsTotal" class="ds-panel">
+        <p class="ds-empty ds-empty--lista">El aula no tiene sesiones definidas. Se configuran en la edición del cronograma.</p>
+      </section>
+      <template v-else>
         <!-- Hero consolidado del aula -->
-        <div class="ar-scorecard">
-          <div class="sc-hero">
-            <div class="sc-ring" :class="'lvl-' + notaLevel(generalAulaAverages.consolidated20)">
-              <svg width="92" height="92" viewBox="0 0 92 92">
-                <circle cx="46" cy="46" r="40" class="ring-track" stroke-width="9" fill="none" />
+        <section class="ds-panel ad-score">
+          <div class="ad-score-hero">
+            <div class="ad-ring" :class="notaTone(generalAulaAverages.consolidated20)">
+              <svg width="92" height="92" viewBox="0 0 92 92" role="img" :aria-label="`Nota consolidada del aula ${fmtNota(generalAulaAverages.consolidated20)} de 20`">
+                <circle cx="46" cy="46" r="40" class="ad-ring-track" stroke-width="9" fill="none" />
                 <circle
-                  cx="46" cy="46" r="40" class="ring-prog" stroke-width="9" fill="none" stroke-linecap="round"
+                  cx="46" cy="46" r="40" class="ad-ring-prog" stroke-width="9" fill="none" stroke-linecap="round"
                   :stroke-dasharray="RING_CIRC" :stroke-dashoffset="ringOffset(generalAulaAverages.consolidated20)"
                 />
               </svg>
-              <div class="ring-num"><b>{{ fmtNota(generalAulaAverages.consolidated20) }}</b><span>/ 20</span></div>
+              <div class="ad-ring-num"><b>{{ fmtNota(generalAulaAverages.consolidated20) }}</b><span>/ 20</span></div>
             </div>
             <div>
-              <div class="label">NOTA CONSOLIDADA DEL AULA</div>
-              <div class="big">{{ score20Label(generalAulaAverages.consolidated20) }}</div>
-              <div class="prov" :class="{ firm: generalCoverage.full }">
-                <i class="fa-solid" :class="generalCoverage.full ? 'fa-circle-check' : 'fa-clock'"></i>
+              <div class="ad-score-label">Nota consolidada del aula</div>
+              <div class="ad-score-big">{{ score20Label(generalAulaAverages.consolidated20) }}</div>
+              <span class="ds-pill" :class="generalCoverage.full ? 'ok' : 'warn'">
+                <i class="fa-solid" :class="generalCoverage.full ? 'fa-circle-check' : 'fa-clock'" aria-hidden="true"></i>
                 {{ generalCoverage.full ? 'Muestra completa' : 'Muestra incompleta' }}
-              </div>
+              </span>
             </div>
           </div>
-          <div class="sc-evals">
-            <div class="sc-eval">
-              <div class="head"><span class="badge-ia">IA</span><span class="tag">PROMEDIO IA</span></div>
-              <div class="score"><b>{{ fmtNota(generalAulaAverages.ai20) }}</b><span>/ 20</span></div>
-              <div class="bar"><i :class="'fill-' + notaLevel(generalAulaAverages.ai20)" :style="{ width: barWidth(generalAulaAverages.ai20) }"></i></div>
-              <div class="weight">{{ generalAulaAverages.aiSessions }} / {{ sessionsTotal }} sesiones analizadas</div>
+          <div class="ad-score-evals">
+            <div class="ad-score-eval">
+              <div class="ad-score-eval-head"><span class="ds-pill info">IA</span><span class="ad-score-label">Promedio IA</span></div>
+              <div class="ad-score-value"><b>{{ fmtNota(generalAulaAverages.ai20) }}</b><span>/ 20</span></div>
+              <div class="ds-track"><i class="ad-fill" :class="notaTone(generalAulaAverages.ai20)" :style="{ width: barWidth(generalAulaAverages.ai20) }"></i></div>
+              <div class="ad-score-weight">{{ generalAulaAverages.aiSessions }} / {{ sessionsTotal }} sesiones analizadas</div>
             </div>
-            <div class="sc-eval">
-              <div class="head"><span class="tag">PROMEDIO RUBRICA MANUAL</span></div>
-              <div class="score"><b>{{ fmtNota(generalAulaAverages.manual20) }}</b><span>/ 20</span></div>
-              <div class="bar"><i class="fill-accent" :style="{ width: barWidth(generalAulaAverages.manual20) }"></i></div>
-              <div class="weight">{{ generalAulaAverages.manualSessions }} / {{ sessionsTotal }} sesiones evaluadas</div>
+            <div class="ad-score-eval">
+              <div class="ad-score-eval-head"><span class="ad-score-label">Promedio rúbrica manual</span></div>
+              <div class="ad-score-value"><b>{{ fmtNota(generalAulaAverages.manual20) }}</b><span>/ 20</span></div>
+              <div class="ds-track"><i :style="{ width: barWidth(generalAulaAverages.manual20) }"></i></div>
+              <div class="ad-score-weight">{{ generalAulaAverages.manualSessions }} / {{ sessionsTotal }} sesiones evaluadas</div>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- Evolucion del aula -->
-        <div class="ar-card">
-          <div class="ar-card-head">
-            <span class="ic"><i class="fa-solid fa-chart-line"></i></span>
+        <section class="ds-panel">
+          <header class="ds-panel-head">
             <div>
-              <div class="ar-eyebrow">EVOLUCION DEL AULA</div>
-              <h3 class="ar-card-title">Nota por sesion</h3>
-              <p class="ar-metaline ar-chart-hint">
-                Linea solida: consolidada. Punteadas: IA y rubrica manual. Los huecos son sesiones sin evaluar.
-              </p>
+              <h3 class="ds-panel-title">¿Cómo evoluciona la nota del aula por sesión?</h3>
+              <p class="ds-panel-sub">Línea sólida: consolidada. Punteadas: IA y rúbrica manual. Los huecos son sesiones sin evaluar.</p>
             </div>
-          </div>
-          <apexchart type="line" height="300" :options="generalChartOptions" :series="generalChartSeries" />
+          </header>
+          <div class="ds-panel-body">
+            <div role="img" aria-label="Nota del aula por sesion">
+              <apexchart type="line" height="300" :options="generalChartOptions" :series="generalChartSeries" />
+            </div>
 
-          <div class="ar-coverage">
-            <div class="cov-item">
-              <div class="cov-head">
-                <span class="cov-name"><i class="cov-dot ia"></i>Analisis IA</span>
-                <span class="cov-count">{{ generalCoverage.ai }} / {{ generalCoverage.total }} · {{ generalCoverage.aiPct }}%</span>
+            <div class="ad-coverage">
+              <div class="ad-cov-item">
+                <div class="ad-cov-head">
+                  <span><i class="ad-cov-dot ia" aria-hidden="true"></i>Análisis IA</span>
+                  <b>{{ generalCoverage.ai }} / {{ generalCoverage.total }} · {{ generalCoverage.aiPct }}%</b>
+                </div>
+                <div class="ds-track"><i class="ad-cov-ia" :style="{ width: generalCoverage.aiPct + '%' }"></i></div>
               </div>
-              <div class="cov-bar"><i class="ia" :style="{ width: generalCoverage.aiPct + '%' }"></i></div>
-            </div>
-            <div class="cov-item">
-              <div class="cov-head">
-                <span class="cov-name"><i class="cov-dot ac"></i>Evaluacion manual</span>
-                <span class="cov-count">{{ generalCoverage.manual }} / {{ generalCoverage.total }} · {{ generalCoverage.manualPct }}%</span>
+              <div class="ad-cov-item">
+                <div class="ad-cov-head">
+                  <span><i class="ad-cov-dot" aria-hidden="true"></i>Evaluación manual</span>
+                  <b>{{ generalCoverage.manual }} / {{ generalCoverage.total }} · {{ generalCoverage.manualPct }}%</b>
+                </div>
+                <div class="ds-track"><i :style="{ width: generalCoverage.manualPct + '%' }"></i></div>
               </div>
-              <div class="cov-bar"><i class="ac" :style="{ width: generalCoverage.manualPct + '%' }"></i></div>
             </div>
           </div>
-          <p v-if="!generalCoverage.full" class="ar-warn">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            Muestra incompleta. El veredicto del aula puede cambiar conforme se evaluen mas sesiones.
-          </p>
-        </div>
+          <footer v-if="!generalCoverage.full" class="ds-panel-foot warn">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <span>Muestra incompleta. El veredicto del aula puede cambiar conforme se evalúen más sesiones.</span>
+          </footer>
+        </section>
 
         <!-- Detalle por sesion -->
-        <div class="ar-card ar-table-card">
-          <div class="ar-eyebrow">DETALLE POR SESION</div>
-          <div class="ar-table-scroll">
-            <table class="ar-table">
+        <section class="ds-panel">
+          <header class="ds-panel-head"><h3 class="ds-panel-title">Detalle por sesión</h3></header>
+          <div class="ds-panel-body ds-table-scroll">
+            <table class="ds-table ad-general-table">
               <thead>
                 <tr>
-                  <th>Sesion</th><th>Rubrica manual</th><th>Nota IA</th>
+                  <th>Sesión</th><th>Rúbrica manual</th><th>Nota IA</th>
                   <th>Nota manual</th><th>Consolidada</th><th>Veredicto</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="r in generalRows" :key="r.n" :class="{ current: r.n === selectedSession }">
-                  <td class="td-s">S{{ r.n }}</td>
-                  <td><span class="num">{{ r.manualMarked }} / {{ r.manualTotal }}</span> <span class="ar-muted">· {{ r.manualPct }}%</span></td>
+                  <td>S{{ r.n }}</td>
+                  <td><span class="ad-strong-ink">{{ r.manualMarked }} / {{ r.manualTotal }}</span> <span class="ad-muted">· {{ r.manualPct }}%</span></td>
                   <td>
-                    <span v-if="r.hasAi" class="score-badge" :class="'sv-' + notaLevel(r.aiScore20)">{{ fmtNota(r.aiScore20) }}</span>
-                    <span v-else class="ar-muted">sin analisis</span>
+                    <span v-if="r.hasAi" class="ds-pill ad-mono" :class="notaTone(r.aiScore20)">{{ fmtNota(r.aiScore20) }}</span>
+                    <span v-else class="ad-muted">sin análisis</span>
                   </td>
                   <td>
-                    <span v-if="r.hasManual" class="score-badge" :class="'sv-' + notaLevel(r.manualScore20)">{{ fmtNota(r.manualScore20) }}</span>
-                    <span v-else class="ar-muted">sin evaluar</span>
+                    <span v-if="r.hasManual" class="ds-pill ad-mono" :class="notaTone(r.manualScore20)">{{ fmtNota(r.manualScore20) }}</span>
+                    <span v-else class="ad-muted">sin evaluar</span>
                   </td>
                   <td>
-                    <span v-if="r.consolidated20 != null" class="score-badge strong" :class="'sv-' + notaLevel(r.consolidated20)">{{ fmtNota(r.consolidated20) }}</span>
-                    <span v-else class="ar-muted">--</span>
+                    <span v-if="r.consolidated20 != null" class="ds-pill ad-mono" :class="notaTone(r.consolidated20)">{{ fmtNota(r.consolidated20) }}</span>
+                    <span v-else class="ad-muted">--</span>
                   </td>
-                  <td><span class="ar-verdict" :class="'sv-' + notaLevel(r.consolidated20)">{{ score20Label(r.consolidated20) }}</span></td>
+                  <td :class="notaTone(r.consolidated20)">{{ score20Label(r.consolidated20) }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        <p class="ar-footer-note">
-          <i class="fa-solid fa-circle-info"></i>
-          La nota consolidada combina IA y rubrica manual con pesos {{ PESO_IA_PCT }}% / {{ PESO_MANUAL_PCT }}%.
-          Si solo hay una fuente disponible, se usa esa.
+        <p class="ds-callout">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>
+            La nota consolidada combina IA y rúbrica manual con pesos {{ PESO_IA_PCT }}% / {{ PESO_MANUAL_PCT }}%.
+            Si solo hay una fuente disponible, se usa esa.
+          </span>
         </p>
-      </div>
+      </template>
     </section>
 
-    <!-- MODAL: importar notas pegadas desde el Google Sheet. Mismo shell
-         visual que el modal de IA (clases aam-*). -->
-    <Teleport to="body">
-      <div v-if="showImportModal" class="aula-ai-modal-overlay" @click.self="showImportModal = false">
-        <div class="aula-ai-modal">
-          <header class="aam-head">
-            <div>
-              <div class="aam-eyebrow"><i class="fa-solid fa-file-arrow-up"></i> Importar notas finales</div>
-              <h3>{{ aula?.global_code || 'Aula' }}</h3>
-            </div>
-            <button class="aam-close" @click="showImportModal = false">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </header>
-          <div class="aam-body">
-            <p class="aam-intro">
-              Escribe la <strong>NOTA FINAL (0-20)</strong> solo a los alumnos que quieras actualizar;
-              las casillas vacias no se tocan. Tambien puedes <strong>copiar la columna de notas
-              del Sheet y pegarla</strong> en la casilla del primer alumno: se reparte hacia abajo
-              en orden (verifica que el orden de alumnos coincida con el Sheet). La nota se registra como nota unica del alumno
-              (tests, PP y PF quedan con ese valor para que la NOTA FINAL calculada coincida).
-            </p>
-            <div class="imp-list">
-              <div v-for="(s, idx) in students" :key="s.enrollment_id" class="imp-row">
-                <span class="imp-num mono">{{ String(idx + 1).padStart(2, '0') }}</span>
-                <span class="imp-name">{{ apellidosNombres(s) }}</span>
-                <span class="imp-cur" title="Nota final actual">{{ currentFinalLabel(s) }}</span>
-                <input
-                  v-model="importGrades[s.enrollment_id]"
-                  type="number"
-                  min="0"
-                  max="20"
-                  step="0.5"
-                  placeholder="--"
-                  :class="{ bad: importGrades[s.enrollment_id] && parseNota(importGrades[s.enrollment_id]) == null }"
-                  @paste="onImportPaste($event, idx)"
-                />
-              </div>
-            </div>
+    <!-- MODAL: importar notas pegadas desde el Google Sheet. -->
+    <BaseModal v-model="showImportModal" :title="`Importar notas finales · ${aula?.global_code || 'Aula'}`" size="lg">
+      <div class="ds-stack">
+        <p class="ds-callout info">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <span>
+            Escribe la <strong>NOTA FINAL (0-20)</strong> solo a los alumnos que quieras actualizar;
+            las casillas vacías no se tocan. También puedes <strong>copiar la columna de notas
+            del Sheet y pegarla</strong> en la casilla del primer alumno: se reparte hacia abajo
+            en orden (verifica que el orden de alumnos coincida con el Sheet). La nota se registra como nota única del alumno
+            (tests, PP y PF quedan con ese valor para que la NOTA FINAL calculada coincida).
+          </span>
+        </p>
+        <div class="ad-imp-list">
+          <div v-for="(s, idx) in students" :key="s.enrollment_id" class="ad-imp-row">
+            <span class="ad-muted ad-mono ad-small">{{ String(idx + 1).padStart(2, '0') }}</span>
+            <span class="ad-imp-name">{{ apellidosNombres(s) }}</span>
+            <span class="ad-imp-cur" title="Nota final actual">{{ currentFinalLabel(s) }}</span>
+            <input
+              v-model="importGrades[s.enrollment_id]"
+              class="ds-input ad-imp-input"
+              type="number"
+              min="0"
+              max="20"
+              step="0.5"
+              placeholder="--"
+              :aria-label="`Nota final de ${apellidosNombres(s)}`"
+              :class="{ 'is-bad': importGrades[s.enrollment_id] && parseNota(importGrades[s.enrollment_id]) == null }"
+              @paste="onImportPaste($event, idx)"
+            />
           </div>
-          <footer class="aam-foot">
-            <button class="btn" @click="showImportModal = false">Cancelar</button>
-            <button class="btn primary" :disabled="!importCount" @click="applyImport">
-              <i class="fa-solid fa-check"></i>
-              Aplicar{{ importCount ? ` (${importCount} alumnos)` : '' }}
-            </button>
-          </footer>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <button class="btn-exec btn-exec-outline" type="button" @click="showImportModal = false">Cancelar</button>
+        <button class="btn-exec btn-exec-primary" type="button" :disabled="!importCount" @click="applyImport">
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          Aplicar{{ importCount ? ` (${importCount} alumnos)` : '' }}
+        </button>
+      </template>
+    </BaseModal>
 
-    <!-- MODAL: ejecutar IA. Teleport a <body> para escapar de cualquier
-         transform/filter del layout padre que rompa position:fixed. -->
-    <Teleport to="body">
-      <div v-if="showAiModal" class="aula-ai-modal-overlay" @click.self="showAiModal = false">
-        <div class="aula-ai-modal">
-          <header class="aam-head">
-            <div>
-              <div class="aam-eyebrow"><i class="fa-solid fa-wand-magic-sparkles"></i> Analisis IA</div>
-              <h3>Sesion {{ selectedSession }}</h3>
-            </div>
-            <button class="aam-close" @click="showAiModal = false">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </header>
-          <div class="aam-body">
-            <p class="aam-intro">
-              La IA analiza el transcript y el syllabus para puntuar 9 criterios. Las categorias
-              <strong>Interaccion</strong> y <strong>Contenido</strong> se auto-marcan segun los scores.
-              <strong>Entorno</strong> y <strong>Comunicacion academica</strong> quedan manuales.
-            </p>
-            <div class="aam-field">
-              <div class="aam-field-head">
-                <label>Transcript</label>
-                <label class="aam-upload-btn">
-                  <i class="fa-solid fa-upload"></i> Cargar archivo (.vtt o .txt)
-                  <input type="file" accept=".vtt,.txt,text/plain,text/vtt" @change="onTranscriptFileChange" hidden />
-                </label>
-              </div>
-              <textarea
-                v-model="aiTranscript"
-                rows="12"
-                placeholder="Pega el transcript con timestamps [HH:MM:SS] o sube un archivo .vtt de Teams/Zoom/YouTube.&#10;&#10;Ejemplo:&#10;[00:00:15] Bienvenidos al modulo de Excel...&#10;[00:01:30] Vamos a revisar la sesion anterior..."
-              ></textarea>
-              <span class="aam-hint muted small">
-                Acepta WebVTT (Teams, Zoom, YouTube) o texto plano. Se convierte automaticamente al formato [HH:MM:SS].
-              </span>
-            </div>
-            <div class="aam-field">
-              <label>Imagen del syllabus (PNG/JPG)</label>
-              <input type="file" accept="image/png,image/jpeg,image/webp" @change="onSyllabusChange" />
-              <span v-if="aiSyllabusFile" class="muted small">
-                Seleccionado: {{ aiSyllabusFile.name }} ({{ Math.round(aiSyllabusFile.size / 1024) }} KB)
-              </span>
-            </div>
-            <div v-if="aiError" class="aam-error">
-              <i class="fa-solid fa-circle-exclamation"></i> {{ aiError }}
-            </div>
+    <!-- MODAL: ejecutar IA -->
+    <BaseModal v-model="showAiModal" :title="`Análisis IA · sesión ${selectedSession}`" size="lg">
+      <div class="ds-stack">
+        <p v-if="aiSpend" class="ds-callout info">
+          <i class="fa-solid fa-coins" aria-hidden="true"></i>
+          <span>Gasto IA de este mes: <b>S/ {{ aiSpend.spentPen.toFixed(2) }}</b> en {{ aiSpend.audits }} análisis (~S/ 2 cada uno)</span>
+        </p>
+        <p class="ad-intro">
+          La IA analiza el transcript y el syllabus para puntuar 9 criterios. Las categorías
+          <strong>Interacción</strong> y <strong>Contenido</strong> se auto-marcan según los scores.
+          <strong>Entorno</strong> y <strong>Comunicación académica</strong> quedan manuales.
+        </p>
+        <div class="ds-field">
+          <div class="ad-field-head">
+            <label class="ds-label" for="ad-transcript">Transcript</label>
+            <label class="btn-exec btn-exec-outline btn-sm">
+              <i class="fa-solid fa-upload" aria-hidden="true"></i> Cargar archivo (.vtt o .txt)
+              <input type="file" accept=".vtt,.txt,text/plain,text/vtt" hidden @change="onTranscriptFileChange" />
+            </label>
           </div>
-          <footer class="aam-foot">
-            <button class="btn" @click="showAiModal = false" :disabled="isRunningAi">Cancelar</button>
-            <button class="btn primary" @click="runAiAudit" :disabled="isRunningAi">
-              <i v-if="isRunningAi" class="fa-solid fa-spinner fa-spin"></i>
-              <i v-else class="fa-solid fa-play"></i>
-              {{ isRunningAi ? 'Analizando...' : 'Ejecutar analisis' }}
-            </button>
-          </footer>
+          <textarea
+            id="ad-transcript"
+            v-model="aiTranscript"
+            class="ds-input ad-transcript"
+            rows="12"
+            placeholder="Pega el transcript con timestamps [HH:MM:SS] o sube un archivo .vtt de Teams/Zoom/YouTube.&#10;&#10;Ejemplo:&#10;[00:00:15] Bienvenidos al modulo de Excel...&#10;[00:01:30] Vamos a revisar la sesion anterior..."
+          ></textarea>
+          <span class="ds-help">
+            Acepta WebVTT (Teams, Zoom, YouTube) o texto plano. Se convierte automáticamente al formato [HH:MM:SS].
+          </span>
         </div>
+        <div class="ds-field">
+          <label class="ds-label" for="ad-syllabus">Imagen del syllabus (PNG/JPG)</label>
+          <input id="ad-syllabus" class="ad-file" type="file" accept="image/png,image/jpeg,image/webp" @change="onSyllabusChange" />
+          <span v-if="aiSyllabusFile" class="ds-help">
+            Seleccionado: {{ aiSyllabusFile.name }} ({{ Math.round(aiSyllabusFile.size / 1024) }} KB)
+          </span>
+        </div>
+        <p v-if="aiError" class="ds-callout bad">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          <span>{{ aiError }}</span>
+        </p>
       </div>
-    </Teleport>
+      <template #footer>
+        <button class="btn-exec btn-exec-outline" type="button" :disabled="isRunningAi" @click="showAiModal = false">Cancelar</button>
+        <button class="btn-exec btn-exec-primary" type="button" :disabled="isRunningAi" @click="runAiAudit">
+          <i class="fa-solid" :class="isRunningAi ? 'fa-spinner fa-spin' : 'fa-play'" aria-hidden="true"></i>
+          {{ isRunningAi ? 'Analizando...' : 'Ejecutar análisis' }}
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
 <style scoped>
-.aula-detail {
-  --bg-soft: #FAFAF8;
-  --line: #E8E8E3;
-  --line-soft: #EFEFEA;
-  --ink: #14140F;
-  --ink-2: #3A3A33;
-  --ink-3: #6F6F66;
-  --ink-4: #A0A099;
-  --green: #10B981;
-  --green-soft: #ECFDF4;
-  --green-ink: #047857;
-  --amber-soft: #FEF6E1;
-  --amber-ink: #B45309;
-  --red-soft: #FEECEC;
-  --red-ink: #B91C1C;
-  --blue-soft: #ECF2FE;
-  --blue-ink: #1D4ED8;
-  --slate-soft: #F1F3F5;
-  --slate-ink: #475569;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow-md: 0 1px 2px rgba(20,20,15,0.04), 0 4px 12px rgba(20,20,15,0.06);
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+.ad-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+/* Solo lo propio de esta pantalla: matriz de notas, rubrica, anillo y barras.
+   Estructura, colores y estados salen de design-system.css (ds-*). */
+.ad-mono { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; }
+.ad-muted { color: var(--ds-muted); }
+.ad-small { font-size: 11.5px; }
+.ad-grow { flex: 1; }
+.ad-suffix { font-size: 13px; font-weight: 600; color: var(--ds-muted); }
 
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--ink);
-  font-size: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.muted { color: var(--ink-3); }
-.small { font-size: 11.5px; }
-.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; display: inline-block; }
-.spacer { flex: 1; }
-.dot-sep { color: var(--ink-4); }
-
-/* HEADER */
-.page-head {
-  background: white; border: 1px solid var(--line); border-radius: var(--radius-lg);
-  padding: 16px 18px; margin-bottom: 16px;
-  display: flex; gap: 16px; position: relative;
-}
-.back-btn {
-  width: 32px; height: 32px; flex-shrink: 0;
-  border: 1px solid var(--line); border-radius: 8px;
-  background: white; cursor: pointer; color: var(--ink-3);
-}
-.back-btn:hover { background: var(--bg-soft); color: var(--ink); }
-.head-left { flex: 1; min-width: 0; }
-.head-tags { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
-.tag {
-  display: inline-block; padding: 2px 7px; border-radius: 5px;
-  background: var(--bg-soft); border: 1px solid var(--line-soft);
-  font-size: 10.5px; font-weight: 600; color: var(--ink-2);
-  letter-spacing: 0.04em;
-}
-.tag.muted { color: var(--ink-3); background: transparent; border-color: transparent; }
-.status-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 999px;
-  font-size: 10.5px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.status-pill .dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
-.status-pill.ok { background: var(--green-soft); color: var(--green-ink); }
-
-.page-head h1 {
-  margin: 4px 0 10px; font-size: 22px; font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.info-row { display: flex; gap: 22px; flex-wrap: wrap; }
-.info-cell { min-width: 0; }
-.ic-label {
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;
-}
-.ic-value { font-size: 13px; font-weight: 500; }
-.ic-value.docente { display: flex; align-items: center; gap: 6px; }
-.ic-value .av {
-  width: 22px; height: 22px; border-radius: 999px;
-  background: var(--red-soft); color: var(--red-ink);
-  display: grid; place-items: center; font-size: 10px; font-weight: 700;
-}
-
-.head-kpis {
-  display: flex; gap: 20px; flex-shrink: 0;
-  padding-left: 18px; border-left: 1px solid var(--line);
-}
-.hk { text-align: right; }
-.hk-label {
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.hk-value { font-size: 22px; font-weight: 600; color: var(--green-ink); margin-top: 4px; }
-.hk-value.muted { color: var(--ink-3); }
-.hk:first-child .hk-value { color: var(--ink); }
-
-/* TABS */
-.tabs {
-  display: flex; gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 14px;
-}
-.tab {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: transparent; border: none;
-  padding: 9px 14px; cursor: pointer;
-  font-size: 13px; font-weight: 500; color: var(--ink-3);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-}
-.tab:hover { color: var(--ink-2); }
-.tab.active { color: var(--ink); border-bottom-color: var(--green); }
-.tab i { font-size: 11px; }
-.tab-count {
-  background: var(--bg-soft); color: var(--ink-3);
-  border-radius: 999px; padding: 1px 7px;
-  font-size: 10.5px; font-weight: 600;
-}
-.tab.active .tab-count { background: var(--green-soft); color: var(--green-ink); }
-
-.tab-body { min-height: 200px; }
-.state-msg { text-align: center; padding: 60px 20px; color: var(--ink-3); font-size: 13.5px; }
-.state-msg i { margin-right: 6px; }
-
-/* TOOLBAR */
-.toolbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 10px 12px; margin-bottom: 12px;
-}
-.input {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 6px 10px; min-width: 260px; color: var(--ink-3);
-  font-size: 13px;
-}
-.input input { border: none; outline: none; flex: 1; background: transparent; color: var(--ink); font-size: 13px; }
-.input input::placeholder { color: var(--ink-4); }
-.chip-group { display: flex; gap: 5px; }
-.chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 999px;
-  border: 1px solid var(--line); background: white;
-  font-size: 12px; color: var(--ink-2); cursor: pointer;
-}
-.chip:hover { background: var(--bg-soft); }
-.chip.active { background: var(--green-soft); color: var(--green-ink); border-color: #C8EFD8; font-weight: 500; }
-.chip .dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
-.legend { display: flex; gap: 12px; }
-.grades-note { margin: 10px 2px 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); }
-.lg { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-3); }
-.btn {
+/* ── Encabezado ─────────────────────────────────────────────────────────── */
+.ad-back {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 11px; border-radius: 8px;
-  font-size: 12.5px; font-weight: 500;
-  border: 1px solid var(--line); background: white;
-  color: var(--ink-2); cursor: pointer;
+  margin: 0 0 6px; padding: 0; border: 0; background: none;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2); cursor: pointer;
 }
-.btn:hover:not(:disabled) { background: var(--bg-soft); }
-.btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
-.btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ad-back:hover, .ad-back:focus-visible { color: var(--ds-accent); }
+.ad-back i { font-size: 11px; }
 
-/* Menu desplegable Importar/Exportar CSV */
-.csv-menu-wrap { position: relative; }
-.csv-caret { font-size: 9px; opacity: 0.6; }
-.csv-menu-backdrop { position: fixed; inset: 0; z-index: 40; }
-.csv-menu {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 41;
-  min-width: 220px; padding: 4px;
-  background: white; border: 1px solid var(--line);
-  border-radius: 10px; box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
-  display: flex; flex-direction: column;
-}
-.csv-menu button {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 11px; border: none; border-radius: 7px;
-  background: transparent; text-align: left; cursor: pointer;
-  font-size: 12.5px; font-weight: 500; color: var(--ink-2);
-}
-.csv-menu button:hover { background: var(--bg-soft); }
-.csv-menu button i { width: 14px; text-align: center; opacity: 0.7; }
+.ad-facts { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; }
+.ad-facts dt { margin-bottom: 3px; font-size: 11.5px; font-weight: 600; color: var(--ds-muted); }
+.ad-facts dd { margin: 0; font-size: 13px; font-weight: 500; color: var(--ds-ink); }
+.ad-teacher { display: flex; align-items: center; gap: 6px; }
 
-/* MATRIZ DE ASISTENCIA */
-.att-matrix-scroll {
-  background: white; border: 1px solid var(--line);
-  border-radius: var(--radius); overflow: auto; max-height: 72vh;
-}
-.att-matrix {
-  width: 100%; border-collapse: separate; border-spacing: 0;
-  font-size: 12.5px;
-}
-.att-matrix th, .att-matrix td {
-  padding: 7px 9px; border-bottom: 1px solid var(--line-soft);
-  white-space: nowrap; vertical-align: middle;
-}
-.att-matrix thead th {
-  position: sticky; top: 0; z-index: 2;
-  background: var(--bg-soft);
-  font-size: 10px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em;
-  text-align: center; border-bottom: 1px solid var(--line);
-}
-.att-matrix thead .th-groups th { border-bottom: 1px solid var(--line-soft); }
-/* Tokens, no hex: los *-soft ya se invierten en el bloque dark de abajo. */
-.att-matrix .th-group-att { background: var(--green-soft) !important; color: var(--green-ink); }
-.att-matrix .th-group-part { background: var(--amber-soft) !important; color: var(--amber-ink); }
-.att-matrix .th-session { padding: 4px 6px; font-size: 9.5px; }
-.att-matrix .th-summary { min-width: 70px; }
-.att-matrix .sticky-c0 {
-  position: sticky; left: 0; z-index: 1; background: white;
-  width: 38px; text-align: center; color: var(--ink-3);
-}
-.att-matrix .sticky-c1 {
-  position: sticky; left: 38px; z-index: 1; background: white;
-  min-width: 220px; max-width: 240px;
-}
-.att-matrix .sticky-c2 {
-  position: sticky; left: 278px; z-index: 1; background: white;
-  min-width: 90px; border-right: 1px solid var(--line-soft);
-}
-.att-matrix thead .sticky-c0,
-.att-matrix thead .sticky-c1,
-.att-matrix thead .sticky-c2 { z-index: 3; background: var(--bg-soft); }
-.att-matrix tbody tr:hover td { background: #FAFAF6; }
-.att-matrix tbody tr:hover .sticky-c0,
-.att-matrix tbody tr:hover .sticky-c1,
-.att-matrix tbody tr:hover .sticky-c2 { background: #FAFAF6; }
-
-.student-name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
-.student-name-cell > div { flex: 1; min-width: 0; overflow: hidden; }
-.av-sm {
-  width: 26px; height: 26px; border-radius: 999px;
-  background: var(--slate-soft); color: var(--slate-ink);
-  display: grid; place-items: center; font-size: 10px; font-weight: 700;
-  flex-shrink: 0;
-}
-.sn-name {
-  font-weight: 500; font-size: 12.5px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.sn-handle {
-  font-size: 10.5px; color: var(--ink-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.ad-avatar {
+  width: 26px; height: 26px; flex-shrink: 0;
+  display: grid; place-items: center; border-radius: 999px;
+  background: var(--ds-soft-neutral); color: var(--ds-ink-2);
+  font-size: 10px; font-weight: 700;
 }
 
-.contact-cell { font-size: 11.5px; line-height: 1.3; }
-.contact-cell .small { font-size: 10.5px; }
-
-.mod-pill {
-  display: inline-block; padding: 1px 7px; border-radius: 4px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
-  font-family: var(--font-mono);
-}
-.mod-pill.flex { background: var(--blue-soft); color: var(--blue-ink); }
-.mod-pill.regular { background: var(--slate-soft); color: var(--slate-ink); }
-
-.type-badge {
-  display: inline-block; padding: 1px 6px; border-radius: 4px;
-  font-size: 10px; font-weight: 600; font-family: var(--font-mono);
-}
-.tb-seg { background: var(--amber-soft); color: var(--amber-ink); }
-.seg-stack { display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-start; }
-.tb-rp  { background: #FCE4EC; color: #BE185D; }
-.tb-cc  { background: var(--blue-soft); color: var(--blue-ink); }
-.tb-obs { background: var(--slate-soft); color: var(--slate-ink); }
-.tb-act { background: #E5F5EC; color: #1D7A4D; }
-.tb-member { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
-.tb-member i { margin-right: 2px; font-size: 9px; }
-.tb-beca { background: #E0F2FE; color: #075985; border: 1px solid #7DD3FC; }
-.tb-beca i { margin-right: 2px; font-size: 9px; }
-.tb-certify { background: var(--ds-soft-ok); color: var(--ds-ok-ink); border: 1px solid var(--ds-ok); margin-left: 4px; }
-.tb-certify i { margin-right: 2px; font-size: 9px; }
-/* Mismos colores que la etiqueta "Traera laptop" del panel FICO */
-.tb-laptop { background: #ECFEFF; color: #155E75; border: 1px solid #A5F3FC; }
-.tb-laptop i { margin-right: 2px; font-size: 9px; color: #0891B2; }
-
-/* HISTORIAL */
-.hist-wrap { display: grid; gap: 16px; padding: 4px 2px; }
-.hist-card {
-  background: white; border: 1px solid var(--line);
-  border-radius: var(--radius); overflow: hidden;
-}
-/* La tabla ya vive dentro de la tarjeta: pierde su borde y su radio propios. */
-.hist-card .att-matrix-scroll {
-  border: 0; border-radius: 0; background: transparent; max-height: 60vh;
-}
-.hist-head {
-  display: flex; align-items: center; gap: 9px;
-  padding: 10px 14px; background: var(--bg-soft);
-  border-bottom: 1px solid var(--line);
-}
-/* Reusa los colores de los badges (hb-*) para el icono de la tarjeta. */
-.hist-ic {
-  width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto;
-  display: grid; place-items: center; font-size: 11px;
-}
-/* Variante de .att-matrix para tablas de texto: solo cambia la alineacion.
-   Todo lo demas (tarjeta, banda de cabecera, densidad, hover) se hereda. */
-.hist-matrix thead th,
-.hist-matrix td { text-align: left; }
-/* sticky-c1 se ancla a 38px por la columna N° de Notas, que aqui no existe. */
-.hist-matrix .sticky-c1 { left: 0; }
-.hist-matrix .sn-name { white-space: normal; }
-.hist-just {
-  color: var(--ink-3); max-width: 280px;
-  white-space: normal; /* .att-matrix pone nowrap: la justificacion es texto largo */
-}
-.hist-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 4px;
-  font-size: 11px; font-weight: 600;
-}
-.hb-ret  { background: #FEE2E2; color: #B91C1C; }
-.hb-cc   { background: var(--blue-soft); color: var(--blue-ink); }
-.hb-rp   { background: #FCE4EC; color: #BE185D; }
-.hb-obs  { background: var(--slate-soft); color: var(--slate-ink); }
-.hb-baja { background: #F3F4F6; color: #4B5563; }
-.hb-fico { background: var(--amber-soft); color: var(--amber-ink); }
-.hb-otro { background: var(--slate-soft); color: var(--slate-ink); }
-/* Convalidado: violeta, para que no se confunda con ninguna salida del aula. */
-.hb-conv { background: #EDE9FE; color: #6D28D9; }
-
-.hist-title {
-  font-size: 12.5px; font-weight: 600; color: var(--ink);
-  text-transform: uppercase; letter-spacing: .05em; margin: 0;
-}
-.hist-count {
-  margin-left: auto; min-width: 22px; padding: 2px 9px; border-radius: 10px;
-  background: white; border: 1px solid var(--line); color: var(--ink-3);
-  font-size: 11px; font-weight: 600; text-align: center;
-}
-.hist-warn { color: var(--amber-ink); }
-
-/* Aviso de convalidados en la cabecera, bajo el KPI de Alumnos. */
-.hk-sub {
-  margin-top: 2px; padding: 0; border: 0; background: none;
-  font-size: 11px; font-weight: 600; color: #6D28D9;
+/* Aviso de convalidados bajo el KPI de Alumnos: lleva al tab Historial. */
+.ad-kpi-link {
+  display: block; margin-top: 1px; padding: 0; border: 0; background: none;
+  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--ds-violet-ink);
   cursor: pointer; text-decoration: underline dotted;
 }
-.hk-sub:hover { color: #4C1D95; }
 
-.td-att { padding: 3px 4px !important; text-align: center; }
-.td-part { padding: 3px 4px !important; text-align: center; }
+/* ds-tabs es inline-flex, pero dentro de .ds-page (flex columna) se estira. */
+.ad-tabs { align-self: flex-start; }
+.ad-tab-count { margin-left: 2px; font-size: 11px; opacity: 0.75; }
 
-.td-summary { text-align: center; }
+/* ── Barra de acciones de Notas / Auditoria ─────────────────────────────── */
+.ad-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ad-search { width: 260px; height: 32px; }
+.ad-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ds-ink-2); }
+.ad-debt-swatch { width: 14px; height: 14px; border-radius: var(--ds-radius-control); background: var(--ds-soft-info); border: 1px solid var(--ds-border-strong); }
 
-/* LISTA DE NOTAS */
-.att-matrix .th-group-pi { background: var(--blue-soft) !important; color: var(--blue-ink); }
-.att-matrix .th-total { font-weight: 700; }
-.td-total { text-align: center; font-weight: 600; background: #FBFBF7; }
-.td-center { text-align: center; }
-.grade-input {
+.ad-csv { position: relative; }
+.ad-caret { font-size: 9px; opacity: 0.6; }
+.ad-csv-backdrop { position: fixed; inset: 0; z-index: 40; }
+.ad-csv-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 41;
+  display: flex; flex-direction: column; min-width: 220px; padding: 4px;
+  background: var(--ds-surface); border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm); box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
+}
+.ad-csv-menu button {
+  display: flex; align-items: center; gap: 8px; padding: 8px 11px;
+  border: 0; border-radius: var(--ds-radius-control); background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ds-ink); text-align: left; cursor: pointer;
+}
+.ad-csv-menu button:hover, .ad-csv-menu button:focus-visible { background: var(--ds-surface-2); }
+.ad-csv-menu button i { width: 14px; text-align: center; color: var(--ds-ink-2); }
+
+/* ── Matriz de notas ────────────────────────────────────────────────────── */
+/* Tabla ancha (2 columnas por sesion): scroll horizontal y vertical propio,
+   con N° y alumno fijos a la izquierda y la cabecera fija arriba. */
+.ad-grades-scroll { max-height: 72vh; overflow: auto; }
+.ad-grades { border-collapse: separate; border-spacing: 0; }
+.ad-grades th, .ad-grades td { white-space: nowrap; vertical-align: middle; }
+.ad-grades th { text-align: center; }
+/* Las celdas pintan superficie + tinte como capas: en oscuro los tintes son
+   translucidos y una columna fija dejaria ver lo que pasa por debajo. */
+.ad-grades thead th {
+  position: sticky; top: 0; z-index: 2;
+  background-color: var(--ds-surface-2);
+  background-image: linear-gradient(var(--ad-tint, transparent), var(--ad-tint, transparent));
+  box-shadow: inset 0 -1px 0 var(--ds-border);
+}
+.ad-grades tbody td {
+  background-color: var(--ds-surface);
+  background-image: linear-gradient(var(--ad-tint, transparent), var(--ad-tint, transparent));
+}
+.ad-grades .ad-c0 { position: sticky; left: 0; z-index: 1; width: 38px; min-width: 38px; text-align: center; }
+.ad-grades .ad-c1 { position: sticky; left: 38px; z-index: 1; min-width: 220px; max-width: 240px; overflow: hidden; }
+.ad-grades thead .ad-c0, .ad-grades thead .ad-c1 { z-index: 3; }
+.ad-grades .ad-group.ok { --ad-tint: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ad-grades .ad-group.warn { --ad-tint: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ad-grades .ad-group.info { --ad-tint: var(--ds-soft-info); color: var(--ds-info-ink); }
+.ad-grades .ad-session { padding: 4px 6px; font-size: 10px; }
+.ad-grades .ad-strong { font-weight: 700; }
+
+.ad-grades tbody tr:hover { --ad-tint: var(--ds-soft-neutral); }
+/* Orden a proposito: deuda gana a laptop y "certificar" (tarea pendiente de
+   Academica) gana a las dos. */
+.ad-grades tbody tr.row-laptop { --ad-tint: var(--ds-soft-cyan); }
+.ad-grades tbody tr.row-debt { --ad-tint: var(--ds-soft-info); }
+.ad-grades tbody tr.row-certify { --ad-tint: var(--ds-soft-ok); }
+.ad-grades tbody tr.row-certify .ad-c0 { box-shadow: inset 3px 0 0 var(--ds-ok); }
+
+.ad-center { text-align: center; }
+.ad-cell-input { padding: 3px 4px; text-align: center; }
+.ad-total { text-align: center; font-weight: 600; color: var(--ds-heading); }
+.ad-pill-stack { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ad-pill-gap { margin-left: 4px; }
+.ad-debt-ico { flex-shrink: 0; margin-left: 2px; font-size: 12px; color: var(--ds-info-ink); }
+
+.ad-student { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ad-student-text { flex: 1; min-width: 0; overflow: hidden; }
+.ad-student-name { font-size: 12.5px; font-weight: 600; color: var(--ds-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-student-name.ad-wrap { white-space: normal; }
+.ad-student-sub { font-size: 10.5px; font-weight: 400; color: var(--ds-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ad-grade-input {
   width: 40px; height: 24px; padding: 0 4px;
-  border: 1px solid var(--line); border-radius: 5px;
-  font-family: var(--font-mono); font-size: 11.5px; text-align: center;
-  background: white; color: var(--ink);
+  border: 1px solid var(--ds-border-strong); border-radius: var(--ds-radius-control);
+  background: var(--ds-surface-2); color: var(--ds-ink);
+  font-family: var(--ds-font-mono); font-size: 11.5px; text-align: center;
+  color-scheme: light dark;
 }
-.grade-input:focus { outline: none; border-color: var(--green-ink); }
-.grade-input.wide { width: 64px; }
-.grade-input::-webkit-outer-spin-button,
-.grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.part-check { width: 15px; height: 15px; accent-color: var(--amber-ink); cursor: pointer; }
-.ocup-pill {
-  display: inline-grid; place-items: center;
-  width: 22px; height: 20px; border-radius: 4px;
-  font-size: 10px; font-weight: 700; font-family: var(--font-mono);
-}
-.ocup-pill.p { background: var(--slate-soft); color: var(--slate-ink); }
-.ocup-pill.e { background: var(--blue-soft); color: var(--blue-ink); }
-.row-debt td { background: #EAF2FD !important; }
-.row-debt .sticky-c0, .row-debt .sticky-c1 { background: #EAF2FD !important; }
-/* Promo LAPTOP: fila con tinte cian (mismo color que la tabla FICO).
-   Si el alumno ademas tiene deuda, gana el azul de deuda (doble clase). */
-.row-laptop td { background: #ECFEFF !important; }
-.row-laptop .sticky-c0, .row-laptop .sticky-c1 { background: #ECFEFF !important; }
-.row-debt.row-laptop td,
-.row-debt.row-laptop .sticky-c0, .row-debt.row-laptop .sticky-c1 { background: #EAF2FD !important; }
-/* Va despues de deuda/laptop para ganarles: certificar es tarea pendiente de Academica. */
-.row-certify td,
-.row-certify .sticky-c0, .row-certify .sticky-c1 { background: var(--ds-soft-ok) !important; }
-.row-certify .sticky-c0 { box-shadow: inset 3px 0 0 var(--ds-ok); }
-.debt-ico { color: var(--blue-ink); font-size: 12px; margin-left: 2px; flex-shrink: 0; }
-.grades-table .sticky-c1 { overflow: hidden; }
-.debt-swatch {
-  display: inline-block; width: 14px; height: 14px;
-  border-radius: 4px; background: #EAF2FD; border: 1px solid #C8DCF5;
-}
-.expand-btn {
-  display: inline-grid; place-items: center;
-  width: 24px; height: 24px; border-radius: 5px;
-  background: transparent; border: 1px solid var(--line);
-  color: var(--ink-3); cursor: pointer; font-size: 10.5px;
-}
-.expand-btn:hover { color: var(--green-ink); border-color: var(--green-ink); }
-.result-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
-}
-.result-pill.ok { background: #E5F5EC; color: #1D7A4D; }
-.result-pill.bad { background: #FDEAEA; color: #B43E3E; }
-.cert-pill {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 999px;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.03em;
-  background: #EAF0FA; color: #002060; white-space: nowrap;
-}
+.ad-grade-input:focus { outline: none; border-color: var(--ds-accent); }
+.ad-grade-input--wide { width: 64px; }
+.ad-grade-input::-webkit-outer-spin-button,
+.ad-grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ad-part-check { width: 15px; height: 15px; accent-color: var(--ds-warn); cursor: pointer; }
 
-.deliv-subrow > td { background: #FBFBF5; padding: 12px 16px; }
-.deliv-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px; max-width: 980px;
+/* Fila de criterios de entregables (se abre con el lapiz) */
+.ad-grades .ad-deliv-row > td {
+  --ad-tint: var(--ds-surface-2);
+  padding: 12px 16px; font-weight: 400; color: var(--ds-ink-2); white-space: normal;
 }
-.deliv-title {
-  font-size: 11px; font-weight: 700; color: var(--ink);
-  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
+.ad-deliv { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; max-width: 980px; }
+.ad-deliv-title {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  font-size: 12px; font-weight: 700; color: var(--ds-heading);
 }
-.deliv-field {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; font-size: 12px; color: var(--ink-2, var(--ink));
-  margin-bottom: 6px; white-space: normal;
+.ad-deliv-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 6px; font-size: 12px; color: var(--ds-ink-2);
 }
-.deliv-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.ad-deliv-flags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.ad-deliv-obs { grid-column: 1 / -1; }
+.ad-obs { max-width: 880px; min-height: 56px; line-height: 1.45; }
+.ad-obs--ia { border-color: var(--ds-warn); background: var(--ds-soft-warn); }
 
-/* Observaciones IA */
-.obs-group { grid-column: 1 / -1; }
-.obs-group .deliv-title { display: flex; align-items: center; gap: 10px; }
-.btn-xs {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 5px; cursor: pointer;
-  background: white; border: 1px solid var(--line);
-  font-size: 10px; font-weight: 600; color: var(--ink-2, var(--ink));
-  text-transform: none; letter-spacing: normal;
-}
-.btn-xs:hover:not(:disabled) { border-color: var(--green-ink); color: var(--green-ink); }
-.btn-xs:disabled { opacity: 0.55; cursor: not-allowed; }
-.obs-textarea {
-  width: 100%; max-width: 880px; resize: vertical;
-  border: 1px solid var(--line); border-radius: 6px;
-  padding: 7px 9px; font-size: 12.5px; line-height: 1.45;
-  font-family: inherit; background: white; color: var(--ink);
-  white-space: normal;
-}
-.obs-textarea:focus { outline: none; border-color: var(--green-ink); }
-.obs-textarea.ia-draft { border-color: var(--amber-ink); background: #FFFDF4; }
-.obs-summary-card { grid-column: 1 / -1; }
-.obs-summary-text { font-size: 13px; line-height: 1.55; margin: 0 0 8px; white-space: pre-wrap; }
+/* Resumenes bajo la tabla */
+.ad-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--ds-gap); }
+.ad-summary-wide { grid-column: 1 / -1; }
+.ad-summary-text { margin: 0; font-size: 13px; line-height: 1.55; white-space: pre-wrap; color: var(--ds-ink); }
+.ad-sumlist { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.ad-sumlist > div { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.ad-sumlist dt { font-weight: 400; color: var(--ds-ink-2); }
+.ad-sumlist dd { margin: 0; font-weight: 700; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.ad-sumlist dd.ok { color: var(--ds-ok-ink); }
+.ad-sumlist dd.bad { color: var(--ds-bad-ink); }
+.ad-session-table td, .ad-session-table th { padding-left: 6px; }
+.ad-top { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ad-top li { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; }
+.ad-top-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
-.summary-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px; margin-top: 14px;
-}
-.summary-card {
-  background: white; border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 14px 16px;
-}
-.sum-title {
-  font-size: 11px; font-weight: 700; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em;
-  margin: 0 0 10px; display: flex; align-items: center; gap: 7px;
-}
-.sum-rows { display: flex; flex-direction: column; gap: 6px; }
-.sum-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; font-size: 12.5px;
-}
-.sum-row .ok-ink { color: #1D7A4D; }
-.sum-row .bad-ink { color: #B43E3E; }
-.sum-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.sum-table th, .sum-table td { padding: 3px 6px; text-align: center; }
-.sum-table th { font-size: 10px; color: var(--ink-3); font-weight: 600; }
-.sum-table td:first-child, .sum-table th:first-child { text-align: left; }
-.top-row { align-items: flex-start; }
-.top-pos {
-  flex: 0 0 auto; display: inline-grid; place-items: center;
-  width: 26px; height: 26px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-}
-.pos-1 { background: #FCF3D7; color: #9A7A1E; }
-.pos-2 { background: #EEF0F3; color: #5A6572; }
-.pos-3 { background: #F7E9DC; color: #9A6230; }
-.top-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+/* ── Historial ──────────────────────────────────────────────────────────── */
+.ad-hist-title { display: flex; align-items: center; gap: 9px; }
+.ad-hist td { vertical-align: middle; }
+.ad-hist-just { max-width: 280px; white-space: normal; }
 
-.footer-note {
-  font-size: 12px; color: var(--ink-3); margin: 12px 0 0;
-  display: flex; align-items: center; gap: 6px;
-}
-.footer-note i { color: var(--ink-4); }
+/* ── Auditoria: tira de sesiones ────────────────────────────────────────── */
+.ad-sessions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ad-sessions-label { font-size: 12px; font-weight: 600; color: var(--ds-muted); }
+.ad-session-btn { display: inline-flex; align-items: center; gap: 6px; }
+.ad-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--ds-muted); }
+.ad-dot.sdot-partial { background: var(--ds-accent); }
+.ad-dot.sdot-done { background: var(--ds-ok); }
+.ad-sessions [aria-pressed="true"] .ad-dot { background: var(--ds-on-brand); }
+.ad-session-note { font-weight: 700; }
+.ad-session-note.pend { font-weight: 500; opacity: 0.7; }
 
-/* RUBRICA */
-.session-strip {
-  display: flex; align-items: center; gap: 10px;
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 10px 12px; margin-bottom: 12px;
+/* ── Scorecard: anillo + dos evaluaciones ───────────────────────────────── */
+.ad-score { flex-direction: row; flex-wrap: wrap; }
+.ad-score-hero {
+  flex: 1; min-width: 280px; display: flex; align-items: center; gap: 14px; padding: 15px 18px;
+  border-right: 1px solid var(--ds-border); background: var(--ds-surface-2);
 }
-.session-strip-label {
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.session-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
-.schip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 9px; border-radius: 6px;
-  border: 1px solid var(--line); background: white;
-  font-size: 12px; font-family: var(--font-mono); color: var(--ink-2);
-  cursor: pointer;
-}
-.schip:hover { background: var(--bg-soft); }
-.schip.active { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
-.sdot { width: 6px; height: 6px; border-radius: 999px; background: var(--ink-4); }
-.schip.active .sdot { background: white; }
-.sdot.sdot-empty { background: var(--ink-4); }
-.sdot.sdot-partial { background: #F59E0B; }
-.sdot.sdot-done { background: var(--green); }
+.ad-score-label { font-size: 11.5px; font-weight: 600; color: var(--ds-muted); }
+.ad-score-big { margin: 2px 0 6px; font-size: 16px; font-weight: 800; color: var(--ds-heading); }
+.ad-score-evals { flex: 2; min-width: 300px; display: flex; }
+.ad-score-eval { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; border-right: 1px solid var(--ds-border); }
+.ad-score-eval:last-child { border-right: 0; }
+.ad-score-eval-head { display: flex; align-items: center; gap: 8px; }
+.ad-score-value { display: flex; align-items: baseline; gap: 4px; }
+.ad-score-value b { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.ad-score-value span { font-size: 13px; font-weight: 600; color: var(--ds-muted); }
+.ad-score-weight { font-size: 11.5px; font-weight: 600; color: var(--ds-muted); }
 
-.rubric-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-bottom: 14px;
-}
-.rh-eyebrow {
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.rh-title { margin: 4px 0 6px; font-size: 18px; font-weight: 600; }
-.rh-meta { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
-.rh-actions { display: flex; gap: 8px; align-items: center; }
-.ai-btn {
-  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-  color: white; border-color: transparent;
-}
-.ai-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-}
+.ad-ring { position: relative; width: 68px; height: 68px; flex: none; }
+.ad-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ad-ring-track { stroke: var(--ds-surface-3); }
+.ad-ring-prog { stroke: var(--ds-accent); transition: stroke-dashoffset 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ad-ring.ok .ad-ring-prog { stroke: var(--ds-ok); }
+.ad-ring.warn .ad-ring-prog { stroke: var(--ds-warn); }
+.ad-ring.bad .ad-ring-prog { stroke: var(--ds-bad); }
+.ad-ring-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ad-ring-num b { font-size: 19px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; color: var(--ds-heading); }
+.ad-ring-num span { font-size: 9px; font-weight: 700; color: var(--ds-muted); }
 
-/* AI PANEL */
-.ai-panel {
-  background: linear-gradient(180deg, #FAFAFE 0%, white 60%);
-  border: 1px solid #E0E2FF; border-radius: var(--radius);
-  padding: 14px 16px; margin-bottom: 14px;
-}
-.ai-panel-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
-  padding-bottom: 10px; border-bottom: 1px solid #E0E2FF;
-}
-.ai-eyebrow {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 700; color: #4F46E5;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.ai-when { margin-left: 6px; }
-.ai-summary { display: flex; gap: 18px; }
-.ai-summary-item { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; }
-.ai-summary-item strong { font-size: 14px; color: var(--ink); }
+/* Relleno de .ds-track por tono (sin tono = --ds-accent del global) */
+.ad-fill.ok { background: var(--ds-ok); }
+.ad-fill.warn { background: var(--ds-warn); }
+.ad-fill.bad { background: var(--ds-bad); }
 
-.ai-crits {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px; margin-bottom: 12px;
-}
-.ai-crit {
-  background: white; border: 1px solid var(--line-soft);
-  border-radius: 8px; padding: 10px 12px;
-}
-.ai-crit-head {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-}
-.ai-crit-id { font-size: 10.5px; color: var(--ink-3); }
-.ai-crit-name { flex: 1; font-size: 12px; font-weight: 600; }
-.ai-score {
-  font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
-  font-family: var(--font-mono);
-}
-.aisc-good { background: var(--green-soft); color: var(--green-ink); }
-.aisc-ok   { background: var(--blue-soft); color: var(--blue-ink); }
-.aisc-warn { background: var(--amber-soft); color: var(--amber-ink); }
-.aisc-bad  { background: var(--red-soft); color: var(--red-ink); }
+/* ── Auditoria: resumen ─────────────────────────────────────────────────── */
+.ad-empty-title { display: block; margin-bottom: 6px; font-size: 16px; color: var(--ds-ink-2); }
+.ad-split { display: flex; height: 8px; margin-top: 10px; border-radius: 999px; overflow: hidden; background: var(--ds-surface-3); }
+.ad-split-p { background: var(--ds-accent); }
+.ad-split-t { background: var(--ds-warn); }
+.ad-legend-row { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--ds-ink-2); }
+.ad-legend-row--center { justify-content: center; }
+.ad-legend-row i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 3px; }
+.ad-legend-row i.ia { background: var(--ds-accent-2); }
+.ad-legend-row i.ac { background: var(--ds-accent); }
 
-.sg-good  { color: var(--green-ink); }
-.sg-ok    { color: var(--blue-ink); }
-.sg-warn  { color: var(--amber-ink); }
-.sg-bad   { color: var(--red-ink); }
-.sg-empty { color: var(--ink-3); }
+.ad-fo { display: flex; flex-direction: column; margin: 0; list-style: none; }
+.ad-fo li { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-top: 1px solid var(--ds-border); }
+.ad-fo li:first-child { padding-top: 0; border-top: 0; }
+.ad-fo b { font-size: 13px; color: var(--ds-heading); }
+.ad-fo span { font-size: 12.5px; line-height: 1.45; color: var(--ds-ink-2); }
 
-.gen-summary {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-  margin-bottom: 16px;
+.ad-compare { display: flex; align-items: flex-end; gap: 16px; height: 150px; padding: 14px 6px 0; }
+.ad-cmp-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; height: 100%; cursor: pointer; }
+.ad-cmp-bars { display: flex; align-items: flex-end; justify-content: center; gap: 5px; width: 100%; height: 100%; }
+.ad-cmp-bar { position: relative; width: 26px; min-height: 2px; border-radius: 6px 6px 0 0; transition: height 0.5s; }
+.ad-cmp-bar.ia { background: var(--ds-accent-2); }
+.ad-cmp-bar.ac { background: var(--ds-accent); }
+.ad-cmp-bar span {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 700; color: var(--ds-ink-2); font-variant-numeric: tabular-nums;
 }
-.gen-summary-card {
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
-}
-.gen-summary-card-main {
-  border-color: var(--indigo, #6366f1);
-  background: linear-gradient(180deg, rgba(99,102,241,.04) 0%, white 60%);
-}
-.gen-summary-card .gen-label {
-  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-  color: var(--ink-3); font-weight: 600;
-}
-.gen-summary-card strong { font-size: 26px; font-weight: 700; line-height: 1; }
+.ad-cmp-pend { align-self: flex-end; font-size: 11px; color: var(--ds-muted); }
+.ad-cmp-x { font-size: 12px; font-weight: 700; color: var(--ds-ink-2); }
+.ad-cmp-col.current .ad-cmp-x { color: var(--ds-accent); }
 
-.gen-table-wrap {
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  overflow: hidden;
-}
-.gen-table { width: 100%; border-collapse: collapse; }
-.gen-table th, .gen-table td {
-  padding: 10px 14px; font-size: 12px; text-align: left;
-  border-bottom: 1px solid var(--line-soft);
-}
-.gen-table thead th {
-  background: var(--bg-soft, #fafafa); font-weight: 600; color: var(--ink-2);
-  font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
-}
-.gen-table tbody tr:last-child td { border-bottom: none; }
-.gen-table .td-session { font-weight: 700; }
-.gen-verdict {
-  display: inline-block; padding: 2px 8px; border-radius: 5px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
-  background: var(--slate-soft);
-}
-.gen-verdict.sg-good { background: var(--green-soft); }
-.gen-verdict.sg-ok   { background: var(--blue-soft); }
-.gen-verdict.sg-warn { background: var(--amber-soft); }
-.gen-verdict.sg-bad  { background: var(--red-soft); }
+/* ── Auditoria IA: tarjetas de criterio ─────────────────────────────────── */
+.ad-wrap-head { flex-wrap: wrap; }
+.ad-crit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 11px; }
+/* El borde izquierdo lleva el tono del puntaje (bueno / atencion / malo). */
+.ad-crit { position: relative; }
+.ad-crit::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ad-edge, transparent); }
+.ad-crit.ok { --ad-edge: var(--ds-ok); }
+.ad-crit.warn { --ad-edge: var(--ds-warn); }
+.ad-crit.bad { --ad-edge: var(--ds-bad); }
+.ad-crit.info { --ad-edge: var(--ds-accent); }
+.ad-crit-body { gap: 8px; }
+.ad-crit-top { display: flex; align-items: flex-start; gap: 10px; }
+.ad-crit-num { padding-top: 2px; font-size: 12px; font-weight: 600; color: var(--ds-muted); }
+.ad-crit-title { flex: 1; margin: 0; font-size: 13.5px; font-weight: 700; line-height: 1.25; color: var(--ds-heading); }
+.ad-crit-bar { display: flex; gap: 4px; }
+.ad-crit-bar i { flex: 1; height: 5px; border-radius: 999px; background: var(--ds-surface-3); }
+.ad-crit-bar i.fill { background: var(--ad-edge, var(--ds-accent)); }
+.ad-crit-text { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink-2); }
+.ad-stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
 
-.gen-trend-card {
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 16px 18px; margin-bottom: 16px;
+/* ── Evaluacion academica: rubrica ──────────────────────────────────────── */
+.ad-acad-prog { text-align: right; }
+.ad-acad-big { font-size: 18px; font-weight: 800; color: var(--ds-heading); }
+.ad-rub-grid { align-items: start; }
+.ad-rub-track { border-radius: 0; height: 4px; }
+.ad-rub-row {
+  display: flex; align-items: flex-start; gap: 11px; padding: 10px 18px;
+  border-top: 1px solid var(--ds-border); font-size: 13px; line-height: 1.45; color: var(--ds-ink);
+  cursor: pointer; user-select: none; transition: background 0.12s;
 }
-.gen-trend-head { margin-bottom: 6px; }
-.gen-trend-hint { margin: 4px 0 0; }
+.ad-rub-row:hover { background: var(--ds-surface-2); }
+.ad-rub-row.on { color: var(--ds-ink-2); }
+.ad-cbx {
+  width: 18px; height: 18px; flex: none; margin-top: 1px;
+  display: grid; place-items: center; border-radius: var(--ds-radius-control);
+  border: 2px solid var(--ds-border-strong); color: transparent; font-size: 10px; transition: 0.15s;
+}
+.ad-rub-row.on .ad-cbx { background: var(--ds-accent); border-color: var(--ds-accent); color: var(--ds-surface); }
+.ad-rub-grid.is-readonly .ad-rub-row { cursor: default; }
+.ad-rub-grid.is-readonly .ad-rub-row:hover { background: transparent; }
 
-.gen-coverage {
-  margin-top: 12px; padding-top: 14px;
-  border-top: 1px dashed var(--line-soft);
+/* Barra de guardado: flota sobre la rubrica al hacer scroll (por eso sombra). */
+.ad-savebar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 18px;
+  background: color-mix(in oklab, var(--ds-surface) 88%, transparent); backdrop-filter: blur(10px);
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.25);
 }
-.gen-coverage-row {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
-  margin-top: 10px;
-}
-.gen-coverage-item { display: flex; flex-direction: column; gap: 6px; }
-.gcv-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-}
-.gcv-name {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--ink-2); font-weight: 600;
-}
-.gcv-count { font-size: 12px; color: var(--ink-2); }
-.gcv-dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-}
-.gcv-dot-ai     { background: #6366f1; }
-.gcv-dot-manual { background: #f59e0b; }
-.gcv-bar {
-  position: relative; height: 6px;
-  background: var(--bg-soft, #f1f5f9);
-  border-radius: 999px; overflow: hidden;
-}
-.gcv-fill {
-  position: absolute; top: 0; bottom: 0; left: 0;
-  border-radius: inherit;
-  transition: width .3s ease;
-}
-.gcv-fill-ai     { background: #6366f1; }
-.gcv-fill-manual { background: #f59e0b; }
-.gen-coverage-warn {
-  display: flex; align-items: center; gap: 6px;
-  margin: 12px 0 0; font-size: 11.5px;
-  color: var(--amber-ink);
-}
-.ai-crit-comment { font-size: 11.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 6px; }
-.ai-stamps { display: flex; flex-wrap: wrap; gap: 4px; }
-.ai-stamp {
-  background: var(--slate-soft); color: var(--slate-ink);
-  font-size: 10px; padding: 1px 5px; border-radius: 4px;
-}
+.ad-savebar-text { font-size: 14px; font-weight: 600; color: var(--ds-ink); }
 
-.ai-insights {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  margin-top: 8px;
-}
-.ai-insight-block { background: white; border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; }
-.ai-insight-block h4 { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.ai-insight-block ul { list-style: none; padding: 0; margin: 0; font-size: 11.5px; }
-.ai-insight-block li { padding: 5px 0; border-top: 1px dashed var(--line-soft); }
-.ai-insight-block li:first-child { border-top: none; }
-.ai-insight-block li strong { display: block; color: var(--ink); }
-.ai-insight-block li span { display: block; margin-top: 2px; line-height: 1.4; }
+/* ── General: cobertura y tabla ─────────────────────────────────────────── */
+.ad-coverage { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--ds-border); }
+.ad-cov-item { display: flex; flex-direction: column; gap: 7px; }
+.ad-cov-head { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--ds-ink-2); }
+.ad-cov-head b { color: var(--ds-heading); }
+.ad-cov-dot { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 3px; background: var(--ds-accent); }
+.ad-cov-dot.ia, .ad-cov-ia { background: var(--ds-accent-2); }
+.ad-general-table tr.current td { background: var(--ds-soft-info); }
+.ad-strong-ink { font-weight: 600; color: var(--ds-heading); }
 
+/* ── Modales ────────────────────────────────────────────────────────────── */
+.ad-intro { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ds-ink-2); }
+.ad-field-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ad-field-head .ds-label { margin-bottom: 0; }
+.ad-transcript { min-height: 160px; font-family: var(--ds-font-mono); font-size: 12px; line-height: 1.5; }
+.ad-file { font-size: 12px; padding: 6px 0; color: var(--ds-ink-2); }
 
-.rubric-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
-}
-.rubric-cat {
-  background: white; border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.rc-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-soft);
-  margin-bottom: 8px;
-}
-.rc-head h3 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
-.rc-total {
-  background: var(--bg-soft); padding: 2px 8px; border-radius: 5px;
-  font-size: 11.5px; font-weight: 600; color: var(--ink-2);
-}
-.rc-items { list-style: none; padding: 0; margin: 0; }
-.rc-item { padding: 6px 0; }
-.rc-check {
-  display: flex; gap: 9px; cursor: pointer; align-items: flex-start;
-  font-size: 12.5px; line-height: 1.45;
-}
-.rc-check input { position: absolute; opacity: 0; pointer-events: none; }
-.rc-box {
-  flex-shrink: 0; width: 18px; height: 18px;
-  border: 1.5px solid var(--line); border-radius: 4px;
-  background: white;
-  display: grid; place-items: center;
-  margin-top: 1px;
-  transition: background 0.12s, border-color 0.12s;
-}
-.rc-box i {
-  color: white; font-size: 10px; opacity: 0;
-  transition: opacity 0.12s;
-}
-.rc-check input:checked ~ .rc-box {
-  background: var(--green); border-color: var(--green);
-}
-.rc-check input:checked ~ .rc-box i { opacity: 1; }
-.rc-text { color: var(--ink-2); }
-.rc-check input:checked ~ .rc-text { color: var(--ink); }
+.ad-imp-list { max-height: 52vh; overflow-y: auto; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.ad-imp-row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--ds-border); }
+.ad-imp-row:last-child { border-bottom: 0; }
+.ad-imp-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--ds-ink); }
+.ad-imp-cur { min-width: 34px; font-size: 11.5px; color: var(--ds-muted); text-align: right; }
+.ad-imp-input { width: 72px; height: 30px; text-align: center; font-weight: 600; }
+.ad-imp-input.is-bad { border-color: var(--ds-bad); color: var(--ds-bad-ink); }
 
-@media (max-width: 1100px) {
-  .rubric-grid { grid-template-columns: 1fr; }
-  .info-row { gap: 14px; }
-  .head-kpis { padding-left: 12px; gap: 14px; }
+@media (max-width: 900px) {
+  .ad-coverage { grid-template-columns: 1fr; }
+  .ad-score-hero { border-right: 0; border-bottom: 1px solid var(--ds-border); }
+  .ad-search { width: 100%; }
 }
-
-/* DARK MODE */
-[data-coreui-theme="dark"] .aula-detail {
-  --bg-soft: #1F1F1A;
-  --line: #2A2A22;
-  --line-soft: #1F1F1A;
-  --ink: #F4F4F0;
-  --ink-2: #D4D4CC;
-  --ink-3: #A0A099;
-  --ink-4: #6F6F66;
-  --green-soft: rgba(16,185,129,0.14);
-  --green-ink: #34D399;
-  --amber-soft: rgba(245,158,11,0.14);
-  --amber-ink: #FBBF24;
-  --red-soft: rgba(239,68,68,0.14);
-  --red-ink: #F87171;
-  --blue-soft: rgba(37,99,235,0.18);
-  --blue-ink: #60A5FA;
-  --slate-soft: #2A2A22;
-  --slate-ink: #A0A099;
-}
-[data-coreui-theme="dark"] .aula-detail .page-head,
-[data-coreui-theme="dark"] .aula-detail .toolbar,
-[data-coreui-theme="dark"] .aula-detail .session-strip,
-[data-coreui-theme="dark"] .aula-detail .rubric-cat,
-[data-coreui-theme="dark"] .aula-detail .att-matrix-scroll { background: #1A1A14; }
-[data-coreui-theme="dark"] .aula-detail .back-btn,
-[data-coreui-theme="dark"] .aula-detail .btn,
-[data-coreui-theme="dark"] .aula-detail .input,
-[data-coreui-theme="dark"] .aula-detail .chip,
-[data-coreui-theme="dark"] .aula-detail .schip { background: #1A1A14; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aula-detail .csv-menu { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .aula-detail .csv-menu button { color: #D4D4CC; }
-[data-coreui-theme="dark"] .aula-detail .csv-menu button:hover { background: #22221C; }
-[data-coreui-theme="dark"] .aula-detail .att-matrix thead th,
-[data-coreui-theme="dark"] .aula-detail .att-matrix .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .att-matrix .sticky-c1,
-[data-coreui-theme="dark"] .aula-detail .att-matrix .sticky-c2 { background: #1A1A14; }
-[data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c1,
-[data-coreui-theme="dark"] .aula-detail .att-matrix thead .sticky-c2 { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aula-detail .grade-input { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
-[data-coreui-theme="dark"] .aula-detail .td-total { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover td,
-[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c1,
-[data-coreui-theme="dark"] .aula-detail .att-matrix tbody tr:hover .sticky-c2 { background: #22221C; }
-[data-coreui-theme="dark"] .aula-detail .row-debt td,
-[data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .row-debt .sticky-c1 { background: #1B2536 !important; }
-[data-coreui-theme="dark"] .aula-detail .row-laptop td,
-[data-coreui-theme="dark"] .aula-detail .row-laptop .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .row-laptop .sticky-c1 { background: rgba(8, 145, 178, 0.14) !important; }
-[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop td,
-[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop .sticky-c0,
-[data-coreui-theme="dark"] .aula-detail .row-debt.row-laptop .sticky-c1 { background: #1B2536 !important; }
-[data-coreui-theme="dark"] .aula-detail .deliv-subrow > td { background: #1F1F1A; }
-[data-coreui-theme="dark"] .aula-detail .summary-card { background: #1A1A14; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aula-detail .hist-card { background: #1A1A14; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aula-detail .hist-head { background: #1F1F1A; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aula-detail .hist-count { background: #14140F; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aula-detail .obs-textarea,
-[data-coreui-theme="dark"] .aula-detail .btn-xs { background: #14140F; border-color: #3A3A33; color: #E8E8E0; }
-[data-coreui-theme="dark"] .aula-detail .obs-textarea.ia-draft { background: #221F12; }
-[data-coreui-theme="dark"] .aula-detail .rc-box { background: #1A1A14; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .aula-detail .ai-panel {
-  background: linear-gradient(180deg, #1A1A24 0%, #1A1A14 60%);
-  border-color: #3A3A55;
-}
-[data-coreui-theme="dark"] .aula-detail .ai-panel-head { border-color: #3A3A55; }
-[data-coreui-theme="dark"] .aula-detail .ai-crit,
-[data-coreui-theme="dark"] .aula-detail .ai-insight-block { background: #1A1A14; border-color: #2A2A22; }
-
-/* ==================================================================== */
-/* AUDITORIA - REDISENO (portado del prototipo, namespaced .audit-rd)   */
-/* ==================================================================== */
-.audit-rd {
-  --ar-accent: #6366f1;
-  --ar-accent-ink: #ffffff;
-  --ar-surface: #ffffff;
-  --ar-surface-2: #faf9f8;
-  --ar-surface-3: #f1efed;
-  --ar-border: #e8e6e3;
-  --ar-border-strong: #d8d4d0;
-  --ar-ink: #1b1917;
-  --ar-ink-2: #57534e;
-  --ar-ink-3: #8d877f;
-  --ar-track: #ece9e6;
-  --ar-seg-on: #ffffff;
-  --ar-shadow: 0 1px 2px rgba(28, 25, 23, .05), 0 1px 1px rgba(28, 25, 23, .03);
-  --ar-shadow-lg: 0 10px 30px -12px rgba(28, 25, 23, .18);
-  --ar-s1-bg: #fde8e6; --ar-s1-fg: #c0362c;
-  --ar-s2-bg: #fdeccb; --ar-s2-fg: #a96208;
-  --ar-s3-bg: #dde8fd; --ar-s3-fg: #2256c9;
-  --ar-s4-bg: #d9f3df; --ar-s4-fg: #1d7a40;
-  --ar-s5-bg: #cdf1e4; --ar-s5-fg: #0a7a5c;
-  /* Misma fuente que el resto del ERP (no monospace, era incongruente).
-     tabular-nums mantiene los numeros alineados sin cambiar de familia. */
-  --ar-mono: inherit;
-  --ar-r-sm: 8px; --ar-r: 12px; --ar-r-lg: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  color: var(--ar-ink);
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-}
-
-/* tira de sesiones */
-.audit-rd .ar-sess-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.audit-rd .ar-sess-lbl { font-size: 11px; font-weight: 700; letter-spacing: .09em; color: var(--ar-ink-3); margin-right: 4px; }
-.audit-rd .ar-sess-pill {
-  display: inline-flex; flex-direction: row; align-items: center; gap: 7px;
-  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: 10px; padding: 8px 14px;
-  transition: .15s; cursor: pointer;
-}
-.audit-rd .ar-sess-pill:hover { border-color: var(--ar-border-strong); }
-.audit-rd .ar-sess-pill .slabel { font-size: 13.5px; font-weight: 700; color: var(--ar-ink-2); }
-.audit-rd .ar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ar-ink-3); flex: none; }
-.audit-rd .ar-dot.sdot-empty { background: var(--ar-ink-3); }
-.audit-rd .ar-dot.sdot-partial { background: var(--ar-accent); }
-.audit-rd .ar-dot.sdot-done { background: var(--ar-s4-fg); }
-.audit-rd .ar-sess-pill .note { font-size: 13px; font-weight: 700; color: var(--ar-ink); }
-.audit-rd .ar-sess-pill .note.pend { color: var(--ar-ink-3); font-weight: 600; }
-.audit-rd .ar-sess-pill.active { background: var(--ar-accent); border-color: var(--ar-accent); }
-.audit-rd .ar-sess-pill.active .slabel, .audit-rd .ar-sess-pill.active .note { color: var(--ar-accent-ink); }
-.audit-rd .ar-sess-pill.active .ar-dot { background: var(--ar-accent-ink) !important; }
-
-/* scorecard */
-.audit-rd .ar-scorecard {
-  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg);
-  box-shadow: var(--ar-shadow); display: flex; align-items: stretch; overflow: hidden; flex-wrap: wrap;
-}
-.audit-rd .sc-hero {
-  padding: 15px 18px; display: flex; gap: 14px; align-items: center;
-  background: linear-gradient(135deg, color-mix(in oklab, var(--ar-accent) 9%, var(--ar-surface)), var(--ar-surface));
-  border-right: 1px solid var(--ar-border); min-width: 280px; flex: 1;
-}
-.audit-rd .sc-ring { position: relative; width: 68px; height: 68px; flex: none; }
-.audit-rd .sc-ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
-.audit-rd .sc-ring .ring-track { stroke: var(--ar-track); }
-.audit-rd .sc-ring .ring-prog { stroke: var(--ar-s3-fg); transition: stroke-dashoffset .6s cubic-bezier(.2, .8, .2, 1); }
-.audit-rd .sc-ring.lvl-1 .ring-prog { stroke: var(--ar-s1-fg); }
-.audit-rd .sc-ring.lvl-2 .ring-prog { stroke: var(--ar-s2-fg); }
-.audit-rd .sc-ring.lvl-3 .ring-prog { stroke: var(--ar-s3-fg); }
-.audit-rd .sc-ring.lvl-4 .ring-prog { stroke: var(--ar-s4-fg); }
-.audit-rd .sc-ring.lvl-5 .ring-prog { stroke: var(--ar-s5-fg); }
-.audit-rd .sc-ring .ring-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.audit-rd .sc-ring .ring-num b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-.audit-rd .sc-ring .ring-num span { font-size: 9px; color: var(--ar-ink-3); font-weight: 700; }
-.audit-rd .sc-hero .label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--ar-ink-3); }
-.audit-rd .sc-hero .big { font-size: 16px; font-weight: 800; margin-top: 2px; }
-.audit-rd .sc-hero .prov {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 600;
-  color: var(--ar-s2-fg); background: var(--ar-s2-bg); border-radius: 20px; padding: 2px 9px;
-}
-.audit-rd .sc-hero .prov.firm { color: var(--ar-s4-fg); background: var(--ar-s4-bg); }
-.audit-rd .sc-evals { display: flex; flex: 2; min-width: 300px; }
-.audit-rd .sc-eval { flex: 1; padding: 14px 18px; border-right: 1px solid var(--ar-border); display: flex; flex-direction: column; gap: 8px; }
-.audit-rd .sc-eval:last-child { border-right: none; }
-.audit-rd .sc-eval .head { display: flex; align-items: center; gap: 8px; }
-.audit-rd .sc-eval .head .tag { font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--ar-ink-3); }
-.audit-rd .sc-eval .head .badge-ia {
-  font-size: 10px; font-weight: 800; letter-spacing: .04em; color: var(--ar-accent);
-  background: color-mix(in oklab, var(--ar-accent) 14%, transparent); border-radius: 5px; padding: 2px 7px;
-}
-.audit-rd .sc-eval .score { display: flex; align-items: baseline; gap: 4px; }
-.audit-rd .sc-eval .score b { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
-.audit-rd .sc-eval .score span { font-size: 13px; color: var(--ar-ink-3); font-weight: 600; }
-.audit-rd .bar { height: 8px; border-radius: 20px; background: var(--ar-track); overflow: hidden; }
-.audit-rd .bar > i { display: block; height: 100%; border-radius: 20px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
-.audit-rd .bar > i.fill-1 { background: var(--ar-s1-fg); }
-.audit-rd .bar > i.fill-2 { background: var(--ar-s2-fg); }
-.audit-rd .bar > i.fill-3 { background: var(--ar-s3-fg); }
-.audit-rd .bar > i.fill-4 { background: var(--ar-s4-fg); }
-.audit-rd .bar > i.fill-5 { background: var(--ar-s5-fg); }
-.audit-rd .bar > i.fill-accent { background: var(--ar-accent); }
-.audit-rd .sc-eval .weight { font-size: 11px; color: var(--ar-ink-3); font-weight: 600; }
-
-/* toolbar + segmented */
-.audit-rd .ar-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.audit-rd .ar-grow { flex: 1; }
-.audit-rd .ar-segmented { display: inline-flex; background: var(--ar-surface-3); border-radius: 12px; padding: 4px; gap: 2px; }
-.audit-rd .ar-segmented button {
-  border: none; background: transparent; padding: 7px 13px; border-radius: 9px; font-size: 13px; font-weight: 600;
-  color: var(--ar-ink-2); display: flex; align-items: center; gap: 7px; transition: .15s; cursor: pointer;
-}
-.audit-rd .ar-segmented button.on { background: var(--ar-seg-on); color: var(--ar-ink); box-shadow: var(--ar-shadow); }
-.audit-rd .ar-segmented button .pip { font-size: 11px; font-family: var(--ar-mono); color: var(--ar-ink-3); }
-
-/* botones */
-.audit-rd .ar-btn {
-  border: 1px solid var(--ar-border-strong); background: var(--ar-surface); color: var(--ar-ink); border-radius: 9px;
-  padding: 8px 13px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px;
-  transition: .15s; cursor: pointer;
-}
-.audit-rd .ar-btn:hover { background: var(--ar-surface-3); }
-.audit-rd .ar-btn:disabled { opacity: .6; cursor: default; }
-.audit-rd .ar-btn.primary { background: var(--ar-accent); color: var(--ar-accent-ink); border-color: var(--ar-accent); }
-.audit-rd .ar-btn.primary:hover { filter: brightness(1.06); background: var(--ar-accent); }
-
-/* stacks / cards / generic */
-.audit-rd .ar-stack { display: flex; flex-direction: column; gap: 11px; }
-.audit-rd .ar-card { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg); box-shadow: var(--ar-shadow); padding: 15px 18px; }
-.audit-rd .ar-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; color: var(--ar-ink-3); }
-.audit-rd .ar-eyebrow.accent { color: var(--ar-accent); }
-.audit-rd .ar-card-title { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0 0; }
-.audit-rd .ar-card-head { display: flex; align-items: flex-start; gap: 11px; padding-bottom: 13px; margin-bottom: 18px; border-bottom: 1px solid var(--ar-border); }
-.audit-rd .ar-card-head .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; flex: none; background: color-mix(in oklab, var(--ar-accent) 12%, transparent); color: var(--ar-accent); }
-.audit-rd .ar-metaline { font-size: 12.5px; color: var(--ar-ink-3); }
-.audit-rd .ar-metaline b { color: var(--ar-ink-2); }
-.audit-rd .ar-empty { text-align: center; padding: 60px 20px; color: var(--ar-ink-3); background: var(--ar-surface); border: 1px dashed var(--ar-border); border-radius: var(--ar-r); }
-.audit-rd .ar-empty .big { font-size: 17px; font-weight: 700; color: var(--ar-ink-2); margin-bottom: 6px; }
-
-/* metrics */
-.audit-rd .ar-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 11px; }
-.audit-rd .ar-metric { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); padding: 14px 16px; box-shadow: var(--ar-shadow); }
-.audit-rd .ar-metric .lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--ar-ink-3); margin-bottom: 8px; }
-.audit-rd .ar-metric .big { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
-.audit-rd .ar-metric .big.sm { font-size: 17px; }
-.audit-rd .ar-metric .big .suf { font-size: 14px; color: var(--ar-ink-3); font-weight: 600; }
-.audit-rd .split-bar { display: flex; height: 10px; border-radius: 20px; overflow: hidden; margin-top: 12px; background: var(--ar-track); }
-.audit-rd .split-bar .p { background: var(--ar-accent); }
-.audit-rd .split-bar .t { background: var(--ar-s2-fg); }
-.audit-rd .split-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--ar-ink-2); }
-.audit-rd .split-legend.center { justify-content: center; }
-.audit-rd .split-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 6px; }
-.audit-rd .split-legend .li-p, .audit-rd .split-legend .li-ac { background: var(--ar-accent); }
-.audit-rd .split-legend .li-t { background: var(--ar-s2-fg); }
-.audit-rd .split-legend .li-ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
-
-/* fortalezas / oportunidades */
-.audit-rd .ar-fo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; align-items: start; }
-.audit-rd .ar-fo { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r-lg); box-shadow: var(--ar-shadow); padding: 15px 18px; }
-.audit-rd .ar-fo .fo-head { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 800; margin-bottom: 10px; }
-.audit-rd .ar-fo .fo-head .ic { width: 27px; height: 27px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; }
-.audit-rd .ar-fo.str .ic { background: var(--ar-s4-bg); color: var(--ar-s4-fg); }
-.audit-rd .ar-fo.opp .ic { background: var(--ar-s2-bg); color: var(--ar-s2-fg); }
-.audit-rd .ar-fo .fo-item { padding: 9px 0; border-top: 1px solid var(--ar-border); }
-.audit-rd .ar-fo .fo-item:first-of-type { border-top: none; }
-.audit-rd .ar-fo .fo-item .t { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-.audit-rd .ar-fo .fo-item .d { font-size: 12.5px; line-height: 1.45; color: var(--ar-ink-2); }
-
-/* compare chart */
-.audit-rd .ar-ia-toolbar, .audit-rd .ar-acad-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.audit-rd .ar-sort { display: inline-flex; gap: 2px; background: var(--ar-surface-3); border-radius: 9px; padding: 3px; }
-.audit-rd .ar-sort button { border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ar-ink-2); padding: 6px 11px; border-radius: 7px; cursor: pointer; }
-.audit-rd .ar-sort button.on { background: var(--ar-seg-on); color: var(--ar-ink); box-shadow: var(--ar-shadow); }
-.audit-rd .ar-compare { display: flex; align-items: flex-end; gap: 16px; height: 150px; padding: 14px 6px 0; }
-.audit-rd .cmp-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; cursor: pointer; }
-.audit-rd .cmp-bars { display: flex; gap: 5px; align-items: flex-end; height: 100%; width: 100%; justify-content: center; }
-.audit-rd .cmp-bar { width: 26px; border-radius: 6px 6px 0 0; position: relative; transition: height .5s; min-height: 2px; }
-.audit-rd .cmp-bar.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
-.audit-rd .cmp-bar.ac { background: var(--ar-accent); }
-.audit-rd .cmp-bar .v { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; font-family: var(--ar-mono); color: var(--ar-ink-2); font-weight: 700; }
-.audit-rd .cmp-pend { align-self: flex-end; color: var(--ar-ink-3); font-size: 11px; font-family: var(--ar-mono); }
-.audit-rd .cmp-x { font-size: 12px; font-weight: 700; color: var(--ar-ink-2); }
-.audit-rd .cmp-col.current .cmp-x { color: var(--ar-accent); }
-
-/* IA criterion cards */
-.audit-rd .ar-crit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 11px; }
-.audit-rd .ar-crit {
-  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); padding: 13px 15px;
-  display: flex; flex-direction: column; gap: 8px; box-shadow: var(--ar-shadow); position: relative; overflow: hidden;
-}
-.audit-rd .ar-crit::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ar-edge, transparent); }
-.audit-rd .ar-crit.bc-1 { --ar-edge: var(--ar-s1-fg); --ar-barc: var(--ar-s1-fg); }
-.audit-rd .ar-crit.bc-2 { --ar-edge: var(--ar-s2-fg); --ar-barc: var(--ar-s2-fg); }
-.audit-rd .ar-crit.bc-3 { --ar-edge: var(--ar-s3-fg); --ar-barc: var(--ar-s3-fg); }
-.audit-rd .ar-crit.bc-4 { --ar-edge: var(--ar-s4-fg); --ar-barc: var(--ar-s4-fg); }
-.audit-rd .ar-crit.bc-5 { --ar-edge: var(--ar-s5-fg); --ar-barc: var(--ar-s5-fg); }
-.audit-rd .ar-crit .crit-top { display: flex; align-items: flex-start; gap: 10px; }
-.audit-rd .ar-crit .num { font-family: var(--ar-mono); font-size: 12px; color: var(--ar-ink-3); font-weight: 600; padding-top: 2px; }
-.audit-rd .ar-crit .crit-title { font-size: 13.5px; font-weight: 700; flex: 1; line-height: 1.25; margin: 0; }
-.audit-rd .ar-crit .score-badge { font-family: var(--ar-mono); font-size: 11.5px; font-weight: 700; border-radius: 7px; padding: 3px 9px; white-space: nowrap; }
-.audit-rd .score-badge.sv-1 { background: var(--ar-s1-bg); color: var(--ar-s1-fg); }
-.audit-rd .score-badge.sv-2 { background: var(--ar-s2-bg); color: var(--ar-s2-fg); }
-.audit-rd .score-badge.sv-3 { background: var(--ar-s3-bg); color: var(--ar-s3-fg); }
-.audit-rd .score-badge.sv-4 { background: var(--ar-s4-bg); color: var(--ar-s4-fg); }
-.audit-rd .score-badge.sv-5 { background: var(--ar-s5-bg); color: var(--ar-s5-fg); }
-.audit-rd .ar-crit .scorebar { display: flex; gap: 4px; }
-.audit-rd .ar-crit .scorebar i { height: 5px; flex: 1; border-radius: 20px; background: var(--ar-track); }
-.audit-rd .ar-crit .scorebar i.fill { background: var(--ar-barc); }
-.audit-rd .ar-crit .crit-text { font-size: 12.5px; line-height: 1.5; color: var(--ar-ink-2); margin: 0; }
-.audit-rd .ar-crit .stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
-.audit-rd .ar-crit .stamp { font-family: var(--ar-mono); font-size: 11px; color: var(--ar-ink-2); background: var(--ar-surface-3); border: 1px solid var(--ar-border); border-radius: 6px; padding: 2px 7px; }
-
-/* rubrica academica */
-.audit-rd .ar-acad-prog { text-align: right; }
-.audit-rd .ar-acad-prog .big { font-family: var(--ar-mono); font-size: 18px; font-weight: 800; }
-.audit-rd .ar-rub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; align-items: start; }
-.audit-rd .ar-rub-cat { background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-r); box-shadow: var(--ar-shadow); overflow: hidden; }
-.audit-rd .ar-rub-cat .rc-head { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid var(--ar-border); }
-.audit-rd .ar-rub-cat .rc-head h3 { font-size: 13.5px; font-weight: 800; margin: 0; flex: 1; }
-.audit-rd .ar-rub-cat .rc-prog { font-family: var(--ar-mono); font-size: 12px; font-weight: 700; color: var(--ar-ink-2); }
-.audit-rd .ar-rub-cat .rc-bar { height: 4px; background: var(--ar-track); }
-.audit-rd .ar-rub-cat .rc-bar > i { display: block; height: 100%; background: var(--ar-accent); transition: width .4s; }
-.audit-rd .rub-row { display: flex; align-items: flex-start; gap: 11px; padding: 10px 15px; border-top: 1px solid var(--ar-border); cursor: pointer; transition: background .12s; user-select: none; }
-.audit-rd .rub-row:hover { background: var(--ar-surface-2); }
-.audit-rd .rub-row .cbx { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--ar-border-strong); flex: none; margin-top: 1px; display: grid; place-items: center; transition: .15s; color: transparent; font-size: 10px; }
-.audit-rd .rub-row.on .cbx { background: var(--ar-accent); border-color: var(--ar-accent); color: var(--ar-accent-ink); }
-.audit-rd .rub-row .rtext { font-size: 13px; line-height: 1.45; color: var(--ar-ink); }
-.audit-rd .rub-row.on .rtext { color: var(--ar-ink-2); }
-
-/* rubrica historica: se lee, no se marca */
-.audit-rd .ar-rub-legacy { display: flex; align-items: flex-start; gap: 11px; padding: 13px 15px; font-size: 13px; line-height: 1.45; color: var(--ar-ink-2); }
-.audit-rd .ar-rub-legacy > i { color: var(--ar-accent); margin-top: 2px; }
-.audit-rd .ar-rub-grid.is-readonly .rub-row { cursor: default; }
-.audit-rd .ar-rub-grid.is-readonly .rub-row:hover { background: transparent; }
-
-/* save bar */
-.audit-rd .ar-savebar {
-  position: sticky; bottom: 0; z-index: 5; margin-top: 2px;
-  background: color-mix(in oklab, var(--ar-surface) 88%, transparent); backdrop-filter: blur(10px);
-  border: 1px solid var(--ar-border); border-radius: var(--ar-r); box-shadow: var(--ar-shadow-lg);
-  display: flex; align-items: center; gap: 16px; padding: 12px 18px; flex-wrap: wrap;
-}
-.audit-rd .ar-savebar .prog-text { font-size: 14px; font-weight: 600; }
-.audit-rd .ar-savebar .prog-text b { font-family: var(--ar-mono); }
-.audit-rd .ar-savebar .ar-saved { font-size: 12px; color: var(--ar-ink-3); }
-
-/* ---- General: cobertura, tabla, veredicto ---- */
-.audit-rd .ar-chart-hint { margin: 4px 0 8px; }
-.audit-rd .ar-coverage { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--ar-border); }
-.audit-rd .cov-item { display: flex; flex-direction: column; gap: 7px; }
-.audit-rd .cov-head { display: flex; align-items: center; justify-content: space-between; }
-.audit-rd .cov-name { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ar-ink-2); }
-.audit-rd .cov-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
-.audit-rd .cov-dot.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
-.audit-rd .cov-dot.ac { background: var(--ar-accent); }
-.audit-rd .cov-count { font-size: 12.5px; font-weight: 700; color: var(--ar-ink-2); }
-.audit-rd .cov-bar { height: 8px; border-radius: 20px; background: var(--ar-track); overflow: hidden; }
-.audit-rd .cov-bar > i { display: block; height: 100%; border-radius: 20px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
-.audit-rd .cov-bar > i.ia { background: color-mix(in oklab, var(--ar-accent) 60%, var(--ar-surface)); }
-.audit-rd .cov-bar > i.ac { background: var(--ar-accent); }
-.audit-rd .ar-warn { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 12.5px; color: var(--ar-s2-fg); background: var(--ar-s2-bg); border-radius: 8px; padding: 9px 12px; }
-
-.audit-rd .ar-table-card { padding: 18px 0 6px; }
-.audit-rd .ar-table-card .ar-eyebrow { padding: 0 22px 12px; }
-.audit-rd .ar-table-scroll { overflow-x: auto; }
-.audit-rd .ar-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.audit-rd .ar-table thead th {
-  text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ar-ink-3);
-  padding: 8px 16px; border-bottom: 1px solid var(--ar-border); white-space: nowrap;
-}
-.audit-rd .ar-table tbody td { padding: 9px 14px; border-bottom: 1px solid var(--ar-border); color: var(--ar-ink-2); white-space: nowrap; }
-.audit-rd .ar-table tbody tr:last-child td { border-bottom: none; }
-.audit-rd .ar-table tbody tr.current { background: color-mix(in oklab, var(--ar-accent) 6%, transparent); }
-.audit-rd .ar-table .td-s { font-weight: 700; color: var(--ar-ink); }
-.audit-rd .ar-table .num { font-weight: 600; color: var(--ar-ink); }
-.audit-rd .ar-muted { color: var(--ar-ink-3); font-size: 12.5px; }
-.audit-rd .ar-table .score-badge { font-size: 12px; font-weight: 700; border-radius: 7px; padding: 3px 9px; }
-.audit-rd .ar-table .score-badge.strong { font-size: 13px; }
-.audit-rd .ar-verdict { font-size: 11px; font-weight: 800; letter-spacing: .05em; }
-.audit-rd .ar-verdict.sv-1 { color: var(--ar-s1-fg); }
-.audit-rd .ar-verdict.sv-2 { color: var(--ar-s2-fg); }
-.audit-rd .ar-verdict.sv-3 { color: var(--ar-s3-fg); }
-.audit-rd .ar-verdict.sv-4 { color: var(--ar-s4-fg); }
-.audit-rd .ar-verdict.sv-5 { color: var(--ar-s5-fg); }
-.audit-rd .ar-footer-note { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ar-ink-3); margin: 2px 0 0; }
-
-@media (max-width: 1100px) {
-  .audit-rd .ar-fo-grid, .audit-rd .ar-rub-grid { grid-template-columns: 1fr; }
-  .audit-rd .ar-coverage { grid-template-columns: 1fr; }
-}
-
-/* ---- DARK (CoreUI) ---- */
-[data-coreui-theme="dark"] .audit-rd {
-  --ar-surface: #1d1a17;
-  --ar-surface-2: #221e1b;
-  --ar-surface-3: #2a2521;
-  --ar-border: #2f2a26;
-  --ar-border-strong: #423b35;
-  --ar-ink: #f6f3ef;
-  --ar-ink-2: #b0a99f;
-  --ar-ink-3: #7d756b;
-  --ar-track: #2a2521;
-  --ar-seg-on: #3b342d;
-  --ar-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-  --ar-shadow-lg: 0 14px 40px -14px rgba(0, 0, 0, .6);
-  --ar-s1-bg: #3a1c1a; --ar-s1-fg: #f0a39b;
-  --ar-s2-bg: #392713; --ar-s2-fg: #f2c179;
-  --ar-s3-bg: #1c2c4a; --ar-s3-fg: #9cc0f5;
-  --ar-s4-bg: #163020; --ar-s4-fg: #82dca0;
-  --ar-s5-bg: #0f2e26; --ar-s5-fg: #6fd9b6;
-}
-
-</style>
-
-<style>
-/* MODAL IA (no-scoped: el modal se teleporta a <body> y no recibe
-   los selectores [data-v-xxxx] de scoped). Prefijo "aam-" para evitar
-   colisiones con clases globales. */
-.aula-ai-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(20, 20, 15, 0.55);
-  backdrop-filter: blur(4px);
-  display: grid; place-items: center;
-  z-index: 10000; padding: 20px;
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-.aula-ai-modal {
-  background: white; border-radius: 14px;
-  width: 100%; max-width: 720px;
-  max-height: 90vh; display: flex; flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  color: #14140F;
-}
-.aam-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 16px 22px; border-bottom: 1px solid #E8E8E3;
-}
-.aam-head h3 { margin: 4px 0 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
-.aam-eyebrow {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 700; color: #4F46E5;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.aam-close {
-  width: 30px; height: 30px; border-radius: 7px;
-  border: 1px solid #E8E8E3; background: white;
-  color: #6F6F66; cursor: pointer;
-  display: grid; place-items: center;
-}
-.aam-close:hover { background: #FAFAF8; color: #14140F; }
-
-.aam-body { padding: 18px 22px; overflow: auto; }
-.aam-intro {
-  font-size: 13px; color: #3A3A33; margin: 0 0 16px;
-  line-height: 1.55;
-}
-
-.aam-field { margin-bottom: 16px; }
-.aam-field-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; margin-bottom: 6px;
-}
-.aam-field label {
-  display: block; font-size: 11.5px; font-weight: 600;
-  color: #6F6F66; text-transform: uppercase; letter-spacing: 0.04em;
-}
-.aam-upload-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 7px;
-  background: #FAFAF8; border: 1px solid #E8E8E3;
-  font-size: 11.5px; font-weight: 500; color: #3A3A33;
-  cursor: pointer; text-transform: none; letter-spacing: 0;
-}
-.aam-upload-btn:hover { background: #F1F3F5; border-color: #D4D4CC; }
-.aam-field textarea {
-  width: 100%; resize: vertical; min-height: 160px;
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 12px; line-height: 1.5;
-  padding: 10px 12px; border: 1px solid #E8E8E3; border-radius: 8px;
-  background: #FAFAF8; color: #14140F; outline: none;
-}
-.aam-field textarea:focus { background: white; border-color: #6F6F66; }
-.aam-field input[type="file"] { font-size: 12px; padding: 6px 0; }
-.aam-hint { display: block; margin-top: 5px; font-size: 11px; color: #6F6F66; }
-
-.aam-error {
-  background: #FEECEC; color: #B91C1C;
-  padding: 9px 12px; border-radius: 8px;
-  font-size: 12.5px; margin-top: 8px;
-  display: flex; align-items: center; gap: 6px;
-}
-
-.aam-foot {
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding: 14px 22px; border-top: 1px solid #E8E8E3;
-}
-.aam-foot .btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 14px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  border: 1px solid #E8E8E3; background: white;
-  color: #3A3A33; cursor: pointer;
-}
-.aam-foot .btn:hover:not(:disabled) { background: #FAFAF8; }
-.aam-foot .btn.primary { background: var(--we-navy, #002060); color: white; border-color: var(--we-navy, #002060); }
-.aam-foot .btn.primary:hover:not(:disabled) { background: var(--we-navy-dark, #001540); }
-.aam-foot .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-/* Importar notas finales: lista de alumnos con casilla de nota */
-.imp-list {
-  border: 1px solid #E8E8E3; border-radius: 10px;
-  max-height: 52vh; overflow-y: auto;
-}
-.imp-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px 12px; border-bottom: 1px solid #F0F0EB;
-}
-.imp-row:last-child { border-bottom: none; }
-.imp-num { font-size: 11px; color: #9C9C93; }
-.imp-name { flex: 1; font-size: 13px; font-weight: 500; color: #3A3A33; }
-.imp-cur { font-size: 11.5px; color: #9C9C93; min-width: 34px; text-align: right; }
-.imp-row input {
-  width: 68px; padding: 5px 8px; text-align: center;
-  border: 1px solid #E8E8E3; border-radius: 7px;
-  font-size: 13px; font-weight: 600; color: #3A3A33; background: white;
-}
-.imp-row input:focus { outline: none; border-color: var(--we-navy, #002060); }
-.imp-row input.bad { border-color: #B91C1C; color: #B91C1C; }
-[data-coreui-theme="dark"] .imp-list { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .imp-row { border-color: #24241E; }
-[data-coreui-theme="dark"] .imp-name { color: #D4D4CC; }
-[data-coreui-theme="dark"] .imp-row input { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
-
-/* Dark mode */
-[data-coreui-theme="dark"] .aula-ai-modal {
-  background: #1A1A14; color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .aula-ai-modal .aam-head,
-[data-coreui-theme="dark"] .aula-ai-modal .aam-foot { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .aula-ai-modal .aam-close,
-[data-coreui-theme="dark"] .aula-ai-modal .aam-upload-btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aula-ai-modal .aam-field textarea { background: #1F1F1A; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .aula-ai-modal .aam-foot .btn { background: #1F1F1A; border-color: #2A2A22; color: #D4D4CC; }
-[data-coreui-theme="dark"] .aula-ai-modal .aam-foot .btn.primary { background: var(--we-navy, #002060); color: #fff; border-color: #2f4a8a; }
 </style>

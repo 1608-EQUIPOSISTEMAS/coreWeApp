@@ -183,7 +183,7 @@ const props = defineProps({
   maxSize: { type: Number, default: 20 } // MB por defecto
 })
 
-const emit = defineEmits(['update:modelValue', 'error'])
+const emit = defineEmits(['update:modelValue', 'error', 'uploading'])
 
 // Inyecciones directas en el componente
 const integrationService = inject(ServiceKeys.Integration)
@@ -226,6 +226,8 @@ async function processUpload(file) {
   }
 
   loading.value = true
+  // El padre bloquea su Guardar mientras sube: sin esto se guardaba sin la URL.
+  emit('uploading', true)
   
   try {
     // Llamada al servicio directamente aquí
@@ -241,6 +243,7 @@ async function processUpload(file) {
     emit('error', error)
   } finally {
     loading.value = false
+    emit('uploading', false)
   }
 }
 </script>

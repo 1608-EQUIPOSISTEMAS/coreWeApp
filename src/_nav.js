@@ -187,6 +187,15 @@ export default [
         roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
+        // Recuperado el 06/10/26: se había borrado junto con los reportes que
+        // reemplazó Plan Comercial, pero este (ventas por canal) no tenía reemplazo.
+        component: 'CNavItem',
+        name: 'Marketing - Gestión',
+        to: '/comercial/RptMktProduct',
+        submodule: 'MARKETING_GESTION',
+        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
+      },
+      {
         component: 'CNavItem',
         name: 'Reporte Comercial',
         to: '/comercial/reporte',

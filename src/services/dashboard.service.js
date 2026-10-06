@@ -50,6 +50,12 @@ async getDetailLeads(payload) {
     const response = (await api.post('/dashboard/detailsales', payload)).data;
     return response.data;
   }
+  // Comercial > Marketing - Gestión. payload: { year, month, advisor? } → { advisors, weeks }
+  async ventasCanal(payload) {
+    const response = (await api.post('/dashboard/ventas-canal', payload)).data;
+    return response.data;
+  }
+
   // Embudo consultas -> ventas por edición y canal (Gerencia).
   // payload: { year, month_num } → { items, canales, totales }
   async gerenciaFunnel(payload) {

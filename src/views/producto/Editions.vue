@@ -1,690 +1,646 @@
 <template>
-  <div class="exec-shell">
+  <div class="ds-page ed-page">
 
-    <!-- ══════════════ MASTHEAD ══════════════ -->
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text">
-            <span class="brand-eyebrow">Gestión Académica &amp; Operaciones</span>
-            <h1 class="brand-title" @click="reloadSchedule()" style="cursor:pointer;" title="Recargar">
-              {{ hasActiveFilters ? 'Resultados Históricos' : 'Cronograma Mensual' }}
-            </h1>
-          </div>
-        </div>
-
-        <!-- ── ACADEMICA: controles inline en la misma fila ── -->
-        <template v-if="isAcademica && !hasActiveFilters">
-          <div class="masthead-inline-filters">
-            <div class="filter-period-nav">
-              <button type="button" class="filter-nav-btn" @click="changeMonth(-1)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <select v-model.number="selectedMonth" @change="fetchSchedule" class="exec-select" style="min-width:100px;">
-                <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
-              </select>
-              <select v-model.number="selectedYear" @change="fetchSchedule" class="exec-select" style="min-width:62px;">
-                <option :value="2024">2024</option>
-                <option :value="2025">2025</option>
-                <option :value="2026">2026</option>
-              </select>
-              <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-            <div class="filter-sep"></div>
-            <button
-              type="button" class="btn-exec btn-exec-sm"
-              :class="onlyCursos === 'all' ? 'btn-exec-ghost' : 'btn-exec-teal'"
-              @click="cycleVista()"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              {{ onlyCursos === 'all' ? 'Todos' : onlyCursos === 'courses' ? 'Solo Cursos' : 'Solo Programas' }}
-              <span v-if="onlyCursos !== 'all'" class="btn-exec-dot"></span>
-            </button>
-            <button
-              type="button" class="btn-exec btn-exec-sm"
-              :class="onlyActivos ? 'btn-exec-teal' : 'btn-exec-ghost'"
-              @click="onlyActivos = !onlyActivos"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Activo
-              <span v-if="onlyActivos" class="btn-exec-dot"></span>
-            </button>
-            <div class="filter-sep"></div>
-            <MultiSelect
-              v-model="columnFilters.business_line"
-              :items="catalogs.businessLineList"
-              label-key="description"
-              value-key="id"
-              placeholder="Línea…"
-              style="min-width:130px;"
-            />
-            <div class="filter-sep"></div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">SEM</span>
-              <span class="inline-kpi-value">{{ schedules.length }}</span>
-            </div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">EDIC.</span>
-              <span class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
-            </div>
-          </div>
-        </template>
-
-        <!-- ── Botones de accion. ACADEMICA solo ve Historial. ── -->
-        <div class="masthead-actions">
-          <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></svg>
-            Historial
-          </button>
-          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasActiveFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showFilterModal = true">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            Filtros
-            <span v-if="hasActiveFilters" class="btn-exec-dot"></span>
-          </button>
-          <button v-if="!isAcademica" type="button" class="btn-exec" :class="hasColumnFilters ? 'btn-exec-teal' : 'btn-exec-ghost'" @click="showMetaModal = true">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-            Resumen
-            <span v-if="hasColumnFilters" class="btn-exec-dot"></span>
-          </button>
-          <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-primary" :class="{ 'btn-exec-ghost': !isCompact }" @click="isCompact = !isCompact">
-            <svg v-if="isCompact" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/></svg>
-            {{ isCompact ? 'Normal' : 'Compacto' }}
-          </button>
-        </div>
+    <!-- ══════════════ ENCABEZADO ══════════════ -->
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <!-- El título recarga el mes: atajo histórico de Producto, se conserva. -->
+        <h1 class="ds-title ed-title-reload" title="Recargar" @click="reloadSchedule()">Cronograma</h1>
+        <p class="ds-sub">
+          <template v-if="isTableLoading">Cargando ediciones…</template>
+          <template v-else-if="hasActiveFilters">
+            Resultados históricos — <b>{{ historyList.length }}</b> {{ historyList.length === 1 ? 'edición' : 'ediciones' }}
+          </template>
+          <template v-else>
+            {{ months[selectedMonth - 1] }} {{ selectedYear }} — <b>{{ allScheduleItems.length }}</b> ediciones en {{ schedules.length }} semanas
+            <template v-if="hasColumnFilters"> · {{ filteredSchedules.flatMap(w => w.items || []).length }} con los filtros de columna</template>
+          </template>
+        </p>
       </div>
 
-      <!-- Filtros / Periodo / KPIs en línea — solo para NO academica -->
-      <div v-if="!isAcademica" class="masthead-filters">
-        <template v-if="!hasActiveFilters">
-          <div class="filter-group">
-            <label class="filter-label">PERÍODO</label>
-            <div class="filter-period-nav">
-              <button type="button" class="filter-nav-btn" @click="changeMonth(-1)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <select v-model.number="selectedMonth" @change="fetchSchedule" class="exec-select" style="min-width:110px;">
-                <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
-              </select>
-              <select v-model.number="selectedYear" @change="fetchSchedule" class="exec-select" style="min-width:68px;">
-                <option :value="2024">2024</option>
-                <option :value="2025">2025</option>
-                <option :value="2026">2026</option>
-              </select>
-              <button type="button" class="filter-nav-btn" @click="changeMonth(1)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="filter-sep"></div>
-          <div class="filter-group">
-            <label class="filter-label">LÍNEA</label>
-            <MultiSelect
-              v-model="columnFilters.business_line"
-              :items="catalogs.businessLineList"
-              label-key="description"
-              value-key="id"
-              placeholder="Todas…"
-            />
-          </div>
-          <div class="filter-spacer"></div>
-          <div class="masthead-kpis">
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">SEMANAS</span>
-              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
-              <span v-else class="inline-kpi-value">{{ schedules.length }}</span>
-            </div>
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">EDICIONES</span>
-              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
-              <span v-else class="inline-kpi-value accent">{{ allScheduleItems.length }}</span>
-            </div>
-            <div class="inline-kpi" v-if="hasColumnFilters" style="margin-right:20px;">
-              <span class="inline-kpi-label">FILTRADAS</span>
-              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
-              <span v-else class="inline-kpi-value" style="color:var(--gold-400)">{{ filteredSchedules.flatMap(w => w.items || []).length }}</span>
-            </div>
-          </div>
-        </template>
-        <template v-else>
-          <div class="filter-chips-bar">
-            <BaseFilterChips :items="formattedActiveFilters" @remove="removeFilter($event)" @clear-all="clearAllFilters" />
-          </div>
-          <div class="filter-spacer"></div>
-          <div class="masthead-kpis" style="margin-right:20px;">
-            <div class="inline-kpi">
-              <span class="inline-kpi-label">RESULTADOS</span>
-              <span v-if="isTableLoading" class="skel-kpi" style="width:32px"></span>
-              <span v-else class="inline-kpi-value accent">{{ historyList.length }}</span>
-            </div>
-          </div>
-        </template>
+      <!-- ACADEMICA solo ve Historial; el resto de acciones es de Producto. -->
+      <div class="ds-head-actions">
+        <button type="button" class="btn-exec btn-exec-ghost" @click="openGlobalHistory">
+          <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial
+        </button>
+        <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-outline ed-toggle" :class="{ 'is-on': hasActiveFilters }" @click="showFilterModal = true">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i> Filtros
+          <span v-if="hasActiveFilters" class="ed-dot" aria-hidden="true"></span>
+        </button>
+        <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-outline ed-toggle" :class="{ 'is-on': hasColumnFilters }" @click="showMetaModal = true">
+          <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Resumen
+          <span v-if="hasColumnFilters" class="ed-dot" aria-hidden="true"></span>
+        </button>
+        <button v-if="!isAcademica" type="button" class="btn-exec btn-exec-outline" @click="isCompact = !isCompact">
+          <i v-if="isCompact" class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+          <i v-else class="fa-solid fa-down-left-and-up-right-to-center" aria-hidden="true"></i>
+          {{ isCompact ? 'Normal' : 'Compacto' }}
+        </button>
+        <button v-if="!hasActiveFilters && $hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-primary" @click="openEditModal(null)">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva edición
+        </button>
       </div>
     </header>
 
-    <!-- ══════════════ CUERPO ══════════════ -->
-     
-    <main class="exec-body pb-5 mb-5">
-      
-      <div class="view-table">
-        
-        <div class="table-shell">
-          <div class="table-responsive-custom">
-            
-            <table class="exec-table" :class="{ 'exec-table-dense': isCompact }">
-              <thead>
-                <!-- FILA 1: Grupos principales -->
-                <tr class="thead-group">
-                  <th class="th-act" rowspan="2">
-                    <div class="d-flex justify-content-center" v-if="!hasActiveFilters">
-<button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" type="button" class="btn-exec btn-exec-primary btn-exec-xs" @click="openEditModal(null)">
-                        + Nueva
-                      </button>
-                    </div>
-                  </th>
-                  <th v-if="canSeeClassroomLinks" :colspan="CLASSROOM_LINKS.length" class="th-group th-group-e">ACADÉMICA</th>
-                  <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">IDENTIFICACIÓN</th>
-                  <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">CRONOGRAMA</th>
-                  <th colspan="3" class="th-group th-group-c">SEGUIMIENTO</th>
-                  <th colspan="2" class="th-group th-group-d">REFERENCIA</th>
-                </tr>
+    <!-- ══════════════ FILTROS ══════════════ -->
+    <!-- ACADEMICA: período, vista y línea en una sola barra. -->
+    <section v-if="isAcademica && !hasActiveFilters" class="ed-toolbar" aria-label="Filtros del cronograma">
+      <div class="ds-field">
+        <label class="ds-label" for="ed-month-acad">Período</label>
+        <div class="ed-period">
+          <button type="button" class="btn-icon btn-icon-sm" title="Mes anterior" aria-label="Mes anterior" @click="changeMonth(-1)">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <select id="ed-month-acad" v-model.number="selectedMonth" @change="fetchSchedule" class="ds-input ed-select ed-select--month">
+            <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+          </select>
+          <select v-model.number="selectedYear" @change="fetchSchedule" class="ds-input ed-select ed-select--year" aria-label="Año">
+            <option :value="2024">2024</option>
+            <option :value="2025">2025</option>
+            <option :value="2026">2026</option>
+          </select>
+          <button type="button" class="btn-icon btn-icon-sm" title="Mes siguiente" aria-label="Mes siguiente" @click="changeMonth(1)">
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="ds-field">
+        <span class="ds-label">Vista</span>
+        <div class="ed-period">
+          <button
+            type="button" class="btn-exec btn-exec-outline btn-sm ed-toggle"
+            :class="{ 'is-on': onlyCursos !== 'all' }"
+            @click="cycleVista()"
+          >
+            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+            {{ onlyCursos === 'all' ? 'Todos' : onlyCursos === 'courses' ? 'Solo cursos' : 'Solo programas' }}
+            <span v-if="onlyCursos !== 'all'" class="ed-dot" aria-hidden="true"></span>
+          </button>
+          <button
+            type="button" class="btn-exec btn-exec-outline btn-sm ed-toggle"
+            :class="{ 'is-on': onlyActivos }"
+            @click="onlyActivos = !onlyActivos"
+          >
+            <i class="fa-regular fa-clock" aria-hidden="true"></i>
+            Activo
+            <span v-if="onlyActivos" class="ed-dot" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="ds-field ed-field-line">
+        <span class="ds-label">Línea de negocio</span>
+        <MultiSelect
+          v-model="columnFilters.business_line"
+          :items="catalogs.businessLineList"
+          label-key="description"
+          value-key="id"
+          placeholder="Línea…"
+        />
+      </div>
+    </section>
 
-                <!-- FILA 2: Columnas individuales -->
-                <tr class="thead-sub">
-                  <!-- Académica -->
-                  <template v-if="canSeeClassroomLinks">
-                    <th v-for="link in CLASSROOM_LINKS" :key="link.field" class="ts ts-e text-center" style="min-width:80px;">
-                      <i :class="link.icon" :style="{ color: link.headerColor }"></i> {{ link.header }}
-                    </th>
-                  </template>
-                  <!-- Identificación -->
-                  <th class="ts ts-a">PROGRAMA</th>
-                  <th class="ts ts-a" v-if="!isCompact">DETALLE</th>
-                  <th class="ts ts-a" v-if="isCompact">LÍNEA</th>
-                  <th class="ts ts-a" v-if="isCompact">TIPADO</th>
-                  <th class="ts ts-a text-center" v-if="isCompact">SEG.</th>
-                  <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
+    <!-- Producto: período y línea; en modo histórico, los chips de filtros. -->
+    <section v-if="!isAcademica" class="ed-toolbar" aria-label="Filtros del cronograma">
+      <template v-if="!hasActiveFilters">
+        <div class="ds-field">
+          <label class="ds-label" for="ed-month">Período</label>
+          <div class="ed-period">
+            <button type="button" class="btn-icon btn-icon-sm" title="Mes anterior" aria-label="Mes anterior" @click="changeMonth(-1)">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <select id="ed-month" v-model.number="selectedMonth" @change="fetchSchedule" class="ds-input ed-select ed-select--month">
+              <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+            </select>
+            <select v-model.number="selectedYear" @change="fetchSchedule" class="ds-input ed-select ed-select--year" aria-label="Año">
+              <option :value="2024">2024</option>
+              <option :value="2025">2025</option>
+              <option :value="2026">2026</option>
+            </select>
+            <button type="button" class="btn-icon btn-icon-sm" title="Mes siguiente" aria-label="Mes siguiente" @click="changeMonth(1)">
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="ds-field ed-field-line">
+          <span class="ds-label">Línea de negocio</span>
+          <MultiSelect
+            v-model="columnFilters.business_line"
+            :items="catalogs.businessLineList"
+            label-key="description"
+            value-key="id"
+            placeholder="Todas…"
+          />
+        </div>
+      </template>
+      <template v-else>
+        <div class="ed-chips">
+          <BaseFilterChips :items="formattedActiveFilters" @remove="removeFilter($event)" @clear-all="clearAllFilters" />
+        </div>
+      </template>
+    </section>
 
-                  <!-- Cronograma -->
-                  <th class="ts ts-b text-center">F. INICIO</th>
-                  <th class="ts ts-b text-center" v-if="isCompact">D.P.</th>
-                  <th class="ts ts-b text-center">F. FIN</th>
-                  <th class="ts ts-b" v-if="isCompact">DÍAS CLASE</th>
-                  <th class="ts ts-b">HORARIO</th>
-                  <th class="ts ts-b">DOCENTE</th>
+    <!-- ══════════════ TABLA DE SEMANAS ══════════════ -->
+    <section class="ds-panel ed-table-panel">
+      <div class="ds-table-scroll ed-scroll">
+        <table class="ds-table ds-table--densa ed-grid" :class="{ 'is-compact': isCompact }">
+          <thead>
+            <!-- FILA 1: Grupos principales -->
+            <tr class="thead-group">
+              <th class="th-act" rowspan="2"><span class="visually-hidden">Acciones</span></th>
+              <th v-if="canSeeClassroomLinks" :colspan="CLASSROOM_LINKS.length" class="th-group th-group-e">Académica</th>
+              <th :colspan="isCompact ? 5 : 2" class="th-group th-group-a">Identificación</th>
+              <th :colspan="isCompact ? 6 : 4" class="th-group th-group-b">Cronograma</th>
+              <th colspan="3" class="th-group th-group-c">Seguimiento</th>
+              <th colspan="2" class="th-group th-group-d">Referencia</th>
+            </tr>
 
-                  <!-- Seguimiento -->
-                  <th class="ts ts-c text-center" style="min-width:120px;max-width:200px">FICHA / MEJORA</th>
-                  <th class="ts ts-c text-center" style="min-width:100px;max-width:180px">CONFIRM.</th>
-                  <th class="ts ts-c text-center" style="min-width:64px;" title="Nueva Metodología">N. MET.</th>
+            <!-- FILA 2: Columnas individuales -->
+            <tr class="thead-sub">
+              <!-- Académica -->
+              <template v-if="canSeeClassroomLinks">
+                <th v-for="link in CLASSROOM_LINKS" :key="link.field" class="ts ts-e text-center ed-w-link">
+                  <i :class="link.icon" :style="{ color: link.headerColor }" aria-hidden="true"></i> {{ link.header }}
+                </th>
+              </template>
+              <!-- Identificación -->
+              <th class="ts ts-a">Programa</th>
+              <th class="ts ts-a" v-if="!isCompact">Detalle</th>
+              <th class="ts ts-a" v-if="isCompact">Línea</th>
+              <th class="ts ts-a" v-if="isCompact">Tipado</th>
+              <th class="ts ts-a text-center" v-if="isCompact">Seg.</th>
+              <th class="ts ts-a text-center" v-if="isCompact">D.A.</th>
 
-                  <!-- Referencia -->
-                  <th class="ts ts-d">OBSERVACIÓN</th>
-                  <th class="ts ts-d">EDICIÓN</th>
-                </tr>
+              <!-- Cronograma -->
+              <th class="ts ts-b text-center">F. inicio</th>
+              <th class="ts ts-b text-center" v-if="isCompact">D.P.</th>
+              <th class="ts ts-b text-center">F. fin</th>
+              <th class="ts ts-b" v-if="isCompact">Días clase</th>
+              <th class="ts ts-b">Horario</th>
+              <th class="ts ts-b">Docente</th>
 
-                <!-- FILA 3: Filtros — toda columna filtra desde aca, ningun
-                     control vive en el encabezado. Solo aplica a la vista
-                     mensual: en modo historico manda el modal de filtros. -->
-                <tr v-if="!hasActiveFilters" class="thead-filter">
-                  <td class="tf"></td><!-- acciones: el th de arriba solo abarca 2 filas -->
+              <!-- Seguimiento -->
+              <th class="ts ts-c text-center ed-w-ficha">Ficha / mejora</th>
+              <th class="ts ts-c text-center ed-w-confirm">Confirm.</th>
+              <th class="ts ts-c text-center ed-w-met" title="Nueva Metodología">N. met.</th>
 
-                  <template v-if="canSeeClassroomLinks">
-                    <td v-for="link in CLASSROOM_LINKS" :key="'f-' + link.field" class="tf"></td>
-                  </template>
+              <!-- Referencia -->
+              <th class="ts ts-d">Observación</th>
+              <th class="ts ts-d">Edición</th>
+            </tr>
 
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" />
-                  </td>
-                  <td class="tf" v-if="!isCompact">
-                    <ColumnFilterDropdown column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" />
-                  </td>
-                  <td class="tf" v-if="isCompact">
-                    <ColumnFilterDropdown column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.business_line_label || item.program_line_business" v-model="columnFilters.line" />
-                  </td>
-                  <td class="tf" v-if="isCompact">
-                    <ColumnFilterDropdown column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" />
-                  </td>
-                  <td class="tf" v-if="isCompact">
-                    <ColumnFilterDropdown column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" />
-                  </td>
-                  <td class="tf" v-if="isCompact"></td><!-- D.A. -->
+            <!-- FILA 3: Filtros — toda columna filtra desde aca, ningun
+                 control vive en el encabezado. Solo aplica a la vista
+                 mensual: en modo historico manda el modal de filtros. -->
+            <tr v-if="!hasActiveFilters" class="thead-filter">
+              <td class="tf"></td><!-- acciones: el th de arriba solo abarca 2 filas -->
 
-                  <td class="tf">
-                    <BaseDatePicker v-model="columnFilters.start_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Inicio..." />
-                  </td>
-                  <td class="tf" v-if="isCompact"></td><!-- D.P. -->
-                  <td class="tf">
-                    <BaseDatePicker v-model="columnFilters.end_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Fin..." />
-                  </td>
-                  <td class="tf" v-if="isCompact"></td><!-- DÍAS CLASE -->
-                  <td class="tf"></td><!-- HORARIO -->
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" />
-                  </td>
+              <template v-if="canSeeClassroomLinks">
+                <td v-for="link in CLASSROOM_LINKS" :key="'f-' + link.field" class="tf"></td>
+              </template>
 
-                  <td class="tf"></td><!-- FICHA / MEJORA -->
-                  <td class="tf"></td><!-- CONFIRM. -->
-                  <td class="tf"></td><!-- N. MET. -->
+              <td class="tf">
+                <ColumnFilterDropdown column-label="Programa" :all-items="allScheduleItems" :value-extractor="(item) => item.program_abreviature" v-model="columnFilters.program" />
+              </td>
+              <td class="tf" v-if="!isCompact">
+                <ColumnFilterDropdown column-label="Detalle" :all-items="allScheduleItems" :value-extractor="(item) => `${item.version_code} ${item.cat_segment}`" v-model="columnFilters.detail" />
+              </td>
+              <td class="tf" v-if="isCompact">
+                <ColumnFilterDropdown column-label="Línea" :all-items="allScheduleItems" :value-extractor="(item) => item.business_line_label || item.program_line_business" v-model="columnFilters.line" />
+              </td>
+              <td class="tf" v-if="isCompact">
+                <ColumnFilterDropdown column-label="Tipado" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_course_category_label" v-model="columnFilters.type" />
+              </td>
+              <td class="tf" v-if="isCompact">
+                <ColumnFilterDropdown column-label="Seg" :all-items="allScheduleItems" :value-extractor="(item) => item.cat_segment" v-model="columnFilters.segment" />
+              </td>
+              <td class="tf" v-if="isCompact"></td><!-- D.A. -->
 
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" />
-                  </td>
-                  <td class="tf">
-                    <ColumnFilterDropdown column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" />
-                  </td>
-                </tr>
-              </thead>
+              <td class="tf">
+                <BaseDatePicker v-model="columnFilters.start_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Inicio..." />
+              </td>
+              <td class="tf" v-if="isCompact"></td><!-- D.P. -->
+              <td class="tf">
+                <BaseDatePicker v-model="columnFilters.end_date" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="F. Fin..." />
+              </td>
+              <td class="tf" v-if="isCompact"></td><!-- DÍAS CLASE -->
+              <td class="tf"></td><!-- HORARIO -->
+              <td class="tf">
+                <ColumnFilterDropdown column-label="Docente" :all-items="allScheduleItems" :value-extractor="(item) => item.instructor" v-model="columnFilters.instructor" />
+              </td>
 
-              <!-- ── TBODY: Vista Mensual ── -->
-              <tbody v-if="!hasActiveFilters">
-                <template v-if="isTableLoading">
-                  <tr v-for="n in 8" :key="'sk-'+n" class="skeleton-row">
-                    <td :colspan="tableColCount">
-                      <div class="sk-cell" :style="{ width: (40 + (n * 17) % 45) + '%' }"></div>
-                    </td>
-                  </tr>
-                </template>
-                <template v-else>
-                <template v-for="(week, wIndex) in filteredSchedules" :key="week.schedule">
-                  <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
-                    <td :colspan="tableColCount" class="week-header-cell">
-                      <div class="week-header-inner">
-                        <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        <span class="week-label">Semana {{ week.schedule }}</span>
-                        <span class="week-badge">{{ week.items.length }} Ediciones</span>
-                      </div>
-                    </td>
-                  </tr>
+              <td class="tf"></td><!-- FICHA / MEJORA -->
+              <td class="tf"></td><!-- CONFIRM. -->
+              <td class="tf"></td><!-- N. MET. -->
 
-                  <tr
-                    v-for="(e, eIndex) in week.items"
-                    :key="e.edition_num_id"
-                    v-show="week.isOpen"
-                    class="tbody-row"
-                    :class="[
-                      e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
-                      { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
-                    ]"
-                    @contextmenu.prevent="handleFamilyFilter(e)"
+              <td class="tf">
+                <ColumnFilterDropdown column-label="Observación" :all-items="allScheduleItems" :value-extractor="(item) => item.notes" v-model="columnFilters.notes" />
+              </td>
+              <td class="tf">
+                <ColumnFilterDropdown column-label="Código Edición" :all-items="allScheduleItems" :value-extractor="(item) => `${item.global_code} ${item.specific_code}`" v-model="columnFilters.edition_code" />
+              </td>
+            </tr>
+          </thead>
+
+          <!-- ── TBODY: Vista Mensual ── -->
+          <tbody v-if="!hasActiveFilters">
+            <template v-if="isTableLoading">
+              <tr v-for="n in 8" :key="'sk-'+n" class="skeleton-row">
+                <td :colspan="tableColCount">
+                  <span class="ds-skel" :style="{ width: (40 + (n * 17) % 45) + '%' }"></span>
+                </td>
+              </tr>
+            </template>
+            <template v-else>
+            <template v-for="week in filteredSchedules" :key="week.schedule">
+              <tr v-if="week.items.length > 0" class="week-header-row" :class="{ 'is-collapsed': !week.isOpen }" @click="week.isOpen = !week.isOpen">
+                <td :colspan="tableColCount" class="week-header-cell">
+                  <div class="week-header-inner">
+                    <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    <span class="week-label">Semana {{ week.schedule }}</span>
+                    <span class="ds-chip week-badge">{{ week.items.length }} ediciones</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                v-for="e in week.items"
+                :key="e.edition_num_id"
+                v-show="week.isOpen"
+                class="tbody-row"
+                :class="[
+                  e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '',
+                  { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }
+                ]"
+                @contextmenu.prevent="handleFamilyFilter(e)"
+              >
+
+              <td class="td-act">
+                <div class="action-btns">
+                  <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios" aria-label="Historial de cambios">
+                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                  </button>
+                  <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol" aria-label="Árbol">
+                   <i class="fa-solid fa-book-bookmark" aria-hidden="true"></i>
+                  </button>
+                  <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar" aria-label="Editar">
+                    <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen" aria-hidden="true"></i>
+                    <i v-else class="fa-solid fa-sitemap" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </td>
+
+                <!-- ACADÉMICA -->
+                <template v-if="canSeeClassroomLinks">
+                  <td
+                    v-for="link in CLASSROOM_LINKS"
+                    :key="link.field"
+                    class="td-e td-e-lac"
+                    :class="{ 'td-e-editing': isEditingLink(e, link.field) }"
                   >
-
-                  <td class="td-act">
-                    <div class="action-btns">
-                      <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                        <i class="fa-solid fa-hamsa"></i>
-                      </button>
-                      <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                      </button>
-                      <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
-                       <i class="fa-solid fa-book-bookmark"></i>
-                      </button>
-                      <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
-                        <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
-                        <i v-else class="fa-solid fa-sitemap"></i>
-                      </button>
-                    </div>
-                  </td>
-
-                    <!-- ACADÉMICA -->
-                    <template v-if="canSeeClassroomLinks">
-                      <td
-                        v-for="link in CLASSROOM_LINKS"
-                        :key="link.field"
-                        class="td-e td-e-lac"
-                        :class="{ 'td-e-editing': isEditingLink(e, link.field) }"
-                      >
-                        <template v-if="e.program_type === 'Curso'">
-                          <div v-if="isEditingLink(e, link.field)" class="lac-inline-edit">
-                            <input
-                              ref="linkInputEl"
-                              class="lac-inline-input"
-                              v-model="editingLink.value"
-                              :placeholder="link.placeholder"
-                              type="url"
-                              @keyup.enter="saveEditLink(e)"
-                              @keyup.escape="cancelEditLink()"
-                            />
-                            <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)">
-                              <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
-                            </button>
-                            <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)">
-                              <i class="fa-solid fa-xmark"></i>
-                            </button>
-                          </div>
-                          <div v-else class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
-                            <i :class="[link.icon, 'lac-chip-icon']"></i>
-                            <div class="lac-chip-actions">
-                              <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, link.field)" :title="`Editar link de ${link.label}`">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                              </button>
-                              <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </a>
-                              <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                              </span>
-                            </div>
-                          </div>
-                        </template>
-                        <span v-else class="text-muted small">—</span>
-                      </td>
+                    <template v-if="e.program_type === 'Curso'">
+                      <div v-if="isEditingLink(e, link.field)" class="lac-inline-edit">
+                        <input
+                          ref="linkInputEl"
+                          class="lac-inline-input"
+                          v-model="editingLink.value"
+                          :placeholder="link.placeholder"
+                          type="url"
+                          @keyup.enter="saveEditLink(e)"
+                          @keyup.escape="cancelEditLink()"
+                        />
+                        <button class="lac-inline-btn lac-inline-btn--save" @click.stop="saveEditLink(e)" :disabled="savingLinkId === e.edition_num_id" title="Guardar (Enter)" aria-label="Guardar link">
+                          <i :class="savingLinkId === e.edition_num_id ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'" aria-hidden="true"></i>
+                        </button>
+                        <button class="lac-inline-btn lac-inline-btn--cancel" @click.stop="cancelEditLink()" title="Cancelar (Esc)" aria-label="Cancelar edición">
+                          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                      <div v-else class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
+                        <i :class="[link.icon, 'lac-chip-icon']" aria-hidden="true"></i>
+                        <div class="lac-chip-actions">
+                          <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="startEditLink(e, link.field)" :title="`Editar link de ${link.label}`" :aria-label="`Editar link de ${link.label}`">
+                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                          </button>
+                          <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`" :aria-label="`Abrir ${link.label}`">
+                            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                          </a>
+                          <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                          </span>
+                        </div>
+                      </div>
                     </template>
+                    <span v-else class="ed-muted">—</span>
+                  </td>
+                </template>
 
-                    <!-- IDENTIFICACIÓN -->
-                    <td class="td-a td-prog">
-                      <div class="prog-name">
-                        <span class="prog-link" style="cursor:pointer;" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
-                          <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
-                          <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
+                <!-- IDENTIFICACIÓN -->
+                <td class="td-a td-prog">
+                  <div class="prog-name">
+                    <span class="prog-link" @click="filterDirectly({ program_version_id: e.program_version_id, program_version_label: e.program_abreviature })">
+                      <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                      <div v-if="isCompact" class="text-truncate ed-trunc-prog" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
+                    </span>
+                  </div>
+                  <div class="prog-sub ed-sub" v-if="!isCompact">
+                    <span class="ed-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                    <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                  </div>
+                </td>
+
+                <td class="td-a ed-w-detail" v-if="!isCompact">
+                  <div class="ed-sub">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
+                  <div class="ed-sub">{{ (e.business_line_label || e.program_line_business) ? 'Línea: ' + (e.business_line_label || e.program_line_business) : '—' }}</div>
+                </td>
+
+                <td class="td-a ed-w-line" v-if="isCompact">
+                  {{ e.business_line_label || e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                </td>
+                <td class="td-a text-center" v-if="isCompact">
+                  <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
+                </td>
+                <td class="td-a text-center" v-if="isCompact">
+                  <span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span>
+                </td>
+                <td class="td-a text-center ed-mono ed-sub" v-if="isCompact">{{ e.calc_da }}</td>
+
+                <!-- CRONOGRAMA -->
+                <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) ? 1060 : 'inherit' }">
+                  <div class="date-link" title="Click derecho: proyección"
+                    @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
+                    @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
+                  >{{ formatDate(e.start_date) }}</div>
+                  <div class="ed-sub" v-if="!isCompact">
+                    {{ 'CA: ' + e.calc_da || 0 }}
+                    <span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span>
+                  </div>
+                  <!-- GAP POPOVER -->
+                  <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="schedule-preview-popover pop--w360" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                    <div class="popover-header-exec">
+                      <span>Proyección: {{ e.program_abreviature }}</span>
+                      <button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activeGapPreviewId = null">&times;</button>
+                    </div>
+                    <div class="popover-content">
+                      <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
+                    </div>
+                  </div>
+                  <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
+                </td>
+
+                <td class="td-b text-center ed-mono ed-sub" v-if="isCompact">{{ e.calc_dp }}</td>
+
+                <td class="td-b text-center">
+                  <div class="ed-mono ed-cell-sm">{{ formatDate(e.end_date) }}</div>
+                </td>
+
+                <td class="td-b ed-cell-sm" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
+
+                <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
+                  <div v-if="!e.schedules || e.schedules.length === 0" class="ed-sub">—</div>
+                  <div v-else-if="e.schedules.length === 1">
+                    <div class="ed-strong-sm" v-if="!isCompact">{{ e.schedules[0]?.day_combination_label || '—' }}</div>
+                    <div class="ed-sub">{{ e.schedules[0]?.hour_combination_label }}</div>
+                  </div>
+                  <div v-else-if="!isCompact" class="schedule-dropdown-wrapper">
+                    <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                      <div>
+                        <div class="ed-strong-sm">{{ e.schedules[0].day_combination_label }}</div>
+                        <div class="ed-sub text-truncate ed-trunc-90">{{ e.schedules[0].hour_combination_label }}</div>
+                      </div>
+                      <span class="ds-pill info">+{{ e.schedules.length - 1 }}</span>
+                    </div>
+                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover">
+                      <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" aria-label="Cerrar" @click.stop="activeScheduleDropdown = null">&times;</button></div>
+                      <div class="popover-body-sm">
+                        <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item">
+                          <div class="ed-schedule-day">{{ sch.day_combination_label }}</div>
+                          <div class="ed-sub">{{ sch.hour_combination_label }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                  </div>
+                </td>
+
+                <td class="td-b ed-w-instr">
+                  <div class="ed-cell-sm text-truncate ed-trunc-160" :title="e.instructor">{{ e.instructor || '—' }}</div>
+                </td>
+
+                <!-- SEGUIMIENTO -->
+                <td class="td-c text-center">
+                  <template v-if="!isAcademica">
+                    <label class="exec-switch scale-75" title="Ficha / Expediente">
+                      <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span>
+                    </label>
+                    <label class="exec-switch scale-75" title="Mejora / Upgrade">
+                      <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
+                    </label>
+                  </template>
+                  <template v-else>
+                    <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
+                    <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
+                  </template>
+                </td>
+                <td class="td-c text-center">
+                  <template v-if="!isAcademica">
+                    <label class="exec-switch scale-75" title="Pre-Confirmación">
+                      <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
+                    </label>
+                    <label class="exec-switch scale-75" title="Confirmación">
+                      <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
+                    </label>
+                  </template>
+                  <template v-else>
+                    <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
+                    <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
+                  </template>
+                </td>
+                <td class="td-c text-center">
+                  <template v-if="!isAcademica">
+                    <label class="exec-switch scale-75" title="Nueva Metodología">
+                      <input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span>
+                    </label>
+                  </template>
+                  <template v-else>
+                    <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
+                  </template>
+                </td>
+
+                <!-- REFERENCIA -->
+                <td class="td-d">
+<textarea
+  v-if="!isCompact"
+  class="exec-textarea"
+  rows="2"
+  v-model="e.notes"
+  @focus="captureOriginalNote(e)"
+  @blur="$hasRole(['ADMIN', 'PRODUCTO']) ? updateQuickNotes(e) : null"
+  :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
+  placeholder="…"
+></textarea>
+                  <div class="ed-cell-sm text-truncate ed-trunc-160" v-if="isCompact" :title="e.notes">{{ e.notes  }}</div>
+                </td>
+                <td class="td-d">
+                  <div class="ed-mono ed-strong-sm" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
+                  <div class="ed-sub" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                    <span v-if="!isCompact && e.specific_code">A: </span><b v-if="e.specific_code">{{ e.specific_code }}</b>
+                  </div>
+                  <div v-if="e.program_type_alias != 'we_program_type_course'" class="ed-sub ed-xs">
+                    <b v-if="e.clasification">{{ e.clasification }}</b>
+                  </div>
+                </td>
+              </tr>
+            </template>
+            </template>
+          </tbody>
+
+          <!-- ── TBODY: Vista Histórica ── -->
+          <tbody v-if="hasActiveFilters">
+            <template v-if="isTableLoading">
+              <tr v-for="n in 8" :key="'skh-'+n" class="skeleton-row">
+                <td :colspan="tableColCount">
+                  <span class="ds-skel" :style="{ width: (40 + (n * 17) % 45) + '%' }"></span>
+                </td>
+              </tr>
+            </template>
+            <template v-else>
+            <tr
+              v-for="e in historyList"
+              :key="e.edition_num_id"
+              class="tbody-row"
+              :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
+              @contextmenu.prevent="handleFamilyFilter(e)"
+            >
+              <td class="td-act">
+                <div class="action-btns">
+                  <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios" aria-label="Historial de cambios">
+                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                  </button>
+                  <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol" aria-label="Árbol">
+                   <i class="fa-solid fa-book-bookmark" aria-hidden="true"></i>
+                  </button>
+                  <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar" aria-label="Editar">
+                    <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen" aria-hidden="true"></i>
+                    <i v-else class="fa-solid fa-sitemap" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+              </td>
+
+              <!-- Mismos links que la vista mensual, pero sin edicion en linea:
+                   el listado historico (sp_edition_list) no los devuelve, asi
+                   que aca el lapiz manda al modal de la edicion. -->
+              <template v-if="canSeeClassroomLinks">
+                <td v-for="link in CLASSROOM_LINKS" :key="link.field" class="td-e td-e-lac">
+                  <template v-if="e.program_type === 'Curso'">
+                    <div class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
+                      <i :class="[link.icon, 'lac-chip-icon']" aria-hidden="true"></i>
+                      <div class="lac-chip-actions">
+                        <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" :title="`Editar link de ${link.label}`" :aria-label="`Editar link de ${link.label}`">
+                          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                        </button>
+                        <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`" :aria-label="`Abrir ${link.label}`">
+                          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        </a>
+                        <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
+                          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                         </span>
                       </div>
-                      <div class="prog-sub text-muted small" v-if="!isCompact">
-                        <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                        <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                    </div>
+                  </template>
+                  <span v-else class="ed-muted">—</span>
+                </td>
+              </template>
+
+              <td class="td-a td-prog">
+                <div class="prog-name">
+                  <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
+                  <div v-if="isCompact" class="text-truncate ed-trunc-prog" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
+                </div>
+                <div class="prog-sub ed-sub" v-if="!isCompact">
+                  <span class="ed-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
+                  <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
+                </div>
+              </td>
+
+              <td class="td-a ed-w-detail" v-if="!isCompact">
+                <div class="ed-sub">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
+                <div class="ed-sub">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
+              </td>
+              <td class="td-a ed-w-line-hist" v-if="isCompact">{{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b></td>
+              <td class="td-a text-center" v-if="isCompact"><span class="tipo-tag">{{ e.cat_course_category_label }}</span></td>
+              <td class="td-a text-center" v-if="isCompact"><span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span></td>
+              <td class="td-a text-center ed-mono ed-sub" v-if="isCompact">{{ e.calc_da }}</td>
+
+              <td class="td-b">
+                <div class="date-link">{{ formatDate(e.start_date) }}</div>
+                <div class="ed-sub" v-if="!isCompact">{{ 'CA: ' + e.calc_da || 0 }}<span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span></div>
+              </td>
+              <td class="td-b text-center ed-mono ed-sub" v-if="isCompact">{{ e.calc_dp }}</td>
+              <td class="td-b text-center"><div class="ed-mono ed-cell-sm">{{ formatDate(e.end_date) }}</div></td>
+              <td class="td-b ed-cell-sm" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
+
+              <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
+                <div v-if="!e.schedules || e.schedules.length === 0" class="ed-sub">—</div>
+                <div v-else-if="e.schedules.length === 1">
+                  <div class="ed-strong-sm" v-if="!isCompact">{{ e.schedules[0].day_combination_label || '—' }}</div>
+                  <div class="ed-sub">{{ e.schedules[0].hour_combination_label }}</div>
+                </div>
+                <div v-else-if="!isCompact" class="schedule-dropdown-wrapper">
+                  <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
+                    <div>
+                      <div class="ed-strong-sm">{{ e.schedules[0].day_combination_label }}</div>
+                      <div class="ed-sub text-truncate ed-trunc-90">{{ e.schedules[0].hour_combination_label }}</div>
+                    </div>
+                    <span class="ds-pill info">+{{ e.schedules.length - 1 }}</span>
+                  </div>
+                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover">
+                    <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" aria-label="Cerrar" @click.stop="activeScheduleDropdown = null">&times;</button></div>
+                    <div class="popover-body-sm">
+                      <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item">
+                        <div class="ed-schedule-day">{{ sch.day_combination_label }}</div>
+                        <div class="ed-sub">{{ sch.hour_combination_label }}</div>
                       </div>
-                    </td>
+                    </div>
+                  </div>
+                  <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
+                </div>
+              </td>
 
-                    <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
-                      <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
-                      <div class="small text-muted">{{ (e.business_line_label || e.program_line_business) ? 'Línea: ' + (e.business_line_label || e.program_line_business) : '—' }}</div>
-                    </td>
+              <td class="td-b ed-w-instr">
+                <div class="ed-cell-sm text-truncate ed-trunc-160" :title="e.instructor">{{ e.instructor || '—' }}</div>
+              </td>
 
-                    <td class="td-a" v-if="isCompact" style="min-width:120px;max-width:300px;">
-                      {{ e.business_line_label || e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                    </td>
-                    <td class="td-a text-center" v-if="isCompact">
-                      <span class="tipo-tag">{{ e.cat_course_category_label }}</span>
-                    </td>
-                    <td class="td-a text-center" v-if="isCompact">
-                      <span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span>
-                    </td>
-                    <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
-
-                    <!-- CRONOGRAMA -->
-                    <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeGapPreviewId === ('week_' + e.edition_num_id) ? 1060 : 'inherit' }">
-                      <div class="date-link" title="Click derecho: proyección"
-                        @click.stop="filterDirectly({ date_from: e.start_date, date_to: e.start_date, date_range: 'true' })"
-                        @contextmenu.prevent.stop="toggleGapPreview($event, 'week_' + e.edition_num_id, e.program_version_id, e, true)"
-                      >{{ formatDate(e.start_date) }}</div>
-                      <div class="small text-muted" v-if="!isCompact">
-                        {{ 'CA: ' + e.calc_da || 0 }}
-                        <span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span>
-                      </div>
-                      <!-- GAP POPOVER -->
-                      <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:360px;left:0;">
-                        <div class="popover-header-exec">
-                          <span>Proyección: {{ e.program_abreviature }}</span>
-                          <button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button>
-                        </div>
-                        <div class="popover-content">
-                          <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
-                        </div>
-                      </div>
-                      <div v-if="activeGapPreviewId === ('week_' + e.edition_num_id)" class="click-overlay" @click="activeGapPreviewId = null"></div>
-                    </td>
-
-                    <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
-
-                    <td class="td-b text-center">
-                      <div class="small text-mono">{{ formatDate(e.end_date) }}</div>
-                    </td>
-
-                    <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
-
-                    <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
-                      <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-                      <div v-else-if="e.schedules.length === 1">
-                        <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0]?.day_combination_label || '—' }}</div>
-                        <div class="small text-muted">{{ e.schedules[0]?.hour_combination_label }}</div>
-                      </div>
-                      <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
-                        <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                          <div>
-                            <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
-                            <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
-                          </div>
-                          <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
-                        </div>
-                        <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                          <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
-                          <div class="popover-body-sm">
-                            <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
-                              <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
-                              <div class="text-muted small">{{ sch.hour_combination_label }}</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
-                      </div>
-                    </td>
-
-                    <td class="td-b" style="min-width:100px;max-width:130px;">
-                      <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
-                    </td>
-
-                    <!-- SEGUIMIENTO -->
-                    <td class="td-c text-center">
-                      <template v-if="!isAcademica">
-                        <label class="exec-switch scale-75" title="Ficha / Expediente">
-                          <input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span>
-                        </label>
-                        <label class="exec-switch scale-75" title="Mejora / Upgrade">
-                          <input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span>
-                        </label>
-                      </template>
-                      <template v-else>
-                        <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
-                        <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
-                      </template>
-                    </td>
-                    <td class="td-c text-center">
-                      <template v-if="!isAcademica">
-                        <label class="exec-switch scale-75" title="Pre-Confirmación">
-                          <input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span>
-                        </label>
-                        <label class="exec-switch scale-75" title="Confirmación">
-                          <input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span>
-                        </label>
-                      </template>
-                      <template v-else>
-                        <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
-                        <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
-                      </template>
-                    </td>
-                    <td class="td-c text-center">
-                      <template v-if="!isAcademica">
-                        <label class="exec-switch scale-75" title="Nueva Metodología">
-                          <input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span>
-                        </label>
-                      </template>
-                      <template v-else>
-                        <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
-                      </template>
-                    </td>
-
-                    <!-- REFERENCIA -->
-                    <td class="td-d">
-<textarea
-  v-if="!isCompact"
-  class="exec-textarea"
-  rows="2"
-  v-model="e.notes"
-  @focus="captureOriginalNote(e)"
-  @blur="$hasRole(['ADMIN', 'PRODUCTO']) ? updateQuickNotes(e) : null"
-  :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
-  placeholder="…"
-></textarea>
-                      <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes  }}</div>
-                    </td>
-                    <td class="td-d">
-                      <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
-                      <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
-                        <span v-if="!isCompact && e.specific_code">A: </span><b v-if="e.specific_code">{{ e.specific_code }}</b>
-                      </div>
-                      <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
-                        <b v-if="e.clasification">{{ e.clasification }}</b>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-                </template>
-              </tbody>
-
-              <!-- ── TBODY: Vista Histórica ── -->
-              <tbody v-if="hasActiveFilters">
-                <template v-if="isTableLoading">
-                  <tr v-for="n in 8" :key="'skh-'+n" class="skeleton-row">
-                    <td :colspan="tableColCount">
-                      <div class="sk-cell" :style="{ width: (40 + (n * 17) % 45) + '%' }"></div>
-                    </td>
-                  </tr>
+              <td class="td-c text-center">
+                <template v-if="!isAcademica">
+                  <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span></label>
+                  <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
                 </template>
                 <template v-else>
-                <tr
-                  v-for="(e, eIndex) in historyList"
-                  :key="e.edition_num_id"
-                  class="tbody-row"
-                  :class="[e.cat_segment ? 'row-segment-' + e.cat_segment.toLowerCase() : '', { 'row-pressing': longPressTimer && currentPressId === e.edition_num_id }]"
-                  @contextmenu.prevent="handleFamilyFilter(e)"
-                >
-                  <td class="td-act">
-                    <div class="action-btns">
-                      <button class="action-btn action-btn-view" @click.stop="openObjectivesModal(e)" title="Objetivos">
-                        <i class="fa-solid fa-hamsa"></i>
-                      </button>
-                      <button v-if="!isAcademica" class="action-btn action-btn-audit" @click.stop="openAuditHistory(e.edition_num_id)" title="Historial de cambios">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                      </button>
-                      <button :class="['action-btn', (e.tree_detail.length == 0 && e.program_type != 'Curso') ? 'action-btn-neutral' : 'action-btn-tree']" @click.stop="openTreeModal(e)" title="Árbol">
-                       <i class="fa-solid fa-book-bookmark"></i>
-                      </button>
-                      <button v-if="$hasRole(['ADMIN', 'PRODUCTO'])" class="action-btn" :class="e.program_type === 'Curso' ? 'action-btn-edit' : 'action-btn-hier'" @click.stop="openEditModal(e)" title="Editar">
-                        <i v-if="e.program_type === 'Curso'"  class="fa-solid fa-file-pen"></i>
-                        <i v-else class="fa-solid fa-sitemap"></i>
-                      </button>
-                    </div>
+                  <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
+                  <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
+                </template>
+              </td>
+              <td class="td-c text-center">
+                <template v-if="!isAcademica">
+                  <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
+                  <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
+                </template>
+                <template v-else>
+                  <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
+                  <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
+                </template>
+              </td>
+              <td class="td-c text-center">
+                <template v-if="!isAcademica">
+                  <label class="exec-switch scale-75" title="Nueva Metodología"><input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span></label>
+                </template>
+                <template v-else>
+                  <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
+                </template>
+              </td>
 
-                  </td>
-
-                  <!-- Mismos links que la vista mensual, pero sin edicion en linea:
-                       el listado historico (sp_edition_list) no los devuelve, asi
-                       que aca el lapiz manda al modal de la edicion. -->
-                  <template v-if="canSeeClassroomLinks">
-                    <td v-for="link in CLASSROOM_LINKS" :key="link.field" class="td-e td-e-lac">
-                      <template v-if="e.program_type === 'Curso'">
-                        <div class="lac-chip" :class="[link.chipClass, { 'lac-chip--no-link': !e[link.field] }]">
-                          <i :class="[link.icon, 'lac-chip-icon']"></i>
-                          <div class="lac-chip-actions">
-                            <button class="lac-chip-btn lac-chip-btn--edit" @click.stop="openEditModal(e)" :title="`Editar link de ${link.label}`">
-                              <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <a v-if="e[link.field]" :href="e[link.field]" target="_blank" class="lac-chip-btn lac-chip-btn--go" :title="`Abrir ${link.label}`">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </a>
-                            <span v-else class="lac-chip-btn lac-chip-btn--go lac-chip-btn--empty" title="Sin link configurado">
-                              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </span>
-                          </div>
-                        </div>
-                      </template>
-                      <span v-else class="text-muted small">—</span>
-                    </td>
-                  </template>
-
-                  <td class="td-a td-prog">
-                    <div class="prog-name">
-                      <span v-if="!isCompact">{{ e.program_abreviature || '—' }}</span>
-                      <div v-if="isCompact" class="text-truncate" style="min-width:40px;max-width:160px;" :title="e.program_abreviature">{{ e.program_abreviature || '—' }}</div>
-                    </div>
-                    <div class="prog-sub text-muted small" v-if="!isCompact">
-                      <span class="text-mono">{{ e.version_code }}</span>&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b>
-                      <span class="float-end">Seg: {{ e.cat_segment }} {{ e.cat_course_category_alias ? ('| ' + e.cat_course_category_label) : '' }}</span>
-                    </div>
-                  </td>
-
-                  <td class="td-a" v-if="!isCompact" style="min-width:80px;max-width:120px;">
-                    <div class="small text-muted">{{ e.program_type != null ? 'Tipo: ' + e.program_type : '' }}</div>
-                    <div class="small text-muted">{{ e.program_line_business ? 'Línea: ' + e.program_line_business : '—' }}</div>
-                  </td>
-                  <td class="td-a" v-if="isCompact" style="min-width:10px;max-width:300px;">{{ e.program_line_business }}&nbsp;<b>{{ '(' + e.program_sessions + ')' }}</b></td>
-                  <td class="td-a text-center" v-if="isCompact"><span class="tipo-tag">{{ e.cat_course_category_label }}</span></td>
-                  <td class="td-a text-center" v-if="isCompact"><span class="seg-pill" :class="'seg-' + (e.cat_segment || '').toLowerCase()">{{ e.cat_segment }}</span></td>
-                  <td class="td-a text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_da }}</td>
-
-                  <td class="td-b">
-                    <div class="date-link small">{{ formatDate(e.start_date) }}</div>
-                    <div class="small text-muted" v-if="!isCompact">{{ 'CA: ' + e.calc_da || 0 }}<span class="float-end">{{ 'CP: ' + e.calc_dp || 0 }}</span></div>
-                  </td>
-                  <td class="td-b text-center text-mono small text-muted" v-if="isCompact">{{ e.calc_dp }}</td>
-                  <td class="td-b text-center"><div class="small text-mono">{{ formatDate(e.end_date) }}</div></td>
-                  <td class="td-b small" v-if="isCompact">{{ !e.schedules ? '' : e.schedules[0].day_combination_label }}</td>
-
-                  <td class="td-b position-relative overflow-visible" :style="{ zIndex: activeScheduleDropdown === e.edition_num_id ? 100 : 'auto' }">
-                    <div v-if="!e.schedules || e.schedules.length === 0" class="text-muted small">—</div>
-                    <div v-else-if="e.schedules.length === 1">
-                      <div class="small fw-600 text-dark" v-if="!isCompact">{{ e.schedules[0].day_combination_label || '—' }}</div>
-                      <div class="small text-muted">{{ e.schedules[0].hour_combination_label }}</div>
-                    </div>
-                    <div v-else class="schedule-dropdown-wrapper" v-if="!isCompact">
-                      <div class="d-flex align-items-center justify-content-between gap-1 cursor-pointer" @click.stop="toggleScheduleDropdown(e.edition_num_id)">
-                        <div>
-                          <div class="small fw-600 text-dark">{{ e.schedules[0].day_combination_label }}</div>
-                          <div class="small text-muted text-truncate" style="max-width:90px;">{{ e.schedules[0].hour_combination_label }}</div>
-                        </div>
-                        <span class="pill pill-blue">+{{ e.schedules.length - 1 }}</span>
-                      </div>
-                      <div v-if="activeScheduleDropdown === e.edition_num_id" class="schedule-popover shadow-sm">
-                        <div class="popover-header-sm">Horarios ({{ e.schedules.length }})<button type="button" class="btn-close-xs" @click.stop="activeScheduleDropdown = null">&times;</button></div>
-                        <div class="popover-body-sm">
-                          <div v-for="(sch, sIdx) in e.schedules" :key="sIdx" class="schedule-item mb-2 pb-2 border-bottom border-light">
-                            <div class="fw-bold text-primary small">{{ sch.day_combination_label }}</div>
-                            <div class="text-muted small">{{ sch.hour_combination_label }}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-if="activeScheduleDropdown === e.edition_num_id" class="click-overlay" @click.stop="activeScheduleDropdown = null"></div>
-                    </div>
-                  </td>
-
-                  <td class="td-b" style="min-width:100px;max-width:130px;">
-                    <div class="small text-truncate" style="max-width:160px;" :title="e.instructor">{{ e.instructor || '—' }}</div>
-                  </td>
-
-                  <td class="td-c text-center">
-                    <template v-if="!isAcademica">
-                      <label class="exec-switch scale-75" title="Ficha / Expediente"><input type="checkbox" v-model="e.expedient" @change="updateQuickStatus(e, 'expedient')" :disabled="!$hasRole(['ADMIN', 'PRODUCTO'])" /><span></span></label>
-                      <label class="exec-switch scale-75" title="Mejora / Upgrade"><input type="checkbox" v-model="e.upgrade" @change="updateQuickStatus(e, 'upgrade')" /><span></span></label>
-                    </template>
-                    <template v-else>
-                      <span class="status-dot-ro" :class="e.expedient ? 'dot-ro-on' : 'dot-ro-off'" title="Ficha / Expediente"></span>
-                      <span class="status-dot-ro" :class="e.upgrade ? 'dot-ro-on' : 'dot-ro-off'" title="Mejora / Upgrade"></span>
-                    </template>
-                  </td>
-                  <td class="td-c text-center">
-                    <template v-if="!isAcademica">
-                      <label class="exec-switch scale-75" title="Pre-Confirmación"><input type="checkbox" v-model="e.preconfirmation" @change="updateQuickStatus(e, 'preconfirmation')" /><span></span></label>
-                      <label class="exec-switch scale-75" title="Confirmación"><input type="checkbox" v-model="e.confirmation" @change="updateQuickStatus(e, 'confirmation')" /><span></span></label>
-                    </template>
-                    <template v-else>
-                      <span class="status-dot-ro" :class="e.preconfirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Pre-Confirmación"></span>
-                      <span class="status-dot-ro" :class="e.confirmation ? 'dot-ro-on' : 'dot-ro-off'" title="Confirmación"></span>
-                    </template>
-                  </td>
-                  <td class="td-c text-center">
-                    <template v-if="!isAcademica">
-                      <label class="exec-switch scale-75" title="Nueva Metodología"><input type="checkbox" v-model="e.new_methodology" @change="updateQuickStatus(e, 'new_methodology')" /><span></span></label>
-                    </template>
-                    <template v-else>
-                      <span class="status-dot-ro" :class="e.new_methodology ? 'dot-ro-on' : 'dot-ro-off'" title="Nueva Metodología"></span>
-                    </template>
-                  </td>
-
-                  <td class="td-d">
+              <td class="td-d">
 <textarea
   v-if="!isCompact"
   class="exec-textarea"
@@ -695,328 +651,223 @@
   :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
   placeholder="…"
 ></textarea>
-                    <div class="small text-truncate" v-if="isCompact" style="max-width:160px;" :title="e.notes">{{ e.notes }}</div>
-                  </td>
-                  <td class="td-d">
-                    <div class="text-mono fw-600 small" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
-                    <div class="text-muted small" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
-                      <b v-if="e.specific_code">{{ e.specific_code }}</b>
-                    </div>
-                    <div v-if="e.program_type_alias != 'we_program_type_course'" class="text-muted" style="font-size:0.7rem;">
-                      <b v-if="e.clasification">{{ e.clasification }}</b>
-                    </div>
-                  </td>
-                </tr>
-                </template>
-              </tbody>
-            </table>
-            
-            </div>
-        </div>
-        
+                <div class="ed-cell-sm text-truncate ed-trunc-160" v-if="isCompact" :title="e.notes">{{ e.notes }}</div>
+              </td>
+              <td class="td-d">
+                <div class="ed-mono ed-strong-sm" v-if="!isCompact"><b v-if="e.global_code">{{ e.global_code }}</b></div>
+                <div class="ed-sub" v-if="!isCompact || (isCompact && e.program_type == 'Curso')">
+                  <b v-if="e.specific_code">{{ e.specific_code }}</b>
+                </div>
+                <div v-if="e.program_type_alias != 'we_program_type_course'" class="ed-sub ed-xs">
+                  <b v-if="e.clasification">{{ e.clasification }}</b>
+                </div>
+              </td>
+            </tr>
+            </template>
+          </tbody>
+        </table>
       </div>
-      
-    </main>
+    </section>
 
     <!-- ══════════════ MODALES ══════════════ -->
 
-    <!-- Modal: Historial Global -->
-    <BaseModal v-model="showHistoryModal" title="Historial Global de Cambios" size="xl">
-      <div class="p-3 bg-light ed-modal-body" style="min-height:400px;max-height:80vh;overflow-y:auto;">
-        <div v-if="isLoadingHistory" class="text-center p-5 text-muted">
-          <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
-          <p>Cargando historial…</p>
-        </div>
-        <div v-else-if="!globalHistoryList || globalHistoryList.length === 0" class="text-center p-5 text-muted">
-          <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 opacity-25"></i>
-          <p>No se encontraron registros recientes.</p>
-        </div>
-        <div v-else class="d-flex flex-column gap-3">
-          <div v-for="tx in globalHistoryList" :key="tx.transaction_id" class="card border shadow-sm">
-            <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
-              <div>
-                <span class="fw-bold text-primary"><i class="fa-solid fa-user-circle me-1"></i>{{ tx.user_name || 'Sistema' }}</span>
-                <span class="text-muted small ms-2">{{ formatDate(tx.created_at) }} <span class="text-xs">({{ new Date(tx.created_at).toLocaleTimeString() }})</span></span>
+    <!-- Modal: Resumen / Meta -->
+    <BaseModal v-model="showMetaModal" title="Resumen de programación" size="xl">
+      <div class="ds-stack">
+        <div class="ds-row ds-row--hero">
+          <article class="ds-panel">
+            <header class="ds-panel-head"><h3 class="ds-panel-title">¿En qué líneas de negocio hay ediciones?</h3></header>
+            <div class="ds-panel-body">
+              <div class="lines-grid">
+                <div v-for="(line, idx) in metaSummary.lines" :key="idx" class="line-item" :class="{ 'is-zero': line.count === 0 }">
+                  <div class="line-item__name">{{ line.name }}</div>
+                  <div class="line-item__count">{{ line.count }}</div>
+                </div>
               </div>
-              <span class="badge bg-light text-dark border">ID: {{ tx.transaction_id }}</span>
             </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-sm table-bordered mb-0 small">
-                  <thead class="table-light text-muted">
-                    <tr><th style="width:50px;" class="text-center">Tipo</th><th style="width:80px;">Acción</th><th style="width:250px;">Edición</th><th>Detalle de Cambios</th></tr>
-                  </thead>
+          </article>
+          <article class="ds-panel">
+            <header class="ds-panel-head"><h3 class="ds-panel-title">¿Qué categorías se programaron?</h3></header>
+            <div class="ds-panel-body">
+              <div class="ed-cats">
+                <div v-for="(cat, idx) in metaSummary.categories.filter(c => c.name !== 'Total' && c.name != 'Minicurso')" :key="idx" class="ed-cat">
+                  <div class="ed-cat-row"><span>{{ cat.name }}</span><span class="ed-num">{{ cat.count }}</span></div>
+                  <div class="ds-track"><i :style="{ width: (cat.count / (metaSummary.categories.find(c => c.name === 'Total')?.count || 1) * 100) + '%' }"></i></div>
+                </div>
+              </div>
+            </div>
+            <footer class="ds-panel-foot">
+              <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+              <span>Total programado: <strong class="ed-num">{{ metaSummary.categories.find(c => c.name === 'Total')?.count || 0 }}</strong></span>
+            </footer>
+          </article>
+        </div>
+        <div class="ds-row ds-row--mitad">
+          <article class="ds-panel">
+            <header class="ds-panel-head"><h3 class="ds-panel-title">¿Cómo se clasifican por tipo?</h3></header>
+            <div class="ds-panel-body">
+              <div class="ds-table-scroll">
+                <table class="ds-table ds-table--densa">
+                  <thead><tr><th>Código</th><th>Descripción</th><th class="num">Cant.</th></tr></thead>
                   <tbody>
-                    <tr v-for="(change, idx) in tx.changes" :key="idx">
-                      <td class="text-center align-middle"><span class="badge" :class="change.is_child ? 'bg-info-subtle text-info-emphasis' : 'bg-primary-subtle text-primary-emphasis'">{{ change.is_child ? 'Hijo' : 'Padre' }}</span></td>
-                      <td class="align-middle"><span class="fw-bold" :class="change.action === 'UPDATE' ? 'text-warning' : 'text-success'">{{ change.action }}</span></td>
-                      <td class="align-middle text-muted">{{ change.abbreviation + ' (' + change.global_code + ')' }}</td>
-                      <td class="align-middle">
-                        <div v-if="change.action === 'INSERT'" class="text-muted fst-italic">Registro creado</div>
-                        <div v-else class="d-flex flex-column gap-1">
-                          <div v-for="(diff, field) in change.changed_fields" :key="field" class="d-flex align-items-center gap-2 border-bottom border-light pb-1">
-                            <span class="fw-bold text-dark" style="min-width:100px;">{{ field }}:</span>
-                            <span class="text-danger text-decoration-line-through bg-danger-subtle px-1 rounded">{{ diff.old === null ? 'null' : diff.old }}</span>
-                            <i class="fa-solid fa-arrow-right text-muted" style="font-size:0.7rem;"></i>
-                            <span class="text-success bg-success-subtle px-1 rounded fw-bold">{{ diff.new === null ? 'null' : diff.new }}</span>
-                          </div>
-                        </div>
-                      </td>
+                    <tr v-for="(type, idx) in metaSummary.types" :key="idx">
+                      <td><span class="ds-pill">{{ type.code }}</span></td>
+                      <td>{{ type.description }}</td>
+                      <td class="num ed-num">{{ type.count }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <button class="btn btn-secondary btn-sm" @click="showHistoryModal = false">Cerrar</button>
-      </template>
-    </BaseModal>
-
-    <!-- Modal: Resumen / Meta -->
-    <BaseModal v-model="showMetaModal" title="Resumen de Programación" size="xl">
-      <div class="meta-dashboard p-3">
-        <div class="card border-0 shadow-sm mb-4 overflow-hidden" v-if="!hasActiveFilters">
-          <div class="card-body p-0">
-            <div class="row g-0">
-              <div class="col-md-4 bg-primary text-white p-4 d-flex flex-column justify-content-center align-items-center text-center position-relative">
-                <i class="fa-solid fa-chart-line position-absolute start-0 bottom-0 opacity-25" style="font-size:8rem;transform:translate(-20%,20%);"></i>
-                <h6 class="text-uppercase opacity-75 mb-2 letter-spacing-1">Avance Global</h6>
-                <div class="display-3 fw-bold mb-0">{{ metaSummary.general.percentage }}<small class="fs-4">%</small></div>
-                <div class="progress w-100 bg-white bg-opacity-25 mt-3" style="height:8px;"><div class="progress-bar bg-white" role="progressbar" :style="{ width: metaSummary.general.percentage + '%' }"></div></div>
-              </div>
-              <div class="col-md-8 p-4 d-flex align-items-center bg-white">
-                <div class="row w-100 text-center g-3">
-                  <div class="col-4 border-end">
-                    <div class="text-muted small text-uppercase fw-bold mb-1">Ventas (B2C)</div>
-                    <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.sales }}</div>
-                    <div class="small text-success"><i class="fa-solid fa-user-check me-1"></i>Inscritos</div>
-                  </div>
-                  <div class="col-4 border-end">
-                    <div class="text-muted small text-uppercase fw-bold mb-1">Corporativo (B2B)</div>
-                    <div class="fs-2 fw-bold text-dark">{{ metaSummary.general.b2b }}</div>
-                    <div class="small text-info"><i class="fa-solid fa-building me-1"></i>Empresas</div>
-                  </div>
-                  <div class="col-4">
-                    <div class="text-muted small text-uppercase fw-bold mb-1">Objetivo Total</div>
-                    <div class="fs-2 fw-bold text-secondary">{{ metaSummary.general.target }}</div>
-                    <div class="small text-muted"><i class="fa-solid fa-bullseye me-1"></i>Vacantes</div>
-                  </div>
-                </div>
+          </article>
+          <article class="ds-panel">
+            <header class="ds-panel-head"><h3 class="ds-panel-title">¿Qué acción pide cada segmento?</h3></header>
+            <div class="ds-panel-body">
+              <div class="ds-table-scroll">
+                <table class="ds-table ds-table--densa ed-seg-table">
+                  <thead><tr><th>Seg.</th><th>Acción requerida</th><th class="num">Cant.</th></tr></thead>
+                  <tbody>
+                    <tr :class="'row-segment-' + seg.code.toLowerCase()" v-for="(seg, idx) in metaSummary.segments" :key="idx">
+                      <td><div class="segment-circle">{{ seg.code }}</div></td>
+                      <td>{{ seg.description.replace('*', '') }}</td>
+                      <td class="num ed-num">{{ seg.count }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        </div>
-        <div class="row g-4 mb-4">
-          <div class="col-lg-8">
-            <div class="meta-card h-100">
-              <div class="meta-card__header"><i class="fa-solid fa-layer-group text-primary me-2"></i>Líneas de Negocio</div>
-              <div class="meta-card__body">
-                <div class="lines-grid">
-                  <div v-for="(line, idx) in metaSummary.lines" :key="idx" class="line-item" :class="{ 'is-zero': line.count === 0 }">
-                    <div class="line-item__name">{{ line.name }}</div>
-                    <div class="line-item__count">{{ line.count }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-lg-4">
-            <div class="meta-card h-100">
-              <div class="meta-card__header"><i class="fa-solid fa-chart-pie text-success me-2"></i>Categorías</div>
-              <div class="meta-card__body">
-                <div class="d-flex flex-column gap-3">
-                  <div v-for="(cat, idx) in metaSummary.categories.filter(c => c.name !== 'Total' && c.name != 'Minicurso')" :key="idx">
-                    <div class="d-flex justify-content-between mb-1 small fw-bold"><span>{{ cat.name }}</span><span>{{ cat.count }}</span></div>
-                    <div class="progress" style="height:6px;"><div class="progress-bar bg-info" role="progressbar" :style="{ width: (cat.count / (metaSummary.categories.find(c => c.name === 'Total')?.count || 1) * 100) + '%' }"></div></div>
-                  </div>
-                  <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
-                    <span class="text-muted small text-uppercase fw-bold">Total Programado</span>
-                    <span class="badge bg-dark fs-6">{{ metaSummary.categories.find(c => c.name === 'Total')?.count || 0 }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row g-4">
-          <div class="col-md-6">
-            <div class="meta-card h-100">
-              <div class="meta-card__header"><i class="fa-solid fa-tags text-warning me-2"></i>Clasificación por Tipo</div>
-              <div class="meta-card__body p-0">
-                <div class="table-responsive">
-                  <table class="table table-sm table-hover mb-0 align-middle">
-                    <thead class="table-light"><tr><th class="px-3">Código</th><th>Descripción</th><th class="text-center px-3">Cant.</th></tr></thead>
-                    <tbody>
-                      <tr v-for="(type, idx) in metaSummary.types" :key="idx">
-                        <td class="px-3"><span class="badge rounded-pill bg-light text-dark border border-secondary fw-bold">{{ type.code }}</span></td>
-                        <td><small class="text-muted lh-1 d-block">{{ type.description }}</small></td>
-                        <td class="text-center fw-bold text-primary px-3">{{ type.count }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="meta-card h-100">
-              <div class="meta-card__header"><i class="fa-solid fa-list-ol text-danger me-2"></i>Segmentación Operativa</div>
-              <div class="meta-card__body p-0">
-                <div class="table-responsive">
-                  <table class="table table-sm table-hover mb-0 align-middle">
-                    <thead class="table-light"><tr><th class="px-3">Seg.</th><th>Acción Requerida</th><th class="text-center px-3">Cant.</th></tr></thead>
-                    <tbody>
-                      <tr :class="'row-segment-' + seg.code.toLowerCase()" v-for="(seg, idx) in metaSummary.segments" :key="idx">
-                        <td class="px-3"><div class="segment-circle">{{ seg.code }}</div></td>
-                        <td><small class="text-muted lh-1 d-block">{{ seg.description.replace('*', '') }}</small></td>
-                        <td class="text-center fw-bold text-dark px-3">{{ seg.count }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+          </article>
         </div>
       </div>
     </BaseModal>
 
     <!-- Modal: Filtros -->
-    <BaseModal v-model="showFilterModal" title="Filtrar Cronograma" size="lg">
-      <div class="p-3 row ed-modal-body">
-        <div class="row g-2 mb-3">
-          <label class="form-label small fw-bold">Rango Fecha inicio</label>
+    <BaseModal v-model="showFilterModal" title="Filtrar cronograma" size="lg">
+      <div class="ds-form-grid ed-filter-grid">
+        <div class="ds-field ed-span-all">
+          <label class="ds-label">Rango de fecha de inicio</label>
           <BaseDatePicker v-model="filterForm.range_string" :config="{ mode: 'range', dateFormat: 'Y-m-d' }" placeholder="Seleccione rango (Desde a Hasta)" @on-change="handleRangeFilterChange" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Buscar Programa</label>
+        <div class="ds-field">
+          <label class="ds-label">Buscar programa</label>
           <SearchSelect v-model="filterForm.program_version_id" mode="remote" :fetcher="q => programService.programVersionCaller({ q })" label-field="program_type_for_iu" value-field="program_version_id" sublabel-field="version_code" placeholder="Buscar programa…" :cache="false" :view-open="6" :model-label="filterForm.program_version_label" @change="(opt) => filterForm.program_version_label = opt ? opt.program_type_for_iu : ''" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Docente</label>
+        <div class="ds-field">
+          <label class="ds-label">Docente</label>
           <MultiSelect v-model="filterForm.instructores_seleccionados" mode="remote" :fetcher="(q) => instructorService.instructorCaller({ q })" :debounce-ms="400" labelKey="full_name" valueKey="instructor_id" placeholder="Buscar docentes…" modalTitle="Seleccionar Docentes" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Línea de Negocio</label>
+        <div class="ds-field">
+          <label class="ds-label">Línea de negocio</label>
           <MultiSelect v-model="filterForm.category_ids" :items="catalogs.catLines" label-key="description" value-key="id" placeholder="LINEAS…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Línea de Negocio (Segmento)</label>
-          <MultiSelect v-model="filterForm.business_line_ids" :items="catalogs.businessLineList" label-key="description" value-key="id" placeholder="EN VIVO, ONLINE, B2B…" />
-        </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Categoría</label>
+        <div class="ds-field">
+          <label class="ds-label">Categoría</label>
           <MultiSelect v-model="filterForm.type_program_ids" :items="catalogs.catCategories" label-key="description" value-key="id" placeholder="CATEGORIAS…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Seguimiento Edición</label>
+        <div class="ds-field">
+          <label class="ds-label">Seguimiento de edición</label>
           <MultiSelect v-model="filterForm.course_category_ids" :items="catalogs.catTypes" label-key="description" value-key="id" placeholder="S. EDICIONES…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Segmento</label>
+        <div class="ds-field">
+          <label class="ds-label">Segmento</label>
           <MultiSelect v-model="filterForm.segment_ids" :items="catalogs.catSegments" label-key="description" value-key="id" placeholder="SEGMENTOS…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Días</label>
+        <div class="ds-field">
+          <label class="ds-label">Días</label>
           <MultiSelect v-model="filterForm.combination_days_ids" :items="catalogs.dayCombinationList" label-key="description" value-key="id" placeholder="DIAS…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Horas</label>
+        <div class="ds-field">
+          <label class="ds-label">Horas</label>
           <MultiSelect v-model="filterForm.hour_combination_ids" :items="catalogs.hourCombinationList" label-key="description" value-key="id" placeholder="HORARIOS…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Modalidad</label>
+        <div class="ds-field">
+          <label class="ds-label">Modalidad</label>
           <MultiSelect v-model="filterForm.model_modality_ids" :items="catalogs.modalityList" label-key="description" value-key="id" placeholder="MODALIDADES…" />
         </div>
-        <div class="mb-3 col-6">
-          <label class="form-label small fw-bold">Clasificación</label>
-          <input type="text" class="form-control form-control-sm" v-model="filterForm.clasification" placeholder="UNQ" />
+        <div class="ds-field">
+          <label class="ds-label" for="ed-filter-clasif">Clasificación</label>
+          <input id="ed-filter-clasif" type="text" class="ds-input" v-model="filterForm.clasification" placeholder="UNQ" />
         </div>
       </div>
       <template #footer>
-        <div class="d-flex justify-content-end w-100 gap-2">
-          <button class="btn btn-outline-secondary btn-sm" @click="showFilterModal = false">Cancelar</button>
-          <button class="btn btn-primary btn-sm" @click="applyFilters">Aplicar Filtros</button>
-        </div>
+        <button type="button" class="btn-exec btn-exec-outline" @click="showFilterModal = false">Cancelar</button>
+        <button type="button" class="btn-exec btn-exec-primary" @click="applyFilters">Aplicar filtros</button>
       </template>
     </BaseModal>
 
     <!-- Modal: Formulario Edición -->
-    <BaseModal v-model="showFormModal" :title="currentEdition ? 'Administrar Edición' : 'Nueva Edición'" size="xl">
+    <BaseModal v-model="showFormModal" :title="currentEdition ? 'Administrar edición' : 'Nueva edición'" size="xl">
       <div ref="editionForm" class="modern-modal-layout">
         <div class="main-column">
-          <div class="internal-header mb-3" v-if="currentEdition">
-            <div class="d-flex align-items-center gap-2">
-              <div class="badge-type" :class="isCourse ? 'bg-warning-subtle text-warning-emphasis' : 'bg-info-subtle text-info-emphasis'">{{ isCourse ? 'CURSO' : 'PROGRAMA' }}</div>
-              <h5 class="m-0 fw-bold text-dark">{{ currentEdition.program_abreviature }}</h5>
-              <div class="badge-type bg-primary-subtle text-primary-emphasis">{{ 'Sesiones: ' + modalForm.sessions }}</div>
+          <div class="ed-form-head" v-if="currentEdition">
+            <div class="ed-form-head-row">
+              <span class="ds-pill" :class="isCourse ? 'warn' : 'info'">{{ isCourse ? 'Curso' : 'Programa' }}</span>
+              <h5 class="ed-form-name">{{ currentEdition.program_abreviature }}</h5>
+              <span class="ds-pill">{{ 'Sesiones: ' + modalForm.sessions }}</span>
             </div>
-            <div class="text-muted small mt-1 ms-1">{{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Código Anual' }} &bull; {{ currentEdition.clasification || '' }}</div>
+            <div class="ed-sub">{{ currentEdition.global_code }} &bull; {{ currentEdition.specific_code || 'Sin Código Anual' }} &bull; {{ currentEdition.clasification || '' }}</div>
           </div>
 
           <section class="form-section">
-            <div class="section-label">Definición General</div>
-            <div class="row g-3">
-              <div class="col-12">
-                <label class="form-label-sm">Versión de Programa</label>
+            <h4 class="section-label">Definición general</h4>
+            <div class="ed-fgrid">
+              <div class="ds-field ed-span-4">
+                <label class="ds-label">Versión de programa<span class="ds-req">*</span></label>
                 <SearchSelect v-model="modalForm.program_version_id" mode="remote" :disabled="!!(currentEdition && currentEdition.edition_num_id)" :fetcher="q => programService.programVersionCaller({ q, active:'Y', not_modality: catalogs.modalityList.find(e => e.alias == 'we_modality_online').id })" label-field="program_type_for_iu" value-field="program_version_id" placeholder="Buscar programa…" :minChars="0" :cache="false" required :view-open="6" :model-label="modalForm.abbreviation" @change="onProgramVersionChange" />
               </div>
-              <div class="col-6" v-if="isCourse">
-                <label class="form-label-sm">Docente Asignado</label>
+              <div class="ds-field ed-span-2" v-if="isCourse">
+                <label class="ds-label">Docente asignado</label>
                 <SearchSelect v-model="modalForm.instructor_id" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" showSubValue label-field="full_name" sublabel-field="document_number" value-field="instructor_id" placeholder="Buscar docente…" :model-label="modalForm.instructor_label" :minChars="0" :cache="false" />
               </div>
-              <div class="col-3">
-                <label class="form-label-sm">Segmentación</label>
+              <div class="ds-field">
+                <label class="ds-label">Segmentación</label>
                 <SearchSelect v-model="modalForm.cat_segment_id" :items="catalogs.catSegments" label-field="description" value-field="id" placeholder="OPCIONAL" />
               </div>
-              <div class="col-3" v-if="modalForm.program_version_id">
-                <label class="form-label-sm">Vacantes</label>
-                <input type="number" class="form-control form-control-sm" v-model.number="modalForm.vacant" placeholder="VACANTES" />
+              <div class="ds-field" v-if="modalForm.program_version_id">
+                <label class="ds-label" for="ed-vacant">Vacantes</label>
+                <input id="ed-vacant" type="number" class="ds-input" v-model.number="modalForm.vacant" placeholder="VACANTES" />
               </div>
             </div>
           </section>
 
-          <section class="form-section mt-3" v-if="modalForm.program_version_id && (modalForm.cat_type_program_alias === 'we_program_type_course' || modalForm.cat_type_program_alias === 'we_program_type_event')">
-            <div class="section-label">Logística y Horarios</div>
-            <div class="row g-3">
-              <div class="col-md-6 position-relative">
-                <label class="form-label-sm">Fecha Inicio</label>
-                <div class="input-group input-group-sm">
+          <section class="form-section" v-if="modalForm.program_version_id && (modalForm.cat_type_program_alias === 'we_program_type_course' || modalForm.cat_type_program_alias === 'we_program_type_event')">
+            <h4 class="section-label">Logística y horarios</h4>
+            <div class="ed-fgrid">
+              <div class="ds-field ed-span-2 position-relative">
+                <label class="ds-label">Fecha de inicio<span v-if="isCourse" class="ds-req">*</span></label>
+                <div class="ed-input-group">
                   <BaseDatePicker v-model="modalForm.start_date" :config="getChildDateConfig()" :disabled="!modalForm.cat_day_combination_id" :required="isCourse" placeholder="dd/mm/aaaa" @on-change="validateAndCalculate(modalForm, 'start_date')" />
-                  <button class="btn btn-outline-secondary" type="button" @click.stop="toggleGapPreview($event, 'main_gap', modalForm.program_version_id, modalForm)" :disabled="!modalForm.start_date || !modalForm.program_version_id">
-                    <i class="fa-solid fa-timeline text-primary"></i>
+                  <button class="btn-icon ed-input-btn" type="button" title="Análisis de tiempos" aria-label="Análisis de tiempos" @click.stop="toggleGapPreview($event, 'main_gap', modalForm.program_version_id, modalForm)" :disabled="!modalForm.start_date || !modalForm.program_version_id">
+                    <i class="fa-solid fa-timeline" aria-hidden="true"></i>
                   </button>
                 </div>
-                <div v-if="activeGapPreviewId === 'main_gap'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;">
-                  <div class="popover-header-exec"><span>Análisis de Tiempos</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+                <div v-if="activeGapPreviewId === 'main_gap'" class="schedule-preview-popover pop--w350" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                  <div class="popover-header-exec"><span>Análisis de tiempos</span><button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activeGapPreviewId = null">&times;</button></div>
                   <div class="popover-content">
                     <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                   </div>
                 </div>
                 <div v-if="activeGapPreviewId === 'gap_popover'" class="click-overlay" @click="activeGapPreviewId = null"></div>
               </div>
-              <div class="col-md-6 position-relative">
-                <label class="form-label-sm">Fecha Fin</label>
-                <div class="input-group input-group-sm">
+              <div class="ds-field ed-span-2 position-relative">
+                <label class="ds-label">Fecha de fin<span v-if="isCourse" class="ds-req">*</span></label>
+                <div class="ed-input-group">
                   <BaseDatePicker v-model="modalForm.end_date" :disabled="!modalForm.cat_day_combination_id" :config="getChildDateConfig(null, modalForm)" :required="isCourse" placeholder="Calculado autom." />
-                  <button class="btn btn-outline-secondary" type="button" @click.stop="toggleSchedulePreview('main_parent', modalForm, $event)">
-                    <i class="fa-solid fa-circle-info text-info"></i>
+                  <button class="btn-icon ed-input-btn" type="button" title="Proyección de sesiones" aria-label="Proyección de sesiones" @click.stop="toggleSchedulePreview('main_parent', modalForm, $event)">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                   </button>
                 </div>
-                <div v-if="activePreviewId === 'main_parent'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
-                  <div class="popover-header-exec"><span>Proyección de Sesiones</span><button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button></div>
+                <div v-if="activePreviewId === 'main_parent'" class="schedule-preview-popover" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                  <div class="popover-header-exec"><span>Proyección de sesiones</span><button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activePreviewId = null">&times;</button></div>
                   <div class="popover-content">
-                    <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">Faltan datos para calcular.</div>
-                    <table v-else class="table table-sm table-striped mb-0 small-table">
+                    <div v-if="previewItems.length === 0" class="ds-empty">Faltan datos para calcular.</div>
+                    <table v-else class="ds-table ds-table--densa ed-preview-table">
                       <thead><tr><th>#</th><th>Fecha</th><th>Estado</th></tr></thead>
                       <tbody>
-                        <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                          <td class="fw-bold text-center">{{ item.sessionNum }}</td>
-                          <td><div class="d-flex flex-column lh-1"><span>{{ formatDate(item.date) }}</span><small class="text-muted" style="font-size:0.65rem">{{ getDayName(item.date) }}</small></div></td>
-                          <td><span v-if="item.status === 'valid'" class="badge bg-success-subtle text-success border border-success-subtle">OK</span><div v-else class="text-danger fw-bold" style="font-size:0.7rem;"><i class="fa-solid fa-ban me-1"></i>{{ item.desc }}</div></td>
+                        <tr v-for="(item, idx) in previewItems" :key="idx" :class="{ 'is-holiday': item.status === 'holiday' }">
+                          <td class="text-center">{{ item.sessionNum }}</td>
+                          <td><div class="d-flex flex-column lh-1"><span>{{ formatDate(item.date) }}</span><small class="ed-sub ed-xs">{{ getDayName(item.date) }}</small></div></td>
+                          <td><span v-if="item.status === 'valid'" class="ds-pill ok">OK</span><div v-else class="ed-bad ed-xs"><i class="fa-solid fa-ban me-1" aria-hidden="true"></i>{{ item.desc }}</div></td>
                         </tr>
                       </tbody>
                     </table>
@@ -1024,29 +875,29 @@
                 </div>
                 <div v-if="activePreviewId === 'main_parent'" class="click-overlay" @click="activePreviewId = null"></div>
               </div>
-              <div class="col-md-6">
-                <label class="form-label-sm">Días</label>
+              <div class="ds-field ed-span-2">
+                <label class="ds-label">Días<span v-if="isCourse" class="ds-req">*</span></label>
                 <SearchSelect v-model="modalForm.cat_day_combination_id" :items="catalogs.dayCombinationList" label-field="description" value-field="id" placeholder="Seleccione días" :required="isCourse" @change="calculateEndDate(modalForm)" />
               </div>
-              <div class="col-md-6">
-                <label class="form-label-sm">Horas</label>
+              <div class="ds-field ed-span-2">
+                <label class="ds-label">Horas<span v-if="isCourse" class="ds-req">*</span></label>
                 <SearchSelect v-model="modalForm.cat_hour_combination_id" :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Seleccione horario" :required="isCourse" />
               </div>
             </div>
           </section>
 
-          <section class="form-section mt-3" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course' && modalForm.cat_type_program_alias !== 'we_program_type_event'">
-            <div class="d-flex align-items-center justify-content-between position-relative">
-              <div class="section-label">Estructura del Programa</div>
+          <section class="form-section" v-if="modalForm.program_version_id && modalForm.cat_type_program_alias !== 'we_program_type_course' && modalForm.cat_type_program_alias !== 'we_program_type_event'">
+            <div class="ed-section-head position-relative">
+              <h4 class="section-label">Estructura del programa</h4>
               <!-- El padre no tiene fecha propia en el formulario: la hereda de sus
                    hijos. Su analisis va aca para decidir, sin cerrar el modal, si
                    conviene abrir una edicion nueva o colgarse de una existente. -->
-              <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button" :disabled="!parentGapContext" @click.stop="toggleGapPreview($event, 'parent_gap', modalForm.program_version_id, parentGapContext)">
-                <i class="fa-solid fa-timeline text-primary me-1" style="font-size:0.8rem;"></i>
-                <span style="font-size:0.75rem;">Frecuencias del padre</span>
+              <button class="btn-exec btn-exec-outline btn-sm" type="button" :disabled="!parentGapContext" @click.stop="toggleGapPreview($event, 'parent_gap', modalForm.program_version_id, parentGapContext)">
+                <i class="fa-solid fa-timeline" aria-hidden="true"></i>
+                Frecuencias del padre
               </button>
-              <div v-if="activeGapPreviewId === 'parent_gap'" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;right:0;left:auto;z-index:1060;">
-                <div class="popover-header-exec"><span>Análisis: {{ modalForm.abbreviation || 'Padre' }}</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+              <div v-if="activeGapPreviewId === 'parent_gap'" class="schedule-preview-popover pop--w350 pop--right" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                <div class="popover-header-exec"><span>Análisis: {{ modalForm.abbreviation || 'Padre' }}</span><button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activeGapPreviewId = null">&times;</button></div>
                 <div class="popover-content">
                   <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                 </div>
@@ -1054,58 +905,58 @@
               <div v-if="activeGapPreviewId === 'parent_gap'" class="click-overlay" @click="activeGapPreviewId = null"></div>
             </div>
             <div class="hierarchy-container">
-              <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.8rem;">
-                <thead class="table-light">
-                  <tr><th style="width:20%">Sub-Programa</th><th style="width:20%">Edición</th><th style="width:25%">Fechas</th><th style="width:20%">Horario / Docente</th><th style="width:15%">Config.</th></tr>
+              <table class="ds-table ds-table--densa ed-children">
+                <thead>
+                  <tr><th class="ed-w20">Sub-programa</th><th class="ed-w20">Edición</th><th class="ed-w25">Fechas</th><th class="ed-w20">Horario / docente</th><th class="ed-w15">Config.</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(child, index) in modalForm.program_version_children" :key="child.child_program_version_id" :class="{ 'opacity-50': isBlockedByPrevious(index) }">
-                    <td class="fw-bold text-dark">
-                      <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>&nbsp;
-                      <span class="text-primary text-decoration-hover" style="cursor:pointer" @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })">{{ child.abbreviation }}</span>
-                      <div class="text-xs text-muted" v-if="!child.edition_id">{{ 'Sesiones: ' + child.sessions }}</div>
+                    <td>
+                      <i class="fa-solid fa-filter ed-filter-ico" aria-hidden="true"></i>&nbsp;
+                      <span class="ed-link" @click="filterDirectly({ program_version_id: child.child_program_version_id, program_version_label: child.abbreviation })">{{ child.abbreviation }}</span>
+                      <div class="ed-sub ed-xs" v-if="!child.edition_id">{{ 'Sesiones: ' + child.sessions }}</div>
                     </td>
                     <td>
                       <div v-if="!child.edition_id" class="d-flex align-items-center gap-2 mb-2">
-                        <small class="text-muted">¿Nueva?</small>
+                        <span class="ed-sub">¿Nueva?</span>
                         <label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" type="checkbox" v-model="child.new" /><span></span></label>
                       </div>
                       <SearchSelect v-if="!child.new && !child.edition_id" v-model="child.edition_id" mode="remote" :fetcher="(q) => searchEditionsFiltered(q, child, index)" label-field="label_for_iu" sublabel-field="specific_code" value-field="edition_num_id" placeholder="Vincular edición…" :minChars="0" :cache="false" required @change="onChildEditionChange($event, child, index)" :disabled="child.new" />
-                      <button :disabled="isBlockedByPrevious(index)" v-if="!child.new && child.edition_id" type="button" class="btn btn-sm btn-danger w-100 mb-0" @click="unlinkChildEdition(child)"><i class="fa-solid fa-times"></i> Desvincular</button>
-                      <div v-if="child.edition_id" class="p-1 bg-light border rounded text-center mb-0">
-                        <div class="fw-bold">{{ child.global_code }}</div>
-                        <div class="text-xs text-muted">{{ child.specific_code }}</div>
-                        <div class="text-xs text-muted">{{ 'Sesiones: ' + child.sessions }}</div>
+                      <button :disabled="isBlockedByPrevious(index)" v-if="!child.new && child.edition_id" type="button" class="btn-exec btn-exec-outline btn-sm ed-btn-bad w-100" @click="unlinkChildEdition(child)"><i class="fa-solid fa-times" aria-hidden="true"></i> Desvincular</button>
+                      <div v-if="child.edition_id" class="ed-linked-box">
+                        <div class="ed-strong-sm">{{ child.global_code }}</div>
+                        <div class="ed-sub ed-xs">{{ child.specific_code }}</div>
+                        <div class="ed-sub ed-xs">{{ 'Sesiones: ' + child.sessions }}</div>
                       </div>
                     </td>
-                    <td class="overflow-visible position-relative" style="min-width:180px!important" :style="{ zIndex: activeGapPreviewId === ('child_gap_' + index) ? 1060 : 'inherit' }">
+                    <td class="overflow-visible position-relative ed-col-dates" :style="{ zIndex: activeGapPreviewId === ('child_gap_' + index) ? 1060 : 'inherit' }">
                       <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                        <div class="input-group input-group-xs mb-1">
+                        <div class="ed-input-group">
                           <BaseDatePicker v-model="child.start_date" :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id" :required="true" placeholder="Inicio" :config="getChildDateConfig(index)" @on-change="validateAndCalculate(child, 'start_date', index)" />
-                          <button class="btn btn-outline-secondary px-1" type="button" :disabled="!child.start_date || isBlockedByPrevious(index)" @click.stop="toggleGapPreview($event, 'child_gap_' + index, child.child_program_version_id, child)"><i class="fa-solid fa-timeline text-primary" style="font-size:0.8rem;"></i></button>
+                          <button class="btn-icon ed-input-btn" type="button" title="Análisis de tiempos" aria-label="Análisis de tiempos" :disabled="!child.start_date || isBlockedByPrevious(index)" @click.stop="toggleGapPreview($event, 'child_gap_' + index, child.child_program_version_id, child)"><i class="fa-solid fa-timeline" aria-hidden="true"></i></button>
                         </div>
-                        <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="schedule-preview-popover shadow-lg" :class="{ 'popover-opens-top': popoverPosition === 'top' }" style="width:350px;left:0;z-index:1060;">
-                          <div class="popover-header-exec"><span>Análisis: {{ child.abbreviation }}</span><button type="button" class="btn-close-xs" @click="activeGapPreviewId = null">&times;</button></div>
+                        <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="schedule-preview-popover pop--w350" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                          <div class="popover-header-exec"><span>Análisis: {{ child.abbreviation }}</span><button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activeGapPreviewId = null">&times;</button></div>
                           <div class="popover-content">
                             <GapTimeline :items="gapPreviewData" :loading="isLoadingGap" :format-date="formatDate" />
                           </div>
                         </div>
                         <div class="position-relative">
-                          <div class="input-group input-group-xs">
+                          <div class="ed-input-group">
                             <BaseDatePicker v-model="child.end_date" :disabled="isBlockedByPrevious(index) || !child.cat_day_combination_id" :required="true" :config="getChildDateConfig(null, child)" placeholder="Fin (Calc)" />
-                            <button class="btn btn-outline-secondary px-1" type="button" :disabled="isBlockedByPrevious(index)" @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"><i class="fa-solid fa-circle-info text-info" style="font-size:0.8rem;"></i></button>
+                            <button class="btn-icon ed-input-btn" type="button" title="Cronograma estimado" aria-label="Cronograma estimado" :disabled="isBlockedByPrevious(index)" @click.stop="toggleSchedulePreview('child_' + child.child_program_version_id, child, $event)"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
                           </div>
-                          <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="schedule-preview-popover shadow-lg" style="right:0;left:auto;min-width:250px;z-index:1070!important;" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
-                            <div class="popover-header-exec"><span>Cronograma Estimado</span><button type="button" class="btn-close-xs" @click="activePreviewId = null">&times;</button></div>
+                          <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="schedule-preview-popover pop--right pop--min250 pop--z1070" :class="{ 'popover-opens-top': popoverPosition === 'top' }">
+                            <div class="popover-header-exec"><span>Cronograma estimado</span><button type="button" class="btn-close-xs" aria-label="Cerrar" @click="activePreviewId = null">&times;</button></div>
                             <div class="popover-content">
-                              <div v-if="previewItems.length === 0" class="text-muted text-center p-2 small">Datos insuficientes.</div>
-                              <table v-else class="table table-sm table-striped mb-0 small-table">
+                              <div v-if="previewItems.length === 0" class="ds-empty">Datos insuficientes.</div>
+                              <table v-else class="ds-table ds-table--densa ed-preview-table">
                                 <thead><tr><th>#</th><th>Fecha</th><th>Obs.</th></tr></thead>
                                 <tbody>
-                                  <tr v-for="(item, idx) in previewItems" :key="idx" :class="{'table-danger': item.status === 'holiday'}">
-                                    <td class="fw-bold text-center small">{{ item.sessionNum }}</td>
-                                    <td>{{ formatDate(item.date) }} <span class="text-muted text-xs">({{ getDayName(item.date) }})</span></td>
-                                    <td><i v-if="item.status === 'valid'" class="fa-solid fa-check text-success"></i><span v-else class="text-danger fw-bold text-xs">{{ item.desc }}</span></td>
+                                  <tr v-for="(item, idx) in previewItems" :key="idx" :class="{ 'is-holiday': item.status === 'holiday' }">
+                                    <td class="text-center">{{ item.sessionNum }}</td>
+                                    <td>{{ formatDate(item.date) }} <span class="ed-sub ed-xs">({{ getDayName(item.date) }})</span></td>
+                                    <td><i v-if="item.status === 'valid'" class="fa-solid fa-check ed-ok" aria-hidden="true"></i><span v-else class="ed-bad ed-xs">{{ item.desc }}</span></td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -1114,7 +965,7 @@
                           <div v-if="activePreviewId === ('child_' + child.child_program_version_id)" class="click-overlay" @click="activePreviewId = null"></div>
                         </div>
                       </div>
-                      <div v-else class="text-muted text-center">-</div>
+                      <div v-else class="ed-muted text-center">-</div>
                       <div v-if="activeGapPreviewId === ('child_gap_' + index)" class="click-overlay" @click="activeGapPreviewId = null"></div>
                     </td>
                     <td>
@@ -1123,16 +974,16 @@
                         <SearchSelect v-model="child.cat_hour_combination_id" required :items="catalogs.hourCombinationList" label-field="description" value-field="id" placeholder="Horas" class="mb-1" :disabled="isBlockedByPrevious(index)" @change="setChildren(modalForm.program_version_children, 'cat_hour_combination_id', child.cat_hour_combination_id)" />
                         <SearchSelect :disabled="isBlockedByPrevious(index)" v-if="child.new || child.edition_id" v-model="child.instructor_id" :cache="false" sublabel-field="document_number" mode="remote" :fetcher="q => instructorService.instructorCaller({ q })" label-field="full_name" value-field="instructor_id" placeholder="Docente" :model-label="child.instructor_label" />
                       </div>
-                      <div v-else class="text-muted text-center">-</div>
+                      <div v-else class="ed-muted text-center">-</div>
                     </td>
                     <td>
                       <div v-if="child.new || child.edition_id" class="d-flex flex-column gap-1">
-                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input type="checkbox" v-model="child.active" /><span></span></label><small class="text-muted">Activo</small></div>
-                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.preconfirmation" /><span></span></label><small class="text-muted">PRE-cfm</small></div>
-                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.expedient" /><span></span></label><small class="text-muted">Ficha</small></div>
-                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.confirmation){child.preconfirmation=true;child.expedient=true}else{child.preconfirmation=false;child.expedient=false} }" type="checkbox" v-model="child.confirmation" /><span></span></label><small class="text-muted">Cfm</small></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input type="checkbox" v-model="child.active" /><span></span></label><span class="ed-sub">Activo</span></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.preconfirmation" /><span></span></label><span class="ed-sub">PRE-cfm</span></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.preconfirmation && child.expedient){child.confirmation=true}else{child.confirmation=false} }" type="checkbox" v-model="child.expedient" /><span></span></label><span class="ed-sub">Ficha</span></div>
+                        <div class="d-flex align-items-center gap-2"><label class="exec-switch scale-75"><input :disabled="isBlockedByPrevious(index)" @change="() => { if(child.confirmation){child.preconfirmation=true;child.expedient=true} }" type="checkbox" v-model="child.confirmation" /><span></span></label><span class="ed-sub">Cfm</span></div>
                       </div>
-                      <div v-else class="text-muted text-center">-</div>
+                      <div v-else class="ed-muted text-center">-</div>
                     </td>
                   </tr>
                 </tbody>
@@ -1142,61 +993,61 @@
         </div>
 
         <div class="sidebar-column">
-          <div class="status-card mb-3">
-            <div class="status-card__header"><i class="fa-solid fa-sliders me-2"></i>Configuración</div>
+          <div class="status-card">
+            <div class="status-card__header"><i class="fa-solid fa-sliders" aria-hidden="true"></i>Configuración</div>
             <div class="status-card__body">
               <div class="switch-row" v-if="isCourse">
-                <div class="switch-label"><span class="fw-bold">Ficha</span><small class="d-block text-muted">Generar expediente</small></div>
+                <div class="switch-label"><span class="ed-strong">Ficha</span><small class="d-block ed-sub">Generar expediente</small></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.expedient" /><span></span></label>
               </div>
               <div class="switch-row" v-if="isCourse">
-                <div class="switch-label"><span class="fw-bold">Pre-Confirmación</span></div>
+                <div class="switch-label"><span class="ed-strong">Pre-confirmación</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.preconfirmation" /><span></span></label>
               </div>
-              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
+              <hr v-if="isCourse" class="ed-hr">
               <div class="switch-row" v-if="isCourse">
-                <div class="switch-label"><span class="fw-bold text-primary">Confirmación</span></div>
+                <div class="switch-label"><span class="ed-strong ed-accent">Confirmación</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.confirmation" /><span></span></label>
               </div>
-              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
+              <hr v-if="isCourse" class="ed-hr">
               <div class="switch-row" v-if="isCourse">
-                <div class="switch-label"><span class="fw-bold">Mejora</span></div>
+                <div class="switch-label"><span class="ed-strong">Mejora</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.upgrade" /><span></span></label>
               </div>
               <div class="switch-row">
-                <div class="switch-label"><span class="fw-bold">Estado (Activo)</span></div>
+                <div class="switch-label"><span class="ed-strong">Estado (activo)</span></div>
                 <label class="exec-switch"><input type="checkbox" v-model="modalForm.active" /><span></span></label>
               </div>
-              <hr v-if="isCourse" class="my-2 border-secondary-subtle">
-              <div class="col-12 mb-2">
-                <label class="form-label-sm">Histórico</label>
-                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.global_code" />
+              <hr v-if="isCourse" class="ed-hr">
+              <div class="ds-field ed-side-field">
+                <label class="ds-label" for="ed-global-code">Histórico</label>
+                <input id="ed-global-code" type="text" class="ds-input" v-model.number="modalForm.global_code" />
               </div>
-              <div class="col-12">
-                <label class="form-label-sm">Ed. Año</label>
-                <input type="text" class="form-control form-control-sm" v-model.number="modalForm.specific_code" />
+              <div class="ds-field">
+                <label class="ds-label" for="ed-specific-code">Ed. año</label>
+                <input id="ed-specific-code" type="text" class="ds-input" v-model.number="modalForm.specific_code" />
               </div>
             </div>
           </div>
           <div class="status-card">
-            <div class="status-card__header"><i class="fa-regular fa-comment-dots me-2"></i>Observaciones</div>
-            <div class="status-card__body p-0">
-              <textarea class="form-control border-0 bg-transparent" rows="6" v-model="modalForm.notes" placeholder="Notas internas…" style="resize:vertical;min-height:150px;max-height:none;font-size:0.85rem;"></textarea>
+            <div class="status-card__header"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i>Observaciones</div>
+            <div class="status-card__body">
+              <textarea class="ds-input ed-notes" rows="6" v-model="modalForm.notes" placeholder="Notas internas…" aria-label="Observaciones"></textarea>
             </div>
           </div>
           <div class="status-card" v-if="currentEdition && isCourse">
-            <div class="status-card__header"><i class="fa-brands fa-whatsapp me-2" style="color:#25d366;"></i>Links Académicos</div>
+            <div class="status-card__header"><i class="fa-solid fa-link" aria-hidden="true"></i>Links académicos</div>
             <!-- Solo lectura fuera de ADMIN/PRODUCTO porque el modal guarda con
                  sp_edition_update, que exige esos roles. Academica edita estos
                  mismos links con el lapiz de la tabla, que va por su endpoint. -->
             <div class="status-card__body">
-              <div v-for="link in CLASSROOM_LINKS" :key="link.field" class="mb-2">
-                <label class="form-label-sm">
-                  <i :class="[link.icon, 'me-1']" :style="{ color: link.headerColor }"></i>{{ link.modalLabel }}
+              <div v-for="link in CLASSROOM_LINKS" :key="link.field" class="ds-field ed-side-field">
+                <label class="ds-label">
+                  <i :class="[link.icon, 'me-1']" :style="{ color: link.headerColor }" aria-hidden="true"></i>{{ link.modalLabel }}
                 </label>
                 <input
                   type="url"
-                  class="form-control form-control-sm"
+                  class="ds-input"
                   v-model="modalForm[link.field]"
                   :placeholder="link.placeholder"
                   :readonly="!$hasRole(['ADMIN', 'PRODUCTO'])"
@@ -1207,86 +1058,83 @@
         </div>
       </div>
       <template #footer>
-        <div class="d-flex justify-content-between w-100 align-items-center">
-          <div class="text-muted small fst-italic"><span v-if="currentEdition">Editando ID: {{ currentEdition.edition_num_id }}</span></div>
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm px-3" @click="cleanFormModal(); showFormModal = false">Cancelar</button>
-            <button class="btn btn-primary btn-sm px-4 fw-bold" :disabled="!isModalValid" @click="applyModalForm"><i class="fa-solid fa-save me-1"></i>Guardar Cambios</button>
-          </div>
-        </div>
+        <span class="ed-footer-id"><span v-if="currentEdition">Editando ID: {{ currentEdition.edition_num_id }}</span></span>
+        <button type="button" class="btn-exec btn-exec-outline" @click="cleanFormModal(); showFormModal = false">Cancelar</button>
+        <button type="button" class="btn-exec btn-exec-primary" :disabled="!isModalValid" @click="applyModalForm"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Guardar cambios</button>
       </template>
     </BaseModal>
 
     <!-- Modal: Árbol Académico -->
     <BaseModal v-model="showTreeModal" :title="treeModalTitle" size="lg">
-      <div class="accordion-container p-3 bg-light rounded-3">
-        <div v-if="!treeGroups.length" class="empty-state p-5 text-center">
-          <div class="mb-3"><i class="fa-solid fa-sitemap fs-1 text-muted opacity-25"></i></div>
-          <h6 class="text-secondary">Sin estructura jerárquica</h6>
-          <p class="text-muted small">Esta edición no tiene programas padres ni cursos hijos asociados.</p>
+      <div class="accordion-container">
+        <div v-if="!treeGroups.length" class="ds-empty ds-empty--lista">
+          <i class="fa-solid fa-sitemap ed-empty-ico" aria-hidden="true"></i>
+          <p class="ed-strong">Sin estructura jerárquica</p>
+          <p>Esta edición no tiene programas padres ni cursos hijos asociados.</p>
         </div>
-        <div v-else class="d-flex flex-column gap-3">
-          <div v-for="(group, idx) in treeGroups" :key="idx" class="accordion-card bg-white border rounded shadow-sm overflow-hidden">
-            <div class="accordion-header p-3 d-flex align-items-center justify-content-between cursor-pointer" :class="{ 'bg-primary-subtle': group.isOpen }" @click="toggleGroup(idx)">
+        <div v-else class="ds-stack">
+          <div v-for="(group, idx) in treeGroups" :key="idx" class="accordion-card">
+            <div class="accordion-header" :class="{ 'is-open': group.isOpen }" @click="toggleGroup(idx)">
               <div class="d-flex align-items-center gap-3" :class="{ 'opacity-75': group.active === 'N' }">
-                <div class="icon-box border rounded p-2 position-relative" :class="group.active === 'N' ? 'bg-danger-subtle text-danger border-danger-subtle' : 'bg-white text-primary border-primary-subtle'">
-                  <i class="fa-solid" :class="group.active === 'N' ? 'fa-ban' : 'fa-layer-group'"></i>
+                <div class="icon-box" :class="{ 'is-inactive': group.active === 'N' }">
+                  <i class="fa-solid" :class="group.active === 'N' ? 'fa-ban' : 'fa-layer-group'" aria-hidden="true"></i>
                 </div>
                 <div>
-                  <div class="badge mb-1" :class="group.active === 'N' ? 'bg-danger text-white' : 'bg-primary text-white'" style="font-size:0.65rem;">{{ group.active === 'N' ? 'PROGRAMA INACTIVO' : 'PROGRAMA PADRE' }}</div>
-                  <h6 class="m-0 fw-bold" :class="group.active === 'N' ? 'text-danger text-decoration-line-through' : 'text-dark'">{{ group.abbreviation }}</h6>
-                  <div class="small text-muted">{{ group.global_code }} &bull; <span v-if="group.clasification" class="badge-btn" style="cursor:pointer;" @click="filterDirectly({ clasification: group.clasification })">{{ group.clasification }}<i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i></span></div>
+                  <span class="ds-pill ed-tree-pill" :class="group.active === 'N' ? 'bad' : 'info'">{{ group.active === 'N' ? 'Programa inactivo' : 'Programa padre' }}</span>
+                  <h6 class="ed-tree-name" :class="{ 'is-inactive': group.active === 'N' }">{{ group.abbreviation }}</h6>
+                  <div class="ed-sub">{{ group.global_code }} &bull; <span v-if="group.clasification" class="ed-link" @click="filterDirectly({ clasification: group.clasification })">{{ group.clasification }}<i class="fa-solid fa-filter ed-filter-ico ms-1" aria-hidden="true"></i></span></div>
                 </div>
               </div>
-              <button class="btn btn-sm btn-icon text-muted"><i class="fa-solid fa-chevron-down transition-transform" :class="{ 'rotate-180': group.isOpen }"></i></button>
+              <button type="button" class="btn-icon btn-icon-sm" :aria-label="group.isOpen ? 'Ocultar módulos' : 'Mostrar módulos'"><i class="fa-solid fa-chevron-down transition-transform" :class="{ 'rotate-180': group.isOpen }" aria-hidden="true"></i></button>
             </div>
-            <div v-show="group.isOpen" class="accordion-body border-top p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0" style="font-size:0.85rem;">
-                  <thead class="table-light text-muted text-uppercase" style="font-size:0.7rem;">
-                    <tr><th class="ps-4 py-2">Curso / Módulo</th><th class="py-2">Fechas</th><th class="py-2">Horario</th><th class="py-2 text-center">Estado</th><th class="py-2 text-center pe-3" style="width:48px;">PDF</th></tr>
+            <div v-show="group.isOpen" class="accordion-body">
+              <div class="ds-table-scroll">
+                <table class="ds-table ds-table--densa ed-tree-table">
+                  <thead>
+                    <tr><th>Curso / módulo</th><th>Fechas</th><th>Horario</th><th class="text-center">Estado</th><th class="text-center ed-w-pdf">PDF</th></tr>
                   </thead>
                   <tbody>
-                    <tr v-for="child in group.children" :key="child.edition_num_id || child.global_code" :class="{ 'table-active': child.is_current }">
-                      <td class="ps-4">
+                    <tr v-for="child in group.children" :key="child.edition_num_id || child.global_code" :class="{ 'is-current': child.is_current }">
+                      <td>
                         <div class="d-flex align-items-center gap-2">
-                          <i class="fa-solid fa-book-open text-muted small"></i>
+                          <i class="fa-solid fa-book-open ed-muted" aria-hidden="true"></i>
                           <div>
-                            <div class="fw-bold text-dark">
-                              <span class="text-decoration-hover text-primary cursor-pointer" @click.stop="filterDirectly({ program_version_id: child.program_version_id, program_version_label: child.abbreviation })">{{ child.program_abreviature || child.abbreviation }}</span>
-                              <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>
-                              <span v-if="child.is_current" class="badge bg-warning text-dark ms-1" style="font-size:0.6rem">ACTUAL</span>
+                            <div class="ed-strong">
+                              <span class="ed-link" @click.stop="filterDirectly({ program_version_id: child.program_version_id, program_version_label: child.abbreviation })">{{ child.program_abreviature || child.abbreviation }}</span>
+                              <i class="fa-solid fa-filter ed-filter-ico ms-1" aria-hidden="true"></i>
+                              <span v-if="child.is_current" class="ds-pill warn ms-1">Actual</span>
                             </div>
-                            <div class="text-muted small" style="font-size:0.7rem;">{{ child.global_code }} &bull; {{ child.specific_code }}</div>
+                            <div class="ed-sub ed-xs">{{ child.global_code }} &bull; {{ child.specific_code }}</div>
                           </div>
                         </div>
                       </td>
                       <td>
                         <div v-if="child.start_date">
-                          <span class="text-decoration-hover text-primary cursor-pointer" @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })">{{ formatDate(child.start_date) }}</span>
-                          <i class="fa-solid fa-filter text-muted ms-1" style="font-size:0.65rem;"></i>
-                          <br><span class="text-muted text-xs">al {{ formatDate(child.end_date) }}</span>
+                          <span class="ed-link" @click.stop="filterDirectly({ date_from: child.start_date, date_to: child.start_date, date_range: 'true' })">{{ formatDate(child.start_date) }}</span>
+                          <i class="fa-solid fa-filter ed-filter-ico ms-1" aria-hidden="true"></i>
+                          <br><span class="ed-sub ed-xs">al {{ formatDate(child.end_date) }}</span>
                         </div>
-                        <span v-else class="text-muted">-</span>
+                        <span v-else class="ed-muted">-</span>
                       </td>
                       <td>
-                        <div v-if="child.schedules && child.schedules.length"><div class="fw-medium">{{ child.schedules[0].day_combination_label }}</div><div class="text-muted text-xs">{{ child.schedules[0].hour_combination_label }}</div><div v-if="child.schedules.length > 1" class="badge bg-light text-secondary border mt-1">+{{ child.schedules.length - 1 }} más</div></div>
-                        <div v-else-if="child.day_combination_label"><div class="fw-medium">{{ child.day_combination_label }}</div><div class="text-muted text-xs">{{ child.hour_combination_label }}</div></div>
-                        <span v-else class="text-muted">-</span>
+                        <div v-if="child.schedules && child.schedules.length"><div class="ed-strong-sm">{{ child.schedules[0].day_combination_label }}</div><div class="ed-sub ed-xs">{{ child.schedules[0].hour_combination_label }}</div><span v-if="child.schedules.length > 1" class="ds-pill ed-more">+{{ child.schedules.length - 1 }} más</span></div>
+                        <div v-else-if="child.day_combination_label"><div class="ed-strong-sm">{{ child.day_combination_label }}</div><div class="ed-sub ed-xs">{{ child.hour_combination_label }}</div></div>
+                        <span v-else class="ed-muted">-</span>
                       </td>
-                      <td class="text-center"><span class="badge border" :class="child.active === 'Y' ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'">{{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}</span></td>
-                      <td class="text-center pe-3">
+                      <td class="text-center"><span class="ds-pill" :class="child.active === 'Y' ? 'ok' : ''">{{ child.active === 'Y' ? 'Activo' : 'Inactivo' }}</span></td>
+                      <td class="text-center">
                         <button
                           v-if="child.start_date && child.end_date"
                           class="btn-pdf-dl"
                           :disabled="downloadingPdfId === child.edition_num_id"
                           :title="'Descargar programación: ' + (child.program_abreviature || child.abbreviation)"
+                          :aria-label="'Descargar programación: ' + (child.program_abreviature || child.abbreviation)"
                           @click.stop="downloadChildPdf(group, child)"
                         >
-                          <i v-if="downloadingPdfId === child.edition_num_id" class="fa-solid fa-spinner fa-spin"></i>
-                          <i v-else class="fa-solid fa-file-pdf"></i>
+                          <i v-if="downloadingPdfId === child.edition_num_id" class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                          <i v-else class="fa-solid fa-file-pdf" aria-hidden="true"></i>
                         </button>
-                        <span v-else class="text-muted" style="font-size:0.7rem;">—</span>
+                        <span v-else class="ed-muted ed-xs">—</span>
                       </td>
                     </tr>
                   </tbody>
@@ -1298,1238 +1146,546 @@
       </div>
     </BaseModal>
 
-    <!-- Modal: Tablero de Objetivos -->
-    <BaseModal v-model="showGoalsModal" title="Tablero de Control" size="xl">
-      <div class="dashboard-layout p-3">
-        <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
-          <div>
-            <h5 class="text-primary fw-bold mb-1">{{ currentEdition?.program_abreviature }}</h5>
-            <p class="text-muted small m-0">{{ currentEdition?.global_code }} | Periodo: <span class="fw-bold text-dark">{{ goalsSummary.label_periodo }}</span></p>
+    <BaseModal v-model="showAuditModal"
+      :title="currentEditionId ? 'Historial de Cambios — Edición' : 'Historial Global de Cambios'"
+      size="xl">
+      <div v-if="loadingAudit && !auditLogs.length" class="ds-empty ds-empty--lista">
+        <i class="fa-solid fa-spinner fa-spin ed-empty-ico" aria-hidden="true"></i>
+        <p>Cargando historial…</p>
+      </div>
+
+      <div v-else-if="!auditLogs.length" class="ds-empty ds-empty--lista">
+        No hay historial de cambios registrado.
+      </div>
+
+      <div v-else class="ds-stack">
+        <div v-for="log in auditLogs" :key="log.transaction_id" class="audit-entry">
+          <!-- Cabecera de transacción -->
+          <div class="audit-entry__header">
+            <div class="d-flex align-items-center gap-2">
+              <div class="ed-avatar" aria-hidden="true">{{ log.user_name?.charAt(0) || '?' }}</div>
+              <div>
+                <div class="ed-strong">{{ log.user_name }}</div>
+                <small class="ed-sub">{{ formatDateTime(log.created_at) }}</small>
+              </div>
+            </div>
           </div>
-          <div class="text-end">
-            <div class="display-6 fw-bold text-dark mb-0 lh-1">{{ goalsSummary.insc.total_aula }}</div>
-            <small class="text-uppercase text-muted fw-bold" style="font-size:0.7rem;letter-spacing:1px;">Total Inscritos</small>
+
+          <!-- Cambios agrupados por tabla/registro -->
+          <div v-for="(change, i) in log.changes" :key="i" class="audit-change">
+            <div class="audit-change__meta">
+              <!-- actionClass devuelve el nombre legacy (pill-teal/amber/red/slate);
+                   aquí solo se traduce a tono, sin tocar la función. -->
+              <span class="ds-pill" :class="'ed-act--' + actionClass(change.action)">
+                {{ actionLabel(change.action) }}
+              </span>
+              <span class="ed-strong">
+                {{ change.program_abbreviation || '' }}
+                <span class="ed-sub" v-if="change.global_code">· {{ change.global_code }}</span>
+              </span>
+              <span v-if="change.is_child" class="ds-pill">
+                <i class="fa-solid fa-sitemap" aria-hidden="true"></i> Módulo
+              </span>
+              <span v-if="change.table_name === 'edition_structure'" class="ds-pill">
+                <i class="fa-solid fa-link" aria-hidden="true"></i> Vínculo
+              </span>
+            </div>
+
+            <!-- Campos modificados -->
+            <div v-if="change.changed_fields && Object.keys(change.changed_fields).length"
+                 class="audit-fields">
+              <div v-for="(val, key) in change.changed_fields" :key="key" class="audit-field-row">
+                <span class="field-name">{{ resolveFieldLabel(key) }}</span>
+                <span class="field-old">{{ formatFieldValue(key, val).old }}</span>
+                <i class="fa-solid fa-arrow-right ed-muted ed-xs" aria-hidden="true"></i>
+                <span class="field-new">{{ formatFieldValue(key, val).new }}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="row g-4">
-          <div class="col-md-4">
-            <div class="kpi-card h-100">
-              <div class="kpi-header"><i class="fa-solid fa-users-viewfinder text-info"></i>Origen Inscritos</div>
-              <ul class="list-group list-group-flush mt-3">
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-bullhorn text-muted me-2"></i>Venta Directa</span><span class="badge bg-primary rounded-pill">{{ goalsSummary.insc.ventas_prg }}</span></li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-headset text-muted me-2"></i>Seguimiento</span><span class="badge bg-info rounded-pill">{{ goalsSummary.insc.seguimiento }}</span></li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-briefcase text-muted me-2"></i>Corporativo (B2B)</span><span class="badge bg-secondary rounded-pill">{{ goalsSummary.insc.b2b }}</span></li>
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0"><span><i class="fa-solid fa-handshake text-muted me-2"></i>Membresía</span><span class="badge bg-warning rounded-pill">{{ goalsSummary.insc.b2b }}</span></li>
-              </ul>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="kpi-card h-100">
-              <div class="kpi-header"><i class="fa-solid fa-crosshairs text-danger"></i>Cumplimiento</div>
-              <div class="text-center py-3">
-                <div class="progress" style="height:25px;"><div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: Math.min(goalsSummary.vacantes.porcentaje, 100) + '%' }">{{ goalsSummary.vacantes.porcentaje }}%</div></div>
-                <div class="d-flex justify-content-between mt-2 small text-muted fw-bold"><span>0%</span><span>Meta: {{ goalsSummary.vacantes.objetivo }} vacantes</span><span>100%</span></div>
-              </div>
-              <div class="alert alert-light border mt-2 mb-0 text-center">
-                <div v-if="goalsSummary.vacantes.faltantes < 0" class="text-success fw-bold"><i class="fa-solid fa-check-circle"></i> ¡Meta superada por {{ Math.abs(goalsSummary.vacantes.faltantes) }}!</div>
-                <div v-else class="text-warning fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Faltan {{ goalsSummary.vacantes.faltantes }} para meta</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="kpi-card h-100">
-              <div class="kpi-header"><i class="fa-solid fa-filter-circle-dollar text-success"></i>Embudo</div>
-              <div class="d-flex align-items-center justify-content-around mt-4">
-                <div class="text-center"><h3 class="fw-bold text-muted mb-0">{{ goalsSummary.consultas.total }}</h3><small class="text-muted">Leads Totales</small></div>
-                <div class="text-muted"><i class="fa-solid fa-arrow-right"></i></div>
-                <div class="text-center"><h3 class="fw-bold text-success mb-0">{{ goalsSummary.insc.total_aula }}</h3><small class="text-success">Ventas</small></div>
-              </div>
-              <div class="text-center mt-4">
-                <span class="display-6 fw-bold text-dark">{{ goalsSummary.consultas.conversion }}%</span>
-                <small class="d-block text-muted text-uppercase fw-bold ls-1">Tasa de Conversión</small>
-              </div>
-            </div>
-          </div>
+
+        <!-- Cargar más -->
+        <div class="text-center" v-if="auditHasMore">
+          <button type="button" class="btn-exec btn-exec-outline btn-sm" @click="loadAuditLogs(currentEditionId)" :disabled="loadingAudit">
+            <i class="fa-solid fa-spinner fa-spin" v-if="loadingAudit" aria-hidden="true"></i>
+            Cargar más
+          </button>
         </div>
       </div>
     </BaseModal>
 
-<BaseModal v-model="showAuditModal"
-  :title="currentEditionId ? 'Historial de Cambios — Edición' : 'Historial Global de Cambios'"
-  size="xl">  <div v-if="loadingAudit && !auditLogs.length" class="text-center py-5 ed-modal-body">
-    <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
-    <p class="text-muted fw-600">Cargando historial...</p>
-  </div>
-
-  <div v-else-if="!auditLogs.length" class="empty-state ed-modal-body">
-    No hay historial de cambios registrado.
-  </div>
-
-  <div v-else class="ed-modal-body">
-    <div v-for="log in auditLogs" :key="log.transaction_id" class="audit-entry mb-3">
-      <!-- Cabecera de transacción -->
-      <div class="audit-entry__header">
-        <div class="d-flex align-items-center gap-2">
-          <div class="user-avatar">{{ log.user_name?.charAt(0) || '?' }}</div>
-          <div>
-            <div class="fw-bold" style="font-size:.85rem">{{ log.user_name }}</div>
-            <small class="text-muted">{{ formatDateTime(log.created_at) }}</small>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cambios agrupados por tabla/registro -->
-      <div v-for="(change, i) in log.changes" :key="i" class="audit-change">
-        <div class="audit-change__meta">
-          <span class="pill border" :class="actionClass(change.action)">
-            {{ actionLabel(change.action) }}
-          </span>
-          <span class="fw-semibold" style="font-size:.82rem">
-            {{ change.program_abbreviation || '' }}
-            <span class="text-muted" v-if="change.global_code">· {{ change.global_code }}</span>
-          </span>
-          <span v-if="change.is_child" class="pill pill-slate border" style="font-size:.68rem">
-            <i class="fa-solid fa-sitemap me-1"></i> Módulo
-          </span>
-          <span v-if="change.table_name === 'edition_structure'" class="pill pill-slate border" style="font-size:.68rem">
-            <i class="fa-solid fa-link me-1"></i> Vínculo
-          </span>
-        </div>
-
-        <!-- Campos modificados -->
-        <div v-if="change.changed_fields && Object.keys(change.changed_fields).length"
-             class="audit-fields mt-2">
-          <div v-for="(val, key) in change.changed_fields" :key="key" class="audit-field-row">
-            <span class="field-name">{{ resolveFieldLabel(key) }}</span>
-            <span class="field-old">{{ formatFieldValue(key, val).old }}</span>
-            <i class="fa-solid fa-arrow-right text-muted" style="font-size:.7rem"></i>
-            <span class="field-new">{{ formatFieldValue(key, val).new }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cargar más -->
-    <div class="text-center mt-3" v-if="auditHasMore">
-      <button class="btn-exec btn-exec-outline btn-exec-sm" @click="loadAuditLogs(currentEditionId)" :disabled="loadingAudit">
-        <i class="fa-solid fa-spinner fa-spin me-1" v-if="loadingAudit"></i>
-        Cargar más
-      </button>
-    </div>
-  </div>
-</BaseModal>
-
-<A5MigrationModal
-  v-model:visible="showA5MigrationModal"
-  :origin="a5MigrationOrigin"
-  :a5-segment-id="getA5SegmentId()"
-  @completed="handleA5Completed"
-/>
+    <A5MigrationModal
+      v-model:visible="showA5MigrationModal"
+      :origin="a5MigrationOrigin"
+      :a5-segment-id="getA5SegmentId()"
+      @completed="handleA5Completed"
+    />
   </div>
 </template>
 
+<!-- Paleta canónica de segmentos (--cro-a1..a7). Solo la importa Gerencia ›
+     Objetivos; sin esta línea el cronograma dependería de haber visitado esa
+     vista antes para tener los colores. -->
+<style src="@/styles/cronograma-fila.css"></style>
+
 <style scoped>
 /* ═══════════════════════════════════════════════
-   TOKENS DE DISEÑO
+   ENCABEZADO Y FILTROS
+   Todo color sale de --ds-* (design-system.css): claro y oscuro sin bloque
+   propio. Los botones y switches son los globales; aquí solo lo del cronograma.
 ═══════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+.ed-title-reload { cursor: pointer; }
+.ed-title-reload:hover { color: var(--ds-accent); }
 
-.exec-shell {
-  font-family: 'Hanken Grotesk', system-ui, sans-serif;
-  background: #f8fafc;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: #0f172a;
-
-  --navy-900: #0f172a;
-  --navy-800: #1e293b;
-  --navy-700: #334155;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-100: #f1f5f9;
-  --teal-600:  #002060; /* navy WE */
-  --teal-500:  #12274e;
-  --blue-600:  #2563eb;
-  --gold-400:  #fbbf24;
-  --white:     #ffffff;
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --border:         #e2e8f0;
-
-  /* Color de grupos de columna */
-  --col-a-bg:     #eff6ff;
-  --col-a-head:   #1e40af;
-  --col-a-border: #bfdbfe;
-  --col-a-td:     #f8fbff;
-  --col-a-tdbdr:  #e0eeff;
-
-  --col-b-bg:     #f0fdf4;
-  --col-b-head:   #166534;
-  --col-b-border: #bbf7d0;
-  --col-b-td:     #f7fdf9;
-  --col-b-tdbdr:  #d5f5e0;
-
-  --col-c-bg:     #fff7ed;
-  --col-c-head:   #92400e;
-  --col-c-border: #fed7aa;
-  --col-c-td:     #fffbf5;
-  --col-c-tdbdr:  #fde8c8;
-
-  --col-d-bg:     #fafafa;
-  --col-d-head:   #374151;
-  --col-d-border: #e5e7eb;
-  --col-d-td:     #fdfdfd;
-  --col-d-tdbdr:  #ebebeb;
+/* Barra de filtros: no es .ds-panel porque ese recorta (overflow hidden) y los
+   desplegables de MultiSelect quedarían cortados. */
+.ed-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px;
+  padding: 12px 16px;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
 }
+.ed-period { display: flex; align-items: center; gap: 6px; }
+.ed-select { height: 32px; padding: 4px 8px; }
+.ed-select--month { width: 130px; }
+.ed-select--year { width: 84px; }
+.ed-field-line { min-width: 180px; }
+.ed-chips { flex: 1; min-width: 0; }
+
+/* Interruptor visual de un botón de filtro: encendido = tinte de info. */
+.ed-toggle.is-on { background: var(--ds-soft-info); border-color: var(--ds-accent); color: var(--ds-info-ink); }
+.ed-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ds-warn); }
 
 /* ═══════════════════════════════════════════════
-   MASTHEAD
+   TABLA DE SEMANAS
+   Scroll propio con alto acotado: el encabezado de 3 filas necesita un
+   contenedor donde quedarse fijo; a 400px la tabla scrollea en horizontal.
 ═══════════════════════════════════════════════ */
-.exec-masthead {
-  background: var(--navy-900);
-  color: var(--white);
-  border-bottom: 1px solid var(--navy-700);
-  flex-shrink: 0;
-}
+.ed-scroll { max-height: calc(100vh - 250px); min-height: 320px; overflow: auto; }
+.ed-grid { min-width: 1200px; }
+.ed-grid td { padding: 3px 8px; vertical-align: middle; }
+.ed-grid.is-compact td { padding: 5px 8px; }
 
-.masthead-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 28px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-}
+.ed-grid thead { position: sticky; top: 0; z-index: 10; }
+/* Fondos opacos en el encabezado fijo: los --ds-soft-* son translúcidos en
+   oscuro y dejarían ver las filas que pasan por debajo. */
+.ed-grid thead th { background: linear-gradient(var(--grp, transparent), var(--grp, transparent)), var(--ds-surface); vertical-align: middle; }
+.ed-grid .thead-group th { padding: 7px 10px; font-size: 11px; font-weight: 700; }
+.ed-grid .th-group { text-align: center; border-left: 2px solid var(--ds-surface); }
+.ed-grid .th-act { width: 86px; box-shadow: inset -1px 0 0 var(--ds-border); }
+.ed-grid .thead-sub .ts { padding: 6px 10px; font-size: 11px; font-weight: 600; border-left: 1px solid var(--ds-surface); box-shadow: inset 0 -1px 0 var(--ds-border); }
 
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
+/* Grupos de columna: color solo en la cabecera (DESIGN_SYSTEM §5.5.1). */
+.th-group-a, .ts-a { --grp: var(--ds-soft-info); color: var(--ds-info-ink); }
+.th-group-b, .ts-b { --grp: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.th-group-c, .ts-c { --grp: var(--ds-soft-orange); color: var(--ds-orange-ink); }
+.th-group-d, .ts-d { --grp: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+.th-group-e, .ts-e { --grp: var(--ds-soft-violet); color: var(--ds-violet-ink); }
 
-.brand-rule {
-  width: 3px; height: 42px;
-  background: var(--teal-500);
-  border-radius: 2px; flex-shrink: 0;
-}
+.ed-w-link { min-width: 80px; }
+.ed-w-ficha { min-width: 120px; max-width: 200px; }
+.ed-w-confirm { min-width: 100px; max-width: 180px; }
+.ed-w-met { min-width: 64px; }
+.ed-w-detail { min-width: 80px; max-width: 120px; }
+.ed-w-line { min-width: 120px; max-width: 300px; }
+.ed-w-line-hist { min-width: 10px; max-width: 300px; }
+.ed-w-instr { min-width: 100px; max-width: 130px; }
+.ed-trunc-prog { min-width: 40px; max-width: 160px; }
+.ed-trunc-160 { max-width: 160px; }
+.ed-trunc-90 { max-width: 90px; }
 
-.brand-eyebrow {
-  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 500; display: block; margin-bottom: 3px;
-}
-
-.brand-title {
-  font-size: 18px; font-weight: 700; margin: 0;
-  letter-spacing: -0.01em; color: var(--white);
-  transition: opacity 0.15s;
-}
-.brand-title:hover { opacity: 0.85; }
-
-.masthead-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-/* Controles inline para ACADEMICA (una sola fila junto al brand) */
-.masthead-inline-filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  margin-left: auto;
-}
-
-/* Filtros */
-.masthead-filters {
-  display: flex; align-items: center; gap: 0;
-  padding: 0 28px; min-height: 50px;
-}
-
-.filter-group { display: flex; flex-direction: column; gap: 2px; padding: 8px 20px 8px 0; }
-
-.filter-label {
-  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 600; cursor: default;
-}
-
-.filter-period-nav { display: flex; align-items: center; gap: 4px; }
-
-.filter-nav-btn {
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
-  color: var(--slate-300); width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 3px; cursor: pointer; transition: all 0.15s;
-}
-.filter-nav-btn:hover { background: rgba(255,255,255,0.16); color: var(--white); }
-
-.exec-select {
-  background: transparent; border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-  color: var(--white); font-family: 'Hanken Grotesk', inherit;
-  font-size: 12.5px; font-weight: 500; padding: 3px 0;
-  outline: none; cursor: pointer; min-width: 110px; appearance: auto;
-}
-.exec-select option { color: var(--text-primary); background: var(--white); }
-
-.filter-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.1); margin: 0 20px 0 0; }
-.filter-spacer { flex: 1; }
-
-/* KPIs inline */
-.masthead-kpis { display: flex; gap: 28px; align-items: center; }
-.inline-kpi { text-align: right; }
-.inline-kpi-label {
-  display: block; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
-  color: var(--slate-400); font-weight: 600; margin-bottom: 2px;
-}
-.inline-kpi-value {
-  font-size: 15px; font-weight: 700; color: var(--white);
-  font-variant-numeric: tabular-nums; font-family: 'IBM Plex Mono', monospace;
-}
-.inline-kpi-value.accent { color: #6366f1; }
-
-/* Filtros activos en masthead */
-.filter-chips-bar { flex: 1; padding: 8px 0; }
-
-/* ═══════════════════════════════════════════════
-   BOTONES EJECUTIVOS
-═══════════════════════════════════════════════ */
-.btn-exec {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 4px;
-  border: solid 1px white;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
-  cursor: pointer; border: none; font-family: inherit;
-  transition: background 0.15s, opacity 0.15s; position: relative;
-}
-
-.btn-exec-ghost {
-  background: rgba(255,255,255,0.07); color: var(--slate-300);
-  border: 1px solid rgba(206, 206, 206, 0.784);
-}
-.btn-exec-ghost:hover { background: rgba(255,255,255,0.13); color: var(--white); }
-
-.btn-exec-primary { background: var(--teal-600); color: var(--white); }
-.btn-exec-primary:hover:not(:disabled) { background: var(--teal-500); }
-.btn-exec-primary:disabled { opacity: 0.55; cursor: default; }
-
-.btn-exec-teal { background: rgba(13,148,136,0.28); color: #5eead4; border: 1px solid rgba(13,148,136,0.4); }
-.btn-exec-teal:hover { background: rgba(13,148,136,0.4); }
-
-.btn-exec-xs { padding: 4px 10px; font-size: 11px; }
-
-.btn-exec-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--gold-400); display: inline-block;
-  margin-left: 2px;
-}
-
-/* ═══════════════════════════════════════════════
-   CUERPO
-═══════════════════════════════════════════════ */
-.exec-body {
-  flex: 1;
-  padding: 12px 24px 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.view-table {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.table-shell {
-  flex: 1;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.table-responsive-custom {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
-}
-
-/* ═══════════════════════════════════════════════
-   TABLA EJECUTIVA
-═══════════════════════════════════════════════ */
-.exec-table {
-  width: 100%; border-collapse: collapse;
-  font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 12.5px; min-width: 1200px;
-}
-
-.exec-table-dense td { padding: 5px 8px !important; }
-
-/* ── Fila 1: Grupos principales ── */
-.exec-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.thead-group th {
-  padding: 8px 10px; font-size: 10px;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  font-weight: 700; border-bottom: 1px solid var(--border);
-}
-
-.th-act {
-  background:rgb(217, 217, 237);
-  width: 86px; padding: 8px 10px;
-  border-right: 2px solid var(--navy-700);
-}
-
-.th-group { text-align: center; }
-
-.th-group-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 2px solid var(--col-a-border); }
-.th-group-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 2px solid var(--col-b-border); }
-.th-group-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 2px solid var(--col-c-border); }
-.th-group-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 2px solid var(--col-d-border); }
-.th-group-e { background: #ede9fe; color: #5b21b6; border-left: 2px solid #c4b5fd; }
-
-/* ── Fila 2: Columnas individuales ── */
-.thead-sub .ts {
-  padding: 6px 10px; font-size: 10px;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  font-weight: 600; border-bottom: 2px solid var(--border);
-}
-
-.ts-a { background: var(--col-a-bg); color: var(--col-a-head); border-left: 1px solid var(--col-a-border); }
-.ts-b { background: var(--col-b-bg); color: var(--col-b-head); border-left: 1px solid var(--col-b-border); }
-.ts-c { background: var(--col-c-bg); color: var(--col-c-head); border-left: 1px solid var(--col-c-border); }
-.ts-d { background: var(--col-d-bg); color: var(--col-d-head); border-left: 1px solid var(--col-d-border); }
-
-/* ── Fila 3: Filtros de columna ── */
-.thead-filter .tf {
-  padding: 5px 6px;
-  background: var(--bg-subtle, #f8fafc);
-  border-bottom: 2px solid var(--border);
-  vertical-align: middle;
-}
+/* Fila 3: filtros de columna */
+.ed-grid .thead-filter .tf { padding: 5px 6px; background: var(--ds-surface-2); border-top: 0; box-shadow: inset 0 -1px 0 var(--ds-border); }
 /* flatpickr renderiza su propio input (altInput), fuera del alcance de los
    estilos del trigger: hay que igualarlo a mano o la fila queda despareja. */
 .thead-filter :deep(.exec-flatpickr-input) {
-  width: 100%;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 11px;
-  font-family: inherit;
-  color: #1e293b;
-  background: #fff;
-  box-sizing: border-box;
-  outline: none;
+  width: 100%; height: 30px; padding: 0 8px; box-sizing: border-box; outline: none;
+  border: 1px solid var(--ds-border-strong); border-radius: var(--ds-radius-control);
+  font-size: 11px; font-family: inherit; color: var(--ds-ink); background: var(--ds-surface);
 }
-.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #002060; }
+.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: var(--ds-accent); }
 
-/* ── Encabezado de Semana ── */
+/* ── Barra de semana ── */
 .week-header-row { cursor: pointer; }
-.week-header-row:hover .week-header-cell { filter: brightness(0.97); }
-
-.week-header-cell {
-  padding: 0 !important;
-  background: var(--navy-800) !important;
-  border-bottom: 1px solid var(--navy-700) !important;
-}
-
-.week-header-inner {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px;
-}
-
-.week-chevron {
-  color: var(--slate-400); transition: transform 0.2s ease; flex-shrink: 0;
-}
+.ed-grid .week-header-cell { padding: 0; background: var(--ds-surface-2); border-top: 1px solid var(--ds-border); }
+.week-header-row:hover .week-header-cell { background: var(--ds-surface-3); }
+.week-header-inner { display: flex; align-items: center; gap: 10px; padding: 7px 14px; }
+.week-chevron { flex-shrink: 0; color: var(--ds-muted); transition: transform 0.2s ease; }
 .week-chevron-open { transform: rotate(180deg); }
+.week-label { font-size: 13px; font-weight: 800; color: var(--ds-heading); }
+.week-badge { margin-left: auto; }
 
-.week-label {
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--slate-300);
-}
-
-.week-badge {
-  margin-left: auto; background: var(--teal-600); color: var(--white);
-  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 10px;
-  letter-spacing: 0.04em; border: solid 1px white;
-}
-
-/* ── Skeleton Loading ── */
-.skeleton-row td { padding: 8px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-.sk-cell {
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.4s ease-in-out infinite;
-}
-@keyframes sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+.skeleton-row td { padding: 10px 12px; }
 
 /* ── Filas de datos ── */
-.tbody-row td {
-  padding: 1px 4px; border-bottom: 1px solid #f8fafc;
-  vertical-align: middle;
+.ed-grid .td-a, .ed-grid .td-b, .ed-grid .td-c, .ed-grid .td-d, .ed-grid .td-e { border-left: 1px solid var(--ds-border); }
+.ed-grid .tbody-row:hover > td { background: var(--ds-surface-2); }
+.ed-grid td.td-act { padding: 0 8px; box-shadow: inset -1px 0 0 var(--ds-border); }
+
+/* Segmentos A1..A7: identidad categórica, no estado. Paleta canónica
+   --cro-aN (cronograma-fila.css), la misma de Cronograma Vista y Objetivos.
+   A5 = cancelado (rojo), A7 = cerrado (navy). El tinte se mezcla con la
+   superficie para quedar opaco y legible en los dos temas. */
+.seg-a1, .row-segment-a1 { --seg: var(--cro-a1); }
+.seg-a2, .row-segment-a2 { --seg: var(--cro-a2); }
+.seg-a3, .row-segment-a3 { --seg: var(--cro-a3); }
+.seg-a4, .row-segment-a4 { --seg: var(--cro-a4); }
+.seg-a5, .row-segment-a5 { --seg: var(--cro-a5); }
+.seg-a6, .row-segment-a6 { --seg: var(--cro-a6); }
+.seg-a7, .row-segment-a7 { --seg: var(--cro-a7); }
+
+.ed-grid tr[class*="row-segment-"] > .td-a,
+.ed-grid tr[class*="row-segment-"] > .td-b,
+.ed-grid tr[class*="row-segment-"] > .td-c,
+.ed-grid tr[class*="row-segment-"] > .td-d { background: color-mix(in oklab, var(--seg) var(--seg-mix, 12%), var(--ds-surface)); }
+.ed-grid tr[class*="row-segment-"] > .td-prog { box-shadow: inset 3px 0 0 var(--seg); }
+.ed-grid tr[class*="row-segment-"]:hover { --seg-mix: 20%; }
+
+/* Long press (filtro de familia): pinta la fila mientras se mantiene. */
+.ed-grid tr.tbody-row.row-pressing > :is(.td-a, .td-b, .td-c, .td-d) {
+  background: color-mix(in oklab, var(--ds-accent) 20%, var(--ds-surface));
+  cursor: progress;
+  transition: background-color 0.3s;
 }
-.tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background-color: #f0f9ff !important; transition: background 0.1s; }
 
-.td-act {
-  background: var(--navy-900) !important;
-  border-right: 2px solid var(--navy-800) !important;
-  padding: 0px 8px !important;
+/* Pastilla de segmento: el texto se acerca a la tinta del tema para que el
+   navy de A7 no desaparezca en oscuro. */
+.seg-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 10px; font-weight: 800;
+  background: color-mix(in oklab, var(--seg, var(--ds-muted)) 22%, var(--ds-surface));
+  color: color-mix(in oklab, var(--seg, var(--ds-ink-2)) 70%, var(--ds-ink));
 }
-.tbody-row:hover .td-act { background: #152c711d !important; }
 
-.td-a { background: var(--col-a-td); border-left: 1px solid var(--col-a-tdbdr); }
-.td-b { background: var(--col-b-td); border-left: 1px solid var(--col-b-tdbdr); }
-.td-c { background: var(--col-c-td); border-left: 1px solid var(--col-c-tdbdr); }
-.td-d { background: var(--col-d-td); border-left: 1px solid var(--col-d-tdbdr); }
-.td-e { background: #faf5ff; border-left: 1px solid #e9d5ff; }
-.ts-e { background: #f5f3ff; color: #6d28d9; border-left: 1px solid #ddd6fe; }
-.link-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; text-decoration: none; transition: all .15s; }
-.link-wa { background: #dcfce7; color: #16a34a; }
-.link-wa:hover { background: #25d366; color: #fff; }
-.link-teams { background: #ede9fe; color: #6264a7; }
-.link-teams:hover { background: #6264a7; color: #fff; }
+.tipo-tag {
+  display: inline-block; padding: 2px 7px;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  font-size: 10.5px; font-weight: 500; color: var(--ds-ink-2); background: var(--ds-surface);
+}
 
-/* ── ACADÉMICA: celda con chip animado ── */
-.td-e-lac { padding: 0 6px !important; vertical-align: middle; }
+/* Utilidades de texto propias (las de Bootstrap tienen color fijo y en
+   oscuro el texto desaparece, DESIGN_SYSTEM §6). */
+.ed-sub { font-size: 11.5px; color: var(--ds-muted); }
+.ed-muted { color: var(--ds-muted); }
+.ed-cell-sm { font-size: 11.5px; color: var(--ds-ink-2); }
+.ed-strong { font-weight: 700; color: var(--ds-ink); }
+.ed-strong-sm { font-size: 11.5px; font-weight: 600; color: var(--ds-ink); }
+.ed-accent { color: var(--ds-accent); }
+.ed-mono { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; }
+.ed-num { font-weight: 700; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.ed-xs { font-size: 10.5px; }
+.ed-ok { color: var(--ds-ok-ink); }
+.ed-bad { font-weight: 700; color: var(--ds-bad-ink); }
+.cursor-pointer { cursor: pointer; }
 
+.td-prog { max-width: 200px; }
+.prog-name { font-weight: 600; color: var(--ds-heading); }
+.prog-link { color: var(--ds-accent); cursor: pointer; }
+.prog-link:hover { text-decoration: underline; }
+.prog-sub { line-height: 1.3; }
+.date-link { font-family: var(--ds-font-mono); font-size: 12px; font-weight: 600; color: var(--ds-accent); cursor: pointer; }
+.date-link:hover { text-decoration: underline; }
+
+/* Observación editable en la celda: parece texto hasta que se enfoca. */
+.exec-textarea {
+  width: 100%; resize: none; padding: 3px 5px;
+  font-size: 11.5px; font-family: inherit; line-height: 1.4; color: var(--ds-ink);
+  background: transparent; border: 1px solid transparent; border-radius: var(--ds-radius-control);
+  transition: border-color 0.2s, background 0.2s;
+}
+.exec-textarea:hover { background: var(--ds-surface-2); border-color: var(--ds-border); }
+.exec-textarea:focus { background: var(--ds-surface); border-color: var(--ds-accent); outline: none; }
+.exec-textarea::placeholder { color: var(--ds-muted); }
+
+/* ── Botones de acción de la fila: el tono distingue la acción ── */
+.action-btns { display: flex; justify-content: center; gap: 4px; }
+.action-btn {
+  flex-shrink: 0; width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.action-btn:hover { border-color: var(--ds-border-strong); background: var(--ds-surface); }
+.action-btn:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
+.action-btn-audit { background: var(--ds-soft-info); color: var(--ds-info-ink); }
+.action-btn-tree { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.action-btn-neutral { background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+.action-btn-edit { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.action-btn-hier { background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+
+/* ── Seguimiento en solo lectura (ACADEMICA) ── */
+.status-dot-ro { display: inline-block; width: 8px; height: 8px; margin: 0 3px; border-radius: 50%; vertical-align: middle; }
+.dot-ro-on { background: var(--ds-ok); box-shadow: 0 0 0 2px var(--ds-soft-ok); }
+.dot-ro-off { background: var(--ds-border-strong); }
+
+/* ── ACADÉMICA: chip de link que se abre al pasar el mouse ── */
+.td-e-lac { vertical-align: middle; }
+.ed-grid td.td-e-lac { padding: 0 6px; }
 .lac-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  border-radius: 20px;
-  padding: 4px 7px;
-  border: 1px solid transparent;
-  cursor: default;
+  display: inline-flex; align-items: center; gap: 0;
+  padding: 4px 7px; border: 1px solid transparent; border-radius: 20px;
+  white-space: nowrap; cursor: default;
   transition: gap .2s ease, background .15s, border-color .15s;
-  white-space: nowrap;
 }
-.lac-chip:hover {
-  gap: 5px;
-  border-color: rgba(0,0,0,.1);
-}
-.lac-chip--wa { color: #16a34a; }
-.lac-chip--wa:hover { background: #f0fdf4; border-color: #bbf7d0; }
-.lac-chip--teams { color: #6264a7; }
-.lac-chip--teams:hover { background: #f5f3ff; border-color: #ddd6fe; }
-.lac-chip--ficha { color: #d97706; }
-.lac-chip--ficha:hover { background: #fffbeb; border-color: #fde68a; }
-.lac-chip--notas { color: #0284c7; }
-.lac-chip--notas:hover { background: #f0f9ff; border-color: #bae6fd; }
-.lac-chip--no-link { color: var(--slate-300, #cbd5e1) !important; }
-.lac-chip--no-link:hover { background: var(--slate-50, #f8fafc); border-color: var(--slate-200, #e2e8f0); }
+.lac-chip:hover { gap: 5px; background: var(--lac-soft, var(--ds-surface-2)); border-color: var(--ds-border); }
+/* Cada link con su tono de negocio; el mismo tono lo usa el ícono del
+   encabezado (CLASSROOM_LINKS.headerColor). */
+.lac-chip--wa { --lac-soft: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.lac-chip--teams { --lac-soft: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+.lac-chip--ficha { --lac-soft: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.lac-chip--notas { --lac-soft: var(--ds-soft-info); color: var(--ds-info-ink); }
+.lac-chip.lac-chip--no-link { --lac-soft: var(--ds-surface-2); color: var(--ds-border-strong); }
 
-.lac-chip-icon {
-  font-size: 1.05rem;
-  transition: transform .2s ease;
-  flex-shrink: 0;
-}
+.lac-chip-icon { flex-shrink: 0; font-size: 1.05rem; transition: transform .2s ease; }
 .lac-chip:hover .lac-chip-icon { transform: scale(0.88); }
-
 .lac-chip-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
+  display: flex; align-items: center; gap: 2px;
+  max-width: 0; overflow: hidden; opacity: 0;
   transition: max-width .25s ease, opacity .2s ease .05s;
 }
-.lac-chip:hover .lac-chip-actions {
-  max-width: 64px;
-  opacity: 1;
-}
-
+.lac-chip:hover .lac-chip-actions { max-width: 64px; opacity: 1; }
 .lac-chip-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: .68rem;
-  text-decoration: none;
-  color: inherit;
-  padding: 0;
+  flex-shrink: 0; width: 24px; height: 24px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 5px; background: transparent;
+  font-size: .68rem; text-decoration: none; color: var(--ds-ink-2); cursor: pointer;
   transition: background .15s, color .15s, transform .1s;
-  flex-shrink: 0;
 }
-.lac-chip-btn:hover { transform: scale(1.15); }
-.lac-chip-btn--edit { color: var(--slate-500, #64748b); }
-.lac-chip-btn--edit:hover { background: var(--slate-100, #f1f5f9); color: var(--teal-600, #0d9488); }
-.lac-chip-btn--go { color: var(--slate-500, #64748b); }
-.lac-chip--wa .lac-chip-btn--go:hover { background: #dcfce7; color: #16a34a; }
-.lac-chip--teams .lac-chip-btn--go:hover { background: #ede9fe; color: #6264a7; }
-.lac-chip--ficha .lac-chip-btn--go:hover { background: #fef3c7; color: #d97706; }
-.lac-chip--notas .lac-chip-btn--go:hover { background: #e0f2fe; color: #0284c7; }
+.lac-chip-btn:hover { transform: scale(1.15); background: var(--ds-surface); }
+.lac-chip-btn--edit:hover { color: var(--ds-accent); }
+.lac-chip-btn--go:hover { color: inherit; }
 .lac-chip-btn--empty { opacity: .3; cursor: not-allowed; }
 .lac-chip-btn--empty:hover { transform: none; background: transparent; }
 
-/* ── Inline edit de links ── */
-.td-e-editing { min-width: 220px !important; padding: 4px 6px !important; }
-
-.lac-inline-edit {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  animation: lac-expand .15s ease;
-}
+/* ── Edición en línea del link ── */
+.ed-grid td.td-e-editing { min-width: 220px; padding: 4px 6px; }
+.lac-inline-edit { display: flex; align-items: center; gap: 4px; animation: lac-expand .15s ease; }
 @keyframes lac-expand {
   from { opacity: 0; transform: scaleX(.85); }
   to   { opacity: 1; transform: scaleX(1); }
 }
-
 .lac-inline-input {
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  padding: 0 8px;
-  font-size: .72rem;
-  border: 1.5px solid var(--teal-400, #2dd4bf);
-  border-radius: 5px;
-  outline: none;
-  background: #fff;
-  color: var(--text-primary, #0f172a);
-  box-shadow: 0 0 0 3px rgba(20,184,166,.12);
-  transition: border-color .15s;
+  flex: 1; min-width: 0; height: 28px; padding: 0 8px;
+  font-size: .72rem; color: var(--ds-ink); background: var(--ds-surface);
+  border: 1.5px solid var(--ds-accent); border-radius: var(--ds-radius-control); outline: none;
 }
-.lac-inline-input:focus { border-color: var(--teal-500, #14b8a6); }
-
 .lac-inline-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  font-size: .7rem;
-  flex-shrink: 0;
-  transition: background .12s, transform .1s;
-  padding: 0;
+  flex-shrink: 0; width: 26px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 5px; font-size: .7rem; cursor: pointer;
+  transition: background .12s, color .12s;
 }
-.lac-inline-btn:hover:not(:disabled) { transform: scale(1.1); }
 .lac-inline-btn:disabled { opacity: .5; cursor: not-allowed; }
-.lac-inline-btn--save { background: #dcfce7; color: #16a34a; }
-.lac-inline-btn--save:hover:not(:disabled) { background: #22c55e; color: #fff; }
-.lac-inline-btn--cancel { background: #fee2e2; color: #dc2626; }
-.lac-inline-btn--cancel:hover:not(:disabled) { background: #ef4444; color: #fff; }
-
-/* ── Dots read-only para SEGUIMIENTO ── */
-.status-dot-ro {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin: 0 3px;
-  vertical-align: middle;
-}
-.dot-ro-on  { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
-.dot-ro-off { background: #cbd5e1; }
-
-.td-prog { max-width: 200px; }
-
-/* ── Botones de Acción en tabla ── */
-.action-btns { display: flex; justify-content: center; gap: 4px; }
-
-.action-btn {
-  width: 26px; height: 26px; border-radius: 4px; border: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s; flex-shrink: 0; border: solid 1px #0a0a1e32;
-}
-
-.action-btn-view   { background: rgba(14,165,233,0.12); color: #0284c7; }
-.action-btn-view:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-tree   { background: rgba(239,68,68,0.1); color: #dc2626; }
-.action-btn-tree:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-neutral { background: rgba(148,163,184,0.12); color: #64748b; }
-.action-btn-neutral:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-edit  { background: rgba(245,158,11,0.12); color: #d97706; }
-.action-btn-edit:hover { background: rgba(244, 243, 243, 0.767); }
-
-.action-btn-hier  { background: rgba(99,102,241,0.12); color: #6366f1; }
-.action-btn-hier:hover {  background: rgba(244, 243, 243, 0.767); }
-
-/* ── Botón descarga PDF (modal jerarquía) ── */
-.btn-pdf-dl {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;
-  background: rgba(220,38,38,0.08); color: #dc2626;
-  transition: background 0.15s, transform 0.1s;
-}
-.btn-pdf-dl:hover:not(:disabled) { background: rgba(220,38,38,0.18); transform: scale(1.08); }
-.btn-pdf-dl:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ── Programa ── */
-.prog-name { font-weight: 600; }
-.prog-link { color: #1d4ed8; }
-.prog-link:hover { text-decoration: underline; }
-.prog-sub { font-size: 11px; line-height: 1.3; }
-
-/* ── Fecha / Date link ── */
-.date-link {
-  color: #0369a1; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px; cursor: pointer;
-}
-.date-link:hover { text-decoration: underline; }
-
-/* ── Badges y Pills ── */
-.pill {
-  display: inline-block; padding: 2px 8px; border-radius: 3px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
-}
-.pill-blue   { background: #dbeafe; color: #1d4ed8; }
-.pill-violet { background: #ede9fe; color: #6d28d9; }
-.pill-amber  { background: #fef3c7; color: #92400e; }
-.pill-teal   { background: #ccfbf1; color: #0f766e; }
-.pill-slate  { background: #f1f5f9; color: #475569; }
-
-/* Segmento pill */
-.seg-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%;
-  font-size: 10px; font-weight: 800; letter-spacing: 0;
-}
-.seg-a1 { background: #dbeafe; color: #1e40af; }
-.seg-a2 { background: #fed7aa; color: #92400e; }
-.seg-a3 { background: #fef9c3; color: #854d0e; }
-.seg-a4 { background: #fde8c8; color: #9a3412; }
-.seg-a5 { background: #fecdd3; color: #9f1239; }
-.seg-a6 { background: #e6d5fa; color: #6d28d9; }
-.seg-a7 { background: #ccd8ed; color: #1e3a8a; }
-
-/* Tipo tag */
-.tipo-tag {
-  display: inline-block; padding: 2px 7px;
-  border: 1px solid var(--border); border-radius: 3px;
-  font-size: 10px; font-weight: 500; color: var(--text-secondary);
-  background: var(--white);
-}
-
-/* ── Textarea ── */
-.exec-textarea {
-  width: 100%; resize: none; background-color: transparent;
-  border: 1px solid transparent; border-radius: 3px;
-  font-size: 11.5px; font-family: inherit;
-  line-height: 1.4; transition: all 0.2s;
-  padding: 3px 5px; color: var(--text-primary);
-}
-.exec-textarea:hover { background-color: #f8fafc; border-color: var(--border); }
-.exec-textarea:focus { background-color: var(--white); border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
-.exec-textarea::placeholder { color: var(--text-muted); }
-
-/* ── Segmento colores de fila ── */
-tr.row-segment-a1 { --seg-bg: #eff6ff; --seg-border: #93c5fd; }
-tr.row-segment-a2 { --seg-bg: #fbebd8; --seg-border: #fbb56a; }
-tr.row-segment-a3 { --seg-bg: #f9f6d8; --seg-border: #fde047; }
-tr.row-segment-a4 { --seg-bg: #f8f4c9; --seg-border: #edce33; }
-tr.row-segment-a5 { --seg-bg: #f9d5d8; --seg-border: #fb7185; }
-tr.row-segment-a6 { --seg-bg: #ecdcfa; --seg-border: #a855f7; } /* A6 = morado pastel (aplica también a hijos) */
-tr.row-segment-a7 { --seg-bg: #d9e2f2; --seg-border: #1e3a8a; } /* A7 = CERRADO: pastel azul acero, el borde navy marca el cierre */
-
-tr[class*="row-segment-"] .td-a,
-tr[class*="row-segment-"] .td-b,
-tr[class*="row-segment-"] .td-c,
-tr[class*="row-segment-"] .td-d {
-  background-color: var(--seg-bg) !important;
-}
-tr[class*="row-segment-"] .td-a {
-  border-left: 3px solid var(--seg-border) !important;
-}
-tr[class*="row-segment-"]:hover .td-a,
-tr[class*="row-segment-"]:hover .td-b,
-tr[class*="row-segment-"]:hover .td-c,
-tr[class*="row-segment-"]:hover .td-d {
-  filter: brightness(0.97);
-}
-
-/* ── Long press ── */
-.row-pressing .td-a,
-.row-pressing .td-b,
-.row-pressing .td-c,
-.row-pressing .td-d {
-  background-color: #dbeafe !important;
-  cursor: progress !important;
-  transition: background-color 0.3s;
-}
+.lac-inline-btn--save { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.lac-inline-btn--save:hover:not(:disabled) { background: var(--ds-ok); color: var(--ds-on-brand); }
+.lac-inline-btn--cancel { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.lac-inline-btn--cancel:hover:not(:disabled) { background: var(--ds-bad); color: var(--ds-on-brand); }
 
 /* ═══════════════════════════════════════════════
-   FOOTER
+   POPOVERS (proyección, análisis de tiempos, horarios)
+   Fondo opaco --ds-surface: flotan sobre filas teñidas.
 ═══════════════════════════════════════════════ */
-.exec-footer {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 28px; background: var(--white);
-  border-top: 1px solid var(--border);
-  font-size: 11.5px; color: var(--text-muted); font-weight: 500;
-  flex-shrink: 0;
-}
-.exec-footer strong { color: var(--text-secondary); }
-.footer-sep { color: var(--border); }
-.footer-spacer { flex: 1; }
-.footer-status { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot-ok      { background: #22c55e; }
-.dot-loading { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
-
-/* ═══════════════════════════════════════════════
-   POPOVERS / DROPDOWNS DE HORARIO
-═══════════════════════════════════════════════ */
-.overflow-visible { overflow: visible !important; }
-.cursor-pointer   { cursor: pointer; }
-
 .schedule-preview-popover {
-  position: absolute; top: 100%; left: 0;
-  z-index: 10000 !important;
-  background-color: #ffffff !important;
-  border: 1px solid #e2e8f0; border-radius: 8px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04) !important;
+  position: absolute; top: 100%; left: 0; z-index: 10000 !important;
   width: 320px; max-width: 90vw; margin-top: 6px; overflow: hidden;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+  text-align: left;
   animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-.popover-opens-top {
-  top: auto !important; bottom: 100% !important;
-  margin-top: 0 !important; margin-bottom: 6px;
-}
+.popover-opens-top { top: auto !important; bottom: 100% !important; margin-top: 0 !important; margin-bottom: 6px; }
+/* Variantes de ancho y anclaje (antes eran style="" sueltos). */
+.pop--w360 { width: 360px; }
+.pop--w350 { width: 350px; }
+.pop--right { right: 0; left: auto; }
+.pop--min250 { min-width: 250px; }
+.schedule-preview-popover.pop--z1070 { z-index: 1070 !important; }
 
 .popover-header-exec {
-  background: var(--navy-800);
-  padding: 10px 14px; border-bottom: 1px solid var(--navy-700);
   display: flex; justify-content: space-between; align-items: center;
-  font-weight: 700; font-size: 11px; color: var(--slate-300);
-  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 9px 12px; font-size: 12px; font-weight: 700; color: var(--ds-heading);
+  background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border);
 }
-
 .popover-content { max-height: 300px; overflow-y: auto; }
+.ed-preview-table { font-size: 11.5px; }
+.ed-preview-table th:first-child, .ed-preview-table td:first-child { padding-left: 12px; }
+.ed-preview-table tr.is-holiday td { background: var(--ds-soft-bad); }
 
 .schedule-dropdown-wrapper { position: relative; }
-
 .schedule-popover {
   position: absolute; top: 100%; left: 0; z-index: 1050;
-  min-width: 220px; background: white; border: 1px solid #e5e7eb;
-  border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  margin-top: 5px; overflow: hidden;
+  min-width: 220px; margin-top: 5px; overflow: hidden;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
 }
-
 .popover-header-sm {
-  background: #f9fafb; padding: 0.5rem 0.75rem; font-size: 0.75rem;
-  font-weight: 700; text-transform: uppercase; color: #6b7280;
   display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--ds-ink-2);
+  background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border);
 }
-.popover-body-sm { padding: 0.75rem; max-height: 200px; overflow-y: auto; }
+.popover-body-sm { max-height: 200px; overflow-y: auto; padding: 10px 12px; }
+.schedule-item { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--ds-border); }
+.schedule-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+.ed-schedule-day { font-size: 11.5px; font-weight: 700; color: var(--ds-accent); }
 
-.btn-close-xs {
-  border: none; background: transparent; font-size: 1.1rem; line-height: 1;
-  padding: 0; color: var(--slate-400); cursor: pointer;
-}
-.btn-close-xs:hover { color: #ef4444; }
-
-.click-overlay {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  z-index: 9999; cursor: default;
-}
+.btn-close-xs { padding: 0; border: none; background: transparent; font-size: 1.1rem; line-height: 1; color: var(--ds-muted); cursor: pointer; }
+.btn-close-xs:hover { color: var(--ds-bad); }
+.click-overlay { position: fixed; top: 0; left: 0; z-index: 9999; width: 100vw; height: 100vh; cursor: default; }
 
 /* ═══════════════════════════════════════════════
-   ESTILOS DE MODALES (internos)
+   MODAL: RESUMEN
 ═══════════════════════════════════════════════ */
-.modern-modal-layout {
-  display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: 1.5rem;
-  min-height: 400px;
-}
-@media (max-width: 992px) { .modern-modal-layout { grid-template-columns: 1fr; } }
-
-.main-column { display: flex; flex-direction: column; }
-.sidebar-column { display: flex; flex-direction: column; gap: 1rem; }
-
-.badge-type {
-  padding: 0.25rem 0.5rem; border-radius: 6px;
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
-}
-
-.form-section {
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem;
-  padding: 1.25rem; position: relative;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-}
-.section-label {
-  position: absolute; top: -10px; left: 12px;
-  background: #fff; padding: 0 0.5rem;
-  font-size: 0.75rem; font-weight: 700; color: #2563eb;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-.form-label-sm {
-  font-size: 0.78rem; font-weight: 600; color: #4b5563;
-  margin-bottom: 0.25rem; display: block;
-}
-
-.hierarchy-container {
-  border: 1px solid #e5e7eb; border-radius: 0.375rem;
-  overflow: visible; min-width: 500px !important;
-}
-
-.status-card {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;
-}
-.status-card__header {
-  background: var(--navy-800); color: var(--slate-300);
-  padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 600;
-  border-bottom: 1px solid var(--navy-700);
-  display: flex; align-items: center;
-}
-.status-card__body { padding: 1rem; }
-
-.switch-row {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
-}
-.switch-row:last-child { margin-bottom: 0; }
-.switch-label { font-size: 0.85rem; color: #334155; line-height: 1.2; }
-
-/* Acordeón árbol */
-.accordion-container { min-height: 200px; }
-.accordion-card { transition: all 0.2s ease-in-out; }
-.accordion-header { transition: background-color 0.2s; }
-.accordion-header:hover { background-color: #f8fafc; }
-.transition-transform { transition: transform 0.3s ease; }
-.rotate-180 { transform: rotate(180deg); }
-.icon-box { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-
-/* Resumen meta */
-.meta-dashboard { background-color: #f8fafc; border-radius: 8px; }
-.meta-card {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column;
-}
-.meta-card__header {
-  background: #fff; padding: 1rem 1.25rem; font-size: 0.9rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: #475569;
-  border-bottom: 1px solid #f1f5f9;
-}
-.meta-card__body { padding: 1.25rem; flex: 1; }
-
 .lines-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 5px;
+  gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 4px;
 }
-.line-item {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem;
-  padding: 0.75rem; text-align: center; transition: all 0.2s;
-}
-.line-item:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.line-item.is-zero { opacity: 0.6; background: #fff; border-style: dashed; }
-.line-item__name { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem; }
-.line-item__count { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
-.line-item.is-zero .line-item__count { color: #cbd5e1; }
+.line-item { padding: 12px; text-align: center; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.line-item.is-zero { opacity: 0.6; background: var(--ds-surface); border-style: dashed; }
+.line-item__name { margin-bottom: 4px; font-size: 11.5px; font-weight: 600; color: var(--ds-ink-2); }
+.line-item__count { font-size: 20px; font-weight: 800; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+.line-item.is-zero .line-item__count { color: var(--ds-muted); }
 
+.ed-cats { display: flex; flex-direction: column; gap: 12px; }
+.ed-cat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; color: var(--ds-ink-2); }
+
+.ed-seg-table tr[class*="row-segment-"] > td { background: color-mix(in oklab, var(--seg) 12%, var(--ds-surface)); }
 .segment-circle {
-  width: 24px; height: 24px; background: #e0e7ff; color: #4338ca;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 0.8rem;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 11px; font-weight: 700;
+  background: color-mix(in oklab, var(--seg, var(--ds-muted)) 24%, var(--ds-surface));
+  color: color-mix(in oklab, var(--seg, var(--ds-ink-2)) 70%, var(--ds-ink));
 }
-
-/* Colores segmento en tablas de modal */
-.row-segment-a1 td { background-color: #eff6ff !important; }
-.row-segment-a2 td { background-color: #fbebd8 !important; }
-.row-segment-a3 td { background-color: #f9f6d8 !important; }
-.row-segment-a4 td { background-color: #f8f4c9 !important; }
-.row-segment-a5 td { background-color: #f9d5d8 !important; }
-.row-segment-a6 td { background-color: #ecdcfa !important; }
-.row-segment-a7 td { background-color: #d9e2f2 !important; }
-
-/* Modal goals */
-.kpi-card {
-  background: #fff; border: 1px solid #f3f4f6; border-radius: 0.75rem;
-  padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-.kpi-header {
-  font-size: 0.9rem; font-weight: 700; color: #374151; text-transform: uppercase;
-  letter-spacing: 0.05em; margin-bottom: 1rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem;
-}
-
-/* Small table */
-.small-table { font-size: 0.8rem; }
-.text-xs { font-size: 0.7rem; }
-.ls-1 { letter-spacing: 1px; }
-.letter-spacing-1 { letter-spacing: 1px; }
 
 /* ═══════════════════════════════════════════════
-   UTILIDADES
+   MODAL: FILTROS Y FORMULARIO DE EDICIÓN
 ═══════════════════════════════════════════════ */
-.text-center { text-align: center; }
-.text-right  { text-align: right; }
-.text-mono   { font-family: 'IBM Plex Mono', monospace; }
-.text-muted  { color: var(--text-muted); }
-.small       { font-size: 11.5px; }
-.fw-600      { font-weight: 600; }
-.fw-700      { font-weight: 700; }
+.ed-filter-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.ed-span-all { grid-column: 1 / -1; }
+
+.modern-modal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 20px; min-height: 400px; }
+@media (max-width: 992px) { .modern-modal-layout { grid-template-columns: minmax(0, 1fr); } }
+.main-column { display: flex; flex-direction: column; gap: var(--ds-gap); min-width: 0; }
+.sidebar-column { display: flex; flex-direction: column; gap: var(--ds-gap); }
+
+.ed-form-head-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ed-form-name { margin: 0; font-size: 16px; font-weight: 800; color: var(--ds-heading); }
+.ed-form-head .ed-sub { margin-top: 4px; }
+
+/* Bloque del formulario: tarjeta con borde, título arriba (§5.5 bloques). */
+.form-section { padding: 14px 16px; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius); }
+.section-label { margin: 0 0 12px; font-size: 13.5px; font-weight: 700; color: var(--ds-heading); }
+.ed-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.ed-section-head .section-label { margin: 0; }
+
+.ed-fgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; }
+.ed-span-2 { grid-column: span 2; }
+.ed-span-4 { grid-column: 1 / -1; }
+@media (max-width: 600px) {
+  .ed-fgrid { grid-template-columns: minmax(0, 1fr); }
+  .ed-span-2 { grid-column: auto; }
+}
+
+/* Fecha + botón de análisis pegados, como un input-group. */
+.ed-input-group { display: flex; align-items: stretch; }
+.ed-input-group > :first-child { flex: 1; min-width: 0; }
+.ed-input-btn { flex: none; width: 34px; padding: 0; margin-left: -1px; color: var(--ds-accent); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+.hierarchy-container { min-width: 500px; overflow: visible; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.ed-children th:first-child, .ed-children td:first-child { padding-left: 10px; }
+.ed-children td { vertical-align: top; }
+.ed-w20 { width: 20%; }
+.ed-w25 { width: 25%; }
+.ed-w15 { width: 15%; }
+.ed-col-dates { min-width: 180px; }
+.ed-link { color: var(--ds-accent); cursor: pointer; }
+.ed-link:hover { text-decoration: underline; }
+.ed-filter-ico { font-size: 0.65rem; color: var(--ds-muted); }
+.ed-linked-box { padding: 4px; text-align: center; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control); }
+.ed-btn-bad { color: var(--ds-bad-ink); }
+
+.status-card { overflow: hidden; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius); }
+.status-card__header {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  font-size: 12.5px; font-weight: 700; color: var(--ds-heading);
+  background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border);
+}
+.status-card__body { padding: 12px 14px; }
+.switch-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.switch-row:last-child { margin-bottom: 0; }
+.switch-label { font-size: 12.5px; line-height: 1.2; color: var(--ds-ink); }
+.ed-hr { margin: 8px 0; border: 0; border-top: 1px solid var(--ds-border); opacity: 1; }
+.ed-side-field { margin-bottom: 10px; }
+.ed-notes { min-height: 150px; }
+.ed-footer-id { margin-right: auto; font-size: 12px; font-style: italic; color: var(--ds-muted); }
 
 /* ═══════════════════════════════════════════════
-   ANIMACIONES
+   MODAL: ÁRBOL ACADÉMICO
 ═══════════════════════════════════════════════ */
-@keyframes popIn  { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes spin   { to { transform: rotate(360deg); } }
-@keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-.audit-entry {
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 6px;
-  overflow: hidden;
+.accordion-container { min-height: 200px; }
+.ed-empty-ico { display: block; margin-bottom: 10px; font-size: 28px; opacity: 0.4; }
+.accordion-card { overflow: hidden; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius); }
+.accordion-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background-color 0.2s; }
+.accordion-header:hover { background: var(--ds-surface-2); }
+.accordion-header.is-open { background: var(--ds-soft-info); }
+.accordion-body { border-top: 1px solid var(--ds-border); }
+.icon-box {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; color: var(--ds-accent); background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
 }
-.audit-entry__header {
-  background: var(--slate-50, #f8fafc);
-  padding: .6rem 1rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+.icon-box.is-inactive { color: var(--ds-bad-ink); background: var(--ds-soft-bad); }
+.ed-tree-pill { margin-bottom: 4px; }
+.ed-tree-name { margin: 0; font-size: 14px; font-weight: 700; color: var(--ds-ink); }
+.ed-tree-name.is-inactive { color: var(--ds-bad-ink); text-decoration: line-through; }
+.ed-tree-table th:first-child, .ed-tree-table td:first-child { padding-left: 16px; }
+.ed-tree-table tr.is-current td { background: var(--ds-soft-warn); }
+.ed-w-pdf { width: 48px; }
+.ed-more { margin-top: 4px; }
+.transition-transform { transition: transform 0.3s ease; }
+.rotate-180 { transform: rotate(180deg); }
+
+.btn-pdf-dl {
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--ds-radius-sm); cursor: pointer;
+  background: var(--ds-soft-bad); color: var(--ds-bad-ink);
+  transition: background 0.15s, color 0.15s;
 }
-.audit-change {
-  padding: .6rem 1rem;
-  border-bottom: 1px solid var(--slate-100, #f1f5f9);
+.btn-pdf-dl:hover:not(:disabled) { background: var(--ds-bad); color: var(--ds-on-brand); }
+.btn-pdf-dl:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════
+   MODAL: HISTORIAL DE CAMBIOS
+═══════════════════════════════════════════════ */
+.audit-entry { overflow: hidden; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.audit-entry__header { padding: 10px 14px; background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border); }
+.ed-avatar {
+  width: 28px; height: 28px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; font-size: 12px; font-weight: 700;
+  background: var(--ds-brand); color: var(--ds-on-brand);
 }
+.audit-change { padding: 10px 14px; border-bottom: 1px solid var(--ds-border); }
 .audit-change:last-child { border-bottom: none; }
-.audit-change__meta {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  flex-wrap: wrap;
-}
-.audit-fields { display: flex; flex-direction: column; gap: .25rem; }
+.audit-change__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12.5px; }
+/* Tono por acción: alta = ok, cambio = warn, baja = bad. */
+.ed-act--pill-teal { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.ed-act--pill-amber { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.ed-act--pill-red { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.audit-fields { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .audit-field-row {
-  display: grid;
-  grid-template-columns: 160px 1fr 16px 1fr;
-  align-items: center;
-  gap: .5rem;
-  font-size: .8rem;
-  padding: .2rem .4rem;
-  border-radius: 4px;
-  background: var(--slate-50, #f8fafc);
+  display: grid; grid-template-columns: 160px 1fr 16px 1fr; align-items: center; gap: 8px;
+  padding: 3px 6px; font-size: 12px; background: var(--ds-surface-2); border-radius: var(--ds-radius-control);
 }
-.field-name { font-weight: 600; color: var(--slate-500, #64748b); }
-.field-old  { color: var(--red-600, #dc2626); text-decoration: line-through; }
-.field-new  { color: #15803d; font-weight: 600; }
-.action-btn-audit { background: rgba(99,102,241,0.1); color: #6366f1; }
-.action-btn-audit:hover { background: rgba(244,243,243,0.767); }
+@media (max-width: 600px) { .audit-field-row { grid-template-columns: 1fr; } }
+.field-name { font-weight: 600; color: var(--ds-ink-2); }
+.field-old { color: var(--ds-bad-ink); text-decoration: line-through; }
+.field-new { font-weight: 600; color: var(--ds-ok-ink); }
 
-/* ═══════════════════════════════════════════════
-   DARK MODE
-═══════════════════════════════════════════════ */
-[data-coreui-theme="dark"] .exec-shell {
-  color: #F4F4F0;
-  --white: #1A1A14;
-  --slate-100: #24241E;
-  --slate-50: #1F1F1A;
-  --slate-200: #2A2A22;
-  --slate-500: #A0A099;
-  --red-600: #F87171;
-  --text-primary: #F4F4F0;
-  --text-secondary: #A0A099;
-  --text-muted: #8A8A80;
-  --border: #2A2A22;
+@keyframes popIn { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* Grupos de columna (sólidos: los thead son sticky) */
-  --col-a-bg: #1B2537; --col-a-head: #93C5FD; --col-a-border: #2A3A55; --col-a-td: #171D2A; --col-a-tdbdr: #232E44;
-  --col-b-bg: #16281F; --col-b-head: #6EE7B7; --col-b-border: #1F3A2E; --col-b-td: #141F19; --col-b-tdbdr: #1E3227;
-  --col-c-bg: #2B2214; --col-c-head: #FCD34D; --col-c-border: #45361C; --col-c-td: #201B12; --col-c-tdbdr: #3A2E1A;
-  --col-d-bg: #1F1F1A; --col-d-head: #A0A099; --col-d-border: #2A2A22; --col-d-td: #1C1C16; --col-d-tdbdr: #24241E;
+@media (prefers-reduced-motion: reduce) {
+  .schedule-preview-popover, .lac-inline-edit { animation: none; }
 }
-
-/* ── Masthead (el bloque global "masthead claro" fuerza #fff con !important) ── */
-[data-coreui-theme="dark"] .exec-masthead .filter-nav-btn { background: #24241E !important; border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; border-color: #2A2A22 !important; }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal { background: rgba(143,170,220,.15) !important; color: #8FAADC !important; border-color: rgba(143,170,220,.4) !important; }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-teal:hover { background: rgba(143,170,220,.25) !important; }
-[data-coreui-theme="dark"] .inline-kpi-value.accent { color: #8FAADC !important; }
-
-/* ── Tabla principal ── */
-[data-coreui-theme="dark"] .th-act { background: #24242E; }
-[data-coreui-theme="dark"] .thead-filter .tf { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input) {
-  background: #14140F;
-  border-color: #3A3A33;
-  color: #F4F4F0;
-}
-[data-coreui-theme="dark"] .thead-filter :deep(.exec-flatpickr-input:focus) { border-color: #8FAADC; }
-[data-coreui-theme="dark"] .th-group-e { background: #251F33; color: #C4B5FD; border-left-color: #3A3050; }
-[data-coreui-theme="dark"] .ts-e { background: #211D2E; color: #C4B5FD; border-left-color: #3A3050; }
-[data-coreui-theme="dark"] .td-e { background: #1D1A26; border-left-color: #2A2438; }
-[data-coreui-theme="dark"] .skeleton-row td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .sk-cell {
-  background: linear-gradient(90deg, #24241E 25%, #2A2A22 50%, #24241E 75%);
-  background-size: 200% 100%;
-}
-[data-coreui-theme="dark"] .tbody-row td { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .tbody-row:hover td { background-color: #252B33 !important; }
-[data-coreui-theme="dark"] .link-wa { background: rgba(37,211,102,.15); color: #4ADE80; }
-[data-coreui-theme="dark"] .link-teams { background: rgba(165,180,252,.18); color: #A5B4FC; }
-[data-coreui-theme="dark"] .lac-chip:hover { border-color: rgba(255,255,255,.15); }
-[data-coreui-theme="dark"] .lac-chip--wa { color: #4ADE80; }
-[data-coreui-theme="dark"] .lac-chip--wa:hover { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.35); }
-[data-coreui-theme="dark"] .lac-chip--teams { color: #A5B4FC; }
-[data-coreui-theme="dark"] .lac-chip--teams:hover { background: rgba(165,180,252,.12); border-color: rgba(165,180,252,.35); }
-[data-coreui-theme="dark"] .lac-chip--ficha { color: #FCD34D; }
-[data-coreui-theme="dark"] .lac-chip--ficha:hover { background: rgba(252,211,77,.12); border-color: rgba(252,211,77,.35); }
-[data-coreui-theme="dark"] .lac-chip--notas { color: #7DD3FC; }
-[data-coreui-theme="dark"] .lac-chip--notas:hover { background: rgba(125,211,252,.12); border-color: rgba(125,211,252,.35); }
-[data-coreui-theme="dark"] .lac-chip--no-link { color: #5A5A50 !important; }
-[data-coreui-theme="dark"] .lac-chip--no-link:hover { background: #24241E; border-color: #3A3A33; }
-[data-coreui-theme="dark"] .lac-chip-btn--edit:hover { background: #24241E; color: #8FAADC; }
-[data-coreui-theme="dark"] .lac-chip--wa .lac-chip-btn--go:hover { background: rgba(74,222,128,.2); color: #4ADE80; }
-[data-coreui-theme="dark"] .lac-chip--teams .lac-chip-btn--go:hover { background: rgba(165,180,252,.2); color: #A5B4FC; }
-[data-coreui-theme="dark"] .lac-chip--ficha .lac-chip-btn--go:hover { background: rgba(252,211,77,.2); color: #FCD34D; }
-[data-coreui-theme="dark"] .lac-chip--notas .lac-chip-btn--go:hover { background: rgba(125,211,252,.2); color: #7DD3FC; }
-[data-coreui-theme="dark"] .lac-inline-input { background: #14140F; }
-[data-coreui-theme="dark"] .lac-inline-btn--save { background: rgba(74,222,128,.16); color: #4ADE80; }
-[data-coreui-theme="dark"] .lac-inline-btn--cancel { background: rgba(239,68,68,.16); color: #F87171; }
-[data-coreui-theme="dark"] .dot-ro-on { box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
-[data-coreui-theme="dark"] .dot-ro-off { background: #3A3A33; }
-[data-coreui-theme="dark"] .action-btn { border-color: rgba(255,255,255,.14); }
-[data-coreui-theme="dark"] .action-btn-view { color: #38BDF8; }
-[data-coreui-theme="dark"] .action-btn-tree { color: #F87171; }
-[data-coreui-theme="dark"] .action-btn-neutral { color: #A0A099; }
-[data-coreui-theme="dark"] .action-btn-edit { color: #FBBF24; }
-[data-coreui-theme="dark"] .action-btn-hier,
-[data-coreui-theme="dark"] .action-btn-audit { color: #A5B4FC; }
-[data-coreui-theme="dark"] .action-btn-view:hover,
-[data-coreui-theme="dark"] .action-btn-tree:hover,
-[data-coreui-theme="dark"] .action-btn-neutral:hover,
-[data-coreui-theme="dark"] .action-btn-edit:hover,
-[data-coreui-theme="dark"] .action-btn-hier:hover,
-[data-coreui-theme="dark"] .action-btn-audit:hover { background: rgba(255,255,255,.15); }
-[data-coreui-theme="dark"] .btn-pdf-dl { background: rgba(248,113,113,.12); color: #F87171; }
-[data-coreui-theme="dark"] .btn-pdf-dl:hover:not(:disabled) { background: rgba(248,113,113,.22); }
-[data-coreui-theme="dark"] .prog-link { color: #7BA3F0; }
-[data-coreui-theme="dark"] .date-link { color: #7DD3FC; }
-[data-coreui-theme="dark"] .pill-blue { background: rgba(59,130,246,.2); color: #93C5FD; }
-[data-coreui-theme="dark"] .pill-violet { background: rgba(139,92,246,.2); color: #C4B5FD; }
-[data-coreui-theme="dark"] .pill-amber { background: rgba(245,158,11,.18); color: #FCD34D; }
-[data-coreui-theme="dark"] .pill-teal { background: rgba(45,212,191,.18); color: #5EEAD4; }
-[data-coreui-theme="dark"] .pill-slate { background: #24241E; color: #A0A099; }
-[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; }
-[data-coreui-theme="dark"] .seg-a1 { background: rgba(59,130,246,.25); color: #93C5FD; }
-[data-coreui-theme="dark"] .seg-a2 { background: rgba(249,115,22,.25); color: #FDBA74; }
-[data-coreui-theme="dark"] .seg-a3 { background: rgba(234,179,8,.25); color: #FDE047; }
-[data-coreui-theme="dark"] .seg-a4 { background: rgba(217,119,6,.25); color: #FCD34D; }
-[data-coreui-theme="dark"] .seg-a5 { background: rgba(244,63,94,.25); color: #FDA4AF; }
-[data-coreui-theme="dark"] .seg-a6 { background: rgba(168,85,247,.25); color: #C4B5FD; }
-[data-coreui-theme="dark"] .seg-a7 { background: rgba(143,170,220,.25); color: #A5C0E8; }
-[data-coreui-theme="dark"] .exec-textarea:hover { background-color: #1F1F1A; }
-
-/* Semáforos de fila por segmento (los pasteles claros no funcionan en dark) */
-[data-coreui-theme="dark"] tr.row-segment-a1 { --seg-bg: #202A3D; }
-[data-coreui-theme="dark"] tr.row-segment-a2 { --seg-bg: #332413; }
-[data-coreui-theme="dark"] tr.row-segment-a3 { --seg-bg: #302B12; }
-[data-coreui-theme="dark"] tr.row-segment-a4 { --seg-bg: #2E2710; }
-[data-coreui-theme="dark"] tr.row-segment-a5 { --seg-bg: #331A1E; }
-[data-coreui-theme="dark"] tr.row-segment-a6 { --seg-bg: #2A2038; }
-[data-coreui-theme="dark"] tr.row-segment-a7 { --seg-bg: #232B3B; --seg-border: #8FAADC; }
-[data-coreui-theme="dark"] .row-pressing .td-a,
-[data-coreui-theme="dark"] .row-pressing .td-b,
-[data-coreui-theme="dark"] .row-pressing .td-c,
-[data-coreui-theme="dark"] .row-pressing .td-d { background-color: #2A3A55 !important; }
-
-/* Switches (semáforo FICHA/CONFIRM): navy WE → derivado claro */
-[data-coreui-theme="dark"] .exec-switch span { background: #3A3A33; }
-[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-switch input:checked + span { background: #8FAADC; }
-
-/* ── Popovers ── */
-[data-coreui-theme="dark"] .schedule-preview-popover { background-color: #1F1F1A !important; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .schedule-popover { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .popover-header-sm { background: #24241E; color: #A0A099; border-bottom-color: #2A2A22; }
-
-/* ── Modales (teleported a body: no heredan los tokens del shell) ── */
-[data-coreui-theme="dark"] .form-section { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .section-label { background: #1A1A14; color: #60A5FA; }
-[data-coreui-theme="dark"] .form-label-sm { color: #A0A099; }
-[data-coreui-theme="dark"] .hierarchy-container { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .status-card { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .switch-label { color: #D0D0C8; }
-[data-coreui-theme="dark"] .accordion-header:hover { background-color: #24241E; }
-[data-coreui-theme="dark"] .meta-dashboard { background-color: #14140F; }
-[data-coreui-theme="dark"] .meta-card { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .meta-card__header { background: #1A1A14; color: #A0A099; border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .line-item { background: #1F1F1A; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .line-item:hover { border-color: #3A3A33; }
-[data-coreui-theme="dark"] .line-item.is-zero { background: #1A1A14; }
-[data-coreui-theme="dark"] .line-item__name { color: #8A8A80; }
-[data-coreui-theme="dark"] .line-item__count { color: #F4F4F0; }
-[data-coreui-theme="dark"] .line-item.is-zero .line-item__count { color: #4A4A42; }
-[data-coreui-theme="dark"] .segment-circle { background: rgba(99,102,241,.25); color: #C7D2FE; }
-[data-coreui-theme="dark"] .row-segment-a1 td { background-color: #202A3D !important; }
-[data-coreui-theme="dark"] .row-segment-a2 td { background-color: #332413 !important; }
-[data-coreui-theme="dark"] .row-segment-a3 td { background-color: #302B12 !important; }
-[data-coreui-theme="dark"] .row-segment-a4 td { background-color: #2E2710 !important; }
-[data-coreui-theme="dark"] .row-segment-a5 td { background-color: #331A1E !important; }
-[data-coreui-theme="dark"] .row-segment-a6 td { background-color: #2A2038 !important; }
-[data-coreui-theme="dark"] .row-segment-a7 td { background-color: #232B3B !important; }
-[data-coreui-theme="dark"] .kpi-card { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .kpi-header { color: #D0D0C8; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .audit-entry { border-color: #2A2A22; }
-[data-coreui-theme="dark"] .audit-entry__header { background: #1F1F1A; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .audit-change { border-bottom-color: #24241E; }
-[data-coreui-theme="dark"] .audit-field-row { background: #1F1F1A; }
-[data-coreui-theme="dark"] .field-name { color: #A0A099; }
-[data-coreui-theme="dark"] .field-old { color: #F87171; }
-[data-coreui-theme="dark"] .field-new { color: #34D399; }
-[data-coreui-theme="dark"] .btn-exec-outline { border-color: #3A3A33; color: #A0A099; }
-[data-coreui-theme="dark"] .btn-exec-outline:hover:not(:disabled) { background: #24241E; color: #F4F4F0; border-color: #3A3A33; }
-
-/* Inputs de los modales (el CSS global los fuerza a blanco) */
-[data-coreui-theme="dark"] .form-control,
-[data-coreui-theme="dark"] .form-select {
-  background-color: #1F1F1A !important;
-  border-color: #3A3A33 !important;
-  color: #F4F4F0 !important;
-}
-[data-coreui-theme="dark"] .form-control::placeholder { color: #6A6A60; }
-[data-coreui-theme="dark"] .form-control:focus,
-[data-coreui-theme="dark"] .form-select:focus {
-  background-color: #1A1A14 !important;
-  border-color: #8FAADC !important;
-  box-shadow: 0 0 0 3px rgba(143,170,220,0.15) !important;
-}
-
-/* Utilidades Bootstrap que no se adaptan solas al tema oscuro */
-[data-coreui-theme="dark"] .bg-light { background-color: #1F1F1A !important; }
-[data-coreui-theme="dark"] .bg-white { background-color: #1A1A14 !important; }
-[data-coreui-theme="dark"] .text-dark { color: #F4F4F0 !important; }
-[data-coreui-theme="dark"] .bg-warning.text-dark { color: #14140F !important; }
-[data-coreui-theme="dark"] .table-light { --cui-table-bg: #24241E; --cui-table-color: #A0A099; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .table-light th { background-color: #24241E !important; color: #A0A099; }
-[data-coreui-theme="dark"] .alert-light { background-color: #1F1F1A; border-color: #2A2A22 !important; color: #D0D0C8; }
-[data-coreui-theme="dark"] .border-light { border-color: #2A2A22 !important; }
 </style>
 
-<style>
-/* Casco del BaseModal (teleported a body, fuera del scope): solo en dark y
-   solo para los modales de esta vista, identificados por su contenido. */
-[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) {
-  background: #1A1A14;
-  border-color: #2A2A22;
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
-}
-[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .modal-header { border-bottom-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .modal-footer { border-top-color: #2A2A22; }
-[data-coreui-theme="dark"] .modal-card:has(.meta-dashboard, .modern-modal-layout, .accordion-container, .dashboard-layout, .ed-modal-body) .btn-close { color: #A0A099; }
-</style>
 <script setup>
 
 import { ref, reactive, computed, onMounted, onUnmounted, inject, watch, nextTick, getCurrentInstance } from 'vue'
@@ -2598,6 +1754,8 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import A5MigrationModal from './A5MigrationModal.vue'
 import GapTimeline from './GapTimeline.vue'
 import { parentScheduleFromChildren } from '@/utils/parentSchedule'
+import { allowedDaysOf, sessionCalendar, sessionEndDate, weekdayOf } from '@/features/edition-schedule/sessionCalendar'
+import { editionGapTimeline } from '@/features/edition-schedule/gapTimeline'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 
@@ -2645,10 +1803,10 @@ const onlyActivos = ref(false)
 // las claves que viajan en el JSON, asi que agregar un link aqui + en la BD +
 // en editionUpdateSchema alcanza. Un quinto link NO deberia tocar el markup.
 const CLASSROOM_LINKS = [
-  { field: 'whatsapp_link', header: '',      label: 'WhatsApp',          modalLabel: 'WhatsApp Link',   icon: 'fa-brands fa-whatsapp',  chipClass: 'lac-chip--wa',    headerColor: '#25d366', placeholder: 'https://chat.whatsapp.com/...' },
-  { field: 'teams_link',    header: 'Teams', label: 'Teams',             modalLabel: 'Teams Link',      icon: 'fa-solid fa-video',      chipClass: 'lac-chip--teams', headerColor: '#6264a7', placeholder: 'https://teams.microsoft.com/...' },
-  { field: 'ficha_link',    header: 'Ficha', label: 'la ficha',          modalLabel: 'Ficha',           icon: 'fa-solid fa-file-lines', chipClass: 'lac-chip--ficha', headerColor: '#d97706', placeholder: 'https://...' },
-  { field: 'grades_link',   header: 'Notas', label: 'la lista de notas', modalLabel: 'Lista de Notas',  icon: 'fa-solid fa-list-ol',    chipClass: 'lac-chip--notas', headerColor: '#0284c7', placeholder: 'https://...' }
+  { field: 'whatsapp_link', header: '',      label: 'WhatsApp',          modalLabel: 'WhatsApp Link',   icon: 'fa-brands fa-whatsapp',  chipClass: 'lac-chip--wa',    headerColor: 'var(--ds-ok-ink)', placeholder: 'https://chat.whatsapp.com/...' },
+  { field: 'teams_link',    header: 'Teams', label: 'Teams',             modalLabel: 'Teams Link',      icon: 'fa-solid fa-video',      chipClass: 'lac-chip--teams', headerColor: 'var(--ds-violet-ink)', placeholder: 'https://teams.microsoft.com/...' },
+  { field: 'ficha_link',    header: 'Ficha', label: 'la ficha',          modalLabel: 'Ficha',           icon: 'fa-solid fa-file-lines', chipClass: 'lac-chip--ficha', headerColor: 'var(--ds-warn-ink)', placeholder: 'https://...' },
+  { field: 'grades_link',   header: 'Notas', label: 'la lista de notas', modalLabel: 'Lista de Notas',  icon: 'fa-solid fa-list-ol',    chipClass: 'lac-chip--notas', headerColor: 'var(--ds-info-ink)', placeholder: 'https://...' }
 ]
 
 // Los mismos campos, vacios, para inicializar y limpiar el formulario del modal.
@@ -2842,12 +2000,6 @@ async function loadAuditLogs(editionId) {
  * @param {String|Number} value - El alias o ID a buscar
  * @param {String} defaultText - Texto si no se encuentra
  */
-function getCatalogLabel(catalogName, value, defaultText = 'Sin Asignar') {
-  if (!value) return defaultText
-  const options = catalog?.options(catalogName) || []
-  const found = options.find(o => o.alias === value || o.code === value || o.id === value)
-  return found ? found.description : defaultText
-}
 
 // Computed que devuelve items después de aplicar TODOS los filtros
 // (tanto los de búsqueda global como los de columna)
@@ -2967,24 +2119,6 @@ function calculateMetaSummary() {
 
   metaSummary.value.types = Object.values(typesMap).sort((a, b) => b.count - a.count)
   metaSummary.value.segments = Object.values(segsMap).sort((a, b) => b.count - a.count)
-
-  // 6. DATOS HARDCODEADOS PARA AVANCE GLOBAL (Solo si NO hay filtros)
-  if (!hasActiveFilters.value) {
-    const fakeSales = 84
-    const fakeB2B = 3
-    const fakeTarget = 808
-    const fakeTotal = fakeSales + fakeB2B
-    const fakePercentage = fakeTarget > 0 ? ((fakeTotal / fakeTarget) * 100).toFixed(2) : '0.00'
-
-    metaSummary.value.general = {
-      sales: fakeSales,
-      b2b: fakeB2B,
-      target: fakeTarget,
-      percentage: fakePercentage
-    }
-  } else {
-    metaSummary.value.general = { sales: 0, b2b: 0, target: 0, percentage: 0 }
-  }
 }
 
 // --- LOGICA DE ÁRBOL (TREE MODAL) ---
@@ -3028,7 +2162,6 @@ function openTreeModal(edition) {
   }
   */
 
-  console.log(edition)
 
   // Detectamos si es una estructura "Hijo con contexto" (tiene padre/hermanos)
   // La clave es si el primer elemento tiene 'children' o 'parent_edition_id'
@@ -3092,32 +2225,8 @@ function toggleGroup(index) {
 const hasColumnFilters = computed(() => {
   return Object.values(columnFilters).some(arr => arr.length > 0)
 })
-// --- HELPER RESPUESTAS ---
-function handleServiceResponse(response) {
-  if (!response) {
-    toast.error('Error de conexión con el servidor')
-    return false
-  }
-  const { result, message } = response
-  const msgText = message || 'Operación completada'
-
-  if (result === 0) {
-    toast.error(msgText)
-    return false
-  } else if (result === 1) {
-    toast.success(msgText)
-    return true
-  } else {
-    // Cualquier otro número se considera warning/info pero permite continuar
-    toast.warning(msgText)
-    return true
-  }
-}
 
 // --- FORMATTERS ---
-const hasAnyEdition = computed(() =>
-  schedules.value.some(w => Array.isArray(w.items) && w.items.length > 0)
-)
 
 function formatDate(value) {
   if (!value) return '—'
@@ -3165,7 +2274,6 @@ const filterForm = reactive({
     hour_combination_ids: [],
     model_modality_ids: [],
     instructores_seleccionados: [],
-    business_line_ids: [],
 })
 
 // Filtros activos (aplicados)
@@ -3207,7 +2315,6 @@ const formattedActiveFilters = computed(() => {
   // Definimos qué campos son arrays y cómo se llaman en el catálogo
   const arrayFilters = [
     { key: 'category_ids', labelPrefix: 'Línea', catalogName: 'catLines' },
-    { key: 'business_line_ids', labelPrefix: 'L. Negocio', catalogName: 'businessLineList' },
     { key: 'type_program_ids', labelPrefix: 'Cat', catalogName: 'catCategories' },
     { key: 'segment_ids', labelPrefix: 'Seg', catalogName: 'catSegments' },
     { key: 'combination_days_ids', labelPrefix: 'Días', catalogName: 'dayCombinationList' },
@@ -3362,7 +2469,9 @@ function clearAllFilters(reload = true) {
 
 
 // --- LISTADO ---
+let scheduleRequestSeq = 0
 async function fetchSchedule() {
+  const seq = ++scheduleRequestSeq
   isTableLoading.value = true
   try {
     if(!hasActiveFilters.value){
@@ -3374,6 +2483,7 @@ async function fetchSchedule() {
       }
       
       const { items } = await editionService.editionByWeekList(payload)
+      if (seq !== scheduleRequestSeq) return
 
       schedules.value = Array.isArray(items)
         ? items.map(w => ({ ...w, isOpen: true }))
@@ -3389,6 +2499,7 @@ async function fetchSchedule() {
         ...activeFilters
       }
       const { items } = await editionService.editionList(payload)
+      if (seq !== scheduleRequestSeq) return
 
       historyList.value = items
 
@@ -3404,7 +2515,7 @@ async function fetchSchedule() {
     schedules.value = []
     historyList.value = []
   } finally {
-    isTableLoading.value = false
+    if (seq === scheduleRequestSeq) isTableLoading.value = false
   }
 }
 onMounted(() => {
@@ -3612,13 +2723,6 @@ function applyFiltersFromQueryParams() {
   }
 }
 
-// Genera un string "YYYY-MM-01" basado en el dashboard
-const defaultStartDate = computed(() => {
-  const y = selectedYear.value;
-  const m = String(selectedMonth.value).padStart(2, '0');
-  return `${y}-${m}-01`; // Siempre el día 1 para que el picker se posicione ahí
-});
-
 function cleanFormModal(){
   modalForm.program_version_id = null
   modalForm.instructor_id = null
@@ -3655,7 +2759,6 @@ async function openEditModal(edition) {
     showFormModal.value = true
     //cleanForm y set starst date
     cleanFormModal()
-    // modalForm.start_date = defaultStartDate.value
     modalForm.active = true
     return
   }
@@ -3700,10 +2803,9 @@ async function openEditModal(edition) {
     modalForm.cat_day_combination_id = data.cat_day_combination_id
     modalForm.cat_hour_combination_id = data.cat_hour_combination_id
     // Hijos
-    console.log(data.children)
     modalForm.program_version_children = (data.children || []).map(child => ({
       ...child,
-      start_date: child.start_date ? child.start_date.slice(0, 10) : defaultStartDate.value,
+      start_date: child.start_date ? child.start_date.slice(0, 10) : null,
       end_date: (child.end_date || '').slice(0, 10),
       expedient: !!child.expedient,
       upgrade: !!child.upgrade,
@@ -3750,9 +2852,12 @@ async function handleA5Completed({ migrated, applyA5 }) {
   // pasada y antes esos cambios se perdian en silencio cuando habia migracion.
   // Ya no choca con la guarda del backend: post-migracion no quedan alumnos vivos.
   if (!applyA5) toast.success(`Migracion completada: ${migrated} inscripcion(es) movidas`)
-  await persistEditionUpdate()
-  showFormModal.value = false
-  fetchSchedule()
+  // Si el guardado falla el modal queda abierto con los cambios: la edicion ya
+  // esta en A5, pero el resto del formulario no se pierde.
+  if (!(await persistEditionUpdate())) {
+    toast.warning('La edición quedó en A5, pero los demás cambios no se guardaron. Revísalos y guarda de nuevo.')
+    fetchSchedule()
+  }
 }
 
 const editionForm = ref(null)
@@ -3871,9 +2976,9 @@ async function persistEditionUpdate() {
     }
 
   } catch (err) {
-    console.error(err)
-    toast.error('Ocurrió un error inesperado al procesar la solicitud')
+    toast.error(err?.response?.data?.message || 'Ocurrió un error inesperado al procesar la solicitud')
   }
+  return response?.result === 1
 }
 
 function setChildren(children, field, value) {
@@ -3920,7 +3025,7 @@ function onProgramVersionChange(opcion) {
     upgrade: false,
     preconfirmation: false,
     confirmation: false,
-    start_date: null,//defaultStartDate.value,
+    start_date: null,
     end_date: null,
     instructor_id: null,
     instructor_label: null,
@@ -3929,20 +3034,6 @@ function onProgramVersionChange(opcion) {
     day_combination_label: null,
     hour_combination_label: null
   }))
-}
-
-// --- OBJETIVOS (DUMMY POR AHORA) ---
-const showGoalsModal = ref(false)
-const goalsSummary = ref({
-  label_periodo: 'Noviembre 2025',
-  insc: { ventas_prg: 6, seguimiento: 6, b2b: 0, membresia: 0, total_aula: 12 },
-  vacantes: { faltantes: -3, objetivo: 3, porcentaje: 120 },
-  consultas: { total: 34, conversion: 35 }
-})
-
-function openObjectivesModal(edition) {
-  currentEdition.value = edition
-  showGoalsModal.value = true
 }
 
 // Lógica de cambio de mes
@@ -4009,109 +3100,56 @@ async function updateQuickNotes(edition) {
   // 3. Actualizamos nuestra variable de control por si el usuario vuelve a hacer focus sin recargar
   originalNoteValue.value = currentNotes;
 }
-/**
- * Función CORE que realiza la actualización
- * 1. Obtiene la data completa de la BD (para no perder datos ocultos)
- * 2. Mezcla con los cambios de la UI
- * 3. Envía el update
- */
+// Guarda los switches y la nota de una fila. Va directo al update: el SP solo
+// toca los campos que recibe (COALESCE), así que no hace falta leer la edición
+// antes ni recargar el mes entero después. Si falla, se recarga para que la
+// fila vuelva a lo que hay en la BD.
 async function saveQuickChange(edition) {
   try {
-    // A. Obtenemos la data "real" actual de la BD
-    const currentData = await editionService.editionGet({ id: edition.edition_num_id })
-
-    if (!currentData) {
-      toast.error('Error al sincronizar con el servidor')
-      return
-    }
-
-    // B. Preparamos el Payload mezclando la BD con lo que modificó el usuario en la lista
-    // Usamos los valores de 'edition' (lista) para los campos que permitimos editar
-    // Usamos 'currentData' para el resto (ids, fechas, etc) para no romper nada
-
-    const payload = {
-      // Campos editables desde la lista (Booleans convertidos a Y/N)
-      // Usamos la variable 'edition' que es la reactiva del v-model
-      expedient: edition.expedient ? 'Y' : 'N',
-      upgrade: edition.upgrade ? 'Y' : 'N',
-      preconfirmation: edition.preconfirmation ? 'Y' : 'N',
-
-      confirmation: edition.confirmation ? 'Y' : 'N',
-      new_methodology: edition.new_methodology ? 'Y' : 'N',
-      notes: edition.notes // Texto directo
-    }
-
-    // C. Ejecutamos el Update
     const response = await editionService.editionUpdate({
       id: edition.edition_num_id,
-      edition: payload
+      edition: {
+        expedient: edition.expedient ? 'Y' : 'N',
+        upgrade: edition.upgrade ? 'Y' : 'N',
+        preconfirmation: edition.preconfirmation ? 'Y' : 'N',
+        confirmation: edition.confirmation ? 'Y' : 'N',
+        new_methodology: edition.new_methodology ? 'Y' : 'N',
+        notes: edition.notes
+      }
     })
-
-    //if (response && response.result === 1) {
-    if (response && response.result === 1) {
-      // Usamos el mensaje del backend si viene, o uno por defecto
-      toast.success(response.message || 'Edición actualizada correctamente', { timeout: 1500 })
-    } else {
-      // Si result es 0 u otro, es un error
-      toast.error(response?.message || 'Error al actualizar')
-      // Opcional: Recargar el listado si falló para revertir visualmente
+    if (response?.result === 1) {
+      toast.success(response.message || 'Edición actualizada', { timeout: 1500 })
+      return
     }
-
-    fetchSchedule();
+    toast.error(response?.message || 'Error al actualizar')
   } catch (err) {
-    console.error(err)
-    toast.error('Error de conexión al guardar cambios')
+    toast.error(err?.response?.data?.message || 'Error de conexión al guardar cambios')
   }
-}
-
-function validateDateInput(targetObj, fieldKey) {
-  const dateVal = targetObj[fieldKey];
-  if (!dateVal) return;
-
-  const [y, m, d] = dateVal.split('-').map(Number);
-
-  // 1. Validar Mes y Año
-  if (y !== selectedYear.value || m !== selectedMonth.value) {
-    toast.info(`La fecha debe pertenecer a ${months.value[selectedMonth.value - 1]} del ${selectedYear.value}`);
-    targetObj[fieldKey] = null;
-    return;
-  }
-
-  // 2. Validar Feriados (MODIFICADO: Solo aviso)
-  if (holidayDates.value.includes(dateVal)) {
-    const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
-    const hName = hObj ? hObj.description : 'Feriado';
-
-    // CAMBIO: Toast warning y NO limpiamos el input
-    toast.warning(`Atención: La fecha seleccionada es feriado (${hName}).`);
-  }
+  fetchSchedule()
 }
 
 function getChildDateConfig(index = null, bodyField = null) {
   const config = {};
 
   // LOGICA MIN/MAX
+  // Una edición NUEVA del mes navegado arranca dentro de ese mes; una existente
+  // se puede mover de mes (validateAndCalculate tampoco la ata). Los módulos
+  // siguientes nunca empiezan antes que el anterior.
   if (bodyField) {
     config.minDate = bodyField.start_date;
-  } else {
-    if (!hasActiveFilters.value || !currentEdition.value) {
-      if (index === 0 || index == null) {
-        // Lógica del primer elemento (mes/año seleccionado)
-        const y = selectedYear.value;
-        const m = selectedMonth.value;
-        const lastDay = new Date(y, m, 0).getDate();
-        config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
-        config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
-      } else {
-        const prevChild = modalForm.program_version_children[index - 1];
-        if (prevChild && prevChild.start_date) {
-          config.minDate = prevChild.start_date;
-        }
-      }
+  } else if ((index === 0 || index == null) && !currentEdition.value && !hasActiveFilters.value) {
+    const y = selectedYear.value;
+    const m = selectedMonth.value;
+    const lastDay = new Date(y, m, 0).getDate();
+    config.minDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    config.maxDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
+  } else if (index > 0) {
+    const prevChild = modalForm.program_version_children[index - 1];
+    if (prevChild && prevChild.start_date) {
+      config.minDate = prevChild.start_date;
     }
   }
 
-  // --- LÓGICA: HABILITAR SOLO DÍAS ESPECÍFICOS (PERO PERMITIR FERIADOS) ---
   const targetObj = (index !== null && modalForm.program_version_children[index])
     ? modalForm.program_version_children[index]
     : bodyField ? bodyField : modalForm;
@@ -4121,75 +3159,25 @@ function getChildDateConfig(index = null, bodyField = null) {
       c => c.id === targetObj.cat_day_combination_id
     );
 
-    if (comboOption && comboOption.variable_2) {
-      try {
-        const allowedDays = JSON.parse(comboOption.variable_2);
-
-        // Flatpickr: Solo habilitar los días de la semana permitidos (Lun, Mie, etc.)
-        // YA NO bloqueamos si es feriado.
-        config.enable = [
-          (date) => {
-            const dayOfWeek = date.getDay();
-            // const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-            // CAMBIO AQUÍ: Solo validamos que sea el día de la semana correcto.
-            return allowedDays.includes(dayOfWeek);
-          }
-        ];
-      } catch (e) {
-        console.error('Error parseando días:', e);
-      }
+    // Flatpickr: solo los días de la semana del horario. En el INICIO además
+    // se apagan los feriados (pedido de Producto, 06/10/26: antes solo avisaba).
+    // El fin no se filtra: lo calcula el sistema saltando feriados.
+    const allowedDays = allowedDaysOf(comboOption);
+    const esInicio = !bodyField;
+    if (allowedDays.length) {
+      config.enable = [
+        (date) => {
+          if (!allowedDays.includes(date.getDay())) return false;
+          if (!esInicio) return true;
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          return !holidayMap.value.has(dateStr);
+        }
+      ];
     }
   }
 
   return config;
 }
-
-/**
- * Parsea la descripción del combo (ej: "Lun-Mie-Vier") y devuelve un array de días JS (0-6)
- * JS: 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
- */
-function parseDaysFromLabel(label) {
-  if (!label) return [];
-
-  const labelLower = label.toLowerCase();
-  const days = [];
-
-  // Mapeo de términos comunes en español
-  if (labelLower.includes('lun')) days.push(1);
-  if (labelLower.includes('mar')) days.push(2);
-  if (labelLower.includes('mie') || labelLower.includes('mié')) days.push(3);
-  if (labelLower.includes('jue')) days.push(4);
-  if (labelLower.includes('vie') || labelLower.includes('vier')) days.push(5);
-  if (labelLower.includes('sab') || labelLower.includes('sáb')) days.push(6);
-  if (labelLower.includes('dom')) days.push(0);
-
-  return days; // Ej: [1, 3, 5]
-}
-
-/**
- * Obtiene días permitidos con fallback robusto
- * Prioriza JSON en variable_2, usa texto como backup
- */
-function getAllowedDaysFromCombo(comboOption) {
-  if (!comboOption) return [];
-
-  // Intento 1: JSON en variable_2 (más confiable)
-  if (comboOption.variable_2) {
-    try {
-      const parsed = JSON.parse(comboOption.variable_2);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Error parsing variable_2, usando fallback:', e);
-    }
-  }
-
-  // Intento 2: Fallback a texto
-  return parseDaysFromLabel(comboOption.description);
-}
-
 
 function validateAndCalculate(targetObj, fieldKey, index=null) {
    const dateVal = targetObj[fieldKey];
@@ -4248,11 +3236,14 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
       }
    }
 
-   // Advertencia de Feriados
-   if (holidayDates.value.includes(dateVal)) {
+   // Una edición no arranca en feriado (el picker ya los apaga; esto cubre la
+   // fecha escrita a mano). El backend lo vuelve a validar al guardar.
+   if (fieldKey === 'start_date' && holidayDates.value.includes(dateVal)) {
        const hObj = catalogs.value.catHolidays.find(h => h.variable_3 === dateVal);
        const hName = hObj ? hObj.description : 'Feriado';
-       toast.warning(`Nota: La fecha seleccionada coincide con un feriado (${hName}).`);
+       toast.error(`No se puede iniciar en feriado (${hName}). Elige otro día.`);
+       nextTick(() => { targetObj[fieldKey] = null; targetObj.end_date = null; });
+       return;
    }
 
    // 3. SI LA FECHA ES VÁLIDA, RECALCULAR Y ACTUALIZAR
@@ -4297,6 +3288,8 @@ function validateAndCalculate(targetObj, fieldKey, index=null) {
 }
 
 // REEMPLAZO DEL ARRAY ANTIGUO
+const holidayMap = computed(() => new Map((catalogs.value.catHolidays || []).map(h => [h.variable_3, h.description])))
+
 const holidayDates = computed(() => {
   // Asegúrate de que 'catalogs.value.catHolidays' exista (array vacío por defecto)
   return (catalogs.value.catHolidays || []).map(h => h.variable_3) // Aquí vienen las fechas 'YYYY-MM-DD'
@@ -4380,7 +3373,6 @@ function onChildEditionChange(edition, child, index) {
     resetChildData(child);
     return;
   }
-  console.log(edition)
   nextTick(() => {
     child.edition_id = edition.edition_num_id;
     child.start_date = edition.start_date ? edition.start_date.slice(0, 10) : null;
@@ -4440,76 +3432,16 @@ function isBlockedByPrevious(index) {
   return previousSiblings.some(sibling => !isChildComplete(sibling))
 }
 
-// Helper para cerrar al hacer click fuera (puedes usar el overlay existente o un click-outside)
-function closePreview() {
-  activePreviewId.value = null
-}
 
-// Función CORE que simula el calendario y genera la lista
-// Función CORE que simula el calendario y genera la lista
+// Vista previa del calendario: misma regla que el fin calculado y el backend
+// (features/edition-schedule/sessionCalendar.js).
 function generatePreviewData(targetObj) {
-  const list = []
-
-  // Validaciones iniciales...
-  if (!targetObj.start_date || !targetObj.cat_day_combination_id) return []
-  const totalSessions = targetObj.sessions || targetObj.program_version_sessions || 0
-  if (totalSessions <= 0) return []
-  const comboOption = catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id)
-  if (!comboOption) return []
-  const allowedDays = getAllowedDaysFromCombo(comboOption)
-  if (allowedDays.length === 0) return []
-
-  // Inicio de simulación
-  let iterDate = new Date(targetObj.start_date + 'T12:00:00')
-  let sessionsCounted = 0
-  let safetyLoop = 0
-
-  // El bucle sigue corriendo HASTA completar las sesiones VÁLIDAS requeridas
-  while (sessionsCounted < totalSessions && safetyLoop < 1000) {
-    safetyLoop++
-
-    const y = iterDate.getFullYear()
-    const m = String(iterDate.getMonth() + 1).padStart(2, '0')
-    const d = String(iterDate.getDate()).padStart(2, '0')
-    const dateString = `${y}-${m}-${d}` // Fecha actual del bucle
-    const dayOfWeek = iterDate.getDay() // 0=Dom, 1=Lun...
-
-    const isClassDay = allowedDays.includes(dayOfWeek)
-
-    // Solo nos importa si hoy toca clase (según Lunes-Miércoles, etc)
-    if (isClassDay) {
-      // AQUÍ ESTÁ LA LÓGICA QUE PIDES:
-      // Buscamos si esta fecha exacta es un feriado activo en el catálogo
-      const holidayItem = catalogs.value.catHolidays.find(h => h.variable_3 === dateString )
-
-      if (holidayItem) {
-        // CASO 1: ES FERIADO
-        // Lo agregamos a la lista para que el usuario lo vea visualmente
-        list.push({
-          date: dateString,
-          status: 'holiday',          // Esto activará el color rojo en el template
-          desc: holidayItem.description, // Ej: "Viernes Santo"
-          sessionNum: '-'             // No lleva número de sesión
-        })
-        // IMPORTANTE: NO hacemos sessionsCounted++, por lo que el sistema
-        // buscará un día más al final para compensar este feriado.
-      } else {
-        // CASO 2: ES DÍA HÁBIL
-        sessionsCounted++ // Aquí sí contamos la sesión
-        list.push({
-          date: dateString,
-          status: 'valid',            // Esto activará el color verde/normal
-          desc: 'Sesión Regular',
-          sessionNum: sessionsCounted
-        })
-      }
-    }
-
-    // Avanzamos al siguiente día calendario
-    iterDate.setDate(iterDate.getDate() + 1)
-  }
-
-  return list
+  return sessionCalendar({
+    startDate: targetObj.start_date,
+    sessions: targetObj.sessions || targetObj.program_version_sessions,
+    allowedDays: allowedDaysOf(catalogs.value.dayCombinationList.find(c => c.id === targetObj.cat_day_combination_id)),
+    holidays: holidayMap.value
+  })
 }
 
 // Helper simple para nombre de día
@@ -4521,15 +3453,6 @@ function getDayName(dateStr) {
 
 // --- NUEVOS HELPERS ---
 const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-// Obtiene el índice (0-6) de una fecha string YYYY-MM-DD respetando la zona local
-function getDayIndexFromStr(dateStr) {
-  if (!dateStr) return -1;
-  const [y, m, d] = dateStr.split('-').map(Number);
-  // Creamos fecha local (Mes es índice 0 en JS)
-  const dateObj = new Date(y, m - 1, d);
-  return dateObj.getDay();
-}
 
 function calculateEndDate(targetObj) {
   // 1. Validaciones básicas
@@ -4549,8 +3472,7 @@ function calculateEndDate(targetObj) {
     return;
   }
 
-  // 2. Parsing Robusto usando la nueva función unificada
-  const allowedDays = getAllowedDaysFromCombo(comboOption);
+  const allowedDays = allowedDaysOf(comboOption);
 
   if (allowedDays.length === 0) {
     toast.error("Error en configuración de días del catálogo.");
@@ -4558,7 +3480,7 @@ function calculateEndDate(targetObj) {
   }
 
   // 3. Validación de coherencia Día vs Combo
-  const startDayIdx = getDayIndexFromStr(targetObj.start_date);
+  const startDayIdx = weekdayOf(targetObj.start_date);
 
   if (!allowedDays.includes(startDayIdx)) {
     const dayName = dayNames[startDayIdx];
@@ -4572,41 +3494,10 @@ function calculateEndDate(targetObj) {
     return;
   }
 
-  // 4. Simulación de calendario con T12:00:00 (evitar problemas de zona horaria)
-  let iterDate = new Date(targetObj.start_date + 'T12:00:00');
-  let sessionsCounted = 0;
-  let safetyLoop = 0;
-  let calculatedEndDate = null;
-
-  while (sessionsCounted < totalSessions && safetyLoop < 1500) {
-    safetyLoop++;
-
-    const y = iterDate.getFullYear();
-    const m = String(iterDate.getMonth() + 1).padStart(2, '0');
-    const d = String(iterDate.getDate()).padStart(2, '0');
-    const dateString = `${y}-${m}-${d}`;
-    const dayOfWeek = iterDate.getDay();
-
-    const isClassDay = allowedDays.includes(dayOfWeek);
-    const isHoliday = holidayDates.value.includes(dateString);
-
-    if (isClassDay && !isHoliday) {
-      sessionsCounted++;
-      if (sessionsCounted === totalSessions) {
-        calculatedEndDate = dateString;
-        break;
-      }
-    }
-
-    iterDate.setDate(iterDate.getDate() + 1);
-  }
-
-  // 5. Validación de resultado
-  if (safetyLoop >= 1500) {
-    toast.error("No se pudo calcular la fecha fin: demasiadas iteraciones. Revise configuración.");
-    targetObj.end_date = null;
-    return;
-  }
+  // 4. Fin = última sesión contando días del horario y saltando feriados.
+  const calculatedEndDate = sessionEndDate({
+    startDate: targetObj.start_date, sessions: totalSessions, allowedDays, holidays: holidayMap.value
+  });
 
   if (calculatedEndDate) {
     nextTick(() => {
@@ -4615,11 +3506,6 @@ function calculateEndDate(targetObj) {
   } else {
     toast.error("No se pudo calcular fecha fin. Verifique días/feriados.");
   }
-}
-function addAttachmentProgram(){
-  modalForm.attachments.push({
-    program_version_attachment_id: null,
-  })
 }
 // Computed para aplanar todos los items (necesario para el componente)
 const allScheduleItems = computed(() => {
@@ -4756,7 +3642,6 @@ if (index !== 0) {
 
     // ✅ NORMALIZAR a YYYY-MM-DD antes de comparar
     const editionDate = edition.start_date.slice(0, 10);
-    debugger
     if (minDateLimit && editionDate < minDateLimit) return false;
     if (maxDateLimit && editionDate > maxDateLimit) return false;
 
@@ -4780,9 +3665,6 @@ if (index !== 0) {
 }
 
 // --- HISTORIAL GLOBAL ---
-const showHistoryModal = ref(false)
-const globalHistoryList = ref([])
-const isLoadingHistory = ref(false)
 const isTableLoading = ref(false)
 
 async function openGlobalHistory() {
@@ -4819,7 +3701,6 @@ function toggleSchedulePreview(uniqueId, targetObj, event) {
   activePreviewId.value = uniqueId;
 }
 
-const isLoadingExtraInfo = ref(false)
 
 // --- LÓGICA DE GAP ANALYSIS (Timeline Genérico) ---
 const activeGapPreviewId = ref(null)
@@ -4918,70 +3799,21 @@ async function toggleGapPreview(event, uniqueId, programVersionId, contextObj, i
  * CORE: Cálculo de Lista Completa
  */
 function calculateGapData(historicalList, currentObj) {
-  if (!currentObj.start_date) return []
-
-  const msPerDay = 1000 * 60 * 60 * 24
-  const targetDate = new Date(currentObj.start_date + 'T12:00:00')
-
-  // ID para excluir (si estamos editando)
-  const currentId = currentObj.edition_id || (currentEdition.value?.edition_num_id)
-
-  // A. Preparar Historial (Data del SP)
-  let timeline = historicalList
-    .filter(e => e.active === 'Y' && e.edition_num_id !== currentId)
-    .map(e => ({
-      ...e,
-      dateObj: new Date(e.start_date_eff),
-      type: 'history',
-      // Mapeamos los campos nuevos de tu SP
-      daysLabel: e.cat_day_combination || '—',
-      hoursLabel: e.cat_hour_combination || '—'
-    }))
-
-  // B. Preparar Item Actual (Selección / Fila)
-  // Si no viene pre-seteado (caso formulario), buscamos en catálogos
-  let myDays = currentObj.day_combination_label;
-  let myHours = currentObj.hour_combination_label;
-
-  if (!myDays && currentObj.cat_day_combination_id) {
-      const d = catalogs.value.dayCombinationList.find(x => x.id === currentObj.cat_day_combination_id)
-      if (d) myDays = d.description
-  }
-  if (!myHours && currentObj.cat_hour_combination_id) {
-      const h = catalogs.value.hourCombinationList.find(x => x.id === currentObj.cat_hour_combination_id)
-      if (h) myHours = h.description
-  }
-
-  const newItem = {
+  const labelOf = (list, id) => list.find(x => x.id === id)?.description
+  const history = historicalList.map(e => ({
+    ...e,
+    daysLabel: e.cat_day_combination || '—',
+    hoursLabel: e.cat_hour_combination || '—'
+  }))
+  const current = {
     global_code: currentObj.global_code || 'NUEVA',
+    start_date: currentObj.start_date,
     start_date_eff: currentObj.start_date,
-    dateObj: targetDate,
-    type: 'current',
     active: 'Y',
-    daysLabel: myDays || '—',
-    hoursLabel: myHours || '—'
+    daysLabel: currentObj.day_combination_label || labelOf(catalogs.value.dayCombinationList, currentObj.cat_day_combination_id) || '—',
+    hoursLabel: currentObj.hour_combination_label || labelOf(catalogs.value.hourCombinationList, currentObj.cat_hour_combination_id) || '—'
   }
-
-  timeline.push(newItem)
-
-  // C. Ordenar y Calcular Gaps
-  timeline.sort((a, b) => a.dateObj - b.dateObj)
-  const currentIndex = timeline.findIndex(t => t.type === 'current')
-
-  return timeline.map((item, index) => {
-    let gapInfo = null
-
-    if (index === currentIndex - 1) {
-       const diff = Math.floor((newItem.dateObj - item.dateObj) / msPerDay)
-       gapInfo = { label: `${diff} días después`, color: diff < 30 ? 'text-warning' : 'text-success' }
-    }
-    if (index === currentIndex + 1) {
-       const diff = Math.floor((item.dateObj - newItem.dateObj) / msPerDay)
-       gapInfo = { label: `${diff} días antes`, color: diff < 30 ? 'text-danger' : 'text-info' }
-    }
-
-    return { ...item, gapInfo }
-  })
+  return editionGapTimeline(history, current, currentObj.edition_id || currentEdition.value?.edition_num_id)
 }
 </script>
 

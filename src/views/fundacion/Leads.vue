@@ -1,52 +1,55 @@
 <template>
-  <div class="leads-page">
-    <header class="ep-masthead">
-      <div class="ep-masthead-left">
-        <span class="ep-breadcrumb">FUNDACIÓN</span>
-        <h1 class="ep-title">Listado de Leads</h1>
-        <span class="ep-subtitle">Gestión de leads y oportunidades</span>
+  <div class="ds-page leads-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <h1 class="ds-title">Listado de Leads</h1>
+        <p class="ds-sub">Gestión de leads y oportunidades de Fundación</p>
       </div>
-      <div class="ep-masthead-actions">
-        <div class="ep-view-toggle">
-          <button :class="['ep-toggle-btn', { 'is-active': !isCompact }]" @click="isCompact = false">
-            <i class="fa-solid fa-table-columns"></i> Expandida
+      <div class="ds-head-actions">
+        <div class="ds-tabs" role="group" aria-label="Vista de la tabla">
+          <button type="button" :aria-pressed="isCompact" @click="isCompact = true">
+            <i class="fa-solid fa-list" aria-hidden="true"></i> Compacta
           </button>
-          <button :class="['ep-toggle-btn', { 'is-active': isCompact }]" @click="isCompact = true">
-            <i class="fa-solid fa-list"></i> Compacta
+          <button type="button" :aria-pressed="!isCompact" @click="isCompact = false">
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Expandida
           </button>
         </div>
+        <!-- Con restricciones activas el boton se tiñe de rojo y late: el asesor
+             debe saber que esta viendo una bandeja acotada por su lider. -->
         <button
-          class="ep-btn-control"
-          :class="hasActiveRestrictions ? 'ep-btn-danger' : ''"
-          @click="openControlModal"
+          type="button"
+          class="btn-exec"
+          :class="hasActiveRestrictions ? 'btn-exec-danger lp-pulse' : 'btn-exec-outline'"
           :title="isFundacion ? 'Mis Permisos de Visualización' : 'Control de Asesores'"
+          @click="openControlModal"
         >
-          <i class="fa-solid" :class="isFundacion ? 'fa-user-lock' : 'fa-shield-halved'"></i>
-          <span>{{ isFundacion ? 'Mis Permisos' : 'Control' }}</span>
+          <i class="fa-solid" :class="isFundacion ? 'fa-user-lock' : 'fa-shield-halved'" aria-hidden="true"></i>
+          {{ isFundacion ? 'Mis Permisos' : 'Control' }}
         </button>
-        <button class="ep-btn-new" @click="goNew" v-if="!hasActiveRestrictions">
-          <i class="fa-solid fa-plus"></i> Nuevo Lead
+        <button v-if="!hasActiveRestrictions" type="button" class="btn-exec btn-exec-primary" @click="goNew">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo Lead
         </button>
       </div>
     </header>
-    <main class="ep-body">
+    <main class="lp-body">
 
-      <section class="ep-section ep-filter-bar" :class="{ 'is-filtered': activeFilterChips.length > 0 }">
-        <div class="ep-filter-bar-main">
-          <div class="ep-quick-row">
-            <nav class="ep-tabs" aria-label="Vistas rapidas">
+      <section class="ds-panel">
+        <div class="lp-toolbar">
+          <div class="lp-quick-row">
+            <div class="ds-tabs" role="group" aria-label="Vistas rápidas">
               <button
                 v-for="v in quickViews"
                 :key="v.key"
-                :class="['ep-tab', { 'is-active': activeQuickView === v.key, 'is-highlight': v.highlight }]"
+                type="button"
+                :aria-pressed="activeQuickView === v.key"
                 :title="v.title"
                 @click="applyQuickView(v.key)"
               >
-                <i class="fa-solid" :class="v.icon"></i> {{ v.label }}
+                <i class="fa-solid" :class="v.icon" aria-hidden="true"></i> {{ v.label }}
               </button>
-            </nav>
-            <div class="ep-quick-order" title="Ordenar resultados">
-              <i class="fa-solid fa-arrow-down-wide-short ep-quick-order-icon"></i>
+            </div>
+            <div class="lp-order" title="Ordenar resultados">
+              <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
               <SearchSelect
                 v-model="filters.order_by"
                 :items="filtroOrden"
@@ -58,20 +61,13 @@
               />
             </div>
           </div>
-          <div class="ep-toolbar">
-            <BasePagination
-              v-model="pagin"
-              @open-filters="openFilterModal"
-              @change="handlePaginationChange"
-            />
-          </div>
+          <BasePagination
+            v-model="pagin"
+            @open-filters="openFilterModal"
+            @change="handlePaginationChange"
+          />
         </div>
-        <div v-if="activeFilterChips.length > 0" class="ep-filter-strip">
-          <span class="ep-filter-strip-badge">
-            <i class="fa-solid fa-circle-half-stroke"></i>
-            Filtros activos
-            <span class="ep-filter-strip-count">{{ activeFilterChips.length }}</span>
-          </span>
+        <div v-if="activeFilterChips.length > 0" class="lp-chips">
           <BaseFilterChips
             :items="activeFilterChips"
             @remove="clearFilter"
@@ -389,27 +385,27 @@
                 <td class="td-a text-center nowrap"> 
                     <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
 
-                    <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
+                    <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square c-warn'"></i>
                   </button> 
                     <button class="btn-icon ms-1" @click.stop="viewLead(l, $event)" title="Clonar/Ver">
 
-                    <i class="fa-solid fa-clone text-primary"></i>
+                    <i class="fa-solid fa-clone c-info"></i>
                   </button>
                 </td>
-                <td class="td-a fw-600 text-dark">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</td>
+                <td class="td-a fw-600 c-ink">{{ pipelineMap[l.cat_status_alias] || l.cat_status_lead_label || '—' }}</td>
                 <td class="td-a" style="min-width:160px">
                   <div class="d-flex flex-column">
-                    <span class="fw-700 text-dark">{{ l.origin_phone }}</span>
+                    <span class="fw-700 c-ink">{{ l.origin_phone }}</span>
                     <span class="small text-muted">{{ l.full_name_label || 'Sin nombre' }}</span>
                   </div>
                 </td>
                 <td class="td-a small">{{ l.cat_prospect_situation || '—' }}</td>
                 <td class="td-a minW">
-                  <span class="pill pill-slate border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span>
+                  <span class="ds-pill border">{{ queryMap[l.cat_promotion_alias] || '—' }}</span>
                 </td>
                 <td class="td-a" style="min-width:280px">
                   <div v-if="l.program_label">
-                    <div class="fw-600 text-dark">{{ l.program_label }}</div>
+                    <div class="fw-600 c-ink">{{ l.program_label }}</div>
                     <div class="small text-muted mt-1">
                       {{ l.cat_type_program_label }}
                       <span v-if="l.cat_model_modality_label"> • {{ l.cat_model_modality_label }}</span>
@@ -422,19 +418,19 @@
                 </td>
                 <td class="td-a small nowrap fw-700 pay-date-cell">{{ l.pay_date || '—' }}</td>
                 <td class="td-a">
-                  <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ interestMap[l.cat_interest_alias] }}</span>
+                  <span v-if="l.cat_interest_alias" class="ds-pill" :class="badgeForInterest(l.cat_interest_alias)">{{ interestMap[l.cat_interest_alias] }}</span>
                   <span v-else class="text-muted small">—</span>
                 </td>
                 <td class="td-a" style="min-width:120px">
                   <div v-if="l.user_registration_label">
-                    <div class="small fw-600 text-dark">{{ l.user_registration_label }}</div>
+                    <div class="small fw-600 c-ink">{{ l.user_registration_label }}</div>
                     <div class="text-muted x-small">{{ l.system_registration_date }}</div>
                   </div>
                 </td>
-                <td class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
+                <td class="td-a small nowrap fw-600 c-ink">{{ l.origin_seller_phone || '—' }}</td>
                 <td class="td-a small text-muted">{{ l.description || '—' }}</td>
                 <td class="td-a text-center" style="min-width:140px">
-                  <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
+                  <div v-if="l.cat_last_attempt_type_label" class="ds-pill d-inline-flex align-items-center gap-1">
                     <span>{{ l.cat_last_attempt_type_label }}</span>
                     <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
                   </div>
@@ -442,7 +438,7 @@
                 </td>
                 <!-- we_calling_message es el centinela de los intentos sin respuesta; el tipo ya sale en Seguimiento -->
                 <td class="td-a text-center" style="min-width:160px">
-                  <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
+                  <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="ds-pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
                   <span v-else class="text-muted small">—</span>
                 </td>
               </tr>
@@ -482,11 +478,11 @@
     <td class="td-a text-center nowrap"> 
         <button class="btn-icon" @click.stop="l.enrollment_id ? openEnrollmentModal(l.enrollment_id) : editLead(l, $event)" :title="l.enrollment_id ? 'Ver Matrícula' : 'Editar'">
 
-        <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square text-warning'"></i>
+        <i class="fa-solid" :class="l.enrollment_id ? 'fa-user-check text-success' : 'fa-pen-to-square c-warn'"></i>
       </button> 
         <button class="btn-icon ms-1" @click.stop="viewLead(l, $event)" title="Clonar/Ver">
 
-        <i class="fa-solid fa-clone text-primary"></i>
+        <i class="fa-solid fa-clone c-info"></i>
       </button>
     </td>
 
@@ -506,10 +502,10 @@
 
     <!-- ── D. CLIENTE ───────────────────────────────────────── -->
     <td v-show="colGroups.cliente" class="td-a nowrap" style="min-width:120px">{{ l.full_name_label }}</td>
-    <td v-show="colGroups.cliente" class="td-a nowrap fw-700 text-dark">{{ l.origin_phone }}</td>
+    <td v-show="colGroups.cliente" class="td-a nowrap fw-700 c-ink">{{ l.origin_phone }}</td>
     <td v-show="colGroups.cliente" class="td-a small">{{ l.cat_prospect_situation || '—' }}</td>
-    <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.cat_client_moment_description }}</td>
-    <td v-show="colGroups.cliente" class="td-a nowrap fw-600 text-dark">{{ l.membership_moment }}</td>
+    <td v-show="colGroups.cliente" class="td-a nowrap fw-600 c-ink">{{ l.cat_client_moment_description }}</td>
+    <td v-show="colGroups.cliente" class="td-a nowrap fw-600 c-ink">{{ l.membership_moment }}</td>
     <td v-if="!colGroups.cliente" class="td-a tg-placeholder-cell">
   <div class="tg-collapsed-hint tg-hint-cliente">
     <span class="tg-hint-line tg-hint-strong">{{ l.origin_phone }}</span>
@@ -521,19 +517,19 @@
     <!-- ── D. LEAD ───────────────────────────────────────────── -->
     <!-- ── D. LEAD ── -->
     <td v-show="colGroups.lead" class="td-a">
-      <span class="pill pill-slate border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
+      <span class="ds-pill border">{{ l.cat_status_description || l.cat_status_lead_label || '—' }}</span>
     </td>
     <td v-show="colGroups.lead" class="td-a">
       <div class="small fw-700 pay-date-cell">{{ l.pay_date || '—' }}</div>
     </td>
     <td v-show="colGroups.lead" class="td-a">
-      <span v-if="l.cat_interest_alias" class="pill" :class="badgeForInterest(l.cat_interest_alias)">{{ l.cat_interest_description }}</span>
+      <span v-if="l.cat_interest_alias" class="ds-pill" :class="badgeForInterest(l.cat_interest_alias)">{{ l.cat_interest_description }}</span>
       <span v-else class="text-muted small">—</span>
     </td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_channel_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_medium_contact_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted">{{ l.cat_word_description || '—' }}</td>
-    <td v-show="colGroups.lead" class="td-a small text-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
+    <td v-show="colGroups.lead" class="td-a small c-info fw-500">{{ l.cat_strategy_description || '—' }}</td>
     <td v-show="colGroups.lead" class="td-a small text-muted obs-cell" :title="l.observations || ''">{{ l.observations || '—' }}</td>
     <td v-if="!colGroups.lead" class="td-a tg-placeholder-cell">
       <div class="tg-collapsed-hint tg-hint-lead">
@@ -545,10 +541,10 @@
     <!-- ── D. ASESOR ── -->
     <td v-show="colGroups.asesor" class="td-a small">{{ l.user_registration_label }}</td>
     <td v-show="colGroups.asesor" class="td-a small nowrap text-muted">{{ l.system_registration_date || '—' }}</td>
-    <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 text-dark">{{ l.origin_seller_phone || '—' }}</td>
+    <td v-show="colGroups.asesor" class="td-a small nowrap fw-600 c-ink">{{ l.origin_seller_phone || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a small text-muted">{{ l.description || '—' }}</td>
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:140px">
-      <div v-if="l.cat_last_attempt_type_label" class="pill pill-slate d-inline-flex align-items-center gap-1">
+      <div v-if="l.cat_last_attempt_type_label" class="ds-pill d-inline-flex align-items-center gap-1">
         <span>{{ l.cat_last_attempt_type_label }}</span>
         <i v-if="l.follow_details" class="fa-solid fa-circle-info opacity-75 ms-1"></i>
       </div>
@@ -556,7 +552,7 @@
     </td>
     <!-- we_calling_message es el centinela de los intentos sin respuesta; el tipo ya sale en Seguimiento -->
     <td v-show="colGroups.asesor" class="td-a text-center" style="min-width:160px">
-      <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
+      <span v-if="l.cat_last_follow_alias && l.cat_last_follow_alias !== 'we_calling_message'" class="ds-pill" :class="badgeForFollow(l.cat_last_follow_alias)">{{ followMap[l.cat_last_follow_alias] }}</span>
       <span v-else class="text-muted small">—</span>
     </td>
     <td v-if="!colGroups.asesor" class="td-a tg-placeholder-cell">
@@ -596,8 +592,8 @@
               <div class="d-flex align-items-center gap-3">
                 <div class="lead-avatar"><i class="fa-regular fa-user"></i></div>
                 <div>
-                  <h6 class="mb-0 fw-700 text-dark">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
-                  <div class="d-flex gap-3 text-secondary small mt-1 fw-500 align-items-center">
+                  <h6 class="mb-0 fw-700 c-ink">{{ selectedFollowLead.full_name_label || 'Prospecto sin nombre' }}</h6>
+                  <div class="d-flex gap-3 c-ink2 small mt-1 fw-500 align-items-center">
                     <span><i class="fa-solid fa-phone me-1"></i>{{ selectedFollowLead.origin_phone }}</span>
 
                     <div class="d-flex align-items-center">
@@ -644,7 +640,7 @@
                       <td class="td-a align-top pt-2" style="min-width: 230px;">
                         <SearchSelect :items="lAttempts" v-model="attempt.cat_type_attempt" label-field="description" value-field="alias" placeholder="Seleccionar..." :disabled="attempt.id" class="exec-select-light w-100" required @update:model-value="(val) => handleTypeChange(attempt, val)" />
                         <div v-if="attempt.id" class="mt-2 text-truncate" style="font-size: 10px;">
-                          <span class="pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'pill-slate' : 'pill-amber'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
+                          <span class="ds-pill border w-100 justify-content-center" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? '' : 'warn'" :title="attempt.cat_creation_origin_label || 'Gestión Manual'">
                             <i class="fa-solid me-1" :class="attempt.cat_creation_origin_alias === 'we_origin_manual' ? 'fa-user-pen' : 'fa-robot'"></i>
                             {{ attempt.cat_creation_origin_label || 'Gestión Manual' }}
                           </span>
@@ -675,11 +671,11 @@
                         <textarea v-model="attempt.response" class="exec-textarea w-100" rows="2" placeholder="Escribe una observación..." :disabled="!!attempt.id && attemptAsksResult(attempt.cat_type_attempt) && attempt.calling_alias !== 'we_calling_pending'"></textarea>
                       </td>
                       <td class="td-a align-top pt-2">
-                        <div v-if="attempt.user_registration_label" class="small fw-600 text-dark">{{ attempt.user_registration_label }}</div>
+                        <div v-if="attempt.user_registration_label" class="small fw-600 c-ink">{{ attempt.user_registration_label }}</div>
                         <div class="text-muted x-small">{{ attempt.registration_date_fmt || '—' }}</div>
                       </td>
                       <td class="td-a align-top pt-2">
-                        <div v-if="attempt.user_modification_label" class="small fw-600 text-dark">{{ attempt.user_modification_label }}</div>
+                        <div v-if="attempt.user_modification_label" class="small fw-600 c-ink">{{ attempt.user_modification_label }}</div>
                         <div class="text-muted x-small">{{ attempt.modification_date_fmt || '—' }}</div>
                       </td>
                     </tr>
@@ -695,7 +691,7 @@
 
           <footer class="downbar-footer">
             <button class="btn-exec btn-exec-outline" @click="showFollowModal = false">Cancelar</button>
-            <button class="btn-exec btn-exec-success" @click="saveFastFollow" :disabled="isSavingFollow">
+            <button class="btn-exec btn-exec-primary" @click="saveFastFollow" :disabled="isSavingFollow">
               <i class="fa-solid fa-save me-1"></i>
               {{ isSavingFollow ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
@@ -714,7 +710,7 @@
           <input v-model.trim="filters.q" type="text" class="exec-input-light w-100" placeholder="Nombre, teléfono..." @keyup.enter="applyFilters" />
         </div>
         <div class="col-md-3">
-          <label class="exec-label text-primary">Ordenar resultados por</label>
+          <label class="exec-label c-info">Ordenar resultados por</label>
           <SearchSelect v-model="filters.order_by" :items="filtroOrden" label-field="description" value-field="value" placeholder="Seleccionar orden..." class="exec-select-light w-100" />
         </div>
         <div class="col-md-3" v-if="!isFundacion">
@@ -760,7 +756,7 @@
         </div>
       </div>
       <div class="exec-fieldset mb-4">
-        <h6 class="fieldset-title" style="color: var(--teal-600);">Interés Académico</h6>
+        <h6 class="fieldset-title is-accent">Interés Académico</h6>
         <div class="row g-3">
           <div class="col-md-6">
             <label class="exec-label">Programa</label>
@@ -792,7 +788,7 @@
         </div>
       </div>
       <div class="exec-fieldset">
-        <h6 class="fieldset-title" style="color: var(--blue-600);">Filtros Financieros y Matrícula</h6>
+        <h6 class="fieldset-title is-info">Filtros Financieros y Matrícula</h6>
         <div class="row g-3">
           <div class="col-md-3 col-6"><label class="exec-label">Estado FICO (Deuda)</label><MultiSelect v-model="filters.fico_status_ids" :items="filtroFicoStatus" label-key="description" value-key="id" placeholder="Todos..." /></div>
           <div class="col-md-3 col-6"><label class="exec-label">Perfil de Precio</label><MultiSelect v-model="filters.profile_ids" :items="filtroProfile" label-key="description" value-key="id" placeholder="Todos..." /></div>
@@ -897,11 +893,11 @@
         </div>
       </div>
       <div class="row g-4" v-if="asesoresControl.length > 0">
-        <div class="col-12"><h6 class="fieldset-title text-primary"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6></div>
+        <div class="col-12"><h6 class="fieldset-title c-info"><i class="fa-solid fa-graduation-cap me-1"></i> Restricciones Académicas</h6></div>
         <div class="col-md-4"><label class="exec-label">Tipos de Programa</label><MultiSelect disabled v-model="asesoresControl[0].type_program_ids" :items="filtroTiposPrograma" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Modalidades</label><MultiSelect disabled v-model="asesoresControl[0].model_modality_ids" :items="filtroModalidad" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Programas Específicos</label><MultiSelect disabled v-model="asesoresControl[0].program_ids" :items="filtroProgramasEspec" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
-        <div class="col-12 mt-4"><h6 class="fieldset-title" style="color: var(--teal-600);"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6></div>
+        <div class="col-12 mt-4"><h6 class="fieldset-title is-accent"><i class="fa-solid fa-earth-americas me-1"></i> Restricciones Globales y Operativas</h6></div>
         <div class="col-md-4"><label class="exec-label">Estatus (Pipeline)</label><MultiSelect disabled v-model="asesoresControl[0].status_lead_ids" :items="filtroPipeline" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">E. Cliente</label><MultiSelect disabled v-model="asesoresControl[0].moment_ids" :items="filtroMoment" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Seguimiento</label><MultiSelect disabled v-model="asesoresControl[0].last_follow_ids" :items="filtroFollow" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
@@ -909,13 +905,13 @@
         <div class="col-md-4"><label class="exec-label">Estrategia MKT</label><MultiSelect disabled v-model="asesoresControl[0].strategy_ids" :items="strategyCatalog" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-md-4"><label class="exec-label">Nivel de Interés</label><MultiSelect disabled v-model="asesoresControl[0].interest_level_ids" :items="filtroInterest" label-key="description" value-key="id" placeholder="Accesibilidad total" /></div>
         <div class="col-12 mt-4">
-    <h6 class="fieldset-title" style="color: var(--amber-600);">
+    <h6 class="fieldset-title is-warn">
       <i class="fa-solid fa-calendar-range me-1"></i> Restricciones de Fecha
     </h6>
   </div>
   <div class="col-md-6">
     <label class="exec-label">F. Primer Contacto (rango permitido)</label>
-    <div class="exec-input-light w-100 d-flex align-items-center gap-2" style="height:auto; padding: 6px 10px; background:#f8fafc; color:#94a3b8; font-size:12px;">
+    <div class="exec-input-light lp-readonly w-100 d-flex align-items-center gap-2">
       <i class="fa-regular fa-calendar me-1"></i>
       <span v-if="asesoresControl[0].first_contact_date_from">
         {{ asesoresControl[0].first_contact_date_from }} → {{ asesoresControl[0].first_contact_date_to }}
@@ -925,7 +921,7 @@
   </div>
   <div class="col-md-6">
     <label class="exec-label">Inicio de Edición (rango permitido)</label>
-    <div class="exec-input-light w-100 d-flex align-items-center gap-2" style="height:auto; padding: 6px 10px; background:#f8fafc; color:#94a3b8; font-size:12px;">
+    <div class="exec-input-light lp-readonly w-100 d-flex align-items-center gap-2">
       <i class="fa-regular fa-calendar me-1"></i>
       <span v-if="asesoresControl[0].edition_start_date_from">
         {{ asesoresControl[0].edition_start_date_from }} → {{ asesoresControl[0].edition_start_date_to }}
@@ -938,7 +934,7 @@
     <template #footer>
       <div class="d-flex justify-content-end w-100 gap-2">
         <button class="btn-exec btn-exec-outline px-4" @click="showControlModal = false">{{ isFundacion ? 'Entendido, cerrar' : 'Cancelar' }}</button>
-        <button v-if="!isFundacion" class="btn-exec btn-exec-warning px-4" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
+        <button v-if="!isFundacion" class="btn-exec btn-exec-primary px-4" @click="saveControlRestrictions" :disabled="isSavingRestrictions">
           <i class="fa-solid fa-save me-1"></i>
           {{ isSavingRestrictions ? 'Guardando...' : 'Guardar Restricciones' }}
         </button>
@@ -974,7 +970,7 @@
             <span v-if="enrollmentData.edition_label"><i class="fa-regular fa-calendar me-1"></i> {{ enrollmentData.edition_label }}</span>
           </div>
         </div>
-        <span v-if="enrollmentData.modality_label" class="pill pill-slate border">{{ enrollmentData.modality_label }}</span>
+        <span v-if="enrollmentData.modality_label" class="ds-pill border">{{ enrollmentData.modality_label }}</span>
       </div>
       <div class="row g-4">
         <div class="col-md-6 border-end pe-4">
@@ -985,7 +981,7 @@
             <div class="info-block"><label class="exec-label">Fecha Inscripción</label><span class="info-value text-muted" style="font-weight:500;">{{ enrollmentData.registration_date }}</span></div>
             <div class="info-block mb-3">
               <label class="exec-label">Canal de Pago</label>
-              <span class="pill pill-slate border"><i class="fa-solid fa-credit-card me-1"></i>{{ enrollmentData.payment_channel_label || '—' }}</span>
+              <span class="ds-pill border"><i class="fa-solid fa-credit-card me-1"></i>{{ enrollmentData.payment_channel_label || '—' }}</span>
             </div>
             <div class="info-block mb-3" v-if="enrollmentData.payment_method_label || enrollmentData.token_provider_label">
               <label class="exec-label">{{ enrollmentData.payment_channel_alias === 'we_channel_token' ? 'Proveedor Link/Token' : 'Método de Pago' }}</label>
@@ -994,12 +990,12 @@
           </div>
           <div class="info-block mb-3">
             <label class="exec-label mb-1">Estado de Matrícula</label>
-            <span class="pill" :class="enrollmentData.active === 'Y' ? 'pill-teal' : 'pill-red'">{{ enrollmentData.status_label || 'Desconocido' }}</span>
+            <span class="ds-pill" :class="enrollmentData.active === 'Y' ? 'ok' : 'bad'">{{ enrollmentData.status_label || 'Desconocido' }}</span>
           </div>
           <!-- Categoría de entrada: solo eventos/congresos la tienen -->
           <div class="info-block mb-3" v-if="enrollmentData.event_category_label">
             <label class="exec-label mb-1">Categoría de Entrada</label>
-            <span class="pill event-cat-pill" :class="'is-' + (enrollmentData.event_category_alias || '').replace('we_event_category_', '')">
+            <span class="ds-pill event-cat-pill" :class="'is-' + (enrollmentData.event_category_alias || '').replace('we_event_category_', '')">
               <i class="fa-solid fa-ticket me-1"></i>{{ enrollmentData.event_category_label }}
             </span>
           </div>
@@ -1009,20 +1005,20 @@
           <h6 class="fieldset-title">Desglose Financiero</h6>
           <div class="d-flex align-items-center gap-2 mb-3">
             <i class="fa-solid fa-credit-card text-slate-400"></i>
-            <span class="fw-700 text-dark" style="font-size:13px;">{{ enrollmentData.payment_plan_label || '—' }}</span>
-            <span class="pill pill-slate" style="font-size:9px;">Plan de Pago</span>
+            <span class="fw-700 c-ink" style="font-size:13px;">{{ enrollmentData.payment_plan_label || '—' }}</span>
+            <span class="ds-pill " style="font-size:9px;">Plan de Pago</span>
           </div>
           <div class="finance-card">
             <div class="d-flex justify-content-between mb-2 pb-2">
-              <span class="text-secondary fw-600" style="font-size:12px;">Precio de Lista: <span class="pill pill-slate ms-1">{{ enrollmentData.profile_label || 'General' }}</span></span>
-              <span class="fw-700 text-dark" style="font-size:14px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}</span>
+              <span class="c-ink2 fw-600" style="font-size:12px;">Precio de Lista: <span class="ds-pill ms-1">{{ enrollmentData.profile_label || 'General' }}</span></span>
+              <span class="fw-700 c-ink" style="font-size:14px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.list_price) }}</span>
             </div>
             <div v-if="enrollmentData.discounts_list && enrollmentData.discounts_list.length > 0" class="mb-2">
               <div v-for="(desc, i) in enrollmentData.discounts_list" :key="i" class="d-flex justify-content-between align-items-center c-red py-1">
                 <span class="text-muted" style="font-size:11.5px;"><i class="fa-solid fa-tag me-1"></i><span class="fw-600">{{ desc.label || desc.name }}</span><span v-if="desc.value" class="text-slate-400 ms-1 fst-italic">({{ desc.value }}{{ desc.alias && desc.alias.includes('percent') ? '%' : '' }})</span></span>
                 <span class="fw-700 c-red" style="font-size:12.5px;">- {{ formatMoney(enrollmentData.currency_symbol, desc.calculated_amount) }}</span>
               </div>
-              <hr class="my-2" style="border-color:var(--slate-100);">
+              <hr class="my-2">
             </div>
             <!-- Después del bloque de descuentos, antes de "Total a Pagar" -->
             <div v-if="enrollmentData.reserva_amount > 0" 
@@ -1031,21 +1027,21 @@
                 <i class="fa-solid fa-hand-holding-dollar me-1 text-blue-400"></i>
                 Adelanto / Reserva:
               </span>
-              <span class="fw-700" style="font-size:12.5px; color:#1d4ed8;">
+              <span class="fw-700 c-info" style="font-size:12.5px;">
                 {{ formatMoney(enrollmentData.currency_symbol, enrollmentData.reserva_amount) }}
               </span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-              <span class="fw-700 text-dark" style="font-size:12.5px;">Total a Pagar:</span>
+              <span class="fw-700 c-ink" style="font-size:12.5px;">Total a Pagar:</span>
               <span class="fw-700 accent-text" style="font-size:16px;">{{ formatMoney(enrollmentData.currency_symbol, enrollmentData.total_amount) }}</span>
             </div>
             <div class="d-flex justify-content-between mb-2 c-green">
               <span class="fw-600" style="font-size:12px;">Pagado:</span>
               <span class="fw-700" style="font-size:13px;">{{ formatMoney(enrollmentData.currency_symbol, totalPaidDisplay) }}</span>
             </div>
-            <hr class="my-2" style="border-color:#dcfce7;">
+            <hr class="my-2">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-700 text-dark" style="font-size:12.5px;">Saldo Pendiente:</span>
+              <span class="fw-700 c-ink" style="font-size:12.5px;">Saldo Pendiente:</span>
               <span class="fw-700" style="font-size:18px;" :class="saldoPendienteDisplay > 0 ? 'c-red' : 'c-green'">{{ formatMoney(enrollmentData.currency_symbol, saldoPendienteDisplay) }}</span>
             </div>
           </div>
@@ -1058,11 +1054,11 @@
             <div class="d-flex align-items-center gap-3 overflow-hidden">
               <div class="file-icon"><i class="fa-solid fa-lg" :class="getFileIcon(file.type)"></i></div>
               <div class="d-flex flex-column text-truncate">
-                <span class="fw-600 text-dark text-truncate" style="font-size:12.5px;" :title="file.name">{{ file.name || 'Documento Adjunto' }}</span>
+                <span class="fw-600 c-ink text-truncate" style="font-size:12.5px;" :title="file.name">{{ file.name || 'Documento Adjunto' }}</span>
                 <span class="text-muted" style="font-size:10.5px;">
                   {{ file.date || 'Archivo histórico' }}
-                  <span v-if="file.source === 'payment_receipt'" class="pill pill-slate ms-1" style="font-size:8px; background:#eff6ff; color:#1d4ed8;">VOUCHER</span>
-                  <span v-if="file.source === 'enrollment'" class="pill pill-slate ms-1" style="font-size:8px;">LEGACY</span>
+                  <span v-if="file.source === 'payment_receipt'" class="ds-pill info ms-1">VOUCHER</span>
+                  <span v-if="file.source === 'enrollment'" class="ds-pill ms-1" style="font-size:8px;">LEGACY</span>
                 </span>
               </div>
             </div>
@@ -1099,9 +1095,8 @@
                 <!-- # -->
                 <td class="td-a text-center fw-700 text-muted">
                   <span v-if="cuota.is_reserva"
-                        class="pill pill-slate"
-                        title="Adelanto / Pago Inicial"
-                        style="background:#dbeafe;color:#1e40af;font-size:9px;">INI</span>
+                        class="ds-pill info"
+                        title="Adelanto / Pago Inicial">INI</span>
                   <span v-else>{{ cuota.installment_number }}</span>
                 </td>
 
@@ -1111,7 +1106,7 @@
                     {{ cuota.due_date }}
                   </span>
                   <span v-if="isNextDue(cuota)" 
-                        class="pill pill-amber ms-2" 
+                        class="ds-pill warn ms-2" 
                         style="font-size:9px;">Próxima</span>
                 </td>
 
@@ -1122,15 +1117,15 @@
 
                 <!-- Estado -->
                 <td class="td-a text-center">
-                  <span class="pill" :class="badgeForInstallment(cuota.status_alias)">
+                  <span class="ds-pill" :class="badgeForInstallment(cuota.status_alias)">
                     {{ cuota.status_label }}
                   </span>
                 </td>
               </tr>
             </tbody>
             <tfoot>
-              <tr style="background:#f8fafc; border-top: 2px solid #e2e8f0;">
-                <td colspan="2" class="td-a fw-700 text-end" style="font-size:11.5px; color:#475569;">
+              <tr class="lp-plan-total">
+                <td colspan="2" class="td-a fw-700 text-end text-muted" style="font-size:11.5px;">
                   TOTAL PLAN:
                 </td>
                 <td class="td-a text-end fw-700 accent-text" style="font-size:13px;">
@@ -1143,11 +1138,11 @@
         </div>
       </div>
       <div class="mt-4 pt-2" v-if="enrollmentData.lead_observations">
-        <h6 class="fieldset-title"><i class="fa-solid fa-comment-dots me-1 text-secondary"></i> Observaciones del Asesor</h6>
-        <div class="exec-alert alert-info" style="border-left-color: #94a3b8;"><i class="fa-solid fa-quote-left opacity-40 mt-1"></i><p class="mb-0" style="font-size:.85rem; white-space: pre-line; color: var(--text-primary);">{{ enrollmentData.lead_observations }}</p></div>
+        <h6 class="fieldset-title"><i class="fa-solid fa-comment-dots me-1 c-ink2"></i> Observaciones del Asesor</h6>
+        <div class="exec-alert alert-neutral"><i class="fa-solid fa-quote-left opacity-40 mt-1"></i><p class="mb-0" style="font-size:.85rem; white-space: pre-line;">{{ enrollmentData.lead_observations }}</p></div>
       </div>
       <div class="mt-3" v-if="enrollmentData.notes">
-        <h6 class="fieldset-title"><i class="fa-solid fa-note-sticky me-1 text-warning"></i> Notas de Matrícula</h6>
+        <h6 class="fieldset-title"><i class="fa-solid fa-note-sticky me-1 c-warn"></i> Notas de Matrícula</h6>
         <div class="exec-alert alert-warning"><i class="fa-solid fa-triangle-exclamation opacity-60 mt-1"></i><p class="mb-0" style="font-size:.85rem; white-space: pre-line;">{{ enrollmentData.notes }}</p></div>
       </div>
     </div>
@@ -2120,13 +2115,13 @@ function rowClassForStatus(s) {
 }
 
 function badgeForInterest(s) {
-  const map = { 'we_lead_interest_high': 'pill-red', 'we_lead_interest_medium': 'pill-amber', 'we_lead_interest_low': 'pill-slate' };
-  return map[s] || 'pill-slate'
+  const map = { 'we_lead_interest_high': 'bad', 'we_lead_interest_medium': 'warn', 'we_lead_interest_low': '' };
+  return map[s] || ''
 }
 
 function badgeForFollow(s) {
-  const map = { 'we_calling_pending': 'pill-slate', 'we_calling_answered': 'pill-teal', 'we_calling_no_answer': 'pill-red' };
-  return map[s] || 'pill-slate'
+  const map = { 'we_calling_pending': '', 'we_calling_answered': 'ok', 'we_calling_no_answer': 'bad' };
+  return map[s] || ''
 }
 
 function addLocalAttempt() {
@@ -2226,12 +2221,12 @@ const membershipList = ref([]);
 // Badge por estado de cuota
 function badgeForInstallment(alias) {
   const map = {
-    'we_payment_status_paid':      'pill-teal',
-    'we_payment_status_pending':   'pill-amber',
-    'we_payment_status_draft':     'pill-slate',
-    'we_payment_status_cancelled': 'pill-red',
+    'we_payment_status_paid':      'ok',
+    'we_payment_status_pending':   'warn',
+    'we_payment_status_draft':     '',
+    'we_payment_status_cancelled': 'bad',
   }
-  return map[alias] || 'pill-slate'
+  return map[alias] || ''
 }
 
 // ¿Está vencida? (fecha pasada y no pagada)
@@ -2279,881 +2274,303 @@ const saldoPendienteDisplay = computed(() => {
 
 
 <style scoped>
-/* ═══════════════════════════════════════════════════
-   LAYOUT — diseño basado en EnrollmentPage
-   ═══════════════════════════════════════════════════ */
-.leads-page {
-  --e-bg: #FFFFFF;
-  --e-bg-subtle: #FAFAF8;
-  --e-border: #E8E8E3;
-  --e-border-strong: #D4D4CC;
-  --e-text: #14140F;
-  --e-text-secondary: #6F6F66;
-  --e-text-muted: #A0A099;
-  --e-accent: #10B981;
-  --e-accent-soft: #ECFDF4;
+/* Colores solo con tokens ds-* (design-system.css): sin bloque dark, los tokens
+   cambian solos. btn-exec, btn-icon y ds-pill son globales: no se redefinen. */
+.leads-page { font-size: 13px; }
+.lp-body { display: flex; flex-direction: column; gap: 14px; }
 
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--e-text);
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 24px 28px;
-  font-size: 13px;
-}
-
-/* === Masthead === */
-.ep-masthead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 22px;
-}
-.ep-masthead-left { display: flex; flex-direction: column; gap: 3px; }
-.ep-breadcrumb {
-  font-size: 11px;
-  color: var(--e-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-.ep-title {
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--e-text);
-  margin: 0;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-.ep-subtitle {
-  font-size: 13.5px;
-  color: var(--e-text-secondary);
-  font-weight: 400;
-  margin-top: 2px;
-}
-.ep-masthead-actions { display: flex; align-items: center; gap: 10px; }
-
-/* View toggle */
-.ep-view-toggle { display: flex; background: #fff; border: 1px solid var(--e-border); border-radius: 8px; padding: 3px; }
-.ep-toggle-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; font-size: 12px; font-weight: 500;
-  color: var(--e-text-secondary); background: transparent;
-  border: none; border-radius: 6px; cursor: pointer;
-  transition: all .2s ease; font-family: inherit;
-}
-.ep-toggle-btn.is-active { background: var(--e-bg-subtle); color: var(--e-text); font-weight: 600; }
-.ep-toggle-btn:not(.is-active):hover { color: var(--e-text); }
-
-/* Control button */
-.ep-btn-control {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px; font-size: 13px; font-weight: 600;
-  color: var(--e-text); background: #fff;
-  border: 1px solid var(--e-border); border-radius: 8px; cursor: pointer;
-  transition: all .2s ease; font-family: inherit;
-}
-.ep-btn-control:hover { border-color: var(--e-border-strong); background: var(--e-bg-subtle); }
-.ep-btn-control.ep-btn-danger {
-  background: rgba(220, 38, 38, 0.06);
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.25);
-  animation: pulseRed 2s infinite;
-}
-.ep-btn-control i { font-size: 11px; }
-
-/* New button */
-.ep-btn-new {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 18px; font-size: 13px; font-weight: 600;
-  color: #fff; background: var(--we-navy, #002060);
-  border: none; border-radius: 8px; cursor: pointer;
-  transition: background .2s ease; font-family: inherit;
-  letter-spacing: -0.01em;
-}
-.ep-btn-new:hover { background: var(--we-navy-dark, #001540); }
-.ep-btn-new i { font-size: 11px; }
-
-/* === Body === */
-.ep-body { padding: 0; }
-
-/* === Filter bar section === */
-.ep-section {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-bottom: 14px;
-}
-.ep-section.ep-filter-bar {
-  background: #fff;
-  border: 1px solid var(--e-border);
-  border-radius: 10px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-.ep-section.ep-filter-bar.is-filtered {
-  border-color: rgba(16, 185, 129, 0.32);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
-}
-.ep-filter-bar-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-}
-.ep-toolbar {
-  display: flex; align-items: center; justify-content: flex-end;
-  gap: 16px; flex-wrap: wrap;
-  flex: 1 1 auto;
-}
-
-/* ── Vistas rapidas ───────────────────────────────────────────── */
-.ep-quick-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  flex: 0 1 auto;
-}
-.ep-quick-order {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-.ep-quick-order-icon {
-  font-size: 11px;
-  color: var(--e-text-secondary);
-}
-.ss-quick {
-  width: 230px;
-}
-.ss-quick :deep(.searchselect-control) {
-  min-height: 32px;
-  padding: 0.15rem 2.25rem 0.15rem 0.6rem;
-  border-radius: 8px;
-}
+/* ── Barra: vistas rapidas + orden a la izquierda, paginacion a la derecha ── */
+.ds-tabs > button i { margin-right: 4px; font-size: 11px; }
+.lp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 10px 14px; }
+.lp-quick-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lp-order { display: flex; align-items: center; gap: 6px; color: var(--ds-ink-2); font-size: 11px; }
+.ss-quick { width: 230px; }
+.ss-quick :deep(.searchselect-control) { min-height: 32px; padding: 0.15rem 2.25rem 0.15rem 0.6rem; border-radius: var(--ds-radius-control); }
 .ss-quick :deep(.searchselect-input),
-.ss-quick :deep(.ss-locked-label) {
-  font-size: 12.5px;
+.ss-quick :deep(.ss-locked-label) { font-size: 12.5px; }
+.lp-chips { padding: 8px 14px; border-top: 1px solid var(--ds-border); background: var(--ds-surface-2); }
+.lp-chips :deep(.active-filters) { margin-bottom: 0; }
+.lp-pulse { animation: lp-pulse 2s infinite; }
+@keyframes lp-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ds-bad) 40%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
-.ep-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  flex: 0 1 auto;
-}
-.ep-tab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px;
-  font-size: 12.5px; font-weight: 500;
-  color: var(--e-text-secondary);
-  background: var(--e-bg-subtle);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all .15s ease;
-  font-family: inherit;
-  white-space: nowrap;
-}
-.ep-tab i { font-size: 11px; opacity: 0.7; }
-.ep-tab:hover {
-  color: var(--e-text);
-  background: #F5F5F5;
-}
-.ep-tab.is-active {
-  color: var(--e-accent);
-  background: var(--e-accent-soft);
-  border-color: rgba(16, 185, 129, 0.25);
-  font-weight: 600;
-}
-.ep-tab.is-active i { opacity: 1; }
-.ep-tab.is-highlight i { opacity: 1; }
-.ep-tab.is-highlight::before {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--e-accent);
-  margin-right: 6px;
-  vertical-align: middle;
-}
-.ep-filter-strip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 14px;
-  border-top: 1px solid var(--e-border);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.015));
-}
-.ep-filter-strip-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #047857;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.ep-filter-strip-badge i { font-size: 11px; }
-.ep-filter-strip-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px; height: 18px;
-  padding: 0 5px;
-  background: var(--e-accent);
-  color: #fff;
-  border-radius: 9px;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.ep-filter-strip :deep(.active-filters) { margin-bottom: 0; flex: 1 1 auto; }
-.ep-filter-strip :deep(.active-filters .label) { display: none; }
 
-/* === Dark mode === */
-[data-coreui-theme="dark"] .leads-page {
-  --e-bg: #1A1A14;
-  --e-bg-subtle: #1F1F1A;
-  --e-border: #2A2A22;
-  --e-border-strong: #3A3A33;
-  --e-text: #F4F4F0;
-  --e-text-secondary: #A0A099;
-  --e-text-muted: #6F6F66;
-  --e-accent-soft: rgba(16, 185, 129, 0.16);
+/* ── Tabla ─────────────────────────────────────────────────────────────── */
+.table-shell { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius); overflow: hidden; }
+.table-responsive-custom { width: 100%; overflow-x: auto; overflow-y: visible; }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--ds-ink); }
+/* style.scss pinta las filas del thead de blanco fijo: en oscuro tapaba los tintes */
+.exec-table thead tr { background: var(--ds-surface); }
+.thead-sub .ts {
+  padding: 5px 10px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; text-align: left; white-space: nowrap;
+  border-bottom: 1px solid var(--ds-border); background: var(--ds-surface-2); color: var(--ds-muted);
 }
-[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar { background: #1A1A14; }
-[data-coreui-theme="dark"] .leads-page .ep-section.ep-filter-bar.is-filtered {
-  border-color: rgba(52, 211, 153, 0.32);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
-}
-[data-coreui-theme="dark"] .leads-page .ep-filter-strip {
-  border-top-color: #2A2A22;
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.04));
-}
-[data-coreui-theme="dark"] .leads-page .ep-tab { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .leads-page .ep-tab:hover { background: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .leads-page .ep-tab.is-active {
-  background: rgba(16, 185, 129, 0.16);
-  color: #34D399;
-  border-color: rgba(52, 211, 153, 0.32);
-}
-[data-coreui-theme="dark"] .leads-page .ep-filter-strip-badge { color: #34D399; }
-[data-coreui-theme="dark"] .leads-page .ep-view-toggle { background: #1A1A14; border-color: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .ep-toggle-btn.is-active { background: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .ep-btn-control { background: #1A1A14; border-color: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .leads-page .ep-btn-new { background: #F4F4F0; color: #14140F; }
-[data-coreui-theme="dark"] .leads-page .ep-btn-new:hover { background: #E4E4DD; }
-
-/* Dark mode — compact group headers */
-[data-coreui-theme="dark"] .leads-page .thead-colgroup { background: #1F1F1A; }
-[data-coreui-theme="dark"] .leads-page .tg-fixed { background: #1F1F1A; border-right-color: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .tg-header { background: #1A1A14; border-right-color: #2A2A22; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .tg-header:hover { background: #1F1F1A; }
-[data-coreui-theme="dark"] .leads-page .tg-programa { color: #60a5fa; }
-[data-coreui-theme="dark"] .leads-page .tg-cliente  { color: #34d399; }
-[data-coreui-theme="dark"] .leads-page .tg-lead     { color: #fbbf24; }
-[data-coreui-theme="dark"] .leads-page .tg-asesor   { color: #a78bfa; }
-[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-programa,
-[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-cliente,
-[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-lead,
-[data-coreui-theme="dark"] .leads-page .tg-collapsed.tg-asesor { background: #1A1A14; }
-[data-coreui-theme="dark"] .leads-page .thead-sub .ts { background: #1F1F1A; color: #A0A099; border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .thead-filter .tf { background: #1F1F1A; border-bottom-color: #34D399; }
-[data-coreui-theme="dark"] .leads-page .table-shell { background: #1A1A14; border-color: #2A2A22; }
-
-/* Dark mode — table body rows */
-[data-coreui-theme="dark"] .leads-page .tbody-row td {
-  color: #E4E4DD;
-  border-bottom-color: #2A2A22;
-  background: #1A1A14;
-}
-[data-coreui-theme="dark"] .leads-page .tbody-row:hover td { background: #232319; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .text-dark,
-[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted {
-  color: #E4E4DD !important;
-}
-[data-coreui-theme="dark"] .leads-page .tbody-row .text-muted { color: #A0A099 !important; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .accent-text { color: #34D399; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .pay-date-cell { color: #34D399; }
-
-/* Status row backgrounds (override the light pastel backgrounds) */
-[data-coreui-theme="dark"] .leads-page .row-inscrito > td { background: rgba(16, 185, 129, 0.10); }
-[data-coreui-theme="dark"] .leads-page .row-blue > td     { background: rgba(59, 130, 246, 0.10); }
-[data-coreui-theme="dark"] .leads-page .row-emerald > td  { background: rgba(13, 148, 136, 0.10); }
-[data-coreui-theme="dark"] .leads-page .row-yellow > td   { background: rgba(245, 158, 11, 0.10); }
-[data-coreui-theme="dark"] .leads-page .row-gray > td     { background: #1F1F1A; color: #A0A099; }
-[data-coreui-theme="dark"] .leads-page .row-red > td      { background: rgba(239, 68, 68, 0.10); }
-[data-coreui-theme="dark"] .leads-page .row-highlight > td { background: rgba(59, 130, 246, 0.16) !important; }
-
-/* Hover override for colored rows */
-[data-coreui-theme="dark"] .leads-page .row-inscrito:hover > td { background: rgba(16, 185, 129, 0.18); }
-[data-coreui-theme="dark"] .leads-page .row-blue:hover > td     { background: rgba(59, 130, 246, 0.18); }
-[data-coreui-theme="dark"] .leads-page .row-emerald:hover > td  { background: rgba(13, 148, 136, 0.18); }
-[data-coreui-theme="dark"] .leads-page .row-yellow:hover > td   { background: rgba(245, 158, 11, 0.18); }
-[data-coreui-theme="dark"] .leads-page .row-gray:hover > td     { background: #2A2A22; }
-[data-coreui-theme="dark"] .leads-page .row-red:hover > td      { background: rgba(239, 68, 68, 0.18); }
-
-/* Compact-mode collapsed-group hint cells */
-[data-coreui-theme="dark"] .leads-page .tg-hint-programa { background: rgba(37, 99, 235, 0.15); color: #60a5fa; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-cliente  { background: rgba(5, 150, 105, 0.15);  color: #34d399; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-lead     { background: rgba(217, 119, 6, 0.15);  color: #fbbf24; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-asesor   { background: rgba(124, 58, 237, 0.15); color: #a78bfa; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-main { color: #F4F4F0; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-strong { color: #F4F4F0; }
-[data-coreui-theme="dark"] .leads-page .tg-hint-muted { color: #A0A099; }
-
-/* Pills inside rows */
-[data-coreui-theme="dark"] .leads-page .tbody-row .pill-slate { background: #2A2A22; color: #A0A099; border-color: #3A3A33 !important; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .pill-teal  { background: rgba(13, 148, 136, 0.18); color: #5EEAD4; border-color: rgba(13, 148, 136, 0.4) !important; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .pill-amber { background: rgba(245, 158, 11, 0.18); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4) !important; }
-[data-coreui-theme="dark"] .leads-page .tbody-row .pill-red   { background: rgba(239, 68, 68, 0.18); color: #F87171; border-color: rgba(239, 68, 68, 0.4) !important; }
-
-/* Action icon buttons in rows */
-[data-coreui-theme="dark"] .leads-page .btn-icon { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .leads-page .btn-icon:hover:not(:disabled) { background: #2A2A22; border-color: #3A3A33; color: #F4F4F0; }
-
-.btn-exec { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
-.btn-exec:disabled { opacity: .5; cursor: default; }
-.btn-exec-primary { background: var(--navy-900, #0f172a); color: #fff; border-color: var(--navy-900, #0f172a); }
-.btn-exec-primary:hover:not(:disabled) { background: #1e293b; }
-.btn-exec-ghost { background: rgba(255,255,255,.07); color: var(--slate-300, #cbd5e1); border-color: rgba(255,255,255,.12); }
-.btn-exec-ghost:hover:not(:disabled) { background: rgba(255,255,255,.13); color: #fff; }
-.btn-exec-active { background: #fff; color: var(--navy-900, #0f172a); border-color: #fff; }
-.btn-exec-danger { background: rgba(220,38,38,.15); color: #fca5a5; border-color: rgba(220,38,38,.3); }
-.btn-exec-warning { background: #f59e0b; color: var(--navy-900, #0f172a); border-color: #f59e0b; }
-.btn-exec-warning:hover:not(:disabled) { background: #d97706; }
-.btn-exec-success { background: #15803d; color: #fff; border-color: #15803d; }
-.btn-exec-success:hover:not(:disabled) { background: #166534; }
-.btn-exec-outline { background: #fff; border-color: var(--border, #e2e8f0); color: var(--text-secondary, #475569); }
-.btn-exec-outline:hover:not(:disabled) { background: var(--slate-50, #f8fafc); border-color: var(--slate-400, #94a3b8); }
-
-.table-shell { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
-.table-responsive-custom { width: 100%; overflow-x: auto; overflow-y: visible; border-radius: 8px; }
-.exec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-
-.thead-sub .ts { padding: 5px 10px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #E5E7EB; text-align: left; background: #FAFAFA; color: #6B7280; white-space: nowrap; }
 .thead-sub .ts.text-center { text-align: center; }
 
-/* ═══════════════════════════════════════════════════════════════
-   GRUPOS DE COLUMNAS COLAPSABLES — estilo EnrollmentExpandedTable
-   ═══════════════════════════════════════════════════════════════ */
-.thead-colgroup {
-  background: #FAFAFA;
-}
-
-.tg-fixed {
-  width: 80px;
-  min-width: 80px;
-  background: #FAFAFA;
-  border-right: 1px solid #E5E7EB;
-}
-
+/* Grupos de columnas colapsables (vista compacta): un color por grupo */
+.thead-colgroup { background: var(--ds-surface-2); }
+.tg-fixed { width: 80px; min-width: 80px; background: var(--ds-surface-2); border-right: 1px solid var(--ds-border); }
 .tg-header {
-  padding: 0;
-  cursor: pointer;
-  user-select: none;
-  border-right: 1px solid #E5E7EB;
-  border-bottom: 1px solid #E5E7EB;
-  background: #fff;
-  transition: background 0.15s;
-  white-space: nowrap;
+  padding: 0; cursor: pointer; user-select: none; white-space: nowrap;
+  border-right: 1px solid var(--ds-border); border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-surface); transition: background 0.15s;
 }
-
-.tg-header:hover { background: #F9FAFB; }
-
-.tg-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
+.tg-header:hover { background: var(--ds-surface-2); }
+.tg-label { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .tg-icon { font-size: 9px; opacity: 0.7; }
-.tg-text { }
 .tg-chevron { font-size: 8px; transition: transform 0.2s; opacity: 0.55; }
+.tg-programa { border-left: 2px solid var(--ds-info-ink); color: var(--ds-info-ink); }
+.tg-cliente { border-left: 2px solid var(--ds-ok-ink); color: var(--ds-ok-ink); }
+.tg-lead { border-left: 2px solid var(--ds-warn-ink); color: var(--ds-warn-ink); }
+.tg-asesor { border-left: 2px solid var(--ds-violet-ink); color: var(--ds-violet-ink); }
+.tg-collapsed { width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
+.tg-collapsed .tg-text { writing-mode: vertical-rl; text-orientation: mixed; font-size: 9px; max-height: 60px; overflow: hidden; }
+.tg-collapsed .tg-label { flex-direction: column; padding: 8px 4px; gap: 4px; }
+.tg-placeholder-cell { width: 88px !important; min-width: 88px !important; max-width: 88px !important; padding: 4px 6px !important; vertical-align: middle; }
+.tg-collapsed-hint { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 3px 5px; border-radius: var(--ds-radius-control); }
+.tg-hint-programa { color: var(--ds-info-ink); background: var(--ds-soft-info); }
+.tg-hint-cliente { color: var(--ds-ok-ink); background: var(--ds-soft-ok); }
+.tg-hint-lead { color: var(--ds-warn-ink); background: var(--ds-soft-warn); }
+.tg-hint-asesor { color: var(--ds-violet-ink); background: var(--ds-soft-violet); }
+.tg-hint-line { display: block; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; line-height: 1.3; }
+.tg-hint-main { font-weight: 600; color: var(--ds-ink); }
+.tg-hint-strong { font-weight: 700; }
+.tg-hint-muted { color: var(--ds-muted); }
 
-/* Colores por grupo — borde izquierdo de acento */
-.tg-programa { border-left: 2px solid #2563eb; color: #1e40af; }
-.tg-cliente  { border-left: 2px solid #059669; color: #065f46; }
-.tg-lead     { border-left: 2px solid #d97706; color: #92400e; }
-.tg-asesor   { border-left: 2px solid #7c3aed; color: #5b21b6; }
-
-/* Estado colapsado */
-.tg-collapsed {
-  width: 36px !important;
-  min-width: 36px !important;
-  max-width: 36px !important;
+/* Cabeceras de la tabla del panel de control */
+.thead-group .th-cat {
+  padding: 10px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--ds-brand); color: var(--ds-on-brand); border-right: 2px solid var(--ds-border-strong);
 }
-.tg-collapsed .tg-text {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-size: 9px;
-  max-height: 60px;
-  overflow: hidden;
-}
-.tg-collapsed .tg-label {
-  flex-direction: column;
-  padding: 8px 4px;
-  gap: 4px;
-}
-.tg-collapsed.tg-programa,
-.tg-collapsed.tg-cliente,
-.tg-collapsed.tg-lead,
-.tg-collapsed.tg-asesor { background: #fff; }
+.th-group { padding: 8px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--ds-border); }
+/* .exec-table thead th (global) pinta fondo blanco: hace falta la misma especificidad */
+.exec-table .th-group-a { background: var(--ds-soft-info); color: var(--ds-info-ink); border-left: 2px solid var(--ds-info-ink); }
+.exec-table .th-group-b { background: var(--ds-soft-ok); color: var(--ds-ok-ink); border-left: 2px solid var(--ds-ok-ink); }
+.ts-a { padding: 8px 12px; background: var(--ds-soft-info); color: var(--ds-info-ink); border-left: 1px solid var(--ds-border); }
+.ts-b { padding: 8px 12px; background: var(--ds-soft-ok); color: var(--ds-ok-ink); border-left: 1px solid var(--ds-border); }
+.td-cat { padding-left: 14px; border-right: 2px solid var(--ds-border-strong); background: var(--ds-surface-2) !important; color: var(--ds-heading) !important; }
 
-/* Celda placeholder cuando grupo está colapsado */
-.tg-placeholder-cell {
-  width: 88px !important;
-  min-width: 88px !important;
-  max-width: 88px !important;
-  padding: 4px 6px !important;
-  vertical-align: middle;
-}
-
-/* Indicador visual en filas del tbody cuando colapsado */
-.tg-collapsed-hint {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 3px 5px;
-  border-radius: 4px;
-  width: 100%;
-}
-
-.tg-hint-programa { color: #2563eb; background: #eff6ff; }
-.tg-hint-cliente  { color: #059669; background: #f0fdf4; }
-.tg-hint-lead     { color: #d97706; background: #fffbeb; }
-/* ═══════════════════════════════════════════════════════════════ */
-
-.thead-group .th-cat { background: var(--navy-900, #0f172a); color: var(--slate-300, #cbd5e1); padding: 10px 14px; border-right: 2px solid #334155; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; }
-.th-group { padding: 8px 10px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border, #e2e8f0); }
-.th-group-a { background: #eff6ff; color: #1e40af; border-left: 2px solid #bfdbfe; }
-.th-group-b { background: #f0fdf4; color: #166534; border-left: 2px solid #bbf7d0; }
-.ts-a { background: #f8fbff; color: #3b82f6; border-left: 1px solid #dbeafe; padding: 8px 12px; }
-.ts-b { background: #f7fdf9; color: #16a34a; border-left: 1px solid #d1fae5; padding: 8px 12px; }
-
-.tbody-row { transition: background 0.12s; position: relative; }
-.tbody-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; color: var(--text-primary, #0f172a); }
+/* Filas: el borde izquierdo y el fondo dicen el estado del lead */
+.tbody-row { position: relative; transition: background 0.12s; }
+.tbody-row td { padding: 10px 14px; vertical-align: middle; border-bottom: 1px solid var(--ds-border); color: var(--ds-ink); }
 .tbody-row:last-child td { border-bottom: none; }
-.tbody-row:hover td { background: #f8fafc; cursor: pointer; }
-
-.row-inscrito { border-left: 3px solid #10b981; } .row-inscrito > td  { background: #f0fdf4; }
-.row-blue     { border-left: 3px solid #3b82f6; } .row-blue > td      { background: #f0f9ff; }
-.row-emerald  { border-left: 3px solid #0d9488; } .row-emerald > td   { background: #f0fdfa; }
-.row-yellow   { border-left: 3px solid #f59e0b; } .row-yellow > td    { background: #fffbeb; }
-.row-gray     { border-left: 3px solid #94a3b8; } .row-gray > td      { background: var(--slate-50, #f8fafc); color: var(--text-secondary, #475569); }
-.row-red      { border-left: 3px solid #ef4444; } .row-red > td       { background: #fef2f2; }
-.row-highlight > td { background: #eff6ff !important; }
-
-.td-a { border-left: 1px solid transparent; }
-.td-b { border-left: 1px solid transparent; }
-.td-cat { padding-left: 14px; border-right: 2px solid #1e293b; background: var(--navy-900, #0f172a) !important; color: #fff !important; }
-
-.text-center { text-align: center; }
-.nowrap { white-space: nowrap; }
-.text-mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
-.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
-.text-muted { color: var(--text-muted, #94a3b8); }
-.accent-text { color: #0d9488; }
-.c-green { color: #15803d; } .c-red { color: #dc2626; }
-.small { font-size: 11.5px; } .x-small { font-size: 10px; }
-.pay-date-cell { color: #15803d; }
-
-.pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; }
-.pill-slate  { background: var(--slate-100, #f1f5f9); color: var(--text-secondary, #475569); border-color: var(--slate-200, #e2e8f0) !important; }
-.pill-teal   { background: #ccfbf1; color: #0f766e; border-color: #99f6e4 !important; }
-
-/* Categoría de entrada de eventos: un color por tier para leerlo de un vistazo */
-.event-cat-pill            { border: 1px solid transparent; font-weight: 700; }
-.event-cat-pill.is-vip     { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
-.event-cat-pill.is-premium { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe !important; }
-.event-cat-pill.is-general { background: #e0f2fe; color: #075985; border-color: #bae6fd !important; }
-.event-cat-pill.is-virtual { background: #f1f5f9; color: #334155; border-color: #e2e8f0 !important; }
-[data-coreui-theme="dark"] .event-cat-pill.is-vip     { background: rgba(245,158,11,.16); color: #FCD34D; border-color: rgba(245,158,11,.35) !important; }
-[data-coreui-theme="dark"] .event-cat-pill.is-premium { background: rgba(139,92,246,.16); color: #C4B5FD; border-color: rgba(139,92,246,.35) !important; }
-[data-coreui-theme="dark"] .event-cat-pill.is-general { background: rgba(56,189,248,.16); color: #7DD3FC; border-color: rgba(56,189,248,.35) !important; }
-[data-coreui-theme="dark"] .event-cat-pill.is-virtual { background: rgba(148,163,184,.16); color: #CBD5E1; border-color: rgba(148,163,184,.35) !important; }
-.pill-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a !important; }
-.pill-red    { background: #fee2e2; color: #b91c1c; border-color: #fecaca !important; }
-
-.btn-icon { background: transparent; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary, #475569); transition: all .15s; font-size: 12px; vertical-align: middle; }
-.btn-icon:hover:not(:disabled) { background: var(--slate-100, #f1f5f9); color: var(--text-primary, #0f172a); border-color: var(--slate-300, #cbd5e1); }
-.btn-icon:disabled { opacity: .4; cursor: default; }
-
-.empty-state { padding: 40px; text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-weight: 500; }
-.empty-state svg { display: block; margin: 0 auto 10px auto; color: var(--slate-300, #cbd5e1); }
-.empty-state p { margin: 0; }
+.tbody-row:hover td { background: var(--ds-surface-2); cursor: pointer; }
+.row-inscrito { border-left: 3px solid var(--ds-ok); } .row-inscrito > td { background: var(--ds-soft-ok); }
+.row-blue { border-left: 3px solid var(--ds-info-ink); } .row-blue > td { background: var(--ds-soft-info); }
+.row-emerald { border-left: 3px solid var(--ds-cyan-ink); } .row-emerald > td { background: var(--ds-soft-cyan); }
+.row-yellow { border-left: 3px solid var(--ds-warn); } .row-yellow > td { background: var(--ds-soft-warn); }
+.row-gray { border-left: 3px solid var(--ds-border-strong); } .row-gray > td { background: var(--ds-surface-2); color: var(--ds-ink-2); }
+.row-red { border-left: 3px solid var(--ds-bad); } .row-red > td { background: var(--ds-soft-bad); }
+.row-highlight > td { background: var(--ds-soft-info) !important; }
+.td-a, .td-b { border-left: 1px solid transparent; }
 
 .compact-table { font-size: 11px; }
 .compact-table .ts { padding: 6px 10px; font-size: 10px; }
-.compact-table td { padding: 6px 10px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-.compact-table .pill { padding: 2px 6px; font-size: 9.5px; }
-.compact-table .obs-cell {
-  min-width: 180px;
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-style: italic;
-  cursor: help;
+.compact-table td { max-width: 180px; padding: 6px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-table .ds-pill { padding: 2px 6px; font-size: 9.5px; }
+.compact-table .obs-cell { min-width: 180px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; cursor: help; }
+
+/* Utilidades de la pagina */
+.text-center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.text-mono { font-variant-numeric: tabular-nums; }
+.fw-500 { font-weight: 500; } .fw-600 { font-weight: 600; } .fw-700 { font-weight: 700; }
+.text-muted, .text-slate-400, .text-slate-300 { color: var(--ds-muted) !important; }
+.text-blue-400 { color: var(--ds-info-ink); }
+.accent-text { color: var(--ds-accent); }
+.c-green, .pay-date-cell { color: var(--ds-ok-ink); }
+.c-red { color: var(--ds-bad-ink); }
+.c-info { color: var(--ds-info-ink); }
+.c-ink { color: var(--ds-ink); }
+.c-ink2 { color: var(--ds-ink-2); }
+.c-warn { color: var(--ds-warn-ink); }
+.small { font-size: 11.5px; } .x-small { font-size: 10px; }
+
+/* Categoria de entrada de eventos: un tono por tier para leerlo de un vistazo */
+.event-cat-pill { border: 1px solid transparent; font-weight: 700; }
+.event-cat-pill.is-vip { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.event-cat-pill.is-premium { background: var(--ds-soft-violet); color: var(--ds-violet-ink); }
+.event-cat-pill.is-general { background: var(--ds-soft-cyan); color: var(--ds-cyan-ink); }
+.event-cat-pill.is-virtual { background: var(--ds-soft-neutral); color: var(--ds-ink-2); }
+
+.empty-state { padding: 40px; text-align: center; font-size: 13px; font-weight: 500; color: var(--ds-muted); }
+.empty-state svg { display: block; margin: 0 auto 10px; color: var(--ds-border-strong); }
+.empty-state p { margin: 0; }
+
+/* ── Formularios de los modales ───────────────────────────────────────── */
+.exec-fieldset { padding: 16px 20px; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.fieldset-title {
+  margin-bottom: 14px; padding-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ds-ink-2); border-bottom: 1px solid var(--ds-border);
+}
+.fieldset-title.is-accent { color: var(--ds-accent); }
+.fieldset-title.is-info { color: var(--ds-info-ink); }
+.fieldset-title.is-warn { color: var(--ds-warn-ink); }
+.exec-label { display: block; margin-bottom: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ds-ink-2); }
+.exec-input-light, .exec-select-light, .exec-textarea {
+  display: block; padding: 7px 10px; font-family: inherit; font-size: 12.5px; color: var(--ds-ink);
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control); transition: border-color 0.15s;
+}
+.exec-input-light, .exec-select-light { height: 36px; }
+.exec-textarea { min-height: 64px; resize: vertical; }
+.exec-input-light:focus, .exec-select-light:focus, .exec-textarea:focus {
+  outline: none; border-color: var(--ds-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-accent) 15%, transparent);
+}
+.exec-input-light:disabled, .exec-select-light:disabled, .exec-textarea:disabled { background: var(--ds-surface-2); color: var(--ds-muted); cursor: not-allowed; }
+.lp-readonly { height: auto; padding: 6px 10px; font-size: 12px; background: var(--ds-surface-2); color: var(--ds-muted); }
+
+.modal-lead-strip { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--ds-surface); border-bottom: 1px solid var(--ds-border); }
+.lead-avatar {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  font-size: 16px; background: var(--ds-soft-info); color: var(--ds-info-ink); border: 1px solid var(--ds-border);
 }
 
-.exec-fieldset { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 16px 20px; }
-.fieldset-title { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 14px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 6px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+/* Cronometro de llamada */
+.timer-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 50%; cursor: pointer; font-size: 0.65rem; transition: filter 0.15s; }
+.timer-btn:hover:not(:disabled) { filter: brightness(0.95); }
+.timer-btn--start { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.timer-btn--stop { background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.timer-btn:disabled { opacity: 0.45; cursor: default; }
+.timer-display { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ds-ink-2); }
+.timer-display--active { color: var(--ds-bad-ink); }
 
-.exec-input-light, .exec-select-light { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 7px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary, #0f172a); transition: border-color .15s; height: 36px; display: block; }
-.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 3px rgba(20,184,166,.1); }
-.exec-textarea { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 7px 10px; font-size: 12.5px; font-family: inherit; color: var(--text-primary, #0f172a); transition: border-color .15s; resize: vertical; min-height: 64px; display: block; }
-.exec-textarea:focus { outline: none; border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 3px rgba(20,184,166,.1); }
-.exec-textarea:disabled, .exec-input-light:disabled, .exec-select-light:disabled { background: var(--slate-50, #f8fafc); color: var(--slate-400, #94a3b8); cursor: not-allowed; }
+/* Avisos */
+.exec-alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; font-size: 12.5px; line-height: 1.5; border-radius: var(--ds-radius-sm); border-left: 4px solid; }
+.alert-info { background: var(--ds-soft-info); color: var(--ds-info-ink); border-color: var(--ds-info-ink); }
+.alert-warning { background: var(--ds-soft-warn); color: var(--ds-warn-ink); border-color: var(--ds-warn); }
+.alert-neutral { background: var(--ds-surface-2); color: var(--ds-ink); border-color: var(--ds-border-strong); }
+.exec-alert-banner { display: flex; align-items: center; gap: 20px; padding: 20px; border: 1px solid; border-radius: var(--ds-radius); }
+.banner-danger { background: var(--ds-soft-bad); border-color: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.banner-success { background: var(--ds-soft-ok); border-color: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.banner-title { margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+.banner-text { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ds-ink); }
 
-.exec-modal-body { display: flex; flex-direction: column; }
-.modal-lead-strip { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--border, #e2e8f0); }
-.lead-avatar { width: 40px; height: 40px; border-radius: 50%; background: #f0f9ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid #e0f2fe; flex-shrink: 0; }
-
-.timer-btn { width: 28px; height: 28px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .65rem; transition: all .15s; }
-.timer-btn--start { background: #d1fae5; color: #059669; }
-.timer-btn--start:hover { background: #a7f3d0; }
-.timer-btn--stop  { background: #fee2e2; color: #dc2626; }
-.timer-btn--stop:hover  { background: #fecaca; }
-.timer-btn:disabled { opacity: .45; cursor: default; }
-.timer-display { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text-secondary, #475569); }
-.timer-display--active { color: #dc2626; }
-
-.exec-alert { padding: 12px 16px; border-radius: 6px; font-size: 12.5px; border-left: 4px solid; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
-.alert-info    { background: #f0f9ff; color: #0369a1; border-color: #3b82f6; }
-.alert-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
-.alert-success { background: #f0fdf4; color: #166534; border-color: #22c55e; }
-
-.exec-alert-banner { display: flex; align-items: center; padding: 20px; border-radius: 8px; gap: 20px; border: 1px solid; }
-.banner-danger  { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
-.banner-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
-.banner-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-.banner-text  { font-size: 12.5px; color: var(--text-primary, #0f172a); margin: 0; line-height: 1.5; }
-
+/* Panel de control de restricciones */
 .control-table-wrapper { max-height: 62vh; overflow: auto; }
-.control-table-wrapper .sticky-col { position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 5px -2px rgba(0,0,0,.12); }
-.control-table-wrapper tbody .sticky-col { background: #fff; }
-.control-table-wrapper thead .sticky-col { z-index: 3; background: var(--navy-900, #0f172a); }
+.control-table-wrapper .sticky-col { position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.12); }
+.control-table-wrapper tbody .sticky-col { background: var(--ds-surface); }
+.control-table-wrapper thead .sticky-col { z-index: 3; background: var(--ds-brand); }
 .minW-200 { min-width: 220px; }
 .minW-300 { min-width: 320px; }
 
-.enrollment-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; }
-.enrollment-title { font-size: 14px; font-weight: 700; color: #0d9488; margin: 0; text-transform: uppercase; letter-spacing: .03em; }
-.enrollment-sub { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 4px; font-weight: 500; }
+/* Detalle de matricula */
+.enrollment-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.enrollment-title { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ds-heading); }
+.enrollment-sub { margin-top: 4px; font-size: 11.5px; font-weight: 500; color: var(--ds-muted); }
 .info-block { display: flex; flex-direction: column; gap: 2px; }
-.info-value { font-size: 13px; font-weight: 600; color: var(--text-primary, #0f172a); }
-
-.finance-card { background: var(--slate-50, #f8fafc); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 14px; }
+.info-value { font-size: 13px; font-weight: 600; color: var(--ds-ink); }
+.finance-card { padding: 14px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.finance-card hr { border-color: var(--ds-border); opacity: 1; }
 .file-list { display: flex; flex-direction: column; gap: 8px; }
-.file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; transition: border-color .15s; }
-.file-item:hover { border-color: #0d9488; }
-.file-icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--slate-50, #f8fafc); border-radius: 4px; flex-shrink: 0; }
+.file-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); transition: border-color 0.15s; }
+.file-item:hover { border-color: var(--ds-accent); }
+.file-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; background: var(--ds-surface-2); border-radius: var(--ds-radius-control); }
+.lp-plan-total { background: var(--ds-surface-2); border-top: 2px solid var(--ds-border); }
 
-.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
-.loader-ring { width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: #0d9488; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.exec-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 200px; }
+.loader-ring { width: 32px; height: 32px; border: 3px solid var(--ds-border); border-top-color: var(--ds-accent); border-radius: 50%; animation: lp-spin 0.8s linear infinite; }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
 
-.scroll-area { max-height: 500px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--slate-300, #cbd5e1) transparent; }
-.scroll-area::-webkit-scrollbar { width: 5px; }
-.scroll-area::-webkit-scrollbar-thumb { background: var(--slate-200, #e2e8f0); border-radius: 4px; }
+.scroll-area { max-height: 500px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ds-border-strong) transparent; }
 
-.pulse-alert { animation: pulseRed 2s infinite; }
-@keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.4); } 70% { box-shadow: 0 0 0 6px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
-
-.text-slate-400 { color: var(--slate-400, #94a3b8); }
-
-/* ══ SKELETON LOADING ════════════════════════════════════════ */
-.skeleton-row td { padding: 10px 14px; border-bottom: 1px solid var(--slate-50, #f8fafc); vertical-align: middle; }
+/* Skeleton de carga */
+.skeleton-row td { padding: 10px 14px; vertical-align: middle; border-bottom: 1px solid var(--ds-border); }
 .sk-cell {
-  height: 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.4s ease-in-out infinite;
-  width: 100%;
+  width: 100%; height: 12px; border-radius: var(--ds-radius-control);
+  background: linear-gradient(90deg, var(--ds-surface-2) 25%, var(--ds-surface-3) 50%, var(--ds-surface-2) 75%);
+  background-size: 200% 100%; animation: sk-shimmer 1.4s ease-in-out infinite;
 }
 .sk-cell.mt-1 { margin-top: 5px; }
-@keyframes sk-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-/* ═══════════════════════════════════════════════════════════════ */
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* ══ FILTROS INLINE EN CABECERA ═══════════════════════════════ */
-.thead-filter .tf { padding: 5px 6px; background: #FAFAFA; border-bottom: 2px solid #0D9488; vertical-align: middle; position: relative; }
-.hf-input { width: 100%; height: 28px; padding: 3px 8px; font-size: 11px; font-family: inherit; border: 1px solid var(--border, #e2e8f0); border-radius: 4px; background: #fff; color: var(--text-primary, #0f172a); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
-.hf-input:focus { border-color: var(--teal-500, #14b8a6); box-shadow: 0 0 0 2px rgba(20, 184, 166, .15); }
-.hf-input::placeholder { color: var(--slate-400, #94a3b8); font-size: 10.5px; }
+
+/* ── Filtros en la cabecera de la tabla ───────────────────────────────── */
+.thead-filter .tf { position: relative; padding: 5px 6px; vertical-align: middle; background: var(--ds-surface-2); border-bottom: 2px solid var(--ds-accent); }
+.hf-input {
+  box-sizing: border-box; width: 100%; height: 28px; padding: 3px 8px; outline: none;
+  font-family: inherit; font-size: 11px; color: var(--ds-ink);
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.hf-input:focus { border-color: var(--ds-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent) 15%, transparent); }
+.hf-input::placeholder { font-size: 10.5px; color: var(--ds-muted); }
 .hf-phone-cell { display: flex; align-items: center; gap: 4px; }
 .hf-phone-cell .hf-input { flex: 1; min-width: 0; }
-.hf-copy-btn {
-  flex-shrink: 0; width: 28px; height: 28px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border, #e2e8f0); border-radius: 4px;
-  background: #fff; color: var(--slate-400, #94a3b8); cursor: pointer;
-  font-size: 11px; transition: border-color .15s, color .15s, background .15s;
+.hf-copy-btn, .hf-clear-btn {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px;
+  font-size: 11px; cursor: pointer; border-radius: var(--ds-radius-control); transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.hf-copy-btn:hover:not(:disabled) {
-  border-color: var(--teal-500, #14b8a6);
-  color: var(--teal-500, #14b8a6); background: #f0fdfa;
-}
-.hf-copy-btn:disabled { opacity: .55; cursor: not-allowed; }
+.hf-copy-btn { background: var(--ds-surface); border: 1px solid var(--ds-border); color: var(--ds-muted); }
+.hf-copy-btn:hover:not(:disabled) { border-color: var(--ds-accent); color: var(--ds-accent); }
+.hf-copy-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.hf-clear-btn { margin: 0 auto; background: var(--ds-soft-bad); border: 1px solid var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.hf-clear-btn:hover { border-color: var(--ds-bad); }
 .hf-multiselect { font-size: 11px; }
-.thead-filter .hf-multiselect :deep(.ms-trigger) {
-  min-height: 28px;
-  height: 28px;
-  padding: 0 8px;
-  font-size: 11px;
-  border-color: var(--border, #e2e8f0);
-  border-radius: 4px;
-  gap: 4px;
-}
-.thead-filter .hf-multiselect :deep(.ms-trigger:hover:not(.is-disabled)) {
-  border-color: var(--slate-400, #94a3b8);
-  background: #fff;
-}
+.thead-filter .hf-multiselect :deep(.ms-trigger) { gap: 4px; height: 28px; min-height: 28px; padding: 0 8px; font-size: 11px; border-color: var(--ds-border); border-radius: var(--ds-radius-control); }
+.thead-filter .hf-multiselect :deep(.ms-trigger:hover:not(.is-disabled)) { border-color: var(--ds-border-strong); }
 .thead-filter .hf-multiselect :deep(.ms-trigger.is-open),
-.thead-filter .hf-multiselect :deep(.ms-trigger.has-selection) {
-  border-color: var(--teal-500, #14b8a6);
-  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15);
-}
-.thead-filter .hf-multiselect :deep(.placeholder-text),
-.thead-filter .hf-multiselect :deep(.value-text) {
-  font-size: 10.5px;
-  color: var(--slate-400, #94a3b8);
-  font-family: inherit;
-}
-.thead-filter .hf-multiselect :deep(.value-text) {
-  color: var(--text-primary, #0f172a);
-}
-.thead-filter .hf-multiselect :deep(.trigger-icon) {
-  font-size: 10px;
-}
-.hf-clear-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 auto; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer; font-size: 11px; transition: all .15s; }
-.hf-clear-btn:hover { background: #fee2e2; border-color: #f87171; }
+.thead-filter .hf-multiselect :deep(.ms-trigger.has-selection) { border-color: var(--ds-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent) 15%, transparent); }
+.thead-filter .hf-multiselect :deep(.placeholder-text) { font-family: inherit; font-size: 10.5px; color: var(--ds-muted); }
+.thead-filter .hf-multiselect :deep(.value-text) { font-family: inherit; font-size: 10.5px; color: var(--ds-ink); }
+.thead-filter .hf-multiselect :deep(.trigger-icon) { font-size: 10px; }
 .thead-filter :deep(.exec-flatpickr-input) {
-  height: 28px !important;
-  min-height: 28px !important;
-  font-size: 10.5px !important;
-  padding: 0 8px !important;
-  font-family: inherit !important;
-  border: 1px solid var(--border, #e2e8f0) !important;
-  border-radius: 4px !important;
-  background: #fff !important;
-  color: var(--text-primary, #0f172a) !important;
-  box-sizing: border-box !important;
-  transition: border-color .15s, box-shadow .15s !important;
-  outline: none !important;
+  box-sizing: border-box !important; height: 28px !important; min-height: 28px !important; padding: 0 8px !important; outline: none !important;
+  font-family: inherit !important; font-size: 10.5px !important; color: var(--ds-ink) !important;
+  background: var(--ds-surface) !important; border: 1px solid var(--ds-border) !important; border-radius: var(--ds-radius-control) !important;
 }
-.thead-filter :deep(.exec-flatpickr-input::placeholder) {
-  color: var(--slate-400, #94a3b8) !important;
-  font-size: 10.5px !important;
-}
-.thead-filter :deep(.exec-flatpickr-input:focus) {
-  border-color: var(--teal-500, #14b8a6) !important;
-  box-shadow: 0 0 0 2px rgba(20, 184, 166, .15) !important;
-}
-.thead-sub .ts { border-bottom: 1px solid #E5E7EB; }
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* ══ HEADER FILTER ACTIONS ════════════════════════════════════ */
+.thead-filter :deep(.exec-flatpickr-input::placeholder) { font-size: 10.5px !important; color: var(--ds-muted) !important; }
+.thead-filter :deep(.exec-flatpickr-input:focus) { border-color: var(--ds-accent) !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent) 15%, transparent) !important; }
 .tf-actions-cell { text-align: center; }
 .hf-actions-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-/* ═════════════════════════════════════════════════════════════ */
-
-/* Últimas celdas del thead-filter — dropdown abre a la izquierda */
+/* Las ultimas celdas abren su desplegable hacia la izquierda */
 .thead-filter .tf:nth-last-child(-n+3) :deep(.multiselect-dropdown) { left: auto !important; right: 0 !important; }
 
-@media (max-width: 768px) {
-  .leads-page { padding: 16px 12px; }
-  .ep-masthead { flex-direction: column; align-items: flex-start; gap: 14px; }
-  .ep-masthead-actions { flex-wrap: wrap; }
-}
 
-
-.tg-hint-line {
-  display: block;
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 76px;
-  line-height: 1.3;
-}
-
-.tg-hint-main  { font-weight: 600; color: var(--text-primary, #0f172a); }
-.tg-hint-strong { font-weight: 700; }
-.tg-hint-muted { color: var(--text-muted, #94a3b8); }
-
-.tg-hint-programa { background: #eff6ff; }
-.tg-hint-cliente  { background: #f0fdf4; }
-.tg-hint-lead     { background: #fffbeb; }
-.tg-hint-asesor   { background: #f5f3ff; }
-
-.tg-hint-asesor { color: #7c3aed; background: #f5f3ff; }
-
+/* Matricula observada por FICO: reenvio */
 .obs-enroll-banner {
-  display: flex; align-items: center; gap: 16px;
-  padding: 14px 20px; background: #FFFBEB;
-  border: 1px solid #FDE68A; border-left: 4px solid #F59E0B; border-radius: 8px;
+  display: flex; align-items: center; gap: 16px; padding: 14px 20px;
+  background: var(--ds-soft-warn); border: 1px solid var(--ds-soft-warn); border-left: 4px solid var(--ds-warn); border-radius: var(--ds-radius);
 }
-.obs-enroll-icon { font-size: 22px; color: #F59E0B; flex-shrink: 0; }
+.obs-enroll-icon { flex-shrink: 0; font-size: 22px; color: var(--ds-warn); }
 .obs-enroll-body { flex: 1; }
-.obs-enroll-body strong { display: block; font-size: 13px; color: #92400E; margin-bottom: 3px; }
-.obs-enroll-body p { margin: 0; font-size: 12px; color: #B45309; line-height: 1.5; }
+.obs-enroll-body strong { display: block; margin-bottom: 3px; font-size: 13px; color: var(--ds-warn-ink); }
+.obs-enroll-body p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ds-warn-ink); }
 .obs-enroll-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 18px; font-size: 12.5px; font-weight: 600;
-  background: #0D9488; color: #fff; border: none; border-radius: 6px;
-  cursor: pointer; font-family: inherit; flex-shrink: 0; transition: opacity .15s;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 8px 18px; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  background: var(--ds-brand); color: var(--ds-on-brand); border: none; border-radius: var(--ds-radius-sm); transition: opacity 0.15s;
 }
-.obs-enroll-btn:hover { opacity: .9; }
-.obs-enroll-btn:disabled { opacity: .5; cursor: not-allowed; }
+.obs-enroll-btn:hover { opacity: 0.9; }
+.obs-enroll-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ═══════════════════════════════════════════════════
-   DOWNBAR — bottom sheet (slides up from bottom)
-   ═══════════════════════════════════════════════════ */
-.downbar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  z-index: 1055;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-}
-
+/* ── Downbar de seguimiento (sube desde abajo) ─────────────────────────── */
+.downbar-overlay { position: fixed; inset: 0; z-index: 1055; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); }
 .downbar-panel {
-  background: #fff;
-  width: 100%;
-  max-width: 1400px;
-  max-height: 88vh;
-  border-radius: 16px 16px 0 0;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
+  display: flex; flex-direction: column; width: 100%; max-width: 1400px; max-height: 88vh; overflow: hidden;
+  background: var(--ds-surface); border-radius: 16px 16px 0 0; box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.18);
 }
-
-.downbar-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px 24px 14px;
-  border-bottom: 1px solid #F0F0F0;
-  flex-shrink: 0;
-}
-
-.downbar-grabber {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 38px;
-  height: 4px;
-  background: #E5E7EB;
-  border-radius: 999px;
-}
-
-.downbar-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1A1A1A;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
+.downbar-header { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 18px 24px 14px; border-bottom: 1px solid var(--ds-border); }
+.downbar-grabber { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 38px; height: 4px; border-radius: 999px; background: var(--ds-border-strong); }
+.downbar-title { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--ds-heading); }
 .downbar-close {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border: 1px solid #E8E8E8;
-  background: #fff;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #737373;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .15s ease;
+  position: absolute; top: 50%; right: 18px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; cursor: pointer;
+  font-size: 13px; color: var(--ds-ink-2); background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  transition: background 0.15s, color 0.15s;
 }
-.downbar-close:hover {
-  background: #FAFAFA;
-  border-color: #D4D4D4;
-  color: #1A1A1A;
-}
-
-.downbar-body {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding: 0;
-}
-
-.downbar-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 24px;
-  border-top: 1px solid #F0F0F0;
-  background: #FAFAFA;
-  flex-shrink: 0;
-}
-
-/* Slide-up animation */
-.downbar-enter-active,
-.downbar-leave-active {
-  transition: opacity 0.25s ease;
-}
-.downbar-enter-active .downbar-panel,
-.downbar-leave-active .downbar-panel {
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.downbar-enter-from,
-.downbar-leave-to {
-  opacity: 0;
-}
-.downbar-enter-from .downbar-panel,
-.downbar-leave-to .downbar-panel {
-  transform: translateY(100%);
-}
-
-/* Dark mode */
-[data-coreui-theme="dark"] .downbar-overlay { background: rgba(0, 0, 0, 0.6); }
-[data-coreui-theme="dark"] .downbar-panel { background: #1A1A14; box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5); }
-[data-coreui-theme="dark"] .downbar-header { border-bottom-color: #2A2A22; }
-[data-coreui-theme="dark"] .downbar-title { color: #F4F4F0; }
-[data-coreui-theme="dark"] .downbar-grabber { background: #2A2A22; }
-[data-coreui-theme="dark"] .downbar-close { background: #1A1A14; border-color: #2A2A22; color: #A0A099; }
-[data-coreui-theme="dark"] .downbar-close:hover { background: #2A2A22; color: #F4F4F0; }
-[data-coreui-theme="dark"] .downbar-footer { background: #1F1F1A; border-top-color: #2A2A22; }
+.downbar-close:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
+.downbar-body { flex: 1 1 auto; padding: 0; overflow-y: auto; }
+.downbar-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0; padding: 14px 24px; background: var(--ds-surface-2); border-top: 1px solid var(--ds-border); }
+.downbar-enter-active, .downbar-leave-active { transition: opacity 0.25s ease; }
+.downbar-enter-active .downbar-panel, .downbar-leave-active .downbar-panel { transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+.downbar-enter-from, .downbar-leave-to { opacity: 0; }
+.downbar-enter-from .downbar-panel, .downbar-leave-to .downbar-panel { transform: translateY(100%); }
 
 @media (max-width: 768px) {
   .downbar-panel { max-height: 92vh; border-radius: 14px 14px 0 0; }
   .downbar-header { padding: 16px 16px 12px; }
   .downbar-footer { padding: 12px 16px; }
 }
-
 </style>

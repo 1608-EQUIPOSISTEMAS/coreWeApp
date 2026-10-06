@@ -1,258 +1,266 @@
 <template>
-  <div ref="programForm" class="exec-shell form-shell">
-
-    <header class="exec-masthead">
-      <div class="masthead-inner">
-        <div class="masthead-brand">
-          <div class="brand-rule"></div>
-          <div class="brand-text d-flex align-items-center gap-3">
-            <div>
-              <span class="brand-eyebrow">Gestión Académica</span>
-              <h1 class="brand-title">{{ isEdit ? 'Editar Programa' : 'Nuevo Programa' }}</h1>
-            </div>
-            <span v-if="isEdit" class="pill pill-slate border mt-3">ID: {{ idParam }}</span>
-            <span v-if="isEdit" :class="['pill', form.active ? 'pill-teal' : 'pill-red', 'border', 'mt-3']">
-              {{ form.active ? 'ACTIVO' : 'INACTIVO' }}
-            </span>
-          </div>
+  <div ref="programForm" class="ds-page">
+    <header class="ds-head">
+      <div class="ds-head-titles">
+        <!-- El estado va pegado al título (DESIGN_SYSTEM §5.4): arriba a la derecha no se ve -->
+        <div class="pf-title-row">
+          <h1 class="ds-title">{{ isEdit ? (form.program_name || 'Programa') : 'Nuevo programa' }}</h1>
+          <span v-if="isEdit && loaded" class="ds-pill" :class="form.active ? 'ok' : ''">
+            <i class="fa-solid" :class="form.active ? 'fa-circle-check' : 'fa-circle-pause'" aria-hidden="true"></i>
+            {{ form.active ? 'Activo' : 'Inactivo' }}
+          </span>
         </div>
+        <p class="ds-sub">
+          <template v-if="isEdit">
+            <span class="mono">#{{ idParam }}</span> · {{ form.program_versions.length }} {{ form.program_versions.length === 1 ? 'versión' : 'versiones' }}
+          </template>
+          <template v-else>Completa los datos generales y al menos una versión.</template>
+        </p>
+      </div>
 
-        <div class="masthead-actions">
-          <button type="button" class="btn-exec btn-exec-ghost" @click="cancelar">
-            <i class="fa-solid fa-arrow-left"></i> Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn-exec btn-exec-primary px-4"
-            @click="guardar"
-            :disabled="saving || !isValid"
-          >
-            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
-            {{ saving ? 'Guardando…' : (isEdit ? 'Actualizar Programa' : 'Crear Programa') }}
-          </button>
-        </div>
+      <div class="ds-head-actions">
+        <button type="button" class="btn-exec btn-exec-outline" @click="cancelar">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-exec btn-exec-primary"
+          @click="guardar"
+          :disabled="saving || !isValid"
+        >
+          <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'" aria-hidden="true"></i>
+          {{ saving ? 'Guardando…' : (isEdit ? 'Guardar cambios' : 'Crear programa') }}
+        </button>
       </div>
     </header>
 
-    <main class="exec-body pb-5 d-flex justify-content-center" v-if="loaded">
-      <div class="exec-form-wrapper w-100" style="max-width: 1100px;">
+    <template v-if="loaded">
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">Datos generales del programa</h3>
+        </header>
+        <div class="ds-panel-body pf-grid">
+          <div class="ds-field pf-span-2">
+            <label class="ds-label" for="pf-name">Nombre general<span class="ds-req">*</span></label>
+            <input
+              id="pf-name"
+              v-restrict="{ transform: 'upper' }"
+              v-model.trim="form.program_name"
+              type="text"
+              class="ds-input"
+              required
+              placeholder="Ej. DIPLOMADO EN GESTIÓN PÚBLICA"
+            />
+          </div>
 
-        <div class="exec-fieldset mb-4">
-          <h6 class="fieldset-title"><i class="fa-solid fa-cube me-2 text-primary"></i> Datos Generales del Programa</h6>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="exec-label">Nombre General <span class="c-red">*</span></label>
+          <div class="ds-field">
+            <label class="ds-label" for="pf-skem">Esquema<span class="ds-req">*</span></label>
+            <input
+              id="pf-skem"
+              v-restrict="{ transform: 'upper' }"
+              v-model.trim="form.skem_clasification"
+              type="text"
+              class="ds-input"
+              required
+              placeholder="ESQUEMA"
+            />
+          </div>
+
+          <div class="ds-field">
+            <label class="ds-label" for="pf-link">URL web</label>
+            <div class="pf-icon-input">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
               <input
-                v-restrict="{ transform: 'upper' }"
-                v-model.trim="form.program_name"
-                type="text"
-                class="exec-input-light w-100"
-                required
-                placeholder="Ej. DIPLOMADO EN GESTIÓN PÚBLICA"
+                id="pf-link"
+                v-model.trim="form.link"
+                type="url"
+                class="ds-input"
+                placeholder="https://..."
               />
             </div>
+          </div>
 
-            <div class="col-md-3">
-              <label class="exec-label">Esquema <span class="c-red">*</span></label>
-              <input
-                v-restrict="{ transform: 'upper' }"
-                v-model.trim="form.skem_clasification"
-                type="text"
-                class="exec-input-light w-100"
-                required
-                placeholder="ESQUEMA"
-              />
-            </div>
+          <div class="ds-field">
+            <label class="ds-label">Tipo de programa<span class="ds-req">*</span></label>
+            <SearchSelect
+              :disabled="isCatLocked('cat_type_program')"
+              v-model="form.cat_type_program"
+              :items="catalogs.programTypeList"
+              label-field="description"
+              value-field="id"
+              placeholder="Seleccionar..."
+              :model-label="form.cat_type_program_label"
+              required
+            />
+          </div>
 
-            <div class="col-md-3">
-              <label class="exec-label">URL Web</label>
-              <div class="input-group-custom">
-                <i class="fa-solid fa-link input-icon text-primary"></i>
-                <input
-                  v-model.trim="form.link"
-                  type="url"
-                  class="exec-input-light w-100 icon-padded"
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
+          <div class="ds-field">
+            <label class="ds-label">Categoría del programa<span class="ds-req">*</span></label>
+            <SearchSelect
+              :disabled="isCatLocked('cat_category')"
+              v-model="form.cat_category"
+              :items="catalogs.categoryList"
+              label-field="description"
+              value-field="id"
+              placeholder="Seleccionar..."
+              :model-label="form.cat_category_label"
+              required
+            />
+          </div>
 
-            <div class="col-md-3">
-              <label class="exec-label">Tipo de programa <span class="c-red">*</span></label>
-              <SearchSelect
-                :disabled="isCatLocked('cat_type_program')"
-                v-model="form.cat_type_program"
-                :items="catalogs.programTypeList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-                :model-label="form.cat_type_program_label"
-                class="exec-select-light w-100"
-                required
-              />
-            </div>
+          <div class="ds-field">
+            <label class="ds-label">Línea de negocio<span class="ds-req">*</span></label>
+            <SearchSelect
+              :disabled="isCatLocked('cat_business_line_id')"
+              v-model="form.cat_business_line_id"
+              :items="catalogs.businessLineList"
+              label-field="description"
+              value-field="id"
+              placeholder="Seleccionar..."
+              required
+            />
+          </div>
 
-            <div class="col-md-3">
-              <label class="exec-label">Categoría del Programa <span class="c-red">*</span></label>
-              <SearchSelect
-                :disabled="isCatLocked('cat_category')"
-                v-model="form.cat_category"
-                :items="catalogs.categoryList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-                :model-label="form.cat_category_label"
-                class="exec-select-light w-100"
-                required
-              />
-            </div>
+          <div class="ds-field">
+            <label class="ds-label">Modalidad<span class="ds-req">*</span></label>
+            <SearchSelect
+              :disabled="isCatLocked('cat_model_modality')"
+              v-model="form.cat_model_modality"
+              :items="catalogs.modalityList"
+              label-field="description"
+              value-field="id"
+              placeholder="Seleccionar..."
+              required
+            />
+          </div>
 
-            <div class="col-md-3">
-              <label class="exec-label">Línea de Negocio <span class="c-red">*</span></label>
-              <SearchSelect
-                :disabled="isCatLocked('cat_business_line_id')"
-                v-model="form.cat_business_line_id"
-                :items="catalogs.businessLineList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-                class="exec-select-light w-100"
-                required
-              />
-            </div>
-
-            <div class="col-md-3">
-              <label class="exec-label">Modalidad <span class="c-red">*</span></label>
-              <SearchSelect
-                :disabled="isCatLocked('cat_model_modality')"
-                v-model="form.cat_model_modality"
-                :items="catalogs.modalityList"
-                label-field="description"
-                value-field="id"
-                placeholder="Seleccionar..."
-                class="exec-select-light w-100"
-                required
-              />
-            </div>
-
-            <div class="col-md-3 d-flex flex-column justify-content-center align-items-center border-start ps-3">
-              <label class="exec-label mb-2">Estado del Programa</label>
+          <div class="ds-field">
+            <label class="ds-label">Estado del programa</label>
+            <div class="pf-switch">
               <label class="exec-switch exec-switch-lg">
                 <input type="checkbox" v-model="form.active" />
                 <span></span>
               </label>
-              <span class="x-small text-muted mt-1 fw-600">{{ form.active ? 'ACTIVO EN SISTEMA' : 'INACTIVO' }}</span>
+              <span>{{ form.active ? 'Activo en el sistema' : 'Inactivo' }}</span>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="exec-fieldset">
-          <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-            <h6 class="fieldset-title mb-0 border-0 pb-0"><i class="fa-solid fa-layer-group me-2 text-info"></i> Versiones y Estructura</h6>
-            <button type="button" class="btn-exec btn-exec-outline text-primary border-primary btn-sm" @click="agregarVersion">
-              <i class="fa-solid fa-plus me-1"></i> Agregar Versión
-            </button>
-          </div>
+      <section class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">Versiones y estructura</h3>
+          <button type="button" class="btn-exec btn-exec-outline btn-sm" @click="agregarVersion">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar versión
+          </button>
+        </header>
 
-          <div v-if="form.program_versions.length === 0" class="empty-state">
-            <i class="fa-solid fa-inbox fa-2x mb-2 text-slate-300"></i>
-            <p class="mb-0">No hay versiones definidas. Agrega al menos una para continuar.</p>
-          </div>
+        <div class="ds-panel-body pf-versions">
+          <p v-if="form.program_versions.length === 0" class="ds-empty">
+            No hay versiones definidas. Usa "Agregar versión" para crear al menos una.
+          </p>
 
-          <div
+          <article
             v-for="(ver, idx) in form.program_versions"
             :key="ver._key"
-            class="exec-version-card mb-4"
+            class="pf-version"
           >
-            <div class="version-header d-flex justify-content-between align-items-center">
-              <div class="d-flex align-items-center gap-2">
-                <span class="version-badge">V{{ idx + 1 }}</span>
-                <span v-if="ver.version_code" class="text-mono fw-700 accent-text">{{ ver.version_code }}</span>
+            <header class="pf-version-head">
+              <div class="pf-version-id">
+                <span class="pf-version-badge">V{{ idx + 1 }}</span>
+                <span v-if="ver.version_code" class="mono pf-version-code">{{ ver.version_code }}</span>
               </div>
-              <div class="d-flex gap-2 align-items-center">
-                <span v-if="ver.sessions" class="pill pill-slate border"><i class="fa-solid fa-calendar-days me-1"></i> {{ ver.sessions }} sesiones</span>
-                <span v-if="ver.abbreviation" class="pill pill-slate border">{{ ver.abbreviation }}</span>
-                <button type="button" class="btn-icon btn-icon-sm ms-2" v-if="form.program_versions.length > 1 && ver.new" @click="form.program_versions.splice(idx, 1)" title="Eliminar Versión">
-                    <i class="fa-solid fa-trash text-danger"></i>
+              <div class="pf-version-tags">
+                <span v-if="ver.sessions" class="ds-pill"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ ver.sessions }} sesiones</span>
+                <span v-if="ver.abbreviation" class="ds-pill">{{ ver.abbreviation }}</span>
+                <button
+                  v-if="form.program_versions.length > 1 && ver.new"
+                  type="button"
+                  class="btn-icon btn-icon-sm"
+                  title="Eliminar versión"
+                  aria-label="Eliminar versión"
+                  @click="form.program_versions.splice(idx, 1)"
+                >
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i>
                 </button>
               </div>
-            </div>
+            </header>
 
-            <div class="version-body p-3 row g-3">
-              <div class="col-md-4">
-                <label class="exec-label">Certificación <span class="c-red">*</span></label>
+            <div class="pf-grid pf-grid--version">
+              <div class="ds-field pf-span-2">
+                <label class="ds-label">Certificación<span class="ds-req">*</span></label>
                 <input
                   v-model.trim="ver.description"
                   type="text"
-                  class="exec-input-light w-100"
+                  class="ds-input"
                   placeholder="Descripción de certificación..."
                   required
                 />
               </div>
 
-              <div class="col-md-4">
-                <label class="exec-label">Nombre Publicitario <span class="c-red">*</span></label>
+              <div class="ds-field pf-span-2">
+                <label class="ds-label">Nombre publicitario<span class="ds-req">*</span></label>
                 <input
                   v-model.trim="ver.brand_name"
                   type="text"
-                  class="exec-input-light w-100"
+                  class="ds-input"
                   placeholder="Nombre comercial..."
                   required
                 />
               </div>
 
-              <div class="col-md-4">
-                <label class="exec-label">Abreviatura <span class="c-red">*</span></label>
+              <div class="ds-field pf-span-2">
+                <label class="ds-label">Abreviatura<span class="ds-req">*</span></label>
                 <input
                   v-restrict="{ transform: 'upper' }"
                   v-model.trim="ver.abbreviation"
                   type="text"
-                  class="exec-input-light w-100"
+                  class="ds-input"
                   required
                   placeholder="Ej. DGP-01"
                 />
               </div>
 
-              <div class="col-md-2">
-                <label class="exec-label">Código <span class="c-red">*</span></label>
+              <div class="ds-field">
+                <label class="ds-label">Código<span class="ds-req">*</span></label>
                 <input
                   v-restrict="{ transform: 'upper' }"
                   v-model.trim="ver.version_code"
                   :disabled="isEdit && !ver.new"
                   type="text"
-                  class="exec-input-light w-100 text-mono fw-600"
+                  class="ds-input mono"
                   placeholder="CÓDIGO"
                   required
                 />
               </div>
 
-              <div class="col-md-2">
-                <label class="exec-label">Nro. Sesiones <span class="c-red">*</span></label>
+              <div class="ds-field">
+                <label class="ds-label">Nro. sesiones<span class="ds-req">*</span></label>
                 <input
                   v-model.number="ver.sessions"
                   type="text"
                   v-restrict="{ only: 'numbers' }"
-                  class="exec-input-light w-100 text-mono"
+                  class="ds-input mono"
                   placeholder="0"
                   required
                 />
               </div>
 
-              <div class="col-md-4">
-                <label class="exec-label">URL Ficha Técnica</label>
-                <div class="input-group-custom">
-                  <i class="fa-solid fa-file-pdf input-icon"></i>
+              <div class="ds-field pf-span-2">
+                <label class="ds-label">URL ficha técnica</label>
+                <div class="pf-icon-input">
+                  <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
                   <input
                     v-model.trim="ver.expedient_link"
                     type="url"
-                    class="exec-input-light w-100 icon-padded"
+                    class="ds-input"
                     placeholder="https://..."
                   />
                 </div>
               </div>
 
-              <div class="col-md-2">
-                <label class="exec-label">Categoría Curso <span class="c-red">*</span></label>
+              <div class="ds-field">
+                <label class="ds-label">Categoría curso<span class="ds-req">*</span></label>
                 <SearchSelect
                   v-model="ver.cat_course_category"
                   :items="catalogs.courseCategoryList"
@@ -261,160 +269,125 @@
                   placeholder="Categoría..."
                   required
                   :model-label="ver.cat_course_category_label"
-                  class="exec-select-light w-100"
                 />
               </div>
 
-              <div class="col-md-2 d-flex flex-column align-items-center justify-content-center">
-                <label class="exec-label mb-2">Estado Activo</label>
-                <label class="exec-switch">
-                  <input type="checkbox" v-model="ver.active" />
-                  <span></span>
-                </label>
+              <div class="ds-field">
+                <label class="ds-label">Estado activo</label>
+                <div class="pf-switch">
+                  <label class="exec-switch">
+                    <input type="checkbox" v-model="ver.active" />
+                    <span></span>
+                  </label>
+                  <span>{{ ver.active ? 'Activa' : 'Inactiva' }}</span>
+                </div>
               </div>
             </div>
 
-            <div class="version-footer p-3 bg-slate-50 border-top" v-if="form.cat_type_program != 'we_program_type_course'">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="exec-label mb-0" style="color: var(--teal-600);"><i class="fa-solid fa-link me-1"></i> Programas / Versiones Hijas</div>
+            <div v-if="!isCourseType" class="pf-children">
+              <div class="pf-children-head">
+                <span class="ds-label pf-children-title"><i class="fa-solid fa-link" aria-hidden="true"></i> Programas / versiones hijas</span>
                 <button
                   type="button"
-                  class="btn-exec btn-exec-ghost text-teal-600 btn-sm p-1"
+                  class="btn-exec btn-exec-ghost btn-sm"
                   @click="onAddChildClick(ver)"
                   :disabled="!ver.program_version_id"
                 >
-                  <i class="fa-solid fa-plus-circle me-1"></i> Agregar curso hijo
+                  <i class="fa-solid fa-circle-plus" aria-hidden="true"></i> Agregar curso hijo
                 </button>
               </div>
 
-              <div v-if="childrenByParent(ver).length" class="row g-2">
-                <div class="col-md-4" v-for="(child, idy) in ver.childs" :key="idy">
-                  <div class="child-select-wrapper position-relative">
-                    <span class="child-order">{{ idy + 1 }}</span>
-                    <SearchSelect
-                      v-model="child.program_version_id"
-                      mode="remote"
-                      showSubValue
-                      sublabel-field="version_code"
-                      :fetcher="q => programService.programVersionCaller({ q })"
-                      label-field="abbreviation"
-                      :disabled="child.program_version_id && !child.isNewAssigned"
-                      value-field="program_version_id"
-                      placeholder="Buscar hijo..."
-                      :minChars="0"
-                      :cache="false"
-                      :model-label="child.label"
-                      class="exec-select-light w-100"
-                      required
-                      @change="(val) => { if(val) child.isNewAssigned = true; }"
-                    />
-                    <button class="btn-icon btn-icon-sm position-absolute" style="right: -30px; top: 6px;" @click="ver.childs.splice(idy, 1)" title="Quitar">
-                        <i class="fa-solid fa-xmark text-danger"></i>
-                    </button>
-                  </div>
+              <div v-if="childrenByParent(ver).length" class="pf-children-grid">
+                <div v-for="(child, idy) in ver.childs" :key="idy" class="pf-child">
+                  <span class="pf-child-order">{{ idy + 1 }}</span>
+                  <SearchSelect
+                    v-model="child.program_version_id"
+                    mode="remote"
+                    showSubValue
+                    sublabel-field="version_code"
+                    :fetcher="q => programService.programVersionCaller({ q })"
+                    label-field="abbreviation"
+                    :disabled="child.program_version_id && !child.isNewAssigned"
+                    value-field="program_version_id"
+                    placeholder="Buscar hijo..."
+                    :minChars="0"
+                    :cache="false"
+                    :model-label="child.label"
+                    class="pf-child-select"
+                    required
+                    @change="(val) => { if(val) child.isNewAssigned = true; }"
+                  />
+                  <button type="button" class="btn-icon btn-icon-sm" title="Quitar curso hijo" aria-label="Quitar curso hijo" @click="ver.childs.splice(idy, 1)">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                  </button>
                 </div>
               </div>
-              <div v-else class="text-muted small fst-italic">
-                No hay cursos hijos vinculados a esta versión. (Guarde el programa primero para asignar).
-              </div>
+              <p v-else class="ds-help pf-children-empty">
+                No hay cursos hijos vinculados a esta versión. Guarda el programa primero para asignarlos.
+              </p>
             </div>
-          </div>
+          </article>
         </div>
+      </section>
+    </template>
 
-      </div>
-    </main>
-
-    <main class="exec-body pb-5 d-flex justify-content-center align-items-center" v-else style="min-height: 50vh;">
-      <div class="text-center">
-        <i class="fas fa-spinner fa-spin fa-2x text-slate-400 mb-3"></i>
-        <p class="text-muted fw-600">Cargando información del programa...</p>
-      </div>
-    </main>
-
+    <!-- Carga: esqueleto con la forma de los dos paneles en vez de un spinner suelto -->
+    <template v-else>
+      <section v-for="n in 2" :key="'sk' + n" class="ds-panel" aria-busy="true">
+        <header class="ds-panel-head"><span class="ds-skel pf-skel-title"></span></header>
+        <div class="ds-panel-body pf-grid">
+          <span v-for="c in 8" :key="c" class="ds-skel pf-skel-field"></span>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped>
-/* ═══════════════════════════════════════════════
-   TOKENS DE DISEÑO LOCALES Y ESTRUCTURA
-   (Se asume que switches, pills y botones están en CSS Global)
-═══════════════════════════════════════════════ */
-.exec-shell {
-  background: var(--slate-50, #f8fafc);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+.pf-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mono { font-family: var(--ds-font-mono); }
+
+/* Grilla del formulario: 4 columnas (6 en la versión) para que el nombre y los
+   textos largos ocupen el doble; baja a 2 y luego a 1 en pantallas chicas. */
+.pf-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 16px; }
+.pf-grid--version { grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 16px; }
+.pf-span-2 { grid-column: span 2; }
+
+/* Icono dentro del input de URL */
+.pf-icon-input { position: relative; }
+.pf-icon-input > i { position: absolute; top: 50%; left: 11px; transform: translateY(-50%); font-size: 12px; color: var(--ds-muted); pointer-events: none; }
+.pf-icon-input > input { padding-left: 30px; }
+
+.pf-switch { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 12.5px; color: var(--ds-ink-2); }
+
+/* Tarjeta de versión: bloque repetible dentro del panel de versiones */
+.pf-versions { display: flex; flex-direction: column; gap: var(--ds-gap); }
+.pf-version { border: 1px solid var(--ds-border); border-radius: var(--ds-radius); overflow: hidden; }
+.pf-version-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border); }
+.pf-version-id, .pf-version-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pf-version-badge { padding: 3px 8px; border-radius: var(--ds-radius-control); background: var(--ds-brand); color: var(--ds-on-brand); font-size: 11px; font-weight: 700; }
+.pf-version-code { font-weight: 700; color: var(--ds-accent); }
+
+/* Hijos de la versión (solo programas compuestos, no cursos) */
+.pf-children { padding: 14px 16px; background: var(--ds-surface-2); border-top: 1px solid var(--ds-border); }
+.pf-children-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.pf-children-title { margin: 0; color: var(--ds-accent); }
+.pf-children-empty { margin: 0; }
+.pf-children-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; }
+.pf-child { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pf-child-select { flex: 1; min-width: 0; }
+.pf-child-order { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: var(--ds-radius-control); background: var(--ds-surface-3); color: var(--ds-ink-2); font-size: 11px; font-weight: 700; }
+
+.pf-skel-title { width: 180px; }
+.pf-skel-field { height: 36px; }
+
+@media (max-width: 900px) {
+  .pf-grid, .pf-grid--version { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-
-/* Masthead */
-.exec-masthead { background: var(--navy-900, #0f172a); color: var(--white, #fff); border-bottom: 1px solid var(--navy-700, #334155); position: sticky; top: 0; z-index: 100;}
-.masthead-inner { display: flex; justify-content: space-between; align-items: center; padding: 12px 28px; }
-.masthead-brand { display: flex; align-items: center; gap: 16px; }
-.brand-rule { width: 4px; height: 42px; background: var(--teal-500, #12274e); border-radius: 4px; }
-.brand-eyebrow { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--slate-400, #94a3b8); font-weight: 500; display: block; margin-bottom: 3px; }
-.brand-title { font-size: 19px; font-weight: 700; margin: 0; color: var(--white, #fff); }
-.masthead-actions { display: flex; gap: 10px; align-items: center; }
-
-/* Wrapper Central */
-.exec-body { padding: 32px 28px; }
-.exec-form-wrapper { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-
-/* Fieldsets y Labels */
-.exec-fieldset { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
-.fieldset-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary, #475569); font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid var(--slate-100, #f1f5f9); padding-bottom: 10px; }
-.exec-label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
-.c-red { color: var(--red-600, #dc2626); font-weight: 600; margin-left: .15rem; }
-
-/* Inputs estándar (Heredados del estándar) */
-.exec-input-light, .exec-select-light { background: var(--white, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 4px; padding: 8px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary, #0f172a); transition: all 0.15s; height: 38px; }
-.exec-input-light:focus, .exec-select-light:focus { outline: none; border-color: var(--teal-500, #12274e); box-shadow: 0 0 0 3px rgba(18, 39, 78, 0.1); }
-.exec-input-light:disabled, .exec-select-light:disabled { background-color: var(--slate-50, #f8fafc); color: var(--slate-400, #94a3b8); cursor: not-allowed; opacity: 1; }
-
-/* Iconos dentro de inputs */
-.input-group-custom { position: relative; display: flex; align-items: center; }
-.input-icon { position: absolute; left: 12px; color: var(--slate-400, #94a3b8); font-size: 13px; }
-.icon-padded { padding-left: 32px; }
-
-/* Bloques de Versión */
-.exec-version-card { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; background: var(--white, #fff); overflow: hidden; transition: box-shadow 0.2s;}
-.exec-version-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
-.version-header { background: var(--slate-50, #f8fafc); border-bottom: 1px solid var(--border, #e2e8f0); padding: 10px 16px; }
-.version-badge { background: var(--navy-900, #0f172a); color: var(--white, #fff); font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
-.empty-state { text-align: center; color: var(--slate-400, #94a3b8); font-size: 13px; font-style: italic; padding: 20px; background: var(--slate-50, #f8fafc); border-radius: 6px; border: 1px dashed var(--slate-300, #cbd5e1);}
-
-/* Selector de hijos */
-.child-select-wrapper { display: flex; align-items: center; gap: 8px; margin-right: 30px; /* Margen para el boton de borrar */ }
-.child-order { background: var(--teal-600, #12274e); color: var(--white, #fff); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 700; flex-shrink: 0;}
-
-/* ════════════════════════════════════════
-   DARK MODE
-   ════════════════════════════════════════ */
-[data-coreui-theme="dark"] .exec-shell {
-  color: #F4F4F0;
-  --white: #1A1A14;
-  --slate-50: #1F1F1A;
-  --slate-100: #24241E;
-  --slate-300: #3A3A33;
-  --slate-400: #8A8A80;
-  --teal-600: #8FAADC; /* navy WE derivado claro para dark */
-  --teal-500: #8FAADC;
-  --red-600: #F87171;
-  --border: #2A2A22;
-  --text-primary: #F4F4F0;
-  --text-secondary: #A0A099;
-  --text-muted: #8A8A80;
+@media (max-width: 500px) {
+  .pf-grid, .pf-grid--version { grid-template-columns: 1fr; }
+  .pf-span-2 { grid-column: auto; }
 }
-[data-coreui-theme="dark"] .exec-masthead .btn-exec-ghost { background: #24241E !important; }
-[data-coreui-theme="dark"] .exec-input-light::placeholder,
-[data-coreui-theme="dark"] .exec-select-light::placeholder { color: #6A6A60; }
-[data-coreui-theme="dark"] .exec-input-light:focus,
-[data-coreui-theme="dark"] .exec-select-light:focus { box-shadow: 0 0 0 3px rgba(143,170,220,0.15); }
-[data-coreui-theme="dark"] .child-order { color: #14140F; }
-[data-coreui-theme="dark"] .version-badge { color: #F4F4F0; }
-[data-coreui-theme="dark"] .exec-switch span::after { background: #F4F4F0; }
-[data-coreui-theme="dark"] .pill-teal { background: rgba(52,211,153,.16); color: #34D399; border-color: rgba(52,211,153,.35) !important; }
-[data-coreui-theme="dark"] .pill-red { background: rgba(239,68,68,.16); color: #F87171; border-color: rgba(239,68,68,.35) !important; }
-[data-coreui-theme="dark"] .bg-white { background-color: #1F1F1A !important; }
 </style>
 
 <script setup>
@@ -425,7 +398,6 @@
   import { useToast } from 'vue-toastification'
   import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
-import FileUploader from '@/components/FileUploader.vue'
   const toast = useToast()
   const router = useRouter()
   const route = useRoute()
@@ -468,10 +440,11 @@ import FileUploader from '@/components/FileUploader.vue'
     businessLineList: catalog?.options('we_business_line') || []
   })
 
-  const typeProgramLabel = computed(() => {
-    const f = catalogs.value.programTypeList.find(i => i.id === form.cat_type_program)
-    return f ? f.description : ''
-  })
+  // cat_type_program es el id del catálogo: compararlo con el alias daba
+  // siempre distinto y la sección de hijos salía también en cursos.
+  const isCourseType = computed(() =>
+    catalogs.value.programTypeList.find(i => i.id === form.cat_type_program)?.alias === 'we_program_type_course')
+
 
   let localKeyCounter = 1
   function makeVersionRow(partial = {}) {
@@ -560,16 +533,13 @@ import FileUploader from '@/components/FileUploader.vue'
    * a la forma que usa el frontend: { id, code, label }
    */
   function normalizeChildrenDetail(childrenDetail) {
-    console.log(childrenDetail)
     if (!Array.isArray(childrenDetail)) return []
     return childrenDetail
       .map(ch => {
         return {
           program_version_id: ch.child_program_version_id,
           version_code: ch.version_code,
-          label: ch.label,
           expedient_link: ch.expedient_link,
-
           label: ch.abbreviation
         }
       })
@@ -599,7 +569,6 @@ import FileUploader from '@/components/FileUploader.vue'
     form.cat_category_label = data.cat_category_label
     form.skem_clasification = data.skem_clasification ?? ''
     const versions = Array.isArray(data.program_versions) ? data.program_versions : []
-    console.log(versions)
     form.program_versions = versions.map(v =>
       makeVersionRow({
         program_version_id: v.program_version_id ?? null,
@@ -617,7 +586,6 @@ import FileUploader from '@/components/FileUploader.vue'
         childs: normalizeChildrenDetail(v.children_detail ?? v.children ?? [])
       })
     )
-    console.log(form.program_versions)
   }
 
   /**
@@ -625,19 +593,11 @@ import FileUploader from '@/components/FileUploader.vue'
    * que espera el SP (solo IDs numéricos válidos).
    */
   function buildChildrenIdsFromRow(v) {
-    console.log("data: \n")
-
     if (!Array.isArray(v.childs)) return null
-    const ids = v.childs
-      .map(c => Number(c.program_version_id))
-
-    console.log(ids.length)
-    // si quieres diferenciar "sin cambios" vs "deja sin hijos", puedes
-    // devolver null cuando no haya ids; por ahora devolvemos [] para
-    // que el SP limpie vínculos si corresponde.
-    return ids.length>0 ? ids : []
+    // Una fila agregada sin elegir programa es Number(null) = 0: el FK tumbaba
+    // todo el guardado. [] hace que el SP limpie los vínculos.
+    return v.childs.map(c => Number(c.program_version_id)).filter(id => id > 0)
   }
-
 
   /**
    * Payload para /programregister
@@ -691,9 +651,7 @@ import FileUploader from '@/components/FileUploader.vue'
         cat_model_modality: form.cat_model_modality ?? null,
         active: form.active ? 'Y' : 'N',
         skem_clasification: form.skem_clasification || null,
-        new_active_version_id: form.program_versions.find(v => v.active=='Y')?.program_version_id ?? null,
         program_versions: form.program_versions
-          // .filter(v => v.program_version_id != null)
           .map(v => ({
             program_version_id: v.program_version_id,
             version_code: v.version_code || null,
@@ -739,8 +697,7 @@ import FileUploader from '@/components/FileUploader.vue'
         }
       }
     } catch (e) {
-      console.error('Error guardando programa:', e)
-      toast.error('Ocurrió un error al guardar.')
+      toast.error(e?.response?.data?.message || 'Ocurrió un error al guardar.')
     } finally {
       saving.value = false
     }
