@@ -588,6 +588,10 @@ Gestión nació en `ds-*`.
 B2B y Fundación (06/10/26): completos en `ds-*` — bandejas y formularios de
 leads (misma transformación que Comercial, sin su lógica), Empresas, Consultas
 corporativas, Contratos, Eventos y Objetivos.
+Configuración (07/10/26): completa en `ds-*`. Roles y Permisos es una grilla
+de tarjetas por rol (usuarios, permisos con barra de %, chips módulo + conteo)
+y "Editar" abre la matriz en un modal. Un permiso = una casilla de la matriz
+(`features/roles/roleSummary.js`, con test).
 
 **Color de segmento (A1–A7):** es identidad, no estado, y se lee igual en todo el
 ERP: A1 azul, A2 ámbar, A3 turquesa, A4 naranja, A5 rojo (cancelado), A6 violeta,
@@ -597,5 +601,8 @@ otro mapeo: A4 en verde ya confundió dos pantallas.
 
 **Interruptor:** `.exec-switch` (global) ya tiene modo oscuro en
 `design-system.css`; ninguna vista lo parcha.
-Siguen los módulos por uso: FICO inscripciones → Comercial leads → Académica
-aulas → Producto cronograma → Configuración → B2B/Fundación.
+Gerencia (07/10/26): completa en `ds-*` (Embudo y Reporte Completo se sumaron a
+Objetivos y Parámetros). Fundación va en violeta como línea de ingreso: el verde
+es "bien", no una identidad.
+Pendiente por uso: FICO inscripciones (el resto de la lista original ya está en
+`ds-*`).
