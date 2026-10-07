@@ -44,13 +44,28 @@ const RESPUESTA_MANUAL = {
   SIN_RESPUESTA: 'dio el ticket por resuelto: no hubo respuesta al manual a tiempo',
 }
 
-// Cómo se lee cada tipo de evento. Todos salen de datos que el ERP ya guarda
-// (marcas del ticket y comentarios): el backend no lleva una bitácora aparte.
+// Cómo se lee cada tipo de evento. Los cambios de dueño y de estado salen de
+// la bitácora del backend (ticket_events), con su actor; actor null = Sistema.
+// El resto (creación, alertas, manual, comentarios) de lo que guarda el ticket.
 const FORMATO = {
   CREADO: e => ({ icono: 'fa-plus', tono: 'info', quien: e.actor ?? SISTEMA, accion: 'creó el ticket' }),
-  ASIGNADO: e => ({ icono: 'fa-user-check', tono: 'neutral', quien: 'Ticket', accion: 'asignado a', destino: e.aUsuario }),
+  ASIGNADO: e => e.actor
+    ? { icono: 'fa-user-check', tono: 'neutral', quien: e.actor, accion: 'asignó el ticket a', destino: e.aUsuario }
+    : {
+        icono: 'fa-user-check', tono: 'neutral', quien: SISTEMA,
+        accion: e.detalle === 'AUTOMATICO' ? 'asignó automáticamente el ticket a' : 'asignó el ticket a',
+        destino: e.aUsuario,
+      },
+  REASIGNADO: e => ({
+    icono: 'fa-right-left', tono: 'neutral', quien: e.actor ?? SISTEMA,
+    accion: e.deUsuario ? `reasignó el ticket (lo tenía ${e.deUsuario}) a` : 'reasignó el ticket a',
+    destino: e.aUsuario,
+  }),
   TOMADO: e => ({ icono: 'fa-hand', tono: 'info', quien: e.actor ?? 'El agente', accion: 'tomó el ticket' }),
-  RESUELTO: e => ({ icono: 'fa-circle-check', tono: 'ok', quien: e.actor ?? 'El agente', accion: 'marcó el ticket como resuelto' }),
+  RESUELTO: e => e.detalle === 'MANUAL'
+    ? { icono: 'fa-circle-check', tono: 'ok', quien: SISTEMA, accion: 'cerró el ticket por el manual enviado' }
+    : { icono: 'fa-circle-check', tono: 'ok', quien: e.actor ?? 'El agente', accion: 'marcó el ticket como resuelto' },
+  REABIERTO: e => ({ icono: 'fa-rotate-left', tono: 'warn', quien: e.actor ?? SISTEMA, accion: 'reabrió el ticket' }),
   ESCALADO: e => ({
     icono: 'fa-arrow-up-right-dots', tono: 'warn', quien: SISTEMA,
     accion: e.deUsuario ? `escaló el ticket por SLA (lo tenía ${e.deUsuario})` : 'escaló el ticket por SLA',
