@@ -72,7 +72,7 @@
         <p v-if="error" class="ds-alert">{{ error }}</p>
         <p v-else-if="cargando && !tickets.length" class="ds-alert neutro">Cargando tickets…</p>
         <p v-else-if="!tickets.length" class="ds-empty ds-empty--lista">
-          {{ filtro === 'TODOS' ? 'Todavía no hay tickets.' : 'Ningún ticket coincide con este filtro.' }}
+          {{ mensajeVacio }}
         </p>
         <p v-else-if="!ticketsFiltrados.length" class="ds-empty ds-empty--lista">
           Ningún ticket coincide con la prioridad o el estado elegidos.
@@ -117,6 +117,12 @@ const emit = defineEmits(['abrir', 'tomar', 'update:filtro', 'update:busqueda', 
 const filtroLocal = computed({
   get: () => props.filtro,
   set: (v) => emit('update:filtro', v),
+})
+
+// Con una búsqueda activa, una lista vacía no significa "no hay tickets".
+const mensajeVacio = computed(() => {
+  if (props.busqueda.trim()) return `Ningún ticket coincide con “${props.busqueda.trim()}”.`
+  return props.filtro === 'TODOS' ? 'Todavía no hay tickets.' : 'Ningún ticket coincide con este filtro.'
 })
 
 // Prioridad y estado se filtran en el cliente, sobre lo que ya llegó filtrado
