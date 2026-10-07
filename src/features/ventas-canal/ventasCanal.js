@@ -30,8 +30,12 @@ export const CLIENT_TYPES = [
 ]
 
 const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-export const weekLabel = ({ from, to }) =>
-  `${Number(from.slice(8))}–${Number(to.slice(8))} ${MONTHS_SHORT[Number(to.slice(5, 7)) - 1]}`
+// "S36 · 1–6 sep": la semana del Plan Comercial y sus días. Un tramo de un día
+// (el 31) no repite el número.
+export const weekLabel = ({ label, from, to }) => {
+  const dias = from === to ? `${Number(from.slice(8))}` : `${Number(from.slice(8))}–${Number(to.slice(8))}`
+  return `${label ? `${label} · ` : ''}${dias} ${MONTHS_SHORT[Number(to.slice(5, 7)) - 1]}`
+}
 
 export const conversion = ({ c, v }) => (c > 0 ? v / c : null)
 

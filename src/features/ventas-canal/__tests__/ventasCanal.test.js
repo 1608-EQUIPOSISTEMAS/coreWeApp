@@ -54,4 +54,6 @@ describe('insights (banda)', () => {
 
 it('weekLabel', () => {
   expect(weekLabel({ from: '2026-07-22', to: '2026-07-31' })).toBe('22–31 jul')
+  expect(weekLabel({ label: 'S36', from: '2026-08-31', to: '2026-08-31' })).toBe('S36 · 31 ago')
+  expect(weekLabel({ label: 'S37', from: '2026-09-07', to: '2026-09-13' })).toBe('S37 · 7–13 sep')
 })

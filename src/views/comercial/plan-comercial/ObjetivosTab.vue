@@ -123,6 +123,7 @@ import ColumnChart from './ColumnChart.vue'
 
 const props = defineProps({
   month: { type: String, required: true },
+  line: { type: String, default: 'VIVO' }, // VIVO | ONLINE
   reloadKey: { type: Number, default: 0 }
 })
 defineEmits(['select-month'])
@@ -138,7 +139,7 @@ async function cargar () {
   loading.value = true
   error.value = ''
   try {
-    data.value = await service.objetivos(year.value)
+    data.value = await service.objetivos(year.value, props.line)
   } catch (err) {
     console.error('[PlanComercial] objetivos', { year: year.value, err })
     error.value = err?.response?.data?.message || 'No se pudieron cargar los objetivos. Vuelve a intentar en un momento.'
@@ -147,7 +148,8 @@ async function cargar () {
   }
 }
 // Cambiar de mes dentro del mismo año no vuelve a pedir nada: el año ya está.
-watch([year, () => props.reloadKey], cargar, { immediate: true })
+// Cambiar de línea sí: cada línea tiene su plan.
+watch([year, () => props.line, () => props.reloadKey], cargar, { immediate: true })
 
 const usdToPen = computed(() => data.value?.usd_to_pen ?? 0)
 const totales = computed(() => (data.value?.months ?? []).map((m) => monthTotals(m, usdToPen.value)))

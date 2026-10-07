@@ -277,6 +277,7 @@ function emptyGradeDraft() {
     final_criteria: {},
     group_number: null,
     observation: '',
+    in_whatsapp_group: false,
   }
 }
 
@@ -309,6 +310,7 @@ function hydrateGradesDraft() {
           final_criteria: { ...(saved.final_criteria || {}) },
           group_number: saved.group_number ?? null,
           observation: saved.observation || '',
+          in_whatsapp_group: saved.in_whatsapp_group === true,
         }
       : emptyGradeDraft()
   }
@@ -424,6 +426,7 @@ async function saveGrades() {
           final_criteria: numMap(d.final_criteria),
           group_number: Number.isInteger(groupNum) && groupNum > 0 ? groupNum : null,
           observation: (d.observation || '').trim() || null,
+          in_whatsapp_group: d.in_whatsapp_group === true,
         }
       })
     if (!items.length) return
@@ -837,7 +840,9 @@ const aulaGradeAverage = computed(() => {
   return round2g(finals.reduce((a, b) => a + b, 0) / finals.length)
 })
 
-const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 14)
+const gradesColspan = computed(() => 2 * (sessionsTotal.value || 0) + 15)
+// Checklist del grupo de WhatsApp: cuántos alumnos ya entraron (lo marca Académica).
+const inWhatsappCount = computed(() => students.value.filter((s) => gradesDraft[s.enrollment_id]?.in_whatsapp_group === true).length)
 
 const TYPE_STATUS_BADGE = {
   we_enrollment_status_tracking: { label: 'SEG', tone: 'warn' },
@@ -1887,6 +1892,9 @@ onMounted(async () => {
                 <th rowspan="2">B2B</th>
                 <th rowspan="2">Becas</th>
                 <th rowspan="2">Membresía</th>
+                <th rowspan="2" class="ad-center" title="Alumnos que ya entraron al grupo de WhatsApp del aula">
+                  Grupo WSP<br /><span class="ad-muted ad-mono">{{ inWhatsappCount }}/{{ students.length }}</span>
+                </th>
                 <th class="ad-group ok" :colspan="(sessionsTotal || 1) + 1">Nota de tests · 6/20</th>
                 <th class="ad-group warn" :colspan="(sessionsTotal || 1) + 1">Participación · 2/20</th>
                 <th class="ad-group info" colspan="3">Proyecto integrador · 6+8/20</th>
@@ -1968,6 +1976,15 @@ onMounted(async () => {
                       <i class="fa-solid fa-crown" aria-hidden="true"></i> {{ s.membership_tier_name }}
                     </span>
                     <span v-else class="ad-muted">--</span>
+                  </td>
+                  <td class="ad-cell-input ad-center">
+                    <input
+                      type="checkbox"
+                      class="ad-wsp-check"
+                      :aria-label="`${apellidosNombres(s)} entró al grupo de WhatsApp`"
+                      :checked="draftFor(s).in_whatsapp_group === true"
+                      @change="draftFor(s).in_whatsapp_group = $event.target.checked; markDirty(s.enrollment_id)"
+                    />
                   </td>
                   <td v-for="n in sessionNumbers" :key="'t' + n" class="ad-cell-input">
                     <input
@@ -3047,6 +3064,7 @@ onMounted(async () => {
 .ad-grade-input::-webkit-outer-spin-button,
 .ad-grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .ad-part-check { width: 15px; height: 15px; accent-color: var(--ds-warn); cursor: pointer; }
+.ad-wsp-check { width: 15px; height: 15px; accent-color: var(--ds-ok); cursor: pointer; }
 
 /* Fila de criterios de entregables (se abre con el lapiz) */
 .ad-grades .ad-deliv-row > td {

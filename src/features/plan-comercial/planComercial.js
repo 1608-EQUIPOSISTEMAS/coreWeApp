@@ -6,6 +6,19 @@
 // del Sheet "4. Ventas Diarias": bajo el 15% la celda va en rojo.
 export const CONVERSION_GOAL_PCT = 15
 
+// Productos de la linea Online (mismo orden y llaves que el backend).
+export const ONLINE_PRODUCTS = [
+  { id: 'PLUS', label: 'Membresía Plus' },
+  { id: 'CURSOS', label: 'Cursos' },
+  { id: 'ESPECIALIZACIONES', label: 'Especializaciones' },
+  { id: 'GOLD_PLAT', label: 'Gold / Plat' },
+  { id: 'BLACK', label: 'Black' }
+]
+export const LINES = [
+  { id: 'VIVO', label: 'En Vivo' },
+  { id: 'ONLINE', label: 'Online' }
+]
+
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const WEEKDAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
