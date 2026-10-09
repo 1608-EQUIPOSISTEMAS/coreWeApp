@@ -199,7 +199,9 @@
             </div>
           </section>
 
-          <section v-if="ticket.canManage && ticket.estado !== 'CERRADO'" class="ds-panel">
+          <!-- Un dueño a la vez: con agente, solo ese agente lo pasa a otro.
+               El backend decide (canReassign) y vuelve a validarlo al mover. -->
+          <section v-if="ticket.canReassign" class="ds-panel">
             <div class="ds-panel-body tk-side">
               <TicketReassign
                 :asignado-a-id="ticket.asignadoA?.id ?? null"

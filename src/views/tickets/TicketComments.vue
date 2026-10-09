@@ -38,7 +38,7 @@
           <small class="tk-paste-hint">o pegá con <kbd>Ctrl</kbd>+<kbd>V</kbd></small>
           <span v-for="(a, i) in archivos" :key="a.name + i" class="ds-chip tk-archivo">
             {{ a.name }}
-            <button type="button" class="tk-quitar" :aria-label="`Quitar ${a.name}`" @click="archivos.splice(i, 1)">×</button>
+            <button type="button" class="tk-quitar" :aria-label="`Quitar ${a.name}`" @click="quitar(i)">×</button>
           </span>
         </div>
 
@@ -48,6 +48,7 @@
         </button>
       </div>
 
+      <p v-if="errorArchivos" class="ds-alert">{{ errorArchivos }}</p>
       <p v-if="error" class="ds-alert">{{ error }}</p>
     </form>
   </section>
@@ -58,6 +59,7 @@ import { ref } from 'vue'
 import TicketAttachments from './TicketAttachments.vue'
 import { fechaHora } from './ticket-format.js'
 import { usePegarImagenes } from './usePegarImagenes.js'
+import { ACCEPT, agregarAdjuntos } from './adjuntos.js'
 
 defineProps({
   comentarios: { type: Array, default: () => [] },
@@ -68,23 +70,32 @@ defineProps({
 
 const emit = defineEmits(['comentar'])
 
-const MAX_FILES = 4
-const ACCEPT = 'image/png,image/jpeg,image/webp,application/pdf'
-
 const cuerpo = ref('')
 const archivos = ref([])
+const errorArchivos = ref('')
 const input = ref(null)
 
+// Mismas reglas que el alta (adjuntos.js): antes aceptaba cualquier tipo y peso
+// y lo que pasaba de 4 se descartaba sin avisar.
+function agregar (lista) {
+  const { archivos: todos, error } = agregarAdjuntos(archivos.value, lista)
+  archivos.value = todos
+  errorArchivos.value = error
+}
+
 function onSeleccion (evento) {
-  archivos.value = [...archivos.value, ...Array.from(evento.target.files)].slice(0, MAX_FILES)
+  agregar(evento.target.files)
   evento.target.value = ''
+}
+
+function quitar (i) {
+  archivos.value.splice(i, 1)
+  errorArchivos.value = ''
 }
 
 // TicketComments solo se monta mientras hay un ticket abierto (v-if="ticket"
 // en TicketDetail.vue), así que el pegado siempre corresponde a este hilo.
-usePegarImagenes((imagenes) => {
-  archivos.value = [...archivos.value, ...imagenes].slice(0, MAX_FILES)
-})
+usePegarImagenes(agregar)
 
 // El padre limpia el formulario llamando a reset() cuando el servidor confirma:
 // si el envío falla, lo escrito no se pierde.
@@ -96,6 +107,7 @@ function enviar () {
 function reset () {
   cuerpo.value = ''
   archivos.value = []
+  errorArchivos.value = ''
 }
 
 // Precarga el cuadro de respuesta (p. ej. con el borrador de la IA) sin
