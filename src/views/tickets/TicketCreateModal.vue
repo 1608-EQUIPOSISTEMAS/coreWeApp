@@ -100,6 +100,7 @@ import { ref, computed, watch } from 'vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { pesoArchivo } from './ticket-format.js'
 import { usePegarImagenes } from './usePegarImagenes.js'
+import { MAX_FILES, MAX_MB, ACCEPT, agregarAdjuntos } from './adjuntos.js'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -108,15 +109,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'crear'])
-
-// Mismos límites que impone el backend (tickets.files.js). Esto no es la
-// validación real —el servidor revisa hasta los magic bytes— sino para no
-// hacerle subir 20 MB a alguien para después rechazarlos.
-const MAX_FILES = 4
-const MAX_MB = 5
-const MAX_BYTES = MAX_MB * 1024 * 1024
-const MIMES = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
-const ACCEPT = MIMES.join(',')
 
 const titulo = ref('')
 const problema = ref('')
@@ -130,22 +122,9 @@ const puedeEnviar = computed(() =>
   titulo.value.trim().length >= 3 && problema.value.trim().length >= 10)
 
 function agregar (lista) {
-  errorArchivos.value = ''
-  for (const archivo of Array.from(lista ?? [])) {
-    if (archivos.value.length >= MAX_FILES) {
-      errorArchivos.value = `Como máximo ${MAX_FILES} archivos.`
-      break
-    }
-    if (!MIMES.includes(archivo.type)) {
-      errorArchivos.value = `"${archivo.name}" no es PNG, JPG, WEBP ni PDF.`
-      continue
-    }
-    if (archivo.size > MAX_BYTES) {
-      errorArchivos.value = `"${archivo.name}" pesa más de ${MAX_MB} MB.`
-      continue
-    }
-    archivos.value.push(archivo)
-  }
+  const { archivos: todos, error } = agregarAdjuntos(archivos.value, lista)
+  archivos.value = todos
+  errorArchivos.value = error
 }
 
 function onSeleccion (evento) {
