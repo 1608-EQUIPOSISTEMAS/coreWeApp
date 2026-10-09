@@ -235,7 +235,7 @@
                 <td :colspan="COL_COUNT">
                   <div class="week-row-inner">
                     <i class="fa-solid fa-chevron-down week-chevron" :class="{ 'is-open': week.isOpen }" aria-hidden="true"></i>
-                    <span>Semana {{ week.schedule }}</span>
+                    <span>Semana {{ week.number }}</span>
                     <span class="ds-pill info week-count">{{ week.items.length }} ediciones</span>
                   </div>
                 </td>
@@ -597,6 +597,7 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import { confirmAction } from '@/composables/useConfirm'
 import { editionGapsByUid, DIAS_MINIMOS_ENTRE_EDICIONES } from '@/features/schedule-plan/editionGaps'
+import { numeradorDeSemanas } from '@/shared/lib/cronograma'
 
 const planService = inject(ServiceKeys.SchedulePlan)
 const programService = inject(ServiceKeys.Program)
@@ -726,9 +727,14 @@ function pasaFiltros (item) {
   return pares.every(([sel, valor]) => !sel?.length || sel.includes(valor))
 }
 
+// Sin filtros de pantalla: buscar no debe renumerar el mes (ver numeradorDeSemanas).
+const numeroDeSemana = computed(() => numeradorDeSemanas(
+  monthItems.value.map(item => ({ schedule: weekOfMonth(item.start_date), items: [item] }))
+))
+
 const filteredWeeks = computed(() => {
   const semanas = Array.from({ length: SEMANAS_POR_MES }, (_, i) => ({
-    schedule: i + 1, isOpen: openWeeks.value[i + 1] !== false, items: []
+    schedule: i + 1, number: numeroDeSemana.value(i + 1), isOpen: openWeeks.value[i + 1] !== false, items: []
   }))
   for (const item of monthItems.value) {
     if (!pasaFiltros(item)) continue

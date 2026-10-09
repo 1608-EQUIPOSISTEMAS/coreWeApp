@@ -72,6 +72,22 @@ export function objetivoDeCanales (metasCanal, metrica = 'ventas') {
   return Object.values(metasCanal || {}).reduce((t, c) => t + (Number(c?.[metrica]) || 0), 0)
 }
 
+// Número de semana que se MUESTRA: la primera semana con ediciones siempre es la
+// "Semana 1" (pedido de Producto, 09/10/2026).
+//
+// El número que manda el SP (sp_edition_by_week_list) cuenta de lunes a domingo
+// desde la semana del día 1. Si el 1 cae domingo (nov/2026) y no hay ediciones ese
+// día, el mes arrancaba en "Semana 2". Solo cambia la etiqueta: el agrupado y
+// `schedule` (clave de plegado) siguen siendo los del SP.
+//
+// `semanas` va SIN los filtros de pantalla: si no, buscar un programa renumeraría
+// el mes y la misma edición cambiaría de semana según el filtro.
+export function numeradorDeSemanas (semanas) {
+  const conEdiciones = (semanas || []).filter((w) => w.items?.length).map((w) => w.schedule)
+  const primera = conEdiciones.length ? Math.min(...conEdiciones) : 1
+  return (schedule) => schedule - primera + 1
+}
+
 // Agrupa el mes en semanas y arma las familias DIP → PEE → ESP → curso.
 //
 // El SP ya devuelve las ediciones de una familia consecutivas; aquí se unen las

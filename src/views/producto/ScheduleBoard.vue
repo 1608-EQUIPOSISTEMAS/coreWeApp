@@ -126,7 +126,7 @@
                     <div class="week-bar" :class="{ collapsed: !week.isOpen }" @click="toggleWeek(week.schedule)">
                       <button type="button" class="caret"><span>▾</span></button>
                       <span class="wk-chip"></span>
-                      <h3>Semana {{ week.schedule }}</h3>
+                      <h3>Semana {{ week.number }}</h3>
                       <span class="ed-pill">{{ week.count }} ediciones</span>
                       <span class="grow"></span>
                       <span class="stat">{{ week.summary }}</span>
@@ -408,7 +408,7 @@
 import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { objetivoDeCanales } from '@/shared/lib/cronograma'
+import { objetivoDeCanales, numeradorDeSemanas, agruparPorSemana } from '@/shared/lib/cronograma'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
 
@@ -745,6 +745,9 @@ const filteredWeeks = computed(() => {
   }))
 })
 
+// agruparPorSemana sin filtro = el mes sin A5, que es lo que muestra esta vista.
+const numeroDeSemana = computed(() => numeradorDeSemanas(agruparPorSemana(schedules.value)))
+
 const displayWeeks = computed(() => filteredWeeks.value
   .filter(w => w.items.length)
   .map(w => {
@@ -785,7 +788,7 @@ const displayWeeks = computed(() => filteredWeeks.value
     const conMeta = items.filter(it => (it.e.meta_vacantes ?? 0) > 0)
     const avg = conMeta.length ? Math.round(conMeta.reduce((s, it) => s + it.fl.pct, 0) / conMeta.length) : 0
     return {
-      schedule: w.schedule, count: items.length, items,
+      schedule: w.schedule, number: numeroDeSemana.value(w.schedule), count: items.length, items,
       isOpen: !closedWeeks.value[w.schedule],
       summary: `${live} en curso · ${avg}% logro prom.`,
     }

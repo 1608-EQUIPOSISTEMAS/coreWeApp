@@ -155,9 +155,9 @@
                   <tr class="cro-week">
                     <td :colspan="totalColumnas">
                       <div class="cro-week-bar" :class="{ 'is-collapsed': cerradas[w.schedule] }" @click="alternarSemana(w.schedule)">
-                        <button type="button" class="cro-caret" :aria-label="`Plegar la semana ${w.schedule}`"><span>▾</span></button>
+                        <button type="button" class="cro-caret" :aria-label="`Plegar la semana ${numeroDeSemana(w.schedule)}`"><span>▾</span></button>
                         <span class="cro-chip"></span>
-                        <h3>Semana {{ w.schedule }}</h3>
+                        <h3>Semana {{ numeroDeSemana(w.schedule) }}</h3>
                         <span class="cro-pill">{{ w.items.length }} ediciones</span>
                         <span class="cro-grow"></span>
                         <span class="cro-stat">{{ resumenDeSemana(w) }}</span>
@@ -367,7 +367,7 @@ import BaseModal from '@/components/BaseModal.vue'
 // ordenar y pintar igual, o el usuario deja de creerle a las dos.
 import {
   agruparPorSemana, segmentoDe, tintaDeSegmento, suave, lineaDe, tipoDe,
-  esNuevaMetodologia, fechaCorta, diasDe, horasDe, fechaLocal
+  esNuevaMetodologia, fechaCorta, diasDe, horasDe, fechaLocal, numeradorDeSemanas
 } from '@/shared/lib/cronograma'
 import '@/styles/cronograma-fila.css'
 
@@ -502,7 +502,9 @@ const pendientes = computed(() => filas.value.filter((f) => !cerrada(f) && tiene
 
 // Todas las ediciones del mes menos los A5 (cancelados), que agruparPorSemana ya
 // descarta: es el mismo universo que muestra el cronograma.
-const filas = computed(() => agruparPorSemana(semanasCrudas.value).flatMap((w) => w.items.map((it) => it.e)))
+const mesSinFiltro = computed(() => agruparPorSemana(semanasCrudas.value))
+const filas = computed(() => mesSinFiltro.value.flatMap((w) => w.items.map((it) => it.e)))
+const numeroDeSemana = computed(() => numeradorDeSemanas(mesSinFiltro.value))
 
 const conteos = computed(() => ({
   Todas: filas.value.length,

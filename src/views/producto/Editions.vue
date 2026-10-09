@@ -12,7 +12,7 @@
             Resultados históricos — <b>{{ historyList.length }}</b> {{ historyList.length === 1 ? 'edición' : 'ediciones' }}
           </template>
           <template v-else>
-            {{ months[selectedMonth - 1] }} {{ selectedYear }} — <b>{{ allScheduleItems.length }}</b> ediciones en {{ schedules.length }} semanas
+            {{ months[selectedMonth - 1] }} {{ selectedYear }} — <b>{{ allScheduleItems.length }}</b> ediciones en {{ schedules.filter(w => w.items?.length).length }} semanas
             <template v-if="hasColumnFilters"> · {{ filteredSchedules.flatMap(w => w.items || []).length }} con los filtros de columna</template>
           </template>
         </p>
@@ -256,7 +256,7 @@
                 <td :colspan="tableColCount" class="week-header-cell">
                   <div class="week-header-inner">
                     <svg class="week-chevron" :class="{ 'week-chevron-open': week.isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    <span class="week-label">Semana {{ week.schedule }}</span>
+                    <span class="week-label">Semana {{ numeroDeSemana(week.schedule) }}</span>
                     <span class="ds-chip week-badge">{{ week.items.length }} ediciones</span>
                   </div>
                 </td>
@@ -1756,6 +1756,7 @@ import GapTimeline from './GapTimeline.vue'
 import { parentScheduleFromChildren } from '@/utils/parentSchedule'
 import { allowedDaysOf, sessionCalendar, sessionEndDate, weekdayOf } from '@/features/edition-schedule/sessionCalendar'
 import { editionGapTimeline } from '@/features/edition-schedule/gapTimeline'
+import { numeradorDeSemanas } from '@/shared/lib/cronograma'
 import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 
 
@@ -3514,6 +3515,8 @@ const allScheduleItems = computed(() => {
   }
   return schedules.value.flatMap(week => week.items || [])
 })
+
+const numeroDeSemana = computed(() => numeradorDeSemanas(schedules.value))
 
 const filteredSchedules = computed(() => {
   if (!schedules.value || schedules.value.length === 0) return []
