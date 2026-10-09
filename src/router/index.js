@@ -472,12 +472,6 @@ const routes = [
         },
         // Reportes — solo líderes y admin
         {
-          path: 'RptGoalEdition',
-          name: 'ReportGoalEdition',
-          component: () => import('@/views/comercial/ReportGoalEdition.vue'),
-          meta: { submodule: 'CRONOGRAMA_OBJETIVOS', roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'] },
-        },
-        {
           path: 'RptSLA',
           name: 'ReportSla',
           component: () => import('@/views/comercial/ReportSla.vue'),

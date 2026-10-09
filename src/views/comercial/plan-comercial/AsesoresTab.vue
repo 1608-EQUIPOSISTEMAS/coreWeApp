@@ -113,6 +113,7 @@ const props = defineProps({
   month: { type: String, required: true },
   today: { type: String, required: true },
   puedeEditar: { type: Boolean, default: false },
+  line: { type: String, default: 'VIVO' }, // VIVO | ONLINE
   reloadKey: { type: Number, default: 0 }
 })
 
@@ -125,7 +126,7 @@ async function cargar () {
   loading.value = true
   error.value = ''
   try {
-    data.value = await service.asesores(props.month)
+    data.value = await service.asesores(props.month, props.line)
   } catch (err) {
     console.error('[PlanComercial] asesores', { month: props.month, err })
     error.value = err?.response?.data?.message || 'No se pudieron cargar los objetivos por asesor. Vuelve a intentar en un momento.'
@@ -133,7 +134,7 @@ async function cargar () {
     loading.value = false
   }
 }
-watch(() => [props.month, props.reloadKey], cargar, { immediate: true })
+watch(() => [props.month, props.line, props.reloadKey], cargar, { immediate: true })
 
 const report = computed(() => (data.value ? asesoresReport(data.value, props.today) : null))
 const insights = computed(() => asesoresInsights(report.value))

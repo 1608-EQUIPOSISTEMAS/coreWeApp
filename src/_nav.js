@@ -202,13 +202,6 @@ export default [
         submodule: 'REPORTE',
         roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
-      {
-        component: 'CNavItem',
-        name: 'Cronograma - Objetivos',
-        to: '/comercial/RptGoalEdition',
-        submodule: 'CRONOGRAMA_OBJETIVOS',
-        roles: ['ADMIN', 'LIDER_COMERCIAL', 'GERENCIA'],
-      },
     ],
   },
   {

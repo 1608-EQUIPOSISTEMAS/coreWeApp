@@ -1,9 +1,18 @@
 <template>
-  <BaseModal :model-value="modelValue" :title="`Objetivos de ${monthName(month).toLowerCase()}`" size="xxl" @update:model-value="$emit('update:modelValue', $event)">
+  <BaseModal :model-value="modelValue" :title="`Objetivos ${line === 'ONLINE' ? 'online ' : ''}de ${monthName(month).toLowerCase()}`" size="xxl" @update:model-value="$emit('update:modelValue', $event)">
     <p v-if="error" class="ds-alert">{{ error }}</p>
     <div v-else-if="loading" class="ds-stack"><span v-for="n in 6" :key="n" class="ds-skel"></span></div>
 
     <template v-else-if="semanas.length">
+      <fieldset v-if="line === 'ONLINE'" class="productos">
+        <legend class="ds-label">Ventas del mes por producto</legend>
+        <div class="productos-grid">
+          <label v-for="p in ONLINE_PRODUCTS" :key="p.id" class="ds-field">
+            <span class="ds-label">{{ p.label }}</span>
+            <input v-model="productos[p.id]" class="ds-input" inputmode="numeric" />
+          </label>
+        </div>
+      </fieldset>
       <p class="ds-help ayuda">
         Una fila por semana del mes. La semana que cruza el cambio de mes lleva en cada mes solo sus días.
         Puedes pegar un bloque copiado de Excel desde cualquier celda. Una celda vacía queda sin objetivo.
@@ -62,11 +71,12 @@ import { ref, watch, inject } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import BaseModal from '@/components/BaseModal.vue'
-import { monthName, periodOf } from '@/features/plan-comercial/planComercial'
+import { monthName, periodOf, ONLINE_PRODUCTS } from '@/features/plan-comercial/planComercial'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  month: { type: String, required: true }
+  month: { type: String, required: true },
+  line: { type: String, default: 'VIVO' } // VIVO | ONLINE
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -77,6 +87,7 @@ const service = inject(ServiceKeys.PlanComercial)
 const toast = useToast()
 const semanas = ref([])
 const asesores = ref([])
+const productos = ref({})
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
@@ -87,8 +98,9 @@ async function cargar () {
   loading.value = true
   error.value = ''
   try {
-    const plan = await service.plan(props.month)
+    const plan = await service.plan(props.month, props.line)
     asesores.value = plan.asesores
+    productos.value = Object.fromEntries(ONLINE_PRODUCTS.map((p) => [p.id, aTexto(plan.productos?.[p.id])]))
     semanas.value = plan.weeks.map((w) => ({
       ...w,
       obj_vacantes: aTexto(w.obj_vacantes),
@@ -102,7 +114,7 @@ async function cargar () {
     loading.value = false
   }
 }
-watch(() => [props.modelValue, props.month], ([abierto]) => { if (abierto) cargar() }, { immediate: true })
+watch(() => [props.modelValue, props.month, props.line], ([abierto]) => { if (abierto) cargar() }, { immediate: true })
 
 // Excel en es-PE copia "S/ 35,111.50": la coma es de miles y el punto decimal.
 // Se queda solo con digitos y punto.
@@ -139,14 +151,19 @@ async function guardar () {
     toast.warning(`Revisa la ${invalida.week_label}: los objetivos son números de 0 para arriba.`)
     return
   }
+  const online = props.line === 'ONLINE'
+  if (online && Object.values(productos.value).some((v) => v !== '' && !(Number(v) >= 0))) {
+    toast.warning('Revisa los objetivos por producto: son números de 0 para arriba.')
+    return
+  }
   saving.value = true
   try {
-    await service.guardarPlan(props.month, semanas.value.map((w) => ({
+    await service.guardarPlan(props.month, props.line, semanas.value.map((w) => ({
       date_start: w.date_start,
       obj_vacantes: valor(w.obj_vacantes),
       obj_ingresos: valor(w.obj_ingresos),
       asesores: Object.fromEntries(Object.entries(w.asesores).map(([id, v]) => [id, valor(v)]))
-    })))
+    })), online ? Object.fromEntries(Object.entries(productos.value).map(([id, v]) => [id, valor(v)])) : null)
     toast.success(`Objetivos de ${monthName(props.month).toLowerCase()} guardados`)
     emit('saved')
     emit('update:modelValue', false)
@@ -161,6 +178,9 @@ async function guardar () {
 
 <style scoped>
 .ayuda { margin: 0 0 12px; }
+.productos { margin: 0 0 16px; padding: 0; border: 0; }
+.productos legend { margin-bottom: 8px; }
+.productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .editor { border-collapse: collapse; font-size: 12.5px; }
 .editor th { padding: 0 6px 8px; font-size: 11px; font-weight: 600; color: var(--ds-muted); text-align: center; white-space: nowrap; }
 .editor .grupos th { font-weight: 700; color: var(--ds-heading); }

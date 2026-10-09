@@ -180,6 +180,7 @@ import ColumnChart from './ColumnChart.vue'
 const props = defineProps({
   month: { type: String, required: true },
   today: { type: String, required: true },
+  line: { type: String, default: 'VIVO' }, // VIVO | ONLINE
   reloadKey: { type: Number, default: 0 }
 })
 
@@ -194,7 +195,7 @@ async function cargar () {
   error.value = ''
   abiertas.value = {}
   try {
-    data.value = await service.ventasDiarias(props.month)
+    data.value = await service.ventasDiarias(props.month, props.line)
   } catch (err) {
     console.error('[PlanComercial] ventas diarias', { month: props.month, err })
     error.value = err?.response?.data?.message || 'No se pudo cargar el reporte diario. Vuelve a intentar en un momento.'
@@ -202,7 +203,7 @@ async function cargar () {
     loading.value = false
   }
 }
-watch(() => [props.month, props.reloadKey], cargar, { immediate: true })
+watch(() => [props.month, props.line, props.reloadKey], cargar, { immediate: true })
 
 const semanas = computed(() => (data.value?.weeks ?? []).map((w) => dailyWeek(w, props.today)))
 const matriz = computed(() => conversionMatrix(semanas.value))
