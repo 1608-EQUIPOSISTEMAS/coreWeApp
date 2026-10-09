@@ -55,9 +55,11 @@ function resolveDiscounts (d, discountsByType) {
 }
 
 // Lo que se cobra por el link: en cuotas solo la reserva, al contado el total.
-export function tokenLinkAmount (insc) {
+// Con "Aplazar parte" el link cobra solo la parte inmediata (reservaAhora): la
+// diferida ya es la cuota 1 del plan (token 916 cobró 200 en vez de 80).
+export function tokenLinkAmount (insc, reservaAhora = insc.saved_money) {
   return insc.cat_type_payment === 'we_payment_way_installments'
-    ? (Number(insc.saved_money) || 0)
+    ? (Number(reservaAhora) || 0)
     : (Number(insc.total_amount) || Number(insc.montoOriginal) || 0)
 }
 

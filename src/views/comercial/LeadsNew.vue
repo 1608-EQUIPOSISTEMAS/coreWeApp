@@ -3317,9 +3317,7 @@ cat_certificate_status,
       cat_b2b_doctype: isChannelGeneral.value
         ? idByAlias(insc.cat_b2b_doctype, b2bDoctypeCatalog.value)
         : null,
-      saved_money: reservaSplitEnabled.value
-  ? Number(reservaInmediata.value)
-  : Number(insc.saved_money),
+      saved_money: Number(reservaPagadaAhora()),
 
       // Precios y descuentos
       list_price:           insc.montoOriginal,
@@ -3524,7 +3522,7 @@ async function confirmarToken() {
     return
   }
   // Antes se podia crear un link por S/ 0 (la copia de B2B ya lo bloqueaba).
-  if (!tokenLinkAmount(insc)) {
+  if (!tokenLinkAmount(insc, reservaPagadaAhora())) {
     toast.warning(missingTokenAmountMessage(insc))
     return
   }
@@ -3556,7 +3554,7 @@ async function confirmarToken() {
     // Si es al contado, es el total. Antes mandabamos siempre total_amount, lo que
     // hacia que en cuotas el datatable mostrara S/300 cuando el alumno solo iba
     // a pagar S/150 por el link.
-    const tokenAmount = tokenLinkAmount(insc)
+    const tokenAmount = tokenLinkAmount(insc, reservaPagadaAhora())
 
     const tokenPayload = {
       lead_id: resolvedLeadId,
@@ -3777,7 +3775,7 @@ async function loadTokenForEdit (tokenId) {
 
 async function confirmarEdicionToken () {
   if (!inscriptionFieldsFilled()) return
-  if (!tokenLinkAmount(insc)) {
+  if (!tokenLinkAmount(insc, reservaPagadaAhora())) {
     toast.warning(missingTokenAmountMessage(insc))
     return
   }
@@ -3786,7 +3784,7 @@ async function confirmarEdicionToken () {
     const enrollmentPayload = buildEnrollmentPayload()
     // Mismo razonamiento que tokenCreate: el monto del token = lo que se paga
     // por el link. Cuotas -> saved_money (inicial). Contado -> total_amount.
-    const tokenAmountEdit = tokenLinkAmount(insc)
+    const tokenAmountEdit = tokenLinkAmount(insc, reservaPagadaAhora())
     const resp = await ficoService.tokenEditInscription({
       token_id:    editTokenId.value,
       inscription: enrollmentPayload.inscription,
@@ -4213,6 +4211,8 @@ watch(() => insc.saved_money, (val) => {
 const reservaDiferida = computed(() =>
   round2(Math.max(0, (Number(insc.saved_money) || 0) - (Number(reservaInmediata.value) || 0)))
 )
+
+const reservaPagadaAhora = () => reservaSplitEnabled.value ? reservaInmediata.value : insc.saved_money
 
 const reservaSplitValid = computed(() =>
   !reservaSplitEnabled.value ||

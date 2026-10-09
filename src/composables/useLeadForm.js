@@ -731,6 +731,7 @@ export function useLeadForm(options = {}) {
   const reservaDiferida = computed(() =>
     round2(Math.max(0, (Number(insc.saved_money) || 0) - (Number(reservaInmediata.value) || 0)))
   )
+  const reservaPagadaAhora = () => reservaSplitEnabled.value ? reservaInmediata.value : insc.saved_money
 
   const reservaSplitValid = computed(() =>
     !reservaSplitEnabled.value ||
@@ -1394,7 +1395,7 @@ export function useLeadForm(options = {}) {
         cat_b2b_doctype: isChannelGeneral.value
           ? idByAlias(insc.cat_b2b_doctype, b2bDoctypeCatalog.value)
           : null,
-        saved_money: reservaSplitEnabled.value ? Number(reservaInmediata.value) : Number(insc.saved_money),
+        saved_money: Number(reservaPagadaAhora()),
         list_price:   insc.montoOriginal,
         total_amount: Number(insc.total_amount),
         dsct_porcent_id: insc.dsct_porcent_id, dsct_porcent_label: insc.dsct_porcent_label,
@@ -1569,7 +1570,7 @@ export function useLeadForm(options = {}) {
     if (!validateInscriptionClientInfo()) { toast.warning('Complete los campos obligatorios de la inscripción'); return }
     if (!validateLeadInfo() || !validateContactInfo() || !validateCommercialInfo()) { toast.warning('Faltan datos obligatorios en el formulario del Lead.'); return }
     if (!insc.token_payment_type) { toast.warning('Debe seleccionar el tipo de pago (Débito/Crédito).'); return }
-    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage(insc)); return }
+    if (!tokenLinkAmount(insc, reservaPagadaAhora())) { toast.warning(missingTokenAmountMessage(insc)); return }
 
     savingInsc.value = true
     try {
@@ -1597,7 +1598,7 @@ export function useLeadForm(options = {}) {
         lead_id:      resolvedLeadId,
         cat_provider: null,
         payment_type: insc.token_payment_type || null,
-        amount:       tokenLinkAmount(insc),
+        amount:       tokenLinkAmount(insc, reservaPagadaAhora()),
         currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
         notes:        `Link para ${form.full_name || '---'}`,
         advisor_observation: insc.observacions || null,
@@ -1664,13 +1665,13 @@ export function useLeadForm(options = {}) {
 
   async function confirmarEdicionToken() {
     if (!inscriptionFieldsFilled()) return
-    if (!tokenLinkAmount(insc)) { toast.warning(missingTokenAmountMessage(insc)); return }
+    if (!tokenLinkAmount(insc, reservaPagadaAhora())) { toast.warning(missingTokenAmountMessage(insc)); return }
     savingInsc.value = true
     try {
       const resp = await ficoService.tokenEditInscription({
         token_id:     editTokenId.value,
         inscription:  buildEnrollmentPayload().inscription,
-        amount:       tokenLinkAmount(insc),
+        amount:       tokenLinkAmount(insc, reservaPagadaAhora()),
         currency:     insc.selectedCurrencyAlias === 'we_currency_usd' ? 'USD' : 'PEN',
         payment_type: insc.token_payment_type || null,
         cat_payment_channel: insc.cat_payment_channel || null,

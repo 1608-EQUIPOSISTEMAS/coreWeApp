@@ -54,6 +54,10 @@ describe('tokenLinkAmount', () => {
   it('al contado cobra el total', () => {
     expect(tokenLinkAmount({ cat_type_payment: 'we_payment_way_single', total_amount: 330, montoOriginal: 950 })).toBe(330)
   })
+
+  it('con reserva aplazada cobra solo la parte inmediata', () => {
+    expect(tokenLinkAmount({ cat_type_payment: 'we_payment_way_installments', saved_money: 200, total_amount: 520 }, 80)).toBe(80)
+  })
 })
 
 describe('missingTokenAmountMessage', () => {
