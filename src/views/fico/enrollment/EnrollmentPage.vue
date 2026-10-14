@@ -68,10 +68,17 @@
     </section>
 
     <!-- Split: table + panel (panel slides in only on row selection) -->
-    <div class="ep-split" :class="{ 'has-panel': list.viewMode.value === 'compact' && !!list.selectedEnrollment.value }">
+    <div class="ep-split" :class="{ 'has-panel': showSidePanel }">
       <div class="ep-split-main">
+        <EnrollmentMovementsTable
+          v-if="list.movementsMode.value"
+          :movements="list.movements.value"
+          :totals="list.movementTotals.value"
+          :is-loading="list.isLoading.value"
+        />
+
         <EnrollmentCompactTable
-          v-if="list.viewMode.value === 'compact'"
+          v-else-if="list.viewMode.value === 'compact'"
           :enrollments="list.filteredEnrollments.value"
           :col-filters="list.colFilters"
           :unique-agents="list.uniqueAgents.value"
@@ -84,7 +91,7 @@
         />
 
         <EnrollmentExpandedTable
-          v-if="list.viewMode.value === 'expanded'"
+          v-else-if="list.viewMode.value === 'expanded'"
           :enrollments="list.filteredEnrollments.value"
           :col-filters="list.colFilters"
           :is-loading="list.isLoading.value"
@@ -95,7 +102,7 @@
 
       <transition name="ep-panel-slide">
         <EnrollmentSidePanel
-          v-if="list.viewMode.value === 'compact' && list.selectedEnrollment.value"
+          v-if="showSidePanel"
           :enrollment="list.selectedEnrollment.value"
           @close="list.clearSelection"
           @view-full="goToFullDetail"
@@ -133,6 +140,7 @@ import { buildDailyKpis } from '@/entities/enrollment/dailyKpis.js'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import EnrollmentCompactTable from './EnrollmentCompactTable.vue'
+import EnrollmentMovementsTable from './EnrollmentMovementsTable.vue'
 import EnrollmentExpandedTable from './EnrollmentExpandedTable.vue'
 import EnrollmentFilterModal from './EnrollmentFilterModal.vue'
 import EnrollmentSidePanel from './EnrollmentSidePanel.vue'
@@ -210,12 +218,21 @@ watch(() => list.pagin.value.page, syncFiltersToUrl)
 
 const kpis = computed(() => buildDailyKpis(list.kpisDaily.value.today, list.kpisDaily.value.yesterday))
 
+// El panel lateral es de una VENTA: en la vista de movimientos (un pago por
+// fila) la fila abre el detalle completo y el panel no aplica.
+const showSidePanel = computed(() =>
+  !list.movementsMode.value && list.viewMode.value === 'compact' && !!list.selectedEnrollment.value
+)
+
 const subtitle = computed(() => {
   const total = list.pagin.value.total
   if (!total) return 'Revisa, aprueba y cobra las ventas del día'
-  const base = `${formatValue(total, 'num')} inscripciones con estos filtros`
-  const cobrado = list.paidInRange.value
-  return cobrado === null ? base : `${base} · ${formatValue(cobrado, 'monto')} cobrados en F. pago`
+  if (!list.movementsMode.value) return `${formatValue(total, 'num')} inscripciones con estos filtros`
+  // Lo que se cuadra contra el banco: el total cobrado por moneda del rango.
+  const cobrado = Object.entries(list.movementTotals.value)
+    .map(([currency, amount]) => currency === 'USD' ? `$ ${amount.toFixed(2)}` : formatValue(amount, 'monto'))
+    .join(' + ')
+  return `${formatValue(total, 'num')} pagos en F. pago · ${cobrado} cobrados`
 })
 
 function goToFullDetail (e) {

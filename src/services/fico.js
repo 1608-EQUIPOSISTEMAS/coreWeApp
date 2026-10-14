@@ -29,6 +29,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Un pago por fila (inicial, cuota, adicional) cobrado en el rango F. pago.
+  async paymentMovements(from, to) {
+    const response = (await api.get('/fico/paymentmovements', { params: { from, to } })).data;
+    return response.data;
+  }
+
   async getKpisDaily(today, yesterday) {
     const response = (await api.get('/fico/kpisdaily', { params: { today, yesterday } })).data;
     return response.data;

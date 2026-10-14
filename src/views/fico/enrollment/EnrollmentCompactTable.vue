@@ -50,7 +50,6 @@
                 Pagado <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
-            <th v-if="showCobrado" class="num" style="width:100px" title="Inicial y cuotas pagadas dentro del rango F. pago">Cobrado en F. pago</th>
             <th class="num" style="width:90px">
               <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('saldoMin') }" :aria-expanded="colToggles.isOpen('saldoMin')" :title="colToggles.isOpen('saldoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('saldoMin')">
                 Saldo <i class="fa-solid fa-filter" aria-hidden="true"></i>
@@ -79,7 +78,6 @@
             <th><template v-if="colToggles.isOpen('montoMin')"><input :value="colFilters.montoMin" @input="setFilter('montoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Monto neto mínimo" /></template></th>
             <th><template v-if="colToggles.isOpen('inicialMin')"><input :value="colFilters.inicialMin" @input="setFilter('inicialMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Inicial mínima" /></template></th>
             <th><template v-if="colToggles.isOpen('pagadoMin')"><input :value="colFilters.pagadoMin" @input="setFilter('pagadoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Pagado mínimo" /></template></th>
-            <th v-if="showCobrado"></th>
             <th><template v-if="colToggles.isOpen('saldoMin')"><input :value="colFilters.saldoMin" @input="setFilter('saldoMin', $event.target.value)" type="number" min="0" class="ect-filter num" placeholder="&ge; 0" aria-label="Saldo mínimo" /></template></th>
             <th><template v-if="colToggles.isOpen('estado')"><ColumnFilterDropdown column-label="Estado FICO" :all-items="enrollments" :value-extractor="e => e.confirmation || 'Pendiente'" :fixed-options="['Aprobado', 'Pendiente Revisar', 'Pendiente']" :model-value="colFilters.estado" @update:model-value="v => setFilter('estado', v)" /></template></th>
           </tr>
@@ -87,11 +85,11 @@
         <tbody>
           <template v-if="isLoading">
             <tr v-for="n in 10" :key="'sk-' + n">
-              <td :colspan="columnCount"><span class="ds-skel"></span></td>
+              <td colspan="12"><span class="ds-skel"></span></td>
             </tr>
           </template>
           <tr v-else-if="!enrollments.length">
-            <td :colspan="columnCount" class="ds-empty ds-empty--lista">
+            <td colspan="12" class="ds-empty ds-empty--lista">
               No hay inscripciones con estos filtros. Quita un filtro o limpia los de columna para ver más.
             </td>
           </tr>
@@ -140,9 +138,6 @@
                 {{ fmt.isContado(e) ? '—' : 'S/. ' + fmt.formatMoney(fmt.getReserva(e)) }}
               </td>
               <td class="num mono is-ok">S/. {{ fmt.formatMoney(fmt.getPagado(e)) }}</td>
-              <td v-if="showCobrado" class="num mono" :class="e.paid_in_range != null ? 'ect-strong' : 'is-muted'">
-                {{ e.paid_in_range != null ? 'S/. ' + fmt.formatMoney(e.paid_in_range) : '—' }}
-              </td>
               <td class="num mono" :class="!fmt.isContado(e) && fmt.calcSaldo(e) > 0 ? 'is-bad' : 'is-muted'">
                 {{ fmt.isContado(e) ? '—' : 'S/. ' + fmt.formatMoney(fmt.calcSaldo(e)) }}
               </td>
@@ -158,7 +153,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
@@ -181,10 +175,6 @@ const emit = defineEmits(['select-row', 'clear-col-filters', 'update-filter'])
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
 const colToggles = useColumnFilterToggles(props.colFilters)
-
-// paid_in_range solo viene con un rango F. pago puesto (sp_fico_enrollment_list).
-const showCobrado = computed(() => props.enrollments.some(e => e.paid_in_range != null))
-const columnCount = computed(() => showCobrado.value ? 13 : 12)
 
 // Los filtros son del composable de la pagina (useEnrollmentList.colFilters): la
 // tabla no los muta, avisa el cambio y la pagina lo aplica.

@@ -245,14 +245,22 @@ export function useEnrollmentList () {
   })
   watch(() => filters.payment_range_string, (v) => { colFilters.fPago = v || '' }, { immediate: true })
 
-  // Lo cobrado en el rango F.PAGO (inicial + cuotas, ver sp_fico_enrollment_list)
-  // es la cifra que FICO cuadra contra el banco. null = sin rango puesto.
-  // ponytail: suma solo la pagina cargada; con 500 filas cubre un dia, si no
-  // alcanza va un SUM en el SP.
-  const paidInRange = computed(() => {
-    const rows = filteredEnrollments.value.filter(e => e.paid_in_range != null)
-    return rows.length ? rows.reduce((s, e) => s + Number(e.paid_in_range), 0) : null
-  })
+  // Con un rango F. pago el listado deja de ser de ventas y pasa a ser de
+  // MOVIMIENTOS (un pago por fila, formato "Ingresos operativos"): es lo que FICO
+  // cuadra contra el banco. Una venta en cuotas no se repite completa en cada dia
+  // que paga; solo aparece el pago de ese dia.
+  const movements = ref([])
+  const movementsMode = computed(() => !!filters.payment_from)
+  const movementTotals = computed(() => movements.value.reduce((acc, m) => {
+    acc[m.currency] = (acc[m.currency] || 0) + m.amount
+    return acc
+  }, {}))
+
+  async function fetchMovements () {
+    const { payment_from: from, payment_to: to } = filters
+    movements.value = await ficoService.paymentMovements(from, to || from)
+    pagin.value.total = movements.value.length
+  }
 
   const uniqueAgents = computed(() => [...new Set(enrollments.value.map(e => e.seller_agent_name).filter(Boolean))].sort())
   const uniqueEstados = computed(() => [...new Set(enrollments.value.map(e => e.confirmation || 'Pendiente').filter(Boolean))].sort())
@@ -296,6 +304,11 @@ export function useEnrollmentList () {
   async function fetchEnrollments () {
     isLoading.value = true
     try {
+      if (movementsMode.value) {
+        await fetchMovements()
+        rebuildChips()
+        return
+      }
       const params = { page: pagin.value.page, size: pagin.value.size }
       if (filters.q) params.q = filters.q
       if (filters.order_by) params.order_by = filters.order_by
@@ -328,6 +341,7 @@ export function useEnrollmentList () {
     } catch (err) {
       console.error(err)
       enrollments.value = []
+      movements.value = []
     } finally {
       isLoading.value = false
     }
@@ -532,7 +546,8 @@ export function useEnrollmentList () {
     filtroStatus, filtroTiposPrograma, filtroModalidad, filtroPaymentChannel,
     filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
-    colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments, paidInRange,
+    colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
+    movements, movementsMode, movementTotals,
     fetchEnrollments, forceRefresh, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,
