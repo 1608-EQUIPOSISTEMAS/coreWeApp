@@ -199,6 +199,8 @@ export function useEnrollmentList () {
 
   function clearColFilters () {
     Object.assign(colFilters, emptyColFilters())
+    filters.payment_range_string = null
+    handleDateChange(null, 'payment')
     filters.q = ''
     pagin.value.page = 1
     fetchEnrollments()
@@ -228,6 +230,30 @@ export function useEnrollmentList () {
     fetchEnrollments()
   })
 
+  // F. pago de la columna es el MISMO filtro server-side del modal (chip
+  // "F.Pago"): filtrar solo la pagina cargada dejaba fuera las cuotas, que el SP
+  // encuentra en payments. Los dos watches mantienen ambos lados iguales; el
+  // guard de igualdad corta el rebote y evita el doble fetch.
+  watch(() => colFilters.fPago, (v) => {
+    const range = v?.trim() || null
+    if (range === (filters.payment_range_string || null)) return
+    filters.payment_range_string = range
+    handleDateChange(range, 'payment')
+    pagin.value.page = 1
+    saveState()
+    fetchEnrollments()
+  })
+  watch(() => filters.payment_range_string, (v) => { colFilters.fPago = v || '' }, { immediate: true })
+
+  // Lo cobrado en el rango F.PAGO (inicial + cuotas, ver sp_fico_enrollment_list)
+  // es la cifra que FICO cuadra contra el banco. null = sin rango puesto.
+  // ponytail: suma solo la pagina cargada; con 500 filas cubre un dia, si no
+  // alcanza va un SUM en el SP.
+  const paidInRange = computed(() => {
+    const rows = filteredEnrollments.value.filter(e => e.paid_in_range != null)
+    return rows.length ? rows.reduce((s, e) => s + Number(e.paid_in_range), 0) : null
+  })
+
   const uniqueAgents = computed(() => [...new Set(enrollments.value.map(e => e.seller_agent_name).filter(Boolean))].sort())
   const uniqueEstados = computed(() => [...new Set(enrollments.value.map(e => e.confirmation || 'Pendiente').filter(Boolean))].sort())
 
@@ -246,7 +272,6 @@ export function useEnrollmentList () {
     let list = enrollments.value
     if (colFilters.agente.length) list = list.filter(e => colFilters.agente.includes(e.seller_agent_name || '(Vacío)'))
     if (colFilters.fRegistro?.trim()) list = list.filter(e => inDateRange(e.registration_date, colFilters.fRegistro))
-    if (colFilters.fPago?.trim()) list = list.filter(e => inDateRange(e.pay_date, colFilters.fPago))
     if (colFilters.tipoPago.length) {
       list = list.filter(e => {
         const tipo = (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'
@@ -507,7 +532,7 @@ export function useEnrollmentList () {
     filtroStatus, filtroTiposPrograma, filtroModalidad, filtroPaymentChannel,
     filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
-    colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
+    colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments, paidInRange,
     fetchEnrollments, forceRefresh, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,

@@ -25,6 +25,7 @@ function emptyColFilters () {
   return {
     razon: '',
     documento: '',
+    pais: [],
     sector: [],
     clasificacion: [],
     tipo: [],
@@ -84,6 +85,7 @@ export function useCompanyList () {
     if (colFilters.documento.trim()) list = matchText(list, colFilters.documento, c => c.document_number)
     if (colFilters.contacto.trim()) list = matchText(list, colFilters.contacto, c => `${c.primary_contact_name || ''} ${c.primary_contact_email || ''}`)
 
+    if (colFilters.pais.length) list = list.filter(c => colFilters.pais.includes(c.country))
     if (colFilters.sector.length) list = list.filter(c => colFilters.sector.includes(sectorLabel(c.cat_sector) || '(Sin clasificar)'))
     if (colFilters.clasificacion.length) list = list.filter(c => colFilters.clasificacion.includes(classificationLabel(c.cat_classification) || '(Sin clasificar)'))
     if (colFilters.tipo.length) list = list.filter(c => colFilters.tipo.includes(tipoLabel(c)))
@@ -134,6 +136,7 @@ export function useCompanyList () {
     if (colFilters.razon) chips.push({ key: 'razon', label: `Razón social: ${colFilters.razon}` })
     if (colFilters.documento) chips.push({ key: 'documento', label: `RUC: ${colFilters.documento}` })
     if (colFilters.contacto) chips.push({ key: 'contacto', label: `Contacto: ${colFilters.contacto}` })
+    if (colFilters.pais.length) chips.push({ key: 'pais', label: `País (${colFilters.pais.length})`, details: colFilters.pais })
     if (colFilters.sector.length) chips.push({ key: 'sector', label: `Sector (${colFilters.sector.length})`, details: colFilters.sector })
     if (colFilters.clasificacion.length) chips.push({ key: 'clasificacion', label: `Clasificación (${colFilters.clasificacion.length})`, details: colFilters.clasificacion })
     if (colFilters.tipo.length) chips.push({ key: 'tipo', label: `Tipo (${colFilters.tipo.length})`, details: colFilters.tipo })

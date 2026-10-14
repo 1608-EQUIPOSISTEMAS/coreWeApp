@@ -53,15 +53,31 @@
               </div>
 
               <div class="ds-field">
-                <label class="ds-label" for="cf-doc">RUC / nro. documento<span class="ds-req">*</span></label>
+                <label class="ds-label" for="cf-country">País<span class="ds-req">*</span></label>
+                <input
+                  id="cf-country"
+                  v-model.trim="form.country"
+                  type="text"
+                  class="ds-input"
+                  list="cf-country-list"
+                  v-restrict="'max:60'"
+                  required
+                />
+                <datalist id="cf-country-list">
+                  <option v-for="p in COUNTRIES" :key="p" :value="p" />
+                </datalist>
+              </div>
+
+              <div class="ds-field">
+                <label class="ds-label" for="cf-doc">RUC / nro. documento<span v-if="isPeru" class="ds-req">*</span></label>
                 <input
                   id="cf-doc"
                   v-model.trim="form.document_number"
                   type="text"
                   class="ds-input cf-mono"
-                  placeholder="20XXXXXXXXX"
+                  :placeholder="isPeru ? '20XXXXXXXXX' : 'Opcional fuera de Perú'"
                   v-restrict="'max:20'"
-                  required
+                  :required="isPeru"
                 />
               </div>
 
@@ -243,6 +259,11 @@ import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'
 import SearchSelect from '@/components/SearchSelect.vue'
 import { ServiceKeys } from '@/services'
 
+// Paises de los convenios (Sheet de empresas aliadas: Empresas, GOINTEGRO, BONDA).
+// Es sugerencia, no lista cerrada: el campo acepta cualquier pais.
+const PERU = 'Perú'
+const COUNTRIES = [PERU, 'Argentina', 'Brasil', 'Chile', 'Colombia', 'Ecuador', 'México', 'Uruguay']
+
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -270,6 +291,7 @@ const form = reactive({
   razon_social: '',
   razon_comercial: '',
   document_number: '',
+  country: PERU,
   is_intermediary: false,
   cat_sector: null,
   cat_classification: null,
@@ -278,10 +300,15 @@ const form = reactive({
 })
 
 // Validación
+// Una extranjera (convenios BONDA: Argentina, México...) no tiene RUC peruano;
+// el SP aplica la misma regla.
+const isPeru = computed(() => form.country === PERU)
+
 const isValid = computed(() => {
   return (
     !!form.razon_social &&
-    !!form.document_number &&
+    !!form.country &&
+    (!isPeru.value || !!form.document_number) &&
     form.contacts.every(c => !!c.contact_name)
   )
 })
@@ -330,6 +357,7 @@ async function loadData(id) {
     form.razon_social = data.razon_social || ''
     form.razon_comercial = data.commercial_name || ''
     form.document_number = data.document_number || ''
+    form.country = data.country || PERU
     form.is_intermediary = data.is_intermediary === 'Y'
     form.cat_sector = data.cat_sector ?? null
     form.cat_classification = data.cat_classification ?? null
@@ -372,6 +400,7 @@ async function guardar() {
         razon_social: form.razon_social,
         razon_comercial: form.razon_comercial || null,
         document_number: form.document_number,
+        country: form.country,
         is_intermediary: form.is_intermediary ? 'Y' : 'N',
         cat_sector: form.cat_sector || null,
         cat_classification: form.cat_classification || null,

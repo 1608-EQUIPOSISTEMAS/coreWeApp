@@ -212,7 +212,10 @@ const kpis = computed(() => buildDailyKpis(list.kpisDaily.value.today, list.kpis
 
 const subtitle = computed(() => {
   const total = list.pagin.value.total
-  return total ? `${formatValue(total, 'num')} inscripciones con estos filtros` : 'Revisa, aprueba y cobra las ventas del día'
+  if (!total) return 'Revisa, aprueba y cobra las ventas del día'
+  const base = `${formatValue(total, 'num')} inscripciones con estos filtros`
+  const cobrado = list.paidInRange.value
+  return cobrado === null ? base : `${base} · ${formatValue(cobrado, 'monto')} cobrados en F. pago`
 })
 
 function goToFullDetail (e) {
