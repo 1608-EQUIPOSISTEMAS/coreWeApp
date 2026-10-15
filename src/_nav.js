@@ -381,6 +381,33 @@ export default [
     module: 'CONFIGURACION',
   },
   {
+    // Importar hojas y conciliarlas contra el sistema. Cada item es un permiso
+    // distinto en la matriz (importar escribe datos, conciliar solo lee): fuera
+    // de ADMIN, se otorgan en Configuracion > Roles y Permisos.
+    component: 'CNavGroup',
+    name: 'Importación',
+    to: '/importacion',
+    icon: 'cil-spreadsheet',
+    module: 'IMPORTACION',
+    roles: ['ADMIN'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Importar hoja',
+        to: '/importacion/carga',
+        submodule: 'CARGA',
+        roles: ['ADMIN'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Conciliación',
+        to: '/importacion/conciliacion',
+        submodule: 'CONCILIACION',
+        roles: ['ADMIN'],
+      },
+    ],
+  },
+  {
     component: 'CNavGroup',
     name: 'Configuración',
     to: '/configuracion',
@@ -400,13 +427,6 @@ export default [
         name: 'Roles y Permisos',
         to: '/configuracion/roles',
         submodule: 'ROLES',
-        roles: ['ADMIN'],
-      },
-      {
-        component: 'CNavItem',
-        name: 'Importación',
-        to: '/configuracion/importacion',
-        submodule: 'IMPORTACION',
         roles: ['ADMIN'],
       },
       {

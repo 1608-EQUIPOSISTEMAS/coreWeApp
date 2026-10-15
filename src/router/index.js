@@ -569,6 +569,33 @@ const routes = [
     },
 
     // =====================
+    // IMPORTACION: importar hojas y conciliarlas contra el sistema
+    // =====================
+    // Cada hoja es un permiso distinto de la matriz (importar escribe datos,
+    // conciliar solo lee). ADMIN por rol; el resto, por submodulo.
+    {
+      path: 'importacion',
+      name: 'Importacion',
+      component: RouterViewStub,
+      redirect: { name: 'ImportarHoja' },
+      meta: { module: 'IMPORTACION', roles: ['ADMIN'] },
+      children: [
+        {
+          path: 'carga',
+          name: 'ImportarHoja',
+          component: () => import('@/views/importacion/ImportarHoja.vue'),
+          meta: { submodule: 'CARGA', roles: ['ADMIN'] },
+        },
+        {
+          path: 'conciliacion',
+          name: 'Conciliacion',
+          component: () => import('@/views/importacion/Conciliacion.vue'),
+          meta: { submodule: 'CONCILIACION', roles: ['ADMIN'] },
+        },
+      ],
+    },
+
+    // =====================
     // CONFIGURACION (solo ADMIN)
     // =====================
     {
@@ -590,12 +617,9 @@ const routes = [
           component: () => import('@/views/configuracion/RolesPermisos.vue'),
           meta: { submodule: 'ROLES', roles: ['ADMIN'] },
         },
-        {
-          path: 'importacion',
-          name: 'ConfigImportacion',
-          component: () => import('@/views/configuracion/Importacion.vue'),
-          meta: { submodule: 'IMPORTACION', roles: ['ADMIN'] },
-        },
+        // Importacion se mudo a su propio modulo (/importacion). Se deja la
+        // redireccion para los enlaces guardados.
+        { path: 'importacion', redirect: { name: 'ImportarHoja' } },
         {
           path: 'membresia-cursos',
           name: 'ConfigMembresiaCursos',
