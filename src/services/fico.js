@@ -200,6 +200,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Socios de membresia con vencimiento y estado: { today, items, kpis }.
+  async getMembershipExpiries() {
+    const response = (await api.get('/fico/membresias/vencimientos')).data;
+    return response.data;
+  }
+
   // Informe FICO: metas de cobranza del area en el rango { date_start, date_end }.
   async reporte(period) {
     const response = (await api.post('/fico/reporte', period)).data;

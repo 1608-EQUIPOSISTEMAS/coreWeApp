@@ -21,6 +21,7 @@ import TicketsAlumnosService from './ticketsAlumnos.service'
 import SchedulePlanService from './schedulePlan.service'
 import TicketsService from './tickets.service'
 import PlanComercialService from './planComercial.service'
+import PrediccionService from './prediccion.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -47,7 +48,8 @@ Notification: Symbol('NotificationService'),
   TicketsAlumnos: Symbol('TicketsAlumnosService'),
   SchedulePlan: Symbol('SchedulePlanService'),
   Tickets: Symbol('TicketsService'),
-  PlanComercial: Symbol('PlanComercialService')
+  PlanComercial: Symbol('PlanComercialService'),
+  Prediccion: Symbol('PrediccionService')
 }
 
 export function createServices() {
@@ -72,6 +74,7 @@ export function createServices() {
     [ServiceKeys.TicketsAlumnos]: new TicketsAlumnosService(api),
     [ServiceKeys.SchedulePlan]: new SchedulePlanService(api),
     [ServiceKeys.Tickets]: new TicketsService(api),
-    [ServiceKeys.PlanComercial]: new PlanComercialService(api)
+    [ServiceKeys.PlanComercial]: new PlanComercialService(api),
+    [ServiceKeys.Prediccion]: new PrediccionService(api)
   }
 }
