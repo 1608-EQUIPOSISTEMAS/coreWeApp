@@ -7,6 +7,8 @@
 // la 78 con el limite de 5 min. timeout: 0 = SIN limite en axios: la importacion
 // corre hasta terminar (es una operacion manual de admin, no una request normal).
 const BULK_TIMEOUT_MS = 0
+// La conciliacion solo lee (no corre fila a fila): 2 minutos sobran.
+const RECONCILE_TIMEOUT_MS = 120000
 
 export default class ImportService {
   constructor (api) {
@@ -63,6 +65,14 @@ export default class ImportService {
   async commitUrl (entity, url, jobId) {
     const res = await this.api.post(`/import/${entity}/commit-url`, { url, jobId }, { timeout: BULK_TIMEOUT_MS })
     return res.data?.data ?? { results: [], summary: {} }
+  }
+
+  // Conciliacion hojas FICO <-> sistema (solo lectura): devuelve solo las filas
+  // con diferencias. urls = hojas del mismo programa, una por año; si una fila se
+  // repite, manda la ultima. Lee las hojas y la BD: unos segundos por hoja.
+  async reconcile (urls) {
+    const res = await this.api.post('/import/reconciliation', { urls }, { timeout: RECONCILE_TIMEOUT_MS })
+    return res.data?.data ?? null
   }
 }
 
