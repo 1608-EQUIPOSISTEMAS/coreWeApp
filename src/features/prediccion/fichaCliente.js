@@ -19,6 +19,7 @@ export function whatsappUrl (phoneKey, text) {
 }
 
 export function statusOf (resumen) {
+  if (!resumen.ultima_fecha) return { label: 'Número nuevo', tone: 'info', icon: 'fa-user-plus' }
   return resumen.es_cliente
     ? { label: 'Cliente', tone: 'ok', icon: 'fa-user-check' }
     : { label: 'Prospecto', tone: 'info', icon: 'fa-user-clock' }

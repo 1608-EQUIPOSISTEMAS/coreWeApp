@@ -17,8 +17,9 @@ describe('fichaCliente', () => {
     expect(toDayMonthYear('2026-01-01')).toBe('01/01/2026')
   })
 
-  it('sin compras es prospecto', () => {
+  it('sin compras es prospecto; sin ningun evento es numero nuevo', () => {
     expect(statusOf(resumen({ es_cliente: false, compras: 0 })).label).toBe('Prospecto')
+    expect(statusOf(resumen({ es_cliente: false, compras: 0, consultas: 0, ultima_fecha: null })).label).toBe('Número nuevo')
   })
 
   it('el titular dice desde cuando y hace cuanto', () => {

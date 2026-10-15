@@ -42,11 +42,18 @@
       </p>
     </section>
 
-    <section v-else-if="ficha && !ficha.historial.length" class="ds-panel">
-      <p class="ds-empty ds-empty--lista">
-        El {{ ficha.phone_key }} no tiene consultas ni compras registradas. Revisa el número o regístralo como consulta nueva.
-      </p>
-    </section>
+    <template v-else-if="ficha && !ficha.historial.length">
+      <div class="verdict-row">
+        <p class="ds-verdict ok">
+          <strong>Número nuevo</strong>
+          <span>Nunca consultó ni compró. Elige abajo qué está pidiendo: lo que hicieron los nuevos que preguntaron lo mismo te dice cómo cerrarlo.</span>
+        </p>
+        <router-link class="btn-exec btn-exec-primary" :to="{ name: 'ComercialLeadsNew', query: { telefono: ficha.phone_key } }">
+          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Registrar consulta
+        </router-link>
+      </div>
+      <ManualPrograma :phone-key="ficha.phone_key" />
+    </template>
 
     <template v-else-if="ficha">
       <div v-if="veredicto" class="verdict-row">
@@ -69,6 +76,8 @@
           </div>
         </div>
       </section>
+
+      <ManualPrograma :phone-key="ficha.phone_key" :default-program-id="ultimoProgramaConsultado" />
 
       <div class="ds-row ds-row--mitad">
         <article class="ds-panel">
@@ -148,6 +157,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import { formatValue } from '@/shared/lib/formatValue'
 import { statusOf, headline, buildKpis, timelineRow, outlookVerdict, offerView } from '@/features/prediccion/fichaCliente'
+import ManualPrograma from './ficha/ManualPrograma.vue'
 
 const LIMITE = 10
 
@@ -189,13 +199,15 @@ watch(() => route.query.tel, (tel) => {
   cargar(telefono.value)
 }, { immediate: true })
 
-const estado = computed(() => (ficha.value?.historial.length ? statusOf(ficha.value.resumen) : null))
+const estado = computed(() => (ficha.value ? statusOf(ficha.value.resumen) : null))
 const subtitulo = computed(() => {
   if (!ficha.value) return 'Qué consultó, qué compró y qué ofrecerle, por número de celular.'
   return `${ficha.value.phone_key} · ${headline(ficha.value.resumen)}`
 })
 const kpis = computed(() => buildKpis(ficha.value.resumen, ficha.value.historial))
 const veredicto = computed(() => outlookVerdict(ficha.value.pronostico))
+const ultimoProgramaConsultado = computed(() =>
+  ficha.value.historial.find((e) => e.event_type === 'CONSULTA' && e.program_id)?.program_id ?? null)
 // `?? []`: en un deploy el frontend nuevo puede hablar un rato con el backend viejo.
 const ofertas = computed(() => (ficha.value.ofertas ?? []).map((o) => offerView(o, ficha.value.phone_key)))
 const filas = computed(() => ficha.value.historial.map(timelineRow))

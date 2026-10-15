@@ -2779,6 +2779,8 @@ watch(() => insc.cat_type_document, (newVal) => {
     form.client_status   = 'we_client_person'
     form.key_word_alias = 'we_key_word_null'
     form.active = true
+    // Desde la Ficha del cliente (numero nuevo): el celular ya viene escrito.
+    if (route.query.telefono) form.telefono = String(route.query.telefono)
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
     // form.category_alias = 'we_program_type_course'
     // onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))
