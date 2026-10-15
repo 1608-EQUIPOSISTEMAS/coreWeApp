@@ -199,6 +199,8 @@ export function useEnrollmentList () {
 
   function clearColFilters () {
     Object.assign(colFilters, emptyColFilters())
+    filters.payment_range_string = null
+    handleDateChange(null, 'payment')
     filters.q = ''
     pagin.value.page = 1
     fetchEnrollments()
@@ -228,6 +230,38 @@ export function useEnrollmentList () {
     fetchEnrollments()
   })
 
+  // F. pago de la columna es el MISMO filtro server-side del modal (chip
+  // "F.Pago"): filtrar solo la pagina cargada dejaba fuera las cuotas, que el SP
+  // encuentra en payments. Los dos watches mantienen ambos lados iguales; el
+  // guard de igualdad corta el rebote y evita el doble fetch.
+  watch(() => colFilters.fPago, (v) => {
+    const range = v?.trim() || null
+    if (range === (filters.payment_range_string || null)) return
+    filters.payment_range_string = range
+    handleDateChange(range, 'payment')
+    pagin.value.page = 1
+    saveState()
+    fetchEnrollments()
+  })
+  watch(() => filters.payment_range_string, (v) => { colFilters.fPago = v || '' }, { immediate: true })
+
+  // Con un rango F. pago el listado deja de ser de ventas y pasa a ser de
+  // MOVIMIENTOS (un pago por fila, formato "Ingresos operativos"): es lo que FICO
+  // cuadra contra el banco. Una venta en cuotas no se repite completa en cada dia
+  // que paga; solo aparece el pago de ese dia.
+  const movements = ref([])
+  const movementsMode = computed(() => !!filters.payment_from)
+  const movementTotals = computed(() => movements.value.reduce((acc, m) => {
+    acc[m.currency] = (acc[m.currency] || 0) + m.amount
+    return acc
+  }, {}))
+
+  async function fetchMovements () {
+    const { payment_from: from, payment_to: to } = filters
+    movements.value = await ficoService.paymentMovements(from, to || from)
+    pagin.value.total = movements.value.length
+  }
+
   const uniqueAgents = computed(() => [...new Set(enrollments.value.map(e => e.seller_agent_name).filter(Boolean))].sort())
   const uniqueEstados = computed(() => [...new Set(enrollments.value.map(e => e.confirmation || 'Pendiente').filter(Boolean))].sort())
 
@@ -246,7 +280,6 @@ export function useEnrollmentList () {
     let list = enrollments.value
     if (colFilters.agente.length) list = list.filter(e => colFilters.agente.includes(e.seller_agent_name || '(Vacío)'))
     if (colFilters.fRegistro?.trim()) list = list.filter(e => inDateRange(e.registration_date, colFilters.fRegistro))
-    if (colFilters.fPago?.trim()) list = list.filter(e => inDateRange(e.pay_date, colFilters.fPago))
     if (colFilters.tipoPago.length) {
       list = list.filter(e => {
         const tipo = (e.payment_type === 'PT') ? 'Al contado' : 'Cuotas'
@@ -271,6 +304,11 @@ export function useEnrollmentList () {
   async function fetchEnrollments () {
     isLoading.value = true
     try {
+      if (movementsMode.value) {
+        await fetchMovements()
+        rebuildChips()
+        return
+      }
       const params = { page: pagin.value.page, size: pagin.value.size }
       if (filters.q) params.q = filters.q
       if (filters.order_by) params.order_by = filters.order_by
@@ -303,6 +341,7 @@ export function useEnrollmentList () {
     } catch (err) {
       console.error(err)
       enrollments.value = []
+      movements.value = []
     } finally {
       isLoading.value = false
     }
@@ -508,6 +547,7 @@ export function useEnrollmentList () {
     filtroProgramas, filtroEdiciones, ensureFilterCatalogs,
     filtroOwners, activeFilterChips, filtroOrden,
     colFilters, clearColFilters, applyDraftFilters, uniqueAgents, uniqueEstados, filteredEnrollments,
+    movements, movementsMode, movementTotals,
     fetchEnrollments, forceRefresh, handlePaginationChange, openFilterModal, applyFilters,
     handleDateChange, clearFilter, clearFilters, loadOwners, goNew,
     selectedEnrollment, selectEnrollment, clearSelection,

@@ -9,6 +9,7 @@
           <th class="tc" style="width:84px">Acciones</th>
           <th>Razón social</th>
           <th style="width:130px">RUC / doc.</th>
+          <th style="width:120px">País</th>
           <th style="width:150px">Sector</th>
           <th style="width:140px">Clasificación</th>
           <th class="tc" style="width:120px">Tipo</th>
@@ -35,6 +36,14 @@
           </th>
           <th>
             <input v-model="colFilters.documento" class="ds-input ect-flt" placeholder="RUC..." aria-label="Filtrar por RUC o documento" />
+          </th>
+          <th>
+            <ColumnFilterDropdown
+              column-label="País"
+              :all-items="companies"
+              :value-extractor="c => c.country"
+              v-model="colFilters.pais"
+            />
           </th>
           <th>
             <ColumnFilterDropdown
@@ -73,7 +82,7 @@
       <tbody>
         <template v-if="isLoading">
           <tr v-for="n in 10" :key="'sk-' + n">
-            <td colspan="8"><span class="ds-skel"></span></td>
+            <td colspan="9"><span class="ds-skel"></span></td>
           </tr>
         </template>
 
@@ -103,6 +112,8 @@
             </td>
 
             <td class="mono">{{ c.document_number || '—' }}</td>
+
+            <td>{{ c.country }}</td>
 
             <td>
               <span v-if="sectorLabel(c.cat_sector)" class="ds-pill">{{ sectorLabel(c.cat_sector) }}</span>
@@ -152,7 +163,7 @@
           </tr>
 
           <tr v-if="!companies.length">
-            <td colspan="8" class="ds-empty ds-empty--lista">
+            <td colspan="9" class="ds-empty ds-empty--lista">
               No hay empresas con estos filtros. Límpialos con el borrador de la primera columna o cambia de vista.
             </td>
           </tr>

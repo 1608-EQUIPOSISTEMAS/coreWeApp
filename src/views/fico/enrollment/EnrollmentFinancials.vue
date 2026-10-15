@@ -555,6 +555,9 @@
           </div>
         </div>
 
+        <!-- .ds-panel recorta con overflow:hidden: en pantallas angostas la
+             columna de acciones (detraccion / confirmar) quedaba fuera de vista. -->
+        <div class="ef-table-scroll">
         <table class="ef-table">
           <thead>
             <tr>
@@ -569,7 +572,7 @@
               <th style="width:100px">N. Operacion</th>
               <th style="width:120px">Fecha Pago</th>
               <th class="tc" style="width:60px">Voucher</th>
-              <th class="tc" style="width:40px"></th>
+              <th class="tc ef-col-actions" style="width:40px"></th>
             </tr>
           </thead>
           <tbody>
@@ -636,7 +639,7 @@
                   <input type="file" accept="image/*,.pdf" class="ef-file-input" @change="e => uploadVoucher(e, c)" />
                 </label>
               </td>
-              <td class="tc">
+              <td class="tc ef-col-actions">
                 <button
                   v-if="canPayCuota(c)"
                   class="ef-btn-detraction"
@@ -708,6 +711,7 @@
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
     </div>
 
@@ -1422,6 +1426,12 @@ function needsEditionDecision (child) {
 /* Tabla de cuotas */
 .ef-cuotas-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .ef-toolbar-actions { display: inline-flex; align-items: center; gap: 8px; }
+.ef-table-scroll { overflow-x: auto; }
+/* Las cuotas pagadas muestran entidad y cuenta completas (nowrap) y ensanchan
+   la tabla: la columna de acciones queda fija para no tener que scrollear
+   hasta el confirmar. Hereda el fondo de la fila via los selectores de abajo. */
+.ef-table .ef-col-actions { position: sticky; right: 0; z-index: 1; white-space: nowrap; background: var(--ds-surface); box-shadow: -1px 0 0 var(--ds-border); }
+.ef-table thead th.ef-col-actions { background: var(--ds-surface-2); }
 .ef-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--ds-ink); }
 .ef-table thead th {
   padding: 9px 10px; border-bottom: 1px solid var(--ds-border); background: var(--ds-surface-2);
