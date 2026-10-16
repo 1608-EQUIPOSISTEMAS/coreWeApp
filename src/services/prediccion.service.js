@@ -23,8 +23,13 @@ export default class PrediccionService {
     return (await this.api.post('/prediccion/bandeja', userId ? { user_id: userId } : {})).data.data
   }
 
-  async registrarResultado (assignmentId, outcome, reason = null) {
-    return (await this.api.post('/prediccion/bandeja/resultado', { assignment_id: assignmentId, outcome, reason })).data.data
+  async registrarResultado (assignmentId, outcome) {
+    return (await this.api.post('/prediccion/bandeja/resultado', { assignment_id: assignmentId, outcome })).data.data
+  }
+
+  // Cadencia asistida: el asesor ya mando el WhatsApp del dia.
+  async marcarSeguimiento (followupId) {
+    return (await this.api.post('/prediccion/bandeja/seguimiento', { followup_id: followupId })).data.data
   }
 
   // Lideres: llamados contra grupo de control a 30 dias.

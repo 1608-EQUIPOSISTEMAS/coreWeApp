@@ -2781,6 +2781,8 @@ watch(() => insc.cat_type_document, (newVal) => {
     form.active = true
     // Desde la Ficha del cliente (numero nuevo): el celular ya viene escrito.
     if (route.query.telefono) form.telefono = String(route.query.telefono)
+    // La ficha manda lo que el asesor califico (quien paga, estudiante, cuando).
+    if (route.query.nota) form.observacion = String(route.query.nota)
     //{{form.category_alias}} we_program_type_course onProgramaTypeChange()
     // form.category_alias = 'we_program_type_course'
     // onProgramaTypeChange(programTypeCatalog.value.find(e => e.alias === form.category_alias))

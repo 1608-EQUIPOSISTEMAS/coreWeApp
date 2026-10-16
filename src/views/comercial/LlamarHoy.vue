@@ -3,7 +3,7 @@
     <header class="ds-head">
       <div class="ds-head-titles">
         <h1 class="ds-title">Llamar hoy</h1>
-        <p class="ds-sub">Clientes que volvieron a consultar y aún no compran. Se reparten a las 6:00; cada uno es tuyo por 14 días.</p>
+        <p class="ds-sub">Tus 20 mejores oportunidades del día, Alta primero. Cada una es tuya por 14 días; registra el resultado de cada llamada.</p>
       </div>
       <div class="ds-head-actions">
         <template v-if="esLider">
@@ -11,7 +11,7 @@
           <select id="bandeja-asesor" v-model.number="asesor" class="ds-input selector">
             <option :value="0">Mi bandeja</option>
             <option v-for="a in data?.asesores ?? []" :key="a.user_id" :value="a.user_id">
-              {{ displayName(a.alias) }} · {{ a.open }} por llamar
+              {{ displayName(a.alias) }} · {{ a.open }} abiertos
             </option>
           </select>
         </template>
@@ -24,7 +24,7 @@
     <p v-if="error" class="ds-alert">{{ error }}</p>
 
     <section v-if="loading && !data" class="ds-kpis" aria-busy="true">
-      <div v-for="n in 3" :key="n" class="ds-kpi"><span class="ds-skel"></span></div>
+      <div v-for="n in 4" :key="n" class="ds-kpi"><span class="ds-skel"></span></div>
     </section>
 
     <template v-else-if="data">
@@ -39,44 +39,46 @@
         </div>
       </section>
 
-      <section class="ds-panel">
+      <section v-if="!grupos.length" class="ds-panel">
+        <p class="ds-empty">No tienes llamadas pendientes hoy. La bandeja se arma a las 6:00; lo reprogramado ("Lo pienso", "No contesta") aparece el día que toca.</p>
+      </section>
+
+      <section v-for="g in grupos" :key="g.level" class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">
+            <span class="ds-pill" :class="g.tone"><i class="fa-solid" :class="g.icon" aria-hidden="true"></i> {{ g.label }}</span>
+            {{ g.rows.length }} por llamar
+          </h3>
+          <span class="ds-panel-hint">{{ g.hint }}</span>
+        </header>
         <div class="ds-panel-body">
           <div class="ds-table-scroll">
             <table class="ds-table ds-table--lista">
               <thead>
-                <tr><th>Cliente</th><th>Qué consultó</th><th class="num">Probabilidad</th><th>Plazo</th><th class="num">Cerrar la llamada</th></tr>
+                <tr><th>Cliente</th><th>Programa y por qué llamarlo</th><th class="num">Acciones</th></tr>
               </thead>
               <tbody>
-                <tr v-if="!filas.length">
-                  <td colspan="5" class="ds-empty ds-empty--lista">
-                    No hay clientes por llamar. La bandeja se arma a las 6:00 con clientes que volvieron a consultar.
-                  </td>
-                </tr>
-                <tr v-for="f in filas" :key="f.id">
+                <tr v-for="f in g.rows" :key="f.id">
                   <td>
                     <strong class="cliente">{{ f.cliente }}</strong>
+                    <span v-if="f.sinNombre" class="ds-pill warn">Pide su nombre primero</span>
                     <span class="acciones">
-                      <a class="btn-icon btn-icon-sm" :href="f.whatsapp" target="_blank" rel="noopener" :title="`Enviar propuesta por WhatsApp a ${f.telefono}`" :aria-label="`Enviar propuesta por WhatsApp a ${f.telefono}`">
+                      <a class="btn-icon btn-icon-sm" :href="f.whatsapp" target="_blank" rel="noopener" :title="`WhatsApp a ${f.telefono}`" :aria-label="`WhatsApp a ${f.telefono}`">
                         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
                       </a>
-                      <router-link class="btn-icon btn-icon-sm" :to="{ name: 'FichaCliente', query: { tel: f.telefono } }" title="Ver ficha y qué ofrecerle" aria-label="Ver ficha y qué ofrecerle">
-                        <i class="fa-solid fa-id-card" aria-hidden="true"></i>
-                      </router-link>
                       <span class="nota">{{ f.telefono }}</span>
                     </span>
                   </td>
                   <td>
-                    {{ f.programa }}
-                    <span v-if="f.repetida" class="ds-pill info">2+ consultas</span>
-                    <small class="nota">{{ f.consulta }}</small>
-                    <span class="ds-pill" :class="f.edicionTone"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> {{ f.edicion }}</span>
+                    {{ f.programa }} <span class="ds-pill" :class="f.tierTone">{{ f.tier }}</span>
+                    <span v-if="f.plazo" class="ds-pill warn">{{ f.plazo }}</span>
+                    <small class="nota">{{ f.porQue }}</small>
+                    <small v-if="f.antes" class="antes"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> {{ f.antes }}</small>
                   </td>
-                  <td class="num">
-                    <span class="prob" :class="f.probTone">{{ f.probabilidad }}</span>
-                    <span class="ds-pill" :class="f.tierTone">{{ f.tier }}</span>
-                  </td>
-                  <td><span class="ds-pill" :class="f.venceTone">{{ f.vence }}</span></td>
                   <td class="num cierre">
+                    <router-link class="btn-exec btn-exec-outline btn-sm" :to="f.ficha">
+                      <i class="fa-solid fa-id-card" aria-hidden="true"></i> Abrir ficha
+                    </router-link>
                     <router-link v-if="f.inscribir" class="btn-exec btn-exec-outline btn-sm" :to="f.inscribir">
                       <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Inscribir
                     </router-link>
@@ -87,11 +89,43 @@
                       :disabled="guardando === f.id"
                       @change="registrar(f, $event)"
                     >
-                      <option value="">Registrar…</option>
-                      <optgroup v-for="g in OUTCOME_GROUPS" :key="g.label" :label="g.label">
-                        <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
-                      </optgroup>
+                      <option value="">Registrar resultado…</option>
+                      <option v-for="o in OUTCOME_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="seguimientos.length" class="ds-panel">
+        <header class="ds-panel-head">
+          <h3 class="ds-panel-title">Mensajes de seguimiento de hoy</h3>
+          <span class="ds-panel-hint">Cadencia por WhatsApp (días 1, 3 y 7): el mensaje ya va escrito</span>
+        </header>
+        <div class="ds-panel-body">
+          <div class="ds-table-scroll">
+            <table class="ds-table ds-table--lista">
+              <thead>
+                <tr><th>Cliente</th><th>Programa</th><th>Paso</th><th class="num">Acciones</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in seguimientos" :key="s.id">
+                  <td><strong class="cliente">{{ s.cliente }}</strong><span class="nota">{{ s.telefono }}</span></td>
+                  <td>{{ s.programa }}<small class="nota">{{ s.motivo }}</small></td>
+                  <td>
+                    <span class="ds-pill info">{{ s.paso }}</span>
+                    <span v-if="s.atraso" class="ds-pill warn">{{ s.atraso }}</span>
+                  </td>
+                  <td class="num cierre">
+                    <a class="btn-exec btn-sm" :href="s.whatsapp" target="_blank" rel="noopener">
+                      <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar
+                    </a>
+                    <button type="button" class="btn-exec btn-exec-outline btn-sm" :disabled="marcando === s.id" @click="marcarEnviado(s)">
+                      <i class="fa-solid fa-check" aria-hidden="true"></i> Enviado
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -100,7 +134,7 @@
         </div>
         <footer class="ds-panel-foot">
           <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-          <span>Un cliente que vuelve a consultar compra algo en el mes el 4.4% de las veces (9% si consultó 2+ veces); un prospecto dormido, el 0.24%. Abre la ficha para ver qué ofrecerle; si dice que sí, "Inscribir" abre la venta con sus datos y la bandeja la cierra sola.</span>
+          <span>Si el cliente responde o vuelve a consultar, sube de nivel y entra a tu lista de llamadas; si compra, la cadencia se cancela sola.</span>
         </footer>
       </section>
 
@@ -114,7 +148,7 @@ import { ref, computed, watch, inject, getCurrentInstance } from 'vue'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { displayName } from '@/features/plan-comercial/planComercial'
-import { OUTCOME_GROUPS, parseOutcome, assignmentRow, buildKpis } from '@/features/prediccion/bandeja'
+import { OUTCOME_OPTIONS, OUTCOME_LABEL, assignmentRow, groupByLevel, followUpRow, buildKpis } from '@/features/prediccion/bandeja'
 import MedicionPanel from './llamar-hoy/MedicionPanel.vue'
 
 const service = inject(ServiceKeys.Prediccion)
@@ -128,6 +162,7 @@ const data = ref(null)
 const loading = ref(false)
 const error = ref('')
 const guardando = ref(null)
+const marcando = ref(null)
 const generando = ref(false)
 const medicionKey = ref(0)
 
@@ -146,12 +181,13 @@ async function cargar () {
 watch(asesor, cargar, { immediate: true })
 
 async function registrar (fila, event) {
-  if (!event.target.value) return
-  const { outcome, reason } = parseOutcome(event.target.value)
+  const outcome = event.target.value
+  if (!outcome) return
   guardando.value = fila.id
   try {
-    await service.registrarResultado(fila.id, outcome, reason)
-    toast.success(`${fila.cliente}: resultado guardado`)
+    const r = await service.registrarResultado(fila.id, outcome)
+    const siguiente = r.cerrado ? 'sale de tu lista' : r.cadencia ? 'pasa a la cadencia de WhatsApp' : 'vuelve el día que toca'
+    toast.success(`${fila.cliente}: ${OUTCOME_LABEL[outcome]}, ${siguiente}`)
     await cargar()
   } catch (err) {
     console.error('[LlamarHoy] resultado', { assignmentId: fila.id, outcome, err })
@@ -162,11 +198,24 @@ async function registrar (fila, event) {
   }
 }
 
+async function marcarEnviado (fila) {
+  marcando.value = fila.id
+  try {
+    await service.marcarSeguimiento(fila.id)
+    await cargar()
+  } catch (err) {
+    console.error('[LlamarHoy] seguimiento', { followupId: fila.id, err })
+    toast.error(err?.response?.data?.message || 'No se pudo marcar el mensaje como enviado.')
+  } finally {
+    marcando.value = null
+  }
+}
+
 async function generar () {
   generando.value = true
   try {
     const r = await service.generarBandeja()
-    toast.success(`Bandeja generada: ${r.asignados} clientes repartidos entre ${r.asesores} asesores y ${r.control} en el grupo de control`)
+    toast.success(`Bandeja generada: ${r.asignados} llamadas entre ${r.asesores} asesores, ${r.control} en control y ${r.cadencia} mensajes de cadencia`)
     medicionKey.value++
     await cargar()
   } catch (err) {
@@ -177,7 +226,8 @@ async function generar () {
   }
 }
 
-const filas = computed(() => (data.value?.abiertos ?? []).map((a) => assignmentRow(a, data.value.today)))
+const grupos = computed(() => groupByLevel((data.value?.abiertos ?? []).map((a) => assignmentRow(a, data.value.today))))
+const seguimientos = computed(() => (data.value?.seguimientos ?? []).map((f) => followUpRow(f, data.value.today)))
 const kpis = computed(() => buildKpis(data.value))
 </script>
 
@@ -185,15 +235,17 @@ const kpis = computed(() => buildKpis(data.value))
 .selector { width: 220px; }
 .cliente { display: block; color: var(--ds-heading); }
 .acciones { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
-.nota { display: block; font-size: 11px; color: var(--ds-muted); }
+.nota { display: block; font-size: 11.5px; color: var(--ds-muted); }
 .acciones .nota { display: inline; }
-.prob { display: block; font-size: 15px; font-weight: 800; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
-.prob.ok { color: var(--ds-ok-ink); }
+.antes { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ds-warn-ink); }
 .cierre { white-space: nowrap; }
 .cierre .btn-exec { margin-right: 6px; }
-.resultado { display: inline-block; width: 190px; }
+.resultado { display: inline-block; width: 210px; }
 
 @media (max-width: 600px) {
   .selector { width: 100%; }
+  .cierre { white-space: normal; }
+  .cierre .btn-exec { margin-bottom: 6px; }
+  .resultado { width: 100%; }
 }
 </style>

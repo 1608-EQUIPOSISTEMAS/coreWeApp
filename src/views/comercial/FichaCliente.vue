@@ -43,15 +43,10 @@
     </section>
 
     <template v-else-if="ficha && !ficha.historial.length">
-      <div class="verdict-row">
-        <p class="ds-verdict ok">
-          <strong>Número nuevo</strong>
-          <span>Nunca consultó ni compró. Elige abajo qué está pidiendo: lo que hicieron los nuevos que preguntaron lo mismo te dice cómo cerrarlo.</span>
-        </p>
-        <router-link class="btn-exec btn-exec-primary" :to="{ name: 'ComercialLeadsNew', query: { telefono: ficha.phone_key } }">
-          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Registrar consulta
-        </router-link>
-      </div>
+      <p class="ds-verdict ok">
+        <strong>Número nuevo</strong>
+        <span>Nunca consultó ni compró. Elige qué pide, califícalo y regístralo: con 1 consulta va a la cadencia de WhatsApp; si vuelve a escribir, sube a Llamar hoy.</span>
+      </p>
       <ManualPrograma :phone-key="ficha.phone_key" />
     </template>
 
@@ -59,6 +54,9 @@
       <div v-if="veredicto" class="verdict-row">
         <p class="ds-verdict" :class="veredicto.tone">
           <strong>{{ veredicto.title }}</strong>
+          <span v-if="veredicto.nivel" class="ds-pill" :class="veredicto.nivel.tone">
+            <i class="fa-solid" :class="veredicto.nivel.icon" aria-hidden="true"></i> Nivel {{ veredicto.nivel.label }}
+          </span>
           <span>{{ veredicto.text }}</span>
         </p>
         <router-link v-if="ficha.lead_id" class="btn-exec btn-exec-primary" :to="{ name: 'ComercialLeadsNew', query: { clone_from: ficha.lead_id } }">
@@ -77,7 +75,21 @@
         </div>
       </section>
 
-      <ManualPrograma :phone-key="ficha.phone_key" :default-program-id="ultimoProgramaConsultado" />
+      <section v-if="llamadas.length" class="ds-callout info ya-dijo" aria-label="Lo que ya dijo">
+        <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+        <div>
+          <strong>Lo que ya dijo (no se lo vuelvas a preguntar)</strong>
+          <ul>
+            <li v-for="c in llamadas" :key="c.key">{{ c.texto }} <small class="nota-inline">{{ c.detalle }}</small></li>
+          </ul>
+        </div>
+      </section>
+
+      <ManualPrograma
+        :phone-key="ficha.phone_key"
+        :default-program-id="ultimoProgramaConsultado"
+        :price-objection="saidTooExpensive(ficha.llamadas)"
+      />
 
       <div class="ds-row ds-row--mitad">
         <article class="ds-panel">
@@ -92,7 +104,6 @@
                   <strong class="sugerencia-programa">{{ o.programa }}</strong>
                   <span class="ds-pill" :class="o.origen.tone">{{ o.origen.label }}</span>
                   <span class="ds-pill" :class="o.tierTone">{{ o.tier }}</span>
-                  <span v-if="o.probabilidad" class="sugerencia-prob">{{ o.probabilidad }}</span>
                 </div>
                 <p class="sugerencia-razon">{{ o.razon }}</p>
                 <div class="sugerencia-cierre">
@@ -110,7 +121,7 @@
           </div>
           <footer class="ds-panel-foot">
             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            <span>Primero lo que pidió; después lo que compraron personas con su mismo historial (el % es lo que pasó con ellas). "Enviar propuesta" abre WhatsApp con fecha y precio, editable antes de enviar.</span>
+            <span>Primero lo que pidió; después lo que compraron personas con su mismo historial. "Enviar propuesta" abre WhatsApp con fecha y precio, editable antes de enviar.</span>
           </footer>
         </article>
 
@@ -156,7 +167,7 @@ import { ref, computed, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import { formatValue } from '@/shared/lib/formatValue'
-import { statusOf, headline, buildKpis, timelineRow, outlookVerdict, offerView } from '@/features/prediccion/fichaCliente'
+import { statusOf, headline, buildKpis, timelineRow, outlookVerdict, offerView, callRow, saidTooExpensive } from '@/features/prediccion/fichaCliente'
 import ManualPrograma from './ficha/ManualPrograma.vue'
 
 const LIMITE = 10
@@ -211,6 +222,7 @@ const ultimoProgramaConsultado = computed(() =>
 // `?? []`: en un deploy el frontend nuevo puede hablar un rato con el backend viejo.
 const ofertas = computed(() => (ficha.value.ofertas ?? []).map((o) => offerView(o, ficha.value.phone_key)))
 const filas = computed(() => ficha.value.historial.map(timelineRow))
+const llamadas = computed(() => (ficha.value.llamadas ?? []).map(callRow))
 const filasVisibles = computed(() => (verTodo.value ? filas.value : filas.value.slice(0, LIMITE)))
 </script>
 
@@ -224,11 +236,13 @@ const filasVisibles = computed(() => (verTodo.value ? filas.value : filas.value.
 .sugerencia:last-child { padding-bottom: 0; border-bottom: 0; }
 .sugerencia-head { display: flex; align-items: center; gap: 8px; }
 .sugerencia-programa { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ds-heading); }
-.sugerencia-prob { font-size: 18px; font-weight: 800; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
 .sugerencia-razon { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ds-ink-2); }
 .sugerencia-cierre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .sugerencia-cierre .btn-exec { margin-left: auto; }
 .precio { font-size: 12.5px; font-weight: 600; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
+
+.ya-dijo ul { margin: 4px 0 0; padding-left: 16px; }
+.nota-inline { font-size: 11px; color: var(--ds-muted); }
 
 .verdict-row { display: flex; align-items: stretch; gap: 12px; }
 .verdict-row .ds-verdict { flex: 1; margin: 0; }

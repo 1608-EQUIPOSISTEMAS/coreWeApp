@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toDayMonthYear, statusOf, headline, buildKpis, timelineRow, outlookVerdict, pitchText, offerView, whatsappUrl } from '../fichaCliente'
+import { toDayMonthYear, statusOf, headline, buildKpis, timelineRow, outlookVerdict, pitchText, offerView, whatsappUrl, callRow, saidTooExpensive } from '../fichaCliente'
 
 const resumen = (over = {}) => ({
   consultas: 4, compras: 1, monto_erp: 250, primera_fecha: '2021-11-13',
@@ -40,8 +40,11 @@ describe('fichaCliente', () => {
   })
 
   it('el cliente que volvio dice llamalo hoy con el mismo % de la bandeja', () => {
-    expect(outlookVerdict({ segment: 'VOLVIO', probability: 9, days: 59, inquiries: 2 }))
-      .toMatchObject({ tone: 'ok', title: 'Llámalo hoy', text: expect.stringContaining('9%') })
+    const v = outlookVerdict({ segment: 'VOLVIO', probability: 9, days: 59, inquiries: 2, level: 'ALTA', callable: true })
+    expect(v).toMatchObject({ tone: 'ok', title: 'Llámalo hoy', nivel: { label: 'Alta' }, text: expect.stringContaining('entra a Llamar hoy') })
+    // El asesor ve el nivel, nunca el %.
+    expect(v.text).not.toContain('%')
+    expect(outlookVerdict({ segment: 'CALIENTE', days: 1, inquiries: 1, level: 'BAJA', callable: false }).text).toContain('cadencia de WhatsApp')
     expect(outlookVerdict(null)).toBeNull()
   })
 
@@ -63,5 +66,12 @@ describe('fichaCliente', () => {
   it('la compra historica avisa que su fecha es la de certificacion', () => {
     const row = timelineRow({ event_type: 'COMPRA', event_date: '2025-07-04', date_kind: 'CERTIFICACION', source: 'LEGACY_ALUMNO', source_id: '1', program_name: null, user_name: null, amount: null })
     expect(row).toMatchObject({ tipo: 'Compra', fechaNota: 'certificación', origen: 'Histórico', programa: 'Sin programa registrado', monto: '—' })
+  })
+
+  it('lo que ya dijo en Llamar hoy, y si fue "caro"', () => {
+    const llamadas = [{ outcome: 'CARO', fecha: '2026-10-02', user_name: 'AE30', program_name: 'POWER BI' }]
+    expect(callRow(llamadas[0]).texto).toBe('Dijo que está caro el 02/10/2026')
+    expect(saidTooExpensive(llamadas)).toBe(true)
+    expect(saidTooExpensive([])).toBe(false)
   })
 })

@@ -32,17 +32,17 @@
         <p v-if="vista.trabajo" class="ds-callout" :class="vista.trabajoTone">
           <i class="fa-solid fa-headset" aria-hidden="true"></i><span>{{ vista.trabajo }}</span>
         </p>
-        <div v-if="vista.motivos.length" class="motivos">
-          <strong>¿Por qué no compran? (90 días)</strong>
+        <div v-if="vista.resultados.length" class="motivos">
+          <strong>¿Qué dicen los clientes? (90 días)</strong>
           <ul>
-            <li v-for="m in vista.motivos" :key="m.motivo"><span>{{ m.motivo }}</span><span class="num">{{ m.total }} · {{ m.pct }}</span></li>
+            <li v-for="m in vista.resultados" :key="m.resultado"><span>{{ m.resultado }}</span><span class="num">{{ m.total }} · {{ m.pct }}</span></li>
           </ul>
         </div>
       </template>
     </div>
     <footer class="ds-panel-foot">
       <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-      <span>"Vende más" solo aparece cuando la diferencia no se explica por azar (95%). Calibración: si quienes no se llamaron compran muy distinto a lo que dijimos, el % de la bandeja se corrige.</span>
+      <span>"Vende más" solo aparece cuando la diferencia no se explica por azar (95%). Calibración: si quienes no se llamaron compran muy distinto a lo que dijimos, el nivel de la bandeja se recalibra.</span>
     </footer>
   </section>
 </template>

@@ -31,35 +31,54 @@ export function headline (resumen) {
   return `${desde} · última interacción ${ago(resumen.dias_desde_ultima)} (${toDayMonthYear(resumen.ultima_fecha)})`
 }
 
-// El veredicto dice que hacer con este cliente HOY. La probabilidad es la misma
-// que usa la bandeja "Llamar hoy" (outlook.entity.js del backend).
+const LEVEL = {
+  ALTA: { label: 'Alta', tone: 'bad', icon: 'fa-fire' },
+  MEDIA: { label: 'Media', tone: 'warn', icon: 'fa-temperature-half' },
+  BAJA: { label: 'Baja', tone: '', icon: 'fa-snowflake' }
+}
+
+// A donde va segun su nivel: la ficha y Llamar hoy cuentan la misma historia.
+const routeOf = (p) => (p.callable
+  ? `Nivel ${LEVEL[p.level].label}: entra a Llamar hoy.`
+  : 'Va a la cadencia de WhatsApp (días 1, 3 y 7); si vuelve a escribir, sube a Llamar hoy.')
+
+// El veredicto dice que hacer con este cliente HOY, con el nivel (nunca el %:
+// el % es de la medicion). La regla es la de la bandeja (outlook.entity.js).
 export function outlookVerdict (pronostico) {
   if (!pronostico) return null
-  const pct = formatValue(pronostico.probability, 'pct')
+  const nivel = pronostico.level ? LEVEL[pronostico.level] : null
   switch (pronostico.segment) {
     case 'VOLVIO':
-      return {
-        tone: 'ok', title: 'Llámalo hoy',
-        text: `Ya es cliente y volvió a consultar (${times(pronostico.inquiries)}, hace ${pronostico.days} días): ${pct} compra algo este mes. Un prospecto dormido, 0.24%.`
-      }
+      return { tone: 'ok', nivel, title: 'Llámalo hoy', text: `Ya es cliente y volvió a consultar (${times(pronostico.inquiries)}, hace ${pronostico.days} días). ${routeOf(pronostico)}` }
     case 'CALIENTE':
-      return {
-        tone: 'ok', title: 'Consulta caliente',
-        text: `Consultó ${ago(pronostico.days)}: 9 de cada 10 cierres pasan en los primeros 14 días. No lo dejes enfriar.`
-      }
+      return { tone: 'ok', nivel, title: 'Consulta caliente', text: `Consultó ${ago(pronostico.days)} (${times(pronostico.inquiries)}): la mayoría compra en los primeros días. ${routeOf(pronostico)}` }
     case 'FRIO':
-      return {
-        tone: 'warn', title: 'Prospecto frío',
-        text: `Consultó hace ${pronostico.days} días y nunca compró: ${pct} compra algo este mes. Si tienes clientes en "Llamar hoy", van primero.`
-      }
+      return { tone: 'warn', nivel, title: 'Prospecto frío', text: `Consultó hace ${pronostico.days} días y nunca compró: pasadas dos semanas casi nadie compra. No va a llamada; si vuelve a escribir, atiéndelo como nuevo.` }
     case 'DORMIDO':
-      return { tone: '', title: 'Dormido', text: `No consulta hace ${pronostico.days} días. Escríbele solo si hay una novedad que contarle.` }
+      return { tone: '', nivel: null, title: 'Dormido', text: `No consulta hace ${pronostico.days} días. Escríbele solo si hay una novedad que contarle.` }
     case 'COMPRO':
-      return { tone: '', title: 'Ya compró', text: 'Compró después de su última consulta. La próxima oportunidad es la siguiente compra (mira las sugerencias).' }
+      return { tone: '', nivel: null, title: 'Ya compró', text: 'Compró después de su última consulta. La próxima oportunidad es la siguiente compra (mira las sugerencias).' }
     default:
       return null
   }
 }
+
+const CALL_RESULT = {
+  INSCRITO: 'Se inscribió', LO_PIENSO: 'Dijo "lo pienso"', CARO: 'Dijo que está caro', NO_CONTESTA: 'No contestó',
+  OTRO_PROGRAMA: 'Quiere otro programa', NO_INTERESA: 'No le interesa', NUMERO_ERRADO: 'Número errado'
+}
+
+// Lo que ya dijo en Llamar hoy: el asesor no vuelve a preguntar lo mismo.
+export function callRow (c) {
+  return {
+    key: `${c.fecha}-${c.outcome}-${c.user_name}`,
+    texto: `${CALL_RESULT[c.outcome] ?? c.outcome} el ${toDayMonthYear(c.fecha)}`,
+    detalle: [c.program_name, c.user_name ? displayName(c.user_name) : null].filter(Boolean).join(' · ')
+  }
+}
+
+// "Caro" en la ultima llamada: el mensaje abre con cuotas y precio de estudiante.
+export const saidTooExpensive = (llamadas) => llamadas?.[0]?.outcome === 'CARO'
 
 export function buildKpis (resumen, historial) {
   const lastInquiry = historial.find((e) => e.event_type === 'CONSULTA')
