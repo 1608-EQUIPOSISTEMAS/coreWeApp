@@ -74,6 +74,16 @@ export default class ImportService {
     const res = await this.api.post('/import/reconciliation', { urls }, { timeout: RECONCILE_TIMEOUT_MS })
     return res.data?.data ?? null
   }
+
+  // Aplica correcciones de la conciliacion. fixes = [{ action, enrollment_id,
+  // row_number, sheet }] tal como vinieron en las filas; urls = las mismas hojas
+  // que se conciliaron (el backend vuelve a conciliar y solo ejecuta lo que
+  // sigue aplicando). Escribe en la BD, una por una: sin limite de tiempo.
+  // Devuelve { applied, failed, results: [{ ...pedido, ok, message }] }.
+  async applyReconciliationFixes (urls, fixes) {
+    const res = await this.api.post('/import/reconciliation/fixes', { urls, fixes }, { timeout: BULK_TIMEOUT_MS })
+    return res.data?.data ?? { applied: 0, failed: 0, results: [] }
+  }
 }
 
 // Crea un <a> temporal apuntando a un object URL del blob y lo "clickea" para
