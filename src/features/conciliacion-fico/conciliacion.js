@@ -120,3 +120,39 @@ export function hallazgosOrdenados (findings) {
   const peso = (f) => (f.severity === 'error' ? 0 : 1)
   return [...(findings || [])].sort((a, b) => peso(a) - peso(b) || ORDEN.indexOf(a.code) - ORDEN.indexOf(b.code))
 }
+
+// --- Correcciones (Fase 3) --------------------------------------------------
+// Cada fila trae `fixes`: { action, label, risk: 'low' | 'high', description,
+// changes, blocked }. 'low' no cambia montos ni crea o anula inscripciones (se
+// aplica en lote o con un clic); 'high' se confirma una por una. `blocked` es el
+// motivo por el que esa correccion no se puede hacer sola: el boton se muestra
+// deshabilitado con el motivo.
+
+// Lo que el backend necesita para encontrar la fila en su propia conciliacion.
+export function pedidoDe (row, fix) {
+  return { action: fix.action, enrollment_id: row.enrollment_id ?? null, row_number: row.row_number ?? null, sheet: row.sheet ?? null }
+}
+
+export const esBajoRiesgo = (fix) => fix.risk === 'low' && !fix.blocked
+
+// Correcciones de bajo riesgo de las filas dadas (las que se aplican en lote).
+export function correccionesBajoRiesgo (rows) {
+  const out = []
+  for (const r of rows || []) for (const f of r.fixes || []) if (esBajoRiesgo(f)) out.push({ row: r, fix: f })
+  return out
+}
+
+// "Corregir fecha: 12 · Registrar pagos: 3" para el modal del lote.
+export function conteoPorAccion (items) {
+  const m = new Map()
+  for (const { fix } of items || []) m.set(fix.label, (m.get(fix.label) || 0) + 1)
+  return [...m.entries()].map(([label, n]) => ({ label, n }))
+}
+
+// Frase del resultado de aplicar correcciones.
+export function resumenResultado (res) {
+  const { applied = 0, failed = 0 } = res || {}
+  if (!failed) return { tono: 'ok', titulo: applied === 1 ? 'Corrección aplicada' : `${applied} correcciones aplicadas`, texto: 'Se volvió a conciliar con los datos nuevos.' }
+  if (!applied) return { tono: 'bad', titulo: failed === 1 ? 'No se aplicó la corrección' : `No se aplicó ninguna de las ${failed} correcciones`, texto: 'Mira el motivo de cada una abajo.' }
+  return { tono: 'warn', titulo: `${applied} aplicadas, ${failed} sin aplicar`, texto: 'Mira el motivo de las que no se aplicaron abajo.' }
+}

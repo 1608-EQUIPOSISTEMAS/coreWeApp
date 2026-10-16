@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isSheetUrl, hojasListas, veredicto, kpis, filtrosPorTipo, filtrarFilas, hallazgosOrdenados, labelOf, toneOf } from '../conciliacion'
+import { isSheetUrl, hojasListas, veredicto, kpis, filtrosPorTipo, filtrarFilas, hallazgosOrdenados, labelOf, toneOf, correccionesBajoRiesgo, conteoPorAccion, pedidoDe, resumenResultado } from '../conciliacion'
 
 const f = (code, severity = 'error') => ({ code, severity, message: '' })
 const rows = [
@@ -59,5 +59,30 @@ describe('conciliacion FICO', () => {
   it('codigo desconocido se muestra tal cual', () => {
     expect(labelOf('NUEVO_CODIGO')).toBe('NUEVO_CODIGO')
     expect(toneOf('warning')).toBe('warn')
+  })
+})
+
+describe('correcciones', () => {
+  const fx = (action, risk, blocked = null) => ({ action, label: action, risk, blocked })
+  const filas = [
+    { row_number: 31, sheet: 1, enrollment_id: 23107, fixes: [fx('agent', 'low', 'no existe IV27')] },
+    { row_number: 107, sheet: 1, enrollment_id: 23117, fixes: [fx('payments', 'low'), fx('registration_date', 'low')] },
+    { row_number: 79, sheet: 1, enrollment_id: 4130, fixes: [fx('plan', 'high')] },
+    { row_number: 54, sheet: 1, enrollment_id: null, fixes: [fx('import_row', 'high')] }
+  ]
+
+  it('el lote junta solo las de bajo riesgo que no estan bloqueadas', () => {
+    expect(correccionesBajoRiesgo(filas).map(x => x.fix.action)).toEqual(['payments', 'registration_date'])
+    expect(conteoPorAccion(correccionesBajoRiesgo(filas))).toEqual([{ label: 'payments', n: 1 }, { label: 'registration_date', n: 1 }])
+  })
+
+  it('el pedido identifica la fila como la devolvio la conciliacion', () => {
+    expect(pedidoDe(filas[3], filas[3].fixes[0])).toEqual({ action: 'import_row', enrollment_id: null, row_number: 54, sheet: 1 })
+  })
+
+  it('resumen del resultado segun cuantas se aplicaron', () => {
+    expect(resumenResultado({ applied: 3, failed: 0 }).tono).toBe('ok')
+    expect(resumenResultado({ applied: 0, failed: 2 }).tono).toBe('bad')
+    expect(resumenResultado({ applied: 2, failed: 1 })).toMatchObject({ tono: 'warn', titulo: '2 aplicadas, 1 sin aplicar' })
   })
 })
