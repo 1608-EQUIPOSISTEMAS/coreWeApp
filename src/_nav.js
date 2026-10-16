@@ -187,6 +187,20 @@ export default [
         roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
+        component: 'CNavItem',
+        name: 'Llamar hoy',
+        to: '/comercial/llamar-hoy',
+        submodule: 'LLAMAR_HOY',
+        roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Ficha del cliente',
+        to: '/comercial/cliente',
+        submodule: 'FICHA_CLIENTE',
+        roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
+      },
+      {
         // Recuperado el 06/10/26: se había borrado junto con los reportes que
         // reemplazó Plan Comercial, pero este (ventas por canal) no tenía reemplazo.
         component: 'CNavItem',
@@ -233,6 +247,13 @@ export default [
         name: 'Cobranzas',
         to: '/fico/cobranzas',
         submodule: 'COBRANZAS',
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Vencimientos Membresía',
+        to: '/fico/membresias',
+        submodule: 'MEMBRESIAS',
         roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
       },
       {

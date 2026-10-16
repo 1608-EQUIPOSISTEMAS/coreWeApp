@@ -129,6 +129,12 @@ const routes = [
             component: () => import('@/views/fico/Collections.vue'),
             meta: { submodule: 'COBRANZAS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
+          {
+            path: 'membresias',
+            name: 'ficoMembershipExpiries',
+            component: () => import('@/views/fico/MembershipExpiries.vue'),
+            meta: { submodule: 'MEMBRESIAS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+          },
           // Informe del area contra sus objetivos (una pagina, como el Comercial).
           {
             path: 'reporte',
@@ -455,6 +461,20 @@ const routes = [
           name: 'PlanComercial',
           component: () => import('@/views/comercial/PlanComercial.vue'),
           meta: { submodule: 'PLAN_COMERCIAL', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Ficha del cliente: historia de un celular (ERP + histórico) y qué ofrecerle.
+        {
+          path: 'cliente',
+          name: 'FichaCliente',
+          component: () => import('@/views/comercial/FichaCliente.vue'),
+          meta: { submodule: 'FICHA_CLIENTE', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Bandeja predictiva: clientes que volvieron a consultar, repartidos entre asesores.
+        {
+          path: 'llamar-hoy',
+          name: 'LlamarHoy',
+          component: () => import('@/views/comercial/LlamarHoy.vue'),
+          meta: { submodule: 'LLAMAR_HOY', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
         },
         // Ventas por canal (Marketing - Gestión). Mismos roles que /dashboard/ventas-canal.
         {
