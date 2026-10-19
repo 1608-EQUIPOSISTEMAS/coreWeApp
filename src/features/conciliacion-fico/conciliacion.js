@@ -21,6 +21,7 @@ export const HALLAZGOS = {
   INSTALLMENTS_MISSING: { label: 'Faltan cuotas', accion: 'Crear las cuotas de la hoja que no existen.' },
   PENDING_MISMATCH: { label: 'Deuda distinta', accion: 'El SALDO de la hoja no coincide con las cuotas pendientes.' },
   PAID_WITHOUT_PAYMENT: { label: 'Pagada sin pago', accion: 'Cuota marcada pagada sin pago registrado: registrar el pago.' },
+  PAYMENT_DATA_MISSING: { label: 'Pago sin datos', accion: 'Pagos sin cuenta, entidad empresa, medio o N° de operación que la hoja sí trae: completarlos.' },
   CHILDREN_MISMATCH: { label: 'Aulas hijas', accion: 'El paquete no tiene todas sus aulas hijas.' },
   MEMBERSHIP_MISSING: { label: 'Sin membresía', accion: 'Miembro en la hoja (col J) sin membresía en la inscripción.' },
   AGENT_MISMATCH: { label: 'Asesor distinto', accion: 'Corregir el asesor según la columna AS.' },
@@ -56,7 +57,7 @@ export function veredicto (summary) {
     return { tono: 'ok', titulo: 'Todo coincide', texto: `Las ${enAlcance} filas en alcance coinciden con el sistema.` }
   }
   if (!errors) {
-    return { tono: 'warn', titulo: 'Solo detalles', texto: `${conDif} filas con diferencias de forma (fecha, asesor o pago sin registrar); ningún monto distinto.` }
+    return { tono: 'warn', titulo: 'Solo detalles', texto: `${conDif} filas con diferencias de forma (fecha, asesor o datos de pago); ningún monto distinto.` }
   }
   return {
     tono: 'bad',
@@ -79,7 +80,7 @@ export function kpis (summary) {
     },
     { clave: 'ok', label: 'Coinciden', valor: s.ok ?? 0, nota: 'Igual en la hoja y en el sistema', icono: 'fa-circle-check', tono: 'ok' },
     { clave: 'errores', label: 'Con errores', valor: s.errors ?? 0, nota: 'Montos, cuotas, faltantes o duplicados', icono: 'fa-circle-xmark', tono: s.errors ? 'bad' : null },
-    { clave: 'avisos', label: 'Solo advertencias', valor: (s.with_findings ?? 0) - (s.errors ?? 0), nota: 'Fecha, asesor o pago sin registrar', icono: 'fa-triangle-exclamation', tono: (s.with_findings ?? 0) - (s.errors ?? 0) ? 'warn' : null }
+    { clave: 'avisos', label: 'Solo advertencias', valor: (s.with_findings ?? 0) - (s.errors ?? 0), nota: 'Fecha, asesor o datos de pago', icono: 'fa-triangle-exclamation', tono: (s.with_findings ?? 0) - (s.errors ?? 0) ? 'warn' : null }
   ]
 }
 
