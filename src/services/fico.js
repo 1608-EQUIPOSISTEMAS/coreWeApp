@@ -206,9 +206,49 @@ export default class FicoService {
     return response.data;
   }
 
+  // Retiros del año con el estado de su encuesta de salida: { items, kpis }.
+  async getRetirados() {
+    const response = (await api.get('/fico/retirados')).data;
+    return response.data;
+  }
+
+  // Manda la encuesta de retiro (link a Nexus): { enviados, omitidos, fallidos }.
+  async enviarEncuestaRetiro(enrollment_ids) {
+    const response = (await api.post('/fico/retirados/encuesta', { enrollment_ids })).data;
+    return response.data;
+  }
+
   // Informe FICO: metas de cobranza del area en el rango { date_start, date_end }.
   async reporte(period) {
     const response = (await api.post('/fico/reporte', period)).data;
+    return response.data;
+  }
+
+  // Ventas y Rentabilidad: { granularity: dia|mes|anio, date, measure: vendido|cobrado }.
+  async ventasPorLinea(params) {
+    const response = (await api.post('/fico/rentabilidad/ventas', params)).data;
+    return response.data;
+  }
+
+  async rentabilidad(params) {
+    const response = (await api.post('/fico/rentabilidad/margen', params)).data;
+    return response.data;
+  }
+
+  // Tarifas de docentes y publicidad del año: { year, tarifas, publicidad }.
+  async costosRentabilidad(year) {
+    const response = (await api.get('/fico/rentabilidad/costos', { params: { year } })).data;
+    return response.data;
+  }
+
+  // hourly_rate null = quitar la tarifa.
+  async guardarTarifaDocente(instructor_id, hourly_rate) {
+    const response = (await api.put('/fico/rentabilidad/tarifa', { instructor_id, hourly_rate })).data;
+    return response.data;
+  }
+
+  async guardarPublicidad(year, rows) {
+    const response = (await api.put('/fico/rentabilidad/publicidad', { year, rows })).data;
     return response.data;
   }
 

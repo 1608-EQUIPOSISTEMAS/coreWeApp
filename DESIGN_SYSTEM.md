@@ -325,6 +325,18 @@ izquierda, la ficha en `ds-panel` con listas `dt | dd` (etiqueta 96px) y
 El scroll es el de la página, nunca uno interno con `height: calc(100vh…)`.
 Una cifra no se repite entre la ficha y la pestaña (el total vive en Finanzas).
 
+### 5.4.1 Bandeja de mensajes (lista + conversación)
+
+Referencia: `views/comercial/WhatsappBandeja.vue`. Grilla `340px | 1fr` (una
+columna bajo 900 px): a la izquierda un `ds-panel` con la lista (cada fila es un
+`<button>` con `aria-current` para la elegida, no un `<tr>`), a la derecha otro
+`ds-panel` con el pill de estado pegado al nombre (§5.4), los mensajes en una
+`<ol aria-live="polite">` y el formulario de respuesta en `.ds-panel-actions`.
+Los globos usan `--ds-surface` (entrante) y `--ds-soft-ok` (saliente). Lo que
+limita responder (ventana de 24 h de WhatsApp) va en un `.ds-callout` encima de
+la caja, no en un toast al fallar. La conversación elegida vive en la URL
+(`?c=id`) para poder compartirla.
+
 ### 5.5 Formulario
 
 ```vue
@@ -435,6 +447,7 @@ se usa `confirmAction()` (§7).
 | Panel de indicador (ranking, medidor, dona, métricas, tabla corta) | `views/dashboard/ResultWidget.vue` | Recibe un objeto `widget` (contrato de `results.entity.js`). Fuera del dashboard lo arma un módulo puro del feature, nunca el template |
 | Carga global con blur | `meta: { showLoader: true }` en la ruta | Opt-in; el resto usa skeleton |
 | Navegar por semana ISO | `views/academica/components/WeekNavigator.vue` + `features/academica-week/useIsoWeekNav.js` | "‹ Semana N ›" + rango; fechas como texto `YYYY-MM-DD` (nunca `new Date('YYYY-MM-DD')`). Lo usan Control de Ediciones y Semanal |
+| Tabla de árbol (Línea → Tipo → Programa) | `views/fico/rentabilidad/LineTree.vue` + `visibleRows` (`features/fico-rentabilidad/rentabilidad.js`) | `ds-table` con filas que abren por nivel (`aria-expanded`, Enter); `columns` = `{ key, label, unit, strong?, toned?, kind: 'trend' }`. El tono del nodo lo decide la entity. Las líneas nacen abiertas |
 | Marcar el estado de una sesión | `views/academica/components/SessionMarkPopover.vue` | Popover anclado con lista de estados (`options` con tono) y slot `#step` para el paso 2 (fecha de una R, motivo de una J). Control de Ediciones y Seguimiento B2B |
 
 **No usar en código nuevo:** `CCard`, `CButton`, `CTable`, `CModal` de CoreUI en

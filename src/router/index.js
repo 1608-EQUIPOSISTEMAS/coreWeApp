@@ -5,6 +5,7 @@ import DefaultLayout from '@/layouts/DefaultLayout'
 
 //is ntanciar toast
 import { useToast } from 'vue-toastification'
+import { canAccess, readSession } from '@/shared/lib/navAccess.js'
 const toast = useToast()
 
 const RouterViewStub = {
@@ -21,12 +22,7 @@ const routes = [
     // Home segun rol: ADMIN al dashboard, el resto al cronograma de solo
     // lectura (pedido 17/07). Mismo criterio que el post-login de Login.vue.
     redirect: () => {
-      try {
-        const roles = JSON.parse(localStorage.getItem('user') || '{}').roles || []
-        return roles.includes('ADMIN') ? '/dashboard' : '/producto/cronograma-vista'
-      } catch {
-        return '/dashboard'
-      }
+      return homeFor(readSession())
     },
     children: [
       {
@@ -135,12 +131,25 @@ const routes = [
             component: () => import('@/views/fico/MembershipExpiries.vue'),
             meta: { submodule: 'MEMBRESIAS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
           },
+          {
+            path: 'retirados',
+            name: 'ficoRetirados',
+            component: () => import('@/views/fico/Retirados.vue'),
+            meta: { submodule: 'RETIRADOS', roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'] },
+          },
           // Informe del area contra sus objetivos (una pagina, como el Comercial).
           {
             path: 'reporte',
             name: 'ReporteFico',
             component: () => import('@/views/fico/ReporteFico.vue'),
             meta: { submodule: 'REPORTE', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'] },
+          },
+          // Ventas por Linea -> Tipo de programa (dia/mes/año) y margen por programa.
+          {
+            path: 'rentabilidad',
+            name: 'ficoRentabilidad',
+            component: () => import('@/views/fico/Rentabilidad.vue'),
+            meta: { submodule: 'RENTABILIDAD', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'] },
           },
           // {
           //   path: 'reportes',
@@ -223,10 +232,9 @@ const routes = [
             // Necesita su propia meta.roles porque, sin ella, hereda la del grupo
             // padre 'producto' (ADMIN/PRODUCTO/GERENCIA) y el guard bloquea al resto.
             component: () => import('@/views/producto/ScheduleBoard.vue'),
-            // public: cualquier usuario logueado, incluidos roles nuevos de la
-            // matriz (una lista de roles aquí siempre termina desactualizada:
-            // MARKETING y FUNDACION ya se habían quedado fuera).
-            meta: { public: true },
+            // Casilla propia CRONOGRAMA (no la del grupo Producto). roles: null
+            // pisa los roles heredados del padre 'producto', que la cerrarían.
+            meta: { module: 'CRONOGRAMA', roles: null },
           },
           {
             path: 'precios',
@@ -468,6 +476,19 @@ const routes = [
           name: 'FichaCliente',
           component: () => import('@/views/comercial/FichaCliente.vue'),
           meta: { submodule: 'FICHA_CLIENTE', roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'] },
+        },
+        // Bot de WhatsApp: bandeja (la asesora ve su línea) y configuración (líderes).
+        {
+          path: 'whatsapp',
+          name: 'WhatsappBandeja',
+          component: () => import('@/views/comercial/WhatsappBandeja.vue'),
+          meta: { submodule: 'WHATSAPP_BANDEJA', roles: ['ADMIN', 'LIDER_COMERCIAL'] },
+        },
+        {
+          path: 'whatsapp/config',
+          name: 'WhatsappConfig',
+          component: () => import('@/views/comercial/WhatsappConfig.vue'),
+          meta: { submodule: 'WHATSAPP_CONFIG', roles: ['ADMIN', 'LIDER_COMERCIAL'] },
         },
         // Bandeja predictiva: clientes que volvieron a consultar, repartidos entre asesores.
         {
@@ -755,6 +776,13 @@ const routes = [
     redirect: '/pages/404',
   },
 ]
+// Home segun permisos: ADMIN al dashboard; el resto al cronograma de solo
+// lectura si su rol tiene esa casilla, si no al dashboard (público).
+function homeFor (session) {
+  if (session.roles.includes('ADMIN')) return '/dashboard'
+  return canAccess({ module: 'CRONOGRAMA' }, session) ? '/producto/cronograma-vista' : '/dashboard'
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
@@ -802,50 +830,21 @@ router.beforeEach((to, from, next) => {
   // (ADMIN al dashboard; el resto al cronograma de solo lectura).
   if (to.path === '/pages/login' && token) {
     toast.info('Ya has iniciado sesión.');
-    return next(userRoles.includes('ADMIN') ? '/dashboard' : '/producto/cronograma-vista');
+    return next(homeFor(readSession()));
   }
 
   // ---------------------------------------------------------
-  // CASO C: VALIDACIÓN DE ACCESO (roles hardcodeados ∪ matriz de Configuración)
+  // CASO C: VALIDACIÓN DE ACCESO (la matriz de Configuración manda)
   // ---------------------------------------------------------
-  // to.meta es el merge de toda la cadena matched: meta.module viene del grupo
-  // padre y meta.roles/meta.submodule de la hoja. Acceso si:
-  //   a) algún rol del usuario está en meta.roles (comportamiento original), o
-  //   b) la matriz le otorga el submódulo de la hoja (o el módulo, si la hoja
-  //      no declara submodule). Una hoja con roles pero SIN submodule solo se
-  //      abre por rol (funciones de liderazgo, ej. crear descuentos).
-  // meta.public = accesible para cualquier usuario logueado (ignora el merge
-  // de roles/module heredado del grupo padre).
-  if (token && !to.meta.public && (to.meta.roles || to.meta.module)) {
-
-      const porRol = Array.isArray(to.meta.roles) &&
-          userRoles.some(rolUsuario => to.meta.roles.includes(rolUsuario));
-
-      let porMatriz = false;
-      if (to.meta.module) {
-          if (to.meta.submodule) {
-              const subs = userSubmodules ? userSubmodules[to.meta.module] : null;
-              porMatriz = Array.isArray(subs) && subs.includes(to.meta.submodule);
-          } else if (!to.meta.roles) {
-              // Ruta sin roles ni submodule (ej. grupo marketing): basta el módulo.
-              porMatriz = Array.isArray(userModules) && userModules.includes(to.meta.module);
-          }
-          // Hoja con roles pero sin submodule: solo se abre por rol explícito.
-      }
-
-      // Sesión vieja sin user.modules en una ruta que solo define module
-      // (ej. marketing): se mantiene el comportamiento previo (sin bloqueo).
-      const legacySinModulos = !to.meta.roles && userModules === null;
-
-      if (!porRol && !porMatriz && !legacySinModulos) {
-          toast.info('No tienes permisos para acceder a esta sección.');
-
-          console.warn(`Acceso denegado. Usuario con roles [${userRoles}] intentó entrar a ruta que requiere roles [${to.meta.roles}] o módulo [${to.meta.module}] / submódulo [${to.meta.submodule}]`);
-
-          // no rediriga a nada
-          return next(from.fullPath); // Quédate en la página actual
-
-      }
+  // to.meta es el merge de toda la cadena matched: module del grupo padre,
+  // roles/submodule de la hoja. Misma regla que el sidebar (navAccess.js):
+  // si una mostrara lo que la otra niega, el usuario ve un link que no abre.
+  // meta.public = cualquier usuario logueado (ignora lo heredado del padre).
+  if (token && !to.meta.public && !canAccess(to.meta, { roles: userRoles, modules: userModules, submodules: userSubmodules })) {
+      toast.info('No tienes permisos para acceder a esta sección.');
+      console.warn(`Acceso denegado. Roles [${userRoles}] en ruta con módulo [${to.meta.module}] / submódulo [${to.meta.submodule}] / roles [${to.meta.roles}]`);
+      // Primera navegación (no hay página de donde venir): a su home, no a un bucle.
+      return next(from.matched.length ? from.fullPath : homeFor(readSession()));
   }
 
   next();

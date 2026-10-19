@@ -329,6 +329,9 @@
           </article>
         </div>
       </section>
+
+      <!-- Solo en edición: los archivos cuelgan del program_id, que nace al crear. -->
+      <ProgramMediaPanel v-if="isEdit" :program-id="idParam" />
     </template>
 
     <!-- Carga: esqueleto con la forma de los dos paneles en vez de un spinner suelto -->
@@ -394,6 +397,7 @@
   import { ref, reactive, computed, onMounted, inject } from 'vue'
   import { useRouter, useRoute } from 'vue-router'
   import SearchSelect from '@/components/SearchSelect.vue'
+  import ProgramMediaPanel from './ProgramMediaPanel.vue'
   import { ServiceKeys } from '@/services'
   import { useToast } from 'vue-toastification'
   import { useRequiredFieldsGuard } from '@/composables/useRequiredFieldsGuard'

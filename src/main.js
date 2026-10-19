@@ -84,6 +84,7 @@ app.provide(ServiceKeys.SchedulePlan, services[ServiceKeys.SchedulePlan])
 app.provide(ServiceKeys.Tickets, services[ServiceKeys.Tickets])
 app.provide(ServiceKeys.PlanComercial, services[ServiceKeys.PlanComercial])
 app.provide(ServiceKeys.Prediccion, services[ServiceKeys.Prediccion])
+app.provide(ServiceKeys.Whatsapp, services[ServiceKeys.Whatsapp])
 
 
   app.config.globalProperties.$hasRole = (roles) => {

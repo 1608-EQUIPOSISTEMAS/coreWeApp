@@ -1,10 +1,12 @@
 // Navegación del sidebar.
-// Visibilidad por ítem = UNIÓN de dos fuentes:
-//   1. `roles`  — lista hardcodeada (comportamiento original)
-//   2. matriz de Configuración → Roles y Permisos:
-//      - grupo:  `module` (código en tabla modules)
-//      - hijo:   `submodule` (código en tabla submodules, dentro del módulo del grupo)
-// Un hijo con `submodule` solo se abre por matriz si el rol tiene ese submódulo.
+// Visibilidad = la matriz de Configuración → Roles y Permisos (19/10/26; la regla
+// vive en shared/lib/navAccess.js y la comparte el guard del router):
+//   - grupo:  `module` (código en tabla modules)
+//   - hijo:   `submodule` (código en tabla submodules, dentro del módulo del grupo)
+// `roles` ya NO abre una opción que tiene casilla: queda de respaldo para una
+// sesión vieja sin matriz y para funciones sin casilla propia (Documentos).
+// Opción nueva ⇒ module/submodule + CATALOGO de sync-modules-roles.mjs, o no
+// la ve nadie salvo ADMIN.
 // Administración se abre a los líderes por Auditoría: cada uno ve la bitácora
 // de su área. Los demás hijos del grupo siguen siendo solo ADMIN, y
 // useFilteredNav oculta el grupo entero si no queda ningún hijo visible.
@@ -26,7 +28,9 @@ export default [
     name: 'Cronograma',
     to: '/producto/cronograma-vista',
     icon: 'cil-calendar',
-    // Sin roles = siempre visible (solo lectura)
+    // Solo lectura, con casilla propia en la matriz (antes era público sin
+    // permiso). Nació marcada para todos los roles.
+    module: 'CRONOGRAMA',
   },
   {
     component: 'CNavGroup',
@@ -201,6 +205,20 @@ export default [
         roles: ['ADMIN', 'COMERCIAL', 'LIDER_COMERCIAL', 'GERENCIA'],
       },
       {
+        component: 'CNavItem',
+        name: 'WhatsApp',
+        to: '/comercial/whatsapp',
+        submodule: 'WHATSAPP_BANDEJA',
+        roles: ['ADMIN', 'LIDER_COMERCIAL'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Bot de WhatsApp',
+        to: '/comercial/whatsapp/config',
+        submodule: 'WHATSAPP_CONFIG',
+        roles: ['ADMIN', 'LIDER_COMERCIAL'],
+      },
+      {
         // Recuperado el 06/10/26: se había borrado junto con los reportes que
         // reemplazó Plan Comercial, pero este (ventas por canal) no tenía reemplazo.
         component: 'CNavItem',
@@ -258,9 +276,23 @@ export default [
       },
       {
         component: 'CNavItem',
+        name: 'Retirados',
+        to: '/fico/retirados',
+        submodule: 'RETIRADOS',
+        roles: ['ADMIN', 'FICO', 'LIDER_FICO', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
         name: 'Reporte Finanzas',
         to: '/fico/reporte',
         submodule: 'REPORTE',
+        roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Ventas y Rentabilidad',
+        to: '/fico/rentabilidad',
+        submodule: 'RENTABILIDAD',
         roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'],
       },
     ],

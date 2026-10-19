@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import allNavItems from '@/_nav.js'
 import api from '@/services/api'
+import { canAccess, readSession } from '@/shared/lib/navAccess.js'
 
 // ── Permisos de la matriz de Configuración (dos niveles) ──
 // Estado singleton a nivel de módulo: todos los componentes comparten la misma
@@ -48,58 +49,19 @@ async function refreshModules() {
 }
 
 export function useFilteredNav() {
+  // La matriz manda (shared/lib/navAccess.js). Los refs dan reactividad: al
+  // llegar /config/mymodules el sidebar se recalcula sin recargar.
+  const session = () => ({
+    roles: readSession().roles,
+    modules: grantedModules.value,
+    submodules: grantedSubmodules.value
+  })
 
-  function hasRole(roles) {
-    if (!roles) return true // sin roles = siempre visible
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const userRoles = user.roles
-      if (!userRoles) return false
-      const rolesArr = Array.isArray(roles) ? roles : [roles]
-      return rolesArr.some(r => userRoles.includes(r))
-    } catch {
-      return false
-    }
-  }
-
-  function hasModule(moduleCode) {
-    if (!moduleCode) return false
-    const mods = grantedModules.value
-    if (Array.isArray(mods) && mods.includes(moduleCode)) return true
-    // Tener al menos un submódulo del módulo también abre el grupo
-    // (ej. COMERCIAL ve "Cronograma" de Producto sin tener todo Producto).
-    const subs = grantedSubmodules.value
-    return !!(subs && Array.isArray(subs[moduleCode]) && subs[moduleCode].length)
-  }
-
-  function hasSubmodule(moduleCode, submoduleCode) {
-    if (!moduleCode || !submoduleCode) return false
-    const subs = grantedSubmodules.value
-    return !!(subs && Array.isArray(subs[moduleCode]) && subs[moduleCode].includes(submoduleCode))
-  }
-
-  // Visibilidad = roles hardcodeados ∪ matriz de Configuración.
-  // Grupo: por módulo. Hijo: por submódulo (hereda el módulo del grupo).
-  //
-  // OJO: hasRole(undefined) devuelve true ("sin roles = siempre visible"), asi
-  // que un item con SOLO module (sin roles) NO puede pasar por hasRole(item.roles)
-  // o el OR se resuelve en true sin mirar la matriz para nada. Por eso solo se
-  // consulta hasRole cuando el item declara roles explicitos.
-  function canSeeGroup(item) {
-    if (!item.roles && !item.module) return true // público (Dashboard, títulos)
-    if (item.roles && hasRole(item.roles)) return true
-    return hasModule(item.module)
-  }
-
-  function canSeeChild(child, parentModule) {
-    if (child.roles && hasRole(child.roles)) return true
-    if (child.submodule) return hasSubmodule(parentModule, child.submodule)
-    // Hijo con roles pero sin submódulo: solo por rol, igual que el guard del
-    // router (si no, el sidebar mostraría un link que el router no deja abrir).
-    if (child.roles) return false
-    // Hijo sin submódulo declarado: basta el módulo del grupo.
-    return !!parentModule && hasModule(parentModule)
-  }
+  // Grupo: por su módulo (sus `roles` son de antes de la matriz y ya no abren
+  // nada). Un grupo sin módulo (Administración) se abre por rol.
+  const canSeeGroup = (item) => canAccess(item.module ? { module: item.module } : { roles: item.roles }, session())
+  const canSeeChild = (child, parentModule) =>
+    canAccess({ module: parentModule, submodule: child.submodule, roles: child.roles }, session())
 
   const filteredNav = computed(() => {
     return allNavItems
