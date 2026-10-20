@@ -125,7 +125,7 @@ function bySelectedThenLabel(a, b) {
   const aSel = tempSelected.value.includes(a.value)
   const bSel = tempSelected.value.includes(b.value)
   if (aSel !== bSel) return aSel ? -1 : 1
-  return a.label.localeCompare(b.label)
+  return a.label.localeCompare(b.label, 'es', { numeric: true })
 }
 
 const uniqueOptions = computed(() => {

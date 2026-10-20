@@ -3,7 +3,7 @@
     <header class="ds-head">
       <div class="ds-head-titles">
         <h1 class="ds-title">Cobranzas</h1>
-        <p class="ds-sub">Cuotas pendientes que vencen en {{ monthLabel }}{{ daySelected ? `, día ${daySelected}` : '' }}</p>
+        <p class="ds-sub">Cuotas pendientes que vencen en {{ monthLabel }}</p>
       </div>
       <div class="ds-head-actions">
         <div class="col-month" role="group" aria-label="Mes">
@@ -15,10 +15,6 @@
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
-        <select v-model="daySelected" class="ds-input col-day" aria-label="Día de vencimiento" @change="loadCollections">
-          <option :value="null">Todos los días</option>
-          <option v-for="d in daysInMonth" :key="d" :value="d">Día {{ d }}</option>
-        </select>
       </div>
     </header>
 
@@ -38,14 +34,6 @@
 
     <section class="ds-panel">
       <div class="col-toolbar">
-        <input
-          v-model="searchInput"
-          type="search"
-          class="ds-input col-search"
-          placeholder="Buscar por nombre, DNI o correo…"
-          aria-label="Buscar alumno"
-          @input="onSearchInput"
-        />
         <div class="ds-tabs" role="group" aria-label="Estado de la cuota">
           <button
             v-for="t in STATE_TABS"
@@ -57,16 +45,19 @@
             {{ t.label }} <span class="col-count">{{ kpis[`${t.key}_count`] ?? 0 }}</span>
           </button>
         </div>
-        <div class="col-advisor">
-          <MultiSelect
-            v-model="advisorIds"
-            :items="advisorOptions"
-            label-key="description"
-            value-key="id"
-            placeholder="Todos los asesores"
-            @update:model-value="loadCollections"
+        <!-- Fechas sueltas, no un rango: FICO cobra el 1 y el 15 sin los dias de
+             en medio. Solo lista fechas con cuotas pendientes en el mes. -->
+        <div class="col-dates">
+          <ColumnFilterDropdown
+            v-model="colFilters.vence"
+            column-label="Fechas de vencimiento"
+            :all-items="allRows"
+            :value-extractor="COLUMN_VALUE.vence"
           />
         </div>
+      </div>
+      <div v-if="chips.length" class="col-chips">
+        <BaseFilterChips :items="chips" @remove="removeChip" @clear-all="clearFilters" />
       </div>
 
       <div class="ds-table-scroll">
@@ -75,12 +66,42 @@
             <tr>
               <th>Alumno / documento</th>
               <th>Programa / edición</th>
-              <th class="tc" style="width:70px">Cuota</th>
-              <th class="num" style="width:120px">Monto</th>
-              <th style="width:110px">Vence</th>
+              <th class="tc" style="width:110px">Cuota</th>
+              <th class="num" style="width:140px" :aria-sort="AMOUNT_SORT[amountSort].aria">
+                <button type="button" class="ds-th-filter" :class="{ 'is-active': amountSort }" :title="AMOUNT_SORT[amountSort].title" @click="cycleAmountSort">
+                  Monto <i class="fa-solid" :class="AMOUNT_SORT[amountSort].icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th style="width:140px">Vence</th>
               <th style="width:140px">Estado</th>
-              <th style="width:110px">Asesor</th>
+              <th style="width:130px">Asesor</th>
               <th class="tc" style="width:56px"><span class="sr-only">Abrir</span></th>
+            </tr>
+            <!-- Fila de filtros siempre visible: es la pantalla de trabajo de
+                 cobranza y los filtros se combinan entre columnas. -->
+            <tr class="col-filters">
+              <th><input v-model="colFilters.alumno" class="ds-input col-filter-input" placeholder="Nombre, DNI, correo o celular…" aria-label="Filtrar alumno" /></th>
+              <th>
+                <ColumnFilterDropdown v-model="colFilters.programa" column-label="Programa" :all-items="allRows" :value-extractor="COLUMN_VALUE.programa" />
+              </th>
+              <th>
+                <ColumnFilterDropdown v-model="colFilters.cuota" column-label="Cuota" :all-items="allRows" :value-extractor="COLUMN_VALUE.cuota" />
+              </th>
+              <th>
+                <ColumnFilterDropdown v-model="colFilters.monto" column-label="Monto" :all-items="allRows" :value-extractor="COLUMN_VALUE.monto" />
+              </th>
+              <th>
+                <ColumnFilterDropdown v-model="colFilters.vence" column-label="Vence" :all-items="allRows" :value-extractor="COLUMN_VALUE.vence" />
+              </th>
+              <th></th>
+              <th>
+                <ColumnFilterDropdown v-model="colFilters.asesor" column-label="Asesor" :all-items="allRows" :value-extractor="COLUMN_VALUE.asesor" />
+              </th>
+              <th class="tc">
+                <button class="btn-icon btn-icon-sm" type="button" title="Limpiar filtros" aria-label="Limpiar filtros" @click="clearFilters">
+                  <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -91,7 +112,7 @@
             </template>
             <tr v-else-if="!items.length">
               <td colspan="8" class="ds-empty--lista col-empty">
-                No hay cuotas pendientes con estos filtros. Prueba otro mes o quita la búsqueda.
+                No hay cuotas pendientes con estos filtros. Prueba otro mes o limpia los filtros.
               </td>
             </tr>
             <tr
@@ -101,12 +122,12 @@
               class="link"
               tabindex="0"
               :class="{ 'is-overdue': it.state_label === 'overdue' }"
-              @click="goToEnrollment(it.enrollment_id)"
-              @keydown.enter.self="goToEnrollment(it.enrollment_id)"
+              @click="previewRow = it"
+              @keydown.enter.self="previewRow = it"
             >
               <td>
                 <div class="col-main">{{ it.student_full_name }}</div>
-                <div class="col-sub">{{ it.document_number || 'sin DNI' }} · {{ it.email || 'sin correo' }}</div>
+                <div class="col-sub">{{ it.document_number || 'sin DNI' }} · {{ it.email || 'sin correo' }}{{ it.phone ? ` · ${it.phone}` : '' }}</div>
               </td>
               <td>
                 <div class="col-main">{{ it.program_name || '—' }}</div>
@@ -133,22 +154,28 @@
         </table>
       </div>
     </section>
+
+    <CollectionPreviewModal :row="previewRow" @close="previewRow = null" @open-enrollment="goToEnrollment" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onMounted } from 'vue'
+import { ref, reactive, computed, watch, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
-import MultiSelect from '@/components/MultiSelect.vue'
+import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
+import BaseFilterChips from '@/components/BaseFilterChips.vue'
+import CollectionPreviewModal from '@/views/fico/collections/CollectionPreviewModal.vue'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
-import { buildCollectionCards, dueLabel, DUE_TONE } from '@/entities/collection/collectionView.js'
+import {
+  buildCollectionCards, dueLabel, DUE_TONE, COLUMN_VALUE,
+  summarizeCollections, filterCollections, sortByAmount
+} from '@/entities/collection/collectionView.js'
 
 const router = useRouter()
 const toast = useToast()
 const ficoService = inject(ServiceKeys.Fico)
-const authService = inject(ServiceKeys.Auth)
 const fmt = useEnrollmentFormatters()
 
 const STATE_TABS = [
@@ -158,19 +185,58 @@ const STATE_TABS = [
   { key: 'upcoming', label: 'Por vencer' }
 ]
 
+const COLUMN_LABEL = { programa: 'Programa', cuota: 'Cuota', monto: 'Monto', asesor: 'Asesor' }
+
+// Clic en "Monto": sin orden (por vencimiento) -> mayor a menor -> menor a mayor.
+const AMOUNT_SORT = {
+  null: { next: 'desc', icon: 'fa-sort', title: 'Ordenar de mayor a menor', aria: 'none' },
+  desc: { next: 'asc', icon: 'fa-sort-down', title: 'Ordenar de menor a mayor', aria: 'descending' },
+  asc: { next: null, icon: 'fa-sort-up', title: 'Quitar orden por monto', aria: 'ascending' }
+}
+
 const today = new Date()
 const monthValue = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
-const daySelected = ref(null)
-const searchInput = ref('')
-const searchQuery = ref('')
 const stateFilter = ref('total')
-const advisorIds = ref([])
-const advisorOptions = ref([])
+const amountSort = ref(null)
+const emptyFilters = () => ({ alumno: '', programa: [], cuota: [], monto: [], vence: [], asesor: [] })
+const colFilters = reactive(emptyFilters())
 
-const items = ref([])
-const kpis = ref({})
+const allRows = ref([])
 const loading = ref(false)
+const previewRow = ref(null)
+
+// Los KPIs se calculan ANTES de la pestaña de estado: cada pestaña muestra su
+// conteo aunque la tabla este filtrada por una sola.
+const filteredRows = computed(() => filterCollections(allRows.value, colFilters))
+const kpis = computed(() => summarizeCollections(filteredRows.value))
 const cards = computed(() => buildCollectionCards(kpis.value))
+const items = computed(() => sortByAmount(
+  stateFilter.value === 'total' ? filteredRows.value : filteredRows.value.filter(r => r.state_label === stateFilter.value),
+  amountSort.value
+))
+
+// Cada fecha marcada es su propio chip (se ven todas y se quitan una a una);
+// el resto de columnas, un chip por columna con sus valores en el detalle.
+const chips = computed(() => [
+  ...colFilters.vence.map(d => ({ key: `vence:${d}`, label: `Vence ${d}` })),
+  ...Object.entries(COLUMN_LABEL)
+    .filter(([key]) => colFilters[key].length)
+    .map(([key, label]) => ({ key, label: `${label}: ${colFilters[key].length}`, details: colFilters[key] })),
+  ...(colFilters.alumno.trim() ? [{ key: 'alumno', label: `Alumno: ${colFilters.alumno.trim()}` }] : [])
+])
+
+function removeChip (key) {
+  if (key.startsWith('vence:')) colFilters.vence = colFilters.vence.filter(d => `vence:${d}` !== key)
+  else colFilters[key] = emptyFilters()[key]
+}
+
+function clearFilters () {
+  Object.assign(colFilters, emptyFilters())
+}
+
+function cycleAmountSort () {
+  amountSort.value = AMOUNT_SORT[amountSort.value].next
+}
 
 const yearMonth = computed(() => {
   const [year, month] = monthValue.value.split('-').map(Number)
@@ -181,15 +247,9 @@ const monthLabel = computed(() => {
   return new Date(year, month - 1, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })
 })
 
-// new Date(y, m, 0) es el ultimo dia del mes m (1-indexed): da cuantos dias tiene.
-const daysInMonth = computed(() => {
-  const { year, month } = yearMonth.value
-  return Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => i + 1)
-})
-
-// Al cambiar de mes el dia elegido puede no existir (31 en abril): vuelve a "todos".
+// Las fechas marcadas son del mes anterior: al cambiar de mes ya no existen.
 watch(monthValue, () => {
-  daySelected.value = null
+  colFilters.vence = []
   loadCollections()
 })
 
@@ -201,51 +261,19 @@ function shiftMonth (delta) {
 
 function setState (key) {
   stateFilter.value = key
-  loadCollections()
-}
-
-let searchTimer = null
-function onSearchInput () {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    searchQuery.value = searchInput.value.trim()
-    loadCollections()
-  }, 320)
 }
 
 async function loadCollections () {
   loading.value = true
   try {
-    const { year, month } = yearMonth.value
-    const r = await ficoService.getCollections({
-      year,
-      month,
-      day: daySelected.value || null,
-      q: searchQuery.value || null,
-      // El backend llama 'all' a la pestaña "Todas"
-      state: stateFilter.value === 'total' ? 'all' : stateFilter.value,
-      advisor_ids: advisorIds.value.map(Number).filter(Number.isFinite)
-    })
-    items.value = r?.items || []
-    kpis.value = r?.kpis || {}
+    const r = await ficoService.getCollections(yearMonth.value)
+    allRows.value = r?.items || []
   } catch (err) {
     console.error('[loadCollections]', err)
     toast.error(err?.response?.data?.message || err?.response?.data?.error || 'No se pudieron cargar las cobranzas.')
-    items.value = []
+    allRows.value = []
   } finally {
     loading.value = false
-  }
-}
-
-async function loadAdvisors () {
-  try {
-    const arr = await authService.userList({})
-    advisorOptions.value = (arr || [])
-      .filter(u => u.alias && u.active)
-      .map(u => ({ id: u.user_id, description: u.full_name ? `${u.alias} — ${u.full_name}` : u.alias }))
-      .sort((a, b) => a.description.localeCompare(b.description))
-  } catch (err) {
-    console.error('[loadAdvisors]', err)
   }
 }
 
@@ -253,20 +281,19 @@ function goToEnrollment (id) {
   router.push({ name: 'enrollmentDetail', params: { id: String(id) } })
 }
 
-onMounted(() => {
-  loadAdvisors()
-  loadCollections()
-})
+onMounted(loadCollections)
 </script>
 
 <style scoped>
 .col-month { display: inline-flex; align-items: center; gap: 4px; }
 .col-month-input { width: 160px; }
-.col-day { width: 150px; }
 
 .col-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 18px; border-bottom: 1px solid var(--ds-border); }
-.col-search { flex: 1; min-width: 220px; }
-.col-advisor { min-width: 220px; }
+
+.col-dates { min-width: 220px; }
+.col-chips { padding: 8px 18px 0; }
+.col-filters th { padding-top: 6px; padding-bottom: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.col-filter-input { width: 100%; height: 30px; font-size: 12px; }
 .col-count {
   display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px;
   border-radius: 9px; background: var(--ds-surface-3); color: var(--ds-ink-2); font-size: 10.5px;
