@@ -149,3 +149,29 @@ export function dueLabel (state, daysToDue) {
 }
 
 export const DUE_TONE = { overdue: 'bad', today: 'warn', upcoming: 'ok' }
+
+const STATE_EXPORT_LABEL = { overdue: 'Vencida', today: 'Vence hoy', upcoming: 'Por vencer' }
+
+// Filas del Excel de deudores: lo que FICO tiene en pantalla (pestaña, filtros
+// y orden ya aplicados). Monto como numero y moneda aparte, para que Excel sume
+// por columna sin mezclar soles con dolares.
+export function buildCollectionsExport (rows = []) {
+  const header = ['Alumno', 'DNI', 'Correo', 'Celular', 'Programa', 'Edición', 'Cuota', 'Moneda',
+    'Monto', 'Vence', 'Estado', 'Días vencida', 'Asesor', 'Inscripción']
+  return [header, ...rows.map(r => [
+    r.student_full_name || '',
+    r.document_number || '',
+    r.email || '',
+    r.phone || '',
+    r.program_name || '',
+    r.edition_code || '',
+    `C${r.installment_number}`,
+    r.currency === 'USD' ? 'USD' : 'PEN',
+    (Number(r.amount) || 0).toFixed(2),
+    isoToDmy(r.due_date),
+    STATE_EXPORT_LABEL[r.state_label] || r.state_label || '',
+    r.state_label === 'overdue' ? Math.abs(Number(r.days_to_due) || 0) : '',
+    r.seller_agent_name || '',
+    r.enrollment_id ?? ''
+  ])]
+}

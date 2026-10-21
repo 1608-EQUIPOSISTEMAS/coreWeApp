@@ -15,6 +15,15 @@
             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
+        <button
+          class="btn-exec btn-exec-outline"
+          type="button"
+          :disabled="loading || !items.length"
+          title="Descarga en Excel los alumnos de la tabla, con los filtros aplicados"
+          @click="exportDebtors"
+        >
+          <i class="fa-solid fa-file-excel" aria-hidden="true"></i> Exportar Excel ({{ items.length }})
+        </button>
       </div>
     </header>
 
@@ -170,8 +179,9 @@ import CollectionPreviewModal from '@/views/fico/collections/CollectionPreviewMo
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import {
   buildCollectionCards, dueLabel, DUE_TONE, COLUMN_VALUE,
-  summarizeCollections, filterCollections, sortByAmount
+  summarizeCollections, filterCollections, sortByAmount, buildCollectionsExport
 } from '@/entities/collection/collectionView.js'
+import { downloadCsv } from '@/shared/lib/downloadCsv.js'
 
 const router = useRouter()
 const toast = useToast()
@@ -275,6 +285,14 @@ async function loadCollections () {
   } finally {
     loading.value = false
   }
+}
+
+// Columnas DNI (1) y Celular (3) como texto en Excel.
+function exportDebtors () {
+  const tab = STATE_TABS.find(t => t.key === stateFilter.value)?.label || 'Todas'
+  downloadCsv(`cobranzas_${monthValue.value}_${tab.toLowerCase().replace(/\s+/g, '-')}.csv`,
+    buildCollectionsExport(items.value), { textColumns: [1, 3] })
+  toast.success(`${items.value.length} cuotas exportadas.`)
 }
 
 function goToEnrollment (id) {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   amountParts, buildCollectionCards, dueLabel, summarizeCollections,
-  filterCollections, sortByAmount, buildInstallmentTimeline
+  filterCollections, sortByAmount, buildInstallmentTimeline, buildCollectionsExport
 } from '../collectionView.js'
 
 const ROWS = [
@@ -101,5 +101,19 @@ describe('dueLabel', () => {
     expect(dueLabel('today', 0)).toBe('Vence hoy')
     expect(dueLabel('upcoming', 3)).toBe('En 3 d')
     expect(dueLabel('upcoming', 20)).toBe('Por vencer')
+  })
+})
+
+describe('buildCollectionsExport', () => {
+  it('una fila por cuota, monto numerico con la moneda aparte y dias solo si esta vencida', () => {
+    const [header, jose, ana, , eva] = buildCollectionsExport([
+      { ...ROWS[0], days_to_due: -19, edition_code: 'SCM-E5', enrollment_id: 101 },
+      { ...ROWS[1], days_to_due: 0 }, ROWS[2], { ...ROWS[3], days_to_due: -19 }
+    ])
+    expect(header).toContain('Días vencida')
+    expect(jose).toEqual(['José Pérez', '70786567', 'jose@mail.com', '+51 987 654 321', 'DIPLOMADO SCM', 'SCM-E5',
+      'C2', 'PEN', '100.00', '01/10/2026', 'Vencida', 19, 'AE30', 101])
+    expect(ana.slice(7, 12)).toEqual(['PEN', '50.50', '19/10/2026', 'Vence hoy', ''])
+    expect(eva.slice(7, 9)).toEqual(['USD', '93.00'])
   })
 })

@@ -277,7 +277,8 @@ function calcDropdownPosition() {
   const spaceBelow = vH - rect.bottom
   const spaceAbove = rect.top
   const maxH = 320
-  const dropdownWidth = Math.max(rect.width, 270) // Ancho que tendrá el dropdown
+  // Más ancho que el trigger: los nombres de programa/edición son largos.
+  const dropdownWidth = Math.min(Math.max(rect.width, 360), vW - 16)
 
   const style = {
     position: 'fixed',
@@ -879,13 +880,14 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
 }
+/* Envuelve en vez de cortar con "…": en Ediciones la fecha de inicio va al
+   final del nombre (DIP GEST PROYECTOS V3 E.. - 06/07/2026) y se perdía. */
 .row-label {
   font-size: 0.82rem;
+  line-height: 1.3;
   color: #334155;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .list-row.is-selected .row-label {
   color: #002060;
