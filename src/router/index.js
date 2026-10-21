@@ -149,7 +149,7 @@ const routes = [
             path: 'rentabilidad',
             name: 'ficoRentabilidad',
             component: () => import('@/views/fico/Rentabilidad.vue'),
-            meta: { submodule: 'RENTABILIDAD', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'] },
+            meta: { submodule: 'RENTABILIDAD', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA', 'FICO'] },
           },
           // {
           //   path: 'reportes',
