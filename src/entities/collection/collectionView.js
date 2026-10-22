@@ -2,12 +2,35 @@
 // del mes; aqui se filtran y se resumen, asi los filtros combinados responden
 // al instante. Soles y dolares se muestran juntos pero nunca se suman.
 
+import { isDocPendingDoctype } from '@/utils/b2bDoctype.js'
+
 const money = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 const currencySign = currency => (currency === 'USD' ? '$' : 'S/.')
 const isoToDmy = iso => (iso ? iso.split('-').reverse().join('/') : '—')
 
 const COLLECTION_STATES = ['overdue', 'today', 'upcoming']
+
+// Quien debe la cuota. Una venta B2B con Orden de Servicio / de Compra la paga
+// la empresa semanas despues: sigue pendiente, pero no se le cobra al alumno.
+export const DEBTOR_VIEWS = [
+  { key: 'students', label: 'Alumnos' },
+  { key: 'companies', label: 'Empresas (OS/OP)' }
+]
+
+export const isCompanyDebt = row => isDocPendingDoctype(row?.b2b_doctype_alias)
+
+export function rowsForDebtor (rows = [], view) {
+  const wantCompany = view === 'companies'
+  return rows.filter(r => isCompanyDebt(r) === wantCompany)
+}
+
+const B2B_DOCTYPE_SHORT = {
+  we_enrollment_b2b_doctype_service_order: 'OS',
+  we_enrollment_b2b_doctype_purchase_order: 'OC'
+}
+
+export const b2bDoctypeShort = alias => B2B_DOCTYPE_SHORT[alias] || ''
 
 // KPIs por estado con el monto SEPARADO por moneda: la clave lleva la moneda
 // en el nombre para que ningun consumidor vuelva a sumarlas.
@@ -157,7 +180,7 @@ const STATE_EXPORT_LABEL = { overdue: 'Vencida', today: 'Vence hoy', upcoming: '
 // por columna sin mezclar soles con dolares.
 export function buildCollectionsExport (rows = []) {
   const header = ['Alumno', 'DNI', 'Correo', 'Celular', 'Programa', 'Edición', 'Cuota', 'Moneda',
-    'Monto', 'Vence', 'Estado', 'Días vencida', 'Asesor', 'Inscripción']
+    'Monto', 'Vence', 'Estado', 'Días vencida', 'Asesor', 'Inscripción', 'Documento B2B']
   return [header, ...rows.map(r => [
     r.student_full_name || '',
     r.document_number || '',
@@ -172,6 +195,7 @@ export function buildCollectionsExport (rows = []) {
     STATE_EXPORT_LABEL[r.state_label] || r.state_label || '',
     r.state_label === 'overdue' ? Math.abs(Number(r.days_to_due) || 0) : '',
     r.seller_agent_name || '',
-    r.enrollment_id ?? ''
+    r.enrollment_id ?? '',
+    b2bDoctypeShort(r.b2b_doctype_alias)
   ])]
 }

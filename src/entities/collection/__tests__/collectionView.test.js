@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   amountParts, buildCollectionCards, dueLabel, summarizeCollections,
-  filterCollections, sortByAmount, buildInstallmentTimeline, buildCollectionsExport
+  filterCollections, sortByAmount, buildInstallmentTimeline, buildCollectionsExport, rowsForDebtor
 } from '../collectionView.js'
 
 const ROWS = [
@@ -112,8 +112,29 @@ describe('buildCollectionsExport', () => {
     ])
     expect(header).toContain('Días vencida')
     expect(jose).toEqual(['José Pérez', '70786567', 'jose@mail.com', '+51 987 654 321', 'DIPLOMADO SCM', 'SCM-E5',
-      'C2', 'PEN', '100.00', '01/10/2026', 'Vencida', 19, 'AE30', 101])
+      'C2', 'PEN', '100.00', '01/10/2026', 'Vencida', 19, 'AE30', 101, ''])
     expect(ana.slice(7, 12)).toEqual(['PEN', '50.50', '19/10/2026', 'Vence hoy', ''])
     expect(eva.slice(7, 9)).toEqual(['USD', '93.00'])
+  })
+
+  it('marca el documento B2B de las cuotas que paga la empresa', () => {
+    const [, row] = buildCollectionsExport([{ ...ROWS[0], b2b_doctype_alias: 'we_enrollment_b2b_doctype_purchase_order' }])
+    expect(row.at(-1)).toBe('OC')
+  })
+})
+
+describe('rowsForDebtor', () => {
+  const OC = { installment_id: 7, b2b_doctype_alias: 'we_enrollment_b2b_doctype_purchase_order' }
+  const OS = { installment_id: 8, b2b_doctype_alias: 'we_enrollment_b2b_doctype_service_order' }
+  // La carta de compromiso no cobra a nadie; si tuviera cuota, la debe el alumno.
+  const CARTA = { installment_id: 9, b2b_doctype_alias: 'we_enrollment_b2b_doctype_compromise_letter' }
+  const all = [...ROWS, OC, OS, CARTA]
+
+  it('la vista Alumnos excluye las OS/OP: esa deuda es de la empresa', () => {
+    expect(ids(rowsForDebtor(all, 'students'))).toEqual([1, 2, 3, 5, 9])
+  })
+
+  it('la vista Empresas trae solo las OS/OP', () => {
+    expect(ids(rowsForDebtor(all, 'companies'))).toEqual([7, 8])
   })
 })

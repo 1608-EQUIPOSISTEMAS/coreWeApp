@@ -3,7 +3,10 @@
     <header class="ds-head">
       <div class="ds-head-titles">
         <h1 class="ds-title">Cobranzas</h1>
-        <p class="ds-sub">Cuotas pendientes que vencen en {{ monthLabel }}</p>
+        <p class="ds-sub">
+          {{ debtorView === 'companies' ? 'Cuotas de ventas B2B con OS/OP que paga la empresa' : 'Cuotas pendientes' }}
+          que vencen en {{ monthLabel }}
+        </p>
       </div>
       <div class="ds-head-actions">
         <div class="col-month" role="group" aria-label="Mes">
@@ -43,6 +46,19 @@
 
     <section class="ds-panel">
       <div class="col-toolbar">
+        <!-- Quien debe: el alumno o la empresa (OS/OP). Cada vista tiene sus
+             propios KPIs, filtros y Excel. -->
+        <div class="ds-tabs" role="group" aria-label="Deudor">
+          <button
+            v-for="v in DEBTOR_VIEWS"
+            :key="v.key"
+            type="button"
+            :aria-pressed="debtorView === v.key"
+            @click="debtorView = v.key"
+          >
+            {{ v.label }} <span class="col-count">{{ debtorCounts[v.key] }}</span>
+          </button>
+        </div>
         <div class="ds-tabs" role="group" aria-label="Estado de la cuota">
           <button
             v-for="t in STATE_TABS"
@@ -60,7 +76,7 @@
           <ColumnFilterDropdown
             v-model="colFilters.vence"
             column-label="Fechas de vencimiento"
-            :all-items="allRows"
+            :all-items="viewRows"
             :value-extractor="COLUMN_VALUE.vence"
           />
         </div>
@@ -73,7 +89,7 @@
         <table class="ds-table ds-table--lista ds-table--densa col-table">
           <thead>
             <tr>
-              <th>Alumno / documento</th>
+              <th>{{ debtorView === 'companies' ? 'Alumno inscrito / documento B2B' : 'Alumno / documento' }}</th>
               <th>Programa / edición</th>
               <th class="tc" style="width:110px">Cuota</th>
               <th class="num" style="width:140px" :aria-sort="AMOUNT_SORT[amountSort].aria">
@@ -91,20 +107,20 @@
             <tr class="col-filters">
               <th><input v-model="colFilters.alumno" class="ds-input col-filter-input" placeholder="Nombre, DNI, correo o celular…" aria-label="Filtrar alumno" /></th>
               <th>
-                <ColumnFilterDropdown v-model="colFilters.programa" column-label="Programa" :all-items="allRows" :value-extractor="COLUMN_VALUE.programa" />
+                <ColumnFilterDropdown v-model="colFilters.programa" column-label="Programa" :all-items="viewRows" :value-extractor="COLUMN_VALUE.programa" />
               </th>
               <th>
-                <ColumnFilterDropdown v-model="colFilters.cuota" column-label="Cuota" :all-items="allRows" :value-extractor="COLUMN_VALUE.cuota" />
+                <ColumnFilterDropdown v-model="colFilters.cuota" column-label="Cuota" :all-items="viewRows" :value-extractor="COLUMN_VALUE.cuota" />
               </th>
               <th>
-                <ColumnFilterDropdown v-model="colFilters.monto" column-label="Monto" :all-items="allRows" :value-extractor="COLUMN_VALUE.monto" />
+                <ColumnFilterDropdown v-model="colFilters.monto" column-label="Monto" :all-items="viewRows" :value-extractor="COLUMN_VALUE.monto" />
               </th>
               <th>
-                <ColumnFilterDropdown v-model="colFilters.vence" column-label="Vence" :all-items="allRows" :value-extractor="COLUMN_VALUE.vence" />
+                <ColumnFilterDropdown v-model="colFilters.vence" column-label="Vence" :all-items="viewRows" :value-extractor="COLUMN_VALUE.vence" />
               </th>
               <th></th>
               <th>
-                <ColumnFilterDropdown v-model="colFilters.asesor" column-label="Asesor" :all-items="allRows" :value-extractor="COLUMN_VALUE.asesor" />
+                <ColumnFilterDropdown v-model="colFilters.asesor" column-label="Asesor" :all-items="viewRows" :value-extractor="COLUMN_VALUE.asesor" />
               </th>
               <th class="tc">
                 <button class="btn-icon btn-icon-sm" type="button" title="Limpiar filtros" aria-label="Limpiar filtros" @click="clearFilters">
@@ -135,7 +151,14 @@
               @keydown.enter.self="previewRow = it"
             >
               <td>
-                <div class="col-main">{{ it.student_full_name }}</div>
+                <div class="col-main">
+                  <span
+                    v-if="b2bDoctypeShort(it.b2b_doctype_alias)"
+                    class="ds-pill info col-doc"
+                    :title="it.b2b_doctype_alias === 'we_enrollment_b2b_doctype_purchase_order' ? 'Orden de Compra' : 'Orden de Servicio'"
+                  >{{ b2bDoctypeShort(it.b2b_doctype_alias) }}</span>
+                  {{ it.student_full_name }}
+                </div>
                 <div class="col-sub">{{ it.document_number || 'sin DNI' }} · {{ it.email || 'sin correo' }}{{ it.phone ? ` · ${it.phone}` : '' }}</div>
               </td>
               <td>
@@ -179,7 +202,8 @@ import CollectionPreviewModal from '@/views/fico/collections/CollectionPreviewMo
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import {
   buildCollectionCards, dueLabel, DUE_TONE, COLUMN_VALUE,
-  summarizeCollections, filterCollections, sortByAmount, buildCollectionsExport
+  summarizeCollections, filterCollections, sortByAmount, buildCollectionsExport,
+  DEBTOR_VIEWS, rowsForDebtor, b2bDoctypeShort
 } from '@/entities/collection/collectionView.js'
 import { downloadCsv } from '@/shared/lib/downloadCsv.js'
 
@@ -206,6 +230,7 @@ const AMOUNT_SORT = {
 
 const today = new Date()
 const monthValue = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
+const debtorView = ref('students')
 const stateFilter = ref('total')
 const amountSort = ref(null)
 const emptyFilters = () => ({ alumno: '', programa: [], cuota: [], monto: [], vence: [], asesor: [] })
@@ -215,9 +240,16 @@ const allRows = ref([])
 const loading = ref(false)
 const previewRow = ref(null)
 
+// Primero se separa por deudor (alumno / empresa OS-OP): cada vista es su
+// propio universo de KPIs, desplegables de filtro y Excel.
+const viewRows = computed(() => rowsForDebtor(allRows.value, debtorView.value))
+const debtorCounts = computed(() => Object.fromEntries(
+  DEBTOR_VIEWS.map(v => [v.key, rowsForDebtor(allRows.value, v.key).length])
+))
+
 // Los KPIs se calculan ANTES de la pestaña de estado: cada pestaña muestra su
 // conteo aunque la tabla este filtrada por una sola.
-const filteredRows = computed(() => filterCollections(allRows.value, colFilters))
+const filteredRows = computed(() => filterCollections(viewRows.value, colFilters))
 const kpis = computed(() => summarizeCollections(filteredRows.value))
 const cards = computed(() => buildCollectionCards(kpis.value))
 const items = computed(() => sortByAmount(
@@ -263,6 +295,10 @@ watch(monthValue, () => {
   loadCollections()
 })
 
+// Los valores marcados en los filtros son de la otra vista (otros programas,
+// montos, fechas): se limpian para no dejar la tabla vacia sin motivo.
+watch(debtorView, clearFilters)
+
 function shiftMonth (delta) {
   const { year, month } = yearMonth.value
   const d = new Date(year, month - 1 + delta, 1)
@@ -290,7 +326,8 @@ async function loadCollections () {
 // Columnas DNI (1) y Celular (3) como texto en Excel.
 function exportDebtors () {
   const tab = STATE_TABS.find(t => t.key === stateFilter.value)?.label || 'Todas'
-  downloadCsv(`cobranzas_${monthValue.value}_${tab.toLowerCase().replace(/\s+/g, '-')}.csv`,
+  const view = debtorView.value === 'companies' ? 'empresas' : 'alumnos'
+  downloadCsv(`cobranzas_${view}_${monthValue.value}_${tab.toLowerCase().replace(/\s+/g, '-')}.csv`,
     buildCollectionsExport(items.value), { textColumns: [1, 3] })
   toast.success(`${items.value.length} cuotas exportadas.`)
 }
@@ -321,6 +358,7 @@ onMounted(loadCollections)
 .col-table td { vertical-align: middle; }
 .col-table tr.is-overdue td { background: var(--ds-soft-bad); }
 .col-main { font-weight: 600; color: var(--ds-ink); line-height: 1.3; }
+.col-doc { margin-right: 6px; font-size: 10.5px; vertical-align: 1px; }
 .col-sub { margin-top: 2px; font-size: 11.5px; color: var(--ds-muted); }
 .col-amount { font-weight: 700; color: var(--ds-heading); white-space: nowrap; }
 .col-empty { text-align: center; color: var(--ds-muted); }
