@@ -9,9 +9,15 @@ export const COURSE_CHANGE_GRACE_DAYS = 30
 // Parsea start_date (cadena calendario) a Date local sin sufrir TZ shift:
 // si el server Node corre en UTC, el ISO viene como '2026-05-09T00:00:00.000Z',
 // que `new Date()` interpreta como 2026-05-08 19:00 Lima — falsea el filtro.
+// También acepta 'DD/MM/YYYY': el start_date de la fila del listado
+// (sp_fico_enrollment_list) viene así, y sin parsearlo el CC #13926 no ofrecía
+// la edición destino del mismo día.
 export function parseLocalDate (startDate) {
-  const m = String(startDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null
+  const s = String(startDate ?? '')
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3])
+  const dmy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/)
+  return dmy ? new Date(+dmy[3], +dmy[2] - 1, +dmy[1]) : null
 }
 
 // Cambio de curso: ediciones que empezaron hace ≤ COURSE_CHANGE_GRACE_DAYS días o después.

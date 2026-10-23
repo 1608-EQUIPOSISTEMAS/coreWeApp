@@ -23,6 +23,11 @@ describe('isWithinCourseChangeWindow', () => {
     expect(isWithinCourseChangeWindow('2026-07-15', oct23, '2026-07-15T00:00:00.000Z')).toBe(true)
     expect(isWithinCourseChangeWindow('2026-07-16', oct23, '2026-07-15')).toBe(false)
   })
+  it('lee el origen en DD/MM/YYYY, como llega la fila del listado (#13926)', () => {
+    const oct23 = new Date(2026, 9, 23)
+    expect(isWithinCourseChangeWindow('2026-07-15T00:00:00.000Z', oct23, '15/07/2026')).toBe(true)
+    expect(isWithinCourseChangeWindow('2026-07-16', oct23, '15/07/2026')).toBe(false)
+  })
   it('rechaza start_date vacío', () => {
     expect(isWithinCourseChangeWindow(null, today)).toBe(false)
   })
