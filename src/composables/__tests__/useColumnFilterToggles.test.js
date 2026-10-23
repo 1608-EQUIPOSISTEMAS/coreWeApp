@@ -30,4 +30,14 @@ describe('useColumnFilterToggles', () => {
     filters.alumno = ''
     expect(f.anyVisible.value).toBe(false)
   })
+
+  it('alwaysOpen: la fila está fija y el clic no la oculta', () => {
+    const f = useColumnFilterToggles(reactive({ alumno: '', agente: [] }), { alwaysOpen: true })
+    expect(f.anyVisible.value).toBe(true)
+    expect(f.isOpen('agente')).toBe(true)
+    f.toggle('agente')
+    f.closeAll()
+    expect(f.isOpen('agente')).toBe(true)
+    expect(f.anyVisible.value).toBe(true)
+  })
 })

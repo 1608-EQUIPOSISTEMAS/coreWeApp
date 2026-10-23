@@ -229,7 +229,7 @@ const router = useRouter()
 const fmt = useEnrollmentFormatters()
 // Mismos filtros que la vista compacta (useEnrollmentList.colFilters): lo que se
 // filtra en una vista sigue filtrado al cambiar a la otra.
-const colToggles = useColumnFilterToggles(props.colFilters)
+const colToggles = useColumnFilterToggles(props.colFilters, { alwaysOpen: true })
 
 // Los filtros son del composable de la pagina (useEnrollmentList.colFilters): la
 // tabla no los muta, avisa el cambio y la pagina lo aplica.
@@ -311,6 +311,8 @@ const totalCols = computed(() =>
 </script>
 
 <style scoped>
+/* La fila de filtros está siempre visible: el encabezado ya no se pulsa. */
+.eet .ds-th-filter { cursor: default; }
 /* Tabla, pills, vacío y skeleton salen de ds-*. Aquí: la columna fija, los
    grupos plegables y la fila de filtros. Sin bloque dark: todo va con tokens. */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

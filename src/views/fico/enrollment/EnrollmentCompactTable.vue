@@ -6,57 +6,57 @@
           <tr>
             <th class="tc" style="width:44px"><span class="sr-only">Abrir</span></th>
             <th style="width:120px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fRegistro') }" :aria-expanded="colToggles.isOpen('fRegistro')" :title="colToggles.isOpen('fRegistro') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('fRegistro')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fRegistro') }" :aria-expanded="colToggles.isOpen('fRegistro')" @click="colToggles.toggle('fRegistro')">
                 F. registro <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th>
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('alumno') }" :aria-expanded="colToggles.isOpen('alumno')" :title="colToggles.isOpen('alumno') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('alumno')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('alumno') }" :aria-expanded="colToggles.isOpen('alumno')" @click="colToggles.toggle('alumno')">
                 Alumno / documento <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th>
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('programa') }" :aria-expanded="colToggles.isOpen('programa')" :title="colToggles.isOpen('programa') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('programa')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('programa') }" :aria-expanded="colToggles.isOpen('programa')" @click="colToggles.toggle('programa')">
                 Programa / edición <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th style="width:96px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('agente') }" :aria-expanded="colToggles.isOpen('agente')" :title="colToggles.isOpen('agente') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('agente')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('agente') }" :aria-expanded="colToggles.isOpen('agente')" @click="colToggles.toggle('agente')">
                 Agente <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th style="width:96px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fPago') }" :aria-expanded="colToggles.isOpen('fPago')" :title="colToggles.isOpen('fPago') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('fPago')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('fPago') }" :aria-expanded="colToggles.isOpen('fPago')" @click="colToggles.toggle('fPago')">
                 F. pago <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="tc" style="width:110px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('tipoPago') }" :aria-expanded="colToggles.isOpen('tipoPago')" :title="colToggles.isOpen('tipoPago') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('tipoPago')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('tipoPago') }" :aria-expanded="colToggles.isOpen('tipoPago')" @click="colToggles.toggle('tipoPago')">
                 Tipo de pago <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="num" style="width:100px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('montoMin') }" :aria-expanded="colToggles.isOpen('montoMin')" :title="colToggles.isOpen('montoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('montoMin')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('montoMin') }" :aria-expanded="colToggles.isOpen('montoMin')" @click="colToggles.toggle('montoMin')">
                 Monto neto <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="num" style="width:90px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('inicialMin') }" :aria-expanded="colToggles.isOpen('inicialMin')" :title="colToggles.isOpen('inicialMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('inicialMin')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('inicialMin') }" :aria-expanded="colToggles.isOpen('inicialMin')" @click="colToggles.toggle('inicialMin')">
                 Inicial <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="num" style="width:90px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('pagadoMin') }" :aria-expanded="colToggles.isOpen('pagadoMin')" :title="colToggles.isOpen('pagadoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('pagadoMin')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('pagadoMin') }" :aria-expanded="colToggles.isOpen('pagadoMin')" @click="colToggles.toggle('pagadoMin')">
                 Pagado <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="num" style="width:90px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('saldoMin') }" :aria-expanded="colToggles.isOpen('saldoMin')" :title="colToggles.isOpen('saldoMin') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('saldoMin')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('saldoMin') }" :aria-expanded="colToggles.isOpen('saldoMin')" @click="colToggles.toggle('saldoMin')">
                 Saldo <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
             <th class="tc" style="width:140px">
-              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('estado') }" :aria-expanded="colToggles.isOpen('estado')" :title="colToggles.isOpen('estado') ? 'Ocultar filtro' : 'Filtrar por esta columna'" @click="colToggles.toggle('estado')">
+              <button type="button" class="ds-th-filter" :class="{ 'is-active': colToggles.isActive('estado') }" :aria-expanded="colToggles.isOpen('estado')" @click="colToggles.toggle('estado')">
                 Estado FICO <i class="fa-solid fa-filter" aria-hidden="true"></i>
               </button>
             </th>
@@ -174,7 +174,7 @@ const emit = defineEmits(['select-row', 'clear-col-filters', 'update-filter'])
 
 const router = useRouter()
 const fmt = useEnrollmentFormatters()
-const colToggles = useColumnFilterToggles(props.colFilters)
+const colToggles = useColumnFilterToggles(props.colFilters, { alwaysOpen: true })
 
 // Los filtros son del composable de la pagina (useEnrollmentList.colFilters): la
 // tabla no los muta, avisa el cambio y la pagina lo aplica.
@@ -235,6 +235,8 @@ function openDetail (e) {
 </script>
 
 <style scoped>
+/* La fila de filtros está siempre visible: el encabezado ya no se pulsa. */
+.ect .ds-th-filter { cursor: default; }
 /* Tabla, pills, vacío y skeleton salen de ds-* (design-system.css). Aquí solo
    lo propio: la fila de filtros, recortes de texto y los tintes de negocio.
    Sin bloque dark: todo va con tokens. */
