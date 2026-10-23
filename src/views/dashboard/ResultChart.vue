@@ -29,22 +29,40 @@ const palette = computed(() => (isDark.value
   ? { principal: '#8FAADC', referencia: '#5A5A50', grid: '#2A2A22' }
   : { principal: '#3A63B8', referencia: '#A9B6CC', grid: '#EEF1F6' }))
 
+// Varias series de igual rango (una por linea de negocio) no caben en
+// principal/referencia: llevan `tono` y el color sale del token, como en ReportBars.
+const TOKEN_POR_TONO = {
+  accent: '--ds-accent', accent2: '--ds-accent-2', neutro: '--ds-reference', bad: '--ds-bad',
+  envivo: '--ds-line-envivo', online: '--ds-line-online'
+}
+const tonos = computed(() => {
+  void isDark.value
+  const estilo = getComputedStyle(document.documentElement)
+  return Object.fromEntries(Object.entries(TOKEN_POR_TONO).map(([tono, token]) => [tono, estilo.getPropertyValue(token).trim()]))
+})
+
 const horizontal = computed(() => props.grafico.tipo === 'barras-h')
 
-// Las barras horizontales crecen con la cantidad de filas (un asesor por fila).
+// Las barras horizontales crecen con la cantidad de filas y de series por fila
+// (ventas + periodo anterior son dos barras). Si la fila queda corta, Chart.js
+// esconde etiquetas del eje y la barra queda sin nombre.
 const altura = computed(() => (horizontal.value
-  ? Math.max(160, props.grafico.categorias.length * 30 + 50)
+  ? Math.max(160, props.grafico.categorias.length * (24 + 14 * props.grafico.series.length) + 60)
   : props.alto))
 
 const reducedMotion = typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-function seriesDataset ({ nombre, datos, rol }) {
-  const color = rol === 'referencia' ? palette.value.referencia : palette.value.principal
+// `notas` (opcional, una por dato) se suma al tooltip: "Ventas: 229 (37%)".
+// `tonosPorDato` pinta cada barra con su tono: una cascada marca en otro color
+// los totales y las bajadas. Un dato [desde, hasta] es una barra flotante.
+function seriesDataset ({ nombre, datos, rol, tono, notas, tonosPorDato }) {
+  const color = tono ? tonos.value[tono] : rol === 'referencia' ? palette.value.referencia : palette.value.principal
   if (props.grafico.tipo === 'linea') {
     return {
       label: nombre,
       data: datos,
+      notas,
       borderColor: color,
       backgroundColor: color,
       borderWidth: rol === 'referencia' ? 2 : 3,
@@ -55,7 +73,8 @@ function seriesDataset ({ nombre, datos, rol }) {
       spanGaps: false
     }
   }
-  return { label: nombre, data: datos, backgroundColor: color, borderRadius: 4, maxBarThickness: 34 }
+  const backgroundColor = tonosPorDato ? tonosPorDato.map(t => tonos.value[t] || color) : color
+  return { label: nombre, data: datos, notas, backgroundColor, borderRadius: 4, maxBarThickness: 34 }
 }
 
 // Una meta o un promedio es UNA línea recta, no una serie: se dibuja como un
@@ -89,13 +108,16 @@ const chartOptions = computed(() => {
     border: { display: false },
     ticks: { callback: (v) => formatCompact(v, unidad), maxTicksLimit: 5 }
   }
-  const categoryAxis = { grid: { display: false }, border: { display: false } }
+  // Cada barra es un nombre: ninguno se salta aunque el eje vaya justo.
+  const categoryAxis = { grid: { display: false }, border: { display: false }, ticks: { autoSkip: false } }
   return {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: horizontal.value ? 'y' : 'x',
     animation: reducedMotion ? false : { duration: 450 },
-    interaction: { mode: 'index', intersect: false },
+    // En barras horizontales la fila se elige por la altura del cursor (eje y);
+    // con el eje x por defecto el tooltip mostraba el dato de otra fila.
+    interaction: { mode: 'index', intersect: false, axis: horizontal.value ? 'y' : 'x' },
     plugins: {
       legend: {
         display: chartData.value.datasets.length > 1,
@@ -106,7 +128,14 @@ const chartOptions = computed(() => {
         labels: { usePointStyle: true, pointStyle: props.grafico.tipo === 'linea' ? 'line' : 'rectRounded', boxWidth: 22, padding: 14 }
       },
       tooltip: {
-        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatValue(ctx.raw, unidad)}` }
+        callbacks: {
+          label: (ctx) => {
+            const nota = ctx.dataset.notas?.[ctx.dataIndex]
+            // Una barra flotante no tiene "un valor": su nota dice lo que mide.
+            if (Array.isArray(ctx.raw)) return nota ?? `${formatValue(ctx.raw[0], unidad)} → ${formatValue(ctx.raw[1], unidad)}`
+            return `${ctx.dataset.label}: ${formatValue(ctx.raw, unidad)}${nota ? ` (${nota})` : ''}`
+          }
+        }
       }
     },
     scales: horizontal.value

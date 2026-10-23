@@ -439,6 +439,13 @@ export default [
         submodule: 'REPORTE',
         roles: ['ADMIN', 'LIDER_PRODUCTO', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Ventas Online & En Vivo',
+        to: '/producto/ventas',
+        submodule: 'VENTAS',
+        roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'GERENCIA'],
+      },
     ],
   },
   {
