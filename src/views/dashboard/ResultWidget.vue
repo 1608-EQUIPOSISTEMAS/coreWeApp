@@ -64,7 +64,7 @@
             :stroke-dasharray="`${s.largo} ${CIRCUNFERENCIA}`"
             :stroke-dashoffset="-s.inicio"
             transform="rotate(-90 60 60)"
-          />
+          ><title>{{ s.label }}: {{ formatValue(s.valor, widget.unidad) }} ({{ formatValue(s.pct, 'pct') }})</title></circle>
           <text x="60" y="58" text-anchor="middle" class="dona-num">{{ formatCompact(widget.total, widget.unidad) }}</text>
           <text x="60" y="73" text-anchor="middle" class="dona-sub">{{ widget.etiquetaTotal }}</text>
         </svg>
@@ -184,7 +184,8 @@ const arcos = computed(() => {
   let inicio = 0
   return (props.widget.segmentos ?? []).map(s => {
     const largo = total ? (Number(s.valor) / total) * CIRCUNFERENCIA : 0
-    const arco = { ...s, largo, inicio }
+    // El % va en el tooltip del segmento (<title>): la dona no lo escribe.
+    const arco = { ...s, largo, inicio, pct: total ? (Number(s.valor) / total) * 100 : null }
     inicio += largo
     return arco
   })
@@ -237,6 +238,8 @@ const arcoMedidor = computed(() => (Math.min(100, Math.max(0, Number(props.widge
 .seg-principal { stroke: var(--ds-accent); } .seg-bg-principal { background: var(--ds-accent); }
 .seg-secundario { stroke: var(--ds-accent-2); } .seg-bg-secundario { background: var(--ds-accent-2); }
 .seg-neutro { stroke: var(--ds-reference); } .seg-bg-neutro { background: var(--ds-reference); }
+.seg-envivo { stroke: var(--ds-line-envivo); } .seg-bg-envivo { background: var(--ds-line-envivo); }
+.seg-online { stroke: var(--ds-line-online); } .seg-bg-online { background: var(--ds-line-online); }
 .seg-ok { stroke: var(--ds-ok); } .seg-bg-ok { background: var(--ds-ok); }
 .seg-warn { stroke: var(--ds-warn); } .seg-bg-warn { background: var(--ds-warn); }
 .seg-bad { stroke: var(--ds-bad); } .seg-bg-bad { background: var(--ds-bad); }

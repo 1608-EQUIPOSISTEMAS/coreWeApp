@@ -36,6 +36,9 @@
   --ds-accent: #3a63b8;
   --ds-accent-2: #93b4e8;
   --ds-reference: #cbd5e1;
+  /* Identidad de las lineas de negocio en graficos (Ventas Online & En Vivo). */
+  --ds-line-envivo: #000f5a;
+  --ds-line-online: #2a8bfc;
   --ds-bar: #c9d6ec;
 
   /* Estados: el tono ok/warn/bad lo decide la regla de negocio, aquí solo el color */
@@ -93,6 +96,9 @@
   --ds-accent: #8faadc;
   --ds-accent-2: #4f6a9a;
   --ds-reference: #4a4a42;
+  /* El navy #000f5a se pierde sobre #1a1a14: mismo azul, aclarado. */
+  --ds-line-envivo: #7b8ce0;
+  --ds-line-online: #2a8bfc;
   --ds-bar: #3a4a66;
 
   --ds-ok: #34d399;
@@ -130,6 +136,18 @@
 .ds-title { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: var(--ds-heading); }
 .ds-sub { margin: 6px 0 0; font-size: 14px; color: var(--ds-muted); }
 .ds-head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+/* Encabezado que acompaña el scroll: título y periodo a mano para recorrer meses
+   sin volver arriba. Se pega bajo el header de la app; flota, por eso lleva fondo
+   y sombra. Requiere que ningún ancestro tenga overflow hidden/auto (DefaultLayout
+   usa overflow-x: clip justamente por esto). */
+.ds-head--fija {
+  position: sticky; top: var(--layout-header-h, 64px); z-index: 20;
+  align-items: center; margin: 0; padding: 12px 18px;
+  background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: var(--ds-radius);
+  box-shadow: 0 6px 16px -10px rgba(15, 23, 42, .35);
+}
+.ds-head--fija .ds-title { font-size: 22px; }
+.ds-head--fija .ds-sub { margin-top: 2px; }
 
 /* Veredicto: una frase armada con los datos, coloreada por el tono */
 .ds-verdict {
@@ -251,6 +269,10 @@
 }
 .ds-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--ds-border); }
 .ds-panel-title { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--ds-heading); }
+/* Dashboard que se lee por sus gráficos: el título de cada panel es la pregunta
+   y tiene que saltar a la vista. Una clase en la .ds-page lo aplica a todos. */
+.ds-page--destacada .ds-panel-title { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 800; letter-spacing: -0.01em; }
+.ds-page--destacada .ds-panel-title::before { content: ''; flex: none; width: 4px; height: 16px; border-radius: 2px; background: var(--ds-accent); }
 .ds-panel-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ds-muted); }
 .ds-panel-hint { font-size: 11.5px; color: var(--ds-muted); white-space: nowrap; }
 .ds-panel-link { font-size: 12px; font-weight: 600; color: var(--ds-ink-2); text-decoration: none; white-space: nowrap; }

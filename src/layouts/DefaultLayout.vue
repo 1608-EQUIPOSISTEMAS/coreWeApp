@@ -58,7 +58,9 @@ const sidebar = useSidebarStore()
   width: 100%;
   max-width: 1656px;
   margin: 0 auto;
-  overflow-x: hidden;
+  /* clip y no hidden: hidden vuelve a .page-body un contenedor de scroll y
+     anula position: sticky en todo lo de adentro (.ds-head--fija, fichas laterales). */
+  overflow-x: clip;
 }
 
 .sidebar-backdrop {

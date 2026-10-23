@@ -72,6 +72,11 @@ export default class ProgramService {
     return response.data;
   }
 
+  // Ranking de lo mas vendido en En Vivo, Online y Membresias: { granularity: mes|anio, date }.
+  async ventas(payload) {
+    return (await api.post('/program/ventas', payload)).data.data;
+  }
+
   // Archivos del programa que manda el bot de WhatsApp (docente, brochure, certificado).
   async mediaGet(program_id) {
     return (await api.post('/program/programmediaget', { program_id })).data.data;

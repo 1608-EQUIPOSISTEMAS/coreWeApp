@@ -58,6 +58,7 @@ Se definen en `:root` y cambian solos con `data-coreui-theme="dark"`.
 | `--ds-accent-2` | `#93b4e8` | `#4f6a9a` | Serie secundaria |
 | `--ds-reference` | `#cbd5e1` | `#4a4a42` | Referencia: típico, meta, período anterior |
 | `--ds-bar` | `#c9d6ec` | `#3a4a66` | Barras que no son la destacada |
+| `--ds-line-envivo` / `--ds-line-online` | `#000f5a` / `#2a8bfc` | `#7b8ce0` / `#2a8bfc` | Identidad de las líneas de negocio En Vivo / Online en gráficos. El navy se aclara en oscuro porque `#000f5a` desaparece sobre `#1a1a14` |
 | `--ds-rose` / `-rose-ink` / `--ds-soft-rose` / `--ds-rose-strong` | `#e07aa3` / `#8e1f4f` / `#fadbe6` / `#f4b6cb` | `#f08bb4` / `#f4a3c4` / rgba 14–30 % | **No llegó al objetivo** (falta, no error). `.ds-pill.rose`, `.ds-band-item.rose` |
 | `--ds-ok` / `-warn` / `-bad` | `#12a150` / `#e08a1e` / `#d64545` | `#34d399` / `#e9b872` / `#f87171` | Relleno de estado (barra, anillo, borde) |
 | `--ds-ok-ink` / `-warn-ink` / `-bad-ink` / `-info-ink` | `#0f7a3d` / `#a8620f` / `#b83232` / `#1e40af` | igual al relleno | Texto de estado (contraste AA) |
@@ -156,6 +157,14 @@ Administración; sin "Contraer menú" (se pidió quitarlo).
 
 - Sin eyebrow en mayúsculas encima del título. El subtítulo dice algo útil (un
   conteo o la hora de actualización), no repite el título.
+- **Encabezado fijo** (`.ds-head.ds-head--fija`): en un dashboard largo con
+  selector de periodo, el título y el periodo acompañan el scroll para cambiar
+  de mes sin volver arriba (referencia: `views/producto/VentasProducto.vue`). Se
+  pega bajo el header de la app; no funciona si un ancestro tiene `overflow:
+  hidden/auto` (por eso `DefaultLayout` usa `overflow-x: clip`).
+- **Títulos de panel destacados** (`.ds-page--destacada` en la raíz): para un
+  dashboard que se lee solo por gráficos, los títulos-pregunta suben a 15.5/800
+  con una marca de color. No se usa en listados ni formularios.
 - Una sola acción primaria por pantalla.
 
 ### 5.2 Panel de indicadores (dashboard, reporte)
@@ -443,7 +452,7 @@ se usa `confirmAction()` (§7).
 | Archivos | `FileUploader` / `MultiFileUploader` | |
 | Aviso breve | `useToast()` de vue-toastification | `toast.success / error / warning`. Único sistema de toasts |
 | Confirmar acción | `confirmAction({ title, text, confirmText, danger })` | `composables/useConfirm.js`; `danger: true` para borrar/anular |
-| Gráfico | `views/dashboard/ResultChart.vue` o vue-chartjs | Ver §9 |
+| Gráfico | `views/dashboard/ResultChart.vue` o vue-chartjs | Ver §9. Cada serie admite `tono` (`accent`, `accent2`, `neutro`: varias series de igual rango, color desde el token) y `notas` (un texto por dato que se suma al tooltip, ej. el %). La dona de `ResultWidget` muestra valor y % al pasar el cursor |
 | Panel de indicador (ranking, medidor, dona, métricas, tabla corta) | `views/dashboard/ResultWidget.vue` | Recibe un objeto `widget` (contrato de `results.entity.js`). Fuera del dashboard lo arma un módulo puro del feature, nunca el template |
 | Carga global con blur | `meta: { showLoader: true }` en la ruta | Opt-in; el resto usa skeleton |
 | Navegar por semana ISO | `views/academica/components/WeekNavigator.vue` + `features/academica-week/useIsoWeekNav.js` | "‹ Semana N ›" + rango; fechas como texto `YYYY-MM-DD` (nunca `new Date('YYYY-MM-DD')`). Lo usan Control de Ediciones y Semanal |
@@ -594,7 +603,7 @@ Reprogramaciones, Tickets y el Reporte Académico en `ds-*` (el reporte se
 migró sin reescribirlo: misma matriz de auditorías por sesión; el rediseño
 completo se revirtió el 28/09/26). El Bot está oculto del sidebar y sigue legacy.
 Producto (06/10/26): completo en `ds-*` — Programas, Docentes, Lista de Precios,
-Carga de Links, Reporte, Cronograma (`Editions.vue` + modal A5 + análisis de
+Carga de Links, Reporte, Ventas Online & En Vivo (dashboard solo de gráficos y sin frase de conclusión: línea de tiempo con una línea por línea de negocio y botones Todos / En Vivo / Online / Membresías; colores de línea de negocio `--ds-line-envivo` (#000f5a, aclarado en oscuro) y `--ds-line-online` (#2a8bfc), los mismos en la dona (`seg-envivo` / `seg-online`); los rankings van como barras horizontales ahora vs periodo anterior; las caídas, como cascada (barras flotantes `[desde, hasta]` con `tonosPorDato`); el % de cada dato sale en el tooltip; widgets `ResultWidget` armados en `features/producto-ventas`), Cronograma (`Editions.vue` + modal A5 + análisis de
 tiempos), Planificación y Cronograma Vista (este último conserva su diseño denso
 del 14/07; solo cambió su capa de color a tokens). Comercial › Marketing -
 Gestión nació en `ds-*`.

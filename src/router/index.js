@@ -255,6 +255,13 @@ const routes = [
             component: () => import('@/views/producto/ReporteProducto.vue'),
             meta: { submodule: 'REPORTE', roles: ['ADMIN', 'LIDER_PRODUCTO', 'GERENCIA'] },
           },
+          // Que se vende mas en En Vivo, Online y Membresias (la venta de FICO, sin margenes).
+          {
+            path: 'ventas',
+            name: 'VentasProducto',
+            component: () => import('@/views/producto/VentasProducto.vue'),
+            meta: { submodule: 'VENTAS', roles: ['ADMIN', 'LIDER_PRODUCTO', 'PRODUCTO', 'GERENCIA'] },
+          },
         ],
       },
 
@@ -786,7 +793,12 @@ function homeFor (session) {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior() {
+  // Arriba solo al cambiar de pantalla. Una pestaña o filtro que vive en la
+  // query (?linea=, ?tab=) es la misma pantalla: subir al inicio en cada clic
+  // saca al usuario del panel que estaba usando. Atrás/adelante vuelve a donde estaba.
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.path === from.path) return false
     return { top: 0 }
   },
 })
