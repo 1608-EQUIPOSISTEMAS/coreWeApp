@@ -295,6 +295,20 @@ export default [
         submodule: 'RENTABILIDAD',
         roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Ingresos Operativos',
+        to: '/fico/ingresos-operativos',
+        submodule: 'INGRESOS_OPERATIVOS',
+        roles: ['ADMIN'],
+      },
+      {
+        component: 'CNavItem',
+        name: 'Pagos Adicionales',
+        to: '/fico/pagos-adicionales',
+        submodule: 'PAGOS_ADICIONALES',
+        roles: ['ADMIN'],
+      },
     ],
   },
   {

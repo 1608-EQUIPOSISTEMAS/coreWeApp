@@ -151,6 +151,35 @@ const routes = [
             component: () => import('@/views/fico/Rentabilidad.vue'),
             meta: { submodule: 'RENTABILIDAD', roles: ['ADMIN', 'LIDER_FICO', 'GERENCIA', 'FICO'] },
           },
+          // Consultor mensual de ingresos sin B2B (reemplaza el sheet "Ing. Operativos").
+          // Ingresos Operativos y Pagos Adicionales: solo ADMIN hasta habilitarlos;
+          // el resto entra cuando se le marque la casilla en Roles y Permisos.
+          {
+            path: 'ingresos-operativos',
+            name: 'ficoIngresosOperativos',
+            component: () => import('@/views/fico/IngresosOperativos.vue'),
+            meta: { submodule: 'INGRESOS_OPERATIVOS', roles: ['ADMIN'] },
+          },
+          // Registro de pagos adicionales (reemplaza el sheet de adicionales).
+          {
+            path: 'pagos-adicionales',
+            name: 'ficoPagosAdicionales',
+            component: () => import('@/views/fico/PagosAdicionales.vue'),
+            meta: { submodule: 'PAGOS_ADICIONALES', roles: ['ADMIN'] },
+          },
+          // Formulario en su propia página, como inscripciones/new.
+          {
+            path: 'pagos-adicionales/new',
+            name: 'ficoPagoAdicionalNuevo',
+            component: () => import('@/views/fico/pagos-adicionales/PagoAdicionalForm.vue'),
+            meta: { submodule: 'PAGOS_ADICIONALES', roles: ['ADMIN'] },
+          },
+          {
+            path: 'pagos-adicionales/:id(\\d+)',
+            name: 'ficoPagoAdicionalEditar',
+            component: () => import('@/views/fico/pagos-adicionales/PagoAdicionalForm.vue'),
+            meta: { submodule: 'PAGOS_ADICIONALES', roles: ['ADMIN'] },
+          },
           // {
           //   path: 'reportes',
           //   name: 'FicoReportes',

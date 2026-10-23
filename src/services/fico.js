@@ -235,6 +235,40 @@ export default class FicoService {
     return response.data;
   }
 
+  // Consultor de Ingresos Operativos: { desde: 'YYYY-MM', hasta?, tipo_cambio? }
+  // → { periodo, resumen, detalle } (pagos sin B2B).
+  async ingresosOperativos(params) {
+    const response = (await api.post('/ingresos-operativos/consulta', params)).data;
+    return response.data;
+  }
+
+  // Pagos Adicionales (reemplaza el sheet de adicionales).
+  // consulta: { desde: 'YYYY-MM', hasta? } → { periodo, filas }.
+  async pagosAdicionales(params) {
+    const response = (await api.post('/pagos-adicionales/consulta', params)).data;
+    return response.data;
+  }
+
+  async pagoAdicional(additional_payment_id) {
+    const response = (await api.post('/pagos-adicionales/detalle', { additional_payment_id })).data;
+    return response.data;
+  }
+
+  async registrarPagoAdicional(payload) {
+    const response = (await api.post('/pagos-adicionales/registrar', payload)).data;
+    return response.data;
+  }
+
+  async editarPagoAdicional(payload) {
+    const response = (await api.post('/pagos-adicionales/editar', payload)).data;
+    return response.data;
+  }
+
+  async anularPagoAdicional(additional_payment_id) {
+    const response = (await api.post('/pagos-adicionales/anular', { additional_payment_id })).data;
+    return response.data;
+  }
+
   // Tarifas de docentes y publicidad del año: { year, tarifas, publicidad }.
   async costosRentabilidad(year) {
     const response = (await api.get('/fico/rentabilidad/costos', { params: { year } })).data;
