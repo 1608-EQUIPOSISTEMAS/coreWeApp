@@ -151,12 +151,3 @@ export function cuentasDe (cuentas, empresaId, moneda) {
   if (!empresaId) return []
   return cuentas.filter(a => a.business_entity_catalog_id === empresaId && (!moneda || !a.currency || a.currency === moneda))
 }
-
-// ── Exportar ───────────────────────────────────────────────────────────────
-
-export function toExportRows (rows) {
-  return [
-    ['N°', ...COLUMNS.map(c => c.label)],
-    ...rows.map(r => [r.id, ...COLUMNS.map(c => r[c.key] ?? '')])
-  ]
-}

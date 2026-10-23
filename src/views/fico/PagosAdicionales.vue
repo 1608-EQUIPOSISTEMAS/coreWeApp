@@ -9,9 +9,6 @@
         <button class="btn-exec btn-exec-outline" type="button" :disabled="!nFiltros" @click="clearFilters">
           <i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i> Limpiar filtros<template v-if="nFiltros"> ({{ nFiltros }})</template>
         </button>
-        <button class="btn-exec btn-exec-outline" type="button" :disabled="!sorted.length" @click="exportar">
-          <i class="fa-solid fa-file-export" aria-hidden="true"></i> Exportar a Excel
-        </button>
         <button v-if="puedeRegistrar" class="btn-exec btn-exec-primary" type="button" @click="abrirNuevo">
           <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo pago adicional
         </button>
@@ -142,12 +139,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { ServiceKeys } from '@/services'
 import { formatValue } from '@/shared/lib/formatValue.js'
-import { downloadCsv } from '@/shared/lib/downloadCsv.js'
 import { activeCount } from '@/shared/lib/columnFilters.js'
 import ColumnFilter from '@/shared/ui/ColumnFilter.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import {
-  COLUMNS, PRIMER_MES, withLabels, applyFilters, valuesFor, sortRows, toExportRows
+  COLUMNS, PRIMER_MES, withLabels, applyFilters, valuesFor, sortRows
 } from '@/features/pagos-adicionales/pagosAdicionales.js'
 import { periodoLabel, mesActual, isMes } from '@/features/ingresos-operativos/ingresosOperativos.js'
 
@@ -267,12 +263,6 @@ async function confirmarAnular () {
   } finally {
     anulando.value = false
   }
-}
-
-function exportar () {
-  // Celular y N° de operación como texto, o Excel se come los ceros.
-  const textColumns = ['celular', 'nOper'].map(k => COLUMNS.findIndex(c => c.key === k) + 1)
-  downloadCsv(`pagos-adicionales-${mes.value}.csv`, toExportRows(sorted.value), { textColumns })
 }
 </script>
 

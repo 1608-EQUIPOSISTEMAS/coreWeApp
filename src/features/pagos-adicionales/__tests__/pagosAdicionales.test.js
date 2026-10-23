@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   COLUMNS, withLabels, applyFilters, valuesFor, sortRows, programasDe, lineaProductoDe,
-  emptyForm, formFromFila, validateForm, buildPayload, cuentasDe, toExportRows, PROGRAMAS_FUNDACION, ASUNTOS
+  emptyForm, formFromFila, validateForm, buildPayload, cuentasDe, PROGRAMAS_FUNDACION, ASUNTOS
 } from '../pagosAdicionales.js'
 
 const fila = (extra = {}) => ({
@@ -87,14 +87,5 @@ describe('formulario', () => {
     ]
     expect(cuentasDe(cuentas, 3213, 'PEN').map(a => a.account_id)).toEqual([6])
     expect(cuentasDe(cuentas, null, 'PEN')).toEqual([])
-  })
-})
-
-describe('exportar', () => {
-  it('incluye el N° y las columnas del sheet', () => {
-    const out = toExportRows(withLabels([fila()]))
-    expect(out[0][0]).toBe('N°')
-    expect(out[1].slice(0, 4)).toEqual([1, 'EN VIVO', 'SAP HANA MM', 'Reprog.'])
-    expect(out[1][9]).toBe('Sí')
   })
 })
