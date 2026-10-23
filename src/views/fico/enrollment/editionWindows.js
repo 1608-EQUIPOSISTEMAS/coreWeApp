@@ -15,9 +15,14 @@ export function parseLocalDate (startDate) {
 }
 
 // Cambio de curso: ediciones que empezaron hace ≤ COURSE_CHANGE_GRACE_DAYS días o después.
-export function isWithinCourseChangeWindow (startDate, today = new Date()) {
+// También la que arrancó el mismo día que la edición origen, aunque pasara la
+// ventana: es un upgrade dentro de la misma cohorte (Esp. Excel E83 → Excel
+// Expert E19 del 15/07, #13926, comparten aulas).
+export function isWithinCourseChangeWindow (startDate, today = new Date(), originStartDate = null) {
   const ed = parseLocalDate(startDate)
   if (!ed) return false
+  const origin = parseLocalDate(originStartDate)
+  if (origin && ed.getTime() === origin.getTime()) return true
   const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() - COURSE_CHANGE_GRACE_DAYS)
   return ed >= cutoff
 }

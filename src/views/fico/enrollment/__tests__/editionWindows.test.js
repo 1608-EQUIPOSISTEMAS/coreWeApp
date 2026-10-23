@@ -17,6 +17,12 @@ describe('isWithinCourseChangeWindow', () => {
   it('no sufre el shift de TZ con un ISO en UTC', () => {
     expect(isWithinCourseChangeWindow('2026-08-29T00:00:00.000Z', today)).toBe(true)
   })
+  it('admite fuera de ventana la edición que arrancó el mismo día que el origen (#13926 Excel → Excel Expert 15/07)', () => {
+    const oct23 = new Date(2026, 9, 23)
+    expect(isWithinCourseChangeWindow('2026-07-15', oct23)).toBe(false)
+    expect(isWithinCourseChangeWindow('2026-07-15', oct23, '2026-07-15T00:00:00.000Z')).toBe(true)
+    expect(isWithinCourseChangeWindow('2026-07-16', oct23, '2026-07-15')).toBe(false)
+  })
   it('rechaza start_date vacío', () => {
     expect(isWithinCourseChangeWindow(null, today)).toBe(false)
   })

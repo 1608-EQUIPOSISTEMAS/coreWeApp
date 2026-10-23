@@ -926,7 +926,7 @@ async function onCCProgramChange () {
       ficoService.getProgramPrice(ccProgramVersionId.value)
     ])
     ccEditionsList.value = (items || [])
-      .filter(e => isWithinCourseChangeWindow(e.start_date))
+      .filter(e => isWithinCourseChangeWindow(e.start_date, new Date(), props.enrollment?.start_date || props.enrollment?.edition_start_date || props.detail?.edition_start_date))
       .map(e => ({
         ...e,
         id: e.edition_num_id || e.id,
