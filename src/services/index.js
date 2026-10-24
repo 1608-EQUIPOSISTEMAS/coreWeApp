@@ -18,6 +18,7 @@ import ImportService from './import.service'
 import MarketingService from './marketing.service'
 import ReprogramacionService from './reprogramacion.service'
 import TicketsAlumnosService from './ticketsAlumnos.service'
+import AcademicaMembresiasService from './academicaMembresias.service'
 import SchedulePlanService from './schedulePlan.service'
 import TicketsService from './tickets.service'
 import PlanComercialService from './planComercial.service'
@@ -47,6 +48,7 @@ Notification: Symbol('NotificationService'),
   Marketing: Symbol('MarketingService'),
   Reprogramacion: Symbol('ReprogramacionService'),
   TicketsAlumnos: Symbol('TicketsAlumnosService'),
+  AcademicaMembresias: Symbol('AcademicaMembresiasService'),
   SchedulePlan: Symbol('SchedulePlanService'),
   Tickets: Symbol('TicketsService'),
   PlanComercial: Symbol('PlanComercialService'),
@@ -74,6 +76,7 @@ export function createServices() {
     [ServiceKeys.Marketing]: new MarketingService(api),
     [ServiceKeys.Reprogramacion]: new ReprogramacionService(api),
     [ServiceKeys.TicketsAlumnos]: new TicketsAlumnosService(api),
+    [ServiceKeys.AcademicaMembresias]: new AcademicaMembresiasService(api),
     [ServiceKeys.SchedulePlan]: new SchedulePlanService(api),
     [ServiceKeys.Tickets]: new TicketsService(api),
     [ServiceKeys.PlanComercial]: new PlanComercialService(api),

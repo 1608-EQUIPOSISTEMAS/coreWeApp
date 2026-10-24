@@ -128,6 +128,13 @@ export default [
         submodule: 'TICKETS_ALUMNOS',
         roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Membresías Vigentes',
+        to: '/academica/membresias',
+        submodule: 'MEMBRESIAS',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
     ],
   },
   {

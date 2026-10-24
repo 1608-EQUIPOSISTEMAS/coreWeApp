@@ -770,6 +770,12 @@ const routes = [
       meta: { module: 'ACADEMICA', submodule: 'TICKETS_ALUMNOS', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA', 'FICO'] },
     },
     {
+      path: 'academica/membresias',
+      name: 'AcademicaMembresias',
+      component: () => import('@/views/academica/MembresiasVigentes.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'MEMBRESIAS', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),
