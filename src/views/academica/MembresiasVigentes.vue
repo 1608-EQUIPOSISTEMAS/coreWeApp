@@ -83,7 +83,14 @@
                 No hay socios con estos filtros. Prueba otra pestaña o quita la búsqueda.
               </td>
             </tr>
-            <tr v-for="it in visible" v-else :key="it.person_id">
+            <template v-for="it in visible" v-else :key="it.person_id">
+            <tr
+              :class="{ link: it.checkpoints.length }"
+              :tabindex="it.checkpoints.length ? 0 : undefined"
+              :aria-expanded="it.checkpoints.length ? openId === it.person_id : undefined"
+              @click="toggle(it)"
+              @keydown.enter="toggle(it)"
+            >
               <td>
                 <div class="mv-main">{{ it.full_name }}</div>
                 <div class="mv-sub">{{ it.document_number || 'sin DNI' }}</div>
@@ -100,6 +107,29 @@
               <td class="mono">{{ fmt.formatDate(it.expiry_date) }}</td>
               <td><span class="ds-pill" :class="STATUS[it.status].tone">{{ statusLabel(it) }}</span></td>
             </tr>
+            <tr v-if="openId === it.person_id" class="mv-checks-row">
+              <td colspan="6">
+                <table class="mv-checks">
+                  <thead>
+                    <tr><th v-for="c in it.checkpoints" :key="c" scope="col">{{ c }}</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td v-for="c in it.checkpoints" :key="c">
+                        <input
+                          type="checkbox"
+                          :checked="it.checks.includes(c)"
+                          :disabled="!canMark || saving.has(`${it.enrollment_id}:${c}`)"
+                          :aria-label="`${c} de ${it.full_name}`"
+                          @change="toggleCheck(it, c, $event.target.checked)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -163,6 +193,38 @@ const visible = computed(() => {
   )
 })
 
+// Marcar es de Academica; GERENCIA ve los checks pero no los toca (el backend lo
+// vuelve a validar).
+const roles = (() => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}').roles || [] } catch { return [] }
+})()
+const canMark = ['ADMIN', 'LIDER_ACADEMICA', 'ACADEMICA'].some(r => roles.includes(r))
+
+// Socio desplegado: uno a la vez. Por vencer no tiene checks y no se despliega.
+const openId = ref(null)
+function toggle (it) {
+  if (!it.checkpoints.length) return
+  openId.value = openId.value === it.person_id ? null : it.person_id
+}
+
+// Optimista: la casilla cambia al toque y se revierte si el backend la rechaza
+// (ej. el socio cambio de etapa desde que se cargo la lista).
+const saving = ref(new Set())
+async function toggleCheck (it, checkpoint, checked) {
+  const key = `${it.enrollment_id}:${checkpoint}`
+  const before = it.checks
+  it.checks = checked ? [...before, checkpoint] : before.filter(c => c !== checkpoint)
+  saving.value.add(key)
+  try {
+    await membresiasService.marcarCheck({ enrollmentId: it.enrollment_id, checkpoint, checked })
+  } catch (err) {
+    it.checks = before
+    toast.error(err?.response?.data?.message || err?.response?.data?.error || `No se pudo guardar ${checkpoint}.`)
+  } finally {
+    saving.value.delete(key)
+  }
+}
+
 function statusLabel ({ status, days_to_expiry: days }) {
   if (status === 'expiring') return days === 0 ? 'Vence hoy' : `Vence en ${days} d`
   return STATUS[status].label
@@ -199,4 +261,12 @@ onMounted(load)
 .mv-sub { margin-top: 2px; font-size: 11.5px; color: var(--ds-muted); }
 .mv-empty { text-align: center; color: var(--ds-muted); }
 .mono { font-variant-numeric: tabular-nums; }
+
+.mv-checks-row > td { background: var(--ds-surface-2); }
+.mv-checks { border-collapse: collapse; }
+.mv-checks th, .mv-checks td { min-width: 44px; padding: 4px 8px; text-align: center; border: 1px solid var(--ds-border); }
+.mv-checks th { font-size: 11.5px; font-weight: 600; color: var(--ds-ink-2); background: var(--ds-surface); }
+.mv-checks td { background: var(--ds-surface); }
+.mv-checks input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ds-accent); }
+.mv-checks input:disabled { cursor: not-allowed; }
 </style>
