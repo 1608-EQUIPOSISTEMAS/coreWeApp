@@ -135,6 +135,13 @@ export default [
         submodule: 'MEMBRESIAS',
         roles: ['ADMIN', 'GERENCIA', 'LIDER_ACADEMICA', 'ACADEMICA'],
       },
+      {
+        component: 'CNavItem',
+        name: 'Seguimiento al Alumno',
+        to: '/academica/seguimiento-alumno',
+        submodule: 'SEGUIMIENTO_ALUMNO',
+        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+      },
     ],
   },
   {

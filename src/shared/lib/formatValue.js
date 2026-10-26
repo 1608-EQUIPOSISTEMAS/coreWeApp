@@ -3,13 +3,17 @@
 // `unidad` es la del contrato de resultados: soles | usd | pct | horas | texto | num.
 // `monto` = soles con céntimos: para un pago o una deuda concreta, donde redondear
 // a S/ 1,201 lo que fue S/ 1,200.50 es un dato falso (soles es para KPIs y totales).
+// `nota` = nota /20 con sus 2 decimales: con 1 decimal un 11.45 se lee "11.5"
+// y parece aprobado cuando redondea a 11 (desaprobado).
 const es = (n, decimales = 0) => Number(n).toLocaleString('es-PE', { maximumFractionDigits: decimales })
+const fixed2 = (n) => Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export function formatValue (valor, unidad) {
   if (valor === null || valor === undefined || valor === '') return '—'
   if (unidad === 'texto') return valor
   if (unidad === 'soles') return `S/ ${es(valor)}`
-  if (unidad === 'monto') return `S/ ${Number(valor).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (unidad === 'monto') return `S/ ${fixed2(valor)}`
+  if (unidad === 'nota') return fixed2(valor)
   if (unidad === 'usd') return `US$ ${es(valor)}`
   if (unidad === 'pct') return `${es(valor, 1)}%`
   if (unidad === 'horas') return `${es(valor, 1)} h`

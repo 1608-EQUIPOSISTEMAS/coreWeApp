@@ -37,3 +37,11 @@ describe('formatValue monto (dinero exacto)', () => {
     expect(formatValue(null, 'monto')).toBe('—')
   })
 })
+
+describe('formatValue nota (/20 con 2 decimales)', () => {
+  it('no esconde el decimal que decide si aprueba', () => {
+    expect(formatValue(11.45, 'nota')).toBe('11.45')
+    expect(formatValue(12, 'nota')).toBe('12.00')
+    expect(formatValue(null, 'nota')).toBe('—')
+  })
+})

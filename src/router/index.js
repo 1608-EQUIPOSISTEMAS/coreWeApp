@@ -776,6 +776,12 @@ const routes = [
       meta: { module: 'ACADEMICA', submodule: 'MEMBRESIAS', roles: ['ADMIN', 'GERENCIA', 'LIDER_ACADEMICA', 'ACADEMICA'] },
     },
     {
+      path: 'academica/seguimiento-alumno',
+      name: 'AcademicaSeguimientoAlumno',
+      component: () => import('@/views/academica/SeguimientoAlumno.vue'),
+      meta: { module: 'ACADEMICA', submodule: 'SEGUIMIENTO_ALUMNO', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+    },
+    {
       path: 'academica/bot',
       name: 'BotAcademico',
       component: () => import('@/views/academica/BotAcademicoIndex.vue'),

@@ -6,7 +6,8 @@ import { ServiceKeys } from '@/services'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import AulasFilterModal from './AulasFilterModal.vue'
 import StudentSearchPanel from './StudentSearchPanel.vue'
-import { aulaStatus } from '@/entities/aula/aulaStatus'
+import { aulaStatus, AULA_STATUS_UI } from '@/entities/aula/aulaStatus'
+import AulaCard from '@/entities/aula/AulaCard.vue'
 import { formatValue } from '@/shared/lib/formatValue'
 
 const editionService = inject(ServiceKeys.Edition)
@@ -247,9 +248,7 @@ const countByStatus = (s) =>
 // de aulaStatus y se usa en los filtros: solo cambia lo que se lee.
 const STATUS_UI = {
   Todos: { label: 'Todas', tone: '' },
-  Activo: { label: 'Activo', tone: 'ok' },
-  Proximo: { label: 'Próximo', tone: 'info' },
-  Finalizado: { label: 'Finalizado', tone: '' },
+  ...AULA_STATUS_UI,
 }
 const statusLabel = (s) => STATUS_UI[s]?.label ?? s
 const statusTone = (s) => STATUS_UI[s]?.tone ?? ''
@@ -402,59 +401,19 @@ const subtitle = computed(() => {
         </article>
       </template>
       <template v-else>
-        <article
-          v-for="c in filtered"
-          :key="c.id"
-          class="aula-card"
-          :style="{ '--aula-color': c.color }"
-          tabindex="0"
-          :aria-label="`Abrir aula ${c.name} ${c.edition}`"
-          @click="openAula(c.id)"
-          @keydown.enter="openAula(c.id)"
-        >
-          <div class="aula-card-head">
-            <div>
-              <span class="aula-code">{{ c.code }}</span>
-              <span class="aula-edition">{{ c.edition }}</span>
-            </div>
-            <div class="aula-pills">
-              <span class="ds-pill" :class="statusTone(c.status)">{{ statusLabel(c.status) }}</span>
-              <span v-if="certOf(c)" class="ds-pill" :class="certOf(c).tone">{{ certOf(c).label }}</span>
-            </div>
-          </div>
-          <h3 class="aula-name">{{ c.name }}</h3>
-          <div class="aula-teacher">
-            <span class="aula-avatar" aria-hidden="true">{{ c.teacherInitials }}</span>
-            <div>
-              <div class="aula-teacher-name">{{ c.teacher }}</div>
-              <div class="aula-teacher-role">Docente</div>
-            </div>
-          </div>
-          <div class="aula-meta">
-            <span>
-              <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
-              <strong>{{ c.sessions || '—' }}</strong> {{ c.sessions === 1 ? 'sesión' : 'sesiones' }}
-            </span>
-            <span>
-              <i class="fa-solid fa-users" aria-hidden="true"></i>
-              <strong>{{ formatValue(c.students, 'num') }}</strong> alumnos
-            </span>
-            <span>
-              <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ c.startDate }} → {{ c.endDate }}
-            </span>
-            <span>
-              <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ c.schedule }}
-            </span>
-          </div>
-          <div class="aula-foot">
+        <AulaCard v-for="c in filtered" :key="c.id" :aula="c" @open="openAula(c.id)">
+          <template #pills>
+            <span v-if="certOf(c)" class="ds-pill" :class="certOf(c).tone">{{ certOf(c).label }}</span>
+          </template>
+          <template #foot>
             <div class="aula-stat">
               <b>{{ formatValue(c.sessions, 'num') }}</b>Sesiones
             </div>
             <button class="btn-exec btn-exec-outline btn-sm aula-open" type="button" @click.stop="openAula(c.id)">
               Ver aula <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
             </button>
-          </div>
-        </article>
+          </template>
+        </AulaCard>
       </template>
     </div>
 
@@ -535,55 +494,23 @@ const subtitle = computed(() => {
 .aulas-count { margin-left: auto; font-size: 12px; color: var(--ds-muted); white-space: nowrap; }
 .tab-count { margin-left: 4px; font-size: 11px; opacity: 0.7; font-variant-numeric: tabular-nums; }
 
-/* Grilla de tarjetas de aula: propia de esta vista */
+/* Grilla de tarjetas de aula. La tarjeta vive en entities/aula/AulaCard.vue;
+   aqui solo queda el esqueleto de carga, que imita su caja. */
 .aula-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--ds-gap); }
-.aula-card {
-  position: relative;
+.aula-card--skel {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 0;
   padding: 18px 16px 16px;
-  overflow: hidden;
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
+  border-top: 3px solid var(--ds-surface-3);
   border-radius: var(--ds-radius);
-  cursor: pointer;
-  transition: border-color 0.12s;
+  pointer-events: none;
 }
-/* Barra superior con el color del segmento */
-.aula-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--aula-color, var(--ds-accent));
-}
-.aula-card:hover { border-color: var(--ds-border-strong); }
-.aula-card:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 1px; }
-.aula-card--skel { cursor: default; pointer-events: none; }
-.aula-card--skel::before { background: var(--ds-surface-3); }
 
-.aula-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.aula-pills { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.aula-code {
-  padding: 2px 7px;
-  font-family: var(--ds-font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-ink-2);
-  background: var(--ds-surface-2);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-}
-.aula-edition { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--ds-muted); }
-.aula-name { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--ds-heading); }
-
-.aula-teacher { display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--ds-surface-2); border-radius: var(--ds-radius-sm); }
-.aula-teacher-name { font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--ds-ink); }
-.aula-teacher-role { font-size: 11px; color: var(--ds-muted); }
-/* Iniciales en --ds-surface: blancas sobre el color en claro y oscuras en modo
-   oscuro, donde los tonos del segmento se aclaran y el blanco perdería contraste. */
+/* Avatar de la vista Tabla (la tarjeta trae el suyo). Iniciales en --ds-surface:
+   blancas sobre el color en claro y oscuras en modo oscuro. */
 .aula-avatar {
   flex: none;
   display: grid;
@@ -597,16 +524,6 @@ const subtitle = computed(() => {
   background: var(--aula-color, var(--ds-accent));
 }
 .aula-avatar--sm { width: 22px; height: 22px; font-size: 9.5px; }
-
-.aula-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; font-size: 12px; color: var(--ds-ink-2); }
-.aula-meta span { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.aula-meta i { font-size: 11px; color: var(--ds-muted); }
-.aula-meta strong { font-weight: 600; color: var(--ds-ink); }
-
-.aula-foot { display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px solid var(--ds-border); }
-.aula-stat { font-size: 11px; color: var(--ds-muted); }
-.aula-stat b { display: block; font-size: 14px; font-weight: 700; color: var(--ds-heading); font-variant-numeric: tabular-nums; }
-.aula-open { margin-left: auto; }
 
 .mono { font-family: var(--ds-font-mono); }
 .aula-row-name { display: block; font-weight: 600; color: var(--ds-ink); }

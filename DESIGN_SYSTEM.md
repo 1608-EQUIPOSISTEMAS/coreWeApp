@@ -502,7 +502,8 @@ vistas (CoreUI queda para el shell: header y sidebar); clases Bootstrap `card`,
 - **Cifras:** siempre con `formatValue(valor, unidad)` (`S/ 1,200`, `12.5%`,
   `48 h`, `—` si no hay dato; nunca `0` inventado). En espacios chicos,
   `formatCompact` (`S/ 1.3 M`). `soles` redondea al sol (KPIs, totales); un
-  pago, cuota o deuda concreta va con `monto` (`S/ 1,200.50`).
+  pago, cuota o deuda concreta va con `monto` (`S/ 1,200.50`). Una nota /20 va
+  con `nota` (`11.45`): siempre 2 decimales, porque decide si aprueba.
 - **Colores de gráfico:** el canvas no lee variables CSS, así que el color va
   en JS dentro de un `computed` con `isDark` (`@/utils/chartTheme`). Patrón
   preferido: leer el token con `getComputedStyle(document.documentElement)
