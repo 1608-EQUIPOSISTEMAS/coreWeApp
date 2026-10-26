@@ -129,7 +129,7 @@
                 {{ rows.length ? 'Ningún pago cumple los filtros. Quita alguno o limpia todos.' : 'No hay pagos registrados en este periodo.' }}
               </td>
             </tr>
-            <tr v-for="(r, i) in pageRows" v-else :key="r.paymentId">
+            <tr v-for="(r, i) in pageRows" v-else :key="`${r.paymentId}-${r.parte || ''}`">
               <td class="num io-muted">{{ pageStart + i + 1 }}</td>
               <td class="mono">{{ fecha(r.fechaPago) }}</td>
               <td class="mono">{{ r.celular || '—' }}</td>
