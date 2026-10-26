@@ -10,3 +10,11 @@ export function aulaStatus (firstDate, lastDate, today = toLocalIsoDate()) {
   if (last && last < today) return 'Finalizado'
   return 'Activo'
 }
+
+// Texto y tono de .ds-pill por estado. Lo comparten Aulas y Seguimiento al
+// Alumno para que el mismo estado se lea igual en las dos pantallas.
+export const AULA_STATUS_UI = {
+  Activo: { label: 'Activo', tone: 'ok' },
+  Proximo: { label: 'Próximo', tone: 'info' },
+  Finalizado: { label: 'Finalizado', tone: '' }
+}
