@@ -80,6 +80,9 @@
           :currency-symbol="saleSymbol"
           :odoo-email="odooEmail"
           :odoo-password="odooPassword"
+          :membership-activation="membershipActivation"
+          :retrying-activation="retryingActivation"
+          @retry-activation="handleRetryActivation"
         />
       </aside>
 
@@ -272,7 +275,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, inject, onMounted } from 'vue'
+import { ref, reactive, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ServiceKeys } from '@/services'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
@@ -1251,6 +1254,8 @@ async function loadEnrollment () {
   activeModalityId.value = null
   odooEmail.value = null
   odooPassword.value = null
+  stopActivationPoll()
+  membershipActivation.value = null
 
   notFound.value = false
   const routeState = window.history.state?.enrollment
@@ -1278,6 +1283,8 @@ async function loadEnrollment () {
     loading.value = false
     buildInstallments()
   }
+
+  loadMembershipActivation()
 
   ficoService.getEnrollmentFlags(enrollmentId.value).then(flags => {
     if (flags) {
@@ -1358,10 +1365,80 @@ async function handleChangeEdition ({ childVersionId, editionId }) {
   } catch (err) { console.error(err) }
 }
 
+// ── Activacion de membresia en Odoo ───────────────────────────────────────
+// Si el job agota sus reintentos queda 'failed' y nadie lo relanza: la ficha lo
+// muestra y deja reintentarlo. Mientras corre se consulta cada 15 s; al terminar
+// se recargan los flags para que aparezca el usuario del campus.
+const membershipActivation = ref(null)
+const retryingActivation = ref(false)
+const ACTIVATION_POLL_MS = 15000
+let activationPollTimer = null
+
+function stopActivationPoll () {
+  clearTimeout(activationPollTimer)
+  activationPollTimer = null
+}
+
+function isActivationRunning (job) {
+  if (job?.status === 'in_progress') return true
+  if (job?.status !== 'pending') return false
+  return !job.scheduledFor || new Date(job.scheduledFor) <= new Date(Date.now() + ACTIVATION_POLL_MS)
+}
+
+async function loadMembershipActivation () {
+  stopActivationPoll()
+  if (!isMembershipEnrollment.value) {
+    membershipActivation.value = null
+    return
+  }
+  const id = enrollmentId.value
+  try {
+    const prev = membershipActivation.value
+    const job = await ficoService.getMembershipActivationStatus(id)
+    if (id !== enrollmentId.value) return
+    membershipActivation.value = job
+    if (isActivationRunning(job)) {
+      activationPollTimer = setTimeout(loadMembershipActivation, ACTIVATION_POLL_MS)
+    } else if (isActivationRunning(prev)) {
+      refreshCampusAccess(job)
+    }
+  } catch (err) {
+    console.error('[loadMembershipActivation]', err)
+  }
+}
+
+function refreshCampusAccess (job) {
+  if (job?.status === 'done') toast.success('Membresía activada: cursos abiertos en el campus.')
+  else if (job?.status === 'failed') toast.error('La activación volvió a fallar. Revisa el motivo en la ficha.')
+  ficoService.getEnrollmentFlags(enrollmentId.value).then(flags => {
+    if (!flags) return
+    odooEmail.value = flags.odoo_email || null
+    odooPassword.value = flags.odoo_password || null
+  }).catch(() => {})
+  refreshAuditLog()
+}
+
+async function handleRetryActivation () {
+  retryingActivation.value = true
+  try {
+    membershipActivation.value = await ficoService.retryMembershipActivation(enrollmentId.value)
+    toast.info('Activación reenviada. Tarda alrededor de un minuto.')
+    refreshAuditLog()
+    activationPollTimer = setTimeout(loadMembershipActivation, ACTIVATION_POLL_MS)
+  } catch (err) {
+    toast.error(apiErrorMessage(err) || 'No se pudo reintentar la activación.')
+    loadMembershipActivation()
+  } finally {
+    retryingActivation.value = false
+  }
+}
+
 onMounted(() => {
   catalogs.loadCatalogs()
   loadEnrollment()
 })
+
+onBeforeUnmount(stopActivationPoll)
 
 // Vue Router reusa la instancia del componente al navegar entre /inscripciones/:id
 // con distintos ids (mismo route name). Sin este watch, props.id cambia pero los

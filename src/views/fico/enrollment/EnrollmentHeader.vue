@@ -73,7 +73,7 @@
       </p>
       <div class="eh-row">
         <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
-        <span class="eh-value">Estado en el campus: <strong>{{ odooEmail ? 'Activo' : 'Sin acceso' }}</strong></span>
+        <span class="eh-value">Estado en el campus: <strong :class="{ 'is-bad': activationFailed }">{{ campusStatus }}</strong></span>
         <button v-if="odooEmail" class="eh-access-btn" type="button" :aria-expanded="showAccess" @click="showAccess = !showAccess">
           <i class="fa-solid" :class="showAccess ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
           {{ showAccess ? 'Ocultar' : 'Ver accesos' }}
@@ -96,6 +96,13 @@
         </dd>
         <dd v-else class="eh-muted">usuario existente (no se generó clave)</dd>
       </dl>
+      <div v-if="activationFailed" class="eh-retry">
+        <p v-if="membershipActivation.error" class="eh-retry-error">{{ membershipActivation.error }}</p>
+        <button class="eh-access-btn" type="button" :disabled="retryingActivation" @click="emit('retry-activation')">
+          <i class="fa-solid" :class="retryingActivation ? 'fa-spinner fa-spin' : 'fa-rotate-right'" aria-hidden="true"></i>
+          {{ retryingActivation ? 'Reintentando…' : 'Reintentar activación' }}
+        </button>
+      </div>
       <p v-if="additionalInfo" class="eh-row">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         <span>Notas: {{ additionalInfo }}</span>
@@ -117,8 +124,12 @@ const props = defineProps({
   summary: { type: Object, default: () => ({ total: 0, paid: 0, balance: 0 }) },
   currencySymbol: { type: String, default: 'S/.' },
   odooEmail: { type: String, default: null },
-  odooPassword: { type: String, default: null }
+  odooPassword: { type: String, default: null },
+  // Ultimo job de activacion de la membresia (null si no es membresia).
+  membershipActivation: { type: Object, default: null },
+  retryingActivation: { type: Boolean, default: false }
 })
+const emit = defineEmits(['retry-activation'])
 
 const fmt = useEnrollmentFormatters()
 const toast = useToast()
@@ -148,6 +159,22 @@ const vipSeat = computed(() => {
 const editionStartDate = computed(() =>
   props.detail?.edition_start_date || props.enrollment?.edition_start_date || null
 )
+
+// Una activacion fallida manda sobre el correo: la bienvenida guarda el usuario
+// Odoo aunque despues no se abran los cursos, y "Activo" escondia el fallo.
+const activationFailed = computed(() => props.membershipActivation?.status === 'failed')
+const campusStatus = computed(() => {
+  const job = props.membershipActivation
+  if (activationFailed.value) return 'Activación fallida'
+  if (job?.status === 'in_progress') return 'Activando cursos…'
+  if (job?.status === 'pending') {
+    const at = job.scheduledFor ? new Date(job.scheduledFor) : null
+    return at && at > new Date() && at.toDateString() !== new Date().toDateString()
+      ? `Activación programada (${fmt.formatDate(job.scheduledFor)})`
+      : 'Activando cursos…'
+  }
+  return props.odooEmail ? 'Activo' : 'Sin acceso'
+})
 
 // Las credenciales del campus van ocultas: la ficha se ve en pantalla compartida.
 const showAccess = ref(false)
@@ -210,4 +237,8 @@ async function copy (value, key) {
 .eh-access dt { font-weight: 600; color: var(--ds-muted); }
 .eh-access dd { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; color: var(--ds-ink); }
 .eh-muted { font-style: italic; color: var(--ds-muted); }
+.eh-value .is-bad { color: var(--ds-bad-ink); }
+.eh-retry { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 0 0 26px; }
+.eh-retry-error { margin: 0; font-size: 12px; color: var(--ds-bad-ink); overflow-wrap: anywhere; }
+.eh-access-btn:disabled { opacity: 0.6; cursor: progress; }
 </style>

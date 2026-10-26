@@ -102,6 +102,18 @@ export default class FicoService {
     return response.data;
   }
 
+  // Ultimo job de activacion de la membresia: { status, error, canRetry, ... }.
+  async getMembershipActivationStatus(enrollmentId) {
+    const response = (await api.get(`/fico/membresias/${enrollmentId}/activacion`)).data;
+    return response.data;
+  }
+
+  async retryMembershipActivation(enrollmentId) {
+    const response = (await api.post(`/fico/membresias/${enrollmentId}/activacion/reintentar`)).data;
+    if (!response.ok) throw new Error(response.error || 'No se pudo reintentar la activacion');
+    return response.data;
+  }
+
   async sendPaymentConfirmationEmail(enrollment_id) {
     const response = (await api.post('/fico/sendpaymentconfirmationemail', { enrollment_id }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
     return response.data;
