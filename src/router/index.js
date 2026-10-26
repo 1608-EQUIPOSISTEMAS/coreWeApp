@@ -773,7 +773,7 @@ const routes = [
       path: 'academica/membresias',
       name: 'AcademicaMembresias',
       component: () => import('@/views/academica/MembresiasVigentes.vue'),
-      meta: { module: 'ACADEMICA', submodule: 'MEMBRESIAS', roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'] },
+      meta: { module: 'ACADEMICA', submodule: 'MEMBRESIAS', roles: ['ADMIN', 'GERENCIA', 'LIDER_ACADEMICA', 'ACADEMICA'] },
     },
     {
       path: 'academica/bot',

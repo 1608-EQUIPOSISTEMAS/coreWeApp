@@ -133,7 +133,7 @@ export default [
         name: 'Membresías Vigentes',
         to: '/academica/membresias',
         submodule: 'MEMBRESIAS',
-        roles: ['ADMIN', 'GERENCIA', 'ACADEMICA'],
+        roles: ['ADMIN', 'GERENCIA', 'LIDER_ACADEMICA', 'ACADEMICA'],
       },
     ],
   },
