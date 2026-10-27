@@ -255,8 +255,12 @@
         </div>
         <div class="ef-field" style="justify-content:flex-end">
           <label class="ef-checkbox-label">
-            <input type="checkbox" v-model="form.is_scholarship" @change="onScholarshipToggle" />
+            <input type="checkbox" v-model="form.is_scholarship" :disabled="form.is_sponsorship" @change="onScholarshipToggle" />
             <span>Beca (sin pago)</span>
+          </label>
+          <label class="ef-checkbox-label">
+            <input type="checkbox" v-model="form.is_sponsorship" @change="onSponsorshipToggle" />
+            <span>Auspicio 100% (sin pago)</span>
           </label>
         </div>
       </div>
@@ -585,6 +589,9 @@ const form = reactive({
   total_amount: 0,
   saved_money: 0,
   is_scholarship: false,
+  // Auspicio: mismo flujo sin pago que la beca, pero con el descuento
+  // GLOBAL/AUSPICIO 100% y la categoria AUS.
+  is_sponsorship: false,
   cat_payment_medium: null,
   cat_business_entity: null,
   bank_account_id: null,
@@ -614,6 +621,12 @@ const form = reactive({
 const showCcField = ref(false)
 watch(() => form.agent_category, (cat) => {
   if (cat === 'b2b') showCcField.value = true
+  // Auspicio sin categoria AUS no existe: al salir de AUS se desmarca.
+  if (cat !== 'aus' && form.is_sponsorship) {
+    form.is_sponsorship = false
+    form.is_scholarship = false
+    onScholarshipToggle()
+  }
 })
 
 // Regex basico de email: estructura X@X.X. Suficiente para detectar errores
@@ -1140,6 +1153,32 @@ const webAgentsList = computed(() => {
   }))
 })
 
+// Auspicio = venta sin pago (is_scholarship) + categoria AUS + descuento
+// GLOBAL/AUSPICIO 100%. El descuento va igual al SP aunque la venta sea en 0:
+// asi queda registrado como auspicio y no como beca.
+const sponsorshipDiscountId = ref(null)
+async function onSponsorshipToggle () {
+  form.is_scholarship = form.is_sponsorship
+  onScholarshipToggle()
+  if (!form.is_sponsorship) return
+  if (['we', 'sa'].includes(form.agent_category)) form.seller_agent_id = null
+  form.agent_category = 'aus'
+  try {
+    const list = await discountService.discountCaller({ q: 'AUSPICIO', cat_discount_type: discountTypeId('we_discount_type_percentage'), scope: 'fico' }) || []
+    const d = list.find(x => x.alias === AUSPICIO_DISCOUNT_ALIAS)
+    if (!d) throw new Error('sin descuento')
+    sponsorshipDiscountId.value = d.id
+    form.dsct_porcent_id = d.id
+    form.dsct_porcent_label = d.full_label || d.description
+  } catch (err) {
+    console.error('[onSponsorshipToggle]', err)
+    form.is_sponsorship = false
+    form.is_scholarship = false
+    onScholarshipToggle()
+    toast.error('No se encontro el descuento GLOBAL/AUSPICIO 100%.')
+  }
+}
+
 function onScholarshipToggle () {
   if (form.is_scholarship) {
     clearPaymentData()
@@ -1400,7 +1439,8 @@ async function handleSave () {
         // Descuentos seleccionados. El SP los procesa en cascada (porcentaje
         // -> promocion stick -> beneficios) y los persiste en enrollment_discounts.
         // Si no se envian, el SP respeta el total_amount y discount_amount queda en 0.
-        dsct_porcent_id: form.dsct_porcent_id || null,
+        // El auspicio manda su descuento aunque otra accion haya limpiado el campo.
+        dsct_porcent_id: (form.is_sponsorship ? sponsorshipDiscountId.value : form.dsct_porcent_id) || null,
         dsct_porcent_label: form.dsct_porcent_label || null,
         dsct_stick_id: form.dsct_stick_id || null,
         dsct_stick_label: form.dsct_stick_label || null,
@@ -1461,7 +1501,7 @@ function resetForm () {
     cat_type_document: catDocTypes.find(c => c.alias?.toLowerCase().includes('dni'))?.id || null,
     document_number: '', first_name: '', last_name: '', email: '', phone: '',
     cat_country: null, cat_program_type: null, program_version_id: null, program_edition_id: null,
-    cat_insc_modality: null, cat_event_category: null, event_seat: '', cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false,
+    cat_insc_modality: null, cat_event_category: null, event_seat: '', cat_payment_way: null, list_price: 0, total_amount: 0, saved_money: 0, is_scholarship: false, is_sponsorship: false,
     cat_payment_medium: null, cat_business_entity: null, bank_account_id: null, transaction_code: '', payment_date: '',
     client_profile: '', membership_program_id: null, agent_category: '', seller_agent_id: null, ticket_payment_urls: [], observations: '',
     email_cc: '',
