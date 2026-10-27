@@ -354,13 +354,6 @@ export default [
         submodule: 'OBJETIVOS',
         roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'],
       },
-      {
-        component: 'CNavItem',
-        name: 'Becas',
-        to: '/fundacion/becas',
-        submodule: 'BECAS',
-        roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'],
-      },
     ],
   },
   {
