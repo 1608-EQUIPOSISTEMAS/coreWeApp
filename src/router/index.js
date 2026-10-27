@@ -610,6 +610,12 @@ const routes = [
           component: () => import('@/views/fundacion/Objetivos.vue'),
           meta: { submodule: 'OBJETIVOS', roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'] },
         },
+        {
+          path: 'becas',
+          name: 'FundacionBecas',
+          component: () => import('@/views/fundacion/Becas.vue'),
+          meta: { submodule: 'BECAS', roles: ['ADMIN', 'FUNDACION', 'LIDER_FUNDACION', 'GERENCIA'] },
+        },
       ],
     },
 
