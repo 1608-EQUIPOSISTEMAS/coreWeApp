@@ -1153,30 +1153,14 @@ const webAgentsList = computed(() => {
   }))
 })
 
-// Auspicio = venta sin pago (is_scholarship) + categoria AUS + descuento
-// GLOBAL/AUSPICIO 100%. El descuento va igual al SP aunque la venta sea en 0:
-// asi queda registrado como auspicio y no como beca.
-const sponsorshipDiscountId = ref(null)
-async function onSponsorshipToggle () {
+// Auspicio = venta sin pago (is_scholarship) + categoria AUS. El descuento
+// GLOBAL/AUSPICIO 100% lo resuelve el backend al ver is_sponsorship.
+function onSponsorshipToggle () {
   form.is_scholarship = form.is_sponsorship
   onScholarshipToggle()
   if (!form.is_sponsorship) return
   if (['we', 'sa'].includes(form.agent_category)) form.seller_agent_id = null
   form.agent_category = 'aus'
-  try {
-    const list = await discountService.discountCaller({ q: 'AUSPICIO', cat_discount_type: discountTypeId('we_discount_type_percentage'), scope: 'fico' }) || []
-    const d = list.find(x => x.alias === AUSPICIO_DISCOUNT_ALIAS)
-    if (!d) throw new Error('sin descuento')
-    sponsorshipDiscountId.value = d.id
-    form.dsct_porcent_id = d.id
-    form.dsct_porcent_label = d.full_label || d.description
-  } catch (err) {
-    console.error('[onSponsorshipToggle]', err)
-    form.is_sponsorship = false
-    form.is_scholarship = false
-    onScholarshipToggle()
-    toast.error('No se encontro el descuento GLOBAL/AUSPICIO 100%.')
-  }
 }
 
 function onScholarshipToggle () {
@@ -1439,8 +1423,9 @@ async function handleSave () {
         // Descuentos seleccionados. El SP los procesa en cascada (porcentaje
         // -> promocion stick -> beneficios) y los persiste en enrollment_discounts.
         // Si no se envian, el SP respeta el total_amount y discount_amount queda en 0.
-        // El auspicio manda su descuento aunque otra accion haya limpiado el campo.
-        dsct_porcent_id: (form.is_sponsorship ? sponsorshipDiscountId.value : form.dsct_porcent_id) || null,
+        dsct_porcent_id: form.dsct_porcent_id || null,
+        // Auspicio: el backend pone el descuento GLOBAL/AUSPICIO 100% y el canal AUS.
+        is_sponsorship: form.is_sponsorship || false,
         dsct_porcent_label: form.dsct_porcent_label || null,
         dsct_stick_id: form.dsct_stick_id || null,
         dsct_stick_label: form.dsct_stick_label || null,
