@@ -254,12 +254,14 @@
           <input v-model.number="form.total_amount" type="number" placeholder="0.00" :disabled="form.is_scholarship" />
         </div>
         <div class="ef-field" style="justify-content:flex-end">
-          <label class="ef-checkbox-label">
-            <input type="checkbox" v-model="form.is_scholarship" :disabled="form.is_sponsorship" @change="onScholarshipToggle" />
+          <!-- El auspicio usa is_scholarship por dentro: la casilla de beca se
+               oculta para que no se lea como beca. -->
+          <label v-if="!form.is_sponsorship" class="ef-checkbox-label">
+            <input type="checkbox" v-model="form.is_scholarship" @change="onScholarshipToggle" />
             <span>Beca (sin pago)</span>
           </label>
           <label class="ef-checkbox-label">
-            <input type="checkbox" v-model="form.is_sponsorship" @change="onSponsorshipToggle" />
+            <input type="checkbox" v-model="form.is_sponsorship" :disabled="form.is_scholarship && !form.is_sponsorship" @change="onSponsorshipToggle" />
             <span>Auspicio 100% (sin pago)</span>
           </label>
         </div>
@@ -274,6 +276,11 @@
     <div class="ef-card" v-if="!isB2BWithoutCharge && !isSpeakerTicket">
       <h6 class="ef-section-title"><i class="fa-solid fa-tags"></i> DESCUENTOS Y BENEFICIOS</h6>
       <div class="ef-grid-3">
+        <!-- Auspicio: el descuento es fijo y lo registra el backend al guardar. -->
+        <div class="ef-field" v-if="form.is_sponsorship">
+          <label>Descuento</label>
+          <input type="text" value="100% - GLOBAL/AUSPICIO 100%" disabled />
+        </div>
         <div class="ef-field" v-if="!isZeroPayment">
           <label>
             Descuento <span class="ef-optional">(opcional)</span>
