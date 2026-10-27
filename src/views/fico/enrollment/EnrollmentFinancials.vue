@@ -815,7 +815,7 @@
             <span class="ef-confirm-label">Total</span>
             <span class="ef-confirm-value fw700">{{ saleSymbol }} {{ fmt.formatMoney(total) }}</span>
           </div>
-          <p v-if="isBeca" class="ds-callout warn">Beca — Descuento 100%. No requiere pago.</p>
+          <p v-if="isBeca" class="ds-callout warn">{{ isAuspicio ? 'Auspicio' : 'Beca' }} — Descuento 100%. No requiere pago.</p>
           <p class="ef-confirm-note">Al confirmar se inscribira al alumno en Odoo y se enviara el correo de confirmacion.</p>
         </div>
       </template>
@@ -1087,6 +1087,12 @@ const planStatus = computed(() => {
 })
 
 const isBeca = computed(() => total.value === 0 && discount.value > 0)
+// Auspicio: mismo flujo que la beca, pero con su descuento "GLOBAL/AUSPICIO 100%"
+// o el canal AUS. Solo cambia como se nombra.
+const isAuspicio = computed(() =>
+  props.enrollment?.agent_origin === 'AUS' ||
+  (props.detail?.discounts || []).some(d => /AUSPICIO/i.test(d.description || ''))
+)
 
 // --- Adicionales (pago del certificado del becado) ---
 const becaTab = ref('pago')
