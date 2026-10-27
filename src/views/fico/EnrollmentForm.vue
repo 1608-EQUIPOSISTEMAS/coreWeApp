@@ -30,6 +30,10 @@
           <label>Asesor WEB <span class="ef-optional">(opcional)</span></label>
           <SearchSelect v-model="form.seller_agent_id" :items="webAgentsList" label-field="label" value-field="id" placeholder="Solo WEB (sin asesor)" />
         </div>
+        <div class="ef-field" v-else-if="form.agent_category === 'aus'">
+          <label>Asesor <span class="ef-optional">(opcional)</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Solo AUS (sin asesor)" />
+        </div>
         <div class="ef-field" v-else-if="form.agent_category === 'we'">
           <label>Area WE <span class="ef-req">*</span></label>
           <SearchSelect v-model="form.seller_agent_id" :items="weAreaOptions" label-field="label" value-field="id" placeholder="Seleccionar..." required />
@@ -252,7 +256,7 @@
         <div class="ef-field" style="justify-content:flex-end">
           <label class="ef-checkbox-label">
             <input type="checkbox" v-model="form.is_scholarship" @change="onScholarshipToggle" />
-            <span>Beca (sin pago)</span>
+            <span>{{ form.agent_category === 'aus' ? 'Auspicio 100% (sin pago)' : 'Beca (sin pago)' }}</span>
           </label>
         </div>
       </div>
@@ -608,8 +612,17 @@ const form = reactive({
 // caso de uso primario (copiar al supervisor de la empresa). El operador igual
 // puede cerrarlo si no necesita CC en ese B2B especifico.
 const showCcField = ref(false)
-watch(() => form.agent_category, (cat) => {
+watch(() => form.agent_category, (cat, prev) => {
   if (cat === 'b2b') showCcField.value = true
+  // El auspicio siempre entra al 100%: se marca solo y se desmarca al salir del
+  // canal, para que no quede una venta de otro canal en 0 por arrastre.
+  if (cat === 'aus' && !form.is_scholarship) {
+    form.is_scholarship = true
+    onScholarshipToggle()
+  } else if (prev === 'aus' && form.is_scholarship) {
+    form.is_scholarship = false
+    onScholarshipToggle()
+  }
 })
 
 // Regex basico de email: estructura X@X.X. Suficiente para detectar errores
@@ -1086,6 +1099,7 @@ const agentCategoryOptions = [
   { id: 'b2b', label: 'B2B' },
   { id: 'web', label: 'WEB' },
   { id: 'we', label: 'WE' },
+  { id: 'aus', label: 'AUS - Auspicio' },
   { id: 'sa', label: 'S/A' }
 ]
 
@@ -1231,6 +1245,7 @@ function resolveAgentOrigin () {
   const cat = form.agent_category
   if (cat === 'b2b') return 'B2B'
   if (cat === 'web') return 'WEB'
+  if (cat === 'aus') return 'AUS'
   // El area WE elegida (twe/fwe) es el origen real: 'TWE' / 'FWE'.
   if (cat === 'we') return String(form.seller_agent_id || 'we').toUpperCase()
   if (cat === 'sa') return 'SA'
