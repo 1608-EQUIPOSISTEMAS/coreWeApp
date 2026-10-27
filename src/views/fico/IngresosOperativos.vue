@@ -181,7 +181,7 @@ const route = useRoute()
 const router = useRouter()
 
 const PAGE_SIZE = 100
-const TONO_TIPO = { PT: 'info', PP: 'violet', CUOTA: 'cyan', BECA: 'warn', AUS: 'warn', ADICIONAL: 'orange' }
+const TONO_TIPO = { PT: 'info', PP: 'violet', CUOTA: 'cyan', BECA: 'warn', ADICIONAL: 'orange' }
 
 // El periodo vive en la URL: el enlace compartido abre el mismo mes.
 const mesHoy = mesActual()

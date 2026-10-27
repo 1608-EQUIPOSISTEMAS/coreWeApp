@@ -428,14 +428,14 @@
               </div>
             </div>
             <div class="eact-field" v-else-if="newAgentCategory && !WE_CATS.includes(newAgentCategory)">
-              <label>Nuevo asesor <span v-if="!OPTIONAL_AGENT_CATS.includes(newAgentCategory)" class="ds-req">*</span><span v-else class="eact-optional">(opcional para {{ newAgentCategory === 'aus' ? 'AUS' : 'S/A' }})</span></label>
+              <label>Nuevo asesor <span v-if="newAgentCategory !== 'sa'" class="ds-req">*</span><span v-else class="eact-optional">(opcional para S/A)</span></label>
               <SearchSelect
                 v-model="newSellerAgentId"
                 :items="filteredAgentOptions"
                 label-field="label"
                 value-field="user_id"
                 placeholder="Buscar asesor por alias o nombre..."
-                :required="!OPTIONAL_AGENT_CATS.includes(newAgentCategory)"
+                :required="newAgentCategory !== 'sa'"
               />
             </div>
             <div v-if="WE_CATS.includes(newAgentCategory)" class="eact-readonly eact-note">
@@ -1095,14 +1095,11 @@ const agentCategoryOptions = [
   { id: 'twe',       label: 'TWE - Talento' },
   { id: 'fwe',       label: 'FWE - Fundacion' },
   { id: 'we',        label: 'WE (generico)' },
-  { id: 'aus',       label: 'AUS - Auspicio' },
   { id: 'sa',        label: 'S/A (Sin Asesor)' }
 ]
 
 // Canales WE: no llevan asesor individual, el canal ES el origen.
 const WE_CATS = ['we', 'twe', 'fwe']
-// Canales donde el asesor es opcional ('SA + asesor', 'AUS + asesor').
-const OPTIONAL_AGENT_CATS = ['sa', 'aus']
 
 // Mapeo inverso: agent_origin almacenado -> categoria UI.
 function categoryFromOrigin (origin) {
@@ -1112,7 +1109,6 @@ function categoryFromOrigin (origin) {
   if (origin === 'FWE') return 'fwe'
   if (origin === 'WE')  return 'we'
   if (origin === 'SA')  return 'sa'
-  if (origin === 'AUS') return 'aus'
   return 'comercial'
 }
 
@@ -1122,7 +1118,6 @@ function originFromCategory (cat) {
   if (cat === 'web') return 'WEB'
   if (WE_CATS.includes(cat)) return cat.toUpperCase()
   if (cat === 'sa')  return 'SA'
-  if (cat === 'aus') return 'AUS'
   return null
 }
 
@@ -1170,9 +1165,9 @@ const canAdvanceEditAgent = computed(() => {
   if (cat === 'web') return !!webMatchLeadId.value
 
   // we: no requiere asesor (siempre se persiste seller_agent_id=null).
-  // sa/aus: asesor opcional (decision: permitir combinacion 'SA + asesor').
+  // sa: asesor opcional (decision: permitir combinacion 'SA + asesor').
   // comercial/b2b: asesor requerido.
-  if (!WE_CATS.includes(cat) && !OPTIONAL_AGENT_CATS.includes(cat) && !newId) return false
+  if (!WE_CATS.includes(cat) && cat !== 'sa' && !newId) return false
 
   const oldOrigin = props.enrollment?.agent_origin || null
   const oldId    = props.enrollment?.seller_agent_id || null

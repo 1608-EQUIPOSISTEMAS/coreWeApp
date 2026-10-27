@@ -205,7 +205,7 @@
             </table>
           </div>
           <p class="bpanel-foot">
-            Inscripciones aprobadas por FICO, por F. PAGO, igual que la hoja. PT = pago total, PP = pago en cuotas, beca = monto 0, auspicio = monto 0 del canal AUS.
+            Inscripciones aprobadas por FICO, por F. PAGO, igual que la hoja. PT = pago total, PP = pago en cuotas, beca = monto 0.
             Retirados, RP y CC son las ventas de ese mes que <b>hoy</b> están en ese estado: el ERP no guarda la fecha del retiro ni de la RP.
             Una venta es la inscripción principal: el retiro de un solo curso de un paquete no cuenta.
           </p>
@@ -275,7 +275,7 @@ const headlineCards = computed(() => {
   ]
 })
 
-// PT, PP, becas y auspicios suman el total; retirados, RP y CC son en qué terminaron.
+// PT, PP y becas suman el total; retirados, RP y CC son en qué terminaron.
 const cifrasInscripciones = computed(() => {
   const i = inscripciones.value
   const de = (k) => (i[k] !== null ? `${formatValue(i[k], 'pct')} del total` : '—')
@@ -284,7 +284,6 @@ const cifrasInscripciones = computed(() => {
     { clave: 'pt', label: 'PT', sub: 'pago total', grupo: 'venta' },
     { clave: 'pp', label: 'PP', sub: i.pct_pp !== null ? `${formatValue(i.pct_pp, 'pct')} de las pagadas` : 'en cuotas', pct: 'pct_pp', grupo: 'venta' },
     { clave: 'becas', label: 'Becas', sub: 'monto 0', grupo: 'venta' },
-    { clave: 'auspicios', label: 'Auspicios', sub: 'canal AUS', grupo: 'venta' },
     { clave: 'retirados', label: 'Retirados', sub: de('pct_retirados'), pct: 'pct_retirados', grupo: 'salida' },
     { clave: 'rp', label: 'RP', sub: de('pct_rp'), pct: 'pct_rp', grupo: 'salida' },
     { clave: 'cc', label: 'CC', sub: de('pct_cc'), pct: 'pct_cc', grupo: 'salida' }
