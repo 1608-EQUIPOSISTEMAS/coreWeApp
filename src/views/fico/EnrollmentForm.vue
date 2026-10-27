@@ -883,7 +883,16 @@ function onChangeDescuentoPorcentual (opt) {
   }
   form.val_porcentaje = Number(opt.value) || 0
   form.dsct_porcent_label = opt.full_label || opt.label || null
+  // El descuento de auspicio implica el canal AUS. Se conserva el asesor si ya
+  // habia uno elegido ('AUS - AE30'); el area WE no es un asesor, se limpia.
+  if (opt.alias === AUSPICIO_DISCOUNT_ALIAS && form.agent_category !== 'aus') {
+    if (['we', 'sa'].includes(form.agent_category)) form.seller_agent_id = null
+    form.agent_category = 'aus'
+  }
 }
+
+// Alias de GLOBAL/AUSPICIO 100% (mismo valor en el backend: discount.entity.js).
+const AUSPICIO_DISCOUNT_ALIAS = '100_global_auspicio'
 
 function onChangeDescuentoFijo (opt) {
   if (!opt) {
