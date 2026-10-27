@@ -30,6 +30,10 @@
           <label>Asesor WEB <span class="ef-optional">(opcional)</span></label>
           <SearchSelect v-model="form.seller_agent_id" :items="webAgentsList" label-field="label" value-field="id" placeholder="Solo WEB (sin asesor)" />
         </div>
+        <div class="ef-field" v-else-if="form.agent_category === 'aus'">
+          <label>Asesor <span class="ef-optional">(opcional)</span></label>
+          <SearchSelect v-model="form.seller_agent_id" :items="agentsList" label-field="label" value-field="id" placeholder="Solo AUS (sin asesor)" />
+        </div>
         <div class="ef-field" v-else-if="form.agent_category === 'we'">
           <label>Area WE <span class="ef-req">*</span></label>
           <SearchSelect v-model="form.seller_agent_id" :items="weAreaOptions" label-field="label" value-field="id" placeholder="Seleccionar..." required />
@@ -1086,6 +1090,7 @@ const agentCategoryOptions = [
   { id: 'b2b', label: 'B2B' },
   { id: 'web', label: 'WEB' },
   { id: 'we', label: 'WE' },
+  { id: 'aus', label: 'AUS - Auspicio' },
   { id: 'sa', label: 'S/A' }
 ]
 
@@ -1231,6 +1236,8 @@ function resolveAgentOrigin () {
   const cat = form.agent_category
   if (cat === 'b2b') return 'B2B'
   if (cat === 'web') return 'WEB'
+  // Auspicio: sigue el flujo de la beca; el canal solo lo identifica (cronograma).
+  if (cat === 'aus') return 'AUS'
   // El area WE elegida (twe/fwe) es el origen real: 'TWE' / 'FWE'.
   if (cat === 'we') return String(form.seller_agent_id || 'we').toUpperCase()
   if (cat === 'sa') return 'SA'

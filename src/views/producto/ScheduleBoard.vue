@@ -102,7 +102,7 @@
               <th>SEGUIMIENTO</th>
               <th class="th-group">
                 <div class="g-title">AULA / INSCRITOS</div>
-                <div class="g-cols"><span>VEN</span><span>SEG</span><span>B2B</span><span>MEM</span><span>BEC</span><span class="hot">AULA</span></div>
+                <div class="g-cols"><span>VEN</span><span>SEG</span><span>B2B</span><span>MEM</span><span>BEC</span><span>AUS</span><span class="hot">AULA</span></div>
               </th>
               <th>OBJETIVO</th>
               <th class="c-num" title="Consultas (leads)">CONS.</th>
@@ -203,6 +203,7 @@
                         <span class="acol" :class="{ zero: !it.e.cnt_b2b }">{{ it.e.cnt_b2b ?? 0 }}</span>
                         <span class="acol" :class="{ zero: !it.e.cnt_memb }">{{ it.e.cnt_memb ?? 0 }}</span>
                         <span class="acol bec">{{ it.e.cnt_becas ?? 0 }}</span>
+                        <span class="acol bec">{{ it.e.cnt_aus ?? 0 }}</span>
                         <span class="acol total" :class="{ empty: !(it.e.cnt_aula ?? 0) }"
                           :style="(it.e.cnt_aula ?? 0) ? { background: aulaColor(it.e.cnt_aula) } : null">{{ it.e.cnt_aula ?? 0 }}</span>
                       </div>
@@ -330,7 +331,7 @@
             <div class="am-formula">
               AULA = VEN + SEG + MEM + B2B →
               <b :style="{ color: aulaColor(amFromList ? amAula : (aulaModal.e.cnt_aula ?? 0)) }">{{ amFromList ? amAula : (aulaModal.e.cnt_aula ?? 0) }}</b>
-              <span>(las becas ocupan asiento pero no suman)</span>
+              <span>(las becas y auspicios ocupan asiento pero no suman)</span>
             </div>
             <div v-if="aulaModal.isProgram" class="am-note">
               Este es un programa padre: sus alumnos se sientan en las aulas de sus cursos hijos,
@@ -535,7 +536,7 @@ async function loadStudents(editionId) {
   amLoading.value = true
   try {
     const rows = await editionService.classroomStudentsList({ edition_id: editionId })
-    const order = { VEN: 0, SEG: 1, MEM: 2, B2B: 3, BEC: 4 }
+    const order = { VEN: 0, SEG: 1, MEM: 2, B2B: 3, BEC: 4, AUS: 5 }
     amStudents.value = (rows || [])
       .map(s => ({ ...s, ch: studentChannel(s) }))
       .sort((a, b) => order[a.ch.tag] - order[b.ch.tag] || (a.full_name || '').localeCompare(b.full_name || ''))
@@ -553,7 +554,7 @@ async function loadStudents(editionId) {
 // que ahí describen las ventas del programa.
 const amFromList = computed(() => Array.isArray(amStudents.value) && amStudents.value.length > 0)
 const amCounts = computed(() => {
-  const c = { VEN: 0, SEG: 0, MEM: 0, B2B: 0, BEC: 0 }
+  const c = { VEN: 0, SEG: 0, MEM: 0, B2B: 0, BEC: 0, AUS: 0 }
   ;(amStudents.value || []).forEach(s => { c[s.ch.tag]++ })
   return c
 })
@@ -580,8 +581,9 @@ function agentLabel(s) {
 // paquete (SEG) > venta directa. MEM usa member_benefits (excluye MEMBRESIA
 // PLUS, igual que el cronograma): un socio PLUS cuenta como VEN/SEG.
 // counts_as_sale = gerencia pidió contarlo como venta (gana a todo menos beca).
+// Auspicio = beca cuya venta es del canal AUS: mismo flujo, otra columna.
 function studentChannel(s) {
-  const tag = s.is_beca ? 'BEC'
+  const tag = s.is_beca ? (s.agent_origin === 'AUS' ? 'AUS' : 'BEC')
     : s.counts_as_sale ? 'VEN'
     : s.member_benefits ? 'MEM'
     : s.is_b2b ? 'B2B'
@@ -602,6 +604,8 @@ const AULA_CHANNELS = [
     desc: 'Alumnos inscritos por convenio con empresas o instituciones. Se negocian por contrato, fuera de la venta directa.' },
   { key: 'cnt_becas', tag: 'BEC', title: 'Becas', color: 'var(--ds-warn-ink)',
     desc: 'Alumnos becados: ocupan asiento pero no facturan, por eso NO suman al total de AULA.' },
+  { key: 'cnt_aus', tag: 'AUS', title: 'Auspicios', color: 'var(--ds-warn-ink)',
+    desc: 'Alumnos de auspicio (canal AUS): igual que la beca, ocupan asiento pero no facturan y NO suman al total de AULA.' },
 ]
 
 // Líneas = categoría del programa (BI, Excel, Proyectos, SAP…), NO we_business_line
@@ -814,7 +818,7 @@ const kpiSums = computed(() => {
     // Numerador del % de logro: solo ventas de ediciones CON objetivo. Sumar las
     // de ediciones sin meta contra un denominador que no las incluye inflaba el %.
     ventasConMeta: aulas.filter(e => (e.meta_vacantes ?? 0) > 0).reduce((s, e) => s + (e.cnt_ventas ?? 0), 0),
-    ch, inscritos: sum('cnt_aula') + ch.cnt_becas,
+    ch, inscritos: sum('cnt_aula') + ch.cnt_becas + ch.cnt_aus,
   }
 })
 const kpiVsObjetivo = computed(() => {
