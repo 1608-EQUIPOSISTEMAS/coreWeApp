@@ -133,6 +133,7 @@
               </td>
               <td v-if="canManage" class="bc-actions">
                 <button
+                  v-if="b.status !== 'expired'"
                   type="button"
                   class="btn-icon btn-icon-sm"
                   :title="`Editar beca de ${b.beneficiary_name}`"
@@ -233,8 +234,10 @@
             value-field="program_id"
             sublabel-field="modality"
             required
+            :disabled="editingActivated"
             @change="form.program_edition_id = null"
           />
+          <span v-if="editingActivated" class="ds-help">La beca ya está activada: el curso no se puede cambiar.</span>
         </div>
         <div v-if="selectedProgram && !isOnline" class="ds-field">
           <label class="ds-label">Edición<span class="ds-req">*</span></label>
@@ -391,6 +394,8 @@ async function eliminar (b) {
 const formOpen = ref(false)
 const editingId = ref(null)
 const editingEdition = ref(null)
+// El backend tambien lo valida (assertEditable).
+const editingActivated = ref(false)
 const formRef = ref(null)
 const requiredFieldsFilled = useRequiredFieldsGuard(formRef)
 const saving = ref(false)
@@ -418,6 +423,7 @@ const programEditions = computed(() => {
 // Sin beca: registrar. Con beca: editar sus datos (la activación no se toca aquí).
 async function openForm (beca = null) {
   editingId.value = beca?.scholarship_id ?? null
+  editingActivated.value = !!beca?.activated_at
   editingEdition.value = beca?.program_edition_id
     ? { program_edition_id: beca.program_edition_id, program_id: beca.program_id, specific_code: beca.specific_code, start_date: beca.edition_start_date, end_date: beca.edition_end_date }
     : null
