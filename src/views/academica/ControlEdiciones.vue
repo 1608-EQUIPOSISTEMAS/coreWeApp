@@ -264,19 +264,18 @@ function confirmRepro() {
         </div>
         <button
           v-if="mode === 'curso'"
-          class="teams-btn"
+          class="btn-exec btn-exec-primary btn-sm teams-btn"
           type="button"
           :disabled="teams.phase.value !== 'idle'"
           :aria-busy="String(teams.phase.value === 'simulating' || teams.phase.value === 'running')"
           title="Crea una reunión de Teams por cada sesión de las próximas 2 semanas, en las aulas sin link manual"
           @click="teams.simulate()"
         >
-          <span class="teams-btn-icon" aria-hidden="true">
-            <i
-              class="fa-solid"
-              :class="teams.phase.value === 'simulating' || teams.phase.value === 'running' ? 'fa-spinner fa-spin' : 'fa-video'"
-            ></i>
-          </span>
+          <i
+            class="fa-solid"
+            :class="teams.phase.value === 'simulating' || teams.phase.value === 'running' ? 'fa-spinner fa-spin' : 'fa-video'"
+            aria-hidden="true"
+          ></i>
           <span class="teams-btn-text">
             <template v-if="teams.phase.value === 'simulating'">Calculando…</template>
             <template v-else-if="teams.phase.value === 'running'">Generando reuniones…</template>
@@ -831,37 +830,21 @@ function confirmRepro() {
 .s-old { margin-right: 3px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
 .s-badge { width: 100%; height: 22px; justify-content: center; gap: 5px; }
 .s-dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
-.s-teams { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--ds-violet-ink); text-decoration: none; }
+.s-teams { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--ds-accent); text-decoration: none; }
 .s-teams:hover { text-decoration: underline; }
 
-/* Boton "Generar links de Teams": violeta de Teams sobre los tokens del DS
-   (soft-violet / violet-ink) para que respete el modo oscuro. */
-.teams-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 34px; padding: 0 14px 0 6px;
-  border: 1px solid color-mix(in srgb, var(--ds-violet-ink) 28%, transparent);
-  border-radius: 999px; background: var(--ds-soft-violet); color: var(--ds-violet-ink);
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
-}
-.teams-btn:hover:not(:disabled) {
-  border-color: var(--ds-violet-ink);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-violet-ink) 18%, transparent);
-}
-.teams-btn:focus-visible { outline: 2px solid var(--ds-violet-ink); outline-offset: 2px; }
-.teams-btn:disabled { opacity: 0.7; cursor: progress; }
-.teams-btn-icon {
-  display: grid; place-items: center; width: 24px; height: 24px;
-  border-radius: 999px; background: var(--ds-violet-ink); color: var(--ds-soft-violet); font-size: 11px;
-}
+/* Boton "Generar links de Teams": estilo principal del ERP (btn-exec-primary,
+   navy de marca); aqui solo el espacio del icono y el cursor de carga. */
+.teams-btn { gap: 7px; }
+.teams-btn:disabled { cursor: progress; }
 .teams-btn-text { white-space: nowrap; }
 
-/* Resumen previo a generar */
-.tp { margin-bottom: 16px; padding: 16px 18px; border-left: 4px solid var(--ds-violet-ink); }
+/* Resumen previo a generar: navy de marca + acento/info del DS. */
+.tp { margin-bottom: 16px; padding: 16px 18px; border-left: 4px solid var(--ds-brand); }
 .tp-head { display: flex; align-items: flex-start; gap: 12px; }
 .tp-logo {
   flex: none; display: grid; place-items: center; width: 36px; height: 36px;
-  border-radius: 10px; background: var(--ds-soft-violet); color: var(--ds-violet-ink); font-size: 15px;
+  border-radius: 10px; background: var(--ds-soft-info); color: var(--ds-brand); font-size: 15px;
 }
 .tp-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--ds-ink); }
 .tp-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--ds-ink-2); }
@@ -870,9 +853,9 @@ function confirmRepro() {
   display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
   border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface);
 }
-.tp-stat--main { background: var(--ds-soft-violet); border-color: color-mix(in srgb, var(--ds-violet-ink) 25%, transparent); }
+.tp-stat--main { background: var(--ds-soft-info); border-color: var(--ds-accent-2); }
 .tp-num { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ds-ink); }
-.tp-stat--main .tp-num { color: var(--ds-violet-ink); }
+.tp-stat--main .tp-num { color: var(--ds-info-ink); }
 .tp-lbl { font-size: 12px; color: var(--ds-ink-2); }
 .tp-hint { font-size: 11px; color: var(--ds-muted); }
 .tp-notes { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
@@ -881,7 +864,7 @@ function confirmRepro() {
 .tp-notes li.tp-note--warn i { color: var(--ds-warn); }
 .tp-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .tp-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--ds-soft-neutral); overflow: hidden; }
-.tp-bar span { display: block; height: 100%; border-radius: 999px; background: var(--ds-violet-ink); transition: width 0.4s ease; }
+.tp-bar span { display: block; height: 100%; border-radius: 999px; background: var(--ds-accent); transition: width 0.4s ease; }
 .tp-progress-txt { font-family: var(--ds-font-mono); font-size: 12px; color: var(--ds-ink-2); white-space: nowrap; }
 .tp-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 640px) {
