@@ -264,18 +264,24 @@ function confirmRepro() {
         </div>
         <button
           v-if="mode === 'curso'"
-          class="btn-exec btn-exec-ghost btn-sm"
+          class="teams-btn"
           type="button"
           :disabled="teams.phase.value !== 'idle'"
-          title="Crea una reunión de Teams por cada sesión futura de las aulas activas"
+          :aria-busy="String(teams.phase.value === 'simulating' || teams.phase.value === 'running')"
+          title="Crea una reunión de Teams por cada sesión de las próximas 2 semanas, en las aulas sin link manual"
           @click="teams.simulate()"
         >
-          <i class="fa-solid fa-video" aria-hidden="true"></i>
-          <template v-if="teams.phase.value === 'simulating'">Calculando…</template>
-          <template v-else-if="teams.phase.value === 'running'">
-            Generando{{ teams.progress.value ? ` ${teams.progress.value.hechos}/${teams.progress.value.total}` : '…' }}
-          </template>
-          <template v-else>Links Teams</template>
+          <span class="teams-btn-icon" aria-hidden="true">
+            <i
+              class="fa-solid"
+              :class="teams.phase.value === 'simulating' || teams.phase.value === 'running' ? 'fa-spinner fa-spin' : 'fa-video'"
+            ></i>
+          </span>
+          <span class="teams-btn-text">
+            <template v-if="teams.phase.value === 'simulating'">Calculando…</template>
+            <template v-else-if="teams.phase.value === 'running'">Generando reuniones…</template>
+            <template v-else>Generar links de Teams</template>
+          </span>
         </button>
         <WeekNavigator
           :week="weekNav.week.value"
@@ -287,41 +293,98 @@ function confirmRepro() {
       </div>
     </header>
 
-    <div v-if="teams.phase.value === 'preview' && teams.preview.value" class="ds-panel teams-preview" role="status">
-      <p>
-        Hasta el <b>{{ formatDayMonth(teams.preview.value.horizon_end) }}</b> se
-        crearán <b>{{ teams.preview.value.created }}</b> reuniones de Teams en
-        <b>{{ teams.preview.value.editions_to_create }}</b> aulas,
-        se moverán <b>{{ teams.preview.value.updated }}</b> y se cancelarán
-        <b>{{ teams.preview.value.cancelled }}</b>.
-        <template v-if="teams.preview.value.instructors_invited">
-          {{ teams.preview.value.instructors_invited }} docentes recibirán invitación
-          (promedio {{ teams.preview.value.invites_avg }}, máximo {{ teams.preview.value.invites_max }} cada uno).
-        </template>
-        <template v-if="teams.preview.value.editions_without_instructor_account">
-          {{ teams.preview.value.editions_without_instructor_account }}
-          {{ teams.preview.value.editions_without_instructor_account === 1 ? 'aula queda' : 'aulas quedan' }}
-          sin coorganizador: su docente no tiene usuario de Teams en el ERP.
-        </template>
-        <span class="sub">
-          Las sesiones posteriores se crean solas cada día al entrar en el rango.
-          <template v-if="teams.preview.value.skipped_in_person">
-            {{ teams.preview.value.skipped_in_person }}
+    <section
+      v-if="teams.preview.value && (teams.phase.value === 'preview' || teams.phase.value === 'running')"
+      class="ds-panel tp"
+      aria-labelledby="tp-title"
+    >
+      <header class="tp-head">
+        <span class="tp-logo" aria-hidden="true"><i class="fa-solid fa-video"></i></span>
+        <div>
+          <h2 id="tp-title" class="tp-title">Generar reuniones de Teams</h2>
+          <p class="tp-sub">
+            Sesiones hasta el <b>{{ formatDayMonth(teams.preview.value.horizon_end) }}</b>
+            (próximas 2 semanas). Las siguientes se crean solas cada día.
+          </p>
+        </div>
+      </header>
+
+      <div class="tp-stats">
+        <div class="tp-stat tp-stat--main">
+          <span class="tp-num">{{ teams.preview.value.created }}</span>
+          <span class="tp-lbl">reuniones nuevas</span>
+        </div>
+        <div class="tp-stat">
+          <span class="tp-num">{{ teams.preview.value.editions_to_create }}</span>
+          <span class="tp-lbl">aulas</span>
+        </div>
+        <div class="tp-stat">
+          <span class="tp-num">{{ teams.preview.value.instructors_invited }}</span>
+          <span class="tp-lbl">docentes invitados</span>
+          <span v-if="teams.preview.value.instructors_invited" class="tp-hint">
+            máx. {{ teams.preview.value.invites_max }} invitaciones c/u
+          </span>
+        </div>
+        <div v-if="teams.preview.value.updated || teams.preview.value.cancelled" class="tp-stat">
+          <span class="tp-num">{{ teams.preview.value.updated }} / {{ teams.preview.value.cancelled }}</span>
+          <span class="tp-lbl">se mueven / cancelan</span>
+        </div>
+      </div>
+
+      <ul class="tp-notes">
+        <li v-if="teams.preview.value.skipped_manual">
+          <i class="fa-solid fa-hand" aria-hidden="true"></i>
+          <span>
+            <b>{{ teams.preview.value.skipped_manual }}</b>
+            {{ teams.preview.value.skipped_manual === 1 ? 'aula ya tiene' : 'aulas ya tienen' }}
+            link manual de Académica y no se {{ teams.preview.value.skipped_manual === 1 ? 'toca' : 'tocan' }}.
+          </span>
+        </li>
+        <li v-if="teams.preview.value.editions_without_instructor_account" class="tp-note--warn">
+          <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+          <span>
+            <b>{{ teams.preview.value.editions_without_instructor_account }}</b>
+            {{ teams.preview.value.editions_without_instructor_account === 1 ? 'aula queda' : 'aulas quedan' }}
+            sin coorganizador: su docente no tiene usuario de Teams en el ERP.
+          </span>
+        </li>
+        <li v-if="teams.preview.value.skipped_in_person">
+          <i class="fa-solid fa-building" aria-hidden="true"></i>
+          <span>
+            <b>{{ teams.preview.value.skipped_in_person }}</b>
             {{ teams.preview.value.skipped_in_person === 1 ? 'aula presencial' : 'aulas presenciales' }}
-            con clases en este rango no {{ teams.preview.value.skipped_in_person === 1 ? 'lleva' : 'llevan' }} Teams (modalidad Presencial).
-          </template>
+            no {{ teams.preview.value.skipped_in_person === 1 ? 'lleva' : 'llevan' }} Teams (modalidad Presencial).
+          </span>
+        </li>
+      </ul>
+
+      <div v-if="teams.phase.value === 'running'" class="tp-progress" role="status" aria-live="polite">
+        <div class="tp-bar">
+          <span :style="{ width: teams.progress.value?.total ? `${Math.round(100 * teams.progress.value.hechos / teams.progress.value.total)}%` : '8%' }"></span>
+        </div>
+        <span class="tp-progress-txt">
+          {{ teams.progress.value ? `${teams.progress.value.hechos} de ${teams.progress.value.total}` : 'Iniciando…' }}
         </span>
-      </p>
-      <div class="repro-actions">
-        <button class="btn-exec btn-exec-ghost btn-sm" type="button" @click="teams.cancel()">Cancelar</button>
+      </div>
+
+      <footer class="tp-actions">
+        <button
+          class="btn-exec btn-exec-ghost btn-sm"
+          type="button"
+          :disabled="teams.phase.value === 'running'"
+          @click="teams.cancel()"
+        >Cancelar</button>
         <button
           class="btn-exec btn-exec-primary btn-sm"
           type="button"
-          :disabled="!teams.preview.value.created && !teams.preview.value.updated && !teams.preview.value.cancelled"
+          :disabled="teams.phase.value === 'running' || (!teams.preview.value.created && !teams.preview.value.updated && !teams.preview.value.cancelled)"
           @click="teams.confirm()"
-        >Generar</button>
-      </div>
-    </div>
+        >
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          {{ teams.preview.value.created ? `Generar ${teams.preview.value.created} reuniones` : 'Aplicar cambios' }}
+        </button>
+      </footer>
+    </section>
 
     <template v-if="mode === 'curso'">
       <div class="ds-kpis">
@@ -771,8 +834,60 @@ function confirmRepro() {
 .s-teams { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--ds-violet-ink); text-decoration: none; }
 .s-teams:hover { text-decoration: underline; }
 
-.teams-preview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; padding: 12px 16px; }
-.teams-preview p { margin: 0; font-size: 13px; color: var(--ds-ink-2); }
+/* Boton "Generar links de Teams": violeta de Teams sobre los tokens del DS
+   (soft-violet / violet-ink) para que respete el modo oscuro. */
+.teams-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 34px; padding: 0 14px 0 6px;
+  border: 1px solid color-mix(in srgb, var(--ds-violet-ink) 28%, transparent);
+  border-radius: 999px; background: var(--ds-soft-violet); color: var(--ds-violet-ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.teams-btn:hover:not(:disabled) {
+  border-color: var(--ds-violet-ink);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-violet-ink) 18%, transparent);
+}
+.teams-btn:focus-visible { outline: 2px solid var(--ds-violet-ink); outline-offset: 2px; }
+.teams-btn:disabled { opacity: 0.7; cursor: progress; }
+.teams-btn-icon {
+  display: grid; place-items: center; width: 24px; height: 24px;
+  border-radius: 999px; background: var(--ds-violet-ink); color: var(--ds-soft-violet); font-size: 11px;
+}
+.teams-btn-text { white-space: nowrap; }
+
+/* Resumen previo a generar */
+.tp { margin-bottom: 16px; padding: 16px 18px; border-left: 4px solid var(--ds-violet-ink); }
+.tp-head { display: flex; align-items: flex-start; gap: 12px; }
+.tp-logo {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: 10px; background: var(--ds-soft-violet); color: var(--ds-violet-ink); font-size: 15px;
+}
+.tp-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--ds-ink); }
+.tp-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--ds-ink-2); }
+.tp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 14px 0 10px; }
+.tp-stat {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); background: var(--ds-surface);
+}
+.tp-stat--main { background: var(--ds-soft-violet); border-color: color-mix(in srgb, var(--ds-violet-ink) 25%, transparent); }
+.tp-num { font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ds-ink); }
+.tp-stat--main .tp-num { color: var(--ds-violet-ink); }
+.tp-lbl { font-size: 12px; color: var(--ds-ink-2); }
+.tp-hint { font-size: 11px; color: var(--ds-muted); }
+.tp-notes { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.tp-notes li { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--ds-ink-2); }
+.tp-notes li i { width: 14px; text-align: center; color: var(--ds-muted); }
+.tp-notes li.tp-note--warn i { color: var(--ds-warn); }
+.tp-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.tp-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--ds-soft-neutral); overflow: hidden; }
+.tp-bar span { display: block; height: 100%; border-radius: 999px; background: var(--ds-violet-ink); transition: width 0.4s ease; }
+.tp-progress-txt { font-family: var(--ds-font-mono); font-size: 12px; color: var(--ds-ink-2); white-space: nowrap; }
+.tp-actions { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 640px) {
+  .tp-actions { flex-direction: column-reverse; }
+  .tp-actions .btn-exec { width: 100%; justify-content: center; }
+}
 
 /* Contadores: el tono sale de tener o no reprogramaciones/tardanzas. */
 .matrix td.cnt { text-align: center; font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; }
