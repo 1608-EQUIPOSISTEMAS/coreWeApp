@@ -75,3 +75,37 @@ export const puedeFijarMonto = ticket =>
 
 export const textoFirmar = ticket =>
   ticket.status === 'PAGO_REGISTRADO' ? 'Validar pago' : 'Aprobar'
+
+// ── Seguimiento / auditoria ──────────────────────────────────────────────
+
+const ACCIONES = {
+  TOMAR: 'Tomó la revisión',
+  LIBERAR: 'Liberó la revisión',
+  FIRMAR: 'Validó',
+  RECHAZAR: 'Rechazó'
+}
+
+export const etiquetaAccion = accion => ACCIONES[accion] || accion || '—'
+
+/** "2 d 4 h", "3 h 10 min", "5 min": tiempo transcurrido desde `desde` hasta `hasta` (o ahora). */
+export function duracion (desde, hasta = new Date()) {
+  if (!desde) return ''
+  const min = Math.max(0, Math.floor((new Date(hasta) - new Date(desde)) / 60000))
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} h ${min % 60} min`
+  return `${Math.floor(h / 24)} d ${h % 24} h`
+}
+
+/**
+ * Quien tiene el tramite y desde cuando. Abierto: el revisor del paso actual.
+ * Cerrado: quien lo cerro (resolved_by), que es a quien se le pregunta despues.
+ * @returns {{ nombre: string, desde: string|null, estado: 'revisando'|'libre'|'cerrado' }}
+ */
+export function revisionDe (ticket) {
+  if (['RESUELTA', 'RECHAZADA', 'PAGO_RECHAZADO'].includes(ticket.status)) {
+    return { nombre: ticket.resuelto_por || '—', desde: ticket.resolved_at, estado: 'cerrado' }
+  }
+  if (ticket.revisor) return { nombre: ticket.revisor, desde: ticket.revision_inicio, estado: 'revisando' }
+  return { nombre: 'Sin tomar', desde: null, estado: 'libre' }
+}

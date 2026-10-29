@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detalleDelPedido, etiquetaMonto, etiquetaTurno, puedeFijarMonto, textoFirmar } from '../ticket-alumno.presentacion.js'
+import { detalleDelPedido, duracion, etiquetaMonto, etiquetaTurno, puedeFijarMonto, revisionDe, textoFirmar } from '../ticket-alumno.presentacion.js'
 
 describe('ticket-alumno.presentacion', () => {
   it('muestra al alumno como turno mientras falta su voucher', () => {
@@ -36,5 +36,21 @@ describe('ticket-alumno.presentacion', () => {
   it('el boton dice que se valida el pago cuando hay voucher', () => {
     expect(textoFirmar({ status: 'PAGO_REGISTRADO' })).toBe('Validar pago')
     expect(textoFirmar({ status: 'ABIERTA' })).toBe('Aprobar')
+  })
+})
+
+describe('seguimiento', () => {
+  it('formatea el tiempo en revision', () => {
+    const t0 = '2026-10-29T10:00:00Z'
+    expect(duracion(t0, '2026-10-29T10:25:00Z')).toBe('25 min')
+    expect(duracion(t0, '2026-10-29T13:10:00Z')).toBe('3 h 10 min')
+    expect(duracion(t0, '2026-10-31T14:00:00Z')).toBe('2 d 4 h')
+    expect(duracion(null)).toBe('')
+  })
+
+  it('abierto muestra al revisor; cerrado, a quien lo cerro', () => {
+    expect(revisionDe({ status: 'ABIERTA', revisor: 'Ana', revision_inicio: 'x' })).toEqual({ nombre: 'Ana', desde: 'x', estado: 'revisando' })
+    expect(revisionDe({ status: 'ABIERTA' }).estado).toBe('libre')
+    expect(revisionDe({ status: 'RESUELTA', resuelto_por: 'Luis', resolved_at: 'y' })).toEqual({ nombre: 'Luis', desde: 'y', estado: 'cerrado' })
   })
 })

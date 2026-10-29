@@ -55,23 +55,26 @@
                 <th>Turno</th>
                 <th>Estado</th>
                 <th>Abierto</th>
+                <th>Revisa</th>
+                <th>En revisión</th>
+                <th>Última acción</th>
               </tr>
             </thead>
             <tbody>
               <template v-if="cargando">
                 <tr v-for="n in 6" :key="`sk-${n}`">
-                  <td colspan="7"><span class="ds-skel"></span></td>
+                  <td colspan="10"><span class="ds-skel"></span></td>
                 </tr>
               </template>
 
               <tr v-else-if="error">
-                <td colspan="7">
+                <td colspan="10">
                   <p class="ds-alert">{{ error }}</p>
                 </td>
               </tr>
 
               <tr v-else-if="!tickets.length">
-                <td colspan="7" class="ds-empty ds-empty--lista">
+                <td colspan="10" class="ds-empty ds-empty--lista">
                   No hay trámites esperando a tu área. Marca «Incluir cerrados» para ver los resueltos.
                 </td>
               </tr>
@@ -95,6 +98,22 @@
                   <td><span class="ds-pill info">{{ etiquetaTurno(t) }}</span></td>
                   <td><span class="ds-pill" :class="estado(t.status).tono">{{ estado(t.status).etiqueta }}</span></td>
                   <td>{{ fecha(t.registration_date) }}</td>
+                  <td>
+                    <span class="revisor" :class="`revisor--${revisionDe(t).estado}`">
+                      {{ revisionDe(t).nombre }}<template v-if="t.lo_reviso_yo"> (tú)</template>
+                    </span>
+                    <span v-if="revisionDe(t).desde" class="dni">
+                      {{ revisionDe(t).estado === 'cerrado' ? 'cerró' : 'desde' }} {{ fechaHora(revisionDe(t).desde) }}
+                    </span>
+                  </td>
+                  <td>{{ revisionDe(t).estado === 'revisando' ? duracion(t.revision_inicio) : '—' }}</td>
+                  <td>
+                    <template v-if="t.ultima_accion">
+                      <span class="alumno">{{ etiquetaAccion(t.ultima_accion) }}</span>
+                      <span class="dni">{{ t.ultima_accion_por || '—' }} · {{ fechaHora(t.ultima_accion_at) }}</span>
+                    </template>
+                    <span v-else class="dni">Sin movimientos</span>
+                  </td>
                 </tr>
               </template>
             </tbody>
@@ -116,6 +135,44 @@
           <div><dt>Costo</dt><dd>{{ etiquetaMonto(seleccionado) }}</dd></div>
           <div><dt>Estado</dt><dd>{{ estado(seleccionado.status).etiqueta }} · turno {{ etiquetaTurno(seleccionado) }}</dd></div>
         </dl>
+
+        <section class="seguimiento">
+          <h4 class="seg-titulo">Seguimiento</h4>
+          <dl class="detalle">
+            <div>
+              <dt>Revisa</dt>
+              <dd>
+                {{ revisionDe(seleccionado).estado === 'revisando' ? seleccionado.revisor : 'Nadie lo tomó en este paso' }}
+                <template v-if="seleccionado.lo_reviso_yo"> (tú)</template>
+              </dd>
+            </div>
+            <div v-if="revisionDe(seleccionado).estado === 'revisando' && seleccionado.revision_inicio">
+              <dt>Inicio revisión</dt>
+              <dd>{{ fechaHora(seleccionado.revision_inicio) }} · hace {{ duracion(seleccionado.revision_inicio) }}</dd>
+            </div>
+            <div><dt>Primera revisión</dt><dd>{{ fechaHora(seleccionado.primera_revision_at) }}</dd></div>
+            <div v-if="seleccionado.resolved_at">
+              <dt>Cerrado</dt>
+              <dd>{{ fechaHora(seleccionado.resolved_at) }} · {{ seleccionado.resuelto_por || '—' }}</dd>
+            </div>
+          </dl>
+
+          <p v-if="cargandoHistorial" class="dni">Cargando historial…</p>
+          <ol v-else-if="historial.length" class="historial">
+            <li v-for="ev in historial" :key="ev.evento_id">
+              <span class="hist-fecha">{{ fechaHora(ev.created_at) }}</span>
+              <span>
+                <strong>{{ ev.usuario || 'Sistema' }}</strong> · {{ etiquetaAccion(ev.accion) }}
+                <template v-if="ev.area"> ({{ ev.area }})</template>
+                <template v-if="ev.status_antes !== ev.status_despues">
+                  · {{ estado(ev.status_antes).etiqueta }} → {{ estado(ev.status_despues).etiqueta }}
+                </template>
+                <span v-if="ev.comentario" class="hist-coment">«{{ ev.comentario }}»</span>
+              </span>
+            </li>
+          </ol>
+          <p v-else class="dni">Sin movimientos registrados en el ERP.</p>
+        </section>
 
         <p v-if="seleccionado.detalle" class="motivo">{{ seleccionado.detalle }}</p>
 
@@ -169,6 +226,24 @@
       </template>
 
       <template v-if="seleccionado?.puede_firmar" #footer>
+        <button
+          v-if="seleccionado.revisor"
+          class="btn-exec btn-exec-outline"
+          type="button"
+          :disabled="guardando"
+          @click="liberar"
+        >
+          Liberar
+        </button>
+        <button
+          v-else
+          class="btn-exec btn-exec-outline"
+          type="button"
+          :disabled="guardando"
+          @click="tomar"
+        >
+          <i class="fa-solid fa-hand" aria-hidden="true"></i> Tomar revisión
+        </button>
         <button class="btn-exec btn-exec-outline" type="button" :disabled="guardando" @click="rechazar">
           Rechazar
         </button>
@@ -187,7 +262,8 @@ import BaseModal from '@/components/BaseModal.vue'
 import { confirmAction } from '@/composables/useConfirm'
 import { ServiceKeys } from '@/services'
 import {
-  TIPOS, detalleDelPedido, estado, etiquetaMonto, etiquetaTipo, etiquetaTurno, puedeFijarMonto, textoFirmar,
+  TIPOS, detalleDelPedido, duracion, estado, etiquetaAccion, etiquetaMonto, etiquetaTipo, etiquetaTurno,
+  puedeFijarMonto, revisionDe, textoFirmar,
 } from '@/entities/ticket-alumno/ticket-alumno.presentacion'
 
 const toast = useToast()
@@ -204,6 +280,8 @@ const seleccionado = ref(null)
 const respuesta = ref('')
 const monto = ref(null)
 const guardando = ref(false)
+const historial = ref([])
+const cargandoHistorial = ref(false)
 
 // Sin monto Academica no puede aprobar: el alumno quedaria debiendo "S/ —".
 const faltaMonto = computed(() =>
@@ -219,6 +297,13 @@ const subtitulo = computed(() => {
 function fecha (valor) {
   if (!valor) return '—'
   return new Date(valor).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function fechaHora (valor) {
+  if (!valor) return '—'
+  return new Date(valor).toLocaleString('es-PE', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
 }
 
 async function cargar () {
@@ -243,7 +328,41 @@ function abrir (ticket) {
   respuesta.value = ticket.respuesta || ''
   monto.value = null
   abierto.value = true
+  cargarHistorial(ticket.solicitud_id)
 }
+
+async function cargarHistorial (solicitudId) {
+  cargandoHistorial.value = true
+  historial.value = []
+  try {
+    historial.value = await ticketsService.historial(solicitudId)
+  } catch (err) {
+    console.error('No se pudo cargar el historial del tramite', err)
+  } finally {
+    cargandoHistorial.value = false
+  }
+}
+
+// Tomar/liberar no cierran el modal: solo cambian quien lo revisa. Se recarga la
+// bandeja y se vuelve a apuntar al ticket para ver el revisor nuevo.
+async function seguimiento (accion, mensaje) {
+  const id = seleccionado.value.solicitud_id
+  guardando.value = true
+  try {
+    await accion(id)
+    toast.success(mensaje)
+    await cargar()
+    seleccionado.value = tickets.value.find(t => t.solicitud_id === id) || seleccionado.value
+    await cargarHistorial(id)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'No se pudo actualizar el seguimiento')
+  } finally {
+    guardando.value = false
+  }
+}
+
+const tomar = () => seguimiento(id => ticketsService.tomar(id), 'Tomaste el trámite: ya figura a tu nombre')
+const liberar = () => seguimiento(id => ticketsService.liberar(id), 'Trámite liberado')
 
 async function verArchivo (cual) {
   try {
@@ -328,6 +447,22 @@ onMounted(cargar)
 .detalle dt { font-size: 11.5px; font-weight: 600; color: var(--ds-ink-2); }
 .detalle dd { margin: 0; font-size: 13px; color: var(--ds-ink); }
 
+.revisor { display: block; }
+.revisor--libre { color: var(--ds-muted); font-style: italic; }
+.revisor--revisando { font-weight: 600; }
+
+.seguimiento {
+  margin: 0 0 var(--ds-gap);
+  padding: 12px 14px;
+  border: 1px solid var(--ds-line, rgba(0, 0, 0, .08));
+  border-radius: var(--ds-radius-sm);
+}
+.seg-titulo { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--ds-ink-2); }
+.historial { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.historial li { display: grid; grid-template-columns: 120px 1fr; gap: 10px; font-size: 12.5px; color: var(--ds-ink); }
+.hist-fecha { color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.hist-coment { display: block; color: var(--ds-ink-2); font-style: italic; }
+
 .adjuntos { display: flex; gap: 8px; margin-bottom: var(--ds-gap); }
 
 .motivo {
@@ -343,5 +478,6 @@ onMounted(cargar)
 
 @media (max-width: 900px) {
   .detalle > div { grid-template-columns: 1fr; gap: 2px; }
+  .historial li { grid-template-columns: 1fr; gap: 0; }
 }
 </style>

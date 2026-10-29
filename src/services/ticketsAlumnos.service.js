@@ -26,6 +26,19 @@ export default class TicketsAlumnosService {
     return (await api.post('/tickets-alumnos/archivo', { solicitud_id: solicitudId, cual })).data.data.url
   }
 
+  // Seguimiento: "empiezo a revisarlo yo" / "lo suelto" y la bitacora del tramite.
+  async tomar (solicitudId) {
+    return (await api.post('/tickets-alumnos/tomar', { solicitud_id: solicitudId })).data.data
+  }
+
+  async liberar (solicitudId) {
+    return (await api.post('/tickets-alumnos/liberar', { solicitud_id: solicitudId })).data.data
+  }
+
+  async historial (solicitudId) {
+    return (await api.post('/tickets-alumnos/historial', { solicitud_id: solicitudId })).data.data
+  }
+
   async rechazar ({ solicitudId, respuesta }) {
     return (await api.post('/tickets-alumnos/rechazar', {
       solicitud_id: solicitudId,
