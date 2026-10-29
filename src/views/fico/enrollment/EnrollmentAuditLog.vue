@@ -58,7 +58,7 @@ const fmt = useEnrollmentFormatters()
 const TONE_BY_ACTION = {
   approved: 'ok', payment_registered: 'ok', validation_applied: 'ok', additional_payment: 'ok', odoo_fee_paid: 'ok',
   edited: 'warn', modality_changed: 'warn', profile_changed: 'warn', student_edited: 'warn', observed: 'warn',
-  installments_rescheduled: 'warn', edition_reprogrammed: 'warn', children_skipped_no_edition: 'warn', additional_payment_edited: 'warn',
+  installments_rescheduled: 'warn', edition_reprogrammed: 'warn', course_reprogrammed: 'warn', children_skipped_no_edition: 'warn', additional_payment_edited: 'warn',
   seller_agent_changed: 'warn', retire_reverted: 'warn', collection_campaign: 'warn', installment_amount_edited: 'warn',
   initial_payment_corrected: 'warn', installment_payment_reverted: 'warn', installment_added: 'warn', installment_plan_adjusted: 'warn',
   email_failed: 'bad', retired: 'bad', sap_credentials_missing: 'bad',

@@ -38,6 +38,11 @@ describe('isWithinReprogramWindow', () => {
     expect(isWithinReprogramWindow('2026-07-01', today)).toBe(true)
     expect(isWithinReprogramWindow('2026-06-30', today)).toBe(false)
   })
+  it('con la edición actual, solo admite las que empiezan después', () => {
+    expect(isWithinReprogramWindow('2026-10-10', today, '2026-10-03')).toBe(true)
+    expect(isWithinReprogramWindow('2026-10-03', today, '2026-10-03')).toBe(false)
+    expect(isWithinReprogramWindow('2026-09-12', today, '2026-10-03T05:00:00.000Z')).toBe(false)
+  })
 })
 
 describe('isMovedOrigin', () => {

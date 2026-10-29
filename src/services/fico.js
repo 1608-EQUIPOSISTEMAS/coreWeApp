@@ -308,6 +308,19 @@ export default class FicoService {
     return response.data;
   }
 
+  // Cursos del paquete con su estado (terminado / en curso / por iniciar), los
+  // reprogramados y las cuotas vencidas del paquete.
+  async getProgramCourses(enrollment_id) {
+    const response = (await api.post('/fico/programcourses', { enrollment_id })).data;
+    return response.data;
+  }
+
+  // RP de uno o varios cursos del paquete: courses = [{ enrollment_id, new_edition_id }].
+  async reprogramCourses({ enrollment_id, courses, justificacion }) {
+    const response = (await api.post('/fico/reprogramcourses', { enrollment_id, courses, justificacion }, { timeout: SLOW_ENDPOINT_TIMEOUT })).data;
+    return response.data;
+  }
+
   async approvePendingReview(enrollmentId, activation_date = null) {
     const body = { enrollment_id: enrollmentId };
     if (activation_date) body.activation_date = activation_date;

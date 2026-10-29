@@ -76,7 +76,7 @@
                 <td>
                   <span class="a5-principal">{{ e.program_name }}</span>
                   <span class="a5-secundario" v-if="e.is_child">
-                    Hijo de {{ e.parent_program_name }} &middot; {{ e.parent_edition_code }}
+                    Curso de {{ e.parent_program_name }} &middot; {{ e.parent_edition_code }}
                   </span>
                 </td>
                 <td class="a5-centro">
@@ -86,13 +86,12 @@
                 </td>
                 <td class="num">{{ formatValue(e.amount_paid, 'monto') }}</td>
                 <td>
-                  <select v-if="needsTarget(e)" class="ds-input" v-model="selections[e.enrollment_id]" :aria-label="`Destino de ${e.full_name}`">
+                  <select class="ds-input" v-model="selections[e.enrollment_id]" :aria-label="`Destino de ${e.full_name}`">
                     <option :value="null">— Seleccionar —</option>
                     <option v-for="ed in availableEditions" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
                   </select>
-                  <!-- Un modulo de paquete no lleva destino propio: el caso vive en
-                       su venta y mover la venta le vuelve a crear los modulos. -->
-                  <span v-else class="a5-nota">Viaja con su venta del paquete</span>
+                  <!-- Un curso de paquete se reprograma solo: el paquete sigue igual. -->
+                  <span v-if="e.is_child" class="a5-nota">Se mueve solo este curso; su paquete sigue igual</span>
                 </td>
               </tr>
             </tbody>
@@ -183,11 +182,11 @@ const selections = reactive({})
 const bulkTargetId = ref(null)
 const justificacion = ref('')
 
-// Un modulo de un paquete (hijo) no lleva destino propio: su caso vive en la
-// venta del paquete y mover esa venta le vuelve a crear los modulos en el
-// destino. Pedirle destino aqui seria guardar una propuesta inejecutable.
-function needsTarget (e) {
-  return !e.is_child
+// Desde el 27/10/2026 todos llevan destino, tambien el curso de un paquete:
+// se reprograma solo ese curso (otra edicion del mismo curso) y el paquete, sus
+// pagos y sus cuotas siguen igual.
+function needsTarget () {
+  return true
 }
 
 const ventas = computed(() => enrollments.value.filter(needsTarget))
@@ -384,5 +383,5 @@ function formatDate (raw) {
 
 .a5-principal { display: block; font-weight: 600; color: var(--ds-ink); }
 .a5-secundario { display: block; margin-top: 1px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
-.a5-nota { font-size: 11px; font-style: italic; color: var(--ds-muted); }
+.a5-nota { display: block; margin-top: 2px; font-size: 11px; font-style: italic; color: var(--ds-muted); }
 </style>

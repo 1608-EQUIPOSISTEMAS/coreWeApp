@@ -35,9 +35,13 @@ export function isWithinCourseChangeWindow (startDate, today = new Date(), origi
 
 // Reprogramación: admite desde el 1ro de hace 2 meses.
 // Ej: estando en julio, admite ediciones desde el 01/05.
-export function isWithinReprogramWindow (startDate, today = new Date()) {
+// Con la edición actual, solo las que empiezan después: reprogramar es mover
+// hacia adelante, nunca a una edición anterior ni a la misma fecha.
+export function isWithinReprogramWindow (startDate, today = new Date(), currentStartDate = null) {
   const ed = parseLocalDate(startDate)
   if (!ed) return false
+  const current = parseLocalDate(currentStartDate)
+  if (current && ed <= current) return false
   const cutoff = new Date(today.getFullYear(), today.getMonth() - 2, 1)
   return ed >= cutoff
 }

@@ -21,9 +21,28 @@
             <span class="eact-tag">PR</span>
           </button>
           <template v-if="canManageEnrollment && !isOriginMoved">
-            <button type="button" class="eact-tile" @click="startAction('rp')">
+            <button v-if="hasProgramCourses" type="button" class="eact-tile" @click="startAction('rpCourses')">
+              <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+              <span class="eact-tile-text"><strong>Reprogramar cursos</strong><small>Mueve solo los cursos elegidos; el programa y sus cuotas no cambian</small></span>
+              <span class="eact-tag">RP</span>
+            </button>
+            <!-- RP del programa completo: solo si no empezo ningun curso. Si ya
+                 llevo alguno se reprograman los cursos que faltan (el backend
+                 tambien lo rechaza). -->
+            <button
+              type="button"
+              class="eact-tile"
+              :disabled="programStarted"
+              :title="programStarted ? 'El alumno ya empezó cursos del programa: usa Reprogramar cursos' : ''"
+              @click="startAction('rp')"
+            >
               <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i>
-              <span class="eact-tile-text"><strong>Reprogramar edición</strong><small>Mismo programa, otra edición; las cuotas pendientes viajan</small></span>
+              <span class="eact-tile-text">
+                <strong>{{ hasProgramCourses ? 'Reprogramar programa completo' : 'Reprogramar edición' }}</strong>
+                <small>{{ programStarted
+                  ? 'No disponible: ya empezó cursos del programa'
+                  : 'Mismo programa, otra edición; las cuotas pendientes viajan' }}</small>
+              </span>
               <span class="eact-tag">RP</span>
             </button>
             <button type="button" class="eact-tile" @click="startAction('cc')">
@@ -134,6 +153,95 @@
         </template>
         <template #step-1>
           <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="rpEditionId" :override-installments="rpPreviewInstallments" ref="emailPreviewRef" />
+        </template>
+      </ActionStepper>
+
+      <!-- REPROGRAMAR CURSOS DEL PAQUETE -->
+      <ActionStepper
+        v-if="activeAction === 'rpCourses'"
+        v-model="stepperStep"
+        :steps="['Reprogramar cursos']"
+        :can-advance="canAdvanceRPC"
+        :loading="saving"
+        confirm-label="Confirmar reprogramación"
+        confirm-icon="fa-calendar-week"
+        @cancel="cancelAction"
+        @confirm="handleReprogramCoursesConfirm"
+      >
+        <template #step-0>
+          <div class="eact-form">
+            <div class="eact-student-bar">
+              <div class="eact-student-main">
+                <span class="eact-student-name">{{ enrollment?.student_full_name || '---' }}</span>
+                <span class="eact-student-doc">{{ enrollment?.document_number || '---' }}</span>
+              </div>
+              <span class="eact-program-pill">{{ enrollment?.program_name || '---' }}</span>
+            </div>
+
+            <p v-if="programCourses?.overdue?.cantidad" class="ds-callout warn">
+              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              <span>Tiene <b>{{ programCourses.overdue.cantidad }} cuota(s) vencida(s)</b> por {{ fmt.formatMoney(programCourses.overdue.monto) }}. Revisa el caso antes de reprogramar.</span>
+            </p>
+
+            <div class="eact-field">
+              <label>Cursos a reprogramar <small>(marca el curso y elige su nueva fecha)</small></label>
+              <div class="eact-rpc-table" role="table">
+                <div class="eact-rpc-head" role="row">
+                  <span></span>
+                  <span>#</span>
+                  <span>Curso</span>
+                  <span>Edición</span>
+                  <span>Fechas actuales</span>
+                  <span class="eact-rpc-right">Estado</span>
+                </div>
+                <div
+                  v-for="(c, i) in rpcCourses"
+                  :key="c.enrollment_id"
+                  class="eact-rpc-row"
+                  :class="{ on: isRpcSelected(c), off: c.state === 'terminado' }"
+                  role="row"
+                >
+                  <label class="eact-rpc-line">
+                    <input
+                      type="checkbox"
+                      :checked="isRpcSelected(c)"
+                      :disabled="c.state === 'terminado'"
+                      :aria-label="`Reprogramar ${c.course_name}`"
+                      @change="toggleRpc(c)"
+                    />
+                    <span class="eact-rpc-num">{{ String(i + 1).padStart(2, '0') }}</span>
+                    <span class="eact-rpc-name">{{ c.course_name }}</span>
+                    <span><span class="eact-rpc-code">{{ c.edition_code || 's/e' }}</span></span>
+                    <span class="eact-rpc-dates">
+                      <span>{{ fmtCourseRange(c.start_date, c.end_date) }}</span>
+                      <small v-if="courseWeeks(c.start_date, c.end_date)">{{ weeksLabel(courseWeeks(c.start_date, c.end_date)) }}</small>
+                    </span>
+                    <span class="eact-rpc-right">
+                      <span class="eact-rpc-status" :class="RPC_TONE[c.state]"><span class="eact-rpc-dot"></span>{{ RPC_STATE[c.state] }}</span>
+                    </span>
+                  </label>
+                  <div v-if="isRpcSelected(c)" class="eact-rpc-pick">
+                    <label :for="`rpc-ed-${c.enrollment_id}`">Nueva fecha</label>
+                    <select
+                      :id="`rpc-ed-${c.enrollment_id}`"
+                      v-model="rpcSelected[c.enrollment_id]"
+                      class="ds-input"
+                      :disabled="rpcLoading[c.enrollment_id]"
+                    >
+                      <option :value="null" disabled>{{ rpcLoading[c.enrollment_id] ? 'Cargando ediciones…' : ((rpcEditions[c.enrollment_id] || []).length ? 'Elige la nueva edición…' : 'Sin ediciones posteriores disponibles') }}</option>
+                      <option v-for="ed in rpcEditions[c.enrollment_id] || []" :key="ed.id" :value="ed.id">{{ ed.label }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <small class="eact-price-hint">Los cursos terminados no se mueven. Las cuotas del programa no cambian; el alumno recibe un correo de curso reprogramado con su cronograma actualizado.</small>
+            </div>
+
+            <div class="eact-field">
+              <label>Justificación<span class="ds-req">*</span></label>
+              <textarea v-model="rpcJustificacion" class="ds-input" required rows="3" placeholder="Motivo de la reprogramación..."></textarea>
+            </div>
+          </div>
         </template>
       </ActionStepper>
 
@@ -564,6 +672,7 @@ import SearchSelect from '@/components/SearchSelect.vue'
 import MultiFileUploader from '@/components/MultiFileUploader.vue'
 import PersonalAccountField from './PersonalAccountField.vue'
 import { parseLocalDate, isWithinCourseChangeWindow, isWithinReprogramWindow, isMovedOrigin, addOneMonth } from './editionWindows.js'
+import { fmtCourseRange, courseWeeks, weeksLabel } from './courseDates.js'
 
 const props = defineProps({
   enrollment: { type: Object, default: null },
@@ -575,7 +684,9 @@ const props = defineProps({
   modalityOptions: { type: Array, default: () => [] },
   profileOptions: { type: Array, default: () => [] },
   odooEmail: { type: String, default: null },
-  studentFlags: { type: Object, default: null }
+  studentFlags: { type: Object, default: null },
+  // Cursos reales del paquete (getProgramCourses): RP por curso.
+  programCourses: { type: Object, default: null }
 })
 
 const emit = defineEmits(['action-completed', 'open-related'])
@@ -658,6 +769,8 @@ function cancelAction () {
 }
 
 function resetAllForms () {
+  for (const k of Object.keys(rpcSelected)) delete rpcSelected[k]
+  rpcJustificacion.value = ''
   rpEditionId.value = null
   rpJustificacion.value = ''
   rpEditions.value = []
@@ -781,8 +894,10 @@ async function loadRPEditions () {
   loadingEditions.value = true
   try {
     const items = await ficoService.getAvailableEditions(enrollmentId.value)
+    const currentStart = props.enrollment?.start_date || props.enrollment?.edition_start_date || props.detail?.edition_start_date
     rpEditions.value = (items || [])
-      .filter(e => e.start_date && isWithinReprogramWindow(e.start_date))
+      .filter(e => e.start_date && isWithinReprogramWindow(e.start_date, new Date(), currentStart))
+      .sort((a, b) => parseLocalDate(a.start_date) - parseLocalDate(b.start_date))
       .map(e => ({
         id: e.edition_num_id || e.id,
         start_date: e.start_date,
@@ -820,6 +935,72 @@ async function handleReprogramConfirm () {
   } catch (err) {
     console.error(err)
     toast.error(err?.response?.data?.error || 'Error al reprogramar edicion.')
+  } finally {
+    saving.value = false
+  }
+}
+
+// ── REPROGRAMAR CURSOS DEL PAQUETE ──
+// Se mueve solo cada curso elegido; el paquete se queda con sus pagos y cuotas.
+const RPC_STATE = { terminado: 'Terminado', en_curso: 'En curso', por_iniciar: 'Por iniciar' }
+const RPC_TONE = { terminado: 'ok', en_curso: 'info', por_iniciar: '' }
+const hasProgramCourses = computed(() => (props.programCourses?.courses || []).length > 0)
+const programStarted = computed(() => !!props.programCourses?.any_started)
+// Solo los cursos vigentes (los RP/retirados ya dejaron el aula).
+const rpcCourses = computed(() => (props.programCourses?.courses || []).filter(c => !c.reprogrammed && c.state))
+const rpcSelected = reactive({}) // enrollment_id del curso -> edicion destino (null = sin elegir)
+const rpcEditions = reactive({})
+const rpcLoading = reactive({})
+const rpcJustificacion = ref('')
+// `in` y no hasOwnProperty: Vue no rastrea getOwnPropertyDescriptor, y con
+// hasOwnProperty el selector de edicion nunca aparecia al marcar el curso.
+const isRpcSelected = c => c.enrollment_id in rpcSelected
+
+function toggleRpc (c) {
+  if (isRpcSelected(c)) { delete rpcSelected[c.enrollment_id]; return }
+  rpcSelected[c.enrollment_id] = null
+  if (!rpcEditions[c.enrollment_id]) loadRpcEditions(c.enrollment_id)
+}
+
+async function loadRpcEditions (courseId) {
+  rpcLoading[courseId] = true
+  try {
+    const items = await ficoService.getAvailableEditions(courseId)
+    const currentStart = rpcCourses.value.find(c => c.enrollment_id === courseId)?.start_date
+    rpcEditions[courseId] = (items || [])
+      .filter(e => e.start_date && isWithinReprogramWindow(e.start_date, new Date(), currentStart))
+      .sort((a, b) => parseLocalDate(a.start_date) - parseLocalDate(b.start_date))
+      .map(e => ({ id: e.edition_num_id || e.id, label: `${fmt.formatDate(e.start_date)} — ${e.global_code || e.edition_code || ''}` }))
+  } catch (err) {
+    console.error('Error cargando ediciones del curso:', err)
+    rpcEditions[courseId] = []
+  } finally {
+    rpcLoading[courseId] = false
+  }
+}
+
+const canAdvanceRPC = computed(() => {
+  const chosen = Object.values(rpcSelected)
+  return chosen.length > 0 && chosen.every(Boolean) && rpcJustificacion.value.trim().length > 0
+})
+
+async function handleReprogramCoursesConfirm () {
+  if (!requiredFieldsFilled()) return
+  saving.value = true
+  try {
+    const res = await ficoService.reprogramCourses({
+      enrollment_id: enrollmentId.value,
+      courses: Object.entries(rpcSelected).map(([id, ed]) => ({ enrollment_id: Number(id), new_edition_id: Number(ed) })),
+      justificacion: rpcJustificacion.value.trim()
+    })
+    const odooIssues = (res?.results || []).filter(r => r.odoo_incomplete)
+    if (res?.result === 1 && !odooIssues.length) toast.success(res.message)
+    else toast.warning(odooIssues.length ? `${res.message} Odoo: revisar ${odooIssues.map(r => r.odoo_detail).join('; ')}` : res?.message)
+    emit('action-completed')
+    cancelAction()
+  } catch (err) {
+    console.error(err)
+    toast.error(err?.response?.data?.error || 'Error al reprogramar los cursos.')
   } finally {
     saving.value = false
   }
@@ -1395,6 +1576,60 @@ async function handleRetire () {
   transition: border-color 0.15s, background 0.15s;
 }
 .eact-tile:hover { border-color: var(--ds-accent); background: var(--ds-surface-2); }
+.eact-tile:disabled { cursor: not-allowed; opacity: 0.55; }
+.eact-tile:disabled:hover { border-color: var(--ds-border); background: var(--ds-surface); }
+
+/* RP por curso: un renglon por curso del paquete; al marcarlo aparece su fecha nueva. */
+/* Tabla de cursos a reprogramar: misma rejilla en cabecera y filas */
+.eact-rpc-table { overflow: hidden; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-card, 10px); background: var(--ds-surface); }
+.eact-rpc-head,
+.eact-rpc-line {
+  display: grid;
+  grid-template-columns: 22px 34px minmax(0, 1fr) 74px 150px 110px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+.eact-rpc-head {
+  padding-top: 9px; padding-bottom: 9px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ds-muted); background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-border);
+}
+.eact-rpc-row { border-bottom: 1px solid var(--ds-border); }
+.eact-rpc-row:last-child { border-bottom: 0; }
+.eact-rpc-line { min-height: 52px; margin: 0; cursor: pointer; }
+.eact-rpc-line input { width: 15px; height: 15px; margin: 0; }
+.eact-rpc-row.on { background: var(--ds-surface-2); box-shadow: inset 3px 0 0 var(--ds-accent); }
+.eact-rpc-row.off .eact-rpc-line { opacity: 0.55; cursor: not-allowed; }
+.eact-rpc-num { font-family: var(--ds-font-mono); font-size: 11px; color: var(--ds-muted); opacity: 0.7; }
+.eact-rpc-name { font-size: 13px; font-weight: 700; color: var(--ds-heading); text-transform: uppercase; }
+.eact-rpc-code {
+  padding: 2px 7px; font-family: var(--ds-font-mono); font-size: 11px; font-weight: 600; color: var(--ds-heading);
+  background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control);
+}
+.eact-rpc-dates { display: flex; flex-direction: column; font-size: 12.5px; color: var(--ds-heading); }
+.eact-rpc-dates small { font-size: 10.5px; color: var(--ds-muted); }
+.eact-rpc-right { justify-self: end; text-align: right; }
+.eact-rpc-status {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+  font-size: 11.5px; font-weight: 600; color: var(--ds-heading); background: var(--ds-surface-2);
+  border-radius: 999px; white-space: nowrap;
+}
+.eact-rpc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ds-muted); opacity: 0.6; }
+.eact-rpc-status.ok .eact-rpc-dot { background: var(--ds-ok, #16a34a); opacity: 1; }
+.eact-rpc-status.info .eact-rpc-dot { background: var(--ds-info, #2563eb); opacity: 1; }
+/* Selector de la nueva fecha, debajo del curso marcado */
+.eact-rpc-pick { display: flex; align-items: center; gap: 12px; padding: 0 14px 12px 82px; }
+.eact-rpc-pick label { margin: 0; font-size: 11.5px; font-weight: 600; color: var(--ds-muted); white-space: nowrap; }
+.eact-rpc-pick .ds-input { max-width: 320px; }
+@media (max-width: 640px) {
+  .eact-rpc-head { display: none; }
+  .eact-rpc-line { grid-template-columns: 22px minmax(0, 1fr) auto; row-gap: 4px; padding-top: 10px; padding-bottom: 10px; }
+  .eact-rpc-num { display: none; }
+  .eact-rpc-line > :nth-child(4), .eact-rpc-dates { grid-column: 2 / -1; }
+  .eact-rpc-right { grid-column: 3; grid-row: 1; }
+  .eact-rpc-pick { padding-left: 48px; flex-wrap: wrap; }
+}
 .eact-tile:focus-visible { outline: 2px solid var(--ds-accent); outline-offset: 2px; }
 .eact-tile > i {
   display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px;

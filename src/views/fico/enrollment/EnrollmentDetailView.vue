@@ -14,6 +14,16 @@
             <span v-if="showCertificarPill" class="edv-status ok">
               <i class="fa-solid fa-certificate" aria-hidden="true"></i> Certificar
             </span>
+            <button
+              v-if="programCourses.reprogrammed_count"
+              type="button"
+              class="edv-status warn edv-status-btn"
+              title="Ver los cursos del programa"
+              @click="activeTab = 'cursos'"
+            >
+              <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+              {{ programCourses.reprogrammed_count }} curso(s) reprogramado(s)
+            </button>
           </template>
         </div>
         <p v-if="!notFound && headerSub" class="ds-sub">{{ headerSub }}</p>
@@ -92,6 +102,10 @@
             <button type="button" role="tab" :aria-selected="activeTab === 'finanzas'" @click="activeTab = 'finanzas'">
               <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> Finanzas
             </button>
+            <button v-if="programCourses.courses.length" type="button" role="tab" :aria-selected="activeTab === 'cursos'" @click="activeTab = 'cursos'">
+              <i class="fa-solid fa-sitemap" aria-hidden="true"></i> Cursos
+              <span class="edv-count">{{ programCourses.courses.length }}</span>
+            </button>
             <button v-if="modalMode === 'view'" type="button" role="tab" :aria-selected="activeTab === 'acciones'" @click="activeTab = 'acciones'">
               <i class="fa-solid fa-bolt" aria-hidden="true"></i> Acciones
             </button>
@@ -100,6 +114,10 @@
               <span v-if="auditLog.length" class="edv-count">{{ auditLog.length }}</span>
             </button>
           </div>
+          <p v-if="activeTab === 'cursos' && coursesSummary" class="edv-courses-sum">
+            <b>{{ coursesSummary.count }} {{ coursesSummary.count === 1 ? 'curso' : 'cursos' }}</b>
+            <template v-if="coursesSummary.range"> · {{ coursesSummary.range }}</template>
+          </p>
         </div>
 
         <div class="ds-panel-body">
@@ -210,11 +228,19 @@
             @revert-cuota="openRevert"
           />
 
+          <ProgramCoursesPanel
+            v-if="programCourses.courses.length"
+            v-show="activeTab === 'cursos'"
+            :courses="programCourses.courses"
+            :overdue="programCourses.overdue"
+          />
+
           <EnrollmentActions
             v-if="modalMode === 'view'"
             v-show="activeTab === 'acciones'"
             :enrollment="enrollment"
             :detail="detail"
+            :program-courses="programCourses"
             :catalogs="catalogData"
             :mode="modalMode"
             :current-modality="currentModality"
@@ -286,6 +312,8 @@ import EnrollmentHeader from './EnrollmentHeader.vue'
 import EnrollmentFinancials from './EnrollmentFinancials.vue'
 import EnrollmentActions from './EnrollmentActions.vue'
 import EnrollmentAuditLog from './EnrollmentAuditLog.vue'
+import ProgramCoursesPanel from './ProgramCoursesPanel.vue'
+import { shortDate } from './courseDates.js'
 import RescheduleInstallmentsModal from './RescheduleInstallmentsModal.vue'
 import EditInstallmentAmountModal from './EditInstallmentAmountModal.vue'
 import RevertInstallmentModal from './RevertInstallmentModal.vue'
@@ -400,6 +428,25 @@ const ficoForm = reactive({
 // Validations
 const validations = ref([])
 const programChildrenList = ref([])
+// Cursos reales del paquete (hijos con su estado): pestana Cursos, etiqueta de
+// reprogramados y la RP por curso de Acciones.
+const emptyProgramCourses = () => ({ courses: [], reprogrammed_count: 0, any_started: false, overdue: null })
+const programCourses = ref(emptyProgramCourses())
+function loadProgramCourses () {
+  if (!enrollmentId.value) return
+  ficoService.getProgramCourses(enrollmentId.value)
+    .then(r => { programCourses.value = r || emptyProgramCourses() })
+    .catch(() => { programCourses.value = emptyProgramCourses() })
+}
+// Cabecera de la pestana Cursos: cursos vigentes (sin los RP) y su rango total.
+const coursesSummary = computed(() => {
+  const live = programCourses.value.courses.filter(c => !c.reprogrammed)
+  if (!live.length) return null
+  const starts = live.map(c => String(c.start_date || '').slice(0, 10)).filter(Boolean).sort()
+  const ends = live.map(c => String(c.end_date || '').slice(0, 10)).filter(Boolean).sort()
+  const range = starts.length && ends.length ? `${shortDate(starts[0])} → ${shortDate(ends[ends.length - 1])}` : ''
+  return { count: live.length, range }
+})
 
 // Reschedule installments
 const rescheduleVisible = ref(false)
@@ -1226,6 +1273,7 @@ async function refreshDetail () {
     if (freshRow) enrollment.value = freshRow
     buildInstallments()
     refreshAuditLog()
+    loadProgramCourses()
 
     if (!ficoForm.payment_date && !lastPayment.value?.payment_date) {
       const commercialDate = detail.value?.commercial_pay_date
@@ -1298,6 +1346,7 @@ async function loadEnrollment () {
   }).catch(() => { loadValidationData() })
 
   refreshAuditLog()
+  loadProgramCourses()
   loadSameDayPending()
 }
 
@@ -1450,6 +1499,8 @@ watch(enrollmentId, (newId, oldId) => {
 </script>
 
 <style scoped>
+.edv-courses-sum { margin: 0; font-size: 12.5px; color: var(--ds-muted); white-space: nowrap; }
+.edv-courses-sum b { color: var(--ds-heading); }
 /* Marco ds-*: la ficha (EnrollmentHeader/Odoo) queda fija a la izquierda y
    las pestañas en un panel; el scroll es el de la página, no uno interno. */
 .edv-back {
@@ -1469,6 +1520,7 @@ watch(enrollmentId, (newId, oldId) => {
 .edv-status.ok { border-color: var(--ds-ok); background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
 .edv-status.warn { border-color: var(--ds-warn); background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
 .edv-status.bad { border-color: var(--ds-bad); background: var(--ds-soft-bad); color: var(--ds-bad-ink); }
+.edv-status-btn { cursor: pointer; font: inherit; }
 
 .edv-nav {
   display: inline-flex; align-items: stretch; overflow: hidden;

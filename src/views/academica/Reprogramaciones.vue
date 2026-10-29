@@ -4,8 +4,8 @@
       <div class="ds-head-titles">
         <h1 class="ds-title">Reprogramaciones</h1>
         <p class="ds-sub">
-          Alumnos varados porque su edición —o la del paquete que compraron— se canceló.
-          Una fila por venta: los módulos viajan con ella.
+          Alumnos varados porque su edición se canceló. Si es un curso de un paquete, se
+          reprograma solo ese curso: el programa y sus cuotas siguen igual.
         </p>
       </div>
       <div class="ds-head-actions">
@@ -87,7 +87,7 @@
                 <tr v-for="f in filas" :key="f.enrollment_id">
                   <td>
                     <span class="linea">{{ f.apellidos }}, {{ f.nombres }}</span>
-                    <span class="nota mono">{{ f.dni || '--' }} &middot; venta #{{ f.enrollment_id }}</span>
+                    <span class="nota mono">{{ f.dni || '--' }} &middot; venta #{{ f.venta_id || f.enrollment_id }}<template v-if="f.es_curso"> &middot; curso #{{ f.enrollment_id }}</template></span>
                   </td>
                   <td>
                     <span v-if="f.celular" class="linea"><i class="fa-solid fa-phone ico" aria-hidden="true"></i> {{ f.celular }}</span>
@@ -96,14 +96,15 @@
                   </td>
                   <td>
                     <span class="linea fuerte">{{ f.programa }}</span>
-                    <span class="nota"><span class="code">{{ f.edicion_codigo || 's/e' }}</span> {{ fecha(f.edicion_inicio) }}</span>
+                    <span class="nota"><span class="code">{{ f.venta_edicion_codigo || f.edicion_codigo || 's/e' }}</span> {{ fecha(f.venta_edicion_inicio || f.edicion_inicio) }}</span>
+                    <span v-if="f.es_curso" class="ds-pill info caso-curso">solo un curso</span>
                   </td>
                   <td>
                     <div v-for="c in f.caidas" :key="c.edition_id" class="caida">
                       <span class="code bad">{{ c.codigo }}</span>
                       <span>{{ c.programa }}</span>
                       <span class="nota">{{ fecha(c.inicio) }}</span>
-                      <span v-if="c.es_la_venta" class="ds-pill">la venta</span>
+                      <span v-if="c.es_la_venta && !f.es_curso" class="ds-pill">la venta</span>
                     </div>
                   </td>
                   <td>
@@ -162,9 +163,18 @@
         <div class="alumno-head">
           <span class="linea fuerte">{{ actual.apellidos }}, {{ actual.nombres }}</span>
           <span class="nota">compró {{ actual.programa }}</span>
+          <span v-if="actual.es_curso" class="nota">se reprograma solo <b>{{ actual.curso }}</b></span>
         </div>
 
-        <fieldset class="salidas">
+        <p v-if="actual.es_curso" class="ds-callout info">
+          <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+          <span>
+            <b>Reprogramación del curso</b> — se elige otra fecha del mismo curso. El programa, sus pagos y
+            sus cuotas no cambian.
+          </span>
+        </p>
+
+        <fieldset v-if="!actual.es_curso" class="salidas">
           <legend class="ds-label">¿Qué hacemos con él?</legend>
           <label
             v-for="s in SALIDAS"
@@ -181,7 +191,7 @@
         </fieldset>
 
         <template v-if="salida === 'reubicar'">
-          <div class="ds-field">
+          <div v-if="!actual.es_curso" class="ds-field">
             <label class="ds-label">Programa destino</label>
             <SearchSelect
               v-model="destProgramVersionId"
@@ -198,12 +208,16 @@
 
           <p v-if="rpSinEdicion" class="ds-callout bad">
             <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-            <span>
+            <span v-if="actual.es_curso">
+              <b>Este curso no tiene ediciones futuras.</b>
+              Coordina con Producto una nueva fecha, o resuelve la venta desde FICO.
+            </span>
+            <span v-else>
               <b>Este programa no tiene ediciones futuras.</b>
               Para reubicarlo hay que elegir <b>otro programa</b>, y eso lo convierte en un cambio de curso.
             </span>
           </p>
-          <p v-else class="ds-callout" :class="esCambioDeCurso ? 'violet' : 'info'">
+          <p v-else-if="!actual.es_curso" class="ds-callout" :class="esCambioDeCurso ? 'violet' : 'info'">
             <i class="fa-solid" :class="esCambioDeCurso ? 'fa-right-left' : 'fa-calendar-day'" aria-hidden="true"></i>
             <span>
               <b>{{ esCambioDeCurso ? 'Cambio de curso' : 'Reprogramación' }}</b> —
@@ -267,7 +281,7 @@
         <div v-else class="salto">
           <div class="salto-lado">
             <span class="nota">De</span>
-            <span class="linea fuerte">{{ actual.programa }}</span>
+            <span class="linea fuerte">{{ actual.es_curso ? actual.curso : actual.programa }}</span>
             <span class="nota"><span class="code">{{ actual.edicion_codigo || 's/e' }}</span> {{ fecha(actual.edicion_inicio) }}</span>
           </div>
           <i class="fa-solid fa-arrow-right flecha" aria-hidden="true"></i>
@@ -284,15 +298,15 @@
              al destino, el CC no, y en los dos casos el plan se ajusta desde FICO. -->
         <div class="cuotas">
           <div>
-            <span class="nota">Cuotas pendientes</span>
+            <span class="nota">{{ actual.es_curso ? 'Cuotas pendientes del programa (no cambian)' : 'Cuotas pendientes' }}</span>
             <span class="linea fuerte">{{ cuotas.cantidad }} cuota(s) &middot; {{ soles(cuotas.monto) }}</span>
           </div>
-          <a class="btn-exec btn-exec-outline btn-sm" :href="linkFico(actual.enrollment_id)" target="_blank" rel="noopener">
+          <a class="btn-exec btn-exec-outline btn-sm" :href="linkFico(actual.venta_id || actual.enrollment_id)" target="_blank" rel="noopener">
             <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar cuotas en FICO
           </a>
         </div>
 
-        <p v-if="!cierre(actual) && !cuotas.cantidad" class="ds-callout warn">
+        <p v-if="!cierre(actual) && !cuotas.cantidad && !actual.es_curso" class="ds-callout warn">
           <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
           <span>
             Esta venta no tiene cuotas por pagar: el destino nace al contado. Si el alumno necesita
@@ -303,8 +317,16 @@
         <p v-if="!cierre(actual)" class="ds-callout warn">
           <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
           <span>
-            Aceptar mueve la inscripción en el ERP, lo inscribe en el aula nueva de Odoo, lo saca de
-            la vieja y le manda el correo. Lo que falle queda anotado como pendiente manual.
+            <template v-if="actual.es_curso">
+              Aceptar mueve solo este curso: lo inscribe en el aula nueva de Odoo, lo saca de la vieja y le
+              manda el correo de curso reprogramado. Las cuotas quedan con sus fechas.
+            </template>
+            <template v-else>
+              Aceptar mueve la inscripción en el ERP, lo inscribe en el aula nueva de Odoo, lo saca de
+              la vieja y le manda el correo. Las cuotas pendientes quedan con sus fechas: si hay que
+              moverlas, hazlo en FICO.
+            </template>
+            Lo que falle queda anotado como pendiente manual.
           </span>
         </p>
 
@@ -435,7 +457,7 @@ const estadoLabel = f => (cierre(f) && estadoDe(f) === 'aceptado')
 const estadoTono = f => ESTADOS.find(e => e.key === estadoDe(f))?.tono || ''
 
 const tipoDeCaso = f => cierre(f)?.pill
-  || (f.dest_kind === 'RP' ? 'Reprogramación' : 'Cambio de curso')
+  || (f.es_curso ? 'Reprogramación de un curso del paquete' : (f.dest_kind === 'RP' ? 'Reprogramación' : 'Cambio de curso'))
 
 // Con centimos a proposito: FICO firma contra el saldo exacto de las cuotas y
 // formatValue('soles') redondea a soles enteros.
@@ -478,7 +500,7 @@ const filas = computed(() => {
   return casos.value.filter(f => {
     if (filtroEstado.value && estadoDe(f) !== filtroEstado.value) return false
     if (!q) return true
-    return [f.nombres, f.apellidos, f.dni, f.programa].some(v => (v || '').toLowerCase().includes(q))
+    return [f.nombres, f.apellidos, f.dni, f.programa, f.curso].some(v => (v || '').toLowerCase().includes(q))
   })
 })
 
@@ -490,7 +512,7 @@ const chips = computed(() => [
 ])
 
 const kpis = computed(() => [
-  { key: 'total', label: 'Alumnos varados', valor: casos.value.length, pie: 'una fila por venta', tono: 'bad', icon: 'fa-user-slash' },
+  { key: 'total', label: 'Alumnos varados', valor: casos.value.length, pie: 'una fila por caso', tono: 'bad', icon: 'fa-user-slash' },
   { key: 'detectado', label: 'Sin destino aún', valor: cuenta('detectado'), pie: 'esperan a Académica', tono: '', icon: 'fa-inbox' },
   { key: 'contactado', label: 'Esperando FICO', valor: cuenta('contactado'), pie: 'ya contactados', tono: 'warn', icon: 'fa-hourglass-half' },
   { key: 'aceptado', label: 'Reubicados', valor: cuenta('aceptado'), pie: 'movidos en el ERP', tono: 'ok', icon: 'fa-circle-check' }
@@ -542,8 +564,9 @@ function alCambiarPrograma (programa) {
 
 function abrirDestino (f) {
   actual.value = f
-  salida.value = SALIDA_POR_KIND[f.dest_kind] || 'reubicar'
-  destProgramVersionId.value = f.dest_program_version_id || f.program_version_id
+  // Un curso del paquete solo se reubica en otra fecha del mismo curso.
+  salida.value = f.es_curso ? 'reubicar' : (SALIDA_POR_KIND[f.dest_kind] || 'reubicar')
+  destProgramVersionId.value = f.es_curso ? f.program_version_id : (f.dest_program_version_id || f.program_version_id)
   destProgramLabel.value = f.dest_program_version_id ? (f.destino_programa || '') : (f.programa || '')
   destEditionId.value = f.dest_edition_id || null
   ediciones.value = []
@@ -635,6 +658,7 @@ onMounted(cargar)
 .ico { font-size: 10px; color: var(--ds-muted); }
 .origen-producto { margin-top: 2px; color: var(--ds-warn-ink); }
 .pendientes { margin-top: 4px; }
+.caso-curso { margin-top: 4px; }
 .acciones { display: flex; justify-content: flex-end; gap: 4px; }
 
 .caida { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 4px; }
