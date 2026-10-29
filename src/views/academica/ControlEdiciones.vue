@@ -7,9 +7,11 @@ import WeekNavigator from './components/WeekNavigator.vue'
 import SessionMarkPopover from './components/SessionMarkPopover.vue'
 import { useIsoWeekNav, formatDayMonth } from '@/features/academica-week/useIsoWeekNav'
 import { normalizeText as norm, initials } from '@/shared/lib/text'
+import { useTeamsSync } from '@/features/teams-sync/useTeamsSync'
 
 const editionService = inject(ServiceKeys.Edition)
 const toast = useToast()
+const teams = useTeamsSync({ editionService, toast, onDone: () => load() })
 
 // Estados de gestion (mismos codigos que edition_session_control).
 const ESTADOS = {
@@ -260,6 +262,21 @@ function confirmRepro() {
             @click="setMode('cierre')"
           >Cierres</button>
         </div>
+        <button
+          v-if="mode === 'curso'"
+          class="btn-exec btn-exec-ghost btn-sm"
+          type="button"
+          :disabled="teams.phase.value !== 'idle'"
+          title="Crea una reunión de Teams por cada sesión futura de las aulas activas"
+          @click="teams.simulate()"
+        >
+          <i class="fa-solid fa-video" aria-hidden="true"></i>
+          <template v-if="teams.phase.value === 'simulating'">Calculando…</template>
+          <template v-else-if="teams.phase.value === 'running'">
+            Generando{{ teams.progress.value ? ` ${teams.progress.value.hechos}/${teams.progress.value.total}` : '…' }}
+          </template>
+          <template v-else>Links Teams</template>
+        </button>
         <WeekNavigator
           :week="weekNav.week.value"
           :start="activeData?.date_start"
@@ -269,6 +286,42 @@ function confirmRepro() {
         />
       </div>
     </header>
+
+    <div v-if="teams.phase.value === 'preview' && teams.preview.value" class="ds-panel teams-preview" role="status">
+      <p>
+        Hasta el <b>{{ formatDayMonth(teams.preview.value.horizon_end) }}</b> se
+        crearán <b>{{ teams.preview.value.created }}</b> reuniones de Teams en
+        <b>{{ teams.preview.value.editions_to_create }}</b> aulas,
+        se moverán <b>{{ teams.preview.value.updated }}</b> y se cancelarán
+        <b>{{ teams.preview.value.cancelled }}</b>.
+        <template v-if="teams.preview.value.instructors_invited">
+          {{ teams.preview.value.instructors_invited }} docentes recibirán invitación
+          (promedio {{ teams.preview.value.invites_avg }}, máximo {{ teams.preview.value.invites_max }} cada uno).
+        </template>
+        <template v-if="teams.preview.value.editions_without_instructor_account">
+          {{ teams.preview.value.editions_without_instructor_account }}
+          {{ teams.preview.value.editions_without_instructor_account === 1 ? 'aula queda' : 'aulas quedan' }}
+          sin coorganizador: su docente no tiene usuario de Teams en el ERP.
+        </template>
+        <span class="sub">
+          Las sesiones posteriores se crean solas cada día al entrar en el rango.
+          <template v-if="teams.preview.value.skipped_in_person">
+            {{ teams.preview.value.skipped_in_person }}
+            {{ teams.preview.value.skipped_in_person === 1 ? 'aula presencial' : 'aulas presenciales' }}
+            con clases en este rango no {{ teams.preview.value.skipped_in_person === 1 ? 'lleva' : 'llevan' }} Teams (modalidad Presencial).
+          </template>
+        </span>
+      </p>
+      <div class="repro-actions">
+        <button class="btn-exec btn-exec-ghost btn-sm" type="button" @click="teams.cancel()">Cancelar</button>
+        <button
+          class="btn-exec btn-exec-primary btn-sm"
+          type="button"
+          :disabled="!teams.preview.value.created && !teams.preview.value.updated && !teams.preview.value.cancelled"
+          @click="teams.confirm()"
+        >Generar</button>
+      </div>
+    </div>
 
     <template v-if="mode === 'curso'">
       <div class="ds-kpis">
@@ -466,6 +519,14 @@ function confirmRepro() {
                       {{ estadoOf(e.sessions[n - 1]).short }}
                     </span>
                   </button>
+                  <a
+                    v-if="e.sessions[n - 1]?.teams_join_url"
+                    class="s-teams"
+                    :href="e.sessions[n - 1].teams_join_url"
+                    target="_blank"
+                    rel="noopener"
+                    :title="`Reunión de Teams de la sesión ${n}`"
+                  ><i class="fa-solid fa-video" aria-hidden="true"></i> Teams</a>
                 </td>
                 <td class="center">
                   <span class="ds-pill mono" :class="e.current_label === 'CULMINÓ' ? 'ok' : 'info'">
@@ -707,6 +768,11 @@ function confirmRepro() {
 .s-old { margin-right: 3px; font-size: 11px; font-weight: 400; color: var(--ds-muted); }
 .s-badge { width: 100%; height: 22px; justify-content: center; gap: 5px; }
 .s-dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
+.s-teams { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--ds-violet-ink); text-decoration: none; }
+.s-teams:hover { text-decoration: underline; }
+
+.teams-preview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; padding: 12px 16px; }
+.teams-preview p { margin: 0; font-size: 13px; color: var(--ds-ink-2); }
 
 /* Contadores: el tono sale de tener o no reprogramaciones/tardanzas. */
 .matrix td.cnt { text-align: center; font-family: var(--ds-font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; }

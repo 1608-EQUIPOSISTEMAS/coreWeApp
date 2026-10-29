@@ -59,6 +59,29 @@ export default class EditionService {
     return response.data
   }
 
+  // Reuniones de Teams por sesion: arranca la sincronizacion en segundo plano
+  // (dry_run = solo simula) y devuelve el job; el avance va por teamsSyncStatus.
+  async teamsSyncStart(payload = {}) {
+    const response = (await api.post('/edition/teams/syncstart', payload, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data
+  }
+
+  async teamsSyncStatus(jobId) {
+    const response = (await api.post('/edition/teams/syncstatus', { job_id: jobId }, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data
+  }
+
+  async teamsSummary() {
+    const response = (await api.post('/edition/teams/summary', {}, {
+      meta: { skipLoader: true }
+    })).data
+    return response.data
+  }
+
   // Cierre de cursos: aulas que terminan en la semana + checklist de cierre.
   async weeklyClosures(payload) {
     const response = (await api.post('/edition/weeklyclosures', payload)).data
