@@ -97,6 +97,7 @@
               <th class="num sa-group" style="width:80px" title="Al inicio: los que siguen + los retirados">Inscritos</th>
               <th class="num" style="width:80px" title="Se retiraron, se reprogramaron o cambiaron de curso">Retirados</th>
               <th class="num" style="width:80px" title="Siguen inscritos hoy">Alumnos</th>
+              <th class="num" style="width:80px" title="De los alumnos, cuántos están en modalidad Flex">Flex</th>
               <th class="num" style="width:90px" title="Aula finalizada: terminaron con nota final">Culminaron</th>
               <th class="num" style="width:84px">Aprobados</th>
               <th class="num" style="width:100px">Desaprobados</th>
@@ -106,7 +107,7 @@
           <tbody>
             <template v-if="loading">
               <tr v-for="n in 8" :key="`skr-${n}`">
-                <td colspan="14"><span class="ds-skel"></span></td>
+                <td colspan="15"><span class="ds-skel"></span></td>
               </tr>
             </template>
             <tr
@@ -131,6 +132,7 @@
               <td class="num sa-group"><strong>{{ formatValue(a.initial, 'num') }}</strong></td>
               <td class="num"><span v-if="a.retired" class="ds-pill bad">{{ a.retired }}</span><span v-else class="sa-zero">0</span></td>
               <td class="num">{{ formatValue(a.students, 'num') }}</td>
+              <td class="num"><strong v-if="a.flex?.students">{{ a.flex.students }}</strong><span v-else class="sa-zero">0</span></td>
               <td class="num"><span v-if="a.completed === null" class="sa-zero" title="El aula aún no termina">—</span><strong v-else>{{ formatValue(a.completed, 'num') }}</strong></td>
               <td class="num"><span v-if="a.approved" class="ds-pill ok">{{ a.approved }}</span><span v-else class="sa-zero">0</span></td>
               <td class="num"><span v-if="a.failed" class="ds-pill bad">{{ a.failed }}</span><span v-else class="sa-zero">0</span></td>
@@ -164,7 +166,7 @@
           <tbody>
             <tr v-for="s in students" :key="s.enrollment_id" :class="{ 'sa-row-out': s.status === 'retired' }">
               <td>
-                <div class="sa-main">{{ s.full_name }}</div>
+                <div class="sa-main">{{ s.full_name }} <span v-if="s.is_flex" class="ds-pill sa-flex">Flex</span></div>
                 <div class="sa-sub">{{ s.document_number || 'sin DNI' }}</div>
               </td>
               <td class="sa-email">{{ s.email || 'sin correo' }}</td>
@@ -325,6 +327,7 @@ onMounted(load)
 .sa-main { font-weight: 600; color: var(--ds-ink); line-height: 1.3; }
 .sa-sub { margin-top: 2px; font-size: 11.5px; color: var(--ds-muted); }
 .sa-zero { color: var(--ds-muted); }
+.sa-flex { margin-left: 6px; font-size: 10.5px; vertical-align: middle; }
 .sa-email { word-break: break-all; }
 /* Separa el bloque de conteos (total → aprobados → desaprobados) del resto. */
 .sa-group { border-left: 1px solid var(--ds-border); }
