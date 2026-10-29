@@ -606,8 +606,9 @@ function exportNotasCsv() {
       d.observation || '',
     ]
   })
-  // BOM para que Excel abra los acentos en UTF-8 correctamente.
-  const csv = '\ufeff' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\n')
+  // BOM para que Excel abra los acentos en UTF-8 correctamente; ';' porque el
+  // Excel en es-PE separa por ';' (con ',' todo cae en la columna A).
+  const csv = '\ufeff' + [header, ...rows].map((r) => r.map(esc).join(';')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

@@ -272,7 +272,7 @@ function exportarParticipantes () {
     ])
   ]
   // BOM: sin el, Excel abre las tildes rotas.
-  const blob = new Blob(['﻿' + filas.map(f => f.map(celda).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const blob = new Blob(['﻿' + filas.map(f => f.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' })
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'participantes-sorteo-retirados.csv' })
   a.click()
   URL.revokeObjectURL(a.href)

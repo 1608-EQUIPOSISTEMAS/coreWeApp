@@ -12,7 +12,8 @@ export function toCsv (rows, { textColumns = [] } = {}) {
   const asText = new Set(textColumns)
   const cells = rows.map((row, i) => row.map((v, col) =>
     i > 0 && asText.has(col) && LOOKS_NUMERIC_ID.test(String(v ?? '')) ? `\t${v}` : v))
-  return '﻿' + cells.map(r => r.map(escapeCell).join(',')).join('\n')
+  // ';' porque el Excel en es-PE separa por ';' (con ',' todo cae en la columna A).
+  return '﻿' + cells.map(r => r.map(escapeCell).join(';')).join('\n')
 }
 
 export function downloadCsv (filename, rows, options) {
