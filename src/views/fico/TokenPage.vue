@@ -160,7 +160,10 @@
                   <span v-if="t.payment_type" class="ds-pill" :class="t.payment_type === 'credito' ? 'warn' : 'cyan'">{{ t.payment_type === 'credito' ? 'Crédito' : 'Débito' }}</span>
                   <span v-else class="tp-sub">—</span>
                 </td>
-                <td><span class="ds-pill info">{{ t.provider_name || '—' }}</span></td>
+                <td>
+                  <span class="ds-pill info">{{ t.provider_name || '—' }}</span>
+                  <span v-if="t.mp_interest_free" class="ds-pill ok ms-1" title="Cuotas sin intereses - Mercado Pago">Cuotas sin intereses - MP</span>
+                </td>
                 <td class="num mono tp-amount">{{ t.currency }} {{ formatMoney(t.amount) }}</td>
                 <td><span class="ds-pill" :class="statusConfig[t.status]?.tone">{{ statusConfig[t.status]?.label || t.status }}</span></td>
                 <td>

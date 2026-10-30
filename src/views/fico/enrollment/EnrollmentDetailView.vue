@@ -11,6 +11,9 @@
             <span class="edv-status" :class="statusTone">
               <i class="fa-solid" :class="STATUS_ICON[statusTone]" aria-hidden="true"></i> {{ statusLabel }}
             </span>
+            <span v-if="detail?.mp_interest_free" class="edv-status ok">
+              <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Cuotas sin intereses - Mercado Pago
+            </span>
             <span v-if="showCertificarPill" class="edv-status ok">
               <i class="fa-solid fa-certificate" aria-hidden="true"></i> Certificar
             </span>

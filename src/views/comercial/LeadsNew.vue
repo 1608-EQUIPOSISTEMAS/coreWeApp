@@ -1511,6 +1511,10 @@ v-restrict="{ only: 'numbers', max: maxPhoneLength, spaces: false, trim: true }"
             </div>
           </template>
         </div>
+        <label v-if="isChannelToken" class="validation-toggle-label mt-3">
+          <input type="checkbox" v-model="insc.mp_interest_free" />
+          Cuotas sin intereses - Mercado Pago
+        </label>
       </div>
 
 <!-- LAYOUT: side-by-side cuando NO es General, stacked cuando sí -->
@@ -2209,6 +2213,9 @@ price_profesional_dollars: 0,
   // inscripcion). El correo puede ir vacio si el asesor aun no lo tiene.
   requires_email_cc: false,
   email_cc: '',
+  // Solo para tokens: el link de Mercado Pago se genera con cuotas sin intereses.
+  // Viaja en inscription_data y se muestra como etiqueta en Tokens y en FICO.
+  mp_interest_free: false,
   })
 
 
@@ -3081,6 +3088,7 @@ function resetInscriptionData() {
     cat_payment_channel: null,
     cat_token_provider: null,
     cat_b2b_doctype: null,
+    mp_interest_free: false,
   })
 
   voucherTouched.value = false
@@ -3347,6 +3355,7 @@ cat_certificate_status,
       // que FICO no pueda confirmar la venta sin resolverlo.
       requires_email_cc:    insc.requires_email_cc === true,
       email_cc:             insc.email_cc || null,
+      mp_interest_free:     isChannelToken.value && insc.mp_interest_free === true,
       // Comercial nunca cobra al centimo, aunque el prospecto sea Corporativo.
       // Explicito: sin el flag el SP cae a la regla vieja de los tokens legacy.
       charge_in_cents:      false,
@@ -3722,6 +3731,7 @@ async function loadTokenForEdit (tokenId) {
     insc.personal_account_modules = d.personal_account_modules || []
     insc.b2b_contract_id     = d.b2b_contract_id     || null
     insc.token_payment_type  = token.payment_type    || null
+    insc.mp_interest_free    = d.mp_interest_free === true
 
     // Los descuentos necesitan el valor numerico (val_porcentaje/val_fijo/val_beneficios)
     // para que el watcher recalcule el total. Ese valor NO se persiste en inscription_data,
