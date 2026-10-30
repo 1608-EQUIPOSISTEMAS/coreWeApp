@@ -1,19 +1,27 @@
 <template>
   <div class="ds-page pl-page">
-    <header class="ds-head">
-      <div class="ds-head-titles">
-        <h1 class="ds-title">Planilla</h1>
-        <p class="ds-sub">Huellero, tardanzas y pago del mes. 1.ª quincena 40 % · fin de mes 60 % menos tardanzas.</p>
+    <header class="pl-head">
+      <div>
+        <nav class="pl-crumb" aria-label="Ruta"><span>Recursos humanos</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><b>Planilla</b></nav>
+        <h1 class="pl-title">Planilla de {{ soloMes }}</h1>
+        <p class="pl-sub">Huellero, tardanzas y pago del mes · 1.ª quincena 40 % · fin de mes 60 % menos tardanzas</p>
       </div>
-      <div class="ds-head-actions">
-        <label class="ds-label sr-only" for="pl-periodo">Periodo</label>
-        <input id="pl-periodo" v-model="periodo" type="month" class="ds-input pl-mes" />
+      <div class="pl-head-actions">
+        <span v-if="calc" class="pl-estado" :class="calc.cerrado ? 'cerrado' : 'abierto'"><i class="pl-dot" aria-hidden="true"></i>{{ calc.cerrado ? 'Periodo cerrado' : 'Periodo abierto' }}</span>
+        <div class="pl-mesnav">
+          <button type="button" aria-label="Mes anterior" @click="moverMes(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+          <label class="pl-mesnav-label">
+            <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ mesCapital }}
+            <input v-model="periodo" type="month" class="pl-mes-input" aria-label="Periodo" />
+          </label>
+          <button type="button" aria-label="Mes siguiente" @click="moverMes(1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+        </div>
       </div>
     </header>
 
-    <div class="ds-tabs" role="tablist" aria-label="Secciones de planilla">
-      <button v-for="t in tabsVisibles" :key="t.key" type="button" role="tab" :aria-selected="String(tab === t.key)" @click="tab = t.key">
-        {{ t.label }}
+    <div class="pl-tabs" role="tablist" aria-label="Secciones de planilla">
+      <button v-for="t in tabsVisibles" :key="t.key" type="button" role="tab" :class="{ activo: tab === t.key }" :aria-selected="String(tab === t.key)" @click="tab = t.key">
+        <i :class="t.icon" aria-hidden="true"></i> {{ t.label }}
       </button>
     </div>
 
@@ -23,80 +31,155 @@
         Los montos de la planilla solo los ve el área de Talento.
       </div>
       <template v-else>
-        <section v-if="calc" class="ds-kpis">
-          <div class="ds-kpi"><div class="ds-kpi-body"><span class="ds-kpi-value">{{ calc.totales.trabajadores }}</span><span class="ds-kpi-label">Trabajadores</span></div></div>
-          <div class="ds-kpi"><div class="ds-kpi-body"><span class="ds-kpi-value">{{ soles(calc.totales.pago_quincena) }}</span><span class="ds-kpi-label">1.ª quincena (40 %)</span></div></div>
-          <div class="ds-kpi"><div class="ds-kpi-icon bad"><i class="fa-solid fa-clock" aria-hidden="true"></i></div><div class="ds-kpi-body"><span class="ds-kpi-value">{{ soles(calc.totales.descuento_tardanza) }}</span><span class="ds-kpi-label">Descuento por tardanzas ({{ calc.totales.minutos_tardanza }} min)</span></div></div>
-          <div class="ds-kpi"><div class="ds-kpi-icon ok"><i class="fa-solid fa-money-bill" aria-hidden="true"></i></div><div class="ds-kpi-body"><span class="ds-kpi-value">{{ soles(calc.totales.pago_fin_mes) }}</span><span class="ds-kpi-label">A pagar fin de mes (60 % − tardanzas)</span></div></div>
+        <section v-if="calc" class="pl-kpis">
+          <div class="pl-kpi">
+            <div class="pl-kpi-top"><span>Trabajadores</span><span class="pl-kpi-ico"><i class="fa-solid fa-user-group" aria-hidden="true"></i></span></div>
+            <div class="pl-kpi-val">{{ calc.totales.trabajadores }}</div>
+            <div class="pl-kpi-foot">Sueldo neto total <b>{{ soles(totalNeto) }}</b></div>
+          </div>
+          <div class="pl-kpi">
+            <div class="pl-kpi-top"><span>1.ª quincena</span><span class="pl-chip">40 %</span></div>
+            <div class="pl-kpi-val">{{ soles(calc.totales.pago_quincena) }}</div>
+            <div class="pl-progress"><span style="width: 40%"></span></div>
+          </div>
+          <div class="pl-kpi">
+            <div class="pl-kpi-top"><span>Descuento por tardanzas</span><span class="pl-kpi-ico bad"><i class="fa-regular fa-clock" aria-hidden="true"></i></span></div>
+            <div class="pl-kpi-val bad">– {{ soles(calc.totales.descuento_tardanza) }}</div>
+            <div class="pl-kpi-foot"><b class="bad">{{ fmtNum(calc.totales.minutos_tardanza) }} min</b> acumulados en el mes</div>
+          </div>
+          <div class="pl-kpi destacado">
+            <div class="pl-kpi-top"><span>A pagar fin de mes</span><span class="pl-kpi-ico ok"><i class="fa-solid fa-money-bill" aria-hidden="true"></i></span></div>
+            <div class="pl-kpi-val">{{ soles(calc.totales.pago_fin_mes) }}</div>
+            <div class="pl-kpi-foot">60 % ({{ soles(totalFinBruto) }}) – tardanzas</div>
+          </div>
         </section>
 
-        <section class="ds-panel">
-          <header class="ds-panel-head">
+        <section v-if="calc && totalNeto" class="pl-card pl-dist">
+          <div class="pl-dist-head"><b>Distribución del costo del mes</b><span>Total <b>{{ soles(totalNeto) }}</b></span></div>
+          <div class="pl-dist-bar">
+            <span class="q" :style="{ flexGrow: calc.totales.pago_quincena }"></span>
+            <span class="f" :style="{ flexGrow: calc.totales.pago_fin_mes }"></span>
+            <span v-if="calc.totales.descuento_tardanza" class="d" :style="{ flexGrow: calc.totales.descuento_tardanza }"></span>
+          </div>
+          <div class="pl-dist-leg">
+            <span><i class="q"></i>1.ª quincena <b>{{ soles(calc.totales.pago_quincena) }}</b></span>
+            <span><i class="f"></i>Fin de mes neto <b>{{ soles(calc.totales.pago_fin_mes) }}</b></span>
+            <span><i class="d"></i>Descontado por tardanzas <b class="bad">{{ soles(calc.totales.descuento_tardanza) }}</b></span>
+          </div>
+        </section>
+
+        <section class="pl-card pl-tabla">
+          <header class="pl-tabla-head">
             <div>
-              <h2 class="ds-panel-title">Planilla {{ nombreMes }}</h2>
-              <p class="ds-panel-sub">
-                <span v-if="calc?.cerrado" class="ds-pill ok"><i class="fa-solid fa-lock" aria-hidden="true"></i> Cerrada (congelada) por {{ calc.cierre.cerrado_por || '—' }} el {{ fechaHora(calc.cierre.cerrado_at) }}</span>
-                <span v-else class="ds-pill warn">Abierta</span>
-                Valor del minuto = sueldo neto ÷ 30 días ÷ 8 h ÷ 60.
+              <h2 class="pl-tabla-title">
+                Planilla {{ nombreMes }}
+                <span v-if="calc?.cerrado" class="pl-badge ok"><i class="fa-solid fa-lock" aria-hidden="true"></i> Cerrada</span>
+                <span v-else class="pl-badge warn">Abierta</span>
+              </h2>
+              <p class="pl-tabla-sub">
+                <template v-if="calc?.cerrado">Congelada por {{ calc.cierre.cerrado_por || '—' }} el {{ fechaHora(calc.cierre.cerrado_at) }} · </template>
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Valor del minuto = sueldo neto ÷ 30 días ÷ 8 h ÷ 60
               </p>
             </div>
-            <div class="ds-panel-actions">
-              <input v-model.trim="filtro" type="search" class="ds-input" placeholder="Buscar nombre, código o área" aria-label="Buscar" />
-              <button class="btn-exec btn-exec-outline" type="button" :disabled="!calc || exportando" @click="exportar">
+            <div class="pl-tabla-actions">
+              <div class="pl-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input v-model.trim="filtro" type="search" placeholder="Buscar nombre, código o área" aria-label="Buscar" /></div>
+              <button class="pl-btn" type="button" :disabled="!calc || exportando" @click="exportar">
                 <i class="fa-solid fa-file-excel" aria-hidden="true"></i> {{ exportando ? 'Exportando…' : 'Exportar Excel' }}
               </button>
-              <button v-if="calc && !calc.cerrado" class="btn-exec btn-exec-primary" type="button" @click="cerrar">
+              <button v-if="calc && !calc.cerrado" class="pl-btn primario" type="button" @click="cerrar">
                 <i class="fa-solid fa-lock" aria-hidden="true"></i> Cerrar periodo
               </button>
-              <button v-else-if="calc" class="btn-exec btn-exec-outline" type="button" @click="reabrir">
+              <button v-else-if="calc" class="pl-btn" type="button" @click="reabrir">
                 <i class="fa-solid fa-lock-open" aria-hidden="true"></i> Reabrir
               </button>
             </div>
           </header>
           <div class="ds-table-scroll">
-            <table class="ds-table ds-table--lista">
+            <table class="pl-table">
               <thead>
                 <tr>
-                  <th>Trabajador</th><th>Área</th><th class="tr">Sueldo neto</th><th class="tr">Quincena</th>
-                  <th class="tr">Fin de mes</th><th class="tc">Tardanzas</th><th class="tr">Descuento</th><th class="tr">A pagar fin de mes</th>
+                  <th class="pl-col-caret"></th><th>Trabajador</th><th>Área</th><th class="tr">Sueldo neto</th><th class="tr">Quincena</th>
+                  <th class="tr">Fin de mes</th><th>Tardanzas</th><th class="tr">Descuento</th><th class="tr">A pagar</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="cargando"><td colspan="8" class="ds-empty">Calculando…</td></tr>
-                <tr v-else-if="!trabajadoresFiltrados.length"><td colspan="8" class="ds-empty">Sin personal. Importa el maestro de personal en la pestaña "Personal".</td></tr>
-                <template v-for="t in trabajadoresFiltrados" :key="t.codigo">
-                  <tr class="pl-fila" @click="abierto = abierto === t.codigo ? null : t.codigo">
+                <tr v-if="cargando"><td colspan="9" class="ds-empty">Calculando…</td></tr>
+                <tr v-else-if="!trabajadoresFiltrados.length"><td colspan="9" class="ds-empty">Sin personal. Importa el maestro de personal en la pestaña "Personal".</td></tr>
+                <template v-for="t in trabajadoresPagina" :key="t.codigo">
+                  <tr class="pl-fila" :class="{ abierta: abierto === t.codigo }" @click="abierto = abierto === t.codigo ? null : t.codigo">
+                    <td class="pl-col-caret"><span class="pl-caret"><i class="fa-solid" :class="abierto === t.codigo ? 'fa-chevron-down' : 'fa-chevron-right'" aria-hidden="true"></i></span></td>
                     <td>
-                      <div class="cell-main"><i class="fa-solid pl-caret" :class="abierto === t.codigo ? 'fa-chevron-down' : 'fa-chevron-right'" aria-hidden="true"></i> {{ t.nombre }}</div>
-                      <div class="cell-sub mono">{{ t.codigo }} · ingreso {{ t.hora_ingreso }}</div>
+                      <div class="pl-who">
+                        <span class="pl-avatar">{{ iniciales(t.nombre) }}</span>
+                        <div>
+                          <div class="cell-main">{{ t.nombre }}</div>
+                          <div class="cell-sub mono">{{ t.codigo }} · ingreso {{ t.hora_ingreso }}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td>{{ t.area || '—' }}</td>
+                    <td><span v-if="t.area" class="pl-area">{{ t.area }}</span><span v-else class="cell-sub">—</span></td>
                     <td class="tr mono">{{ t.sin_sueldo ? 'sin sueldo' : soles(t.sueldo_neto) }}</td>
                     <td class="tr mono">{{ soles(t.pago_quincena) }}</td>
                     <td class="tr mono">{{ soles(t.pago_fin_mes_bruto) }}</td>
-                    <td class="tc">
-                      <span v-if="t.tardanzas" class="ds-pill bad">{{ t.tardanzas }} · {{ t.minutos_tardanza }} min</span>
-                      <span v-else class="cell-sub">{{ t.dias_asistidos ? '0' : 'sin marcas' }}</span>
+                    <td>
+                      <template v-if="t.tardanzas">
+                        <div class="pl-tard"><b>{{ t.tardanzas }} {{ t.tardanzas === 1 ? 'tardanza' : 'tardanzas' }}</b> · {{ t.minutos_tardanza }} min</div>
+                        <div class="pl-tard-bar"><span :style="{ width: barraTardanza(t) }"></span></div>
+                      </template>
+                      <span v-else class="cell-sub">{{ t.dias_asistidos ? 'Sin tardanzas' : 'Sin marcas' }}</span>
                     </td>
-                    <td class="tr mono pl-desc">{{ t.descuento_tardanza ? '− ' + soles(t.descuento_tardanza) : '—' }}</td>
-                    <td class="tr mono"><strong>{{ soles(t.pago_fin_mes) }}</strong></td>
+                    <td class="tr mono pl-desc">{{ t.descuento_tardanza ? '– ' + soles(t.descuento_tardanza) : '—' }}</td>
+                    <td class="tr"><span class="pl-pagar">{{ soles(t.pago_fin_mes) }}</span></td>
                   </tr>
                   <tr v-if="abierto === t.codigo" class="pl-detalle">
-                    <td colspan="8">
+                    <td colspan="9">
+                      <div class="pl-mini">
+                        <div><span>Tardanzas</span><b class="bad">{{ t.tardanzas }} {{ t.tardanzas === 1 ? 'tardanza' : 'tardanzas' }}</b></div>
+                        <div><span>Minutos descontados</span><b>{{ t.minutos_tardanza }} min</b></div>
+                        <div><span>Valor del minuto</span><b>{{ t.sueldo_neto ? 'S/ ' + (t.sueldo_neto / 14400).toFixed(4) : '—' }}</b></div>
+                        <div><span>Descuento</span><b class="bad">{{ t.descuento_tardanza ? '– ' + soles(t.descuento_tardanza) : soles(0) }}</b></div>
+                      </div>
+                      <div class="pl-cal-head">
+                        <b>Marcaciones de entrada · {{ soloMes }}</b>
+                        <div class="pl-leyenda"><span><i class="ok"></i>Puntual</span><span><i class="warn"></i>Dentro de tolerancia</span><span><i class="bad"></i>Tardanza con descuento</span><span><i class="just"></i>Justificado</span></div>
+                      </div>
                       <div v-if="!t.detalle.length" class="cell-sub">Sin marcaciones en el periodo.</div>
-                      <div v-else class="pl-dias">
-                        <span v-for="d in t.detalle" :key="d.fecha" class="pl-dia" :class="{ tarde: d.minutos_tardanza, just: d.justificado }" :title="d.justificacion || ''">
-                          <b>{{ diaCorto(d.fecha) }}</b> {{ d.entrada.slice(0, 5) }}
-                          <template v-if="d.minutos_tardanza"> · {{ d.minutos_tardanza }}′ · −{{ soles(d.descuento) }}</template>
-                          <template v-if="d.justificado"> · justificado</template>
-                        </span>
+                      <div v-else class="pl-cal">
+                        <div v-for="d in ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']" :key="d" class="pl-cal-dow">{{ d }}</div>
+                        <template v-for="(c, i) in calendario(t)" :key="i">
+                          <div v-if="!c" class="pl-cal-vacio"></div>
+                          <div v-else class="pl-dia" :class="c.estado" :title="c.justificacion || ''">
+                            <div class="pl-dia-top"><span>{{ c.dm }}</span><i aria-hidden="true"></i></div>
+                            <div class="pl-dia-hora">{{ c.entrada || '—' }}</div>
+                            <div v-if="c.estado === 'bad'" class="pl-dia-desc">{{ c.minutos }}′ · –{{ c.descuento.toFixed(2) }}</div>
+                            <div v-else-if="c.estado === 'just'" class="pl-dia-desc">justificado</div>
+                          </div>
+                        </template>
                       </div>
                     </td>
                   </tr>
                 </template>
               </tbody>
+              <tfoot v-if="calc && trabajadoresFiltrados.length">
+                <tr>
+                  <td></td>
+                  <td colspan="2"><b>Total planilla</b> <span class="cell-sub">· {{ calc.totales.trabajadores }} trabajadores</span></td>
+                  <td class="tr mono"><b>{{ soles(totalNeto) }}</b></td>
+                  <td class="tr mono"><b>{{ soles(calc.totales.pago_quincena) }}</b></td>
+                  <td class="tr mono"><b>{{ soles(totalFinBruto) }}</b></td>
+                  <td class="bad"><b>{{ fmtNum(calc.totales.minutos_tardanza) }} min</b></td>
+                  <td class="tr mono bad"><b>– {{ soles(calc.totales.descuento_tardanza) }}</b></td>
+                  <td class="tr mono okc"><b>{{ soles(calc.totales.pago_fin_mes) }}</b></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
+          <footer v-if="trabajadoresFiltrados.length" class="pl-pag">
+            <span>Mostrando {{ trabajadoresPagina.length }} de {{ trabajadoresFiltrados.length }} trabajadores</span>
+            <div v-if="paginas > 1" class="pl-pag-btns">
+              <button v-for="p in paginas" :key="p" type="button" :class="{ activo: pagina === p }" @click="pagina = p">{{ p }}</button>
+            </div>
+          </footer>
         </section>
       </template>
     </template>
@@ -318,10 +401,10 @@ const roles = (() => { try { return JSON.parse(localStorage.getItem('user') || '
 const puedeVerSueldos = roles.includes('TALENTO')
 
 const TABS = [
-  { key: 'planilla', label: 'Planilla del mes' },
-  { key: 'asistencia', label: 'Asistencia y tardanzas' },
-  { key: 'huellero', label: 'Importar huellero' },
-  { key: 'personal', label: 'Personal' }
+  { key: 'planilla', label: 'Planilla del mes', icon: 'fa-solid fa-table-list' },
+  { key: 'asistencia', label: 'Asistencia y tardanzas', icon: 'fa-regular fa-clock' },
+  { key: 'huellero', label: 'Importar huellero', icon: 'fa-solid fa-download' },
+  { key: 'personal', label: 'Personal', icon: 'fa-solid fa-user-group' }
 ]
 const tabsVisibles = TABS
 const tab = ref(puedeVerSueldos ? 'planilla' : 'asistencia')
@@ -330,6 +413,13 @@ const hoy = new Date()
 const periodo = ref(`${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`)
 const anioMes = computed(() => { const [a, m] = periodo.value.split('-').map(Number); return { anio: a, mes: m } })
 const nombreMes = computed(() => new Date(anioMes.value.anio, anioMes.value.mes - 1, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }))
+
+const soloMes = computed(() => new Date(anioMes.value.anio, anioMes.value.mes - 1, 1).toLocaleDateString('es-PE', { month: 'long' }))
+const mesCapital = computed(() => { const m = nombreMes.value.replace(' de ', ' '); return m.charAt(0).toUpperCase() + m.slice(1) })
+function moverMes (delta) {
+  const d = new Date(anioMes.value.anio, anioMes.value.mes - 1 + delta, 1)
+  periodo.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 const cargando = ref(false)
 const filtro = ref('')
@@ -357,6 +447,45 @@ const coincide = (...campos) => {
   return !q || campos.some(c => String(c || '').toLowerCase().includes(q))
 }
 const trabajadoresFiltrados = computed(() => (calc.value?.trabajadores || []).filter(t => coincide(t.nombre, t.codigo, t.area)))
+const POR_PAGINA = 8
+const pagina = ref(1)
+const paginas = computed(() => Math.max(1, Math.ceil(trabajadoresFiltrados.value.length / POR_PAGINA)))
+const trabajadoresPagina = computed(() => trabajadoresFiltrados.value.slice((pagina.value - 1) * POR_PAGINA, pagina.value * POR_PAGINA))
+watch(filtro, () => { pagina.value = 1 })
+
+const totalNeto = computed(() => (calc.value?.trabajadores || []).reduce((s, t) => s + (Number(t.sueldo_neto) || 0), 0))
+const totalFinBruto = computed(() => (calc.value?.trabajadores || []).reduce((s, t) => s + (Number(t.pago_fin_mes_bruto) || 0), 0))
+const maxMinutos = computed(() => Math.max(1, ...(calc.value?.trabajadores || []).map(t => t.minutos_tardanza || 0)))
+const barraTardanza = t => `${Math.round((t.minutos_tardanza || 0) / maxMinutos.value * 100)}%`
+const fmtNum = n => new Intl.NumberFormat('es-PE').format(n || 0)
+const iniciales = n => {
+  const [ap, nom] = String(n || '').split(',').map(x => x.trim())
+  return ((nom ? nom[0] : '') + (ap ? ap[0] : '')).toUpperCase() || '?'
+}
+
+// Rejilla L–V del mes: una celda por día hábil, con huecos antes del primer día hábil.
+function calendario (t) {
+  const porFecha = Object.fromEntries((t.detalle || []).map(d => [d.fecha, d]))
+  const { anio, mes } = anioMes.value
+  const dias = new Date(anio, mes, 0).getDate()
+  const celdas = []
+  for (let dia = 1; dia <= dias; dia++) {
+    const dow = new Date(anio, mes - 1, dia).getDay()
+    if (dow === 0 || dow === 6) continue
+    if (!celdas.length) for (let k = 1; k < dow; k++) celdas.push(null)
+    const iso = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+    const dm = `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
+    const m = porFecha[iso]
+    if (!m) { celdas.push({ dm, estado: 'vacio' }); continue }
+    const entrada = m.entrada?.slice(0, 5)
+    let estado = 'ok'
+    if (m.justificado) estado = 'just'
+    else if (m.minutos_tardanza) estado = 'bad'
+    else if (entrada && t.hora_ingreso && entrada > String(t.hora_ingreso).slice(0, 5)) estado = 'warn'
+    celdas.push({ dm, entrada, estado, minutos: m.minutos_tardanza, descuento: Number(m.descuento) || 0, justificacion: m.justificacion })
+  }
+  return celdas
+}
 const asistenciaFiltrada = computed(() => (asis.value?.filas || [])
   .filter(a => !soloTardanzas.value || a.minutos_tardanza || a.justificado || !a.salida || !a.en_ficha)
   .filter(a => coincide(a.nombre, a.codigo, a.area)))
@@ -377,7 +506,7 @@ async function cargar () {
   }
 }
 
-watch([tab, periodo], () => { filtro.value = ''; cargar() })
+watch([tab, periodo], () => { filtro.value = ''; pagina.value = 1; abierto.value = null; cargar() })
 onMounted(cargar)
 
 async function exportar () {
@@ -457,8 +586,6 @@ async function editar (p, cambios) {
 
 <style scoped>
 .pl-mes { width: 170px; }
-.ds-tabs { margin-bottom: 16px; }
-.ds-kpis { margin-bottom: 16px; }
 .ds-panel { margin-bottom: 16px; }
 .ds-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .tr { text-align: right; }
@@ -466,14 +593,6 @@ async function editar (p, cambios) {
 .mono { font-variant-numeric: tabular-nums; }
 .cell-main { font-weight: 600; }
 .cell-sub { font-size: 12px; color: var(--ds-ink-2); }
-.pl-fila { cursor: pointer; }
-.pl-caret { font-size: 10px; width: 12px; color: var(--ds-ink-2); }
-.pl-desc { color: var(--ds-bad); }
-.pl-detalle td { background: var(--ds-soft-neutral); }
-.pl-dias { display: flex; flex-wrap: wrap; gap: 6px; }
-.pl-dia { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--ds-soft-ok); font-variant-numeric: tabular-nums; }
-.pl-dia.tarde { background: var(--ds-soft-bad); }
-.pl-dia.just { background: var(--ds-soft-warn); }
 .pl-check { display: flex; gap: 6px; align-items: center; font-size: 13px; white-space: nowrap; }
 .pl-hora { width: 110px; padding: 2px 6px; }
 .pl-inactivo { opacity: 0.5; }
@@ -487,4 +606,132 @@ async function editar (p, cambios) {
 .dropzone-input { display: none; }
 .dropzone-icon { font-size: 24px; color: var(--ds-accent); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+/* ── Rediseño planilla ── */
+.pl-page { --pl-navy: #172a5c; --pl-green: #1f8a4c; }
+.pl-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.pl-crumb { display: flex; gap: 8px; align-items: center; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-ink-2); }
+.pl-crumb i { font-size: 8px; }
+.pl-crumb b { color: var(--ds-ink); font-weight: 600; }
+.pl-title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--pl-navy); margin: 6px 0 2px; text-transform: none; }
+.pl-sub { margin: 0; font-size: 13px; color: var(--ds-ink-2); }
+.pl-head-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.pl-estado { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.pl-estado.abierto { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pl-estado.cerrado { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.pl-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pl-mesnav { display: flex; align-items: stretch; border: 1px solid var(--ds-border); border-radius: 10px; background: var(--ds-surface); overflow: hidden; }
+.pl-mesnav button { border: 0; background: none; padding: 0 14px; color: var(--ds-ink); cursor: pointer; }
+.pl-mesnav button:hover { background: var(--ds-soft-neutral); }
+.pl-mesnav-label { position: relative; display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-weight: 600; font-size: 14px; border-left: 1px solid var(--ds-border); border-right: 1px solid var(--ds-border); cursor: pointer; margin: 0; }
+.pl-mes-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.pl-mes-input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+
+.pl-tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 5px; background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 12px; margin-bottom: 22px; }
+.pl-tabs button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 9px 16px; border-radius: 8px; font-size: 14px; color: var(--ds-ink); cursor: pointer; }
+.pl-tabs button:hover { background: var(--ds-soft-neutral); }
+.pl-tabs button.activo { background: var(--pl-navy); color: #fff; font-weight: 700; }
+
+.pl-card { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 14px; margin-bottom: 22px; }
+.pl-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+.pl-kpi { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; min-height: 150px; }
+.pl-kpi-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ds-ink-2); }
+.pl-kpi-ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--ds-soft-neutral); color: var(--ds-ink); }
+.pl-kpi-ico.bad { background: var(--ds-soft-bad); color: var(--ds-bad); }
+.pl-kpi-ico.ok { background: var(--pl-green); color: #fff; }
+.pl-chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--ds-soft-neutral); }
+.pl-kpi-val { font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--pl-navy); font-variant-numeric: tabular-nums; }
+.pl-kpi-val.bad { color: var(--ds-bad); }
+.pl-kpi-foot { font-size: 12.5px; color: var(--ds-ink-2); margin-top: auto; }
+.pl-kpi-foot b { color: var(--ds-ink); }
+.pl-progress { height: 5px; border-radius: 99px; background: var(--ds-soft-neutral); margin-top: auto; overflow: hidden; }
+.pl-progress span { display: block; height: 100%; background: var(--pl-navy); border-radius: 99px; }
+.pl-kpi.destacado { background: var(--pl-navy); border-color: var(--pl-navy); color: #fff; }
+.pl-kpi.destacado .pl-kpi-top, .pl-kpi.destacado .pl-kpi-foot { color: rgba(255,255,255,.8); }
+.pl-kpi.destacado .pl-kpi-top span:first-child { font-weight: 600; color: #fff; }
+.pl-kpi.destacado .pl-kpi-val { color: #fff; }
+
+.pl-dist { padding: 18px 24px; }
+.pl-dist-head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; }
+.pl-dist-head span { color: var(--ds-ink-2); font-size: 13px; }
+.pl-dist-head span b { color: var(--ds-ink); }
+.pl-dist-bar { display: flex; gap: 2px; height: 12px; border-radius: 99px; overflow: hidden; }
+.pl-dist-bar span { flex-basis: 0; min-width: 4px; }
+.q { background: var(--pl-navy); } .f { background: var(--pl-green); } .d { background: var(--ds-bad); }
+.pl-dist-leg { display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; color: var(--ds-ink-2); margin-top: 12px; }
+.pl-dist-leg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; }
+.pl-dist-leg b { color: var(--ds-ink); margin-left: 6px; }
+
+.pl-tabla-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 24px 16px; }
+.pl-tabla-title { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--pl-navy); margin: 0; text-transform: none; }
+.pl-tabla-sub { margin: 4px 0 0; font-size: 12.5px; color: var(--ds-ink-2); }
+.pl-badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.pl-badge.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pl-badge.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.pl-tabla-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pl-search { display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--ds-border); border-radius: 10px; background: var(--ds-surface-2, var(--ds-surface)); color: var(--ds-ink-2); min-width: 260px; }
+.pl-search input { border: 0; background: none; outline: none; padding: 10px 0; flex: 1; font-size: 14px; color: var(--ds-ink); }
+.pl-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--ds-border); background: var(--ds-surface); color: var(--ds-ink); font-weight: 600; font-size: 14px; cursor: pointer; }
+.pl-btn:disabled { opacity: .5; cursor: default; }
+.pl-btn .fa-file-excel { color: var(--pl-green); }
+.pl-btn.primario { background: var(--pl-navy); border-color: var(--pl-navy); color: #fff; }
+
+.pl-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pl-table th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ds-ink-2); padding: 14px 12px; background: var(--ds-soft-neutral); border-top: 1px solid var(--ds-border); border-bottom: 1px solid var(--ds-border); white-space: nowrap; }
+.pl-table td { padding: 14px 12px; border-bottom: 1px solid var(--ds-border); vertical-align: middle; }
+.pl-table th:last-child, .pl-table td:last-child { padding-right: 24px; }
+.pl-col-caret { width: 44px; padding-left: 12px !important; }
+.pl-fila { cursor: pointer; }
+.pl-fila:hover { background: var(--ds-soft-neutral); }
+.pl-caret { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; font-size: 11px; color: var(--ds-ink-2); }
+.pl-fila.abierta .pl-caret { background: var(--ds-soft-neutral); color: var(--ds-ink); }
+.pl-who { display: flex; align-items: center; gap: 12px; }
+.pl-avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; background: var(--ds-soft-neutral); color: var(--pl-navy); }
+.pl-area { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; background: var(--ds-soft-neutral); white-space: nowrap; }
+.pl-tard { font-size: 13px; color: var(--ds-ink-2); white-space: nowrap; }
+.pl-tard b { color: var(--ds-bad); font-weight: 600; }
+.pl-tard-bar { height: 4px; width: 110px; border-radius: 99px; background: var(--ds-soft-bad); margin-top: 6px; overflow: hidden; }
+.pl-tard-bar span { display: block; height: 100%; background: var(--ds-bad); border-radius: 99px; }
+.pl-desc { color: var(--ds-bad); }
+.pl-pagar { display: inline-block; padding: 5px 12px; border-radius: 6px; background: var(--ds-soft-ok); color: var(--pl-green); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pl-table tfoot td { background: var(--ds-soft-neutral); padding: 18px 12px; border-bottom: 0; }
+.bad { color: var(--ds-bad); } .okc { color: var(--pl-green); }
+
+.pl-detalle > td { background: var(--ds-soft-neutral); padding: 20px 24px 24px 68px; }
+.pl-mini { display: grid; grid-template-columns: repeat(4, minmax(0, 180px)); gap: 12px; margin-bottom: 22px; }
+.pl-mini div { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.pl-mini span { font-size: 12px; color: var(--ds-ink-2); }
+.pl-mini b { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pl-cal-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 14px; margin-bottom: 10px; }
+.pl-leyenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ds-ink-2); }
+.pl-leyenda i, .pl-dia-top i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+i.ok, .pl-dia.ok .pl-dia-top i { background: var(--pl-green); }
+i.warn, .pl-dia.warn .pl-dia-top i { background: var(--ds-warn); }
+i.bad, .pl-dia.bad .pl-dia-top i { background: var(--ds-bad); }
+i.just, .pl-dia.just .pl-dia-top i { background: var(--ds-accent); }
+.pl-cal { display: grid; grid-template-columns: repeat(5, minmax(0, 190px)); gap: 8px; }
+.pl-cal-dow { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ds-ink-2); padding: 0 4px; }
+.pl-dia { background: var(--ds-surface); border: 1px solid var(--ds-border); border-radius: 8px; padding: 8px 10px; min-height: 56px; position: relative; }
+.pl-dia-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--ds-ink-2); font-variant-numeric: tabular-nums; }
+.pl-dia-top i { margin: 0; }
+.pl-dia-hora { font-size: 15px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.pl-dia-desc { position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: var(--ds-bad); }
+.pl-dia.warn { background: var(--ds-soft-warn); }
+.pl-dia.bad { background: var(--ds-soft-bad); border-color: color-mix(in srgb, var(--ds-bad) 30%, transparent); }
+.pl-dia.bad .pl-dia-hora { color: var(--ds-bad); }
+.pl-dia.just { background: var(--ds-soft-info); }
+.pl-dia.just .pl-dia-desc { color: var(--ds-ink-2); }
+.pl-dia.vacio { opacity: .45; }
+
+.pl-pag { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; font-size: 13px; color: var(--ds-ink-2); }
+.pl-pag-btns { display: flex; gap: 6px; }
+.pl-pag-btns button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--ds-border); background: var(--ds-surface); font-weight: 600; cursor: pointer; color: var(--ds-ink); }
+.pl-pag-btns button.activo { background: var(--pl-navy); border-color: var(--pl-navy); color: #fff; }
+
+@media (max-width: 1100px) { .pl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .pl-kpis, .pl-mini { grid-template-columns: 1fr; }
+  .pl-search { min-width: 0; flex: 1; }
+  .pl-detalle > td { padding: 16px; }
+  .pl-cal { grid-template-columns: repeat(5, minmax(56px, 1fr)); overflow-x: auto; }
+}
 </style>
