@@ -250,34 +250,34 @@ export default class FicoService {
   // Consultor de Ingresos Operativos: { desde: 'YYYY-MM', hasta?, tipo_cambio? }
   // → { periodo, resumen, detalle } (pagos sin B2B).
   async ingresosOperativos(params) {
-    const response = (await api.post('/ingresos-operativos/consulta', params)).data;
+    const response = (await api.post('/fico/ingresos-operativos/consulta', params)).data;
     return response.data;
   }
 
   // Pagos Adicionales (reemplaza el sheet de adicionales).
   // consulta: { desde: 'YYYY-MM', hasta? } → { periodo, filas }.
   async pagosAdicionales(params) {
-    const response = (await api.post('/pagos-adicionales/consulta', params)).data;
+    const response = (await api.post('/fico/pagos-adicionales/consulta', params)).data;
     return response.data;
   }
 
   async pagoAdicional(additional_payment_id) {
-    const response = (await api.post('/pagos-adicionales/detalle', { additional_payment_id })).data;
+    const response = (await api.post('/fico/pagos-adicionales/detalle', { additional_payment_id })).data;
     return response.data;
   }
 
   async registrarPagoAdicional(payload) {
-    const response = (await api.post('/pagos-adicionales/registrar', payload)).data;
+    const response = (await api.post('/fico/pagos-adicionales/registrar', payload)).data;
     return response.data;
   }
 
   async editarPagoAdicional(payload) {
-    const response = (await api.post('/pagos-adicionales/editar', payload)).data;
+    const response = (await api.post('/fico/pagos-adicionales/editar', payload)).data;
     return response.data;
   }
 
   async anularPagoAdicional(additional_payment_id) {
-    const response = (await api.post('/pagos-adicionales/anular', { additional_payment_id })).data;
+    const response = (await api.post('/fico/pagos-adicionales/anular', { additional_payment_id })).data;
     return response.data;
   }
 
