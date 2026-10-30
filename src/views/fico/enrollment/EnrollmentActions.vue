@@ -386,7 +386,7 @@
           </div>
         </template>
         <template #step-1>
-          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="ccEditionId" :override-program-version-id="ccProgramVersionId" ref="emailPreviewRef" />
+          <EmailPreviewStep :enrollment-id="enrollmentId" :active="stepperStep === 1" :override-edition-id="ccEditionId" :override-program-version-id="ccProgramVersionId" :override-installments="ccPreviewInstallments" ref="emailPreviewRef" />
         </template>
       </ActionStepper>
 
@@ -1032,6 +1032,15 @@ const ccNoEdition = computed(() =>
 const ccNewInstallments = ref([])
 const ccFinancedTotal = computed(() => ccNewInstallments.value.reduce((s, c) => s + (Number(c.amount) || 0), 0))
 const ccDestinationTotal = computed(() => (Number(ccTotalAmount.value) || 0) + ccFinancedTotal.value)
+
+// Para el preview del correo: las cuotas que tendra el destino, igual que las
+// arma courseChange — primero las pendientes que se trasladan y detras las nuevas.
+const ccPreviewInstallments = computed(() =>
+  [
+    ...[...rpPendingCuotas.value].sort((a, b) => a.installment_number - b.installment_number),
+    ...ccNewInstallments.value.filter(c => Number(c.amount) > 0)
+  ].map((c, i) => ({ installment_number: i + 1, amount: Number(c.amount), due_date: c.due_date }))
+)
 
 function addCcInstallment () {
   const last = ccNewInstallments.value.at(-1)
