@@ -180,6 +180,23 @@
               <b>{{ previaHuellero.sin_ficha.length }} código(s) del huellero no están en el maestro de personal</b> (se guardan igual, pero no entran a la planilla hasta registrarlos):
               {{ previaHuellero.sin_ficha.map(s => `${s.codigo}${s.nombre ? ' ' + s.nombre : ''}`).join(' · ') }}
             </div>
+            <div v-if="previaHuellero.errores?.length" class="err-list">
+              {{ previaHuellero.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
+            </div>
+            <div v-if="previaHuellero.muestra?.length" class="ds-table-scroll">
+              <table class="ds-table ds-table--densa">
+                <thead><tr><th>Código</th><th>Nombre (huellero)</th><th>Fecha</th><th class="tc">Entrada</th><th class="tc">Salida</th><th class="tc">Marcas</th></tr></thead>
+                <tbody>
+                  <tr v-for="d in previaHuellero.muestra" :key="d.codigo + d.fecha">
+                    <td class="mono">{{ d.codigo }}</td><td>{{ d.nombre || '—' }}</td><td class="mono">{{ diaCorto(d.fecha) }}</td>
+                    <td class="tc mono">{{ d.entrada }}</td>
+                    <td class="tc mono">{{ d.salida || '' }}<span v-if="!d.salida" class="ds-pill warn">sin salida</span></td>
+                    <td class="tc">{{ d.marcas }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="cell-sub">Primeras {{ previaHuellero.muestra.length }} de {{ previaHuellero.dias }} filas (una por trabajador y día).</p>
+            </div>
             <div v-if="!previaHuellero.confirmado" class="card-actions">
               <button class="btn-exec btn-exec-primary" type="button" :disabled="subiendo" @click="confirmarHuellero">
                 <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Guardar {{ previaHuellero.dias }} registro(s)
@@ -232,9 +249,32 @@
             <button v-if="previaPersonal && !previaPersonal.confirmado" class="btn-exec btn-exec-primary" type="button" :disabled="subiendo || !previaPersonal.total" @click="confirmarPersonal">
               Guardar {{ previaPersonal.total }} trabajador(es)
             </button>
-            <span v-if="previaPersonal?.errores?.length" class="err-list">
+            <span v-if="previaPersonal?.confirmado" class="ds-pill ok">Guardado: {{ previaPersonal.total }} trabajador(es).</span>
+          </div>
+
+          <div v-if="previaPersonal && !previaPersonal.confirmado" class="pl-previa">
+            <div class="summary-chips">
+              <span class="ds-pill ok">{{ previaPersonal.total }} fila(s) válidas</span>
+              <span v-if="previaPersonal.errores.length" class="ds-pill bad">{{ previaPersonal.errores.length }} con error</span>
+              <span class="cell-sub">Vista previa: todavía no se guardó nada.</span>
+            </div>
+            <div v-if="previaPersonal.errores.length" class="err-list">
               {{ previaPersonal.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
-            </span>
+            </div>
+            <div class="ds-table-scroll">
+              <table class="ds-table ds-table--densa">
+                <thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Área</th><th class="tc">Horario</th><th class="tr">Sueldo neto</th><th class="tr">Quincena 40 %</th><th class="tr">Fin de mes 60 %</th></tr></thead>
+                <tbody>
+                  <tr v-for="p in previaPersonal.personal" :key="p.codigo">
+                    <td class="mono">{{ p.codigo }}</td><td>{{ p.nombre }}</td><td class="mono">{{ p.dni || '—' }}</td><td>{{ p.area || '—' }}</td>
+                    <td class="tc mono">{{ p.hora_ingreso }} – {{ p.hora_salida }}</td>
+                    <td class="tr mono">{{ soles(p.sueldo_neto) }}</td>
+                    <td class="tr mono">{{ soles(p.sueldo_neto * 0.4) }}</td>
+                    <td class="tr mono">{{ soles(p.sueldo_neto * 0.6) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
