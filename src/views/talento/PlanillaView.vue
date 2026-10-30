@@ -2,12 +2,27 @@
   <div class="ds-page pl-page">
     <header class="pl-head">
       <div>
-        <nav class="pl-crumb" aria-label="Ruta"><span>Recursos humanos</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><b>Planilla</b></nav>
-        <h1 class="pl-title">Planilla de {{ soloMes }}</h1>
-        <p class="pl-sub">Huellero, tardanzas y pago del mes · 1.ª quincena 40 % · fin de mes 60 % menos tardanzas</p>
+        <nav class="pl-crumb" aria-label="Ruta"><span>Recursos humanos</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><template v-if="tab !== 'planilla'"><span>Planilla</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><b>{{ { huellero: 'Importar huellero', personal: 'Personal', asistencia: 'Asistencia' }[tab] }}</b></template><b v-else>Planilla</b></nav>
+        <template v-if="tab === 'personal'">
+          <h1 class="pl-title">Personal</h1>
+          <p class="pl-sub">Sueldos vigentes, áreas y horarios de cada trabajador</p>
+        </template>
+        <template v-else-if="tab === 'huellero'">
+          <h1 class="pl-title">Importar huellero</h1>
+          <p class="pl-sub">Sube las marcaciones del mes para calcular asistencia y tardanzas</p>
+        </template>
+        <template v-else-if="tab === 'asistencia'">
+          <h1 class="pl-title">Asistencia y tardanzas</h1>
+          <p class="pl-sub">Marcaciones del huellero, tardanzas computadas e incidencias por justificar</p>
+        </template>
+        <template v-else>
+          <h1 class="pl-title">Planilla de {{ soloMes }}</h1>
+          <p class="pl-sub">Huellero, tardanzas y pago del mes · 1.ª quincena 40 % · fin de mes 60 % menos tardanzas</p>
+        </template>
       </div>
       <div class="pl-head-actions">
-        <span v-if="calc" class="pl-estado" :class="calc.cerrado ? 'cerrado' : 'abierto'"><i class="pl-dot" aria-hidden="true"></i>{{ calc.cerrado ? 'Periodo cerrado' : 'Periodo abierto' }}</span>
+        <span v-if="tab !== 'planilla' && asis" class="pl-estado" :class="asis.cerrado ? 'cerrado' : 'abierto'"><i class="pl-dot" aria-hidden="true"></i>{{ asis.cerrado ? 'Periodo cerrado' : 'Periodo abierto' }}</span>
+        <span v-else-if="tab === 'planilla' && calc" class="pl-estado" :class="calc.cerrado ? 'cerrado' : 'abierto'"><i class="pl-dot" aria-hidden="true"></i>{{ calc.cerrado ? 'Periodo cerrado' : 'Periodo abierto' }}</span>
         <div class="pl-mesnav">
           <button type="button" aria-label="Mes anterior" @click="moverMes(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
           <label class="pl-mesnav-label">
@@ -185,121 +200,252 @@
     </template>
 
     <!-- ── Asistencia y tardanzas ─────────────────────────────────────── -->
-    <section v-if="tab === 'asistencia'" class="ds-panel">
-      <header class="ds-panel-head">
-        <div>
-          <h2 class="ds-panel-title">Asistencia {{ nombreMes }}</h2>
-          <p class="ds-panel-sub">Tolerancia hasta el minuto 10:59. Del 11 al 30 se computa 30 min; desde el 31, 1 hora. Justifica los días con permiso, comisión o descanso médico.</p>
+    <template v-if="tab === 'asistencia'">
+      <section class="pl-kpis">
+        <div class="pl-kpi">
+          <div class="pl-kpi-top"><span>Minutos de tardanza del mes</span><span class="pl-kpi-ico bad"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i></span></div>
+          <div class="pl-kpi-val bad">{{ fmtNum(asisResumen.minutos) }} min</div>
+          <div class="pl-kpi-foot">En <b class="bad">{{ asisResumen.tardanzas }}</b> {{ asisResumen.tardanzas === 1 ? 'tardanza' : 'tardanzas' }} sin justificar</div>
         </div>
-        <div class="ds-panel-actions">
-          <label class="pl-check"><input v-model="soloTardanzas" type="checkbox" /> Solo tardanzas e incidencias</label>
-          <input v-model.trim="filtro" type="search" class="ds-input" placeholder="Buscar" aria-label="Buscar" />
+        <div class="pl-kpi">
+          <div class="pl-kpi-top"><span>Por justificar en la lista</span><span class="pl-kpi-ico"><i class="fa-regular fa-file-lines" aria-hidden="true"></i></span></div>
+          <div class="pl-kpi-val">{{ asisResumen.tardanzas }}</div>
+          <div class="pl-progress"><span :style="{ width: asisResumen.pctJust + '%' }"></span></div>
+          <div class="pl-kpi-foot"><b class="okc">{{ asisResumen.justificadas }}</b> justificadas de {{ asisResumen.tardanzas + asisResumen.justificadas }} registros</div>
         </div>
-      </header>
-      <div class="ds-table-scroll">
-        <table class="ds-table ds-table--densa">
-          <thead>
-            <tr><th>Fecha</th><th>Trabajador</th><th class="tc">Ingreso</th><th class="tc">Entrada</th><th class="tc">Salida</th><th class="tc">Tardanza</th><th></th></tr>
-          </thead>
-          <tbody>
-            <tr v-if="cargando"><td colspan="7" class="ds-empty">Cargando…</td></tr>
-            <tr v-else-if="!asistenciaFiltrada.length"><td colspan="7" class="ds-empty">Sin marcaciones en el periodo. Importa el Excel del huellero.</td></tr>
-            <tr v-for="a in asistenciaFiltrada" :key="a.asistencia_id">
-              <td class="mono">{{ diaCorto(a.fecha) }}</td>
-              <td>
-                <div class="cell-main">{{ a.nombre }} <span v-if="!a.en_ficha" class="ds-pill warn">sin ficha</span></div>
-                <div class="cell-sub mono">{{ a.codigo }}{{ a.area ? ' · ' + a.area : '' }}</div>
-              </td>
-              <td class="tc mono">{{ a.hora_ingreso }}</td>
-              <td class="tc mono">{{ a.entrada }}</td>
-              <td class="tc mono">{{ a.salida || '' }}<span v-if="!a.salida" class="ds-pill warn">sin salida</span></td>
-              <td class="tc">
-                <span v-if="a.justificado" class="ds-pill ok" :title="a.justificacion">Justificado</span>
-                <span v-else-if="a.minutos_tardanza" class="ds-pill bad">{{ a.minutos_tardanza }} min</span>
-                <span v-else class="cell-sub">—</span>
-              </td>
-              <td class="tr">
-                <button v-if="!asis?.cerrado && (a.minutos_tardanza || a.justificado)" class="btn-exec btn-exec-outline btn-sm" type="button" @click="justificar(a)">
-                  {{ a.justificado ? 'Quitar' : 'Justificar' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ── Importar huellero ──────────────────────────────────────────── -->
-    <template v-if="tab === 'huellero'">
-      <section class="ds-panel">
-        <header class="ds-panel-head">
-          <div>
-            <h2 class="ds-panel-title">Importar marcaciones del huellero</h2>
-            <p class="ds-panel-sub">Sube el Excel tal como lo exporta el huellero (.xlsx o .csv). Se toma la primera marca del día como entrada y la última como salida. Reimportar el mismo día lo reemplaza, sin duplicar.</p>
+        <div class="pl-kpi">
+          <div class="pl-kpi-top"><span>Incidencias</span><span class="pl-kpi-ico warn"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span></div>
+          <div class="pl-kpi-val">{{ asisResumen.sinSalida + asisResumen.sinFicha }}</div>
+          <div class="pl-kpi-foot">
+            <template v-if="asisResumen.sinSalida">{{ asisResumen.sinSalida }} marcación(es) sin salida</template>
+            <template v-if="asisResumen.sinSalida && asisResumen.sinFicha"> · </template>
+            <template v-if="asisResumen.sinFicha">{{ asisResumen.sinFicha }} sin ficha</template>
+            <template v-if="!asisResumen.sinSalida && !asisResumen.sinFicha">Sin incidencias</template>
+            <template v-else> · revisar con el área</template>
           </div>
-        </header>
-        <div class="ds-panel-body">
-          <label class="dropzone" :class="{ 'dropzone-has': !!archivoHuellero }">
-            <input type="file" accept=".xlsx,.csv" class="dropzone-input" aria-label="Elegir archivo del huellero" @change="e => { archivoHuellero = e.target.files?.[0] || null; previaHuellero = null }" />
-            <i class="fa-solid fa-fingerprint dropzone-icon" aria-hidden="true"></i>
-            <span class="dropzone-text">{{ archivoHuellero ? archivoHuellero.name : 'Haz clic para elegir el archivo del huellero' }}</span>
-          </label>
-          <div class="card-actions">
-            <button class="btn-exec btn-exec-primary" type="button" :disabled="!archivoHuellero || subiendo" @click="previsualizarHuellero">
-              {{ subiendo ? 'Leyendo…' : 'Vista previa' }}
-            </button>
+        </div>
+        <div class="pl-kpi destacado pl-regla">
+          <div class="pl-kpi-top"><span>Regla de cómputo</span><i class="fa-solid fa-circle-info" aria-hidden="true"></i></div>
+          <div class="pl-regla-bar"><span class="t1"></span><span class="t2"></span><span class="t3"></span></div>
+          <div class="pl-regla-cols">
+            <div><span>0 – 10:59</span><b>Tolerancia</b></div>
+            <div><span>11 – 30</span><b>30 min</b></div>
+            <div><span>31 a más</span><b>1 hora</b></div>
           </div>
-
-          <div v-if="previaHuellero" class="pl-previa">
-            <div class="summary-chips">
-              <span class="ds-pill">{{ previaHuellero.desde }} → {{ previaHuellero.hasta }}</span>
-              <span class="ds-pill">{{ previaHuellero.marcaciones }} marcaciones</span>
-              <span class="ds-pill ok">{{ previaHuellero.dias }} días-trabajador</span>
-              <span class="ds-pill">{{ previaHuellero.trabajadores }} trabajadores</span>
-              <span v-if="previaHuellero.sin_salida" class="ds-pill warn">{{ previaHuellero.sin_salida }} sin salida</span>
-              <span v-if="previaHuellero.total_errores" class="ds-pill bad">{{ previaHuellero.total_errores }} filas ilegibles</span>
-            </div>
-            <div v-if="previaHuellero.sin_ficha.length" class="ds-callout">
-              <b>{{ previaHuellero.sin_ficha.length }} código(s) del huellero no están en el maestro de personal</b> (se guardan igual, pero no entran a la planilla hasta registrarlos):
-              {{ previaHuellero.sin_ficha.map(s => `${s.codigo}${s.nombre ? ' ' + s.nombre : ''}`).join(' · ') }}
-            </div>
-            <div v-if="previaHuellero.errores?.length" class="err-list">
-              {{ previaHuellero.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
-            </div>
-            <div v-if="previaHuellero.muestra?.length" class="ds-table-scroll">
-              <table class="ds-table ds-table--densa">
-                <thead><tr><th>Código</th><th>Nombre (huellero)</th><th>Fecha</th><th class="tc">Entrada</th><th class="tc">Salida</th><th class="tc">Marcas</th></tr></thead>
-                <tbody>
-                  <tr v-for="d in previaHuellero.muestra" :key="d.codigo + d.fecha">
-                    <td class="mono">{{ d.codigo }}</td><td>{{ d.nombre || '—' }}</td><td class="mono">{{ diaCorto(d.fecha) }}</td>
-                    <td class="tc mono">{{ d.entrada }}</td>
-                    <td class="tc mono">{{ d.salida || '' }}<span v-if="!d.salida" class="ds-pill warn">sin salida</span></td>
-                    <td class="tc">{{ d.marcas }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p class="cell-sub">Primeras {{ previaHuellero.muestra.length }} de {{ previaHuellero.dias }} filas (una por trabajador y día).</p>
-            </div>
-            <div v-if="!previaHuellero.confirmado" class="card-actions">
-              <button class="btn-exec btn-exec-primary" type="button" :disabled="subiendo" @click="confirmarHuellero">
-                <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Guardar {{ previaHuellero.dias }} registro(s)
-              </button>
-            </div>
-            <div v-else class="ds-pill ok">Importado.</div>
-          </div>
+          <div class="pl-kpi-foot">Justifica días con permiso, comisión o descanso médico.</div>
         </div>
       </section>
 
-      <section class="ds-panel">
-        <header class="ds-panel-head"><h2 class="ds-panel-title">Últimas importaciones</h2></header>
+      <section class="pl-card pl-tabla">
+        <header class="pl-tabla-head">
+          <div>
+            <h2 class="pl-tabla-title">Asistencia {{ nombreMes }}</h2>
+            <p class="pl-tabla-sub">Agrupado por trabajador · ordenado por fecha</p>
+          </div>
+          <div class="pl-tabla-actions">
+            <div class="pl-seg" role="tablist" aria-label="Filtro de asistencia">
+              <button v-for="f in FILTROS_ASIS" :key="f.key" type="button" :class="{ activo: filtroAsis === f.key }" @click="filtroAsis = f.key">
+                {{ f.label }} <span class="pl-seg-n">{{ asisConteo[f.key] }}</span>
+              </button>
+            </div>
+            <div class="pl-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input v-model.trim="filtro" type="search" placeholder="Buscar trabajador o área" aria-label="Buscar" /></div>
+          </div>
+        </header>
         <div class="ds-table-scroll">
-          <table class="ds-table ds-table--densa">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Archivo</th><th>Rango</th><th class="tr">Filas</th><th>Usuario</th></tr></thead>
+          <table class="pl-table pl-asis">
+            <thead>
+              <tr><th>Fecha</th><th>Ingreso → Entrada</th><th>Retraso</th><th>Salida</th><th>Jornada</th><th>Tardanza</th><th class="tr">Acción</th></tr>
+            </thead>
+            <tbody>
+              <tr v-if="cargando"><td colspan="7" class="ds-empty">Cargando…</td></tr>
+              <tr v-else-if="!asisGrupos.length"><td colspan="7" class="ds-empty">Sin marcaciones en el periodo. Importa el Excel del huellero.</td></tr>
+              <template v-for="g in asisGrupos" :key="g.codigo">
+                <tr class="pl-grupo">
+                  <td colspan="6">
+                    <div class="pl-who">
+                      <span class="pl-avatar navy">{{ iniciales(g.nombre) }}</span>
+                      <div>
+                        <div class="cell-main">{{ g.nombre }}</div>
+                        <div class="cell-sub mono">{{ g.codigo }} · ingreso {{ g.hora_ingreso }}</div>
+                      </div>
+                      <span v-if="g.area" class="pl-area">{{ g.area }}</span>
+                      <span v-if="!g.en_ficha" class="pl-tag warn">sin ficha</span>
+                    </div>
+                  </td>
+                  <td class="tr">
+                    <div class="pl-tags">
+                      <span v-if="g.tardanzas" class="pl-tag bad">{{ g.tardanzas }} {{ g.tardanzas === 1 ? 'tardanza' : 'tardanzas' }} · {{ g.minutos }} min</span>
+                      <span v-if="g.sinSalida" class="pl-tag warn">{{ g.sinSalida }} sin salida</span>
+                      <span v-if="g.justificadas" class="pl-tag ok">{{ g.justificadas }} {{ g.justificadas === 1 ? 'justificada' : 'justificadas' }}</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-for="a in g.filas" :key="a.asistencia_id" :class="{ 'pl-incid': !a.salida }">
+                  <td>
+                    <div class="pl-fecha">
+                      <span class="pl-fecha-box"><small>{{ dowCorto(a.fecha) }}</small><b>{{ a.fecha.slice(8, 10) }}</b></span>
+                      <span class="cell-sub mono">{{ a.fecha.slice(8, 10) }}/{{ a.fecha.slice(5, 7) }}</span>
+                    </div>
+                  </td>
+                  <td class="mono">
+                    <span class="cell-sub">{{ hm(a.hora_ingreso) }}</span>
+                    <i class="fa-solid fa-arrow-right pl-flecha" aria-hidden="true"></i>
+                    <b :class="{ bad: retraso(a) > 0 && !a.justificado }">{{ a.entrada }}</b>
+                  </td>
+                  <td>
+                    <div class="pl-retraso" :class="nivel(a)"><span></span><span></span><span></span></div>
+                    <div class="cell-sub">{{ retraso(a) > 0 ? `+${retraso(a)} min tarde` : 'A tiempo' }}</div>
+                  </td>
+                  <td class="mono">
+                    <template v-if="a.salida">{{ a.salida }}</template>
+                    <span v-else class="pl-tag warn"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Sin salida</span>
+                  </td>
+                  <td class="mono">{{ jornada(a) }}</td>
+                  <td>
+                    <span v-if="a.justificado" class="pl-tag ok" :title="a.justificacion">Justificado</span>
+                    <span v-else-if="a.minutos_tardanza" class="pl-tag bad">{{ a.minutos_tardanza >= 60 ? '1 hora' : a.minutos_tardanza + ' min' }}</span>
+                    <span v-else class="pl-tag">—</span>
+                  </td>
+                  <td class="tr">
+                    <button v-if="!asis?.cerrado && (a.minutos_tardanza || a.justificado)" class="pl-btn sm" type="button" @click="justificar(a)">
+                      <i class="fa-regular" :class="a.justificado ? 'fa-circle-xmark' : 'fa-file-lines'" aria-hidden="true"></i> {{ a.justificado ? 'Quitar' : 'Justificar' }}
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <footer v-if="asistenciaFiltrada.length" class="pl-pag">
+          <span>Mostrando {{ Math.min(limiteAsis, asistenciaFiltrada.length) }} de {{ asistenciaFiltrada.length }} registros</span>
+          <button v-if="limiteAsis < asistenciaFiltrada.length" class="pl-btn" type="button" @click="limiteAsis += 30">Cargar más</button>
+        </footer>
+      </section>
+    </template>
+
+    <!-- ── Importar huellero ──────────────────────────────────────────── -->
+    <template v-if="tab === 'huellero'">
+      <div class="pl-imp-grid">
+        <section class="pl-card pl-imp">
+          <header class="pl-imp-head">
+            <h2 class="pl-tabla-title">Importar marcaciones del huellero</h2>
+            <p class="pl-tabla-sub">Sube el Excel tal como lo exporta el huellero.</p>
+          </header>
+          <div class="pl-imp-body">
+            <ol class="pl-steps">
+              <li v-for="(s, i) in PASOS_HUELLERO" :key="s" :class="{ hecho: pasoHuellero >= i + 1 }">
+                <span class="pl-steps-bar"></span>
+                <span class="pl-steps-n">{{ i + 1 }}</span> {{ s }}
+              </li>
+            </ol>
+
+            <label class="pl-drop" :class="{ lleno: !!archivoHuellero, sobre: arrastrando }"
+              @dragover.prevent="arrastrando = true" @dragleave="arrastrando = false" @drop.prevent="soltarHuellero">
+              <input type="file" accept=".xlsx,.csv" class="dropzone-input" aria-label="Elegir archivo del huellero" @change="e => elegirHuellero(e.target.files?.[0])" />
+              <span class="pl-drop-ico"><i class="fa-solid fa-fingerprint" aria-hidden="true"></i></span>
+              <b>{{ archivoHuellero ? archivoHuellero.name : 'Arrastra el archivo aquí o haz clic para elegirlo' }}</b>
+              <span class="cell-sub">{{ archivoHuellero ? `${(archivoHuellero.size / 1024).toFixed(0)} KB · haz clic para cambiarlo` : 'Exportación del huellero en .xlsx o .csv' }}</span>
+              <span v-if="!archivoHuellero" class="pl-drop-ext"><span class="x">.xlsx</span><span>.csv</span></span>
+            </label>
+
+            <div class="pl-imp-foot">
+              <span class="cell-sub"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Revisarás las marcaciones antes de guardarlas</span>
+              <button class="pl-btn" :class="{ primario: archivoHuellero && !previaHuellero }" type="button" :disabled="!archivoHuellero || subiendo" @click="previsualizarHuellero">
+                <i class="fa-regular fa-eye" aria-hidden="true"></i> {{ subiendo && !previaHuellero ? 'Leyendo…' : 'Vista previa' }}
+              </button>
+            </div>
+
+            <div v-if="previaHuellero" class="pl-previa">
+              <div class="pl-tags pl-tags-izq">
+                <span class="pl-tag">{{ fechaDMY(previaHuellero.desde) }} → {{ fechaDMY(previaHuellero.hasta) }}</span>
+                <span class="pl-tag">{{ previaHuellero.marcaciones }} marcaciones</span>
+                <span class="pl-tag ok">{{ previaHuellero.dias }} días-trabajador</span>
+                <span class="pl-tag">{{ previaHuellero.trabajadores }} trabajadores</span>
+                <span v-if="previaHuellero.sin_salida" class="pl-tag warn">{{ previaHuellero.sin_salida }} sin salida</span>
+                <span v-if="previaHuellero.total_errores" class="pl-tag bad">{{ previaHuellero.total_errores }} filas ilegibles</span>
+              </div>
+              <div v-if="previaHuellero.sin_ficha.length" class="ds-callout">
+                <b>{{ previaHuellero.sin_ficha.length }} código(s) del huellero no están en el maestro de personal</b> (se guardan igual, pero no entran a la planilla hasta registrarlos):
+                {{ previaHuellero.sin_ficha.map(s => `${s.codigo}${s.nombre ? ' ' + s.nombre : ''}`).join(' · ') }}
+              </div>
+              <div v-if="previaHuellero.errores?.length" class="err-list">
+                {{ previaHuellero.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
+              </div>
+              <div v-if="previaHuellero.muestra?.length" class="ds-table-scroll">
+                <table class="pl-table">
+                  <thead><tr><th>Código</th><th>Nombre (huellero)</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th class="tr">Marcas</th></tr></thead>
+                  <tbody>
+                    <tr v-for="d in previaHuellero.muestra" :key="d.codigo + d.fecha">
+                      <td class="mono">{{ d.codigo }}</td><td>{{ d.nombre || '—' }}</td><td class="mono">{{ diaCorto(d.fecha) }}</td>
+                      <td class="mono">{{ d.entrada }}</td>
+                      <td class="mono"><template v-if="d.salida">{{ d.salida }}</template><span v-else class="pl-tag warn">Sin salida</span></td>
+                      <td class="tr">{{ d.marcas }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="cell-sub">Primeras {{ previaHuellero.muestra.length }} de {{ previaHuellero.dias }} filas (una por trabajador y día).</p>
+              </div>
+              <div class="pl-imp-foot">
+                <span></span>
+                <button v-if="!previaHuellero.confirmado" class="pl-btn primario" type="button" :disabled="subiendo" @click="confirmarHuellero">
+                  <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> {{ subiendo ? 'Guardando…' : `Guardar ${previaHuellero.dias} registro(s)` }}
+                </button>
+                <span v-else class="pl-tag ok"><i class="fa-solid fa-check" aria-hidden="true"></i> Importado</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="pl-imp-side">
+          <div class="pl-kpi destacado pl-como">
+            <b class="pl-como-tit">Cómo se procesa</b>
+            <div class="pl-como-item"><span class="ico in"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i></span><div><b>Primera marca = entrada</b><span>La más temprana del día cuenta como ingreso.</span></div></div>
+            <div class="pl-como-item"><span class="ico out"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></span><div><b>Última marca = salida</b><span>La más tardía del día cuenta como salida.</span></div></div>
+            <div class="pl-como-item"><span class="ico"><i class="fa-solid fa-rotate" aria-hidden="true"></i></span><div><b>Reimportar reemplaza</b><span>Subir el mismo día otra vez lo sobrescribe, sin duplicar.</span></div></div>
+          </div>
+
+          <div class="pl-card pl-cob">
+            <div class="pl-cob-head"><b>Cobertura de {{ soloMes }}</b><span v-if="coberturaRango" class="okc">{{ coberturaRango }}</span></div>
+            <div class="pl-cob-cal">
+              <span v-for="(d, i) in ['L', 'M', 'M', 'J', 'V', 'S', 'D']" :key="'dow' + i" class="dow">{{ d }}</span>
+              <span v-for="(c, i) in cobertura" :key="i" :class="c ? c.estado : 'vacio'">{{ c?.dia }}</span>
+            </div>
+            <div class="pl-cob-leg"><span><i class="imp"></i>Importado</span><span><i class="fds"></i>Fin de semana</span><span><i class="pend"></i>Pendiente</span></div>
+          </div>
+        </aside>
+      </div>
+
+      <section class="pl-card">
+        <header class="pl-tabla-head">
+          <h2 class="pl-tabla-title">Últimas importaciones</h2>
+          <span class="cell-sub">{{ cargasDelMes }} {{ cargasDelMes === 1 ? 'carga' : 'cargas' }} este mes</span>
+        </header>
+        <div class="ds-table-scroll">
+          <table class="pl-table">
+            <thead><tr><th>Archivo</th><th>Tipo</th><th>Fecha</th><th>Rango</th><th class="tr">Filas</th><th>Usuario</th></tr></thead>
             <tbody>
               <tr v-if="!importaciones.length"><td colspan="6" class="ds-empty">Aún no hay importaciones.</td></tr>
               <tr v-for="i in importaciones" :key="i.importacion_id">
-                <td class="mono">{{ fechaHora(i.created_at) }}</td><td>{{ i.tipo }}</td><td>{{ i.archivo }}</td>
-                <td class="mono">{{ i.desde ? `${i.desde} → ${i.hasta}` : '—' }}</td><td class="tr">{{ i.filas }}</td><td>{{ i.usuario || '—' }}</td>
+                <td>
+                  <div class="pl-who">
+                    <span class="pl-file-ico" :class="{ per: i.tipo === 'PERSONAL' }"><i class="fa-solid" :class="i.tipo === 'PERSONAL' ? 'fa-user-group' : 'fa-fingerprint'" aria-hidden="true"></i></span>
+                    <b>{{ i.archivo }}</b>
+                  </div>
+                </td>
+                <td><span class="pl-area" :class="{ per: i.tipo === 'PERSONAL' }">{{ i.tipo }}</span></td>
+                <td class="mono cell-sub">{{ fechaHora(i.created_at) }}</td>
+                <td>
+                  <template v-if="i.desde">
+                    <span class="mono">{{ fechaDMY(i.desde) }} → {{ fechaDMY(i.hasta) }}</span>
+                    <div class="pl-rango"><span :style="{ width: rangoPct(i) + '%' }"></span></div>
+                  </template>
+                  <span v-else class="cell-sub">No aplica</span>
+                </td>
+                <td class="tr"><b>{{ i.filas }}</b></td>
+                <td>
+                  <div v-if="i.usuario" class="pl-who"><span class="pl-avatar navy sm">{{ inicialesUsuario(i.usuario) }}</span>{{ i.usuario }}</div>
+                  <span v-else class="cell-sub">—</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -309,75 +455,131 @@
 
     <!-- ── Personal ───────────────────────────────────────────────────── -->
     <template v-if="tab === 'personal'">
-      <section v-if="puedeVerSueldos" class="ds-panel">
-        <header class="ds-panel-head">
-          <div>
-            <h2 class="ds-panel-title">Cargar sueldos vigentes desde {{ nombreMes }}</h2>
-            <p class="ds-panel-sub">Se carga a inicio de mes. Los sueldos valen desde el mes elegido arriba hasta la próxima carga; los meses anteriores no cambian. El sueldo se guarda cifrado y solo lo ve Talento. El archivo no se almacena: se lee y se descarta. El horario se asigna por área (FICO y B2B 8:30; el resto 9:00) y se puede ajustar abajo.</p>
-          </div>
-          <div class="ds-panel-actions">
-            <button class="btn-exec btn-exec-outline" type="button" @click="svc.descargarPlantilla()">
-              <i class="fa-solid fa-download" aria-hidden="true"></i> Plantilla
-            </button>
-          </div>
-        </header>
-        <div class="ds-panel-body">
-          <label class="dropzone" :class="{ 'dropzone-has': !!archivoPersonal }">
-            <input type="file" accept=".xlsx,.csv" class="dropzone-input" aria-label="Elegir archivo de personal" @change="e => { archivoPersonal = e.target.files?.[0] || null; previaPersonal = null }" />
-            <i class="fa-solid fa-file-excel dropzone-icon" aria-hidden="true"></i>
-            <span class="dropzone-text">{{ archivoPersonal ? archivoPersonal.name : 'Columnas: Código huellero, DNI, Nombre, Área, Sueldo neto' }}</span>
-          </label>
-          <div class="card-actions">
-            <button class="btn-exec btn-exec-primary" type="button" :disabled="!archivoPersonal || subiendo" @click="previsualizarPersonal">Vista previa</button>
-            <button v-if="previaPersonal && !previaPersonal.confirmado" class="btn-exec btn-exec-primary" type="button" :disabled="subiendo || !previaPersonal.total" @click="confirmarPersonal">
-              Guardar {{ previaPersonal.total }} trabajador(es)
-            </button>
-            <span v-if="previaPersonal?.confirmado" class="ds-pill ok">Guardado: {{ previaPersonal.total }} trabajador(es).</span>
-          </div>
-
-          <div v-if="previaPersonal && !previaPersonal.confirmado" class="pl-previa">
-            <div class="summary-chips">
-              <span class="ds-pill ok">{{ previaPersonal.total }} fila(s) válidas</span>
-              <span v-if="previaPersonal.errores.length" class="ds-pill bad">{{ previaPersonal.errores.length }} con error</span>
-              <span class="cell-sub">Vista previa: todavía no se guardó nada. Vigentes desde {{ nombreMes }}.</span>
-            </div>
-            <div v-if="previaPersonal.errores.length" class="err-list">
-              {{ previaPersonal.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
-            </div>
-            <div class="ds-table-scroll">
-              <table class="ds-table ds-table--densa">
-                <thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Área</th><th class="tc">Horario</th><th class="tr">Sueldo neto</th><th class="tr">Quincena 40 %</th><th class="tr">Fin de mes 60 %</th></tr></thead>
-                <tbody>
-                  <tr v-for="p in previaPersonal.personal" :key="p.codigo">
-                    <td class="mono">{{ p.codigo }}</td><td>{{ p.nombre }}</td><td class="mono">{{ p.dni || '—' }}</td><td>{{ p.area || '—' }}</td>
-                    <td class="tc mono">{{ p.hora_ingreso }} – {{ p.hora_salida }}</td>
-                    <td class="tr mono">{{ soles(p.sueldo_neto) }}</td>
-                    <td class="tr mono">{{ soles(p.sueldo_neto * 0.4) }}</td>
-                    <td class="tr mono">{{ soles(p.sueldo_neto * 0.6) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <section class="pl-kpis pl-kpis-3">
+        <div class="pl-kpi">
+          <div class="pl-kpi-top"><span>Personal activo</span><span class="pl-kpi-ico"><i class="fa-solid fa-user-group" aria-hidden="true"></i></span></div>
+          <div class="pl-kpi-val">{{ persResumen.activos }}<small class="pl-kpi-de"> / {{ personal.length }}</small></div>
+          <div class="pl-progress"><span :style="{ width: persResumen.pctActivos + '%' }"></span></div>
+        </div>
+        <div class="pl-kpi destacado">
+          <div class="pl-kpi-top"><span>Sueldo neto total (activos)</span><span class="pl-kpi-ico ok"><i class="fa-solid fa-money-bill" aria-hidden="true"></i></span></div>
+          <div class="pl-kpi-val">{{ puedeVerSueldos ? soles(persResumen.sueldos) : '••••••' }}</div>
+          <div class="pl-kpi-foot">{{ puedeVerSueldos ? `Vigente desde ${nombreMes}` : 'Solo lo ve el equipo de Talento' }}</div>
+        </div>
+        <div class="pl-kpi">
+          <div class="pl-kpi-top"><span>Horarios</span><span class="pl-kpi-ico warn"><i class="fa-regular fa-clock" aria-hidden="true"></i></span></div>
+          <div v-if="!persResumen.horarios.length" class="cell-sub">Sin personal activo.</div>
+          <div v-for="h in persResumen.horarios" :key="h.rango" class="pl-horario"><b class="mono">{{ h.rango }}</b><span>{{ h.n }} {{ h.n === 1 ? 'persona' : 'personas' }}</span></div>
         </div>
       </section>
 
-      <section class="ds-panel">
-        <header class="ds-panel-head">
-          <h2 class="ds-panel-title">Personal ({{ personal.length }})</h2>
-          <input v-model.trim="filtro" type="search" class="ds-input" placeholder="Buscar" aria-label="Buscar" />
+      <div v-if="puedeVerSueldos" class="pl-imp-grid pl-pers-grid">
+        <section class="pl-card pl-imp">
+          <header class="pl-imp-head pl-imp-head-acc">
+            <div>
+              <h2 class="pl-tabla-title">Cargar sueldos vigentes</h2>
+              <p class="pl-tabla-sub">Valen desde {{ nombreMes }} hasta la próxima carga. Los meses anteriores no cambian.</p>
+            </div>
+            <button class="pl-btn" type="button" @click="svc.descargarPlantilla()">
+              <i class="fa-solid fa-download okc" aria-hidden="true"></i> Descargar plantilla
+            </button>
+          </header>
+          <div class="pl-imp-body">
+            <label class="pl-drop pl-drop-row" :class="{ lleno: !!archivoPersonal, sobre: arrastrando }"
+              @dragover.prevent="arrastrando = true" @dragleave="arrastrando = false" @drop.prevent="soltarPersonal">
+              <input type="file" accept=".xlsx,.csv" class="dropzone-input" aria-label="Elegir archivo de personal" @change="e => elegirPersonal(e.target.files?.[0])" />
+              <span class="pl-drop-ico verde"><i class="fa-solid fa-file-excel" aria-hidden="true"></i></span>
+              <span class="pl-drop-txt">
+                <b>{{ archivoPersonal ? archivoPersonal.name : 'Arrastra el Excel de personal o haz clic para elegirlo' }}</b>
+                <span class="cell-sub">{{ archivoPersonal ? 'Haz clic para cambiarlo' : 'Usa la plantilla para no equivocarte de columnas' }}</span>
+              </span>
+            </label>
+            <div class="pl-imp-foot">
+              <div class="pl-cols">
+                <span class="pl-cols-tit">Columnas</span>
+                <span v-for="c in ['Código huellero', 'DNI', 'Nombre', 'Área']" :key="c" class="pl-tag">{{ c }}</span>
+                <span class="pl-tag ok">Sueldo neto</span>
+              </div>
+              <div class="pl-tags">
+                <button v-if="archivoPersonal && !previaPersonal" class="pl-btn primario" type="button" :disabled="subiendo" @click="previsualizarPersonal">
+                  <i class="fa-regular fa-eye" aria-hidden="true"></i> {{ subiendo ? 'Leyendo…' : 'Vista previa' }}
+                </button>
+                <button v-if="previaPersonal && !previaPersonal.confirmado" class="pl-btn primario" type="button" :disabled="subiendo || !previaPersonal.total" @click="confirmarPersonal">
+                  <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Guardar {{ previaPersonal.total }} trabajador(es)
+                </button>
+                <span v-if="previaPersonal?.confirmado" class="pl-tag ok"><i class="fa-solid fa-check" aria-hidden="true"></i> Guardado: {{ previaPersonal.total }} trabajador(es)</span>
+              </div>
+            </div>
+
+            <div v-if="previaPersonal && !previaPersonal.confirmado" class="pl-previa">
+              <div class="pl-tags pl-tags-izq">
+                <span class="pl-tag ok">{{ previaPersonal.total }} fila(s) válidas</span>
+                <span v-if="previaPersonal.errores.length" class="pl-tag bad">{{ previaPersonal.errores.length }} con error</span>
+                <span class="cell-sub">Vista previa: todavía no se guardó nada. Vigentes desde {{ nombreMes }}.</span>
+              </div>
+              <div v-if="previaPersonal.errores.length" class="err-list">
+                {{ previaPersonal.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
+              </div>
+              <div class="ds-table-scroll">
+                <table class="pl-table">
+                  <thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Área</th><th>Horario</th><th class="tr">Sueldo neto</th><th class="tr">Quincena 40 %</th><th class="tr">Fin de mes 60 %</th></tr></thead>
+                  <tbody>
+                    <tr v-for="p in previaPersonal.personal" :key="p.codigo">
+                      <td class="mono">{{ p.codigo }}</td><td>{{ p.nombre }}</td><td class="mono">{{ p.dni || '—' }}</td><td>{{ p.area || '—' }}</td>
+                      <td class="mono">{{ hm(p.hora_ingreso) }} – {{ hm(p.hora_salida) }}</td>
+                      <td class="tr mono">{{ soles(p.sueldo_neto) }}</td>
+                      <td class="tr mono">{{ soles(p.sueldo_neto * 0.4) }}</td>
+                      <td class="tr mono">{{ soles(p.sueldo_neto * 0.6) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="pl-card pl-reglas">
+          <b class="pl-reglas-tit">Privacidad y reglas</b>
+          <div class="pl-regla-item"><span class="ico"><i class="fa-solid fa-lock" aria-hidden="true"></i></span><div><b>Sueldo cifrado</b><span>Solo lo ve el equipo de Talento.</span></div></div>
+          <div class="pl-regla-item"><span class="ico ok"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></span><div><b>El archivo no se guarda</b><span>Se lee y se descarta.</span></div></div>
+          <div class="pl-regla-item"><span class="ico warn"><i class="fa-regular fa-clock" aria-hidden="true"></i></span><div><b>Horario por área</b><span>FICO y B2B 8:30; el resto 9:00. Se puede ajustar abajo.</span></div></div>
+        </aside>
+      </div>
+
+      <section class="pl-card">
+        <header class="pl-tabla-head">
+          <h2 class="pl-tabla-title">Personal <span class="pl-seg-n">{{ personal.length }}</span></h2>
+          <div class="pl-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input v-model.trim="filtro" type="search" placeholder="Buscar nombre, DNI o área" aria-label="Buscar" /></div>
         </header>
         <div class="ds-table-scroll">
-          <table class="ds-table ds-table--densa">
-            <thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Área</th><th class="tc">Ingreso</th><th class="tc">Salida</th><th class="tr">Sueldo neto</th><th class="tc">Activo</th></tr></thead>
+          <table class="pl-table">
+            <thead><tr><th>Trabajador</th><th>DNI</th><th>Área</th><th>Horario (ingreso → salida)</th><th class="tr">Sueldo neto</th><th>Activo</th></tr></thead>
             <tbody>
-              <tr v-if="!personalFiltrado.length"><td colspan="8" class="ds-empty">Sin personal registrado.</td></tr>
+              <tr v-if="cargando"><td colspan="6" class="ds-empty">Cargando…</td></tr>
+              <tr v-else-if="!personalFiltrado.length"><td colspan="6" class="ds-empty">Sin personal registrado.</td></tr>
               <tr v-for="p in personalFiltrado" :key="p.personal_id" :class="{ 'pl-inactivo': !p.activo }">
-                <td class="mono">{{ p.codigo }}</td><td>{{ p.nombre }}</td><td class="mono">{{ p.dni || '—' }}</td><td>{{ p.area || '—' }}</td>
-                <td class="tc"><input class="ds-input pl-hora" type="time" :value="p.hora_ingreso" @change="e => editar(p, { hora_ingreso: e.target.value })" /></td>
-                <td class="tc"><input class="ds-input pl-hora" type="time" :value="p.hora_salida" @change="e => editar(p, { hora_salida: e.target.value })" /></td>
-                <td class="tr mono">{{ puedeVerSueldos ? soles(p.sueldo_neto) : (p.tiene_sueldo ? '••••••' : 'sin sueldo') }}</td>
-                <td class="tc"><input type="checkbox" :checked="p.activo" :aria-label="`Activo ${p.nombre}`" @change="e => editar(p, { activo: e.target.checked })" /></td>
+                <td>
+                  <div class="pl-who">
+                    <span class="pl-avatar">{{ iniciales(p.nombre) }}</span>
+                    <div><div class="cell-main">{{ p.nombre }}</div><div class="cell-sub">Código {{ p.codigo }}</div></div>
+                  </div>
+                </td>
+                <td class="mono cell-sub">{{ p.dni || '—' }}</td>
+                <td><span v-if="p.area" class="pl-area">{{ p.area }}</span><span v-else class="cell-sub">—</span></td>
+                <td>
+                  <div class="pl-horas">
+                    <input class="pl-hora-in" type="time" :value="hm(p.hora_ingreso)" :aria-label="`Ingreso ${p.nombre}`" @change="e => editar(p, { hora_ingreso: e.target.value })" />
+                    <i class="fa-solid fa-arrow-right pl-flecha" aria-hidden="true"></i>
+                    <input class="pl-hora-in" type="time" :value="hm(p.hora_salida)" :aria-label="`Salida ${p.nombre}`" @change="e => editar(p, { hora_salida: e.target.value })" />
+                  </div>
+                </td>
+                <td class="tr mono"><b>{{ puedeVerSueldos ? soles(p.sueldo_neto) : (p.tiene_sueldo ? '••••••' : 'sin sueldo') }}</b></td>
+                <td>
+                  <label class="pl-switch">
+                    <input type="checkbox" :checked="p.activo" :aria-label="`Activo ${p.nombre}`" @change="e => editar(p, { activo: e.target.checked })" />
+                    <span></span>
+                  </label>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -428,7 +630,6 @@ const asis = ref(null)
 const personal = ref([])
 const importaciones = ref([])
 const abierto = ref(null)
-const soloTardanzas = ref(true)
 const exportando = ref(false)
 const subiendo = ref(false)
 const archivoHuellero = ref(null)
@@ -486,9 +687,131 @@ function calendario (t) {
   }
   return celdas
 }
-const asistenciaFiltrada = computed(() => (asis.value?.filas || [])
-  .filter(a => !soloTardanzas.value || a.minutos_tardanza || a.justificado || !a.salida || !a.en_ficha)
-  .filter(a => coincide(a.nombre, a.codigo, a.area)))
+// ── Asistencia: filtros, agrupación por trabajador y cómputo visual ──
+const FILTROS_ASIS = [
+  { key: 'todas', label: 'Todas' },
+  { key: 'tardanzas', label: 'Tardanzas' },
+  { key: 'sinSalida', label: 'Sin salida' },
+  { key: 'justificadas', label: 'Justificadas' }
+]
+const filtroAsis = ref('todas')
+const limiteAsis = ref(30)
+const PRED_ASIS = {
+  todas: a => a.minutos_tardanza || a.justificado || !a.salida || !a.en_ficha,
+  tardanzas: a => a.minutos_tardanza > 0,
+  sinSalida: a => !a.salida,
+  justificadas: a => a.justificado
+}
+const minDe = h => { const [hh, mm] = String(h || '').split(':').map(Number); return (hh || 0) * 60 + (mm || 0) }
+const hm = h => String(h || '').slice(0, 5)
+const retraso = a => Math.max(0, minDe(a.entrada) - minDe(a.hora_ingreso))
+// Tramos de la regla: 0–10 tolerancia, 11–30 computa 30 min, 31+ computa 1 hora.
+const nivel = a => { const r = retraso(a); return r <= 0 ? 'n0' : r <= 10 ? 'n1' : r <= 30 ? 'n2' : 'n3' }
+const jornada = a => {
+  if (!a.salida || !a.entrada) return '—'
+  const m = minDe(a.salida) - minDe(a.entrada)
+  return m > 0 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : '—'
+}
+const dowCorto = f => new Date(`${f}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short' }).replace('.', '').slice(0, 3).toUpperCase()
+
+const asisBase = computed(() => (asis.value?.filas || []).filter(a => coincide(a.nombre, a.codigo, a.area)))
+const asisConteo = computed(() => Object.fromEntries(FILTROS_ASIS.map(f => [f.key, asisBase.value.filter(PRED_ASIS[f.key]).length])))
+const asistenciaFiltrada = computed(() => asisBase.value
+  .filter(PRED_ASIS[filtroAsis.value])
+  .sort((x, y) => x.nombre.localeCompare(y.nombre) || x.fecha.localeCompare(y.fecha)))
+const asisGrupos = computed(() => {
+  const grupos = new Map()
+  for (const a of asistenciaFiltrada.value.slice(0, limiteAsis.value)) {
+    if (!grupos.has(a.codigo)) grupos.set(a.codigo, { codigo: a.codigo, nombre: a.nombre, area: a.area, hora_ingreso: hm(a.hora_ingreso), en_ficha: a.en_ficha, filas: [] })
+    grupos.get(a.codigo).filas.push(a)
+  }
+  // Los totales del encabezado cuentan todo el mes del trabajador, no solo lo visible.
+  return [...grupos.values()].map(g => {
+    const todas = asisBase.value.filter(a => a.codigo === g.codigo)
+    return {
+      ...g,
+      tardanzas: todas.filter(a => a.minutos_tardanza).length,
+      minutos: todas.reduce((s, a) => s + (a.minutos_tardanza || 0), 0),
+      sinSalida: todas.filter(a => !a.salida).length,
+      justificadas: todas.filter(a => a.justificado).length
+    }
+  })
+})
+const asisResumen = computed(() => {
+  const filas = asis.value?.filas || []
+  const tardanzas = filas.filter(a => a.minutos_tardanza).length
+  const justificadas = filas.filter(a => a.justificado).length
+  return {
+    minutos: filas.reduce((s, a) => s + (a.minutos_tardanza || 0), 0),
+    tardanzas,
+    justificadas,
+    pctJust: tardanzas + justificadas ? Math.round(justificadas / (tardanzas + justificadas) * 100) : 0,
+    sinSalida: filas.filter(a => !a.salida).length,
+    sinFicha: new Set(filas.filter(a => !a.en_ficha).map(a => a.codigo)).size
+  }
+})
+watch([filtroAsis, filtro], () => { limiteAsis.value = 30 })
+
+// ── Importar huellero ──
+const PASOS_HUELLERO = ['Elegir archivo', 'Vista previa', 'Confirmar importación']
+const arrastrando = ref(false)
+const pasoHuellero = computed(() => previaHuellero.value?.confirmado ? 3 : previaHuellero.value ? 2 : 1)
+function elegirHuellero (f) { archivoHuellero.value = f || null; previaHuellero.value = null }
+function soltarHuellero (e) { arrastrando.value = false; elegirHuellero(e.dataTransfer?.files?.[0]) }
+const isoDia = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const fechaDMY = f => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '')
+const huelleroDelMes = computed(() => {
+  const { anio, mes } = anioMes.value
+  const ini = `${anio}-${String(mes).padStart(2, '0')}-01`
+  const fin = isoDia(new Date(anio, mes, 0))
+  return importaciones.value.filter(i => i.tipo === 'HUELLERO' && i.desde && i.desde <= fin && i.hasta >= ini)
+})
+// Rejilla L–D del mes: verde si algún archivo del huellero cubre el día hábil.
+const cobertura = computed(() => {
+  const { anio, mes } = anioMes.value
+  const dias = new Date(anio, mes, 0).getDate()
+  const celdas = Array((new Date(anio, mes - 1, 1).getDay() + 6) % 7).fill(null)
+  for (let dia = 1; dia <= dias; dia++) {
+    const d = new Date(anio, mes - 1, dia)
+    const iso = isoDia(d)
+    const fds = d.getDay() === 0 || d.getDay() === 6
+    const cubierto = huelleroDelMes.value.some(i => i.desde <= iso && i.hasta >= iso)
+    celdas.push({ dia, estado: fds ? 'fds' : cubierto ? 'imp' : 'pend' })
+  }
+  return celdas
+})
+const coberturaRango = computed(() => {
+  const dias = cobertura.value.filter(c => c?.estado === 'imp').map(c => String(c.dia).padStart(2, '0'))
+  return dias.length ? `${dias[0]} → ${dias[dias.length - 1]}` : ''
+})
+const cargasDelMes = computed(() => {
+  const { anio, mes } = anioMes.value
+  return importaciones.value.filter(i => { const d = new Date(i.created_at); return d.getFullYear() === anio && d.getMonth() + 1 === mes }).length
+})
+const rangoPct = i => {
+  const dias = (new Date(`${i.hasta}T12:00:00`) - new Date(`${i.desde}T12:00:00`)) / 864e5 + 1
+  const mesDias = new Date(+i.desde.slice(0, 4), +i.desde.slice(5, 7), 0).getDate()
+  return Math.min(100, Math.round(dias / mesDias * 100))
+}
+const inicialesUsuario = n => String(n).trim().split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase()
+
+// ── Personal ──
+function elegirPersonal (f) { archivoPersonal.value = f || null; previaPersonal.value = null }
+function soltarPersonal (e) { arrastrando.value = false; elegirPersonal(e.dataTransfer?.files?.[0]) }
+const persResumen = computed(() => {
+  const activos = personal.value.filter(p => p.activo)
+  const horarios = new Map()
+  for (const p of activos) {
+    const rango = `${hm(p.hora_ingreso)} – ${hm(p.hora_salida)}`
+    horarios.set(rango, (horarios.get(rango) || 0) + 1)
+  }
+  return {
+    activos: activos.length,
+    pctActivos: personal.value.length ? Math.round(activos.length / personal.value.length * 100) : 0,
+    sueldos: activos.reduce((s, p) => s + (Number(p.sueldo_neto) || 0), 0),
+    horarios: [...horarios].map(([rango, n]) => ({ rango, n })).sort((a, b) => a.rango.localeCompare(b.rango))
+  }
+})
 const personalFiltrado = computed(() => personal.value.filter(p => coincide(p.nombre, p.codigo, p.area, p.dni)))
 
 async function cargar () {
@@ -497,8 +820,8 @@ async function cargar () {
   try {
     if (tab.value === 'planilla' && puedeVerSueldos) calc.value = await svc.calculo(anio, mes)
     if (tab.value === 'asistencia') asis.value = await svc.asistencia(anio, mes)
-    if (tab.value === 'huellero') importaciones.value = await svc.importaciones()
-    if (tab.value === 'personal') personal.value = (await svc.personal()).personal
+    if (tab.value === 'huellero') [importaciones.value, asis.value] = await Promise.all([svc.importaciones(), svc.asistencia(anio, mes)])
+    if (tab.value === 'personal') [personal.value, asis.value] = await Promise.all([svc.personal().then(r => r.personal), svc.asistencia(anio, mes)])
   } catch (e) {
     toast.error(errMsg(e, 'No se pudo cargar la información.'))
   } finally {
@@ -726,6 +1049,123 @@ i.just, .pl-dia.just .pl-dia-top i { background: var(--ds-accent); }
 .pl-pag-btns { display: flex; gap: 6px; }
 .pl-pag-btns button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--ds-border); background: var(--ds-surface); font-weight: 600; cursor: pointer; color: var(--ds-ink); }
 .pl-pag-btns button.activo { background: var(--pl-navy); border-color: var(--pl-navy); color: #fff; }
+
+/* ── Asistencia y tardanzas ── */
+.pl-kpi-ico.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pl-regla { gap: 12px; }
+.pl-regla-bar { display: flex; gap: 4px; }
+.pl-regla-bar span, .pl-retraso span { flex: 1; height: 5px; border-radius: 99px; }
+.pl-regla-bar .t1 { background: #f2c14e; } .pl-regla-bar .t2 { background: #e98b8b; } .pl-regla-bar .t3 { background: #e04848; }
+.pl-regla-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pl-regla-cols span { display: block; font-size: 11.5px; color: rgba(255,255,255,.75); }
+.pl-regla-cols b { font-size: 14px; }
+.pl-seg { display: inline-flex; gap: 2px; padding: 4px; border-radius: 10px; background: var(--ds-soft-neutral); }
+.pl-seg button { border: 0; background: none; padding: 7px 12px; border-radius: 8px; font-size: 13.5px; color: var(--ds-ink-2); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.pl-seg button.activo { background: var(--ds-surface); color: var(--ds-ink); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.pl-seg-n { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--ds-border); color: var(--ds-ink-2); }
+.pl-seg button.activo .pl-seg-n { background: var(--pl-navy); color: #fff; }
+.pl-asis td { padding: 10px 12px; }
+.pl-grupo > td { background: var(--ds-soft-neutral); padding: 12px; }
+.pl-grupo .pl-who { gap: 12px; }
+.pl-avatar.navy { background: var(--pl-navy); color: #fff; }
+.pl-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pl-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--ds-soft-neutral); color: var(--ds-ink-2); white-space: nowrap; }
+.pl-tag.bad { background: var(--ds-soft-bad); color: var(--ds-bad); }
+.pl-tag.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pl-tag.ok { background: var(--ds-soft-ok); color: var(--ds-ok-ink); }
+.pl-fecha { display: flex; align-items: center; gap: 10px; }
+.pl-fecha-box { display: inline-flex; flex-direction: column; align-items: center; width: 40px; padding: 3px 0; border: 1px solid var(--ds-border); border-radius: 8px; background: var(--ds-soft-neutral); line-height: 1.05; }
+.pl-fecha-box small { font-size: 9.5px; font-weight: 600; color: var(--ds-ink-2); }
+.pl-fecha-box b { font-size: 16px; color: var(--pl-navy); }
+.pl-flecha { font-size: 10px; margin: 0 8px; color: var(--ds-ink-2); }
+.pl-retraso { display: flex; gap: 3px; width: 150px; margin-bottom: 4px; }
+.pl-retraso span { background: var(--ds-soft-neutral); }
+.pl-retraso:is(.n1, .n2, .n3) span:nth-child(1) { background: #f2c14e; }
+.pl-retraso:is(.n2, .n3) span:nth-child(2) { background: #e98b8b; }
+.pl-retraso.n3 span:nth-child(3) { background: #e04848; }
+.pl-incid > td { background: color-mix(in srgb, var(--ds-soft-warn) 45%, transparent); }
+.pl-btn.sm { padding: 6px 12px; font-size: 13px; }
+
+/* ── Personal ── */
+.pl-kpis-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pl-kpi-de { font-size: 16px; font-weight: 600; color: var(--ds-ink-2); }
+.pl-horario { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.pl-horario span { font-size: 12.5px; color: var(--ds-ink-2); }
+.pl-pers-grid { grid-template-columns: minmax(0, 1fr) 385px; align-items: stretch; }
+.pl-imp-head-acc { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pl-drop-row { flex-direction: row; justify-content: center; gap: 18px; text-align: left; padding: 36px 20px; }
+.pl-drop-txt { display: flex; flex-direction: column; gap: 2px; }
+.pl-drop-ico.verde { background: var(--pl-green); box-shadow: 0 6px 16px rgba(31, 138, 76, .25); margin: 0; width: 56px; height: 56px; font-size: 22px; }
+.pl-cols { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-cols-tit { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ds-ink-2); margin-right: 4px; }
+.pl-cols .pl-tag { border-radius: 6px; }
+.pl-reglas { margin-bottom: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.pl-reglas-tit { font-size: 15px; }
+.pl-regla-item { display: flex; gap: 12px; align-items: flex-start; }
+.pl-regla-item b { display: block; font-size: 14px; }
+.pl-regla-item span:not(.ico) { font-size: 13px; color: var(--ds-ink-2); }
+.pl-regla-item .ico { flex: none; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--ds-soft-neutral); color: var(--pl-navy); font-size: 13px; }
+.pl-regla-item .ico.ok { background: var(--ds-soft-ok); color: var(--pl-green); }
+.pl-regla-item .ico.warn { background: var(--ds-soft-warn); color: var(--ds-warn-ink); }
+.pl-horas { display: flex; align-items: center; }
+.pl-hora-in { width: 112px; padding: 7px 10px; border: 1px solid var(--ds-border); border-radius: 8px; background: var(--ds-surface); color: var(--ds-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pl-hora-in:focus { outline: 2px solid color-mix(in srgb, var(--pl-navy) 30%, transparent); border-color: var(--pl-navy); }
+.pl-switch { position: relative; display: inline-block; width: 46px; height: 26px; margin: 0; cursor: pointer; }
+.pl-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.pl-switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--ds-border); transition: background .15s; pointer-events: none; }
+.pl-switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: transform .15s; }
+.pl-switch input:checked + span { background: var(--pl-green); }
+.pl-switch input:checked + span::after { transform: translateX(20px); }
+.pl-switch input:focus-visible + span { outline: 2px solid var(--pl-navy); outline-offset: 2px; }
+@media (max-width: 1100px) { .pl-kpis-3, .pl-pers-grid { grid-template-columns: 1fr; } }
+
+/* ── Importar huellero ── */
+.pl-imp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; margin-bottom: 22px; }
+.pl-imp { margin-bottom: 0; }
+.pl-imp-head { padding: 20px 24px 16px; border-bottom: 1px solid var(--ds-border); }
+.pl-imp-body { padding: 20px 24px 24px; }
+.pl-steps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0; margin: 0 0 18px; }
+.pl-steps li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ds-ink-2); }
+.pl-steps-bar { flex-basis: 100%; height: 4px; border-radius: 99px; background: var(--ds-soft-neutral); margin-bottom: 8px; }
+.pl-steps-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--ds-soft-neutral); }
+.pl-steps li.hecho { color: var(--ds-ink); font-weight: 600; }
+.pl-steps li.hecho .pl-steps-bar, .pl-steps li.hecho .pl-steps-n { background: var(--pl-navy); color: #fff; }
+.pl-drop { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 20px; border: 1.5px dashed var(--ds-border); border-radius: 12px; background: var(--ds-soft-neutral); cursor: pointer; text-align: center; margin: 0; }
+.pl-drop.sobre, .pl-drop:hover { border-color: var(--pl-navy); }
+.pl-drop.lleno { border-style: solid; }
+.pl-drop b { font-size: 16px; color: var(--ds-ink); }
+.pl-drop-ico { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; background: var(--pl-navy); color: #fff; font-size: 26px; box-shadow: 0 6px 16px rgba(23, 42, 92, .25); margin-bottom: 6px; }
+.pl-drop-ext { display: flex; gap: 8px; }
+.pl-drop-ext span { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px; background: var(--ds-soft-info, var(--ds-surface)); }
+.pl-drop-ext span.x { background: var(--ds-soft-ok); color: var(--pl-green); }
+.pl-imp-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.pl-tags-izq { justify-content: flex-start; }
+.pl-imp-side { display: flex; flex-direction: column; gap: 22px; }
+.pl-como { min-height: 0; gap: 14px; }
+.pl-como-tit { font-size: 16px; }
+.pl-como-item { display: flex; gap: 12px; align-items: flex-start; }
+.pl-como-item b { display: block; font-size: 14px; }
+.pl-como-item span:not(.ico) { font-size: 13px; color: rgba(255, 255, 255, .8); }
+.pl-como-item .ico { flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); color: #fff; }
+.pl-como-item .ico.in { color: #7fe0a6; } .pl-como-item .ico.out { color: #f2c14e; }
+.pl-cob { padding: 18px 20px; margin-bottom: 0; }
+.pl-cob-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 15px; }
+.pl-cob-head span { font-size: 13px; font-weight: 700; }
+.pl-cob-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.pl-cob-cal span { height: 30px; border-radius: 6px; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; }
+.pl-cob-cal .dow { height: auto; font-size: 11px; font-weight: 600; color: var(--ds-ink-2); }
+.pl-cob-cal .imp { background: var(--pl-green); color: #fff; }
+.pl-cob-cal .fds { background: var(--ds-soft-ok); color: var(--pl-green); font-weight: 600; }
+.pl-cob-cal .pend { background: var(--ds-soft-neutral); color: var(--ds-ink-2); font-weight: 600; }
+.pl-cob-leg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ds-ink-2); margin-top: 14px; }
+.pl-cob-leg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.pl-cob-leg .imp { background: var(--pl-green); } .pl-cob-leg .fds { background: var(--ds-soft-ok); } .pl-cob-leg .pend { background: var(--ds-soft-neutral); }
+.pl-file-ico { flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--ds-soft-neutral); color: var(--pl-navy); }
+.pl-file-ico.per, .pl-area.per { background: var(--ds-soft-ok); color: var(--pl-green); }
+.pl-rango { height: 4px; width: 175px; border-radius: 99px; background: var(--ds-soft-neutral); margin-top: 6px; overflow: hidden; }
+.pl-rango span { display: block; height: 100%; background: var(--pl-green); }
+.pl-avatar.sm { width: 30px; height: 30px; font-size: 11px; }
+@media (max-width: 1100px) { .pl-imp-grid { grid-template-columns: 1fr; } }
 
 @media (max-width: 1100px) { .pl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
