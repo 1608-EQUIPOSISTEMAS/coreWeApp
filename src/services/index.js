@@ -25,6 +25,7 @@ import TicketsService from './tickets.service'
 import PlanComercialService from './planComercial.service'
 import PrediccionService from './prediccion.service'
 import WhatsappService from './whatsapp.service'
+import PlanillaService from './planilla.service'
 
 // Re-exportar para fácil acceso
 export { createCatalogService } from './catalog.service'
@@ -55,7 +56,8 @@ Notification: Symbol('NotificationService'),
   Tickets: Symbol('TicketsService'),
   PlanComercial: Symbol('PlanComercialService'),
   Prediccion: Symbol('PrediccionService'),
-  Whatsapp: Symbol('WhatsappService')
+  Whatsapp: Symbol('WhatsappService'),
+  Planilla: Symbol('PlanillaService')
 }
 
 export function createServices() {
@@ -84,6 +86,7 @@ export function createServices() {
     [ServiceKeys.Tickets]: new TicketsService(api),
     [ServiceKeys.PlanComercial]: new PlanComercialService(api),
     [ServiceKeys.Prediccion]: new PrediccionService(api),
-    [ServiceKeys.Whatsapp]: new WhatsappService(api)
+    [ServiceKeys.Whatsapp]: new WhatsappService(api),
+    [ServiceKeys.Planilla]: new PlanillaService(api)
   }
 }

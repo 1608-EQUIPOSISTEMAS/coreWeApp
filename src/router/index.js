@@ -646,6 +646,16 @@ const routes = [
     },
 
     // =====================
+    // TALENTO (RRHH): planilla. Solo rol TALENTO (ADMIN pasa por canAccess).
+    // =====================
+    {
+      path: 'talento/planilla',
+      name: 'TalentoPlanilla',
+      component: () => import('@/views/talento/PlanillaView.vue'),
+      meta: { module: 'PLANILLA', roles: ['TALENTO'] },
+    },
+
+    // =====================
     // IMPORTACION: importar hojas y conciliarlas contra el sistema
     // =====================
     // Cada hoja es un permiso distinto de la matriz (importar escribe datos,
