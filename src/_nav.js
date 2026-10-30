@@ -463,14 +463,24 @@ export default [
     ],
   },
   {
-    // Talento (RRHH): huellero, tardanzas y planilla. Exclusivo del rol
-    // TALENTO; ADMIN entra (canAccess) pero el backend le oculta los montos.
-    component: 'CNavItem',
-    name: 'Planilla',
-    to: '/talento/planilla',
+    // Talento (RRHH). Cada item es un submodulo de la matriz; hoy solo
+    // Planilla, exclusivo del rol TALENTO. ADMIN entra (canAccess) pero el
+    // backend le oculta los montos.
+    component: 'CNavGroup',
+    name: 'Talento',
+    to: '/talento',
     icon: 'cil-people',
-    module: 'PLANILLA',
+    module: 'TALENTO',
     roles: ['TALENTO'],
+    items: [
+      {
+        component: 'CNavItem',
+        name: 'Planilla',
+        to: '/talento/planilla',
+        submodule: 'PLANILLA',
+        roles: ['TALENTO'],
+      },
+    ],
   },
   {
     component: 'CNavTitle',

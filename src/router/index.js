@@ -646,13 +646,23 @@ const routes = [
     },
 
     // =====================
-    // TALENTO (RRHH): planilla. Solo rol TALENTO (ADMIN pasa por canAccess).
+    // TALENTO (RRHH): modulo con submodulos. Hoy solo Planilla, rol TALENTO
+    // (ADMIN pasa por canAccess, sin ver montos).
     // =====================
     {
-      path: 'talento/planilla',
-      name: 'TalentoPlanilla',
-      component: () => import('@/views/talento/PlanillaView.vue'),
-      meta: { module: 'PLANILLA', roles: ['TALENTO'] },
+      path: 'talento',
+      name: 'Talento',
+      component: RouterViewStub,
+      redirect: { name: 'TalentoPlanilla' },
+      meta: { module: 'TALENTO', roles: ['TALENTO'] },
+      children: [
+        {
+          path: 'planilla',
+          name: 'TalentoPlanilla',
+          component: () => import('@/views/talento/PlanillaView.vue'),
+          meta: { submodule: 'PLANILLA', roles: ['TALENTO'] },
+        },
+      ],
     },
 
     // =====================
