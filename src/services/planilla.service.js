@@ -21,7 +21,13 @@ export default class PlanillaService {
   async subir (url, file, confirmar) {
     const form = new FormData()
     form.append('file', file)
-    const res = await this.api.post(`${url}${confirmar ? '?confirmar=1' : ''}`, form, { timeout: ARCHIVO_TIMEOUT_MS })
+    // Content-Type undefined: api.js fija application/json por defecto y con eso
+    // axios convierte el FormData a JSON y el archivo nunca llega. Sin el header,
+    // el navegador pone multipart/form-data con su boundary.
+    const res = await this.api.post(`${url}${confirmar ? '?confirmar=1' : ''}`, form, {
+      timeout: ARCHIVO_TIMEOUT_MS,
+      headers: { 'Content-Type': undefined }
+    })
     return res.data.data
   }
 

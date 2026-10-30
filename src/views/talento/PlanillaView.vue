@@ -310,7 +310,7 @@ const fmt = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' 
 const soles = n => (n === null || n === undefined ? '—' : fmt.format(n))
 const fechaHora = d => (d ? new Date(d).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }) : '—')
 const diaCorto = f => new Date(`${f}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: '2-digit' })
-const errMsg = (e, def) => e?.response?.data?.message || def
+const errMsg = (e, def) => e?.response?.data?.message || e?.response?.data?.error || def
 
 const coincide = (...campos) => {
   const q = filtro.value.toLowerCase()
