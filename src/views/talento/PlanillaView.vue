@@ -35,7 +35,7 @@
             <div>
               <h2 class="ds-panel-title">Planilla {{ nombreMes }}</h2>
               <p class="ds-panel-sub">
-                <span v-if="calc?.cerrado" class="ds-pill ok">Cerrada por {{ calc.cierre.cerrado_por || '—' }} el {{ fechaHora(calc.cierre.cerrado_at) }}</span>
+                <span v-if="calc?.cerrado" class="ds-pill ok"><i class="fa-solid fa-lock" aria-hidden="true"></i> Cerrada (congelada) por {{ calc.cierre.cerrado_por || '—' }} el {{ fechaHora(calc.cierre.cerrado_at) }}</span>
                 <span v-else class="ds-pill warn">Abierta</span>
                 Valor del minuto = sueldo neto ÷ 30 días ÷ 8 h ÷ 60.
               </p>
@@ -229,8 +229,8 @@
       <section v-if="puedeVerSueldos" class="ds-panel">
         <header class="ds-panel-head">
           <div>
-            <h2 class="ds-panel-title">Cargar o actualizar sueldos</h2>
-            <p class="ds-panel-sub">El sueldo se guarda cifrado y solo lo ve Talento. El archivo no se almacena: se lee y se descarta. El horario se asigna por área (FICO y B2B 8:30; el resto 9:00) y se puede ajustar abajo.</p>
+            <h2 class="ds-panel-title">Cargar sueldos vigentes desde {{ nombreMes }}</h2>
+            <p class="ds-panel-sub">Se carga a inicio de mes. Los sueldos valen desde el mes elegido arriba hasta la próxima carga; los meses anteriores no cambian. El sueldo se guarda cifrado y solo lo ve Talento. El archivo no se almacena: se lee y se descarta. El horario se asigna por área (FICO y B2B 8:30; el resto 9:00) y se puede ajustar abajo.</p>
           </div>
           <div class="ds-panel-actions">
             <button class="btn-exec btn-exec-outline" type="button" @click="svc.descargarPlantilla()">
@@ -256,7 +256,7 @@
             <div class="summary-chips">
               <span class="ds-pill ok">{{ previaPersonal.total }} fila(s) válidas</span>
               <span v-if="previaPersonal.errores.length" class="ds-pill bad">{{ previaPersonal.errores.length }} con error</span>
-              <span class="cell-sub">Vista previa: todavía no se guardó nada.</span>
+              <span class="cell-sub">Vista previa: todavía no se guardó nada. Vigentes desde {{ nombreMes }}.</span>
             </div>
             <div v-if="previaPersonal.errores.length" class="err-list">
               {{ previaPersonal.errores.map(e => `Fila ${e.fila}: ${e.motivo}`).join(' · ') }}
@@ -437,13 +437,13 @@ async function confirmarHuellero () {
 
 async function previsualizarPersonal () {
   subiendo.value = true
-  try { previaPersonal.value = await svc.importarPersonal(archivoPersonal.value, false) } catch (e) { toast.error(errMsg(e, 'No se pudo leer el archivo.')) } finally { subiendo.value = false }
+  try { previaPersonal.value = await svc.importarPersonal(archivoPersonal.value, anioMes.value, false) } catch (e) { toast.error(errMsg(e, 'No se pudo leer el archivo.')) } finally { subiendo.value = false }
 }
 
 async function confirmarPersonal () {
   subiendo.value = true
   try {
-    previaPersonal.value = await svc.importarPersonal(archivoPersonal.value, true)
+    previaPersonal.value = await svc.importarPersonal(archivoPersonal.value, anioMes.value, true)
     toast.success(`Se guardaron ${previaPersonal.value.total} trabajador(es).`)
     archivoPersonal.value = null
     cargar()

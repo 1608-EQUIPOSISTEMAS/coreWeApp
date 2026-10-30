@@ -18,13 +18,14 @@ export default class PlanillaService {
     this.api = api
   }
 
-  async subir (url, file, confirmar) {
+  async subir (url, file, confirmar, query = {}) {
     const form = new FormData()
     form.append('file', file)
     // Content-Type undefined: api.js fija application/json por defecto y con eso
     // axios convierte el FormData a JSON y el archivo nunca llega. Sin el header,
     // el navegador pone multipart/form-data con su boundary.
-    const res = await this.api.post(`${url}${confirmar ? '?confirmar=1' : ''}`, form, {
+    const qs = new URLSearchParams({ ...query, ...(confirmar ? { confirmar: '1' } : {}) }).toString()
+    const res = await this.api.post(`${url}${qs ? '?' + qs : ''}`, form, {
       timeout: ARCHIVO_TIMEOUT_MS,
       headers: { 'Content-Type': undefined }
     })
@@ -33,7 +34,8 @@ export default class PlanillaService {
 
   // Sin confirmar = vista previa (no guarda nada).
   importarHuellero (file, confirmar = false) { return this.subir('/planilla/huellero/importar', file, confirmar) }
-  importarPersonal (file, confirmar = false) { return this.subir('/planilla/personal/importar', file, confirmar) }
+  // Los sueldos valen desde (anio, mes): el personal se importa a inicio de mes.
+  importarPersonal (file, { anio, mes }, confirmar = false) { return this.subir('/planilla/personal/importar', file, confirmar, { anio, mes }) }
 
   async personal () { return (await this.api.get('/planilla/personal')).data.data }
   async actualizarPersonal (id, cambios) { return (await this.api.patch(`/planilla/personal/${id}`, cambios)).data.data }
