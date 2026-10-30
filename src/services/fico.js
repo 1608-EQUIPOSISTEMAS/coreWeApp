@@ -212,6 +212,12 @@ export default class FicoService {
     return response.data;
   }
 
+  // Pestaña CxC: saldo por mes y tipo de programa, PEN/USD -> { year, months, total }.
+  async getReceivablesSummary(payload) {
+    const response = (await api.post('/fico/collections/cxc', payload)).data;
+    return response.data;
+  }
+
   // Socios de membresia con vencimiento y estado: { today, items, kpis }.
   async getMembershipExpiries() {
     const response = (await api.get('/fico/membresias/vencimientos')).data;

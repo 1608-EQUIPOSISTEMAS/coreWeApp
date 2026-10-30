@@ -3,12 +3,18 @@
     <header class="ds-head">
       <div class="ds-head-titles">
         <h1 class="ds-title">Cobranzas</h1>
-        <p class="ds-sub">
+        <p v-if="section === 'cxc'" class="ds-sub">Lo que falta cobrar por mes de vencimiento y tipo de programa</p>
+        <p v-else class="ds-sub">
           {{ debtorView === 'companies' ? 'Cuotas de ventas B2B con OS/OP que paga la empresa' : 'Cuotas pendientes' }}
           que vencen en {{ monthLabel }}
         </p>
       </div>
       <div class="ds-head-actions">
+        <div class="ds-tabs" role="group" aria-label="Vista">
+          <button type="button" :aria-pressed="section === 'cuotas'" @click="section = 'cuotas'">Cuotas del mes</button>
+          <button type="button" :aria-pressed="section === 'cxc'" @click="section = 'cxc'">CxC</button>
+        </div>
+        <template v-if="section === 'cuotas'">
         <div class="col-month" role="group" aria-label="Mes">
           <button class="btn-icon btn-icon-sm" type="button" title="Mes anterior" aria-label="Mes anterior" @click="shiftMonth(-1)">
             <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
@@ -27,9 +33,13 @@
         >
           <i class="fa-solid fa-file-excel" aria-hidden="true"></i> Exportar Excel ({{ items.length }})
         </button>
+        </template>
       </div>
     </header>
 
+    <CxcSummary v-if="section === 'cxc'" />
+
+    <template v-else>
     <div class="ds-kpis">
       <div v-for="k in cards" :key="k.clave" class="ds-kpi">
         <span class="ds-kpi-icon" :class="k.tono" aria-hidden="true"><i class="fa-solid" :class="k.icono"></i></span>
@@ -186,6 +196,7 @@
         </table>
       </div>
     </section>
+    </template>
 
     <CollectionPreviewModal :row="previewRow" @close="previewRow = null" @open-enrollment="goToEnrollment" />
   </div>
@@ -199,6 +210,7 @@ import { ServiceKeys } from '@/services'
 import ColumnFilterDropdown from '@/components/ColumnFilterDropdown.vue'
 import BaseFilterChips from '@/components/BaseFilterChips.vue'
 import CollectionPreviewModal from '@/views/fico/collections/CollectionPreviewModal.vue'
+import CxcSummary from '@/views/fico/collections/CxcSummary.vue'
 import { useEnrollmentFormatters } from '@/composables/useEnrollmentFormatters'
 import {
   buildCollectionCards, dueLabel, DUE_TONE, COLUMN_VALUE,
@@ -230,6 +242,8 @@ const AMOUNT_SORT = {
 
 const today = new Date()
 const monthValue = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
+// Cuotas del mes (lista para cobrar) o CxC (cuadro mensual por tipo de programa).
+const section = ref('cuotas')
 const debtorView = ref('students')
 const stateFilter = ref('total')
 const amountSort = ref(null)
