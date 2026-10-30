@@ -4,7 +4,7 @@ vi.mock('../api', () => ({ default: { post: vi.fn() } }))
 import api from '../api'
 import { createCatalogService } from '../catalog.service.js'
 
-const LS_KEY = 'CORE_CATALOG_V5'
+const LS_KEY = 'CORE_CATALOG_V6'
 const CATALOGO = { we_day_combination: [{ catalogo_id: 3010, description: 'Dom', variable_2: '[0]' }] }
 
 describe('catalog.service: cache envenenado', () => {

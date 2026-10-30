@@ -1,7 +1,7 @@
 // src/services/catalog.service.js
 import api from './api'
 
-const LS_KEY = 'CORE_CATALOG_V5' // V5: canal TikTok (we_social_media_tiktok) — bump fuerza refetch en todos los clientes
+const LS_KEY = 'CORE_CATALOG_V6' // V6: entidad empresa "CUOTAS SIN INTERÉS" (we_business_entity_csi) — bump fuerza refetch en todos los clientes
 
 const DEFAULT_WE_CURRENCY = [
   {
